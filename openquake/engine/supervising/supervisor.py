@@ -160,10 +160,11 @@ class SupervisorLogStreamHandler(logging.StreamHandler):
     :class:`SupervisorLogMessageConsumer`.
     """
 
-    def __init__(self, job_id):
+    def __init__(self, calc_domain, calc_id):
         super(SupervisorLogStreamHandler, self).__init__()
         self.setFormatter(logging.Formatter(LOG_FORMAT))
-        self.job_id = job_id
+        self.calc_domain = calc_domain
+        self.calc_id = calc_id
 
     def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
@@ -176,10 +177,11 @@ class SupervisorLogFileHandler(logging.FileHandler):
     :class:`SupervisorLogMessageConsumer`.
     """
 
-    def __init__(self, job_id, log_file):
+    def __init__(self, calc_domain, calc_id, log_file):
         super(SupervisorLogFileHandler, self).__init__(log_file)
         self.setFormatter(logging.Formatter(LOG_FORMAT))
-        self.job_id = job_id
+        self.calc_domain = calc_domain
+        self.calc_id = calc_id
         self.log_file = log_file
 
     def emit(self, record):  # pylint: disable=E0202
