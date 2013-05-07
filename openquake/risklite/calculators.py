@@ -84,7 +84,7 @@ def scenario_damage(ctxt, runner):
                  len(alist), len(missing))
         calc = api.ScenarioDamage(fm['fragility_functions'][taxonomy]['fns'])
         fractions = [frac * asset.number_of_units for frac, asset in
-                     zip(runner.run(calc, hlist), alist)]
+                     zip(runner.run_in_order(calc, hlist), alist)]
         for asset, frac in zip(alist, fractions):
             write(by_asset, asset.asset_id, frac)
         if fractions:
@@ -113,6 +113,6 @@ def scenario(ctxt, runner):
         alist, hlist, missing = get_hazard(assets, hazard_getter)
         log.info('Taxonomy %s, %d assets, %d missing', taxonomy,
                  len(alist), len(missing))
-        loss_ratios = runner.run(calc, hlist)
+        loss_ratios = runner.run_in_order(calc, hlist)
         for asset, loss_ratio in zip(alist, loss_ratios):
             write(loss_map, asset.asset_id, loss_ratio)

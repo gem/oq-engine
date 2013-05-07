@@ -53,8 +53,8 @@ to write the results.
 `risklite` can be used as a library too. There is a helper function
 `openquake.risklite.parallel.run_calc(path, runner, config)` which is able
 to run an end-to-end computation. To use it, you must first instantiate
-a `Runner` object, which in turn requires an executor object.
-The executor comes from the Python library
+a `Runner` object, which in turn requires a seed (the empty list) and
+an executor object. The executor comes from the Python library
 `concurrent.futures`, which is part of the standard library
 starting from Python 3.3 and which can be installed even in
 older versions of Python. At the moment the recommended
@@ -63,7 +63,7 @@ way to perform risk computations is to instantiate a
 
 >>> from concurrent.futures import ProcessPoolExecutor
 >>> from openquake.risklite.parallel import run_calc, Runner
->>> runner = Runner(ProcessPoolExecutor())
+>>> runner = Runner([], ProcessPoolExecutor())
 
 Then it is possible to run the computation as follows:
 
@@ -79,34 +79,52 @@ How the parallelization works
 
 The ``Runner`` class in ``risklite.parallel`` provides a simple way to
 parallelize computations, which is suitable for risk calculations.  It
-is possible to implement different strategies by subclassing or by not
-subclassing. The only requirements are:
+is possible to implement different strategies by subclassing, or by
+using a class with a compatible interface. The only requirements are:
 
 1. the runner object must have a ``.run`` method to be called
    with a callable, a sequence and possibly other optional arguments;
 2. the callable must accept a sequence as first argument.
 
-``runner.run(func, sequence)`` takes the sequence and splits it in
-chunks of a given chunksize, then it applies ``func`` to each chunk
-and collects the results. In risk computations the sequence is
-a list of hazard values and ``func`` is a risklib calculator;
-the output is a list of numpy arrays. It is possible to use
-the runner in different circumstances and to provide custom
-aggregation functions; see `openquake.risklite.tests.runner_test`
-for examples.
+The ``Runner`` class has signature 
+``(seed, executor=FakeExecutor(), chunksize=None, agg=operator.add)``
+where:
 
-The ``Runner`` class uses the executor to submit the computation
+1. `seed` is a value of the same type of the return type of the
+callable, and it is the value which is returned when the callable
+is called with an empty sequence. The callables used by riskite
+returns lists, so the seed is the empty list.
+
+2. `executor` is an executor object, which is used to submit the computation
 to a pool of workers. The workers can be processes (when using
 `:class:concurrent.futures.ProcessPoolExecutor`) or threads (when using
 `:class:concurrent.futures.ThreadPoolExecutor`); it is a responsibility
 of the client to shutdown the pool at the end of the computation. 
-The order of execution of the chunks is not specified, however
+
+3. `chunksize` is an integer; when not given is inferred automagically
+
+4. `agg` is the function used to aggregate the results of the computation;
+by default it is ``operator.add``.
+
+Having instantiate a ``runner`` object, calling ``runner.run(func,
+sequence)`` takes the sequence and splits it in chunks of the given
+chunksize, applies ``func`` to each chunk and collects the results by
+using the aggregation function. In risk computations the sequence is a
+list of hazard values and ``func`` is a risklib calculator; the output
+is a list of numpy arrays. It is possible to use the runner in
+different circumstances and to provide custom aggregation functions;
+see `openquake.risklite.tests.runner_test` for examples.
+
+The order of execution of the chunks is not specified, therefore
 the order of the results is guaranteed to be the same of the
-inputs, i.e. the list in output matches the list in input.
-Using ``runner.run(func, inputlist)`` is similar but not identical
+inputs. If you want to preserve the order, in such a way that
+the list in output matches the list in input, you must call
+`runner.run_in_order(func, inputlist)``: the order of the tasks
+is still random, but the results are kept in memory and ordered.
+This is similar but not identical
 to calling ``executor.map(func, inputlist)``: the latter schedules
 all the tasks at once and then starts running them; the former instead
-takes in account the size of the pool, and schedule only enough tasks
+takes in account the size of the pool, and it schedules only enough tasks
 to fill the pool; when they are done, it schedules other tasks to fill
 the pool again and it continues until all the tasks are finished.
 This approach works because all the chunks have the same size and
@@ -114,6 +132,9 @@ are expected to take more or less the same time. It is better than
 ``executor.map`` in terms of memory consumption, since the number of
 scheduled tasks is limited by the pool size. In case of memory
 problems you can reduce it, by trading memory for speed.
+If the order of the output does not matter, it is best to use
+``runner.run`` which saves memory since it does not store the
+intermediate results.
 
 Since it is pretty difficult to debug error in
 parallel code, ``risklite.parallel`` provides a ``BaseRunner`` class too:

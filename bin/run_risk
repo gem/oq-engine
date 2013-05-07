@@ -13,4 +13,4 @@ if __name__ == '__main__':
     arg = p.parse_args()
     logging.basicConfig(level=logging.INFO)
     with ProcessPoolExecutor() as ppe:
-        run_calc(arg.path, Runner(ppe), arg.config)
+        run_calc(arg.path, Runner([], ppe), arg.config)
