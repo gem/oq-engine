@@ -16,7 +16,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import mock
 import unittest
 
 from datetime import datetime
@@ -24,7 +23,6 @@ from datetime import datetime
 from openquake.engine import engine
 from openquake.engine.db.models import ErrorMsg
 from openquake.engine.db.models import JobStats
-from openquake.engine.db.models import HazardCalculation
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import stats
 
@@ -94,7 +92,7 @@ record_job_stop_time')
         start_patch('openquake.engine.supervising.supervisor.terminate_job')
         start_patch('openquake.engine.supervising.supervisor.get_job_status')
         start_patch('openquake.engine.supervising.supervisor'
-               '.update_job_status_and_error_msg')
+                    '.update_job_status_and_error_msg')
 
         logging.root.setLevel(logging.CRITICAL)
 
@@ -111,7 +109,7 @@ record_job_stop_time')
         # the job process is running
         self.is_pid_running.return_value = True
 
-        with patch('openquake.engine.supervising.' \
+        with patch('openquake.engine.supervising.'
                    'supervisor.SupervisorLogMessageConsumer.run') as run:
 
             def run_(mc):
