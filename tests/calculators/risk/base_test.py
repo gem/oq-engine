@@ -38,11 +38,6 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         "A shortcut to a the corresponding hazard calculation"
         return self.job.risk_calculation.get_hazard_calculation()
 
-    @property
-    def hazard_outputs(self):
-        return self.hazard_calculation.oqjob_set.latest(
-            'last_update').output_set.filter(output_type='hazard_curve_multi')
-
 
 class FakeRiskCalculator(base.RiskCalculator):
     """
@@ -51,19 +46,9 @@ class FakeRiskCalculator(base.RiskCalculator):
 
     celery_task = mock.Mock()
 
-    def hazard_outputs(self, _hc):
-        return mock.Mock()
-
-    def create_getter(self, output, imt, assets):
-        return mock.Mock()
-
-    @property
-    def hazard_getter(self):
-        return "hazard_getter"
-
     @property
     def calculation_parameters(self):
-        return []
+        return base.make_calc_params()
 
 
 class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
@@ -111,24 +96,6 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
         self.assertEqual(1, len(self.calculator.vulnerability_functions))
         self.assertEqual({'VF': 'PGA'}, self.calculator.taxonomy_imt)
 
-    def test_create_outputs(self):
-        # Test that the proper output containers are created
-
-        for hazard_output in self.hazard_outputs:
-            [loss_curve_id, loss_map_ids] = \
-                self.calculator.create_outputs(hazard_output)
-
-            self.assertTrue(
-                models.LossCurve.objects.filter(pk=loss_curve_id).exists())
-
-            self.assertEqual(
-                sorted(self.job.risk_calculation.conditional_loss_poes),
-                sorted(loss_map_ids.keys()))
-
-            for _, map_id in loss_map_ids.items():
-                self.assertTrue(models.LossMap.objects.filter(
-                    pk=map_id).exists())
-
     def test_initialize_progress(self):
         # Tests that the progress counter has been initialized
         # properly
@@ -149,7 +116,8 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 class ParseVulnerabilityModelTestCase(unittest.TestCase):
 
     def setUp(self):
-        cfg = helpers.get_data_path('end-to-end-hazard-risk/job_risk.ini')
+        cfg = helpers.get_data_path(
+            'end-to-end-hazard-risk/job_risk_classical.ini')
         self.job = helpers.get_risk_job(cfg)
         self.calc = base.RiskCalculator(self.job)
 
