@@ -34,7 +34,7 @@ sig_hand () {
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         if [ -f "${upper}.dsk" ]; then
-            loop_dev="$(sudo losetup -a | grep "(${upper})$" | cut -d ':' -f1)"
+            loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
         fi
         sudo lxc-stop -n $lxc_name
         sudo umount /var/lib/lxc/$lxc_name/rootfs
