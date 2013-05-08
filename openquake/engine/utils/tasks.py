@@ -172,8 +172,6 @@ def oqtask(task_func):
             # Setup task logging, via AMQP ...
             logs.init_logs_amqp_send(level=job.log_level, job_id=job_id)
 
-            logs.LOG.debug('job.is_running == %s' % job.is_running)
-            logs.LOG.debug('job.status == %s' % job.status)
             # Tasks can be used in either the `execute` or `post-process` phase
             if not (job.is_running
                     and job.status in ('executing', 'post_processing')):
