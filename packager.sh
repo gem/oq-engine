@@ -147,7 +147,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "
         for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer; do
             echo \"local   openquake   \$dbu                   md5\"
-        done | tee -a /etc/postgresql/9.1/main/pg_hba.conf"
+        done | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
 
     ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
