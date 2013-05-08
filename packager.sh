@@ -145,9 +145,9 @@ _devtest_innervm_run () {
     # configure the machine to run tests
     ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
     ssh $lxc_ip "
-        for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer; do
-            echo \"local   openquake   \$dbu                   md5\"
-        done | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
+        for dbu in oq_reslt_writer oq_job_superv oq_job_init oq_admin; do
+            sudo sed "1ilocal   openquake   \$dbu                   md5\" /etc/postgresql/9.1/main/pg_hba.conf
+        done"
 
     ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
@@ -158,7 +158,7 @@ _devtest_innervm_run () {
 
     for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer; do
         ssh $lxc_ip "sudo su postgres -c \"psql -c \\\"ALTER ROLE $dbu WITH PASSWORD 'openquake'\\\"\""
-    done
+    d one
 
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
