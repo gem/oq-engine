@@ -679,9 +679,9 @@ class BaseHazardCalculator(base.Calculator):
                 intensity_measure_types_and_levels = dict([
                     (record['IMT'], record['IML'])
                     for record in parsers.VulnerabilityModelParser(content)])
-                intensity_measure_types = list(set([
+                intensity_measure_types = list(set(
                     record['IMT']
-                    for record in parsers.VulnerabilityModelParser(content)]))
+                    for record in parsers.VulnerabilityModelParser(content)))
 
                 hc.intensity_measure_types_and_levels.update(
                     intensity_measure_types_and_levels)
