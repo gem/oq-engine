@@ -9,7 +9,7 @@ LXC_BIND=""
 UNION="overlayfs"
 
 usage() {
-    echo "usage: lxc-start-ephemeral [-i ip-addr] [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
+    echo "usage: lxc-start-ephemeral-dsk [-U uniontype] [-d|--daemon] [-h] [-b bdir] [-u user] [-S key] -o orig -- [COMMAND [ARGS...]]"
 }
 
 help() {
@@ -18,7 +18,6 @@ help() {
     echo "Runs an ephemeral (one-off) container"
     echo
     echo "Options:"
-    echo "-i          : static ip address override (1-255)"
     echo "orig        : name of the original container"
     echo "bdir        : directory to bind mount into container"
     echo "user        : the user to connect to the container as"
@@ -32,8 +31,8 @@ help() {
     echo "wait until the container is shut down"
 }
 
-shortoptions='hb:o:u:S:dU:i:'
-longoptions='help,orig:,bdir:,user:,ssh-key:,daemon,union:ipaddr'
+shortoptions='hb:o:u:S:dU:'
+longoptions='help,orig:,bdir:,user:,ssh-key:,daemon,union:'
 
 LXC_RUNNING=0
 LXC_MOUNTED=0
@@ -47,6 +46,10 @@ cleanup_dirs()
     sudo umount $LXC_DIR/rootfs
     # echo "umounting overlay" >&2
     sudo umount $OVERLAY_DIR
+    if [ "$LO_ID" != "" ]; then
+        sudo losetup -d /dev/loop${LO_ID}
+        rm -f ${OVERLAY_DIR}.dsk
+    fi
 
     # remove all contents of the content dir
     sudo rmdir $LXC_DIR/ephemeralbind
@@ -95,13 +98,6 @@ while true; do
 	    -h|--help)
 		help
 		exit 1
-		;;
-            # GEM flag added
-            -i)
-		shift
-                GEM_LXC_NW=10.0.3
-		GEM_LXC_IP=$1
-		shift
 		;;
 	    -o|--orig)
 		shift
@@ -166,9 +162,29 @@ fi
 
 setup_container()
 {
+    local lo_ok=1
+
     echo "Setting up ephemeral container..."
     OVERLAY_DIR=`mktemp -d /tmp/lxc-lp-XXXXXXX`
-    sudo mount -t tmpfs none $OVERLAY_DIR
+    # sudo dd if=/dev/zero of=${OVERLAY_DIR}.dsk bs=1024 count=1048576
+    sudo dd if=/dev/zero of=${OVERLAY_DIR}.dsk bs=1024 count=2097152
+    for LO_ID in $(seq 0 7); do
+	sudo losetup /dev/loop${LO_ID} ${OVERLAY_DIR}.dsk
+        if [ $? -eq 0 ]; then
+                lo_ok=0
+            break
+        fi
+    done
+    if [ $lo_ok -ne 0 ]; then
+        LO_ID=""
+        rm ${OVERLAY_DIR}.dsk
+        echo "Loopback disk image mount fails, exit."
+        exit 11
+    fi
+    sudo mkfs -t ext3 -m 1 -v /dev/loop${LO_ID}
+    sudo mount -t ext3 /dev/loop${LO_ID} $OVERLAY_DIR
+
+    # sudo mount -t tmpfs none $OVERLAY_DIR
     LXC_DIR=`sudo mktemp -d --tmpdir=/var/lib/lxc $LXC_BASE-temp-XXXXXXX`
     LXC_NAME=`basename $LXC_DIR`
     mkdir ${LXC_DIR}/rootfs
@@ -185,13 +201,6 @@ setup_container()
             fi
         done
     }
-
-    # GEM: customization to fix the ip address into /etc/network/interfaces
-    if [ "$GEM_LXC_IP" != "" ]; then
-        GEM_LXC_LW="$(echo "obase=16 ; $GEM_LXC_IP" | bc | tr 'A-Z' 'a-z')"
-        sed -i "s/^\([ 	]\+address[ 	]\+\)[0-9\.]*/\1${GEM_LXC_NW}.${GEM_LXC_IP}/g" $LXC_DIR/rootfs/etc/network/interfaces
-        sed -i "s/^\(lxc.network.hwaddr[ 	]*=.*:\).*/\1${GEM_LXC_LW}/g" $LXC_DIR/config
-    fi
 
     # Update the ephemeral lxc's configuration to reflect the new container name.
     # Check all the places known distros keep hostnames.
