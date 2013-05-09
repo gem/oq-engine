@@ -20,7 +20,6 @@
 """Utility functions related to splitting work into tasks."""
 
 import itertools
-import operator
 from functools import wraps
 
 from celery.task.sets import TaskSet
@@ -218,12 +217,15 @@ def oqtask(task_func):
                 raise JobCompletedError(job_id)
             # The job is running.
             # ... now continue with task execution.
-            task_func(*args, **kwargs)
-            EnginePerformanceMonitor.cache.flush()  # flush the performance logs
+            res = task_func(*args, **kwargs)
         # TODO: should we do something different with the JobCompletedError?
         except Exception, err:
             logs.LOG.critical('Error occurred in task: %s' % str(err))
             logs.LOG.exception(err)
             raise
+        else:
+            return res
+        finally:
+            EnginePerformanceMonitor.cache.flush()  # flush performance data
     celery_queue = config.get('amqp', 'celery_queue')
     return task(wrapped, ignore_result=True, queue=celery_queue)
