@@ -69,8 +69,9 @@ def scenario_damage(job_id, units, containers, params):
     with db.transaction.commit_on_success(using='reslt_writer'):
         fractions, taxonomy = do_scenario_damage(unit, params, profile)
 
+    num_items = base.get_num_items(units)
     signal_task_complete(
-        job_id=job_id, num_items=len(unit.getter.assets),
+        job_id=job_id, num_items=num_items,
         fractions=fractions, taxonomy=taxonomy)
 scenario_damage.ignore_result = False
 

@@ -579,9 +579,34 @@ class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
     celery task where the number of items (i.e. assets) are embedded in
     calculation units.
     """
-    def get_task_data(self, job_id, calculators, *_args):
-        first_getter = calculators.values()[0][0].getter
-        return job_id, len(first_getter.assets)
+    def get_task_data(self, job_id, units, *_args):
+        num_items = get_num_items(units)
+
+        return job_id, num_items
+
+
+def get_num_items(units):
+    """
+    :param units:
+        a not empty dictionary of not empty lists of
+        :class:`openquake.engine.calculators.risk.base.CalculationUnit`
+        instances
+    """
+    # FIXME(lp). Navigating in an opaque structure is a code smell.
+    # We need to refactor the data structure used by celery tasks.
+
+    # let's get the first one
+    first_list_of_units = units.values()[0]
+
+    # get the first item in the list. Then, get the getter from it
+    # (an instance of `..hazard_getters.HazardGetter`.
+    first_getter = first_list_of_units[0].getter
+
+    # A getter keeps a reference to the list of assets we want to
+    # consider
+    num_items = len(first_getter.assets)
+
+    return num_items
 
 
 #: Hold both a Vulnerability function or a fragility function set and
