@@ -41,7 +41,6 @@ This could be the target for future optimizations.
 import itertools
 import math
 import numpy
-import openquake
 
 from django import db
 
@@ -175,7 +174,7 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
     models.HazardCurveData.objects.create(
         hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.wkt2d,
         weight=lt_rlz.weight)
-gmf_to_hazard_curve_task.ignore_result = False
+gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
 @tasks.oqtask  # the parameter job_id is required by the decorator
