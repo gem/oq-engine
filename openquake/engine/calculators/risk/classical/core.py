@@ -57,7 +57,7 @@ def classical(job_id, units, containers, params):
         for loss_type in units:
             do_classical(
                 loss_type, units[loss_type], containers, params, profile)
-    num_items = len(units.values()[0][0].getter.assets)
+    num_items = base.get_num_items(units)
     signal_task_complete(job_id=job_id, num_items=num_items)
 classical.ignore_result = False
 
