@@ -35,7 +35,7 @@ def noagg(acc, val):
     """No operation"""
 
 
-def mapreduce(task_func, task_args, acc, agg=noagg):
+def map_reduce(task_func, task_args, acc, agg=noagg):
     """
     Given a callable and an iterable of arguments, apply the
     callable to the arguments in parallel and return an aggregate
@@ -69,7 +69,7 @@ def mapreduce(task_func, task_args, acc, agg=noagg):
 
 
 # TODO: it seems this is never used except in the tests, so it can
-# be removed; mapreduce more or less serve the same purpose
+# be removed; map_reduce more or less serve the same purpose
 def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
                flatten_results=False):
     """Runs `task_func` for each of the given data items.
