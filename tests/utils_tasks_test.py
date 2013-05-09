@@ -227,18 +227,18 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
 
 class MapReduceTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.tasks.mapreduce()."""
+    """Tests the behaviour of utils.tasks.map_reduce()."""
 
     def test_single_item(self):
         expected = ["hello"] * 5
-        result = tasks.mapreduce(
+        result = tasks.map_reduce(
             just_say_hello, [(i, ) for i in range(5)], [],
             lambda lst, val: lst + [val])
         self.assertEqual(expected, result)
 
     def test_type_error(self):
         try:
-            tasks.mapreduce(just_say_hello, range(5), None)
+            tasks.map_reduce(just_say_hello, range(5), None)
         except TypeError as exc:
             # the message depend on the OQ_NO_DISTRIBUTE flag
             self.assertIn('int', str(exc))
@@ -247,12 +247,12 @@ class MapReduceTestCase(unittest.TestCase):
 
     def test_failing_subtask(self):
         try:
-            tasks.mapreduce(failing_task, [(42, )], None)
+            tasks.map_reduce(failing_task, [(42, )], None)
         except NotImplementedError as exc:
             self.assertEqual(42, exc.args[0])
         else:
             raise Exception("Exception not raised.")
 
     def test_ignore_result(self):
-        res = tasks.mapreduce(just_say_hello, [(i, ) for i in range(5)], None)
+        res = tasks.map_reduce(just_say_hello, [(i, ) for i in range(5)], None)
         self.assertEqual(res, None)

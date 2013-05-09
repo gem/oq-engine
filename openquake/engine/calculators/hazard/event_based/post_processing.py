@@ -198,11 +198,10 @@ def insert_into_gmf_agg(_job_id, rlz, chunk_id, nchunks):
     curs = db.connections['reslt_writer'].cursor()
     with db.transaction.commit_on_success(using='reslt_writer'):
         curs.execute(insert_query)
+        logs.LOG.debug(insert_query)
         # TODO: delete the copied rows from gmf; this can be done
         # only after changing the export procedure to read from gmf_agg
     curs.close()
-    return insert_query
-insert_into_gmf_agg.ignore_result = False
 
 
 def populate_gmf_agg(hc, job_id=None):
@@ -211,14 +210,10 @@ def populate_gmf_agg(hc, job_id=None):
     """
     rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
     nchunks = 16  # makes 16 chunks for each realization
-
-    def debug(acc, msg):
-        logs.LOG.debug(msg)
-
     for rlz in rlzs:
         allargs = [(job_id, rlz, chunk_id, nchunks)
                    for chunk_id in range(nchunks)]
-        tasks.mapreduce(insert_into_gmf_agg, allargs, None, debug)
+        tasks.map_reduce(insert_into_gmf_agg, allargs, None)
 
 
 def do_post_process(job):
@@ -245,7 +240,7 @@ def do_post_process(job):
         logs.LOG.debug('> GMF post-processing block, %s of %s',
                        i + 1, total_blocks)
 
-        tasks.mapreduce(gmf_to_hazard_curve_task, block, None)
+        tasks.map_reduce(gmf_to_hazard_curve_task, block, None)
 
         logs.LOG.debug('< Done GMF post-processing block, %s of %s',
                        i + 1, total_blocks)
