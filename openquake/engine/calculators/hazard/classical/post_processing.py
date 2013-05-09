@@ -96,7 +96,6 @@ _UHS_DISP_NAME_FMT = 'uhs-(%(poe)s)-rlz-%(rlz)s'
 
 # Silencing 'Too many local variables'
 # pylint: disable=R0914
-@tasks.oqtask
 def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
     """
     Function to process a set of hazard curves into 1 hazard map for each PoE
@@ -167,6 +166,9 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             lats=lats,
             imls=map_values,
         )
+
+hazard_curves_to_hazard_map_task = tasks.oqtask(hazard_curves_to_hazard_map)
+hazard_curves_to_hazard_map_task.ignore_result = False  # this is essential
 
 
 def do_hazard_map_post_process(job):
