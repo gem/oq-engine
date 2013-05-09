@@ -180,12 +180,11 @@ gmf_to_hazard_curve_task.ignore_result = False
 
 @tasks.oqtask  # the parameter job_id is required by the decorator
 def insert_into_gmf_agg(_job_id, rlz, chunk_id, nchunks):
-
     coll = models.GmfCollection.objects.get(lt_realization=rlz)
 
     # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
     # if location is of geography type, hence the need to cast it to geometry
-    insert_query = '''\
+    insert_query = '''-- running
     INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping, sa_period,
                                location, gmvs, rupture_ids)
     SELECT gmf_collection_id, imt, sa_damping, sa_period, location::geometry,
@@ -201,7 +200,9 @@ def insert_into_gmf_agg(_job_id, rlz, chunk_id, nchunks):
         curs.execute(insert_query)
         # TODO: delete the copied rows from gmf; this can be done
         # only after changing the export procedure to read from gmf_agg
+    curs.close()
     return insert_query
+insert_into_gmf_agg.ignore_result = False
 
 
 def populate_gmf_agg(hc, job_id=None):
@@ -209,7 +210,7 @@ def populate_gmf_agg(hc, job_id=None):
     Populate the table gmf_agg from gmf and gmf_set.
     """
     rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
-    nchunks = 2  # makes 16 chunks for each realization
+    nchunks = 16  # makes 16 chunks for each realization
 
     def debug(acc, msg):
         logs.LOG.debug(msg)
