@@ -61,8 +61,9 @@ def scenario(job_id, units, containers, params):
             unit = units[loss_type][0]
             agg[loss_type], insured[loss_type] = do_scenario(
                 loss_type, unit, containers, params, profile)
+    num_items = base.get_num_items(units)
     signal_task_complete(
-        job_id=job_id, num_items=len(unit.getter.assets),
+        job_id=job_id, num_items=num_items,
         aggregate_losses=agg, insured_losses=insured)
 scenario.ignore_result = False
 
