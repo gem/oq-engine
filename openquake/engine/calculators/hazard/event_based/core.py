@@ -648,7 +648,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         with EnginePerformanceMonitor(
                 'populating gmf_agg', self.job.id, tracing=True):
-            post_processing.populate_gmf_agg(self.hc)
+            post_processing.populate_gmf_agg(self.hc, self.job.id)
 
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
