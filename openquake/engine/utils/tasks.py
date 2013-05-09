@@ -20,18 +20,57 @@
 """Utility functions related to splitting work into tasks."""
 
 import itertools
-
+import operator
 from functools import wraps
 
 from celery.task.sets import TaskSet
 from celery.task import task
 
-from openquake.engine import logs
+from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
+def noagg(acc, val):
+    """No operation"""
+
+
+def mapreduce(task_func, task_args, acc, agg=noagg):
+    """
+    Given a callable and an iterable of arguments, apply the
+    callable to the arguments in parallel and return an aggregate
+    result depending on the initial value of the accumulator
+    and on the aggregation function. Notice that by default no
+    aggregation is performed. This is useful to run
+    tasks which do not return results. To save memory, the order is
+    not preserved and there is no list with the intermediated results:
+    the accumulator is incremented as soon as a task result comes.
+
+    :param task_func: a `celery` task callable.
+    :param task_args: an iterable over arguments
+    :param acc: the initial value of the accumulator
+    :param agg: the aggregation function, (acc, val) -> new acc
+    :returns: the final value of the accumulator
+
+    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
+    tasks are run sequentially in the current process.
+    """
+    if no_distribute():
+        for the_args in task_args:
+            acc = agg(acc, task_func(*the_args))
+    else:
+        taskset = TaskSet(tasks=map(task_func.subtask, task_args))
+        for result in taskset.apply_async():
+            if isinstance(result, Exception):
+                # TODO: kill all the other tasks
+                raise result
+            acc = agg(acc, result)
+    return acc
+
+
+# TODO: it seems this is never used except in the tests, so it can
+# be removed; mapreduce more or less serve the same purpose
 def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
                flatten_results=False):
     """Runs `task_func` for each of the given data items.
