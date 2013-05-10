@@ -39,7 +39,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         models.JobStats.objects.create(oq_job=self.job)
 
     def _setup_a_new_calculator(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         calc = core.ClassicalHazardCalculator(job)
         return job, calc
@@ -102,7 +102,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     @attr('slow')
     def test_initialize_site_model(self):
         # we need a slightly different config file for this test
-        cfg = helpers.demo_file(
+        cfg = helpers.get_data_path(
             'simple_fault_demo_hazard/job_with_site_model.ini')
         self.job = helpers.get_hazard_job(cfg)
         self.calc = core.ClassicalHazardCalculator(self.job)
