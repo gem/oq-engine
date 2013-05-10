@@ -80,16 +80,16 @@ class Calculator(object):
         return value of the callable and does something with it, such as
         saving or printing it. The order is not preserved.
 
-        :param task_func: a `celery` task callable.
+        :param task_func: a `celery` task callable
         :param task_args: an iterable over positional arguments
-        :param side_effect: a function ret -> None
+        :param side_effect: a function return_value -> None
 
         NB: if the environment variable OQ_NO_DISTRIBUTE is set the
         tasks are run sequentially in the current process.
         """
         for argblock in general.block_splitter(
                 task_arg_gen, self.concurrent_tasks()):
-            tasks.parallelize(task_func, argblock)
+            tasks.parallelize(task_func, argblock, side_effect)
 
     def get_task_complete_callback(self, task_arg_gen, block_size,
                                    concurrent_tasks):
