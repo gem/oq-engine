@@ -179,6 +179,14 @@ gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 @tasks.oqtask  # the parameter job_id is required by the decorator
 def insert_into_gmf_agg(_job_id, rlz, chunk_id, nchunks):
+    """
+    Aggregate the GMVs from the tables gmf and gmf_set in chunks.
+
+    :param int _job_id: used for logging purposes
+    :param rlz: a realization object
+    :param int chunk_id: an integer from 0 to nchunks
+    :param int nchunks: the number of chunks
+    """
     coll = models.GmfCollection.objects.get(lt_realization=rlz)
 
     # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
@@ -207,6 +215,9 @@ insert_into_gmf_agg.ignore_result = False  # essential
 def populate_gmf_agg(job):
     """
     Populate the table gmf_agg from gmf and gmf_set.
+
+    :param job:
+        A :class:`openquake.engine.db.models.OqJob` instance.
     """
     hc = job.hazard_calculation
     rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
@@ -214,6 +225,8 @@ def populate_gmf_agg(job):
     for rlz in rlzs:
         allargs = [(job.id, rlz, chunk_id, nchunks)
                    for chunk_id in range(nchunks)]
+        # parallelizing the insert is effective because all the time is spent
+        # in the aggregration query, not in the insert.
         tasks.parallelize(insert_into_gmf_agg, allargs)
 
 
