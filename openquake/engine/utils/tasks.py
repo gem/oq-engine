@@ -31,29 +31,30 @@ from openquake.engine.utils import config
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
-def noagg(acc, val):
-    """No operation"""
-
-
-def map_reduce(task_func, task_args, acc, agg=noagg):
+def _map_reduce(task_func, task_args, agg, acc):
     """
-    Given a callable and an iterable of arguments, apply the
+    Given a callable and an iterable of positional arguments, apply the
     callable to the arguments in parallel and return an aggregate
     result depending on the initial value of the accumulator
-    and on the aggregation function. Notice that by default no
-    aggregation is performed. This is useful to run
-    tasks which do not return results. To save memory, the order is
+    and on the aggregation function. To save memory, the order is
     not preserved and there is no list with the intermediated results:
     the accumulator is incremented as soon as a task result comes.
 
     :param task_func: a `celery` task callable.
-    :param task_args: an iterable over arguments
-    :param acc: the initial value of the accumulator
+    :param task_args: an iterable over positional arguments
     :param agg: the aggregation function, (acc, val) -> new acc
+    :param acc: the initial value of the accumulator
     :returns: the final value of the accumulator
 
     NB: if the environment variable OQ_NO_DISTRIBUTE is set the
-    tasks are run sequentially in the current process.
+    tasks are run sequentially in the current process and then
+    map_reduce(task_func, task_args, agg, acc) is the same as
+    reduce(agg, itertools.starmap(task_func, task_args), acc).
+    Users of map_reduce should be aware of the fact that when
+    thousands of tasks are spawned and large arguments are passed
+    or large results are returned they may incur in memory issue:
+    this is way the calculators limit the queue with the
+    `concurrent_task` concept.
     """
     if no_distribute():
         for the_args in task_args:
@@ -66,6 +67,29 @@ def map_reduce(task_func, task_args, acc, agg=noagg):
                 raise result
             acc = agg(acc, result)
     return acc
+
+
+# used to implement BaseCalculator.parallelize, which takes in account
+# the `concurrent_task` concept to avoid filling the Celery queue
+def parallelize(task_func, task_args, side_effect=lambda val: None):
+    """
+    Given a callable and an iterable of positional arguments, apply the
+    callable to the arguments in parallel. It is possible to pass a
+    function side_effect(val) which takes the return value of the
+    callable and does something with it (such as saving or printing
+    it). Notice that the order is not preserved. parallelize returns None.
+
+    :param task_func: a `celery` task callable.
+    :param task_args: an iterable over positional arguments
+    :param side_effect: a function val -> None
+
+    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
+    tasks are run sequentially in the current process.
+    """
+    def noagg(acc, val):
+        side_effect(val)
+
+    _map_reduce(task_func, task_args, noagg, None)
 
 
 # TODO: it seems this is never used except in the tests, so it can

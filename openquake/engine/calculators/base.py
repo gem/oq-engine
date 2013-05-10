@@ -21,7 +21,7 @@ import kombu
 import openquake.engine
 
 from openquake.engine import logs
-from openquake.engine.utils import config
+from openquake.engine.utils import config, tasks, general
 
 # Routing key format string for communication between tasks and the control
 # node.
@@ -70,6 +70,26 @@ class Calculator(object):
         Subclasses must implement this.
         """
         raise NotImplementedError()
+
+    def parallelize(self, task_func, task_arg_gen, side_effect=lambda r: None):
+        """
+        Given a callable and a task arg generator, apply the callable to
+        the arguments in parallel. To save memory the tasks are spawned in
+        blocks with maximum size defined by the method .concurrent_tasks().
+        It is possible to pass a function side_effect(ret) which takes the
+        return value of the callable and does something with it, such as
+        saving or printing it. The order is not preserved.
+
+        :param task_func: a `celery` task callable.
+        :param task_args: an iterable over positional arguments
+        :param side_effect: a function ret -> None
+
+        NB: if the environment variable OQ_NO_DISTRIBUTE is set the
+        tasks are run sequentially in the current process.
+        """
+        for argblock in general.block_splitter(
+                task_arg_gen, self.concurrent_tasks()):
+            tasks.parallelize(task_func, argblock)
 
     def get_task_complete_callback(self, task_arg_gen, block_size,
                                    concurrent_tasks):
