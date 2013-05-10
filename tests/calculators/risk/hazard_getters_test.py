@@ -40,6 +40,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
         # need to run pre-execute to parse exposure model
         calc = RiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
         calc.pre_execute()
 
         self._assets = models.ExposureData.objects.filter(

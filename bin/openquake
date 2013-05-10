@@ -282,12 +282,12 @@ def run_hazard(cfg_file, log_level, log_file, exports):
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
-                print 'Job %s ran successfully' % completed_job.id
                 print 'Calculation %d results:' % (
                     completed_job.hazard_calculation.id)
                 list_hazard_outputs(completed_job.hazard_calculation.id)
             else:
-                complain_and_exit('Job %s failed' % completed_job.id,
+                complain_and_exit('Calculation %d failed'
+                                  % completed_job.hazard_calculation.id,
                                   exit_code=1)
     except IOError as e:
         print str(e)
@@ -343,7 +343,7 @@ def _print_calcs_summary(calcs):
     if len(calcs) == 0:
         print 'None'
     else:
-        print ('calc_id | num_jobs | latest_job_status | last_update | '
+        print ('calc_id | status | last_update | '
                'description')
         for calc in calcs:
             jobs = calc.oqjob_set.all()
@@ -366,8 +366,8 @@ def _print_calcs_summary(calcs):
                     '%Y-%m-%d %H:%M:%S %Z'
                 )
 
-            print '%s | %s | %s | %s | %s' % (
-                calc.id, len(jobs), status, last_update, calc.description
+            print '%s | %s | %s | %s' % (
+                calc.id, status, last_update, calc.description
             )
 
 def list_imported_outputs():
@@ -496,12 +496,12 @@ def run_risk(
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
-                print 'Job %s ran successfully' % completed_job.id
                 print 'Calculation %d results:' % (
                     completed_job.risk_calculation.id)
                 list_risk_outputs(completed_job.risk_calculation.id)
             else:
-                complain_and_exit('Job %s failed' % completed_job.id,
+                complain_and_exit('Calculation %s failed'
+                                  % completed_job.risk_calculation.id,
                                   exit_code=1)
     except IOError as e:
         print str(e)

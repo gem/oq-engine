@@ -54,6 +54,7 @@ class ExportTestCase(unittest.TestCase):
         writer = 'openquake.nrmllib.risk.writers.AggregateLossCurveXMLWriter'
 
         self.output_mock.loss_curve.id = 0
+        self.output_mock.loss_curve.loss_type = "structural"
         with mock.patch(writer) as m:
             ret = risk.export_agg_loss_curve(self.output_mock, "/tmp/")
 
@@ -72,6 +73,7 @@ class ExportTestCase(unittest.TestCase):
 
         self.output_mock.loss_curve.id = 0
         self.output_mock.loss_curve.insured = False
+        self.output_mock.loss_curve.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_loss_curve(self.output_mock, "/tmp/")
@@ -92,6 +94,7 @@ class ExportTestCase(unittest.TestCase):
 
         self.output_mock.loss_map.id = 0
         self.output_mock.loss_map.poe = 0.1
+        self.output_mock.loss_map.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_loss_map(self.output_mock, "/tmp/")
@@ -112,6 +115,7 @@ class ExportTestCase(unittest.TestCase):
         writer = 'openquake.nrmllib.risk.writers.BCRMapXMLWriter'
 
         self.output_mock.bcr_distribution.id = 0
+        self.output_mock.bcr_distribution.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_bcr_distribution(self.output_mock, "/tmp/")
@@ -133,6 +137,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.aggregateloss.id = 0
         self.output_mock.aggregateloss.mean = 1
         self.output_mock.aggregateloss.std_dev = 2
+        self.output_mock.aggregateloss.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_aggregate_loss(self.output_mock, "/tmp/")

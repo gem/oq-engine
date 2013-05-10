@@ -32,6 +32,7 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         self.job, _ = helpers.get_fake_risk_job(
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
+        models.JobStats.objects.create(oq_job=self.job)
 
     @property
     def hazard_calculation(self):
@@ -87,14 +88,19 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
         self.assertEqual(["a1", "a2", "a3"], asset_refs)
 
-    def test_set_risk_models(self):
+    def test_get_risk_models(self):
         # Test that Vulnerability model and functions are properly
         # stored and associated with the calculator
 
-        self.calculator.taxonomies = {'VF': 10}
-        self.calculator.set_risk_models()
-        self.assertEqual(1, len(self.calculator.vulnerability_functions))
-        self.assertEqual({'VF': 'PGA'}, self.calculator.taxonomy_imt)
+        # load exposure
+        self.calculator.get_taxonomies()
+
+        risk_models = self.calculator.get_risk_models()
+        self.assertEqual(1, len(risk_models))
+        self.assertTrue('VF' in risk_models)
+        self.assertEqual(1, len(risk_models['VF']))
+        self.assertTrue('structural' in risk_models['VF'])
+        self.assertEqual("PGA", risk_models['VF']['structural'].imt)
 
     def test_initialize_progress(self):
         # Tests that the progress counter has been initialized
@@ -157,8 +163,9 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         self.job.risk_calculation.hazard_output = None
         with self.assertRaises(ValueError) as ar:
             self.calc.parse_vulnerability_model(vuln_content)
-        expected_error = ('The same taxonomy is associated with different imts'
-                          ' MMI and PGA')
+        expected_error = ('Error creating vulnerability function for taxonomy '
+                          'A. A taxonomy can not be associated with different '
+                          'vulnerability functions')
         self.assertEqual(expected_error, ar.exception.message)
 
     def test_lr_eq_0_cov_gt_0(self):

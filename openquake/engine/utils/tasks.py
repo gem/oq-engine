@@ -93,44 +93,9 @@ def parallelize(task_func, task_args, side_effect=lambda val: None):
 
 class JobCompletedError(Exception):
     """
-    Exception to be thrown by :func:`get_running_job`
-    in case of dealing with already completed job.
+    Exception to be thrown by :func:`oqtask` in case of dealing with already
+    completed job.
     """
-
-
-def get_running_job(job_id):
-    """Helper function which is intended to be run by celery task functions.
-
-    Given the id of an in-progress calculation
-    (:class:`openquake.engine.db.models.OqJob`), load all of the calculation
-    data from the database and KVS and return a
-    :class:`openquake.engine.engine.JobContext` object.
-
-    If the calculation is not currently running, a
-    :exc:`JobCompletedError` is raised.
-
-    :returns:
-        :class:`openquake.engine.engine.JobContext` object, representing an
-        in-progress job. This object is created from cached data in the
-        KVS as well as data stored in the relational database.
-    :raises JobCompletedError:
-        If :meth:`~openquake.engine.engine.JobContext.is_job_completed` returns
-        ``True`` for ``job_id``.
-    """
-    # pylint: disable=W0404
-    from openquake.engine.engine import JobContext
-
-    if JobContext.is_job_completed(job_id):
-        raise JobCompletedError(job_id)
-
-    job_ctxt = JobContext.from_kvs(job_id)
-    if job_ctxt and job_ctxt.params:
-        level = job_ctxt.log_level
-    else:
-        level = 'warn'
-    logs.init_logs_amqp_send(level=level, job_id=job_id)
-
-    return job_ctxt
 
 
 def oqtask(task_func):
@@ -158,9 +123,17 @@ def oqtask(task_func):
         try:
             # check if the job is still running
             job = models.OqJob.objects.get(id=job_id)
+            calculation = job.calculation
 
             # Setup task logging, via AMQP ...
-            logs.init_logs_amqp_send(level=job.log_level, job_id=job_id)
+            if isinstance(calculation, models.HazardCalculation):
+                logs.init_logs_amqp_send(level=job.log_level,
+                                         calc_domain='hazard',
+                                         calc_id=calculation.id)
+            else:
+                logs.init_logs_amqp_send(level=job.log_level,
+                                         calc_domain='risk',
+                                         calc_id=calculation.id)
 
             # Tasks can be used in either the `execute` or `post-process` phase
             if job.is_running is False:
@@ -169,7 +142,7 @@ def oqtask(task_func):
                 raise JobCompletedError(
                     'The status of job %d is %s, should be executing or '
                     'post_processing' % (job_id, job.status))
-            # ... now continue with task execution.
+            # else continue with task execution
             res = task_func(*args, **kwargs)
         # TODO: should we do something different with the JobCompletedError?
         except Exception, err:
