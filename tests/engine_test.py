@@ -286,7 +286,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
 
     def test_create_risk_calculation(self):
         # we need an hazard output to create a risk calculation
-        hazard_cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        hazard_cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         hazard_job = helpers.get_hazard_job(hazard_cfg, 'openquake')
         hc = hazard_job.hazard_calculation
         rlz = models.LtRealization.objects.create(
@@ -314,7 +314,8 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         owner = helpers.default_user()
 
         vuln_file = models.Input(digest='123', path='/foo/bar', size=0,
-                                 input_type='vulnerability', owner=owner)
+                                 input_type='structural_vulnerability',
+                                 owner=owner)
         vuln_file.save()
         exposure_file = models.Input(digest='456', path='/foo/baz', size=0,
                                      input_type='exposure', owner=owner)
@@ -346,7 +347,7 @@ class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
     """
 
     def test_read_and_validate_hazard_config(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = engine.prepare_job(getpass.getuser())
         params, files = engine.parse_config(open(cfg, 'r'))
         calculation = engine.create_hazard_calculation(
@@ -375,8 +376,8 @@ class DeleteHazCalcTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hazard_cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        cls.risk_cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
+        cls.hazard_cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
+        cls.risk_cfg = helpers.get_data_path('classical_psha_based_risk/job.ini')
 
     def test_del_haz_calc(self):
         hazard_job = helpers.get_hazard_job(self.hazard_cfg,
@@ -461,8 +462,8 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.hazard_cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        cls.risk_cfg = helpers.demo_file('classical_psha_based_risk/job.ini')
+        cls.hazard_cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
+        cls.risk_cfg = helpers.get_data_path('classical_psha_based_risk/job.ini')
 
     def test_del_risk_calc(self):
         risk_job, _ = helpers.get_fake_risk_job(
