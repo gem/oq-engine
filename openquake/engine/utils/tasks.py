@@ -19,7 +19,6 @@
 
 """Utility functions related to splitting work into tasks."""
 
-import itertools
 from functools import wraps
 
 from celery.task.sets import TaskSet
@@ -164,11 +163,12 @@ def oqtask(task_func):
             logs.init_logs_amqp_send(level=job.log_level, job_id=job_id)
 
             # Tasks can be used in either the `execute` or `post-process` phase
-            if not (job.is_running
-                    and job.status in ('executing', 'post_processing')):
-                # the job is not running
-                raise JobCompletedError(job_id)
-            # The job is running.
+            if job.is_running is False:
+                raise JobCompletedError('Job %d is not running' % job_id)
+            elif job.status not in ('executing', 'post_processing'):
+                raise JobCompletedError(
+                    'The status of job %d is %s, should be executing or '
+                    'post_processing' % (job_id, job.status))
             # ... now continue with task execution.
             res = task_func(*args, **kwargs)
         # TODO: should we do something different with the JobCompletedError?
