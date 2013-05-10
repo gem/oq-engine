@@ -137,6 +137,15 @@ class BaseOQModelForm(ModelForm):
             del kwargs['exports']
         super(BaseOQModelForm, self).__init__(*args, **kwargs)
 
+    def has_vulnerability(self):
+        """
+        :returns: True if a vulnerability file has been given
+        """
+        return [itype
+                for itype, _desc in models.Input.INPUT_TYPE_CHOICES
+                if (itype.endswith('vulnerability') and
+                    "%s_file" % itype in self.files)]
+
     def _add_error(self, field_name, error_msg):
         """
         Add an error to the `errors` dict.
@@ -319,7 +328,7 @@ class ClassicalHazardForm(BaseHazardModelForm):
         super_valid = super(ClassicalHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' in self.files:
+        if self.has_vulnerability():
             if self.instance.intensity_measure_types_and_levels is not None:
                 msg = (
                     '`intensity_measure_types_and_levels` is ignored when a '
@@ -391,7 +400,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
         # If a vulnerability model is defined, show warnings if the user also
         # specified `intensity_measure_types_and_levels` or
         # `intensity_measure_types`:
-        if 'vulnerability_file' in self.files:
+        if self.has_vulnerability():
             if (self.instance.intensity_measure_types_and_levels
                     is not None):
                 msg = (
@@ -482,7 +491,7 @@ class DisaggHazardForm(BaseHazardModelForm):
         super_valid = super(DisaggHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' in self.files:
+        if self.has_vulnerability():
             if self.instance.intensity_measure_types_and_levels is not None:
                 msg = (
                     '`intensity_measure_types_and_levels` is ignored when a '
@@ -524,7 +533,7 @@ class ScenarioHazardForm(BaseHazardModelForm):
         super_valid = super(ScenarioHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' in self.files:
+        if self.has_vulnerability():
             if self.instance.intensity_measure_types is not None:
                 msg = (
                     '`intensity_measure_types` is ignored when a '
@@ -649,9 +658,22 @@ class ScenarioRiskForm(BaseOQModelForm):
             'maximum_distance',
             'master_seed',
             'asset_correlation',
-            'insured_losses'
+            'insured_losses',
+            'time_event'
         )
 
+    def is_valid(self):
+        super_valid = super(ScenarioRiskForm, self).is_valid()
+        rc = self.instance          # RiskCalculation instance
+
+        if 'occupancy_vulnerability_file' in self.files:
+            if rc.time_event is None:
+                self._add_error('time_event', "Scenario Risk requires "
+                                "time_event when an occupancy vulnerability "
+                                "model is given")
+
+                return False
+        return super_valid
 
 # Silencing 'Missing docstring' and 'Invalid name' for all of the validation
 # functions (the latter because some of the function names are very long).

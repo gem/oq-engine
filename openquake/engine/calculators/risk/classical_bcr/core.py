@@ -21,7 +21,7 @@ from openquake.risklib import scientific, utils
 from openquake.risklib.api import Classical
 
 from openquake.engine.calculators.base import signal_task_complete
-from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.calculators.risk.classical import core as classical
 from openquake.engine.utils import tasks
 from openquake.engine import logs
@@ -42,10 +42,11 @@ def classical_bcr(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
-      A list of :class:`..base.CalculationUnit` to be run
+    :param dict units:
+      A dict of :class:`..base.CalculationUnit` instances keyed by
+      loss type string
     :param containers:
-      An instance of :class:`..base.OutputDict` containing
+      An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
@@ -59,12 +60,15 @@ def classical_bcr(job_id, units, containers, params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
-        do_classical_bcr(units, containers, params, profile)
-    signal_task_complete(job_id=job_id, num_items=len(units[0].getter.assets))
+        for loss_type in units:
+            do_classical_bcr(
+                loss_type, units[loss_type], containers, params, profile)
+    num_items = base.get_num_items(units)
+    signal_task_complete(job_id=job_id, num_items=num_items)
 classical_bcr.ignore_result = False
 
 
-def do_classical_bcr(units, containers, params, profile):
+def do_classical_bcr(loss_type, units, containers, params, profile):
     for unit_orig, unit_retro in utils.pairwise(units):
         with profile('getting hazard'):
             assets, hazard_curves = unit_orig.getter()
@@ -87,13 +91,14 @@ def do_classical_bcr(units, containers, params, profile):
                 scientific.bcr(
                     eal_original[i], eal_retrofitted[i],
                     params.interest_rate, params.asset_life_expectancy,
-                    asset.value, asset.retrofitting_cost)
+                    asset.value(loss_type), asset.retrofitting_cost)
                 for i, asset in enumerate(assets)]
 
         with logs.tracing('writing results'):
             containers.write(
                 assets, zip(eal_original, eal_retrofitted, bcr_results),
                 output_type="bcr_distribution",
+                loss_type=loss_type,
                 hazard_output_id=unit_orig.getter.hazard_output_id)
 
 
@@ -110,37 +115,51 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
 
     def __init__(self, job):
         super(ClassicalBCRRiskCalculator, self).__init__(job)
-        self.vulnerability_functions_retrofitted = None
-        self.taxonomy_imt_retrofitted = dict()
+        self.risk_models_retrofitted = None
 
-    def calculation_units(self, assets):
+    def calculation_units(self, loss_type, assets):
         units = []
 
         taxonomy = assets[0].taxonomy
-        vf_orig = self.vulnerability_functions[taxonomy]
-        vf_retro = self.vulnerability_functions_retrofitted[taxonomy]
+        model_orig = self.risk_models[taxonomy][loss_type]
+        model_retro = self.risk_models_retrofitted[taxonomy][loss_type]
 
         for ho in self.rc.hazard_outputs():
             units.extend([
                 base.CalculationUnit(
                     Classical(
-                        vulnerability_function=vf_orig,
+                        model_orig.vulnerability_function,
                         steps=self.rc.lrem_steps_per_interval),
                     hazard_getters.HazardCurveGetterPerAsset(
                         ho,
                         assets,
                         self.rc.best_maximum_distance,
-                        self.taxonomy_imt[taxonomy])),
+                        model_orig.imt)),
                 base.CalculationUnit(
                     Classical(
-                        vulnerability_function=vf_retro,
+                        model_retro.vulnerability_function,
                         steps=self.rc.lrem_steps_per_interval),
                     hazard_getters.HazardCurveGetterPerAsset(
                         ho,
                         assets,
                         self.rc.best_maximum_distance,
-                        self.taxonomy_imt_retrofitted[taxonomy]))])
+                        model_retro.imt))])
         return units
+
+    def get_taxonomies(self):
+        """
+        Override the default get_taxonomies to provide more detailed
+        validation of the exposure.
+
+        Check that the reco value is present in the exposure
+        """
+        taxonomies = super(ClassicalBCRRiskCalculator, self).get_taxonomies()
+
+        if (self.rc.exposure_model.exposuredata_set.filter(
+                reco__isnull=True)).exists():
+            raise ValueError("Some assets do not have retrofitted costs")
+
+        return taxonomies
 
     @property
     def calculator_parameters(self):
@@ -159,15 +178,17 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         :class:`openquake.engine.db.models.BCRDistribution` instance and its
         :class:`openquake.engine.db.models.Output` container.
 
-        :returns: A list containing the output container id
+        :returns: an instance of OutputDict
         """
-        ret = base.OutputDict()
+        ret = writers.OutputDict()
 
-        ret.set(models.BCRDistribution.objects.create(
-                hazard_output=hazard_output,
-                output=models.Output.objects.create_output(
-                    self.job, "BCR Distribution for hazard %s" % hazard_output,
-                    "bcr_distribution")))
+        for loss_type in base.loss_types(self.risk_models):
+            name = "BCR Map. type=%s hazard=%s" % (loss_type, hazard_output)
+            ret.set(models.BCRDistribution.objects.create(
+                    hazard_output=hazard_output,
+                    loss_type=loss_type,
+                    output=models.Output.objects.create_output(
+                        self.job, name, "bcr_distribution")))
         return ret
 
     def create_statistical_outputs(self):
@@ -175,14 +196,16 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         Override default behaviour as BCR and scenario calculators do
         not compute mean/quantiles outputs"
         """
-        return base.OutputDict()
+        return writers.OutputDict()
 
-    def set_risk_models(self):
+    def pre_execute(self):
         """
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        self.vulnerability_functions, self.taxonomy_imt = (
-            self.get_vulnerability_model())
-        (self.vulnerability_functions_retrofitted,
-         self.taxonomy_imt_retrofitted) = self.get_vulnerability_model(True)
+        super(ClassicalBCRRiskCalculator, self).pre_execute()
+        models_retro = super(ClassicalBCRRiskCalculator, self).get_risk_models(
+            retrofitted=True)
+        self.check_taxonomies(models_retro)
+        self.check_imts(base.required_imts(models_retro))
+        self.risk_models_retrofitted = models_retro
