@@ -83,6 +83,10 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 
+#: Kind of supported type of loss outputs
+LOSS_TYPES = ["structural", "non_structural", "occupants", "contents"]
+
+
 def order_by_location(queryset):
     """
     Utility function to order a queryset by location. This works even if
@@ -286,8 +290,12 @@ class Input(djm.Model):
         (u'gsim_logic_tree', u'Ground Shaking Intensity Model Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
-        (u'vulnerability', u'Vulnerability'),
-        (u'vulnerability_retrofitted', u'Vulnerability Retrofitted'),
+        (u'structural_vulnerability', u'Structural Vulnerability'),
+        (u'non_structural_vulnerability', u'Non Structural Vulnerability'),
+        (u'contents_vulnerability', u'Contents Vulnerability'),
+        (u'occupancy_vulnerability', u'Occupancy Vulnerability'),
+        (u'structural_vulnerability_retrofitted',
+         u'Structural Vulnerability Retrofitted'),
         (u'site_model', u'Site Model'),
         (u'rupture_model', u'Rupture Model')
     )
@@ -1050,6 +1058,11 @@ class RiskCalculation(djm.Model):
     ######################################
     interest_rate = djm.FloatField(null=True, blank=True)
     asset_life_expectancy = djm.FloatField(null=True, blank=True)
+
+    ######################################
+    # Scenario parameters:
+    ######################################
+    time_event = djm.TextField(blank=True, null=True)
 
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
@@ -2181,6 +2194,7 @@ class LossFraction(djm.Model):
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
     poe = djm.FloatField(null=True)
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
@@ -2345,6 +2359,7 @@ class LossMap(djm.Model):
     poe = djm.FloatField(null=True)
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"loss_map'
@@ -2371,6 +2386,7 @@ class AggregateLoss(djm.Model):
     insured = djm.BooleanField(default=False)
     mean = djm.FloatField()
     std_dev = djm.FloatField()
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss'
@@ -2390,6 +2406,7 @@ class LossCurve(djm.Model):
     # hazard_output the following fields must be set
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -2444,6 +2461,7 @@ class EventLoss(djm.Model):
     output = djm.OneToOneField('Output')
     rupture = djm.ForeignKey('SESRupture')
     aggregate_loss = djm.FloatField()
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"event_loss'
@@ -2457,6 +2475,7 @@ class BCRDistribution(djm.Model):
     output = djm.OneToOneField("Output", related_name="bcr_distribution")
     hazard_output = djm.OneToOneField(
         "Output", related_name="risk_bcr_distribution")
+    loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -2580,25 +2599,6 @@ class ExposureModel(djm.Model):
         return ExposureData.objects.taxonomies_contained_in(
             self.id, region_constraint)
 
-    def get_asset_chunk(self, taxonomy, region_constraint, offset, count):
-        """
-
-        :param str taxonomy:
-            The taxonomy of the returned objects.
-        :param Polygon region_constraint:
-            A Polygon object with a wkt property used to filter the exposure.
-        :param int offset:
-            An offset used to paginate the returned set.
-        :param int count:
-            An offset used to paginate the returned set.
-
-        :returns:
-            A list of `openquake.engine.db.models.ExposureData` objects of a
-            given taxonomy contained in a region and paginated.
-        """
-        return ExposureData.objects.contained_in(
-            self.id, taxonomy, region_constraint, offset, count)
-
 
 class Occupancy(djm.Model):
     '''
@@ -2617,25 +2617,44 @@ class AssetManager(djm.GeoManager):
     """
     Asset manager
     """
-    def contained_in(self, exposure_model_id, taxonomy,
-                     region_constraint, offset, size):
+    def get_asset_chunk(self, rc, taxonomy, offset, size):
         """
         :returns the asset ids (ordered by location) contained in
-        `region_constraint` of `taxonomy` associated with an
-        `openquake.engine.db.models.ExposureModel` with ID equal to
-        `exposure_model_id`
+        `region_constraint`(embedded in the risk calculation `rc`) of
+        `taxonomy` associated with the
+        `openquake.engine.db.models.ExposureModel` associated with
+        `rc`.
+
+        It also add an annotation to each ExposureData object to provide the
+        right occupants value for the risk calculation given in input
         """
+
+        args = (rc.exposure_model.id, taxonomy,
+                "SRID=4326; %s" % rc.region_constraint.wkt)
+        if rc.time_event is None:
+            occupants = "AVG(riski.occupancy.occupants)"
+            occupants_cond = "1 = 1"
+        else:
+            occupants = "riski.occupancy.occupants"
+            occupants_cond = "riski.occupancy.description = %s"
+            args += (rc.time_event,)
+        args += (size, offset)
 
         return list(
             self.raw("""
-            SELECT * FROM riski.exposure_data
-            WHERE exposure_model_id = %s AND taxonomy = %s AND
-            ST_COVERS(ST_GeographyFromText(%s), site)
+            SELECT riski.exposure_data.*, {occupants} AS occupancy
+            FROM riski.exposure_data
+            LEFT JOIN riski.occupancy
+            ON riski.exposure_data.id = riski.occupancy.exposure_data_id
+            WHERE exposure_model_id = %s AND
+                  taxonomy = %s AND
+                  ST_COVERS(ST_GeographyFromText(%s), site) AND
+                  {occupants_cond}
+            GROUP BY riski.exposure_data.id
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
-            """, [exposure_model_id, taxonomy,
-                  "SRID=4326; %s" % region_constraint.wkt,
-                  size, offset]))
+            """.format(occupants=occupants, occupants_cond=occupants_cond),
+            args))
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
@@ -2734,13 +2753,26 @@ class ExposureData(djm.Model):
                 return cost * area * number_of_units
         raise ValueError("Invalid input")
 
-    @property
-    def value(self):
+    def value(self, loss_type):
         """
-        The structural per-asset value.
+        The per-asset value.
         """
+        if loss_type == "structural":
+            cost = self.stco
+            cost_type = self.exposure_model.stco_type
+        elif loss_type == "non_structural":
+            cost = self.non_stco
+            cost_type = self.non_stco_type
+        elif loss_type == "contents":
+            cost = self.coco
+            cost_type = self.exposure_model.coco_type
+        elif loss_type == "occupancy":
+            # we expect a django annotation called occupants to be
+            # present (like the one provided by #get_asset_chunk)
+            cost_type = "aggregated"
+            cost = self.occupants
         return self.per_asset_value(
-            cost=self.stco, cost_type=self.exposure_model.stco_type,
+            cost=cost, cost_type=cost_type,
             area=self.area, area_type=self.exposure_model.area_type,
             number_of_units=self.number_of_units,
             category=self.exposure_model.category)
