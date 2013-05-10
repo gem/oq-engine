@@ -33,6 +33,7 @@ class EventBasedBCRRiskCalculatorTestCase(
             demo_file('event_based_hazard/job.ini'), output_type="gmf")
 
         self.calculator = core.EventBasedBCRRiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
 
     def shortDescription(self):
         """
