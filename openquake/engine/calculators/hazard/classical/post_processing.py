@@ -200,7 +200,7 @@ def do_hazard_map_post_process(job):
         task_args = ((job.id, hazard_curve_id, poes)
                      for hazard_curve_id in block)
 
-        tasks.map_reduce(hazard_curves_to_hazard_map_task, task_args, None)
+        tasks.parallelize(hazard_curves_to_hazard_map_task, task_args)
 
         logs.LOG.debug('< Done Hazard Map post-processing block, %s of %s'
                        % (i + 1, total_blocks))

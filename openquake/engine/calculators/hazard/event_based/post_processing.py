@@ -201,6 +201,7 @@ def insert_into_gmf_agg(_job_id, rlz, chunk_id, nchunks):
         # TODO: delete the copied rows from gmf; this can be done
         # only after changing the export procedure to read from gmf_agg
     curs.close()
+insert_into_gmf_agg.ignore_result = False  # essential
 
 
 def populate_gmf_agg(hc, job_id=None):
@@ -212,7 +213,7 @@ def populate_gmf_agg(hc, job_id=None):
     for rlz in rlzs:
         allargs = [(job_id, rlz, chunk_id, nchunks)
                    for chunk_id in range(nchunks)]
-        tasks.map_reduce(insert_into_gmf_agg, allargs, None)
+        tasks.parallelize(insert_into_gmf_agg, allargs)
 
 
 def do_post_process(job):
@@ -239,7 +240,7 @@ def do_post_process(job):
         logs.LOG.debug('> GMF post-processing block, %s of %s',
                        i + 1, total_blocks)
 
-        tasks.map_reduce(gmf_to_hazard_curve_task, block, None)
+        tasks.parallelize(gmf_to_hazard_curve_task, block)
 
         logs.LOG.debug('< Done GMF post-processing block, %s of %s',
                        i + 1, total_blocks)
