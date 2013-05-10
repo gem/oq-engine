@@ -86,7 +86,11 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
-            populate_gmf_agg(job.hazard_calculation)
+            job.is_running = True
+            job.status = 'post_processing'
+            job.save()
+            # workaround to fool the JobCompletedError
+            populate_gmf_agg(job)
 
         return gmf_set.gmf_collection.output.id
 
