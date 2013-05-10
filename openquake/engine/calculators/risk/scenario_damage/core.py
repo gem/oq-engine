@@ -46,10 +46,11 @@ def scenario_damage(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
-      A list of :class:`..base.CalculationUnit` to be run
+    :param dict units:
+      A dict with a single item keyed by the string "damage", a list of
+      :class:`..base.CalculationUnit` to be run
     :param containers:
-      An instance of :class:`..base.OutputDict` containing
+      An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
@@ -60,7 +61,7 @@ def scenario_damage(job_id, units, containers, params):
             name, job_id, scenario_damage, tracing=True)
 
     # in scenario damage calculation we have only ONE calculation unit
-    unit = units[0]
+    unit = units['damage'][0]
 
     # and NO containes
     assert len(containers) == 0
@@ -68,8 +69,9 @@ def scenario_damage(job_id, units, containers, params):
     with db.transaction.commit_on_success(using='reslt_writer'):
         fractions, taxonomy = do_scenario_damage(unit, params, profile)
 
+    num_items = base.get_num_items(units)
     signal_task_complete(
-        job_id=job_id, num_items=len(unit.getter.assets),
+        job_id=job_id, num_items=num_items,
         fractions=fractions, taxonomy=taxonomy)
 scenario_damage.ignore_result = False
 
@@ -117,10 +119,9 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         # updated in task_completed_hook when the fractions per taxonomy
         # becomes available, as computed by the workers
         self.ddpt = {}
-        self.fragility_functions = None  # will be set in #set_risk_models
         self.damage_state_ids = None
 
-    def pre_execute(self):
+    def validate_hazard(self):
         """
         Override default behavior to add an additional validation.
         Check that the given hazard input is of the proper type.
@@ -134,25 +135,28 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             raise RuntimeError(
                 "The provided hazard output is not a gmf scenario collection")
 
-        super(ScenarioDamageRiskCalculator, self).pre_execute()
+        super(ScenarioDamageRiskCalculator, self).validate_hazard()
 
-    def calculation_units(self, assets):
+    def get_calculation_units(self, assets):
         """
         :returns:
-            A fixed list of taxonomy dependant arguments that
-            the calculator pass to a worker. In this case taxonomy,
-            fragility_model and fragility_functions for the given
-            taxonomy.
+          a list of :class:`..base.CalculationUnit` instances
         """
         taxonomy = assets[0].taxonomy
-        return [base.CalculationUnit(
-            api.ScenarioDamage(self.fragility_functions[taxonomy]),
+        model = self.risk_models[taxonomy]['damage']
+
+        ret = [base.CalculationUnit(
+            api.ScenarioDamage(model.fragility_functions),
             hazard_getters.GroundMotionScenarioGetter(
                 ho,
                 assets,
                 self.rc.best_maximum_distance,
-                self.taxonomy_imt[taxonomy]))
-                for ho in self.rc.hazard_outputs()]
+                model.imt))
+               for ho in self.rc.hazard_outputs()]
+        # no loss types support at the moment. Use the sentinel key
+        # "damage" instead of a loss type for consistency with other
+        # methods
+        return dict(damage=ret)
 
     def task_completed_hook(self, message):
         """
@@ -203,26 +207,29 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                 "dmg_dist_total")
             writers.total_damage_distribution(tot, self.damage_state_ids)
 
-    def set_risk_models(self):
+    def get_risk_models(self, retrofitted=False):
         """
         Set the attributes fragility_model, fragility_functions, damage_states
         and manage the case of missing taxonomies.
         """
-        fm, self.taxonomy_imt, damage_states = self.parse_fragility_model()
-        self.fragility_functions = fm
-
+        fm, taxonomy_imt, damage_states = self.parse_fragility_model()
+        risk_models = dict([(tax,
+                             dict(
+                                 damage=base.RiskModel(
+                                     taxonomy_imt[tax], None, ffs)))
+                            for tax, ffs in fm.items()])
         for lsi, dstate in enumerate(damage_states):
             models.DmgState.objects.get_or_create(
                 risk_calculation=self.job.risk_calculation,
                 dmg_state=dstate, lsi=lsi)
         self.damage_state_ids = [d.id for d in models.DmgState.objects.filter(
-            risk_calculation=self.job.risk_calculation).order_by('lsi')]
-        self.check_taxonomies(fm)
+            risk_calculation=self.rc).order_by('lsi')]
+        return risk_models
 
     def parse_fragility_model(self):
         """
         Parse the fragility XML file and return fragility_model,
-        fragility_functions, and damage_states for usage in set_risk_models.
+        fragility_functions, and damage_states for usage in get_risk_models.
         """
         content = StringIO.StringIO(
             self.rc.inputs.get(
@@ -260,14 +267,14 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         Override default behaviour as scenario damage calculator does
         not use output containers"
         """
-        return base.OutputDict()
+        return writers.OutputDict()
 
     def create_outputs(self, _ho):
         """
         Override default behaviour as scenario damage calculator does
         not use output containers"
         """
-        return base.OutputDict()
+        return writers.OutputDict()
 
     @property
     def calculator_parameters(self):
