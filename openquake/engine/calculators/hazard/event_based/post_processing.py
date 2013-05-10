@@ -204,14 +204,15 @@ def insert_into_gmf_agg(_job_id, rlz, chunk_id, nchunks):
 insert_into_gmf_agg.ignore_result = False  # essential
 
 
-def populate_gmf_agg(hc, job_id=None):
+def populate_gmf_agg(job):
     """
     Populate the table gmf_agg from gmf and gmf_set.
     """
+    hc = job.hazard_calculation
     rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
     nchunks = 16  # makes 16 chunks for each realization
     for rlz in rlzs:
-        allargs = [(job_id, rlz, chunk_id, nchunks)
+        allargs = [(job.id, rlz, chunk_id, nchunks)
                    for chunk_id in range(nchunks)]
         tasks.parallelize(insert_into_gmf_agg, allargs)
 
