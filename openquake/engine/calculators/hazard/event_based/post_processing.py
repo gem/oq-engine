@@ -207,14 +207,15 @@ def insert_into_gmf_agg(gmf_collection_id, chunk_id, nchunks):
         # only after changing the export procedure to read from gmf_agg
 
 
-def populate_gmf_agg(gmf_collection_ids):
+def populate_gmf_agg(gmf_collection_ids, nchunks=8):
     """
     Populate the table gmf_agg from gmf and gmf_set.
 
-    :param rlzs:
-        A list of :class:`openquake.engine.db.models.LtRealization` instances
+    :param gmf_collection_ids:
+        A sequence of ids
+    :param nchunks:
+        The number of chunks in which to split the parallel computation
     """
-    nchunks = 16  # makes 16 chunks for each realization
     for coll_id in gmf_collection_ids:
         allargs = [(coll_id, chunk_id, nchunks) for chunk_id in range(nchunks)]
         # parallelizing the insert is effective because all the time is spent
