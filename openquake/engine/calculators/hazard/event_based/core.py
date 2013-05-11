@@ -142,6 +142,8 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         logs.LOG.debug('Considering %d sources (of %d)',
                        len(filtered_sources), len(sources))
 
+    filtered_away = 0  # ruptures filtered away by the maximum distance
+
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
@@ -161,6 +163,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                               for rupture in all_ruptures)
             filtered_ruptures = [rup for rup, _ in rup_filter(ruptures_sites)]
 
+            filtered_away += len(all_ruptures) - len(filtered_ruptures)
             if not filtered_ruptures:
                 continue
 
@@ -187,8 +190,10 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                     ses_ordinal=ses_rlz_n)
                 _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                            result_grp_ordinal)
-
-    logs.LOG.debug('< task complete, signalling completion')
+    if filtered_away:
+        logs.LOG.debug('%d rupture(s) filtered away by the maximum distance '
+                       'criterium for set %d', filtered_away, ses_rlz_n)
+    logs.LOG.debug('< task complete, signaling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
