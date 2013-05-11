@@ -651,7 +651,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
                                           self.job.id):
-                post_processing.do_post_process(self.job)
+                self.parallelize(
+                    post_processing.gmf_to_hazard_curve_task,
+                    post_processing.gmf_to_hazard_curve_arg_gen(self.job))
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
