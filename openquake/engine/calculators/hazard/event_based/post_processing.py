@@ -43,6 +43,7 @@ import math
 import numpy
 
 from django import db
+from celery.task import task
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -177,8 +178,8 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
 gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
-@tasks.oqtask  # the parameter job_id is required by the decorator
-def insert_into_gmf_agg(_job_id, rlz, chunk_id, nchunks):
+@task
+def insert_into_gmf_agg(rlz, chunk_id, nchunks):
     """
     Aggregate the GMVs from the tables gmf and gmf_set in chunks.
 
@@ -208,23 +209,18 @@ def insert_into_gmf_agg(_job_id, rlz, chunk_id, nchunks):
         logs.LOG.debug(insert_query)
         # TODO: delete the copied rows from gmf; this can be done
         # only after changing the export procedure to read from gmf_agg
-    curs.close()
-insert_into_gmf_agg.ignore_result = False  # essential
 
 
-def populate_gmf_agg(job):
+def populate_gmf_agg(rlzs):
     """
     Populate the table gmf_agg from gmf and gmf_set.
 
-    :param job:
-        A :class:`openquake.engine.db.models.OqJob` instance.
+    :param rlzs:
+        A list of :class:`openquake.engine.db.models.LtRealization` instances
     """
-    hc = job.hazard_calculation
-    rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
     nchunks = 16  # makes 16 chunks for each realization
     for rlz in rlzs:
-        allargs = [(job.id, rlz, chunk_id, nchunks)
-                   for chunk_id in range(nchunks)]
+        allargs = [(rlz, chunk_id, nchunks) for chunk_id in range(nchunks)]
         # parallelizing the insert is effective because all the time is spent
         # in the aggregration query, not in the insert.
         tasks.parallelize(insert_into_gmf_agg, allargs)
