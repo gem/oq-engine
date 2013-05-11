@@ -645,8 +645,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         with EnginePerformanceMonitor(
                 'populating gmf_agg', self.job.id, tracing=True):
             hc = self.job.hazard_calculation
-            rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
-            post_processing.populate_gmf_agg(rlzs)
+            gmfcollections = models.GmfCollection.objects.filter(
+                lt_realization__hazard_calculation=hc)
+            post_processing.populate_gmf_agg(c.id for c in gmfcollections)
 
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
@@ -666,4 +667,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             if self.hc.hazard_maps:
                 with EnginePerformanceMonitor(
                         'generating hazard maps', self.job.id):
-                    cls_post_proc.do_hazard_map_post_process(self.job)
+                    self.parallelize(
+                        cls_post_proc.hazard_curves_to_hazard_map_task,
+                        cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
+                            self.job))
