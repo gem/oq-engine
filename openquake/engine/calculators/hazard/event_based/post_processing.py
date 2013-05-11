@@ -39,7 +39,6 @@ This could be the target for future optimizations.
 """
 
 import itertools
-import math
 import numpy
 
 from django import db
@@ -47,14 +46,13 @@ from celery.task import task
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.utils import config
 from openquake.engine.utils import tasks
-from openquake.engine.utils.general import block_splitter
+
 
 HAZ_CURVE_DISP_NAME_FMT = 'hazard-curve-rlz-%(rlz)s-%(imt)s'
 
 
-def gmf_post_process_arg_gen(job):
+def gmf_to_hazard_curve_arg_gen(job):
     """
     Generate a sequence of args for the GMF to hazard curve post-processing job
     for a given ``job``. These are task args.
@@ -224,36 +222,6 @@ def populate_gmf_agg(rlzs):
         # parallelizing the insert is effective because all the time is spent
         # in the aggregration query, not in the insert.
         tasks.parallelize(insert_into_gmf_agg, allargs)
-
-
-def do_post_process(job):
-    """
-    Run the GMF to hazard curve post-processing tasks for the given ``job``.
-
-    :param job:
-        A :class:`openquake.engine.db.models.OqJob` instance.
-    """
-    block_size = int(config.get('hazard', 'concurrent_tasks'))
-    block_gen = block_splitter(gmf_post_process_arg_gen(job), block_size)
-
-    hc = job.hazard_calculation
-
-    # Stats for debug logging:
-    n_imts = len(hc.intensity_measure_types_and_levels)
-    n_sites = len(hc.points_to_compute())
-    n_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc).count()
-
-    total_blocks = int(math.ceil(
-        (n_imts * n_sites * n_rlzs) / float(block_size)))
-
-    for i, block in enumerate(block_gen):
-        logs.LOG.debug('> GMF post-processing block, %s of %s',
-                       i + 1, total_blocks)
-
-        tasks.parallelize(gmf_to_hazard_curve_task, block)
-
-        logs.LOG.debug('< Done GMF post-processing block, %s of %s',
-                       i + 1, total_blocks)
 
 
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
