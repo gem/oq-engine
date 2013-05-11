@@ -177,7 +177,7 @@ gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
 @task
-def insert_into_gmf_agg(rlz, chunk_id, nchunks):
+def insert_into_gmf_agg(gmf_collection_id, chunk_id, nchunks):
     """
     Aggregate the GMVs from the tables gmf and gmf_set in chunks.
 
@@ -186,8 +186,6 @@ def insert_into_gmf_agg(rlz, chunk_id, nchunks):
     :param int chunk_id: an integer from 0 to nchunks
     :param int nchunks: the number of chunks
     """
-    coll = models.GmfCollection.objects.get(lt_realization=rlz)
-
     # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
     # if location is of geography type, hence the need to cast it to geometry
     insert_query = '''-- running
@@ -199,7 +197,7 @@ def insert_into_gmf_agg(rlz, chunk_id, nchunks):
     FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
     WHERE a.gmf_set_id=b.id AND gmf_collection_id={} AND a.id % {} = {}
     GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
-    '''.format(coll.id, nchunks, chunk_id)
+    '''.format(gmf_collection_id, nchunks, chunk_id)
 
     curs = db.connections['reslt_writer'].cursor()
     with db.transaction.commit_on_success(using='reslt_writer'):
@@ -209,7 +207,7 @@ def insert_into_gmf_agg(rlz, chunk_id, nchunks):
         # only after changing the export procedure to read from gmf_agg
 
 
-def populate_gmf_agg(rlzs):
+def populate_gmf_agg(gmf_collection_ids):
     """
     Populate the table gmf_agg from gmf and gmf_set.
 
@@ -217,8 +215,8 @@ def populate_gmf_agg(rlzs):
         A list of :class:`openquake.engine.db.models.LtRealization` instances
     """
     nchunks = 16  # makes 16 chunks for each realization
-    for rlz in rlzs:
-        allargs = [(rlz, chunk_id, nchunks) for chunk_id in range(nchunks)]
+    for coll_id in gmf_collection_ids:
+        allargs = [(coll_id, chunk_id, nchunks) for chunk_id in range(nchunks)]
         # parallelizing the insert is effective because all the time is spent
         # in the aggregration query, not in the insert.
         tasks.parallelize(insert_into_gmf_agg, allargs)
