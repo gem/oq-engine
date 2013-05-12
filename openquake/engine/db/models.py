@@ -87,6 +87,13 @@ MAX_SINT_32 = (2 ** 31) - 1
 LOSS_TYPES = ["structural", "non_structural", "occupants", "contents"]
 
 
+# a Django cursor perform some caching which is polluting the
+# memory profiler, this is why we are using the underlying cursor
+def getcursor(route):
+    """Return a psycogp2 cursor from a Django route"""
+    return connections[route].connection.cursor()
+
+
 def order_by_location(queryset):
     """
     Utility function to order a queryset by location. This works even if
@@ -1740,6 +1747,24 @@ class SESRupture(djm.Model):
         return None
 
 
+class IterWrapper(object):
+    def __init__(self, it, **kw):
+        self.it = it
+        vars(self).update(kw)
+
+    def __iter__(self):
+        return self.it
+
+    def next(self):
+        return next(self.it)
+
+
+class Loc(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
 class GmfCollection(djm.Model):
     """
     A collection of ground motion field (GMF) sets for a given logic tree
@@ -1754,11 +1779,54 @@ class GmfCollection(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf_collection'
 
-    def __iter__(self):
+    def get_children_ids(self):
         """
-        Iterator for walking through all child :class:`GmfSet` objects.
+        Get the children ids of a given gmf_collection. If the collection
+        is associated to a linearization it has not children.
         """
-        return GmfSet.objects.filter(gmf_collection=self.id).iterator()
+        curs = getcursor('job_init')
+        curs.execute('select partial_cid from hzrdr.gmf_output '
+                     'where complete_cid=%s', (self.id,))
+        return [r[0] for r in curs]
+
+    def get_gmfs(self, gmf_collection_ids, location=None):
+        """
+        Get the ground motion fields from the database in a good
+        format for the XML export.
+        """
+        where = 'WHERE gmf_collection_id in (%s)' % ','.join(
+            map(str, gmf_collection_ids))
+        if location:
+            where += "AND location::geometry ~= 'SRID=4326;%s::geometry'" \
+                % location
+        query = """
+   select gmf_collection_id, imt, sa_period, sa_damping, rupture_id,
+   array_agg(gmv), array_agg(ST_X(geometry(location))),
+   array_agg(ST_Y(geometry(location))) from (
+       select gmf_collection_id, imt, sa_period, sa_damping,
+       unnest(rupture_ids) as rupture_id, location, unnest(gmvs) as gmv
+       from hzrdr.gmf_agg %s) as x
+   group by gmf_collection_id, imt, sa_period, sa_damping, rupture_id
+   order by gmf_collection_id, imt, sa_period, sa_damping, rupture_id;
+   """ % where
+        curs = getcursor('job_init')
+        curs.execute(query)
+        for (gmf_collection_id, imt, sa_period, sa_damping,
+             rupture_id, gmvs, xs, ys) in curs:
+            gmf_nodes = [_GroundMotionFieldNode(gmv, Loc(x, y))
+                         for gmv, x, y in zip(gmvs, xs, ys)]
+            gmf = _GroundMotionField(
+                imt, sa_period, sa_damping, rupture_id, gmf_nodes)
+            yield gmf
+
+    def __iter__(self, location=None):
+        """
+        """
+        #return GmfSet.objects.filter(gmf_collection=self.id).iterator()
+        ids = [self.id] if self.lt_realization else self.get_children_ids()
+        return iter([IterWrapper(self.get_gmfs(ids, location),
+                                 investigation_time=50.,
+                                 stochastic_event_set_id=1)])
 
 
 class GmfSet(djm.Model):
