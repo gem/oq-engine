@@ -22,7 +22,6 @@ A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
-import collections
 import numpy
 
 from openquake.engine import logs
@@ -127,11 +126,9 @@ class HazardGetter(object):
     def __call__(self):
         """
         :returns:
-            A tuple with three elements. The first is an array of instances of
+            A tuple with two elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is an
-            array with the corresponding hazard data, the third is the array of
-            IDs of assets that has been filtered out by the getter by the
-            ``maximum_distance`` criteria.
+            array with the corresponding hazard data.
         """
         # data is a gmf or a set of hazard curves
         asset_ids, data = self.get_data(self.imt)
@@ -241,9 +238,6 @@ class HazardCurveGetterPerAsset(HazardGetter):
         return hazard, distance
 
 
-GmfsRuptures = collections.namedtuple('GmfsRuptures', 'gmfs ruptures')
-
-
 class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
@@ -255,11 +249,10 @@ class GroundMotionValuesGetter(HazardGetter):
     def __call__(self):
         """
         :returns:
-            A tuple with three elements. The first is an array of instances of
-            :class:`openquake.engine.db.models.ExposureData`, the second is an
-            array with the corresponding hazard data, the third is the array of
-            IDs of assets that has been filtered out by the getter by the
-            ``maximum_distance`` criteria.
+            A tuple with two elements. The first is an array of instances of
+            :class:`openquake.engine.db.models.ExposureData`, the second is a
+            pair (gmfs, ruptures) with the closest ground motion value for each
+            asset.
         """
         asset_ids, gmf_ids = self.get_data(self.imt)
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
@@ -292,7 +285,7 @@ class GroundMotionValuesGetter(HazardGetter):
             gmfs[gmf_id] = gmvs
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
-               GmfsRuptures([gmfs[i] for i in gmf_ids], sorted_ruptures))
+               ([gmfs[i] for i in gmf_ids], sorted_ruptures))
         return ret
 
     def get_data(self, imt):
