@@ -314,7 +314,8 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         owner = helpers.default_user()
 
         vuln_file = models.Input(digest='123', path='/foo/bar', size=0,
-                                 input_type='vulnerability', owner=owner)
+                                 input_type='structural_vulnerability',
+                                 owner=owner)
         vuln_file.save()
         exposure_file = models.Input(digest='456', path='/foo/baz', size=0,
                                      input_type='exposure', owner=owner)
