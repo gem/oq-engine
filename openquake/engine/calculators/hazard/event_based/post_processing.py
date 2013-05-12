@@ -207,7 +207,7 @@ def insert_into_gmf_agg(gmf_collection_id, chunk_id, nchunks):
         # only after changing the export procedure to read from gmf_agg
 
 
-def populate_gmf_agg(gmf_collection_ids, nchunks=8):
+def populate_gmf_agg(gmf_collection_ids, nchunks=1):
     """
     Populate the table gmf_agg from gmf and gmf_set.
 
