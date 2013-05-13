@@ -1,6 +1,45 @@
 #!/bin/bash
+#
+# packager.sh  Copyright (c) 2013, GEM Foundation.
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+#
+# DESCRIPTION
+#
+# packager.sh automates procedures to:
+#  - test sources
+#  - build Ubuntu package (official or development version)
+#  - test Ubuntu package
+#
+# tests are performed inside linux containers (lxc) to achieve
+# a good compromise between speed and isolation
+#
+# all lxc instances are ephemeral
+#
+# in test sources different repositories and branches can be tested
+# consistently: for each openquake dependency it try to use
+# the same repository and the same branch OR the gem repository
+# and the same branch OR the gem repository and the "master" branch
+#
+# in build Ubuntu package each branch package is saved in a separated
+# directory with a well known name syntax to be able to use
+# correct dependencies during the "test Ubuntu package" procedure
+#
+
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-set -x
+# set -x
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
@@ -26,6 +65,10 @@ TB="	"
 
 #
 #  functions
+
+#
+#  sig_hand - manages cleanup if the build is aborted
+#
 sig_hand () {
     trap ERR
     echo "signal trapped"
@@ -57,9 +100,18 @@ sig_hand () {
     fi
 }
 
+#
+#  dep2var <dep> - converts in a proper way the name of a dependency to a variable name
+#      <dep>    the name of the dependency
+#
 dep2var () {
     echo "$1" | sed 's/[-.]/_/g;s/\(.*\)/\U\1/g'
 }
+
+#
+#  mksafedir <dname> - try to create a directory and rise an alert if it already exists
+#      <dname>    name of the directory to create
+#
 mksafedir () {
     local dname
 
@@ -73,6 +125,10 @@ mksafedir () {
     mkdir -p $dname
 }
 
+#
+#  usage <exitcode> - show usage of the script
+#      <exitcode>    value of exitcode
+#
 usage () {
     local ret
 
@@ -91,6 +147,10 @@ usage () {
     exit $ret
 }
 
+#
+#  _wait_ssh <lxc_ip> - wait until the new lxc ssh daemon is ready
+#      <lxc_ip>    the IP address of lxc instance
+#
 _wait_ssh () {
     local lxc_ip="$1"
 
@@ -105,6 +165,11 @@ _wait_ssh () {
     fi
 }
 
+#
+#  _devtest_innervm_run <branch_id> <lxc_ip> - part of source test performed on lxc
+#      <branch_id>    name of the tested branch
+#      <lxc_ip>       the IP address of lxc instance
+#
 _devtest_innervm_run () {
     local i old_ifs pkgs_list dep branch_id="$1" lxc_ip="$2"
 
@@ -196,6 +261,10 @@ _devtest_innervm_run () {
     return
 }
 
+#
+#  _pkgtest_innervm_run <lxc_ip> - part of package test performed on lxc
+#      <lxc_ip>    the IP address of lxc instance
+#
 _pkgtest_innervm_run () {
     local lxc_ip="$1" old_ifs
 
@@ -281,6 +350,12 @@ _pkgtest_innervm_run () {
     return
 }
 
+#
+#  deps_list <listtype> <filename> - retrieve dependencies list from debian/control
+#                                    to be able to install them without the package
+#      listtype    inform deps_list which control lines use to get dependencies
+#      filename    control file used for input
+#
 deps_list() {
     local old_ifs out_list skip i d listtype="$1" filename="$2"
 
@@ -329,6 +404,11 @@ deps_list() {
     return 0
 }
 
+#
+#  _lxc_name_and_ip_get <filename> - retrieve name and ip of the runned ephemeral lxc and
+#                                    put them into global vars "lxc_name" and "lxc_ip"
+#      <filename>    file where lxc-start-ephemeral output is saved
+#
 _lxc_name_and_ip_get()
 {
     local filename="$1" i e
@@ -357,6 +437,10 @@ _lxc_name_and_ip_get()
     return 0
 }
 
+#
+#  devtest_run <branch_id> - main function of source test
+#      <branch_id>    name of the tested branch
+#
 devtest_run () {
     local deps old_ifs branch_id="$1"
 
@@ -417,6 +501,10 @@ devtest_run () {
     # fi
 }
 
+#
+#  pkgtest_run <branch_id> - main function of package test
+#      <branch_id>    name of the tested branch
+#
 pkgtest_run () {
     local i e branch_id="$1"
 
@@ -492,8 +580,7 @@ EOF
         mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
     fi
 
-    # TODO
-    # app related tests (run demos)
+    # TODO: app related tests (run demos)
 
     return 0
 }
