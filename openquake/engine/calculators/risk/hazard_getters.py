@@ -259,7 +259,8 @@ class GroundMotionValuesGetter(HazardGetter):
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
         for missing_asset_id in missing_asset_ids:
-            # please dont' remove this log: it was required by Vitor
+            # please dont' remove this log: it was required by Vitor since
+            # this is a case that should NOT happen and must raise a warning
             logs.LOG.warn(
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
