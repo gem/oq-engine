@@ -75,11 +75,12 @@ class ExposureContainedInTestCase(unittest.TestCase):
             demo_file('classical_psha_based_risk/job.ini'),
             demo_file('simple_fault_demo_hazard/job.ini'))
         calculator = base.RiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
         calculator.pre_execute()
-        self.model = self.job.risk_calculation.exposure_model
+        self.rc = self.job.risk_calculation
 
         common_fake_args = dict(
-            exposure_model=self.model,
+            exposure_model=self.rc.exposure_model,
             stco=1,
             number_of_units=10,
             reco=1,
@@ -96,29 +97,30 @@ class ExposureContainedInTestCase(unittest.TestCase):
         asset.save()
 
     def test_simple_inclusion(self):
-        region_constraint = Polygon(((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
+        self.rc.region_constraint = Polygon(
+            ((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
 
-        results = models.ExposureData.objects.contained_in(
-            self.model.id, "test", region_constraint, 0, 10)
+        results = models.ExposureData.objects.get_asset_chunk(
+            self.rc, "test", 0, 10)
 
         self.assertEqual(1, len(list(results)))
         self.assertEqual("test1", results[0].asset_ref)
 
     def test_inclusion_of_a_pole(self):
-        region_constraint = Polygon(
+        self.rc.region_constraint = Polygon(
             ((-1, 0), (-1, 1), (1, 1), (1, 0), (-1, 0)))
 
-        results = models.ExposureData.objects.contained_in(
-            self.model.id, "test", region_constraint, 0, 10)
+        results = models.ExposureData.objects.get_asset_chunk(
+            self.rc, "test", 0, 10)
 
         self.assertEqual(1, len(results))
         self.assertEqual("test1", results[0].asset_ref)
 
-        region_constraint = Polygon(
+        self.rc.region_constraint = Polygon(
             ((179, 10), (-179, 10), (-179, -10), (179, -10), (179, 10)))
 
-        results = models.ExposureData.objects.contained_in(
-            self.model.id, "test", region_constraint, 0, 10)
+        results = models.ExposureData.objects.get_asset_chunk(
+            self.rc, "test",  0, 10)
 
         self.assertEqual(1, len(list(results)))
         self.assertEqual("test2", results[0].asset_ref)
