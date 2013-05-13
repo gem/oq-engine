@@ -139,6 +139,9 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         sources_sites = ((src, hc.site_collection) for src in sources)
         filtered_sources = [src for src, _ in ssd_filter(sources_sites)]
 
+        logs.LOG.debug('Considering %d sources (of %d)',
+                       len(filtered_sources), len(sources))
+
     filtered_away = 0  # ruptures filtered away by the maximum distance
 
     # Compute and save stochastic event sets
@@ -163,9 +166,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             filtered_away += len(all_ruptures) - len(filtered_ruptures)
             if not filtered_ruptures:
                 continue
-
-        logs.LOG.debug('Considering %d ruptures (of %d)',
-                       len(filtered_ruptures), len(all_ruptures))
 
         with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
             rupture_ids = [
