@@ -188,8 +188,9 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                 _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                            result_grp_ordinal)
     if filtered_away:
-        logs.LOG.debug('%d rupture(s) filtered away by the maximum distance '
-                       'criterium for set %d', filtered_away, ses_rlz_n)
+        logs.LOG.debug(
+            '%d rupture(s) filtered away by the maximum distance '
+            'criterium for task no %d', filtered_away, result_grp_ordinal)
     logs.LOG.debug('< task complete, signaling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
