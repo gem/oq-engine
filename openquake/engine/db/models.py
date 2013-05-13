@@ -1747,16 +1747,17 @@ class SESRupture(djm.Model):
         return None
 
 
-class IterWrapper(object):
-    def __init__(self, it, **kw):
-        self.it = it
-        vars(self).update(kw)
+class Ses(collections.Sequence):
+    def __init__(self, gmfs, investigation_time, stochastic_event_set_id):
+        self._gmfs = gmfs
+        self.investigation_time = investigation_time
+        self.stochastic_event_set_id = stochastic_event_set_id
 
-    def __iter__(self):
-        return self.it
+    def __getitem__(self, i):
+        return self._gmfs[i]
 
-    def next(self):
-        return next(self.it)
+    def __len__(self):
+        return len(self._gmfs)
 
 
 class Loc(object):
@@ -1779,54 +1780,63 @@ class GmfCollection(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf_collection'
 
-    def get_children_ids(self):
+    def get_children(self):
         """
-        Get the children ids of a given gmf_collection. If the collection
+        Get the children of a given gmf_collection. If the collection
         is associated to a linearization it has not children.
         """
         curs = getcursor('job_init')
         curs.execute('select partial_cid from hzrdr.gmf_output '
                      'where complete_cid=%s', (self.id,))
-        return [r[0] for r in curs]
+        return [self.__class__.objects.get(pk=r[0]) for r in curs]
 
-    def get_gmfs(self, gmf_collection_ids, location=None):
+    def get_gmfs(self, location=None):
         """
         Get the ground motion fields from the database in a good
         format for the XML export.
         """
-        where = 'WHERE gmf_collection_id in (%s)' % ','.join(
-            map(str, gmf_collection_ids))
+        if self.lt_realization is None:  # complete logic tree
+            all_gmfs = []
+            for coll in self.get_children():
+                ## TODO: check if we could use iterators instead of lists
+                for ses in coll.get_gmfs(location):
+                    all_gmfs.extend(ses._gmfs)
+            yield Ses(all_gmfs,
+                      investigation_time=ses.investigation_time,
+                      stochastic_event_set_id=ses.stochastic_event_set_id)
+            return
+        where = 'WHERE gmf_collection_id=%d' % self.id
         if location:
             where += " AND location::geometry ~= 'SRID=4326;%s::geometry'" \
                 % location
-        query = """
-   select gmf_collection_id, imt, sa_period, sa_damping, rupture_id,
-   array_agg(gmv), array_agg(ST_X(geometry(location))),
-   array_agg(ST_Y(geometry(location))) from (
-       select gmf_collection_id, imt, sa_period, sa_damping,
-       unnest(rupture_ids) as rupture_id, location, unnest(gmvs) as gmv
-       from hzrdr.gmf_agg %s) as x
-   group by gmf_collection_id, imt, sa_period, sa_damping, rupture_id
-   order by gmf_collection_id, imt, sa_period, sa_damping, rupture_id;
-   """ % where
-        curs = getcursor('job_init')
-        curs.execute(query)
-        for (gmf_collection_id, imt, sa_period, sa_damping,
-             rupture_id, gmvs, xs, ys) in curs:
-            gmf_nodes = [_GroundMotionFieldNode(gmv, Loc(x, y))
-                         for gmv, x, y in zip(gmvs, xs, ys)]
-            gmf = _GroundMotionField(
-                imt, sa_period, sa_damping, rupture_id, gmf_nodes)
-            yield gmf
+        ses_coll = SESCollection.objects.get(
+            lt_realization=self.lt_realization)
+        for ses in SES.objects.filter(ses_collection=ses_coll):
+            query = """
+       select imt, sa_period, sa_damping, rupture_id,
+       array_agg(gmv), array_agg(ST_X(geometry(location))),
+       array_agg(ST_Y(geometry(location))) from (
+           select imt, sa_period, sa_damping,
+           unnest(rupture_ids) as rupture_id, location, unnest(gmvs) as gmv
+           from hzrdr.gmf_agg %s) as x,
+           hzrdr.ses_rupture as y
+       where x.rupture_id=y.id AND ses_id=%d
+       group by imt, sa_period, sa_damping, rupture_id
+       order by imt, sa_period, sa_damping, rupture_id;
+       """ % (where, ses.id)
+            curs = getcursor('job_init')
+            curs.execute(query)
+            for imt, sa_period, sa_damping, rupture_id, gmvs, xs, ys in curs:
+                gmf_nodes = [_GroundMotionFieldNode(gmv, Loc(x, y))
+                             for gmv, x, y in zip(gmvs, xs, ys)]
+                gmf = _GroundMotionField(
+                    imt, sa_period, sa_damping, rupture_id, gmf_nodes)
+                yield Ses([gmf], investigation_time=ses.investigation_time,
+                          stochastic_event_set_id=ses.id)
 
-    def __iter__(self, location=None):
-        """
-        """
-        #return GmfSet.objects.filter(gmf_collection=self.id).iterator()
-        ids = [self.id] if self.lt_realization else self.get_children_ids()
-        return iter([IterWrapper(self.get_gmfs(ids, location),
-                                 investigation_time=50.,
-                                 stochastic_event_set_id=1)])
+    __iter__ = get_gmfs
+    #def __iter__(self, location=None):
+    #    return GmfSet.objects.filter(gmf_collection=self.id).iterator()
 
 
 class GmfSet(djm.Model):
