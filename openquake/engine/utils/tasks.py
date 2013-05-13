@@ -19,128 +19,83 @@
 
 """Utility functions related to splitting work into tasks."""
 
-import itertools
-
 from functools import wraps
 
 from celery.task.sets import TaskSet
 from celery.task import task
 
-from openquake.engine import logs
+from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
-def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
-               flatten_results=False):
-    """Runs `task_func` for each of the given data items.
-
-    Each subtask operates on an item drawn from `data`. It is up to
-    the caller to provide a collection that yields data as expected
-    by the task function.
-
-    Please note that for tasks with ignore_result=True
-        - no results are returned
-        - the control flow returns to the caller immediately i.e. this
-          function does *not* block while the tasks are running unless
-          the caller specifies an asynchronous task handler function.
-        - if specified, an asynchronous task handler function (`ath`)
-          will be run as soon as the tasks have been started.
-          It can be used to check/wait for task results as appropriate
-          and is likely to execute in parallel with longer running tasks.
-
-    :param task_func: A `celery` task callable.
-    :param str name: The name of the `task_func` parameter used to pass the
-        data item.
-    :param data: The data on which the subtasks are to operate.
-    :param dict tf_args: The remaining (keyword) parameters for `task_func`
-    :param ath: an asynchronous task handler function, may only be specified
-        for a task whose results are ignored.
-    :param dict ath_args: The keyword parameters for `ath`
-    :param bool flatten_results: If set, the results will be returned as a
-        single list (as opposed to [[results1], [results2], ..]).
-    :returns: A list where each element is a result returned by a subtask.
-        If an `ath` function is passed we return whatever it returns, `None`
-        otherwise.
+def _map_reduce(task_func, task_args, agg, acc):
     """
-    logs.HAZARD_LOG.debug("-data_length: %s" % len(data))
+    Given a callable and an iterable of positional arguments, apply the
+    callable to the arguments in parallel and return an aggregate
+    result depending on the initial value of the accumulator
+    and on the aggregation function. To save memory, the order is
+    not preserved and there is no list with the intermediated results:
+    the accumulator is incremented as soon as a task result comes.
 
-    subtask = task_func.subtask
-    if tf_args:
-        subtasks = [subtask(**dict(tf_args.items() + [(name, item)]))
-                    for item in data]
+    :param task_func: a `celery` task callable.
+    :param task_args: an iterable over positional arguments
+    :param agg: the aggregation function, (acc, val) -> new acc
+    :param acc: the initial value of the accumulator
+    :returns: the final value of the accumulator
+
+    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
+    tasks are run sequentially in the current process and then
+    map_reduce(task_func, task_args, agg, acc) is the same as
+    reduce(agg, itertools.starmap(task_func, task_args), acc).
+    Users of map_reduce should be aware of the fact that when
+    thousands of tasks are spawned and large arguments are passed
+    or large results are returned they may incur in memory issue:
+    this is way the calculators limit the queue with the
+    `concurrent_task` concept.
+    """
+    if no_distribute():
+        for the_args in task_args:
+            acc = agg(acc, task_func(*the_args))
     else:
-        subtasks = [subtask(**{name: item}) for item in data]
-
-    logs.HAZARD_LOG.debug("-#subtasks: %s" % len(subtasks))
-
-    result = TaskSet(tasks=subtasks).apply_async()
-    if task_func.ignore_result:
-        # Did the user specify an asynchronous task handler function?
-        if ath:
-            if ath_args:
-                return ath(**ath_args)
-            else:
-                return ath()
-    else:
-        # Only called when we expect result messages to come back.
-        results = result.join_native()
-        _check_exception(results)
-        if results and flatten_results:
-            sample = results[0]
-            if isinstance(sample, (list, tuple, set)):
-                results = list(itertools.chain(*results))
-        return results
+        taskset = TaskSet(tasks=map(task_func.subtask, task_args))
+        for result in taskset.apply_async():
+            if isinstance(result, Exception):
+                # TODO: kill all the other tasks
+                raise result
+            acc = agg(acc, result)
+    return acc
 
 
-def _check_exception(results):
-    """If any of the results is an exception, raise it."""
-    for result in results:
-        if isinstance(result, Exception):
-            raise result
+# used to implement BaseCalculator.parallelize, which takes in account
+# the `concurrent_task` concept to avoid filling the Celery queue
+def parallelize(task_func, task_args, side_effect=lambda val: None):
+    """
+    Given a callable and an iterable of positional arguments, apply the
+    callable to the arguments in parallel. It is possible to pass a
+    function side_effect(val) which takes the return value of the
+    callable and does something with it (such as saving or printing
+    it). Notice that the order is not preserved. parallelize returns None.
+
+    :param task_func: a `celery` task callable.
+    :param task_args: an iterable over positional arguments
+    :param side_effect: a function val -> None
+
+    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
+    tasks are run sequentially in the current process.
+    """
+    def noagg(acc, val):
+        side_effect(val)
+
+    _map_reduce(task_func, task_args, noagg, None)
 
 
 class JobCompletedError(Exception):
     """
-    Exception to be thrown by :func:`get_running_job`
-    in case of dealing with already completed job.
+    Exception to be thrown by :func:`oqtask` in case of dealing with already
+    completed job.
     """
-
-
-def get_running_job(job_id):
-    """Helper function which is intended to be run by celery task functions.
-
-    Given the id of an in-progress calculation
-    (:class:`openquake.engine.db.models.OqJob`), load all of the calculation
-    data from the database and KVS and return a
-    :class:`openquake.engine.engine.JobContext` object.
-
-    If the calculation is not currently running, a
-    :exc:`JobCompletedError` is raised.
-
-    :returns:
-        :class:`openquake.engine.engine.JobContext` object, representing an
-        in-progress job. This object is created from cached data in the
-        KVS as well as data stored in the relational database.
-    :raises JobCompletedError:
-        If :meth:`~openquake.engine.engine.JobContext.is_job_completed` returns
-        ``True`` for ``job_id``.
-    """
-    # pylint: disable=W0404
-    from openquake.engine.engine import JobContext
-
-    if JobContext.is_job_completed(job_id):
-        raise JobCompletedError(job_id)
-
-    job_ctxt = JobContext.from_kvs(job_id)
-    if job_ctxt and job_ctxt.params:
-        level = job_ctxt.log_level
-    else:
-        level = 'warn'
-    logs.init_logs_amqp_send(level=level, job_id=job_id)
-
-    return job_ctxt
 
 
 def oqtask(task_func):
@@ -168,25 +123,35 @@ def oqtask(task_func):
         try:
             # check if the job is still running
             job = models.OqJob.objects.get(id=job_id)
+            calculation = job.calculation
 
             # Setup task logging, via AMQP ...
-            logs.init_logs_amqp_send(level=job.log_level, job_id=job_id)
+            if isinstance(calculation, models.HazardCalculation):
+                logs.init_logs_amqp_send(level=job.log_level,
+                                         calc_domain='hazard',
+                                         calc_id=calculation.id)
+            else:
+                logs.init_logs_amqp_send(level=job.log_level,
+                                         calc_domain='risk',
+                                         calc_id=calculation.id)
 
-            logs.LOG.debug('job.is_running == %s' % job.is_running)
-            logs.LOG.debug('job.status == %s' % job.status)
             # Tasks can be used in either the `execute` or `post-process` phase
-            if not (job.is_running
-                    and job.status in ('executing', 'post_processing')):
-                # the job is not running
-                raise JobCompletedError(job_id)
-            # The job is running.
-            # ... now continue with task execution.
-            task_func(*args, **kwargs)
-            EnginePerformanceMonitor.cache.flush()  # flush the performance logs
+            if job.is_running is False:
+                raise JobCompletedError('Job %d is not running' % job_id)
+            elif job.status not in ('executing', 'post_processing'):
+                raise JobCompletedError(
+                    'The status of job %d is %s, should be executing or '
+                    'post_processing' % (job_id, job.status))
+            # else continue with task execution
+            res = task_func(*args, **kwargs)
         # TODO: should we do something different with the JobCompletedError?
         except Exception, err:
             logs.LOG.critical('Error occurred in task: %s' % str(err))
             logs.LOG.exception(err)
             raise
+        else:
+            return res
+        finally:
+            EnginePerformanceMonitor.cache.flush()  # flush performance data
     celery_queue = config.get('amqp', 'celery_queue')
     return task(wrapped, ignore_result=True, queue=celery_queue)

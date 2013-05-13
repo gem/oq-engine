@@ -33,6 +33,7 @@ class ClassicalBCRRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
             demo_file('simple_fault_demo_hazard/job.ini'))
 
         self.calculator = classical_bcr.ClassicalBCRRiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
 
     def shortDescription(self):
         """

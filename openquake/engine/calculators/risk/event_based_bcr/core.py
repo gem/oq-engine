@@ -20,7 +20,7 @@ Core functionality for the Event Based BCR Risk calculator.
 from openquake.risklib import api, scientific, utils
 
 from openquake.engine.calculators.base import signal_task_complete
-from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.calculators.risk.event_based import core as event_based
 from openquake.engine.utils import tasks
 from openquake.engine import logs
@@ -41,10 +41,11 @@ def event_based_bcr(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
-      A list of :class:`..base.CalculationUnit` to be run
+    :param dict units:
+      A dict of :class:`..base.CalculationUnit` instances keyed by
+      loss type string
     :param containers:
-      An instance of :class:`..base.OutputDict` containing
+      An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
@@ -57,12 +58,15 @@ def event_based_bcr(job_id, units, containers, params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
-        do_event_based_bcr(units, containers, params, profile)
-    signal_task_complete(job_id=job_id, num_items=len(units[0].getter.assets))
+        for loss_type in units:
+            do_event_based_bcr(
+                loss_type, units[loss_type], containers, params, profile)
+    num_items = base.get_num_items(units)
+    signal_task_complete(job_id=job_id, num_items=num_items)
 event_based_bcr.ignore_result = False
 
 
-def do_event_based_bcr(units, containers, params, profile):
+def do_event_based_bcr(loss_type, units, containers, params, profile):
     """
     See `event_based_bcr` for docstring
     """
@@ -91,13 +95,14 @@ def do_event_based_bcr(units, containers, params, profile):
                 scientific.bcr(
                     eal_original[i], eal_retrofitted[i],
                     params.interest_rate, params.asset_life_expectancy,
-                    asset.value, asset.retrofitting_cost)
+                    asset.value(loss_type), asset.retrofitting_cost)
                 for i, asset in enumerate(assets)]
 
         with profile('writing results'):
             containers.write(
                 assets, zip(eal_original, eal_retrofitted, bcr_results),
                 output_type="bcr_distribution",
+                loss_type=loss_type,
                 hazard_output_id=unit_orig.getter.hazard_output_id)
 
 
@@ -110,10 +115,9 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
     def __init__(self, job):
         super(EventBasedBCRRiskCalculator, self).__init__(job)
-        self.vulnerability_functions_retrofitted = None
-        self.taxonomy_imt_retrofitted = dict()
+        self.risk_models_retrofitted = None
 
-    def calculation_units(self, assets):
+    def calculation_units(self, loss_type, assets):
         """
         :returns:
           a list of instances of `..base.CalculationUnit` for the given
@@ -122,8 +126,8 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
         # assume all assets have the same taxonomy
         taxonomy = assets[0].taxonomy
-        vf_orig = self.vulnerability_functions[taxonomy]
-        vf_retro = self.vulnerability_functions_retrofitted[taxonomy]
+        model_orig = self.risk_models[taxonomy][loss_type]
+        model_retro = self.risk_models_retrofitted[taxonomy][loss_type]
 
         time_span, tses = self.hazard_times()
 
@@ -133,31 +137,46 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
             units.extend([
                 base.CalculationUnit(
                     api.ProbabilisticEventBased(
-                        vf_orig,
+                        model_orig.vulnerability_function,
                         curve_resolution=self.rc.loss_curve_resolution,
                         time_span=time_span,
                         tses=tses,
                         seed=self.rnd.randint(0, models.MAX_SINT_32),
                         correlation=self.rc.asset_correlation),
-                hazard_getters.GroundMotionValuesGetter(
-                    ho,
-                    assets,
-                    self.rc.best_maximum_distance,
-                    self.taxonomy_imt[taxonomy])),
+                    hazard_getters.GroundMotionValuesGetter(
+                        ho,
+                        assets,
+                        self.rc.best_maximum_distance,
+                        model_orig.imt)),
                 base.CalculationUnit(
                     api.ProbabilisticEventBased(
-                        vf_retro,
+                        model_retro.vulnerability_function,
                         curve_resolution=self.rc.loss_curve_resolution,
                         time_span=time_span,
                         tses=tses,
                         seed=self.rnd.randint(0, models.MAX_SINT_32),
                         correlation=self.rc.asset_correlation),
-                hazard_getters.GroundMotionValuesGetter(
-                    ho,
-                    assets,
-                    self.rc.best_maximum_distance,
-                    self.taxonomy_imt_retrofitted[taxonomy]))])
+                    hazard_getters.GroundMotionValuesGetter(
+                        ho,
+                        assets,
+                        self.rc.best_maximum_distance,
+                        model_retro.imt))])
         return units
+
+    def get_taxonomies(self):
+        """
+        Override the default get_taxonomies to provide more detailed
+        validation of the exposure.
+
+        Check that the reco value is present in the exposure
+        """
+        taxonomies = super(EventBasedBCRRiskCalculator, self).get_taxonomies()
+
+        if (self.rc.exposure_model.exposuredata_set.filter(
+                reco__isnull=True)).exists():
+            raise ValueError("Some assets do not have retrofitted costs")
+
+        return taxonomies
 
     @property
     def calculator_parameters(self):
@@ -185,15 +204,17 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         :class:`openquake.engine.db.models.BCRDistribution` instance and its
         :class:`openquake.engine.db.models.Output` container.
 
-        :returns: A list containing the output container id.
+        :returns: an instance of OutputDict.
         """
-        ret = base.OutputDict()
-        ret.set(models.BCRDistribution.objects.create(
-                hazard_output=hazard_output,
-                output=models.Output.objects.create_output(
-                    self.job,
-                    "BCR Distribution for hazard %s" % hazard_output,
-                    "bcr_distribution")))
+        ret = writers.OutputDict()
+        for loss_type in base.loss_types(self.risk_models):
+            name = "BCR Map. type=%s hazard=%s" % (loss_type, hazard_output)
+            ret.set(models.BCRDistribution.objects.create(
+                    hazard_output=hazard_output,
+                    loss_type=loss_type,
+                    output=models.Output.objects.create_output(
+                        self.job, name, "bcr_distribution")))
+
         return ret
 
     def create_statistical_outputs(self):
@@ -201,14 +222,17 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         Override default behaviour as BCR and scenario calculators do
         not compute mean/quantiles outputs"
         """
-        return base.OutputDict()
+        return writers.OutputDict()
 
-    def set_risk_models(self):
+    def pre_execute(self):
         """
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
-        self.vulnerability_functions, self.taxonomy_imt = (
-            self.get_vulnerability_model())
-        (self.vulnerability_functions_retrofitted,
-         self.taxonomy_imt_retrofitted) = self.get_vulnerability_model(True)
+        super(EventBasedBCRRiskCalculator, self).pre_execute()
+        models_retro = super(
+            EventBasedBCRRiskCalculator, self).get_risk_models(
+                retrofitted=True)
+        self.check_taxonomies(models_retro)
+        self.check_imts(base.required_imts(models_retro))
+        self.risk_models_retrofitted = models_retro

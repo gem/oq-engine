@@ -397,10 +397,6 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
                     rupture_ids=relevant_rupture_ids,
                     result_grp_ordinal=result_grp_ordinal,
                 )
-            else:
-                logs.LOG.debug(
-                    "No ground motion field in point %s "
-                    "as it is too far from any rupture" % location.wkt2d)
 
     inserter.flush()
 
@@ -648,7 +644,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         with EnginePerformanceMonitor(
                 'populating gmf_agg', self.job.id, tracing=True):
-            post_processing.populate_gmf_agg(self.hc)
+            post_processing.populate_gmf_agg(self.job)
 
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
