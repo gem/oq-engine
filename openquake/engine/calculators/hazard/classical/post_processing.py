@@ -24,17 +24,14 @@ E.g. mean and quantile curves.
 import math
 import numpy
 
-from celery.task.sets import TaskSet
 from django.db import transaction
 from itertools import izip
-
-import openquake.engine
 
 from openquake.engine import logs
 from openquake.engine.calculators.hazard.general import CURVE_CACHE_SIZE
 from openquake.engine.db import models
 from openquake.engine.utils import config
-from openquake.engine.utils import tasks as utils_tasks
+from openquake.engine.utils import tasks
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.writer import BulkInserter
 
@@ -170,12 +167,8 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             imls=map_values,
         )
 
-
-# Disabling 'invalid name'
-# pylint: disable=C0103
-hazard_curves_to_hazard_map_task = utils_tasks.oqtask(
-    hazard_curves_to_hazard_map)
-hazard_curves_to_hazard_map_task.ignore_result = False
+hazard_curves_to_hazard_map_task = tasks.oqtask(hazard_curves_to_hazard_map)
+hazard_curves_to_hazard_map_task.ignore_result = False  # this is essential
 
 
 def do_hazard_map_post_process(job):
@@ -204,19 +197,10 @@ def do_hazard_map_post_process(job):
         logs.LOG.debug('> Hazard post-processing block, %s of %s'
                        % (i + 1, total_blocks))
 
-        if openquake.engine.no_distribute():
-            # just execute the post-processing using the plain function form of
-            # the task
-            for hazard_curve_id in block:
-                hazard_curves_to_hazard_map_task(job.id, hazard_curve_id, poes)
-        else:
-            tasks = []
-            for hazard_curve_id in block:
-                tasks.append(hazard_curves_to_hazard_map_task.subtask(
-                    (job.id, hazard_curve_id, poes)))
-            results = TaskSet(tasks=tasks).apply_async()
+        task_args = ((job.id, hazard_curve_id, poes)
+                     for hazard_curve_id in block)
 
-            utils_tasks._check_exception(results)
+        tasks.parallelize(hazard_curves_to_hazard_map_task, task_args)
 
         logs.LOG.debug('< Done Hazard Map post-processing block, %s of %s'
                        % (i + 1, total_blocks))

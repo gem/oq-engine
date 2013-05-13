@@ -108,6 +108,7 @@ class PreExecuteTestCase(unittest.TestCase):
         risk_job = helpers.get_risk_job(
             cfg, hazard_output_id=hazard_curve_output.id
         )
+        models.JobStats.objects.create(oq_job=risk_job)
         calc = classical.ClassicalRiskCalculator(risk_job)
 
         # Check for compatibility between the IMTs defined in the vulnerability
@@ -115,7 +116,7 @@ class PreExecuteTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ar:
             calc.pre_execute()
         self.assertEqual(
-            "There is no hazard output for the intensity measure SA(0.1); "
+            "There is no hazard output in SA(0.1); "
             "the available IMTs are [u'PGA']",
             ar.exception.message)
 
@@ -147,6 +148,7 @@ class PreExecuteTestCase(unittest.TestCase):
         risk_job = helpers.get_risk_job(
             cfg, hazard_output_id=hazard_curve_output.id
         )
+        models.JobStats.objects.create(oq_job=risk_job)
         calc = classical.ClassicalRiskCalculator(risk_job)
 
         # In contrast to the test above (`test_pre_execute_check_imts_raises`),

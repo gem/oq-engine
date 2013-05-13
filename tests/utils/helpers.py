@@ -31,7 +31,6 @@ import random
 import redis
 import shutil
 import string
-import subprocess
 import sys
 import tempfile
 import textwrap
@@ -145,9 +144,11 @@ def run_hazard_job(cfg, exports=None):
 
     models.JobStats.objects.create(oq_job=job)
 
-    calc_mode = job.hazard_calculation.calculation_mode
-    calc = get_calculator_class('hazard', calc_mode)(job)
+    hc = job.hazard_calculation
+    calc = get_calculator_class('hazard', hc.calculation_mode)(job)
     try:
+        logs.init_logs_amqp_send(
+            level='ERROR', calc_domain='hazard', calc_id=hc.id)
         engine._do_run_calc(job, exports, calc, 'hazard')
     finally:
         job.is_running = False
@@ -175,8 +176,9 @@ def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
 
     models.JobStats.objects.create(oq_job=job)
 
-    calc_mode = job.risk_calculation.calculation_mode
-    calc = get_calculator_class('risk', calc_mode)(job)
+    rc = job.risk_calculation
+    calc = get_calculator_class('risk', rc.calculation_mode)(job)
+    logs.init_logs_amqp_send(level='ERROR', calc_domain='risk', calc_id=rc.id)
     completed_job = engine._do_run_calc(job, exports, calc, 'risk')
     job.is_running = False
     job.save()

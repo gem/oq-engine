@@ -32,6 +32,7 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
             demo_file('scenario_hazard/job.ini'), output_type="gmf_scenario")
 
         self.calculator = scenario.ScenarioRiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
         self.calculator.pre_execute()
 
         self.job.is_running = True
