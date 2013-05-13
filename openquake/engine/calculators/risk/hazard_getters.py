@@ -136,7 +136,8 @@ class HazardGetter(object):
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
         for missing_asset_id in missing_asset_ids:
-            # please dont' remove this log: it was required by Vitor
+            # please don't remove this log: it was required by Vitor since
+            # this is a case that should NOT happen and must raise a warning
             logs.LOG.warn(
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
@@ -272,6 +273,9 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor.execute('''\
         SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
         WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
+        # TODO: in principle it should be possible to remove the ORDER BY; see
+        # why qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
+        # breaks if I do so (MS)
         sorted_ruptures = numpy.array([r[0] for r in cursor.fetchall()])
 
         # get the data from the distinct GMFs
@@ -300,9 +304,7 @@ class GroundMotionValuesGetter(HazardGetter):
             args += (sa_period, sa_damping)
 
         # Query explanation. We need to get for each asset the closest
-        # ground motion values (and the corresponding rupture ids from
-        # which they have been generated) for a given logic tree
-        # realization and a given imt.
+        # ground motion for a given logic tree realization and a given imt.
 
         # To this aim, we perform a spatial join with the exposure table that
         # is previously filtered by the assets extent, exposure model
@@ -314,14 +316,14 @@ class GroundMotionValuesGetter(HazardGetter):
         # gmvs
         query = """
   SELECT DISTINCT ON (riski.exposure_data.id)
-        riski.exposure_data.id, gmf_table.id
-  FROM riski.exposure_data JOIN hzrdr.gmf_agg AS gmf_table
-  ON ST_DWithin(riski.exposure_data.site, gmf_table.location, %s)
+        riski.exposure_data.id, gmf_agg.id
+  FROM riski.exposure_data JOIN hzrdr.gmf_agg
+  ON ST_DWithin(riski.exposure_data.site, gmf_agg.location, %s)
   WHERE taxonomy = %s AND exposure_model_id = %s AND
         riski.exposure_data.site && %s AND imt = %s AND
         gmf_collection_id = %s {}
   ORDER BY riski.exposure_data.id,
-           ST_Distance(riski.exposure_data.site, gmf_table.location, false)
+           ST_Distance(riski.exposure_data.site, gmf_agg.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
