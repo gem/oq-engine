@@ -1797,7 +1797,7 @@ class GmfCollection(djm.Model):
         where = 'WHERE gmf_collection_id in (%s)' % ','.join(
             map(str, gmf_collection_ids))
         if location:
-            where += "AND location::geometry ~= 'SRID=4326;%s::geometry'" \
+            where += " AND location::geometry ~= 'SRID=4326;%s::geometry'" \
                 % location
         query = """
    select gmf_collection_id, imt, sa_period, sa_damping, rupture_id,
