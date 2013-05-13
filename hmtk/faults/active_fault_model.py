@@ -46,7 +46,7 @@
 # liability for use of the software. 
 
 '''
-Modeule hmtk.faults.active_fault_model.mtkActiveFaultModel implements a wrapper 
+Module hmtk.faults.active_fault_model.mtkActiveFaultModel implements a wrapper 
 class for a set of active fault sources
 '''
 from copy import deepcopy
@@ -106,7 +106,7 @@ class mtkActiveFaultModel(object):
             model for rendering must be defined
         :param list/dict mfd_config:
             Universal list or dictionay of configuration parameters for the
-            magnitude freeuqncy distribution - will overwrite whatever is 
+            magnitude frequency distribution - will overwrite whatever is 
             previously defined for the fault!
         '''
         self.source_model = mtkSourceModel(self.id, self.name)
@@ -114,7 +114,6 @@ class mtkActiveFaultModel(object):
             fault.generate_recurrence_models(collapse, 
                                              rendered_msr, 
                                              mfd_config)
-            #print fault.__dict__
             src_model, src_weight = fault.generate_fault_source_model()
             for iloc, model in enumerate(src_model):
                

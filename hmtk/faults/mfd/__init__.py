@@ -45,8 +45,30 @@
 # The GEM Foundation, and the authors of the software, assume no 
 # liability for use of the software. 
 
-from hmtk.faults.mfd.anderson_luco_area_mmax import AndersonLucoAreaMmax
-from hmtk.faults.mfd.anderson_luco_arbitrary import AndersonLucoArbitrary
-from hmtk.faults.mfd.youngs_coppersmith import (YoungsCoppersmithExponential,
-    YoungsCoppersmithCharacteristic)
-from hmtk.faults.mfd.characteristic import Characteristic
+import os
+import inspect
+import importlib
+from collections import OrderedDict
+from hmtk.faults.mfd.base import BaseMFDfromSlip
+#from hmtk.faults.mfd.anderson_luco_area_mmax import AndersonLucoAreaMmax
+#from hmtk.faults.mfd.anderson_luco_arbitrary import AndersonLucoArbitrary
+#from hmtk.faults.mfd.youngs_coppersmith import (YoungsCoppersmithExponential,
+#    YoungsCoppersmithCharacteristic)
+#from hmtk.faults.mfd.characteristic import Characteristic
+
+def get_available_mfds():
+    '''
+    Returns an ordered dictionary with the available GSIM classes
+    keyed by class name
+    '''
+    mfds = {}
+    for fname in os.listdir(os.path.dirname(__file__)):
+        if fname.endswith('.py'):
+            modname, _ext = os.path.splitext(fname)
+            mod = importlib.import_module(
+                'hmtk.faults.mfd.' + modname)
+            for cls in mod.__dict__.itervalues():
+                if inspect.isclass(cls) and issubclass(cls,
+                    BaseMFDfromSlip):
+                        mfds[cls.__name__] = cls
+    return OrderedDict((k, mfds[k]) for k in sorted(mfds))

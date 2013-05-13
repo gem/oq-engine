@@ -56,7 +56,8 @@ from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.nrmllib.models import IncrementalMFD
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
-from hmtk.faults.mfd import Characteristic, AndersonLucoAreaMmax
+from hmtk.faults.mfd.characteristic import Characteristic
+from hmtk.faults.mfd.anderson_luco_area_mmax import AndersonLucoAreaMmax
 from hmtk.faults.tectonic_regionalisation import TectonicRegionalisation
 from hmtk.faults.fault_geometries import (SimpleFaultGeometry,
                                           ComplexFaultGeometry)
@@ -360,7 +361,7 @@ class TestmtkActiveFault(unittest.TestCase):
                         'Maximum_Magnitude': None,
                         'Maximum_Magnitude_Uncertainty': None,
                         'Minimum_Magnitude': 5.0,
-                        'Model_Name': 'YoungsCoppersmithExp',
+                        'Model_Name': 'YoungsCoppersmithExponential',
                         'Model_Weight': 0.3,
                         'b_value': [0.8, 0.05]}]
         with self.assertRaises(ValueError) as ae:
@@ -508,7 +509,7 @@ class TestmtkActiveFault(unittest.TestCase):
                         'Maximum_Magnitude': None,
                         'Maximum_Magnitude_Uncertainty': None,
                         'Minimum_Magnitude': 5.0,
-                        'Model_Name': 'YoungsCoppersmithExp',
+                        'Model_Name': 'YoungsCoppersmithExponential',
                         'Model_Weight': 0.3,
                         'b_value': [0.8, 0.05]}]
 
@@ -555,7 +556,7 @@ class TestmtkActiveFault(unittest.TestCase):
                         'Maximum_Magnitude': None,
                         'Maximum_Magnitude_Uncertainty': None,
                         'Minimum_Magnitude': 5.0,
-                        'Model_Name': 'YoungsCoppersmithExp',
+                        'Model_Name': 'YoungsCoppersmithExponential',
                         'Model_Weight': 0.3,
                         'b_value': [0.8, 0.05]}]
 

@@ -66,14 +66,10 @@ from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.faults import mfd
 
-MFD_MAP = {
-    'AndersonLucoArbitrary': mfd.AndersonLucoArbitrary(),
-    'AndersonLucoAreaMmax': mfd.AndersonLucoAreaMmax(),
-    'Characteristic': mfd.Characteristic(),
-    'YoungsCoppersmithExp': mfd.YoungsCoppersmithExponential(),
-    'YoungsCoppersmithChar': mfd.YoungsCoppersmithCharacteristic()
-    }
 
+MFD_MAP = mfd.get_available_mfds()
+
+# TODO Cannot be generalised until this is done in openquake.hazardlib!
 SCALE_REL_MAP = {
            'WC1994': scalerel.wc1994.WC1994,
            'PeerMSR': scalerel.peer.PeerMSR
@@ -164,7 +160,7 @@ class RecurrenceBranch(object):
         :param dict config:
             Configuration settings of the magnitude frequency distribution. 
         '''
-        model = MFD_MAP[config['Model_Name']]
+        model = MFD_MAP[config['Model_Name']]()
         model.setUp(config)
 
         model.get_mmax(config, self.msr, self.rake, self.area)
