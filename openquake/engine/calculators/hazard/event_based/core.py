@@ -139,9 +139,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         sources_sites = ((src, hc.site_collection) for src in sources)
         filtered_sources = [src for src, _ in ssd_filter(sources_sites)]
 
-        logs.LOG.debug('Considering %d sources (of %d)',
-                       len(filtered_sources), len(sources))
-
     filtered_away = 0  # ruptures filtered away by the maximum distance
 
     # Compute and save stochastic event sets
