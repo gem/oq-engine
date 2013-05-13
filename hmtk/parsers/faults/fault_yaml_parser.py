@@ -216,16 +216,17 @@ class FaultYmltoSource(object):
         '''
         if geo_dict['Fault_Typology'] == 'Simple':
             # Simple fault geometry
-            geometry = SimpleFaultGeometry()
             raw_trace = geo_dict['Fault_Trace']
             trace = Line([Point(raw_trace[ival], raw_trace[ival + 1])
                           for ival in range(0, len(raw_trace), 2)])
-            geometry.setUp(trace, geo_dict['Dip'], geo_dict['Upper_Depth'],
-                geo_dict['Lower_Depth'], mesh_spacing)
+            geometry = SimpleFaultGeometry(trace, 
+                                           geo_dict['Dip'], 
+                                           geo_dict['Upper_Depth'],
+                                           geo_dict['Lower_Depth'], 
+                                           mesh_spacing)
                 
         elif geo_dict['Fault_Typology'] == 'Complex':
             # Complex Fault Typology
-            geometry = ComplexFaultGeometry()
             trace = []
             for raw_trace in geo_dict['Fault_Trace']:
                 fault_edge = Line(
@@ -233,7 +234,7 @@ class FaultYmltoSource(object):
                      raw_trace[ival + 2]) for ival in range(0, len(raw_trace), 
                      3)])
                 trace.append(fault_edge)
-            geometry.setUp(trace, mesh_spacing)
+            geometry = ComplexFaultGeometry(trace, mesh_spacing)
         else:
             raise ValueError('Unrecognised or unsupported fault geometry!')
         return geometry

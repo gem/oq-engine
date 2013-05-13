@@ -78,9 +78,8 @@ class TestSimpleGeometry(unittest.TestCase):
         expected_keys = ['trace', 'downdip_width', 'area', 'surface', 
                          'upper_depth', 'length', 'surface_width', 
                          'lower_depth', 'dip', 'typology']
-        self.fault = SimpleFaultGeometry()
-        self.fault.setUp(self.trace, self.dip, self.upper_depth, 
-                         self.lower_depth)
+        self.fault = SimpleFaultGeometry(self.trace, self.dip, 
+                                         self.upper_depth, self.lower_depth)
         self.assertListEqual(self.fault.__dict__.keys(), expected_keys)
         self.assertAlmostEqual(self.fault.length, 60., 5)
         self.assertEqual(self.fault.typology, 'Simple')
@@ -92,9 +91,8 @@ class TestSimpleGeometry(unittest.TestCase):
         Tests the area calculation for a vertical fault
         '''
         # Case 1 - Vertical fault
-        self.fault = SimpleFaultGeometry()
-        self.fault.setUp(self.trace, self.dip, self.upper_depth, 
-                         self.lower_depth)
+        self.fault = SimpleFaultGeometry(self.trace, self.dip, 
+                                         self.upper_depth, self.lower_depth)
        
         self.assertAlmostEqual(1200., self.fault.get_area(), 5)
         self.assertAlmostEqual(20., self.fault.downdip_width, 5)
@@ -106,9 +104,8 @@ class TestSimpleGeometry(unittest.TestCase):
         Tests the area calculation for a dipping fault
         '''
         self.dip = 30.
-        self.fault = SimpleFaultGeometry()
-        self.fault.setUp(self.trace, self.dip, self.upper_depth, 
-                         self.lower_depth)
+        self.fault = SimpleFaultGeometry(self.trace, self.dip, 
+                                         self.upper_depth, self.lower_depth)
         self.assertAlmostEqual(2400., self.fault.get_area(), 5)
         self.assertAlmostEqual(40., self.fault.downdip_width, 5)
 
@@ -136,8 +133,7 @@ class TestComplexFaultGeometry(unittest.TestCase):
         '''
         Tests instantiation of the class
         '''
-        self.fault = ComplexFaultGeometry()
-        self.fault.setUp(self.edges, 1.0)
+        self.fault = ComplexFaultGeometry(self.edges, 1.0)
         self.assertTrue(isinstance(self.fault.surface,
                                    complex_fault.ComplexFaultSurface))
         self.assertEqual(self.fault.typology, 'Complex')
@@ -149,6 +145,5 @@ class TestComplexFaultGeometry(unittest.TestCase):
         :class: openquake.hazardlib.geo.surface.complex_fault.
         ComplexFaultSurface this test simply checks that it is called.
         '''
-        self.fault = ComplexFaultGeometry()
-        self.fault.setUp(self.edges, 1.0)
+        self.fault = ComplexFaultGeometry(self.edges, 1.0)
         self.assertAlmostEqual(2767.2418367330, self.fault.get_area(), 5)

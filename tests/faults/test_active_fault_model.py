@@ -126,15 +126,13 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         x2 = x1.point_at(30., 0., 60.)                                          
         # Total length is 60 km                                                 
         trace = Line([x0, x1, x2])                                         
-        simple_fault = SimpleFaultGeometry()                               
-        simple_fault.setUp(trace, 90., 0., 20.)                               
+        simple_fault = SimpleFaultGeometry(trace, 90., 0., 20.)                               
         # Creates a trace ~60 km long made of 3 points                          
         upper_edge = Line([x0, x1, x2])
         lower_edge = Line([x0.point_at(40., 20., 130.),
                 x1.point_at(42., 25., 130.),  
                 x2.point_at(41., 22., 130.)])                        
-        complex_fault = ComplexFaultGeometry()
-        complex_fault.setUp([upper_edge, lower_edge], 2.0)
+        complex_fault = ComplexFaultGeometry([upper_edge, lower_edge], 2.0)
         config = [{'MFD_spacing': 0.1,
                   'Maximum_Magnitude': 7.0,
                   'Maximum_Uncertainty': None,

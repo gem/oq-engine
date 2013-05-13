@@ -86,7 +86,7 @@ class SimpleFaultGeometry(BaseFaultGeometry):
         Length of fault (km)
 
     '''
-    def setUp(self, trace, dip, upper_depth, lower_depth, mesh_spacing=1.0):
+    def __init__(self, trace, dip, upper_depth, lower_depth, mesh_spacing=1.0):
         '''
         Sets up the fault geometry parameters from the input fault definitions
         :param float mesh_spacing:
@@ -145,7 +145,7 @@ class ComplexFaultGeometry(BaseFaultGeometry):
     :param float area:
         Length of fault (km)
     '''
-    def setUp(self, traces, mesh_spacing=1.0):
+    def __init__(self, traces, mesh_spacing=1.0):
         '''
         Set up function an creates complex fault surface
         :param list traces:

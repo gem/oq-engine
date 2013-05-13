@@ -193,16 +193,17 @@ class TestmtkActiveFault(unittest.TestCase):
         self.dip = 90.                            
         self.upper_depth = 0.
         self.lower_depth = 20.
-        self.simple_fault = SimpleFaultGeometry()
-        self.simple_fault.setUp(self.trace, self.dip, self.upper_depth,
-                                self.lower_depth)
+        self.simple_fault = SimpleFaultGeometry(self.trace, 
+                                                self.dip, 
+                                                self.upper_depth,
+                                                self.lower_depth)
                 # Creates a trace ~60 km long made of 3 points                          
         upper_edge = Line([x0, x1, x2]) 
         lower_edge = Line([x0.point_at(40., 20., 130.), 
                            x1.point_at(42., 25., 130.), 
                            x2.point_at(41., 22., 130.)]) 
-        self.complex_fault = ComplexFaultGeometry()
-        self.complex_fault.setUp([upper_edge, lower_edge], 2.0)
+        self.complex_fault = ComplexFaultGeometry([upper_edge, lower_edge], 
+                                                  2.0)
 
 
     def test_mtk_active_fault_instantiation(self):
@@ -475,8 +476,6 @@ class TestmtkActiveFault(unittest.TestCase):
                                               rates[iloc, idx])
             model.magnitudes = mags[idx]
             test_fault.mfd_models.append(model)
-            #test_fault.mfd_models[1].append(weight)
-            #test_fault.mfd_models[2].append(WC1994())
         return test_fault, expected_rate, np.min(mags), np.max(mags), weights
 
     def test_generate_recurrence_models_no_collapse(self):
