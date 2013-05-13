@@ -56,7 +56,7 @@ class FakeJob:
 
 class ScenarioDamageCalculatorTestCase(unittest.TestCase):
     """
-    Test the ``set_risk_models method`` of the calculator, i.e.
+    Test the ``get_risk_models method`` of the calculator, i.e.
     the parsing of the inputs and the setting of the taxonomies,
     depending on the parameter ``taxonomies_from_fragility``.
     """
@@ -69,15 +69,15 @@ class ScenarioDamageCalculatorTestCase(unittest.TestCase):
         self.calculator.job.rc.taxonomies_from_model = True
         with mock.patch('openquake.nrmllib.risk.parsers.FragilityModelParser',
                         lambda p: FMParser(FRAGILITY_FILE)):
-            self.calculator.set_risk_models()
-        self.assertEqual(sorted(self.calculator.taxonomies), ['RC/DMRF-D/LR'])
+            self.calculator.get_risk_models()
+        self.assertEqual(sorted(self.calculator.risk_models), ['RC/DMRF-D/LR'])
 
     def test_taxonomies_from_fragility_false(self):
         self.calculator.job.rc.taxonomies_from_model = False
         with mock.patch('openquake.nrmllib.risk.parsers.FragilityModelParser',
                         lambda p: FMParser(FRAGILITY_FILE)):
             with self.assertRaises(RuntimeError) as cm:
-                self.calculator.set_risk_models()
+                self.calculator.get_risk_models()
         self.assertEqual(str(cm.exception),
                          'The following taxonomies are in the exposure '
                          "model but not in the risk model: ['RC']")
