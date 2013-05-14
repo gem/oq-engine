@@ -206,8 +206,9 @@ def insert_into_gmf_agg(_job_id, rlz, chunk_id, nchunks):
     with db.transaction.commit_on_success(using='reslt_writer'):
         curs.execute(insert_query)
         logs.LOG.debug(insert_query)
-        # TODO: delete the copied rows from gmf; this can be done
-        # only after changing the export procedure to read from gmf_agg
+        curs.execute('DELETE FROM hzrdr.gmf_set '
+                     'WHERE gmf_collection_id=%d' % coll.id)
+        logs.LOG.debug('Purged hzrdr.gmf and hzrdr.gmf_set')
     curs.close()
 insert_into_gmf_agg.ignore_result = False  # essential
 
