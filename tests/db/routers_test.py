@@ -111,7 +111,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [oq.HazardMap, oq.HazardCurve, oq.HazardCurveData,
-                   oq.GmfData]
+                   oq.GmfAgg]
         expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
@@ -122,7 +122,7 @@ class OQRouterTestCase(unittest.TestCase):
         for write operations.
         '''
         classes = [oq.HazardMap, oq.HazardCurve, oq.HazardCurveData,
-                   oq.GmfData]
+                   oq.GmfAgg]
 
         expected_db = 'reslt_writer'
 
