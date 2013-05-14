@@ -28,7 +28,7 @@ from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.db import models
 
 from tests.utils import helpers
-from tests.utils.helpers import demo_file
+from tests.utils.helpers import get_data_path
 
 
 class Inputs4HazCalcTestCase(unittest.TestCase):
@@ -37,7 +37,7 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
         self.assertEqual([], list(models.inputs4hcalc(-1)))
 
     def test_a_few_inputs(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
         hc = engine.create_hazard_calculation(owner, params, files.values())
@@ -51,7 +51,7 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
         self.assertEqual(expected_ids, actual_ids)
 
     def test_with_input_type(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
         hc = engine.create_hazard_calculation(owner, params, files.values())
@@ -76,8 +76,8 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
 
     def test_a_few_inputs(self):
         job, files = helpers.get_fake_risk_job(
-            demo_file('classical_psha_based_risk/job.ini'),
-            demo_file('simple_fault_demo_hazard/job.ini'))
+            get_data_path('classical_psha_based_risk/job.ini'),
+            get_data_path('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
 
         expected_ids = sorted([x.id for x in files.values()])
@@ -90,8 +90,8 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
 
     def test_with_input_type(self):
         job, files = helpers.get_fake_risk_job(
-            demo_file('classical_psha_based_risk/job.ini'),
-            demo_file('simple_fault_demo_hazard/job.ini'))
+            get_data_path('classical_psha_based_risk/job.ini'),
+            get_data_path('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
 
         # It should only be 1 id, actually.
@@ -235,7 +235,7 @@ class SESRuptureTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = helpers.get_hazard_job(cfg)
 
         lt_rlz = models.LtRealization.objects.create(
@@ -379,7 +379,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
 
     @attr('slow')
     def test_get_site_collection_with_site_model(self):
-        cfg = helpers.demo_file(
+        cfg = helpers.get_data_path(
             'simple_fault_demo_hazard/job_with_site_model.ini')
         job = helpers.get_hazard_job(cfg)
         calc = cls_core.ClassicalHazardCalculator(job)
@@ -402,7 +402,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         self.assertEqual(expected_len, len(site_coll.z2pt5))
 
     def test_get_site_collection_with_reference_parameters(self):
-        cfg = helpers.demo_file(
+        cfg = helpers.get_data_path(
             'simple_fault_demo_hazard/job.ini')
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
 
