@@ -1829,13 +1829,15 @@ class GmfCollection(djm.Model):
         """ % (where, ses.id)
             curs = getcursor('job_init')
             curs.execute(query)
+            gmfs = []
             for imt, sa_period, sa_damping, rupture_id, gmvs, xs, ys in curs:
                 gmf_nodes = [_GroundMotionFieldNode(gmv, Loc(x, y))
                              for gmv, x, y in zip(gmvs, xs, ys)]
-                gmf = _GroundMotionField(
-                    imt, sa_period, sa_damping, rupture_id, gmf_nodes)
-                yield Ses([gmf], investigation_time=ses.investigation_time,
-                          stochastic_event_set_id=ses.id)
+                gmfs.append(
+                    _GroundMotionField(
+                        imt, sa_period, sa_damping, rupture_id, gmf_nodes))
+            yield Ses(gmfs, investigation_time=ses.investigation_time,
+                      stochastic_event_set_id=ses.id)
 
     __iter__ = get_gmfs
     #def __iter__(self, location=None):
