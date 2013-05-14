@@ -89,7 +89,7 @@ def do_event_based(loss_type, units, containers, params, profile):
 
         if not outputs.assets:
             logs.LOG.info("Exit from task as no asset could be processed")
-            return {}
+            return collections.Counter()
 
         if params.sites_disagg:
             with profile('disaggregating results'):
