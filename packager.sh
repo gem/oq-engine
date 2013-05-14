@@ -2,6 +2,7 @@
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 set -x
 set -e
+GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-nrmllib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
@@ -304,7 +305,7 @@ EOF
     if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
         if [ "$branch_id" != "" ]; then
             repo_id="$(repo_id_get)"
-            if [ "$repo_id" != "$GEM_GIT_REPO" -o "$branch_id" != "master" ]; then
+            if [ "git://$repo_id" != "$GEM_GIT_REPO" -o "$branch_id" != "master" ]; then
                 CUSTOM_SERIE="devel/$(echo "$repo_id" | sed "s@/@__@g;s/\./-/g")__${branch_id}"
                 if [ "$CUSTOM_SERIE" != "" ]; then
                     GEM_DEB_SERIE="$CUSTOM_SERIE"
