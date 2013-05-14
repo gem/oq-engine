@@ -65,8 +65,13 @@ def stochastic_event_set_poissonian(
     # else apply filtering
     sources_sites = source_site_filter((source, sites) for source in sources)
     for source, r_sites in sources_sites:
-        ruptures_sites = rupture_site_filter(
-            (rupture, r_sites) for rupture in source.iter_ruptures(tom))
-        for rupture, _sites in ruptures_sites:
-            for i in xrange(rupture.sample_number_of_occurrences()):
-                yield rupture
+        try:
+            ruptures_sites = rupture_site_filter(
+                (rupture, r_sites) for rupture in source.iter_ruptures(tom))
+            for rupture, _sites in ruptures_sites:
+                for i in xrange(rupture.sample_number_of_occurrences()):
+                    yield rupture
+        except Exception, err:
+            msg = 'An error occurred with source id=%s. Error: %s'
+            msg %= (source.source_id, err.message)
+            raise RuntimeError(msg)
