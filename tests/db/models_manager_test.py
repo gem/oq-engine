@@ -33,7 +33,7 @@ from openquake.engine.db import models
 from openquake.engine.calculators.risk import base
 
 from tests.utils import helpers
-from tests.utils.helpers import demo_file
+from tests.utils.helpers import get_data_path
 
 
 class TestCaseWithAJob(unittest.TestCase):
@@ -41,7 +41,7 @@ class TestCaseWithAJob(unittest.TestCase):
     Abstract test case class to just setup a job
     """
     def setUp(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         self.job = helpers.get_hazard_job(cfg, username="test_user")
         for i in range(0, random.randint(1, 10)):
             models.LtRealization(
@@ -72,8 +72,8 @@ class OutputManagerTestCase(TestCaseWithAJob):
 class ExposureContainedInTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
-            demo_file('classical_psha_based_risk/job.ini'),
-            demo_file('simple_fault_demo_hazard/job.ini'))
+            get_data_path('classical_psha_based_risk/job.ini'),
+            get_data_path('simple_fault_demo_hazard/job.ini'))
         calculator = base.RiskCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
         calculator.pre_execute()
