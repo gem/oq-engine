@@ -2088,21 +2088,6 @@ class DisaggResult(djm.Model):
         db_table = 'hzrdr\".\"disagg_result'
 
 
-class GmfData(djm.Model):
-    '''
-    Ground Motion Field data
-
-    DEPRECATED. See instead :class:`GmfCollection`, :class:`GmfSet`,
-    :class:`Gmf`, and :class:`GmfNode`.
-    '''
-    output = djm.ForeignKey('Output')
-    ground_motion = djm.FloatField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_data'
-
-
 class UHS(djm.Model):
     """
     UHS/Uniform Hazard Spectra:
