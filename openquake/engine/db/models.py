@@ -1840,8 +1840,6 @@ class GmfCollection(djm.Model):
                       stochastic_event_set_id=ses.id)
 
     __iter__ = get_gmfs
-    #def __iter__(self, location=None):
-    #    return GmfSet.objects.filter(gmf_collection=self.id).iterator()
 
 
 class GmfSet(djm.Model):
@@ -1875,94 +1873,6 @@ class GmfSet(djm.Model):
             return SES.objects.get(
                 ses_collection__lt_realization=rlz,
                 ordinal=self.ses_ordinal).id
-
-    # Disabling pylint for 'Too many local variables'
-    # pylint: disable=R0914
-    def __iter__(self):
-        """
-        Iterator for walking through all child :class:`Gmf` objects.
-        """
-        return self.iter_gmfs()
-
-    def iter_gmfs(self, location=None, num_tasks=None, imts=None):
-        """
-        Queries for and iterates over child :class:`Gmf` records, with the
-        option of specifying a ``location``.
-
-        :param location:
-            An (optional) parameter for filtering :class:`GMFs <Gmf>`.
-            ``location`` is expected to be a point represented as WKT.
-
-            Example: `POINT(21.1 45.8)`
-
-       :param num_tasks:
-            If given, only the result_grp_ordinal <= num_tasks are returned,
-            otherwise there is no filtering; this is used only in a test and
-            will disappear in the future
-
-        :param imts:
-            A list of IMT triples; if not given, all the calculated IMTs
-            are taken in consideration (no filtering)
-        """
-        job = self.gmf_collection.output.oq_job
-        if self.ses_ordinal is None:  # complete logic tree
-            # Get all of the GmfSets associated with a logic tree realization,
-            # for this calculation.
-            lt_gmf_sets = GmfSet.objects\
-                .filter(
-                    gmf_collection__output__oq_job=job,
-                    gmf_collection__lt_realization__isnull=False)\
-                .order_by('id')
-            for gmf in itertools.chain(
-                    *(each_set.iter_gmfs(location=location)
-                      for each_set in lt_gmf_sets)):
-                yield gmf
-        else:
-            num_tasks = num_tasks or \
-                JobStats.objects.get(oq_job=job.id).num_tasks
-            imts = imts or \
-                map(parse_imt, job.hazard_calculation.intensity_measure_types)
-
-            for imt, sa_period, sa_damping in imts:
-                for result_grp_ordinal in xrange(1, num_tasks + 1):
-                    gmfs = order_by_location(
-                        Gmf.objects.filter(
-                            gmf_set=self.id,
-                            imt=imt,
-                            sa_period=sa_period,
-                            sa_damping=sa_damping,
-                            result_grp_ordinal=result_grp_ordinal))
-                    if location is not None:
-                        gmfs = gmfs.extra(
-                            # The `location` field is a GEOGRAPHY type, so an
-                            # explicit cast is needed to compare geometry:
-                            where=["location::geometry ~= "
-                                   "'SRID=4326;%s'::geometry" % location]
-                        )
-
-                    if len(gmfs) == 0:
-                        # There are no GMFs in this result group for the given
-                        # search parameters.
-                        continue
-
-                    # collect gmf nodes for each event
-                    gmf_nodes = collections.OrderedDict()
-                    for gmf in gmfs:
-                        for gmv, rupture_id in zip(gmf.gmvs, gmf.rupture_ids):
-                            if not rupture_id in gmf_nodes:
-                                gmf_nodes[rupture_id] = []
-                            gmf_nodes[rupture_id].append(
-                                _GroundMotionFieldNode(
-                                    gmv=gmv, location=gmf.location))
-
-                    # then yield ground motion fields for each rupture
-                    first = gmfs[0]
-                    for rupture_id in gmf_nodes:
-                        yield _GroundMotionField(
-                            imt=first.imt, sa_period=first.sa_period,
-                            sa_damping=first.sa_damping,
-                            rupture_id=rupture_id,
-                            gmf_nodes=gmf_nodes[rupture_id])
 
 
 class _GroundMotionField(object):

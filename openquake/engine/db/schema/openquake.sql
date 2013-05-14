@@ -1480,3 +1480,20 @@ CREATE VIEW hzrdr.gmf_agg_job AS
    INNER JOIN uiapi.output AS c
    ON b.output_id=c.id
    WHERE output_type='gmf';
+
+
+-- associations gmf_collections <-> outputs
+CREATE VIEW hzrdr.gmf_output AS
+  SELECT j.id as oq_job_id, hazard_calculation_id,
+  o1.id AS complete_oid, o2.id AS partial_oid,
+  c1.id AS complete_cid, c2.id AS partial_cid
+  FROM uiapi.oq_job AS j
+  INNER JOIN uiapi.output AS o1
+  ON o1.oq_job_id=j.id
+  INNER JOIN uiapi.output AS o2
+  ON o2.oq_job_id=j.id
+  INNER JOIN hzrdr.gmf_collection AS c1
+  ON c1.output_id=o1.id
+  INNER JOIN hzrdr.gmf_collection AS c2
+  ON c2.output_id=o2.id
+  WHERE o1.output_type='complete_lt_gmf' AND o2.output_type='gmf';
