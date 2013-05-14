@@ -1795,16 +1795,19 @@ class GmfCollection(djm.Model):
         Get the ground motion fields from the database in a good
         format for the XML export.
         """
-        if self.lt_realization is None:  # complete logic tree
+        children = self.get_children()
+        if children:  # complete logic tree
             all_gmfs = []
-            for coll in self.get_children():
+            for coll in children:
                 ## TODO: check if we could use iterators instead of lists
                 for ses in coll.get_gmfs(location):
                     all_gmfs.extend(ses._gmfs)
-            yield Ses(all_gmfs,
-                      investigation_time=ses.investigation_time,
-                      stochastic_event_set_id=ses.stochastic_event_set_id)
+            if all_gmfs:
+                yield Ses(all_gmfs,
+                          investigation_time=ses.investigation_time,
+                          stochastic_event_set_id=ses.stochastic_event_set_id)
             return
+        # leaf of the tree
         where = 'WHERE gmf_collection_id=%d' % self.id
         if location:
             where += " AND location::geometry ~= 'SRID=4326;%s::geometry'" \
@@ -1813,17 +1816,17 @@ class GmfCollection(djm.Model):
             lt_realization=self.lt_realization)
         for ses in SES.objects.filter(ses_collection=ses_coll):
             query = """
-       select imt, sa_period, sa_damping, rupture_id,
-       array_agg(gmv), array_agg(ST_X(geometry(location))),
-       array_agg(ST_Y(geometry(location))) from (
+        select imt, sa_period, sa_damping, rupture_id,
+        array_agg(gmv), array_agg(ST_X(geometry(location))),
+        array_agg(ST_Y(geometry(location))) from (
            select imt, sa_period, sa_damping,
            unnest(rupture_ids) as rupture_id, location, unnest(gmvs) as gmv
            from hzrdr.gmf_agg %s) as x,
            hzrdr.ses_rupture as y
-       where x.rupture_id=y.id AND ses_id=%d
-       group by imt, sa_period, sa_damping, rupture_id
-       order by imt, sa_period, sa_damping, rupture_id;
-       """ % (where, ses.id)
+        where x.rupture_id=y.id AND ses_id=%d
+        group by imt, sa_period, sa_damping, rupture_id
+        order by imt, sa_period, sa_damping, rupture_id;
+        """ % (where, ses.id)
             curs = getcursor('job_init')
             curs.execute(query)
             for imt, sa_period, sa_damping, rupture_id, gmvs, xs, ys in curs:
