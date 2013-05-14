@@ -55,6 +55,18 @@ sig_hand () {
     fi
 }
 
+#
+#  repo_id_get - retry git repo from local git remote command
+repo_id_get () {
+    repo_id="$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+
+    echo "$repo_id"
+}
+
+#
+#  mksafedir <dname> - try to create a directory and rise an alert if it already exists
+#      <dname>    name of the directory to create
+#
 mksafedir () {
     local dname
 
@@ -291,10 +303,13 @@ EOF
     fi
 
     if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
-        if [ "${branch_id}" != "" ]; then
-            CUSTOM_SERIE="devel/$(git remote -vv | grep '(fetch)$' | sed "s/^[^ 	]\+[ 	]\+git:\/\///g;s/.git[ 	]\+(fetch)$//g;s@/$GEM_GIT_PACKAGE@@g;s@/@__@g;s/\./-/g")__${branch_id}"
-            if [ "$CUSTOM_SERIE" != "" ]; then
-                GEM_DEB_SERIE="$CUSTOM_SERIE"
+        if [ "$branch_id" != "" ]; then
+            repo_id="$(repo_id_get)"
+            if [ "$repo_id" != "$GEM_GIT_REPO" -o "$branch_id" != "master" ]; then
+                CUSTOM_SERIE="devel/$(echo "$repo_id" | sed "s@/@__@g;s/\./-/g")__${branch_id}"
+                if [ "$CUSTOM_SERIE" != "" ]; then
+                    GEM_DEB_SERIE="$CUSTOM_SERIE"
+                fi
             fi
         fi
         mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
