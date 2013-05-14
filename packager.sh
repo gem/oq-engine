@@ -28,14 +28,10 @@
 #
 # all lxc instances are ephemeral
 #
-# in test sources different repositories and branches can be tested
-# consistently: for each openquake dependency it try to use
-# the same repository and the same branch OR the gem repository
-# and the same branch OR the gem repository and the "master" branch
-#
-# in build Ubuntu package each branch package is saved in a separated
-# directory with a well known name syntax to be able to use
-# correct dependencies during the "test Ubuntu package" procedure
+# ephemeral containers are "clones" of a base container and have a
+# temporary file system that reflects the contents of the base container
+# but any modifications are stored in another overlayed
+# file system (in-memory or disk)
 #
 
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
@@ -109,6 +105,14 @@ dep2var () {
 }
 
 #
+#  repo_id_get - retry git repo from local git remote command
+repo_id_get () {
+    repo_id="$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+
+    echo "$repo_id"
+}
+
+#
 #  mksafedir <dname> - try to create a directory and rise an alert if it already exists
 #      <dname>    name of the directory to create
 #
@@ -141,8 +145,11 @@ usage () {
     echo "       if -R is present update the local repository to the new current package"
     echo "       if -D is present a package with self-computed version is produced."
     echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
-    echo "    $0 pkgtest <branch-name>                    run packaging tests into an ubuntu lxc environment"
-    echo "    $0 devtest <branch-name>                    run development tests into an ubuntu lxc environment"
+    echo
+    echo "    $0 pkgtest <branch-name>                    install oq-engine package and related dependencies into"
+    echo "                                                an ubuntu lxc environment and run package tests and demos"
+    echo "    $0 devtest <branch-name>                    put oq-engine and oq-* dependencies sources in a lxc,"
+    echo "                                                setup environment and run development tests"
     echo
     exit $ret
 }
@@ -282,10 +289,7 @@ _pkgtest_innervm_run () {
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
         build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
-    # TODO: use the correct repo
 
-    #
-    #  dependencies repos
     if [ -f _jenkins_deps_info ]; then
         source _jenkins_deps_info
     fi
@@ -307,7 +311,7 @@ _pkgtest_innervm_run () {
             branch="master"
         fi
 
-        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "$master" ]; then
+        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "master" ]; then
             GEM_DEB_SERIE="master"
         else
             GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
@@ -453,7 +457,15 @@ devtest_run () {
 
     _wait_ssh $lxc_ip
 
-    repo_id="$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+    #
+    #  dependencies repos
+    #
+    # in test sources different repositories and branches can be tested
+    # consistently: for each openquake dependency it try to use
+    # the same repository and the same branch OR the gem repository
+    # and the same branch OR the gem repository and the "master" branch
+    #
+    repo_id="$(repo_id_get)"
     if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
         repos="git://${repo_id} ${GEM_GIT_REPO}"
     else
@@ -562,11 +574,19 @@ EOF
         return $inner_ret
     fi
 
+    #
+    # in build Ubuntu package each branch package is saved in a separated
+    # directory with a well known name syntax to be able to use
+    # correct dependencies during the "test Ubuntu package" procedure
+    #
     if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
-        if [ "${branch_id}" != "" ]; then
-            CUSTOM_SERIE="devel/$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$//g;s@/$GEM_GIT_PACKAGE@@g;s@/@__@g;s/\./-/g")__${branch_id}"
-            if [ "$CUSTOM_SERIE" != "" ]; then
-                GEM_DEB_SERIE="$CUSTOM_SERIE"
+        if [ "$branch_id" != "" ]; then
+            repo_id="$(repo_id_get)"
+            if [ "git://$repo_id" != "$GEM_GIT_REPO" -o "$branch_id" != "master" ]; then
+                CUSTOM_SERIE="devel/$(echo "$repo_id" | sed "s@/@__@g;s/\./-/g")__${branch_id}"
+                if [ "$CUSTOM_SERIE" != "" ]; then
+                    GEM_DEB_SERIE="$CUSTOM_SERIE"
+                fi
             fi
         fi
         mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
