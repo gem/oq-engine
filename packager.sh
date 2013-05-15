@@ -102,9 +102,9 @@ _pkgtest_innervm_run () {
     # copy demos file to $HOME
     ssh $haddr "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
 
-    # run all demos found
+    # run all of the hazard demos
     ssh $haddr "cd demos
-    for ini in \$(find . -name job.ini); do
+    for ini in \$(find ./hazard -name job.ini); do
         DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
     done"
 

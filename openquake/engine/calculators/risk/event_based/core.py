@@ -429,51 +429,55 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
           Compute aggregate loss curves and event loss tables
         """
+        with EnginePerformanceMonitor('post processing', self.job.id):
 
-        time_span, tses = self.hazard_times()
+            time_span, tses = self.hazard_times()
 
-        for loss_type, event_loss_table in self.event_loss_tables.items():
-            for hazard_output in self.rc.hazard_outputs():
-                gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
+            for loss_type, event_loss_table in self.event_loss_tables.items():
+                for hazard_output in self.rc.hazard_outputs():
+                    gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
 
-                aggregate_losses = [
-                    event_loss_table[rupture.id]
-                    for rupture in models.SESRupture.objects.filter(
-                        ses__pk__in=[gmf_set.stochastic_event_set_id
-                                     for gmf_set in gmf_sets])
-                    if rupture.id in event_loss_table]
+                    aggregate_losses = [
+                        event_loss_table[rupture.id]
+                        for rupture in models.SESRupture.objects.filter(
+                            ses__pk__in=[gmf_set.stochastic_event_set_id
+                                         for gmf_set in gmf_sets])
+                        if rupture.id in event_loss_table]
 
-                if aggregate_losses:
-                    aggregate_loss_losses, aggregate_loss_poes = (
-                        scientific.event_based(
-                            aggregate_losses, tses=tses, time_span=time_span,
-                            curve_resolution=self.rc.loss_curve_resolution))
+                    if aggregate_losses:
+                        aggregate_loss_losses, aggregate_loss_poes = (
+                            scientific.event_based(
+                                aggregate_losses, tses=tses,
+                                time_span=time_span,
+                                curve_resolution=self.rc.loss_curve_resolution
+                            ))
 
-                    models.AggregateLossCurveData.objects.create(
-                        loss_curve=models.LossCurve.objects.create(
-                            aggregate=True, insured=False,
-                            hazard_output=hazard_output,
+                        models.AggregateLossCurveData.objects.create(
+                            loss_curve=models.LossCurve.objects.create(
+                                aggregate=True, insured=False,
+                                hazard_output=hazard_output,
+                                loss_type=loss_type,
+                                output=models.Output.objects.create_output(
+                                    self.job,
+                                    "aggregate loss curves. "
+                                    "loss_type=%s hazard=%s" % (
+                                        loss_type, hazard_output),
+                                    "agg_loss_curve")),
+                            losses=aggregate_loss_losses,
+                            poes=aggregate_loss_poes,
+                            average_loss=scientific.average_loss(
+                                aggregate_loss_losses, aggregate_loss_poes))
+
+                event_loss_table_output = models.Output.objects.create_output(
+                    self.job, "Event Loss Table", "event_loss")
+
+                with db.transaction.commit_on_success(using='reslt_writer'):
+                    for rupture_id, aggregate_loss in event_loss_table.items():
+                        models.EventLoss.objects.create(
+                            output=event_loss_table_output,
+                            rupture_id=rupture_id,
                             loss_type=loss_type,
-                            output=models.Output.objects.create_output(
-                                self.job,
-                                "aggregate loss curves. "
-                                "loss_type=%s hazard=%s" % (
-                                    loss_type, hazard_output),
-                                "agg_loss_curve")),
-                        losses=aggregate_loss_losses, poes=aggregate_loss_poes,
-                        average_loss=scientific.average_loss(
-                            aggregate_loss_losses, aggregate_loss_poes))
-
-            event_loss_table_output = models.Output.objects.create_output(
-                self.job, "Event Loss Table", "event_loss")
-
-            with db.transaction.commit_on_success(using='reslt_writer'):
-                for rupture_id, aggregate_loss in event_loss_table.items():
-                    models.EventLoss.objects.create(
-                        output=event_loss_table_output,
-                        rupture_id=rupture_id,
-                        loss_type=loss_type,
-                        aggregate_loss=aggregate_loss)
+                            aggregate_loss=aggregate_loss)
 
     def calculation_units(self, loss_type, assets):
         """
