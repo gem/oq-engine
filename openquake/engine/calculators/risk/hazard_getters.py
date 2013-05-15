@@ -22,7 +22,6 @@ A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
-import collections
 import numpy
 
 from openquake.engine import logs
@@ -118,11 +117,9 @@ class HazardGetter(object):
     def __call__(self):
         """
         :returns:
-            A tuple with three elements. The first is an array of instances of
+            A tuple with two elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is an
-            array with the corresponding hazard data, the third is the array of
-            IDs of assets that has been filtered out by the getter by the
-            ``maximum_distance`` criteria.
+            array with the corresponding hazard data.
         """
         # data is a gmf or a set of hazard curves
         asset_ids, data = self.get_data(self.imt)
@@ -130,7 +127,8 @@ class HazardGetter(object):
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
         for missing_asset_id in missing_asset_ids:
-            # please dont' remove this log: it was required by Vitor
+            # please don't remove this log: it was required by Vitor since
+            # this is a case that should NOT happen and must raise a warning
             logs.LOG.warn(
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
@@ -232,9 +230,6 @@ class HazardCurveGetterPerAsset(HazardGetter):
         return hazard, distance
 
 
-GmfsRuptures = collections.namedtuple('GmfsRuptures', 'gmfs ruptures')
-
-
 class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
@@ -243,7 +238,52 @@ class GroundMotionValuesGetter(HazardGetter):
     def container(self, hazard_output):
         return hazard_output.gmfcollection
 
-    #@profile
+    def __call__(self):
+        """
+        :returns:
+            A tuple with two elements. The first is an array of instances of
+            :class:`openquake.engine.db.models.ExposureData`, the second is a
+            pair (gmfs, ruptures) with the closest ground motion value for each
+            asset.
+        """
+        asset_ids, gmf_ids = self.get_data(self.imt)
+        missing_asset_ids = self.all_asset_ids - set(asset_ids)
+
+        for missing_asset_id in missing_asset_ids:
+            # please dont' remove this log: it was required by Vitor since
+            # this is a case that should NOT happen and must raise a warning
+            logs.LOG.warn(
+                "No hazard has been found for the asset %s within %s km" % (
+                    self.asset_dict[missing_asset_id], self.max_distance))
+
+        if not asset_ids:  # all missing
+            return [], ([], [])
+
+        # get the sorted ruptures from all the distinct GMFs
+        distinct_gmf_ids = tuple(set(gmf_ids))
+        cursor = getcursor('job_init')
+        cursor.execute('''\
+        SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
+        WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
+        # TODO: in principle it should be possible to remove the ORDER BY; see
+        # why qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
+        # breaks if I do so (MS)
+        sorted_ruptures = numpy.array([r[0] for r in cursor.fetchall()])
+
+        # get the data from the distinct GMFs
+        cursor.execute('''\
+        SELECT id, gmvs, rupture_ids FROM hzrdr.gmf_agg
+        WHERE id in %s''', (distinct_gmf_ids,))
+        gmfs = {}
+        for gmf_id, gmvs, ruptures in cursor.fetchall():
+            gmvd = dict(zip(ruptures, gmvs))
+            gmvs = numpy.array([gmvd.get(r, 0.) for r in sorted_ruptures])
+            gmfs[gmf_id] = gmvs
+
+        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
+               ([gmfs[i] for i in gmf_ids], sorted_ruptures))
+        return ret
+
     def get_data(self, imt):
         cursor = models.getcursor('job_init')
 
@@ -256,9 +296,7 @@ class GroundMotionValuesGetter(HazardGetter):
             args += (sa_period, sa_damping)
 
         # Query explanation. We need to get for each asset the closest
-        # ground motion values (and the corresponding rupture ids from
-        # which they have been generated) for a given logic tree
-        # realization and a given imt.
+        # ground motion for a given logic tree realization and a given imt.
 
         # To this aim, we perform a spatial join with the exposure table that
         # is previously filtered by the assets extent, exposure model
@@ -270,14 +308,14 @@ class GroundMotionValuesGetter(HazardGetter):
         # gmvs
         query = """
   SELECT DISTINCT ON (riski.exposure_data.id)
-        riski.exposure_data.id, gmf_table.gmvs, gmf_table.rupture_ids
-  FROM riski.exposure_data JOIN hzrdr.gmf_agg AS gmf_table
-  ON ST_DWithin(riski.exposure_data.site, gmf_table.location, %s)
+        riski.exposure_data.id, gmf_agg.id
+  FROM riski.exposure_data JOIN hzrdr.gmf_agg
+  ON ST_DWithin(riski.exposure_data.site, gmf_agg.location, %s)
   WHERE taxonomy = %s AND exposure_model_id = %s AND
         riski.exposure_data.site && %s AND imt = %s AND
         gmf_collection_id = %s {}
   ORDER BY riski.exposure_data.id,
-           ST_Distance(riski.exposure_data.site, gmf_table.location, false)
+           ST_Distance(riski.exposure_data.site, gmf_agg.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
@@ -291,22 +329,13 @@ class GroundMotionValuesGetter(HazardGetter):
 
         data = cursor.fetchall()
 
-        # generate an ordered array with all the ruptures
-        _rupture_set = set()
-        for _, _, ruptures in data:
-            _rupture_set.update(ruptures)
-        sorted_ruptures = numpy.array(sorted(_rupture_set))
-
-        # maps asset_id -> to a 2-tuple (gmvs, ruptures)
-        assets, gmfs = [], []
-        for asset_id, gmvs, ruptures in data:
+        assets, gmf_ids = [], []
+        for asset_id, gmf_id in data:
             # the query may return spurious assets outside the considered block
             if asset_id in self.asset_dict:  # in block
-                gmv = dict(zip(ruptures, gmvs))
-                gmvs = numpy.array([gmv.get(r, 0.) for r in sorted_ruptures])
                 assets.append(asset_id)
-                gmfs.append(gmvs)
-        return assets, GmfsRuptures(numpy.array(gmfs), sorted_ruptures)
+                gmf_ids.append(gmf_id)
+        return assets, gmf_ids
 
 
 # TODO: this calls will disappear soon: see

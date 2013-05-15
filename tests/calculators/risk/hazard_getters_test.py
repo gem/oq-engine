@@ -23,13 +23,13 @@ from openquake.engine.db import models
 from openquake.engine.calculators.risk import hazard_getters
 from openquake.engine.calculators.risk.base import RiskCalculator
 
-from tests.utils.helpers import demo_file
+from tests.utils.helpers import get_data_path
 
 
 class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
-    hazard_demo = demo_file('simple_fault_demo_hazard/job.ini')
-    risk_demo = demo_file('classical_psha_based_risk/job.ini')
+    hazard_demo = get_data_path('simple_fault_demo_hazard/job.ini')
+    risk_demo = get_data_path('classical_psha_based_risk/job.ini')
     hazard_output_type = 'curve'
     getter_class = hazard_getters.HazardCurveGetterPerAsset
     taxonomy = 'VF'
@@ -76,8 +76,8 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
 class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
-    hazard_demo = demo_file('event_based_hazard/job.ini')
-    risk_demo = demo_file('event_based_risk/job.ini')
+    hazard_demo = get_data_path('event_based_hazard/job.ini')
+    risk_demo = get_data_path('event_based_risk/job.ini')
     hazard_output_type = 'gmf'
     getter_class = hazard_getters.GroundMotionValuesGetter
     taxonomy = 'RM'
@@ -97,8 +97,8 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
 class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
-    hazard_demo = demo_file('scenario_hazard/job.ini')
-    risk_demo = demo_file('scenario_risk/job.ini')
+    hazard_demo = get_data_path('scenario_hazard/job.ini')
+    risk_demo = get_data_path('scenario_risk/job.ini')
     hazard_output_type = 'gmf_scenario'
     getter_class = hazard_getters.GroundMotionScenarioGetter
     taxonomy = 'RM'
