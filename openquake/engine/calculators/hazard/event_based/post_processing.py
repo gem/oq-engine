@@ -204,7 +204,7 @@ def insert_into_gmf_agg(gmf_collection_id, chunk_id, nchunks):
         curs.execute(insert_query)
         logs.LOG.debug(insert_query)
         curs.execute('DELETE FROM hzrdr.gmf_set '
-                     'WHERE gmf_collection_id=%d' % coll.id)
+                     'WHERE gmf_collection_id=%d' % gmf_collection_id)
         logs.LOG.debug('Purged hzrdr.gmf and hzrdr.gmf_set')
 
 

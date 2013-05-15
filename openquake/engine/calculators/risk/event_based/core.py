@@ -432,15 +432,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         with EnginePerformanceMonitor('post processing', self.job.id):
 
             time_span, tses = self.hazard_times()
-
+            ses_ids = set(ses.id for ses in self.rc.get_all_available_ses())
             for loss_type, event_loss_table in self.event_loss_tables.items():
                 for hazard_output in self.rc.hazard_outputs():
-                    gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
                     aggregate_losses = [
                         event_loss_table[rupture.id]
                         for rupture in models.SESRupture.objects.filter(
-                            ses__pk__in=[gmf_set.stochastic_event_set_id
-                                         for gmf_set in gmf_sets])
+                            ses__pk__in=ses_ids)
                         if rupture.id in event_loss_table]
 
                     if aggregate_losses:
