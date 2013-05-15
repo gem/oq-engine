@@ -45,6 +45,9 @@ class HazardCurvesTestCase(unittest.TestCase):
             assert tom.time_span is self.time_span
             assert isinstance(tom, PoissonTOM)
             return iter(self.ruptures)
+    class FailSource(FakeSource):
+        def iter_ruptures(self, tom):
+            raise ValueError('Something bad happened')
 
     class FakeGSIM(object):
         def __init__(self, truncation_level, imts, poes):
@@ -127,6 +130,25 @@ class HazardCurvesTestCase(unittest.TestCase):
                         str(site1_pgd_poe))
         self.assertTrue(numpy.allclose(site2_pgd_poe, site2_pgd_poe_expected),
                         str(site2_pgd_poe))
+
+    def test_source_errors(self):
+        # exercise `hazard_curves_poissonian` in the case of an exception,
+        # whereby we expect the source_id to be reported in the error message
+
+        fail_source = self.FailSource(self.source2.source_id,
+                                      self.source2.ruptures,
+                                      self.source2.time_span)
+        sources = iter([self.source1, fail_source])
+
+        with self.assertRaises(RuntimeError) as ae:
+            hazard_curves_poissonian(sources, self.sites, self.imts,
+                                     self.time_span, self.gsims,
+                                     self.truncation_level)
+        self.assertTrue(isinstance(ae.exception, RuntimeError))
+        expected_error = (
+            'An error occurred with source id=2. Error: Something bad happened'
+        )
+        self.assertEqual(expected_error, ae.exception.message)
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
