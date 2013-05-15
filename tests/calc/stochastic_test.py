@@ -23,6 +23,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
     class FakeRupture(object):
         def __init__(self, occurrences):
             self.occurrences = occurrences
+
         def sample_number_of_occurrences(self):
             return self.occurrences
 
@@ -30,19 +31,54 @@ class StochasticEventSetTestCase(unittest.TestCase):
         def __init__(self, ruptures, time_span):
             self.time_span = time_span
             self.ruptures = ruptures
+
         def iter_ruptures(self, tom):
             assert tom.time_span is self.time_span
             assert isinstance(tom, PoissonTOM)
             return iter(self.ruptures)
 
-    def test(self):
-        time_span = 15
-        r1_1 = self.FakeRupture(1)
-        r1_0 = self.FakeRupture(0)
-        r1_2 = self.FakeRupture(2)
-        r2_1 = self.FakeRupture(1)
-        source1 = self.FakeSource([r1_1, r1_0, r1_2], time_span)
-        source2 = self.FakeSource([r2_1], time_span)
-        ses = list(stochastic_event_set_poissonian([source1, source2],
-                                                   time_span))
-        self.assertEqual(ses, [r1_1, r1_2, r1_2, r2_1])
+    # the first source has 3 ruptures, the second 1 rupture
+    def setUp(self):
+        self.time_span = 15
+        self.r1_1 = self.FakeRupture(1)
+        self.r1_0 = self.FakeRupture(0)
+        self.r1_2 = self.FakeRupture(2)
+        self.r2_1 = self.FakeRupture(1)
+        self.source1 = self.FakeSource(
+            [self.r1_1, self.r1_0, self.r1_2], self.time_span)
+        self.source2 = self.FakeSource(
+            [self.r2_1], self.time_span)
+
+    def test_no_filter(self):
+        ses = list(
+            stochastic_event_set_poissonian(
+                [self.source1, self.source2],
+                self.time_span
+            ))
+        self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2, self.r2_1])
+
+    def test_filter(self):
+        def extract_first_source(sources_sites):
+            for source, _sites in sources_sites:
+                yield source, None
+                break
+        fake_sites = [1, 2, 3]
+        ses = list(
+            stochastic_event_set_poissonian(
+                [self.source1, self.source2],
+                self.time_span, fake_sites, extract_first_source
+            ))
+        self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2])
+
+        def extract_first_rupture(ruptures_sites):
+            for rupture, _sites in ruptures_sites:
+                yield rupture, None
+                break
+        ses = list(
+            stochastic_event_set_poissonian(
+                [self.source1, self.source2],
+                self.time_span, fake_sites,
+                extract_first_source,
+                extract_first_rupture
+            ))
+        self.assertEqual(ses, [self.r1_1])
