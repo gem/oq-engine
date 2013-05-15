@@ -174,6 +174,18 @@ _wait_ssh () {
 
 #
 #  _devtest_innervm_run <branch_id> <lxc_ip> - part of source test performed on lxc
+#                     the following activities are performed:
+#                     - extracts dependencies from oq-{engine,nrmlib, ..} debian/control
+#                       files and install them
+#                     - builds oq-hazardlib speedups
+#                     - installs oq-engine sources on lxc
+#                     - set up postgres
+#                     - creates database schema
+#                     - runs celeryd
+#                     - runs tests
+#                     - runs coverage
+#                     - collects all tests output files from lxc
+#
 #      <branch_id>    name of the tested branch
 #      <lxc_ip>       the IP address of lxc instance
 #
@@ -270,6 +282,16 @@ _devtest_innervm_run () {
 
 #
 #  _pkgtest_innervm_run <lxc_ip> - part of package test performed on lxc
+#                     the following activities are performed:
+#                     - adds local gpg key to apt keystore
+#                     - copies 'oq-*' package repositories on lxc
+#                     - adds repositories to apt sources on lxc
+#                     - performs package tests (install, remove, reinstall ..)
+#                     - set up postgres
+#                     - creates database schema
+#                     - runs celeryd
+#                     - executes demos
+#
 #      <lxc_ip>    the IP address of lxc instance
 #
 _pkgtest_innervm_run () {
@@ -692,19 +714,12 @@ stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')
 stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')"
 # echo "stp [$stp_vers] [$stp_maj] [$stp_min] [$stp_bfx] [$stp_suf]"
 
-if [ 1 -eq 1 ]; then
-    # version info from openquake/__init__.py
-    ini_maj="$(cat openquake/engine/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_min="$(cat openquake/engine/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_bfx="$(cat openquake/engine/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_suf="" # currently not included into the version array structure
-    # echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
-else
-    ini_maj="$stp_maj"
-    ini_min="$stp_min"
-    ini_bfx="$stp_bfx"
-    ini_suf="$stp_suf"
-fi
+# version info from openquake/__init__.py
+ini_maj="$(cat openquake/engine/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+ini_min="$(cat openquake/engine/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+ini_bfx="$(cat openquake/engine/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
+ini_suf="" # currently not included into the version array structure
+# echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
 
 # version info from debian/changelog
 h="$(head -n1 debian/changelog)"
@@ -758,20 +773,18 @@ if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
     read a
 fi
 
-if [ 1 -eq 1 ]; then
-    sed -i "s/^\([ ${TB}]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
+sed -i "s/^\([ ${TB}]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
 
-    # mods pre-packaging
-    mv LICENSE         openquake/engine
-    mv README.txt      openquake/engine/README
-    mv celeryconfig.py openquake/engine
-    mv openquake.cfg   openquake/engine
+# mods pre-packaging
+mv LICENSE         openquake/engine
+mv README.txt      openquake/engine/README
+mv celeryconfig.py openquake/engine
+mv openquake.cfg   openquake/engine
 
-    mv bin/openquake   bin/oqscript.py
-    mv bin             openquake/engine/bin
+mv bin/openquake   bin/oqscript.py
+mv bin             openquake/engine/bin
     
-    rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
-fi
+rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
 
 dpkg-buildpackage $DPBP_FLAG
 cd -
