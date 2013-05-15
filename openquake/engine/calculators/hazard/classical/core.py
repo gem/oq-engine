@@ -283,7 +283,9 @@ BaseHazardCalculator.finalize_hazard_curves`
         # if `hazard_maps` is false but `uniform_hazard_spectra` is true,
         # just don't export the maps
         if self.hc.hazard_maps or self.hc.uniform_hazard_spectra:
-            post_proc.do_hazard_map_post_process(self.job)
+            self.parallelize(
+                post_proc.hazard_curves_to_hazard_map_task,
+                post_proc.hazard_curves_to_hazard_map_task_arg_gen(self.job))
 
         if self.hc.uniform_hazard_spectra:
             post_proc.do_uhs_post_proc(self.job)
