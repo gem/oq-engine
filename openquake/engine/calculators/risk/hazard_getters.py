@@ -261,7 +261,7 @@ class GroundMotionValuesGetter(HazardGetter):
 
         # get the sorted ruptures from all the distinct GMFs
         distinct_gmf_ids = tuple(set(gmf_ids))
-        cursor = getcursor('job_init')
+        cursor = models.getcursor('job_init')
         cursor.execute('''\
         SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
         WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
