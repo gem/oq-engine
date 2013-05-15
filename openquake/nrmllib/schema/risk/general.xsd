@@ -8,20 +8,6 @@
 
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
 
-    <xs:element name="riskResult" type="RiskResult" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="RiskResult">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
-                    <xs:choice>
-                        <xs:element ref="aggregateLossCurve"/>
-                    </xs:choice>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-
     <xs:simpleType name="AssetCategory">
         <xs:restriction base="xs:string" />
     </xs:simpleType>
@@ -39,5 +25,10 @@
             <xs:minLength value="1" />
         </xs:restriction>
     </xs:simpleType>
+
+    <xs:complexType name="Location">
+      <xs:attribute name="lon" type="Longitude"/>
+      <xs:attribute name="lat" type="Latitude"/>
+    </xs:complexType>
 
 </xs:schema>

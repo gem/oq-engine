@@ -1,101 +1,129 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:gml="http://www.opengis.net/gml"
            xmlns="http://openquake.org/xmlns/nrml/0.4"
            targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+    <!-- Exposure model definitions. -->
+    <xs:element name="exposureModel" type="ExposureModel"/>
 
-    <!-- Top-level element for Exposure model definitions. -->
-    <xs:element name="exposureModel" type="ExposureModel" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="ExposureModel">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
-                    <xs:element ref="exposureList"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+        <xs:all>
+            <xs:element name="description" minOccurs="0" type="xs:string"/>
+            <xs:element name="asset" type="ExposureModelAsset"/>
+            <xs:element name="area" minOccurs="0" type="ExposureModelArea"/>
+            <xs:element name="businessInterruptionCost"
+                        minOccurs="0"
+                        type="ExposureModelCost"/>
+            <xs:element name="contentsCost"
+                        minOccurs="0"
+                        type="ExposureModelCost"/>
+            <xs:element name="nonStructuralCost"
+                        minOccurs="0"
+                        type="ExposureModelCost"/>
+            <xs:element name="structuralCost"
+                        minOccurs="0"
+                        type="ExposureModelCost"/>
+            <xs:element name="retrofittedStructuralCost"
+                        type="ExposureModelCost"
+                        minOccurs="0" />
+            <xs:element name="deductible" type="AbsoluteType" minOccurs="0"/>
+            <xs:element name="coverageLimit" type="AbsoluteType" minOccurs="0"/>
+            <xs:element name="assets" type="Assets" />
+        </xs:all>
+
+        <xs:attribute name="id" type="xs:string" use="required"/>
     </xs:complexType>
 
-    <xs:element name="exposureList" type="ExposureList" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="ExposureList">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element name="taxonomySource" minOccurs="0" maxOccurs="1" type="xs:string"/>
-                    <xs:element ref="assetDefinition" minOccurs="0" maxOccurs="unbounded"/>
-                </xs:sequence>
-                <xs:attribute name="assetCategory" type="AssetCategory" use="required"/>
-                <xs:attribute name="areaType" type="AreaType"/>
-                <xs:attribute name="areaUnit" type="AssetValueUnit"/>
-                <!-- contents cost type and unit -->
-                <xs:attribute name="cocoType" type="CostType"/>
-                <xs:attribute name="cocoUnit" type="AssetValueUnit"/>
-                <!-- retrofitting cost type and unit -->
-                <xs:attribute name="recoType" type="CostType"/>
-                <xs:attribute name="recoUnit" type="AssetValueUnit"/>
-                <!-- structural cost type and unit -->
-                <xs:attribute name="stcoType" type="CostType"/>
-                <xs:attribute name="stcoUnit" type="AssetValueUnit"/>
-                <!-- non-structural cost type and unit -->
-                <xs:attribute name="nonStcoType" type="CostType"/>
-                <xs:attribute name="nonStcoUnit" type="AssetValueUnit"/>
-            </xs:extension>
-        </xs:complexContent>
+    <xs:complexType name="ExposureModelAsset">
+         <xs:attribute name="category" type="AssetCategory" use="required"/>
+         <xs:attribute name="taxonomySource" type="xs:string" use="optional"/>
     </xs:complexType>
 
-    <xs:element name="assetDefinition" type="AssetDefinition" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="AssetDefinition">
-        <xs:complexContent>
-            <xs:extension base="FieldNode">
-                <xs:sequence>
-                    <xs:element name="area" minOccurs="0" maxOccurs="1" type="PositiveDoubleType"/>
-                    <!-- contents cost -->
-                    <xs:element name="coco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
-                    <!-- insurance deductible -->
-                    <xs:element name="deductible" minOccurs="0" maxOccurs="1" type="PositiveDoubleType"/>
-                    <!-- insurance coverage limit -->
-                    <xs:element name="limit" minOccurs="0" maxOccurs="1" type="PositiveDoubleType"/>
-                    <!-- number of assets, people etc. -->
-                    <xs:element name="number" minOccurs="0" maxOccurs="1" type="PositiveDoubleType"/>
-                    <xs:element name="occupants" minOccurs="0" maxOccurs="unbounded" type="OccupantsType"/>
-                    <!-- retrofitting cost -->
-                    <xs:element name="reco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
-                    <!-- structural cost -->
-                    <xs:element name="stco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
-                    <!-- non-structural cost -->
-                    <xs:element name="nonstco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
-                    <xs:element name="taxonomy" type="Taxonomy"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+    <xs:complexType name="ExposureModelArea">
+         <xs:attribute name="type" type="AreaType" use="required"/>
+         <xs:attribute name="unit" type="xs:string" use="required"/>
     </xs:complexType>
 
-    <xs:complexType name="AssetValue">
-        <xs:simpleContent>
-            <xs:extension base="PositiveDoubleType"/>
-        </xs:simpleContent>
+    <xs:complexType name="ExposureModelCost">
+         <xs:attribute name="type" type="ExposureModelCostType" use="required"/>
+         <xs:attribute name="unit" type="AssetValueUnit" use="required"/>
     </xs:complexType>
 
-    <xs:complexType name="OccupantsType">
-        <xs:simpleContent>
-            <xs:extension base="PositiveIntegerType">
-                <xs:attribute name="description" type="xs:string" use="required"/>
-            </xs:extension>
-        </xs:simpleContent>
+    <xs:complexType name="AbsoluteType">
+         <xs:attribute name="isAbsolute" type="xs:boolean" />
     </xs:complexType>
+
+    <xs:complexType name="Assets">
+         <xs:sequence>
+              <xs:element name="asset" type="Asset" maxOccurs="unbounded"/>
+         </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Asset">
+         <xs:sequence minOccurs="0" maxOccurs="unbounded">
+             <xs:element name="location" type="Location"/>
+
+             <xs:element name="cost"
+                         minOccurs="0"
+                         maxOccurs="unbounded"
+                         type="Cost"/>
+             <xs:element name="occupancy"
+                         minOccurs="0"
+                         maxOccurs="unbounded"
+                         type="Occupancy"/>
+         </xs:sequence>
+         <xs:attribute name="id" type="xs:string" use="required"/>
+         <xs:attribute name="area" type="PositiveDoubleType" use="optional"/>
+         <xs:attribute name="units" type="PositiveDoubleType" use="optional"/>
+         <xs:attribute name="taxonomy" type="xs:string" use="required"/>
+    </xs:complexType>
+
+     <xs:complexType name="Cost">
+         <xs:attribute name="type"
+                       use="required"
+                       type="CostType"/>
+         <xs:attribute name="value"
+                       use="required"
+                       type="PositiveDoubleType"/>
+         <xs:attribute name="deductible"
+                       use="optional"
+                       type="PositiveDoubleType"/>
+         <xs:attribute name="coverageLimit"
+                       use="optional"
+                       type="PositiveDoubleType"/>
+         <xs:attribute name="retrofitted"
+                       use="optional"
+                       type="PositiveDoubleType"/>
+     </xs:complexType>
+
+     <xs:complexType name="Occupancy">
+         <xs:attribute name="period"
+                       type="xs:string"
+                       use="required"/>
+         <xs:attribute name="occupants"
+                       type="PositiveIntegerType"
+                       use="required"/>
+     </xs:complexType>
 
     <xs:simpleType name="CostType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="structural"/>
+            <xs:enumeration value="contents"/>
+            <xs:enumeration value="businessInterruption"/>
+            <xs:enumeration value="nonStructural"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="ExposureModelCostType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="aggregated"/>
             <xs:enumeration value="per_area"/>
             <xs:enumeration value="per_asset"/>
         </xs:restriction>
     </xs:simpleType>
+
     <xs:simpleType name="AreaType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="aggregated"/>
