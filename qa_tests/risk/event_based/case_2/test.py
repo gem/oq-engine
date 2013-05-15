@@ -59,11 +59,13 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
             sm_lt_path="test_sm", gsim_lt_path="test_gsim",
             is_complete=False, total_items=1, completed_items=1)
 
+        gmf_coll = models.GmfCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test Hazard output", "gmf"),
+            lt_realization=lt_realization)
+
         gmf_set = models.GmfSet.objects.create(
-            gmf_collection=models.GmfCollection.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Test Hazard output", "gmf"),
-                lt_realization=lt_realization),
+            gmf_collection=gmf_coll,
             investigation_time=hc.investigation_time,
             ses_ordinal=1)
 
@@ -86,11 +88,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
-            job.is_running = True
-            job.status = 'post_processing'
-            job.save()
-            # workaround to fool the JobCompletedError
-            populate_gmf_agg(job)
+            populate_gmf_agg([gmf_coll.id])
 
         return gmf_set.gmf_collection.output.id
 
