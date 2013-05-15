@@ -1788,10 +1788,12 @@ class GmfCollection(djm.Model):
     def get_children(self):
         """
         Get the children of a given gmf_collection, if any.
+        :returns:
+          A list of :class:`openquake.engine.db.models.GmfCollection` instances
         """
         curs = getcursor('job_init')
-        curs.execute('select partial_cid from hzrdr.gmf_output '
-                     'where complete_cid=%s', (self.id,))
+        curs.execute('select child_id from hzrdr.gmf_collection_family '
+                     'where parent_id=%s', (self.id,))
         return [self.__class__.objects.get(pk=r[0]) for r in curs]
 
     def get_gmfs_per_ses(self, location=None, orderby=False):
