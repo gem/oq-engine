@@ -140,4 +140,4 @@ GRANT SELECT,INSERT        ON uiapi.performance        TO oq_job_init;
 
 
 -- helper views
-GRANT SELECT               ON hzrdr.gmf_output         TO oq_job_init;
+GRANT SELECT               ON hzrdr.gmf_collection_family TO oq_job_init;
