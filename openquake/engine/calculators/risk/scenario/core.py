@@ -230,7 +230,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 model.vulnerability_function,
                 seed=self.rnd.randint(0, models.MAX_SINT_32),
                 correlation=self.rc.asset_correlation),
-            hazard_getters.GroundMotionScenarioGetter(
+            hazard_getters.GroundMotionValuesGetter(
                 ho,
                 assets,
                 self.rc.best_maximum_distance,

@@ -662,15 +662,6 @@ CREATE TABLE hzrdr.gmf_agg (
     location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE hzrdr_ts;
 
-CREATE TABLE hzrdr.gmf_scenario (
-    id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,  -- FK to output.id
-    imt VARCHAR NOT NULL,
-    gmvs float[],
-    location GEOGRAPHY(point) NOT NULL,
-    UNIQUE (output_id, imt, location)
-) TABLESPACE hzrdr_ts;
-
 
 CREATE TABLE hzrdr.disagg_result (
     id SERIAL PRIMARY KEY,
@@ -1267,12 +1258,6 @@ ON DELETE CASCADE;
 ALTER TABLE hzrdr.gmf
 ADD CONSTRAINT hzrdr_gmf_gmf_set_fk
 FOREIGN KEY (gmf_set_id) REFERENCES hzrdr.gmf_set(id)
-ON DELETE CASCADE;
-
--- gmf_scenario -> output FK
-ALTER TABLE hzrdr.gmf_scenario
-ADD CONSTRAINT hzrdr_gmf_scenario_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id)
 ON DELETE CASCADE;
 
 -- disagg_result -> output FK

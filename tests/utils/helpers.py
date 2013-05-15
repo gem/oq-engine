@@ -711,12 +711,14 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 location="%s" % point)
 
     elif output_type == "gmf_scenario":
-        output = models.Output.objects.create_output(
-            hazard_job, "Test Hazard output", "gmf_scenario")
+        hazard_output = models.GmfCollection.objects.create(
+            output=models.Output.objects.create_output(
+                hazard_job, "Test gmf scenario output", "gmf_scenario"))
+
         for point in ["POINT(15.48 38.0900001)", "POINT(15.565 38.17)",
                       "POINT(15.481 38.25)"]:
-            hazard_output = models.GmfScenario.objects.create(
-                output=output,
+            models.GmfAgg.objects.create(
+                gmf_collection=hazard_output,
                 imt="PGA",
                 location=point,
                 gmvs=[0.1, 0.2, 0.3])
