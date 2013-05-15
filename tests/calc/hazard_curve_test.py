@@ -145,7 +145,6 @@ class HazardCurvesTestCase(unittest.TestCase):
             hazard_curves_poissonian(sources, self.sites, self.imts,
                                      self.time_span, self.gsims,
                                      self.truncation_level)
-        self.assertTrue(isinstance(ae.exception, RuntimeError))
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
