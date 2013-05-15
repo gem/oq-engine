@@ -40,7 +40,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
-            helpers.demo_file("event_based_hazard/job.ini"))
+            helpers.get_data_path("event_based_hazard/job.ini"))
 
         job.hazard_calculation = models.HazardCalculation.objects.create(
             owner=job.hazard_calculation.owner,
