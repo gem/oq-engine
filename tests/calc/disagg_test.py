@@ -64,6 +64,10 @@ class _BaseDisaggTestCase(unittest.TestCase):
             assert tom.time_span == self.tom.time_span
             return iter(self.ruptures)
 
+    class FailSource(FakeSource):
+        def iter_ruptures(self, tom):
+            raise ValueError('Something bad happened')
+
     class FakeGSIM(object):
         def __init__(self, iml, imt, truncation_level, n_epsilons,
                      disaggregated_poes):
@@ -314,6 +318,28 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
             matrix[idx] = 0
 
         self.assertEqual(matrix.sum(), 0)
+
+    def test_source_errors(self):
+        # exercise the case where an error occurs while computing on a given
+        # seismic source; in this case, we expect an error to be raised which
+        # signals the id of the source in question
+        fail_source = self.FailSource(self.source2.source_id,
+                                      self.source2.ruptures,
+                                      self.source2.tom,
+                                      self.source2.tectonic_region_type)
+        sources = iter([self.source1, fail_source])
+
+        with self.assertRaises(RuntimeError) as ae:
+            bin_edges, matrix = disagg.disaggregation_poissonian(
+                sources, self.site, self.imt, self.iml, self.gsims,
+                self.time_span, self.truncation_level, n_epsilons=3,
+                mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4
+            )
+        expected_error = (
+            'An error occurred with source id=2. Error: Something bad happened'
+        )
+        self.assertEqual(expected_error, ae.exception.message)
+
 
     def test_no_contributions_from_ruptures(self):
         # Test that the `disaggregation` function returns `None, None` if no
