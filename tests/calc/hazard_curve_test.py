@@ -45,6 +45,7 @@ class HazardCurvesTestCase(unittest.TestCase):
             assert tom.time_span is self.time_span
             assert isinstance(tom, PoissonTOM)
             return iter(self.ruptures)
+
     class FailSource(FakeSource):
         def iter_ruptures(self, tom):
             raise ValueError('Something bad happened')
