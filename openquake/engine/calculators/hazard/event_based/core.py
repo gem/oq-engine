@@ -113,8 +113,8 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
-        # filters
-        ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
+        # distance filters
+        src_filter = filters.source_site_distance_filter(hc.maximum_distance)
         rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
 
         # complete_logic_tree_ses flag
@@ -136,14 +136,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
             hc.width_of_mfd_bin, hc.area_source_discretization))
 
-        sources_sites = ((src, hc.site_collection) for src in sources)
-        filtered_sources = [src for src, _ in ssd_filter(sources_sites)]
-
-        logs.LOG.debug('Considering %d sources (of %d)',
-                       len(filtered_sources), len(sources))
-
-    filtered_away = 0  # ruptures filtered away by the maximum distance
-
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
@@ -157,28 +149,23 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
         with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
-            all_ruptures = list(stochastic.stochastic_event_set_poissonian(
-                                filtered_sources, hc.investigation_time))
-            ruptures_sites = ((rupture, hc.site_collection)
-                              for rupture in all_ruptures)
-            filtered_ruptures = [rup for rup, _ in rup_filter(ruptures_sites)]
-
-            filtered_away += len(all_ruptures) - len(filtered_ruptures)
-            if not filtered_ruptures:
+            ruptures = list(stochastic.stochastic_event_set_poissonian(
+                            sources, hc.investigation_time,
+                            hc.site_collection, src_filter, rup_filter))
+            if not ruptures:
                 continue
 
         with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
             rupture_ids = [
                 _save_ses_rupture(
                     ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
-                for i, rupture in enumerate(filtered_ruptures, 1)]
+                for i, rupture in enumerate(ruptures, 1)]
 
         if hc.ground_motion_fields:
             with EnginePerformanceMonitor(
                     'computing gmfs', job_id, ses_and_gmfs):
                 gmf_cache = compute_gmf_cache(
-                    hc, gsims, filtered_ruptures, rupture_ids,
-                    result_grp_ordinal)
+                    hc, gsims, ruptures, rupture_ids, result_grp_ordinal)
             with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
                 # This will be the "container" for all computed GMFs
                 # for this stochastic event set.
@@ -187,9 +174,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                     ses_ordinal=ses_rlz_n)
                 _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                            result_grp_ordinal)
-    if filtered_away:
-        logs.LOG.debug('%d rupture(s) filtered away by the maximum distance '
-                       'criterium for set %d', filtered_away, ses_rlz_n)
     logs.LOG.debug('< task complete, signaling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
