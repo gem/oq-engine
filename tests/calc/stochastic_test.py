@@ -28,7 +28,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
             return self.occurrences
 
     class FakeSource(object):
-        def __init__(self, ruptures, time_span):
+        def __init__(self, source_id, ruptures, time_span):
+            self.source_id = source_id
             self.time_span = time_span
             self.ruptures = ruptures
 
@@ -45,9 +46,9 @@ class StochasticEventSetTestCase(unittest.TestCase):
         self.r1_2 = self.FakeRupture(2)
         self.r2_1 = self.FakeRupture(1)
         self.source1 = self.FakeSource(
-            [self.r1_1, self.r1_0, self.r1_2], self.time_span)
+            1, [self.r1_1, self.r1_0, self.r1_2], self.time_span)
         self.source2 = self.FakeSource(
-            [self.r2_1], self.time_span)
+            2, [self.r2_1], self.time_span)
 
     def test_no_filter(self):
         ses = list(
@@ -82,3 +83,11 @@ class StochasticEventSetTestCase(unittest.TestCase):
                 extract_first_rupture
             ))
         self.assertEqual(ses, [self.r1_1])
+        self.source1 = self.FakeSource(1, [self.r1_1, self.r1_0, self.r1_2],
+                                       self.time_span)
+        self.source2 = self.FakeSource(2, [self.r2_1], self.time_span)
+
+    def test(self):
+        ses = list(stochastic_event_set_poissonian(
+            [self.source1, self.source2], self.time_span))
+        self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2, self.r2_1])
