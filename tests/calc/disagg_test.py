@@ -54,7 +54,8 @@ class _BaseDisaggTestCase(unittest.TestCase):
             return self.probability
 
     class FakeSource(object):
-        def __init__(self, ruptures, tom, tectonic_region_type):
+        def __init__(self, source_id, ruptures, tom, tectonic_region_type):
+            self.source_id = source_id
             self.ruptures = ruptures
             self.tom = tom
             self.tectonic_region_type = tectonic_region_type
@@ -105,11 +106,11 @@ class _BaseDisaggTestCase(unittest.TestCase):
         self.time_span = 10
         self.tom = PoissonTOM(time_span=10)
         self.source1 = self.FakeSource(
-            [rupture for poes, rupture in self.ruptures_and_poes1],
+            1, [rupture for poes, rupture in self.ruptures_and_poes1],
             self.tom, 'trt1'
         )
         self.source2 = self.FakeSource(
-            [rupture for poes, rupture in self.ruptures_and_poes2],
+            2, [rupture for poes, rupture in self.ruptures_and_poes2],
             self.tom, 'trt2'
         )
         self.disagreggated_poes = dict(
