@@ -38,7 +38,10 @@ class StochasticEventSetTestCase(unittest.TestCase):
             assert isinstance(tom, PoissonTOM)
             return iter(self.ruptures)
 
-    # the first source has 3 ruptures, the second 1 rupture
+    class FailSource(FakeSource):
+        def iter_ruptures(self, tom):
+            raise ValueError('Something bad happened')
+
     def setUp(self):
         self.time_span = 15
         self.r1_1 = self.FakeRupture(1)
@@ -91,3 +94,33 @@ class StochasticEventSetTestCase(unittest.TestCase):
         ses = list(stochastic_event_set_poissonian(
             [self.source1, self.source2], self.time_span))
         self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2, self.r2_1])
+
+    def test_source_errors(self):
+        # exercise the case where an error occurs while computing on a given
+        # seismic source; in this case, we expect an error to be raised which
+        # signals the id of the source in question
+        fail_source = self.FailSource(2, [self.r2_1], self.time_span)
+        with self.assertRaises(RuntimeError) as ae:
+            list(stochastic_event_set_poissonian([self.source1, fail_source],
+                                                 self.time_span))
+
+        expected_error = (
+            'An error occurred with source id=2. Error: Something bad happened'
+        )
+        self.assertEqual(expected_error, ae.exception.message)
+
+    def test_source_errors_with_sites(self):
+        # exercise the case where an error occurs while computing on a given
+        # seismic source; in this case, we expect an error to be raised which
+        # signals the id of the source in question
+        fail_source = self.FailSource(2, [self.r2_1], self.time_span)
+        fake_sites = [1, 2, 3]
+        with self.assertRaises(RuntimeError) as ae:
+            list(stochastic_event_set_poissonian([self.source1, fail_source],
+                                                 self.time_span,
+                                                 sites=fake_sites))
+
+        expected_error = (
+            'An error occurred with source id=2. Error: Something bad happened'
+        )
+        self.assertEqual(expected_error, ae.exception.message)

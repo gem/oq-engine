@@ -58,9 +58,14 @@ def stochastic_event_set_poissonian(
     tom = PoissonTOM(time_span)
     if sites is None:  # no filtering
         for source in sources:
-            for rupture in source.iter_ruptures(tom):
-                for i in xrange(rupture.sample_number_of_occurrences()):
-                    yield rupture
+            try:
+                for rupture in source.iter_ruptures(tom):
+                    for i in xrange(rupture.sample_number_of_occurrences()):
+                        yield rupture
+            except Exception, err:
+                msg = 'An error occurred with source id=%s. Error: %s'
+                msg %= (source.source_id, err.message)
+                raise RuntimeError(msg)
         return
     # else apply filtering
     sources_sites = source_site_filter((source, sites) for source in sources)
