@@ -2648,7 +2648,7 @@ class AssetManager(djm.GeoManager):
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
             """.format(occupants=occupants, occupants_cond=occupants_cond),
-            args))
+                     args))
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
