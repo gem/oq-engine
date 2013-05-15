@@ -92,7 +92,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
-            helpers.demo_file("simple_fault_demo_hazard/job.ini"))
+            helpers.get_data_path("simple_fault_demo_hazard/job.ini"))
 
         hazard_curve = [
             (0.001, 0.0398612669790014),
