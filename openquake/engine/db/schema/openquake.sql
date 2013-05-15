@@ -1482,11 +1482,10 @@ CREATE VIEW hzrdr.gmf_agg_job AS
    WHERE output_type='gmf';
 
 
--- associations gmf_collections <-> outputs
-CREATE VIEW hzrdr.gmf_output AS
+-- associations parent->children
+CREATE VIEW hzrdr.gmf_collection_family AS
   SELECT j.id as oq_job_id, hazard_calculation_id,
-  o1.id AS complete_oid, o2.id AS partial_oid,
-  c1.id AS complete_cid, c2.id AS partial_cid
+  c1.id AS parent_id, c2.id AS child_id
   FROM uiapi.oq_job AS j
   INNER JOIN uiapi.output AS o1
   ON o1.oq_job_id=j.id
