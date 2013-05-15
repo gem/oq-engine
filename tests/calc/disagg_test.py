@@ -340,7 +340,6 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
         )
         self.assertEqual(expected_error, ae.exception.message)
 
-
     def test_no_contributions_from_ruptures(self):
         # Test that the `disaggregation` function returns `None, None` if no
         # ruptures contribute to the hazard level.
