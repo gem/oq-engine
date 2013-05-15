@@ -108,6 +108,8 @@ _pkgtest_innervm_run () {
         DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
     done"
 
+    # FIXME: here the risk demos part when finished
+
     trap ERR
 
     return
@@ -365,20 +367,16 @@ if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
     read a
 fi
 
-if [ 1 -eq 1 ]; then
-    sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
+sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
 
-    # mods pre-packaging
-    mv LICENSE         openquake/engine
-    mv README.txt      openquake/engine/README
-    mv celeryconfig.py openquake/engine
-    mv openquake.cfg   openquake/engine
+# mods pre-packaging
+mv LICENSE         openquake/engine
+mv README.txt      openquake/engine/README
+mv celeryconfig.py openquake/engine
+mv openquake.cfg   openquake/engine
 
-    mv bin/openquake   bin/oqscript.py
-    mv bin             openquake/engine/bin
-
-    rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
-fi
+mv bin/openquake   bin/oqscript.py
+mv bin             openquake/engine/bin
 
 dpkg-buildpackage $DPBP_FLAG
 cd -

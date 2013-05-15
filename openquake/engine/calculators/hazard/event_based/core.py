@@ -661,12 +661,17 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         with EnginePerformanceMonitor(
                 'populating gmf_agg', self.job.id, tracing=True):
-            post_processing.populate_gmf_agg(self.job)
+            hc = self.job.hazard_calculation
+            gmfcollections = models.GmfCollection.objects.filter(
+                lt_realization__hazard_calculation=hc)
+            post_processing.populate_gmf_agg(c.id for c in gmfcollections)
 
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
                                           self.job.id):
-                post_processing.do_post_process(self.job)
+                self.parallelize(
+                    post_processing.gmf_to_hazard_curve_task,
+                    post_processing.gmf_to_hazard_curve_arg_gen(self.job))
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
@@ -679,4 +684,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             if self.hc.hazard_maps:
                 with EnginePerformanceMonitor(
                         'generating hazard maps', self.job.id):
-                    cls_post_proc.do_hazard_map_post_process(self.job)
+                    self.parallelize(
+                        cls_post_proc.hazard_curves_to_hazard_map_task,
+                        cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
+                            self.job))
