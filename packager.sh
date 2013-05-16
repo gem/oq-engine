@@ -365,11 +365,13 @@ _pkgtest_innervm_run () {
     # copy demos file to $HOME
     ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
 
-    # run all demos found
+    # run all of the hazard demos
     ssh $lxc_ip "cd demos
-    for ini in \$(find . -name job.ini); do
+    for ini in \$(find ./hazard -name job.ini); do
         DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
     done"
+
+    # FIXME: here the risk demos part when finished
 
     trap ERR
 
@@ -782,8 +784,6 @@ mv openquake.cfg   openquake/engine
 
 mv bin/openquake   bin/oqscript.py
 mv bin             openquake/engine/bin
-    
-rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
 
 dpkg-buildpackage $DPBP_FLAG
 cd -
