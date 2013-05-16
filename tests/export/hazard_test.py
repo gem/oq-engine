@@ -264,7 +264,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
         target_dir = tempfile.mkdtemp()
 
         try:
-            cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+            cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
 
             # run the calculation to create something to export
             helpers.run_hazard_job(cfg)
@@ -354,7 +354,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
         target_dir = tempfile.mkdtemp()
 
         try:
-            cfg = helpers.demo_file('event_based_hazard/job.ini')
+            cfg = helpers.get_data_path('event_based_hazard/job.ini')
 
             # run the calculation to create something to export
             helpers.run_hazard_job(cfg)
@@ -455,7 +455,7 @@ class ScenarioExportTestCase(BaseExportTestCase):
         target_dir = tempfile.mkdtemp()
 
         try:
-            cfg = helpers.demo_file('scenario_hazard/job.ini')
+            cfg = helpers.get_data_path('scenario_hazard/job.ini')
 
             # run the calculation to create something to export
             helpers.run_hazard_job(cfg)
@@ -492,7 +492,7 @@ class DisaggExportTestCase(BaseExportTestCase):
         target_dir = tempfile.mkdtemp()
 
         try:
-            cfg = helpers.demo_file('disaggregation/job.ini')
+            cfg = helpers.get_data_path('disaggregation/job.ini')
 
             helpers.run_hazard_job(cfg)
 
