@@ -31,6 +31,7 @@ class HazardCurvesTestCase(unittest.TestCase):
         def __init__(self, probability, tectonic_region_type):
             self.probability = probability
             self.tectonic_region_type = tectonic_region_type
+
         def get_probability_one_or_more_occurrences(self):
             return self.probability
 
@@ -38,6 +39,7 @@ class HazardCurvesTestCase(unittest.TestCase):
         def __init__(self, ruptures, time_span):
             self.time_span = time_span
             self.ruptures = ruptures
+
         def iter_ruptures(self, tom):
             assert tom.time_span is self.time_span
             assert isinstance(tom, PoissonTOM)
@@ -159,8 +161,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                 hypocenter_distribution=openquake.hazardlib.pmf.PMF([(1, 10)]),
                 upper_seismogenic_depth=0.0,
                 lower_seismogenic_depth=10.0,
-                magnitude_scaling_relationship = \
-                    openquake.hazardlib.scalerel.PeerMSR(),
+                magnitude_scaling_relationship=
+                openquake.hazardlib.scalerel.PeerMSR(),
                 rupture_aspect_ratio=2,
                 rupture_mesh_spacing=1.0,
                 location=Point(10, 10)
@@ -179,8 +181,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                 hypocenter_distribution=openquake.hazardlib.pmf.PMF([(1, 10)]),
                 upper_seismogenic_depth=0.0,
                 lower_seismogenic_depth=10.0,
-                magnitude_scaling_relationship = \
-                    openquake.hazardlib.scalerel.PeerMSR(),
+                magnitude_scaling_relationship=
+                openquake.hazardlib.scalerel.PeerMSR(),
                 rupture_aspect_ratio=2,
                 rupture_mesh_spacing=1.0,
                 location=Point(10, 11)
