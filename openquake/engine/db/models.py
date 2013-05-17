@@ -1809,13 +1809,15 @@ class GmfCollection(djm.Model):
         children = self.get_children()
         if children:  # complete logic tree
             all_gmfs = []
-            tot_time = 0
+            tot_time = 0.0
+            fake_ses_id = 1
             for coll in children:
                 for g in coll.get_gmfs_per_ses(location):
                     all_gmfs.append(g)
                     tot_time += g.investigation_time
             if all_gmfs:
-                yield _GmfsPerSES(itertools.chain(*all_gmfs), tot_time, 0)
+                yield _GmfsPerSES(
+                    itertools.chain(*all_gmfs), tot_time, fake_ses_id)
             return
         # leaf of the tree
         where = 'WHERE gmf_collection_id=%d' % self.id
