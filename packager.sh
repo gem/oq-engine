@@ -247,8 +247,9 @@ _devtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
-    # run tests
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
+    if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        # run tests
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine ;
                  ./run_tests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
 
@@ -268,9 +269,14 @@ _devtest_innervm_run () {
                  python-coverage xml --include=\"openquake/*\" 
                 "
 
-    scp "${lxc_ip}:oq-engine/nosetests.xml" .
-    scp "${lxc_ip}:oq-engine/xunit-qa*.xml" .
-    scp "${lxc_ip}:oq-engine/coverage.xml" .
+        scp "${lxc_ip}:oq-engine/nosetests.xml" .
+        scp "${lxc_ip}:oq-engine/xunit-qa*.xml" .
+        scp "${lxc_ip}:oq-engine/coverage.xml" .
+    else
+        if [ -d $HOME/fake-data/oq-engine ]; then
+            cp $HOME/fake-data/oq-engine/* .
+        fi
+    fi
 
     # TODO: version check
 #    echo "NOW PRESS ENTER TO CONTINUE"
