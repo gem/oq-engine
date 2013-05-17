@@ -1765,7 +1765,7 @@ class _GmfsPerSES(collections.Sequence):
                 'stochastic_event_set_id=%s,\n%s)' % (
                 self.investigation_time,
                 self.stochastic_event_set_id,
-                '\n'.join(map(str, self._gmfs))))
+                '\n'.join(sorted(map(str, self._gmfs)))))
 
 
 class _Point(object):
@@ -1808,13 +1808,13 @@ class GmfCollection(djm.Model):
         children = self.get_children()
         if children:  # complete logic tree
             all_gmfs = []
+            tot_time = 0
             for coll in children:
-                ## TODO: check if we could use iterators instead of lists
                 for g in coll.get_gmfs_per_ses(location):
                     all_gmfs.extend(g)
+                    tot_time += g.investigation_time
             if all_gmfs:
-                yield _GmfsPerSES(all_gmfs, g.investigation_time,
-                                  g.stochastic_event_set_id)
+                yield _GmfsPerSES(all_gmfs, tot_time, 0)
             return
         # leaf of the tree
         where = 'WHERE gmf_collection_id=%d' % self.id
