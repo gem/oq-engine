@@ -558,7 +558,8 @@ class ClassicalRiskForm(BaseOQModelForm):
             'conditional_loss_poes',
             'mean_loss_curves',
             'quantile_loss_curves',
-            'poes_disagg'
+            'poes_disagg',
+            'export_dir',
         )
 
 
@@ -575,6 +576,7 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
             'lrem_steps_per_interval',
             'interest_rate',
             'asset_life_expectancy',
+            'export_dir',
         )
 
 
@@ -593,6 +595,7 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
             'asset_correlation',
             'interest_rate',
             'asset_life_expectancy',
+            'export_dir',
         )
 
 
@@ -617,6 +620,7 @@ class EventBasedRiskForm(BaseOQModelForm):
             'mag_bin_width',
             'distance_bin_width',
             'coordinate_bin_width',
+            'export_dir',
         )
 
     def is_valid(self):
@@ -643,6 +647,7 @@ class ScenarioDamageRiskForm(BaseOQModelForm):
             'description',
             'region_constraint',
             'maximum_distance',
+            'export_dir',
         )
 
 
@@ -659,7 +664,8 @@ class ScenarioRiskForm(BaseOQModelForm):
             'master_seed',
             'asset_correlation',
             'insured_losses',
-            'time_event'
+            'time_event',
+            'export_dir',
         )
 
     def is_valid(self):
