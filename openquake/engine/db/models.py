@@ -26,7 +26,6 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import collections
-import itertools
 import operator
 import os
 import re
@@ -87,11 +86,9 @@ MAX_SINT_32 = (2 ** 31) - 1
 LOSS_TYPES = ["structural", "non_structural", "occupants", "contents"]
 
 
-# a Django cursor perform some caching which is polluting the
-# memory profiler, this is why we are using the underlying cursor
 def getcursor(route):
-    """Return a psycogp2 cursor from a Django route"""
-    return connections[route].connection.cursor()
+    """Return a cursor from a Django route"""
+    return connections[route].cursor()
 
 
 def order_by_location(queryset):
@@ -1763,6 +1760,13 @@ class _GmfsPerSES(collections.Sequence):
     def __len__(self):
         return len(self._gmfs)
 
+    def __str__(self):
+        return ('GMFsPerSES(investigation_time=%f, '
+                'stochastic_event_set_id=%s,\n%s)' % (
+                self.investigation_time,
+                self.stochastic_event_set_id,
+                '\n'.join(map(str, self._gmfs))))
+
 
 class _Point(object):
     def __init__(self, x, y):
@@ -1807,7 +1811,7 @@ class GmfCollection(djm.Model):
             for coll in children:
                 ## TODO: check if we could use iterators instead of lists
                 for g in coll.get_gmfs_per_ses(location):
-                    all_gmfs.extend(g._gmfs)
+                    all_gmfs.extend(g)
             if all_gmfs:
                 yield _GmfsPerSES(all_gmfs, g.investigation_time,
                                   g.stochastic_event_set_id)
@@ -1904,7 +1908,8 @@ class _GroundMotionField(object):
         mdata = ('imt=%(imt)s sa_period=%(sa_period)s '
                  'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)d' %
                  vars(self))
-        return 'GMF(%s\n%s)' % (mdata, '\n'.join(map(str, self.gmf_nodes)))
+        nodes = sorted(map(str, self.gmf_nodes))
+        return 'GMF(%s\n%s)' % (mdata, '\n'.join(nodes))
 
 
 class _GroundMotionFieldNode(object):
