@@ -1823,7 +1823,8 @@ class GmfCollection(djm.Model):
                 % location
         ses_coll = SESCollection.objects.get(
             lt_realization=self.lt_realization)
-        for ses in SES.objects.filter(ses_collection=ses_coll):
+
+        for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
             query = """
         select imt, sa_period, sa_damping, rupture_id,
         array_agg(gmv), array_agg(ST_X(geometry(location))),
