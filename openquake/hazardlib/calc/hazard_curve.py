@@ -84,18 +84,23 @@ def hazard_curves_poissonian(
     total_sites = len(sites)
     sources_sites = ((source, sites) for source in sources)
     for source, s_sites in source_site_filter(sources_sites):
-        ruptures_sites = ((rupture, s_sites)
-                          for rupture in source.iter_ruptures(tom))
-        for rupture, r_sites in rupture_site_filter(ruptures_sites):
-            prob = rupture.get_probability_one_or_more_occurrences()
-            gsim = gsims[rupture.tectonic_region_type]
-            sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-            for imt in imts:
-                poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                     truncation_level)
-                curves[imt] *= r_sites.expand(
-                    (1 - prob) ** poes, total_sites, placeholder=1
-                )
+        try:
+            ruptures_sites = ((rupture, s_sites)
+                              for rupture in source.iter_ruptures(tom))
+            for rupture, r_sites in rupture_site_filter(ruptures_sites):
+                prob = rupture.get_probability_one_or_more_occurrences()
+                gsim = gsims[rupture.tectonic_region_type]
+                sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+                for imt in imts:
+                    poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
+                                         truncation_level)
+                    curves[imt] *= r_sites.expand(
+                        (1 - prob) ** poes, total_sites, placeholder=1
+                    )
+        except Exception, err:
+            msg = 'An error occurred with source id=%s. Error: %s'
+            msg %= (source.source_id, err.message)
+            raise RuntimeError(msg)
 
     for imt in imts:
         curves[imt] = 1 - curves[imt]

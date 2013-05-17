@@ -36,7 +36,8 @@ class HazardCurvesTestCase(unittest.TestCase):
             return self.probability
 
     class FakeSource(object):
-        def __init__(self, ruptures, time_span):
+        def __init__(self, source_id, ruptures, time_span):
+            self.source_id = source_id
             self.time_span = time_span
             self.ruptures = ruptures
 
@@ -44,6 +45,10 @@ class HazardCurvesTestCase(unittest.TestCase):
             assert tom.time_span is self.time_span
             assert isinstance(tom, PoissonTOM)
             return iter(self.ruptures)
+
+    class FailSource(FakeSource):
+        def iter_ruptures(self, tom):
+            raise ValueError('Something bad happened')
 
     class FakeGSIM(object):
         def __init__(self, truncation_level, imts, poes):
@@ -59,22 +64,23 @@ class HazardCurvesTestCase(unittest.TestCase):
             return numpy.array([self.poes[(epicenter.latitude, rctx, imt)]
                                 for epicenter in sctx.mesh])
 
-    def test1(self):
-        truncation_level = 3.4
-        imts = {imt.PGA(): [1, 2, 3], imt.PGD(): [2, 4]}
-        time_span = 49.2
+    def setUp(self):
+        self.truncation_level = 3.4
+        self.imts = {imt.PGA(): [1, 2, 3], imt.PGD(): [2, 4]}
+        self.time_span = 49.2
 
         rup11 = self.FakeRupture(0.23, const.TRT.ACTIVE_SHALLOW_CRUST)
         rup12 = self.FakeRupture(0.15, const.TRT.ACTIVE_SHALLOW_CRUST)
         rup21 = self.FakeRupture(0.04, const.TRT.VOLCANIC)
-        source1 = self.FakeSource([rup11, rup12], time_span=time_span)
-        source2 = self.FakeSource([rup21], time_span=time_span)
-        sources = iter([source1, source2])
+        self.source1 = self.FakeSource(1, [rup11, rup12],
+                                       time_span=self.time_span)
+        self.source2 = self.FakeSource(2, [rup21], time_span=self.time_span)
+        self.sources = iter([self.source1, self.source2])
         site1 = Site(Point(10, 20), 1, True, 2, 3)
         site2 = Site(Point(20, 30), 2, False, 4, 5)
-        sites = SiteCollection([site1, site2])
+        self.sites = SiteCollection([site1, site2])
 
-        gsim1 = self.FakeGSIM(truncation_level, imts, poes={
+        gsim1 = self.FakeGSIM(self.truncation_level, self.imts, poes={
             (site1.location.latitude, rup11, imt.PGA()): [0.1, 0.05, 0.03],
             (site2.location.latitude, rup11, imt.PGA()): [0.11, 0.051, 0.034],
             (site1.location.latitude, rup12, imt.PGA()): [0.12, 0.052, 0.035],
@@ -85,23 +91,26 @@ class HazardCurvesTestCase(unittest.TestCase):
             (site1.location.latitude, rup12, imt.PGD()): [0.38, 0.332],
             (site2.location.latitude, rup12, imt.PGD()): [0.37, 0.333],
         })
-        gsim2 = self.FakeGSIM(truncation_level, imts, poes={
+        gsim2 = self.FakeGSIM(self.truncation_level, self.imts, poes={
             (site1.location.latitude, rup21, imt.PGA()): [0.5, 0.3, 0.2],
             (site2.location.latitude, rup21, imt.PGA()): [0.4, 0.2, 0.1],
 
             (site1.location.latitude, rup21, imt.PGD()): [0.24, 0.08],
             (site2.location.latitude, rup21, imt.PGD()): [0.14, 0.09],
         })
-        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: gsim1,
-                 const.TRT.VOLCANIC: gsim2}
+        self.gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: gsim1,
+                      const.TRT.VOLCANIC: gsim2}
 
+    def test1(self):
         site1_pga_poe_expected = [0.0639157, 0.03320212, 0.02145989]
         site2_pga_poe_expected = [0.06406232, 0.02965879, 0.01864331]
         site1_pgd_poe_expected = [0.16146619, 0.1336553]
         site2_pgd_poe_expected = [0.15445961, 0.13437589]
 
-        curves = hazard_curves_poissonian(sources, sites, imts, time_span,
-                                          gsims, truncation_level)
+        curves = hazard_curves_poissonian(self.sources, self.sites, self.imts,
+                                          self.time_span, self.gsims,
+                                          self.truncation_level)
+
         self.assertIsInstance(curves, dict)
         self.assertEqual(set(curves.keys()), set([imt.PGA(), imt.PGD()]))
 
@@ -122,6 +131,24 @@ class HazardCurvesTestCase(unittest.TestCase):
                         str(site1_pgd_poe))
         self.assertTrue(numpy.allclose(site2_pgd_poe, site2_pgd_poe_expected),
                         str(site2_pgd_poe))
+
+    def test_source_errors(self):
+        # exercise `hazard_curves_poissonian` in the case of an exception,
+        # whereby we expect the source_id to be reported in the error message
+
+        fail_source = self.FailSource(self.source2.source_id,
+                                      self.source2.ruptures,
+                                      self.source2.time_span)
+        sources = iter([self.source1, fail_source])
+
+        with self.assertRaises(RuntimeError) as ae:
+            hazard_curves_poissonian(sources, self.sites, self.imts,
+                                     self.time_span, self.gsims,
+                                     self.truncation_level)
+        expected_error = (
+            'An error occurred with source id=2. Error: Something bad happened'
+        )
+        self.assertEqual(expected_error, ae.exception.message)
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
