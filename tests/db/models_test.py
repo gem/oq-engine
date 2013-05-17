@@ -390,7 +390,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
         self.assertEqual(len(all_gmfs), 1)
         gmfs = all_gmfs[0]
         expected = """\
-GMFsPerSES(investigation_time=100.000000, stochastic_event_set_id=0,
+GMFsPerSES(investigation_time=100.000000, stochastic_event_set_id=1,
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
 <X= 15.31000, Y= 38.22500, GMV=0.1000000>
 <X= 15.48000, Y= 38.09100, GMV=0.1000000>
