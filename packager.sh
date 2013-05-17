@@ -365,11 +365,13 @@ _pkgtest_innervm_run () {
     # copy demos file to $HOME
     ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
 
-    # run all of the hazard demos
-    ssh $lxc_ip "cd demos
-    for ini in \$(find ./hazard -name job.ini); do
-        DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
-    done"
+    if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
+        # run all of the hazard demos
+        ssh $lxc_ip "cd demos
+        for ini in \$(find ./hazard -name job.ini); do
+            DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
+        done"
+    fi
 
     # FIXME: here the risk demos part when finished
 
