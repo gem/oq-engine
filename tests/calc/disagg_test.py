@@ -54,7 +54,8 @@ class _BaseDisaggTestCase(unittest.TestCase):
             return self.probability
 
     class FakeSource(object):
-        def __init__(self, ruptures, tom, tectonic_region_type):
+        def __init__(self, source_id, ruptures, tom, tectonic_region_type):
+            self.source_id = source_id
             self.ruptures = ruptures
             self.tom = tom
             self.tectonic_region_type = tectonic_region_type
@@ -62,6 +63,10 @@ class _BaseDisaggTestCase(unittest.TestCase):
             assert isinstance(tom, type(self.tom))
             assert tom.time_span == self.tom.time_span
             return iter(self.ruptures)
+
+    class FailSource(FakeSource):
+        def iter_ruptures(self, tom):
+            raise ValueError('Something bad happened')
 
     class FakeGSIM(object):
         def __init__(self, iml, imt, truncation_level, n_epsilons,
@@ -105,11 +110,11 @@ class _BaseDisaggTestCase(unittest.TestCase):
         self.time_span = 10
         self.tom = PoissonTOM(time_span=10)
         self.source1 = self.FakeSource(
-            [rupture for poes, rupture in self.ruptures_and_poes1],
+            1, [rupture for poes, rupture in self.ruptures_and_poes1],
             self.tom, 'trt1'
         )
         self.source2 = self.FakeSource(
-            [rupture for poes, rupture in self.ruptures_and_poes2],
+            2, [rupture for poes, rupture in self.ruptures_and_poes2],
             self.tom, 'trt2'
         )
         self.disagreggated_poes = dict(
@@ -313,6 +318,27 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
             matrix[idx] = 0
 
         self.assertEqual(matrix.sum(), 0)
+
+    def test_source_errors(self):
+        # exercise the case where an error occurs while computing on a given
+        # seismic source; in this case, we expect an error to be raised which
+        # signals the id of the source in question
+        fail_source = self.FailSource(self.source2.source_id,
+                                      self.source2.ruptures,
+                                      self.source2.tom,
+                                      self.source2.tectonic_region_type)
+        sources = iter([self.source1, fail_source])
+
+        with self.assertRaises(RuntimeError) as ae:
+            bin_edges, matrix = disagg.disaggregation_poissonian(
+                sources, self.site, self.imt, self.iml, self.gsims,
+                self.time_span, self.truncation_level, n_epsilons=3,
+                mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4
+            )
+        expected_error = (
+            'An error occurred with source id=2. Error: Something bad happened'
+        )
+        self.assertEqual(expected_error, ae.exception.message)
 
     def test_no_contributions_from_ruptures(self):
         # Test that the `disaggregation` function returns `None, None` if no
