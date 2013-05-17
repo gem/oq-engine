@@ -14,8 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import getpass
-import itertools
-import string
 import unittest
 import mock
 
@@ -344,8 +342,43 @@ class ParseImtTestCase(unittest.TestCase):
 # we will need three tests complete_logic_tree_gmf_iter,
 # gmf_by_location_iter and no_filtering_gmf_iter.
 # NB: GmfSet.iter_gmvs is also tested in pg_importer_test.py
-class GmfSetIterTestCase(unittest.TestCase):
-    pass
+class GmfsPerSesTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
+        job = helpers.get_hazard_job(cfg)
+        gmf_agg = helpers.create_gmf_agg_records(job)[0]
+        cls.gmf_coll = gmf_agg.gmf_collection
+        cls.ruptures = tuple(gmf_agg.rupture_ids)
+        cls.investigation_time = job.hazard_calculation.investigation_time
+
+    def test_branch_lt(self):
+        all_gmfs = list(self.gmf_coll.get_gmfs_per_ses(orderby=True))
+        self.assertEqual(len(all_gmfs), 1)
+        gmfs = all_gmfs[0]
+        expected = """\
+GMFsPerSES(investigation_time=%f, stochastic_event_set_id=%d,
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.1000000>
+<X= 15.48000, Y= 38.09100, GMV=0.1000000>
+<X= 15.48100, Y= 38.25000, GMV=0.1000000>
+<X= 15.56500, Y= 38.17000, GMV=0.1000000>
+<X= 15.71000, Y= 37.22500, GMV=0.1000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.2000000>
+<X= 15.48000, Y= 38.09100, GMV=0.2000000>
+<X= 15.48100, Y= 38.25000, GMV=0.2000000>
+<X= 15.56500, Y= 38.17000, GMV=0.2000000>
+<X= 15.71000, Y= 37.22500, GMV=0.2000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.3000000>
+<X= 15.48000, Y= 38.09100, GMV=0.3000000>
+<X= 15.48100, Y= 38.25000, GMV=0.3000000>
+<X= 15.56500, Y= 38.17000, GMV=0.3000000>
+<X= 15.71000, Y= 37.22500, GMV=0.3000000>))""" % (
+            (self.investigation_time, gmfs.stochastic_event_set_id)
+            + self.ruptures)
+        self.assertEqual(str(gmfs), expected)
 
 
 class PrepGeometryTestCase(unittest.TestCase):
