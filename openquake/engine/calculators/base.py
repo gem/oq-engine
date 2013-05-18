@@ -71,7 +71,7 @@ class Calculator(object):
         """
         raise NotImplementedError()
 
-    def parallelize(self, task_func, task_arg_gen, side_effect=lambda r: None):
+    def parallelize(self, task_func, task_arg_gen):
         """
         Given a callable and a task arg generator, apply the callable to
         the arguments in parallel. To save memory the tasks are spawned in
@@ -93,7 +93,7 @@ class Calculator(object):
         ntasks = 0
         for argblock in general.block_splitter(
                 arglist, self.concurrent_tasks()):
-            tasks.parallelize(task_func, argblock, side_effect)
+            tasks.parallelize(task_func, argblock, lambda _: None)
             ntasks += len(argblock)
             logs.LOG.debug('Processed %d/%d tasks of kind %s',
                            ntasks, total, task_func.__name__)
