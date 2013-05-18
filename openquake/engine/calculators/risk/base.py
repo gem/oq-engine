@@ -17,21 +17,20 @@
 
 """Base RiskCalculator class."""
 
-import random
+import collections
 import StringIO
 
-from openquake.risklib import scientific
+from django.core.exceptions import ObjectDoesNotExist
 
-from openquake.engine import logs
-from openquake.engine.utils import config
-from openquake.engine.db import models
-from openquake.engine.calculators import base
-from openquake.engine import export
-from openquake.engine.utils import stats
+from openquake.risklib import scientific
 from openquake.nrmllib.risk import parsers
 
-# FIXME: why is a writer in a package called "input" ?
-from openquake.engine.input import exposure as db_writer
+from openquake.engine import logs, export
+from openquake.engine.utils import config, stats
+from openquake.engine.db import models
+from openquake.engine.calculators import base, post_processing
+from openquake.engine.calculators.risk import writers
+from openquake.engine.input.exposure import ExposureDBWriter
 
 
 class RiskCalculator(base.Calculator):
@@ -45,46 +44,25 @@ class RiskCalculator(base.Calculator):
         calculator will work on. Assets are extracted from the exposure input
         and filtered according to the `RiskCalculation.region_constraint`.
 
-    :attribute asset_offsets:
-        A generator of asset offsets used by each celery task. Assets are
-        ordered by their id. An asset offset is an int that identify the set of
-        assets going from offset to offset + block_size.
-
-    :attribute dict vulnerability_functions:
-        A dict mapping taxonomy to vulnerability functions used for this
-        calculation.
-
-    :attribute rnd:
-        The random number generator (initialized with a master seed) used for
-        sampling.
-
-    :attribute dict taxonomy_imt:
-        A dictionary mapping taxonomies to intensity measure type, to
-        support structure dependent intensity measure types
+    :attribute dict risk_models:
+        A nested dict taxonomy -> loss type -> instances of `RiskModel`.
     """
-
-    hazard_getter = None  # the name of the hazard getter class; to override
 
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
 
+        # FIXME(lp). taxonomy_asset_count would be a better name
         self.taxonomies = None
-        self.rnd = None
-        self.vulnerability_functions = None
-        self.taxonomy_imt = dict()
+        self.risk_models = None
 
     def pre_execute(self):
         """
         In this phase, the general workflow is:
-
-            1. Parse the exposure input and store the exposure data (if not
-               already present)
-            2. Check if the exposure filtered with region_constraint is not
-               empty
-            3. Parse the risk models
+            1. Parse and validate the exposure to get the taxonomies
+            2. Parse and validate the available risk models
+            3. Validate the given hazard
             4. Initialize progress counters
-            5. Initialize random number generator
-
+            5. Update the job stats
         """
 
         # reload the risk calculation to avoid getting raw string
@@ -92,38 +70,84 @@ class RiskCalculator(base.Calculator):
         self.job.risk_calculation = models.RiskCalculation.objects.get(
             pk=self.rc.pk)
 
-        with logs.tracing('store exposure'):
-            if self.rc.exposure_input is None:
-                queryset = self.rc.inputs.filter(input_type='exposure')
+        self.taxonomies = self.get_taxonomies()
 
-                if queryset.exists():
-                    self._store_exposure(queryset.all()[0])
-                else:
-                    raise RuntimeError("No exposure model given in input")
+        self.validate_hazard()
 
-            self.taxonomies = self.rc.exposure_model.taxonomies_in(
-                self.rc.region_constraint)
+        with logs.tracing('parse risk models'):
+            self.risk_models = self.get_risk_models()
+            self.check_taxonomies(self.risk_models)
+            self.check_imts(required_imts(self.risk_models))
 
-            if not sum(self.taxonomies.values()):
-                raise RuntimeError(
-                    ['Region of interest is not covered by the exposure input.'
-                     ' This configuration is invalid. '
-                     ' Change the region constraint input or use a proper '
-                     ' exposure file'])
+        assets_num = sum(self.taxonomies.values())
+        self._initialize_progress(assets_num)
 
-        with logs.tracing('store risk model'):
-            self.set_risk_models()
+    def validate_hazard(self):
+        """
+        Calculators must override this to provide additional
+        validation.
 
-        self._initialize_progress(sum(self.taxonomies.values()))
+        :raises:
+           `ValueError` if an Hazard Calculation has been passed
+           but it does not exist
+        """
+        # If an Hazard Calculation ID has been given in input, check
+        # that it exists
+        try:
+            self.rc.hazard_calculation
+        except ObjectDoesNotExist:
+            raise RuntimeError(
+                "The provided hazard calculation ID does not exist")
 
-        self.rnd = random.Random()
-        self.rnd.seed(self.rc.master_seed)
+    def get_taxonomies(self):
+        """
+          Parse the exposure input and store the exposure data (if not
+          already present). Then, check if the exposure filtered with
+          region_constraint is not empty.
+
+          :returns:
+              a dictionary mapping taxonomy string to the number of
+              assets in that taxonomy
+        """
+        # if we are not going to use a preloaded exposure, we need to
+        # parse and store the exposure from the given xml file
+        if self.rc.exposure_input is None:
+            queryset = self.rc.inputs.filter(input_type='exposure')
+            if queryset.exists():
+                with logs.tracing('store exposure'):
+                    exposure = self._store_exposure(queryset.all()[0])
+            else:
+                raise ValueError("No exposure model given in input")
+        else:  # exposure has been preloaded. Get it from the rc
+            exposure = self.rc.exposure_model
+
+        taxonomies = exposure.taxonomies_in(self.rc.region_constraint)
+
+        if not sum(taxonomies.values()):
+            raise ValueError(
+                ['Region of interest is not covered by the exposure input.'
+                 ' This configuration is invalid. '
+                 ' Change the region constraint input or use a proper '
+                 ' exposure file'])
+        return taxonomies
 
     def block_size(self):
         """
         Number of assets handled per task.
         """
         return int(config.get('risk', 'block_size'))
+
+    def expected_tasks(self, block_size):
+        """
+        Number of tasks generated by the task_arg_gen
+        """
+        num_tasks = 0
+        for num_assets in self.taxonomies.values():
+            n, r = divmod(num_assets, block_size)
+            if r:
+                n += 1
+            num_tasks += n
+        return num_tasks
 
     def concurrent_tasks(self):
         """
@@ -147,63 +171,49 @@ class RiskCalculator(base.Calculator):
             An iterator over a list of arguments. Each contains:
 
             1. the job id
-            2. the exposure subset on which the celery task is applied on
-            3. the hazard getter and the hazard_id to be used
-            4. a seed (eventually generated from a master seed)
-            5. the output containers to be populated
-            6. the specific calculator parameter set
+            2. a getter object needed to get the hazard data
+            3. the needed risklib calculators
+            4. the output containers to be populated
+            5. the specific calculator parameter set
         """
-        output_containers = dict(
-            (hazard_output.id,
-             self.create_outputs(hazard_output))
-            for hazard_output in self.considered_hazard_outputs())
+        output_containers = self.create_statistical_outputs()
 
-        if self.rc.hazard_calculation:
-            statistical_output_containers = self.create_statistical_outputs()
-        else:
-            statistical_output_containers = []
+        for hazard in self.rc.hazard_outputs():
+            output_containers.update(self.create_outputs(hazard))
 
-        calculator_parameters = self.calculator_parameters
-
+        num_tasks = 0
         for taxonomy, assets_nr in self.taxonomies.items():
             asset_offsets = range(0, assets_nr, block_size)
 
             for offset in asset_offsets:
                 with logs.tracing("getting assets"):
-                    assets = self.rc.exposure_model.get_asset_chunk(
-                        taxonomy,
-                        self.rc.region_constraint, offset, block_size)
+                    assets = models.ExposureData.objects.get_asset_chunk(
+                        self.rc, taxonomy, offset, block_size)
 
-                hazard = dict((ho.id, self.create_getter(ho, assets))
-                              for ho in self.considered_hazard_outputs())
+                calculation_units = self.get_calculation_units(assets)
 
-                taxonomy_args = self.taxonomy_args(taxonomy)
+                num_tasks += 1
+                yield [self.job.id,
+                       calculation_units,
+                       output_containers,
+                       self.calculator_parameters]
 
-                logs.LOG.debug("Task with %s assets (%s, %s) got args %s",
-                               len(assets), offset, block_size, taxonomy_args)
+        # sanity check to protect against future changes of the distribution
+        # logic
+        expected_tasks = self.expected_tasks(block_size)
+        if num_tasks != expected_tasks:
+            raise RuntimeError('Expected %d tasks, generated %d!' % (
+                               expected_tasks, num_tasks))
 
-                yield ([self.job.id, hazard] +
-                       taxonomy_args +
-                       [output_containers] +
-                       [statistical_output_containers] +
-                       calculator_parameters)
-
-    def taxonomy_args(self, taxonomy):
+    def get_calculation_units(self, assets):
         """
-        :returns:
-            A fixed list of arguments that depends on the taxonomy that a
-            calculator pass to a worker. Default to:
-
-            1) a seed generated from the master seed
-            2) the vulnerability function associated with the assets taxonomy
-            3) the imt associated to such taxonomy
-
-            Must be overriden in order to provide more/less arguments
-            that depends on the taxonomy.
+        :returns: the calculation units to be considered. Default
+        behavior is to returns a dict keyed by loss types. Calculators
+        that do not support multiple loss types must override this
+        method.
         """
-        return [self.rnd.randint(0, models.MAX_SINT_32),
-                self.vulnerability_functions[taxonomy],
-                self.taxonomy_imt[taxonomy]]
+        return dict([(loss_type, self.calculation_units(loss_type, assets))
+                     for loss_type in loss_types(self.risk_models)])
 
     def export(self, *args, **kwargs):
         """
@@ -225,107 +235,6 @@ class RiskCalculator(base.Calculator):
                     logs.LOG.debug('exported %s' % exp_file)
         return exported_files
 
-    # FIXME(lp). This logic (with the ones in `hazard_outputs`) should
-    # go into the models module
-    def considered_hazard_outputs(self):
-        """
-        Returns the list of hazard outputs to be considered
-        """
-        if self.rc.hazard_output:
-            return [self.rc.hazard_output]
-        else:
-            return self.hazard_outputs(self.rc.hazard_calculation)
-
-    def hazard_outputs(self, hazard_calculation):
-        """
-        Calculators must override this to select from the hazard calculation
-        given in input which are the Output objects to be considered by the
-        risk calculation to get the actual hazard input.
-
-        Result objects should be ordered (e.g. by id) and be associated to a
-        hazard logic tree realization.
-
-        :returns:
-            A list of :class:`openquake.engine.db.models.Output`
-            objects to be used for a risk calculation.
-        """
-        raise NotImplementedError
-
-    def create_statistical_outputs(self):
-        """
-        Create mean/quantile `Output` and `LossCurve`/`LossMap` containers.
-        """
-
-        mean_loss_curve_id = models.LossCurve.objects.create(
-            output=models.Output.objects.create_output(
-                job=self.job,
-                display_name='Mean Loss Curves',
-                output_type='loss_curve'),
-            statistics='mean').id
-
-        quantile_loss_curve_ids = dict(
-            (quantile,
-             models.LossCurve.objects.create(
-                 output=models.Output.objects.create_output(
-                     job=self.job,
-                     display_name='quantile(%s)-curves' % quantile,
-                     output_type='loss_curve'),
-                 statistics='quantile',
-                 quantile=quantile).id)
-            for quantile in self.rc.quantile_loss_curves or [])
-
-        mean_loss_map_ids = dict(
-            (poe,
-             models.LossMap.objects.create(
-                 output=models.Output.objects.create_output(
-                     job=self.job,
-                     display_name="Mean Loss Map poe=%.4f" % poe,
-                     output_type="loss_map"),
-                 statistics="mean").id)
-            for poe in self.rc.conditional_loss_poes or [])
-
-        quantile_loss_map_ids = dict(
-            (quantile,
-             dict(
-                 (poe, models.LossMap.objects.create(
-                     output=models.Output.objects.create_output(
-                         job=self.job,
-                         display_name="Quantile Loss Map poe=%.4f q=%.4f" % (
-                             poe, quantile),
-                         output_type="loss_map"),
-                     statistics="quantile",
-                     quantile=quantile).id)
-                 for poe in self.rc.conditional_loss_poes))
-            for quantile in self.rc.quantile_loss_curves or [])
-
-        return [mean_loss_curve_id, quantile_loss_curve_ids,
-                mean_loss_map_ids, quantile_loss_map_ids]
-
-    def create_getter(self, output, assets):
-        """
-        Create an instance of :class:`.hazard_getters.HazardGetter` associated
-        to an hazard output.
-
-        Calculator must override this to create the proper hazard getter.
-
-        :param output:
-            The ID of an :class:`openquake.engine.db.models.Output` produced by
-            a hazard calculation.
-
-        :param assets:
-            The assets for which the HazardGetter should be created.
-
-        :returns:
-            A tuple where the first element is the hazard getter and the second
-            is the associated weight (if `output` is associated with a logic
-            tree realization).
-
-        :raises:
-            `RuntimeError` if the hazard associated with the `output` is not
-            suitable to be used with this calculator.
-        """
-        raise NotImplementedError
-
     @property
     def rc(self):
         """
@@ -346,7 +255,7 @@ class RiskCalculator(base.Calculator):
     def calculator_parameters(self):
         """
         The specific calculation parameters passed as args to the
-        celery task function. Calculators should override this to
+        celery task function. A calculator must override this to
         provide custom arguments to its celery task
         """
         return []
@@ -370,7 +279,7 @@ class RiskCalculator(base.Calculator):
 
         content = StringIO.StringIO(
             exposure_model_input.model_content.raw_content_ascii)
-        db_writer.ExposureDBWriter(exposure_model_input).serialize(
+        ExposureDBWriter(exposure_model_input).serialize(
             parsers.ExposureModelParser(content))
         return exposure_model_input.exposuremodel
 
@@ -385,10 +294,80 @@ class RiskCalculator(base.Calculator):
         stats.pk_set(self.job.id, "nrisk_total", total)
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
-    def set_risk_models(self):
-        (self.vulnerability_functions, self.taxonomy_imt) = (
-            self.get_vulnerability_model())
-        self.check_taxonomies(self.vulnerability_functions)
+        # update job_stats
+        job_stats = models.JobStats.objects.get(oq_job=self.job.id)
+        job_stats.num_sites = total
+        job_stats.num_tasks = self.expected_tasks(self.block_size())
+        job_stats.save()
+
+    def get_risk_models(self, retrofitted=False):
+        """
+        Parse vulnerability models for each loss type in
+        `openquake.engine.db.modelsLOSS_TYPES`,
+        then set the `risk_models` attribute.
+
+        :param bool retrofitted:
+            True if retrofitted models should be set
+        :returns:
+            all the intensity measure types required by the risk models
+        :raises:
+            * `ValueError` if no models can be found
+            * `ValueError` if the exposure does not provide the costs needed
+            by the available loss types in the risk models
+        """
+        risk_models = collections.defaultdict(dict)
+
+        for loss_type in models.LOSS_TYPES:
+            vfs = self.get_vulnerability_model(loss_type, retrofitted)
+            for taxonomy, model in vfs.items():
+                risk_models[taxonomy][loss_type] = model
+
+            if vfs:
+                field_kwarg = dict(
+                    structural=dict(stco__isnull=True),
+                    non_structural=dict(nonstco__isnull=True),
+                    contents=dict(coco__isnull=True),
+                    occupancy=dict(occupany__isnull=True))[loss_type]
+                if self.rc.exposure_model.exposuredata_set.filter(
+                        **field_kwarg).exists():
+                    raise ValueError("Invalid exposure model "
+                                     "for type %s. Some assets don't match "
+                                     "with filter %s" % (
+                                         loss_type, field_kwarg))
+                fields = dict(
+                    structural=["stco_type", "stco_unit"],
+                    non_structural=["non_stco_type", "non_stco_unit"],
+                    contents=["coco_type", "coco_unit"])
+                if loss_type in fields:
+                    if any([not getattr(self.rc.exposure_model, field, False)
+                            for field in fields[loss_type]]):
+                        raise ValueError("Invalid exposure model "
+                                         "for type %s. %s are required" % (
+                                             loss_type, fields[loss_type]))
+
+        if not risk_models:
+            raise ValueError(
+                'At least one risk model of type %s must be defined' % (
+                    models.LOSS_TYPES))
+        return risk_models
+
+    def check_imts(self, model_imts):
+        """
+        Raise a ValueError if no hazard exists in any of the given
+        intensity measure types
+
+        :param model_imts:
+           an iterable of intensity measure types in long form string.
+        """
+        imts = self.hc.get_imts()
+
+        # check that the hazard data have all the imts needed by the
+        # risk calculation
+        missing = set(model_imts) - set(imts)
+        if missing:
+            raise ValueError(
+                "There is no hazard output in "
+                "%s; the available IMTs are %s" % (", ".join(missing), imts))
 
     def check_taxonomies(self, taxonomies):
         """
@@ -412,21 +391,20 @@ class RiskCalculator(base.Calculator):
                 # all taxonomies in the exposure must be covered
                 raise RuntimeError(msg)
 
-    def get_vulnerability_model(self, retrofitted=False):
+    def get_vulnerability_model(self, loss_type, retrofitted=False):
         """
         Load and parse the vulnerability model input associated with this
         calculation.
+
+        :param str loss_type:
+            any value in `openquake.engine.db.models.LOSS_TYPES`. The kind
+            of vulnerability function we are going to get
 
         :param bool retrofitted:
             `True` if the retrofitted model is going to be parsed
 
         :returns:
-            A tuple with
-               1) a dictionary mapping each taxonomy to a
-               :class:`openquake.risklib.scientific.VulnerabilityFunction`
-               instance.
-               2) a dictionary mapping each taxonomy to an intensity
-               measure type expressed as a string, i.e. SA(0.1)
+            a dictionary mapping each taxonomy to a :class:`RiskModel` instance
         """
 
         if retrofitted:
@@ -434,57 +412,52 @@ class RiskCalculator(base.Calculator):
         else:
             input_type = "vulnerability"
 
-        content = StringIO.StringIO(
-            self.rc.inputs.get(
-                input_type=input_type).model_content.raw_content_ascii)
+        input_type = "%s_%s" % (loss_type, input_type)
+
+        queryset = self.rc.inputs.filter(input_type=input_type)
+        if not queryset.exists():
+            return {}
+        else:
+            model = queryset[0]
+
+        content = StringIO.StringIO(model.model_content.raw_content_ascii)
 
         return self.parse_vulnerability_model(content)
 
     def parse_vulnerability_model(self, vuln_content):
         """
-        Parse the vulnerability model and return a `dict` of vulnerability
-        functions keyed by taxonomy and a `dict` of imts keyed by taxonomy.
-
-        If a taxonomy is associated with more than one Intensity Measure Type
-        (IMT), a `ValueError` will be raised.
-
         :param vuln_content:
             File-like object containg the vulnerability model XML.
         :returns:
-            A dictionary mapping each taxonomy (as a `str`) to a
-            :class:`openquake.risklib.scientific.VulnerabilityFunction`
-            instance.
+            a `dict` of `RiskModel` keyed by taxonomy
         :raises:
-            * `ValueError` if a taxonomy is associated with more than one IMT.
-            * `ValueError` if a loss ratio is 0 and its corresponding CoV
-              (Coefficient of Variation) is > 0.0. This is mathematically
-              impossible.
+            * `ValueError` if validation of any vulnerability function fails
         """
         vfs = dict()
-
-        taxonomy_imt = {}
 
         for record in parsers.VulnerabilityModelParser(vuln_content):
             taxonomy = record['ID']
             imt = record['IMT']
             loss_ratios = record['lossRatio']
             covs = record['coefficientsVariation']
+            distribution = record['probabilisticDistribution']
 
-            registered_imt = taxonomy_imt.get(taxonomy, imt)
-
-            if imt != registered_imt:
-                raise ValueError("The same taxonomy is associated with "
-                                 "different imts %s and %s" % (
-                                 imt, registered_imt))
-            else:
-                taxonomy_imt[taxonomy] = imt
+            if taxonomy in vfs:
+                raise ValueError("Error creating vulnerability function for "
+                                 "taxonomy %s. A taxonomy can not "
+                                 "be associated with "
+                                 "different vulnerability functions" % (
+                                 taxonomy))
 
             try:
-                vfs[taxonomy] = scientific.VulnerabilityFunction(
-                    record['IML'],
-                    loss_ratios,
-                    covs,
-                    record['probabilisticDistribution'])
+                vfs[taxonomy] = RiskModel(
+                    imt,
+                    scientific.VulnerabilityFunction(
+                        record['IML'],
+                        loss_ratios,
+                        covs,
+                        distribution),
+                    None)
             except ValueError, err:
                 msg = (
                     "Invalid vulnerability function with ID '%s': %s"
@@ -492,17 +465,7 @@ class RiskCalculator(base.Calculator):
                 )
                 raise ValueError(msg)
 
-        imts = self.hc.get_imts()
-
-        # check that the hazard data have all the imts needed by the
-        # risk calculation
-        for imt in set(taxonomy_imt.values()):
-            if not imt in imts:
-                raise ValueError(
-                    "There is no hazard output for the intensity measure "
-                    "%s; the available IMTs are %s" % (imt, imts))
-
-        return vfs, taxonomy_imt
+        return vfs
 
     def create_outputs(self, hazard_output):
         """
@@ -515,45 +478,260 @@ class RiskCalculator(base.Calculator):
         output.
 
         :returns:
-            A dictionary mapping an Output object ID to a list of int (id of
-            containers) or dict (poe->int)
+            An instance of
+            :class:`openquake.engine.calculators.risk.writers.OutputDict`
         """
+
+        ret = writers.OutputDict()
 
         job = self.job
 
-        # add loss curve containers
-        loss_curve_id = models.LossCurve.objects.create(
-            hazard_output_id=hazard_output.id,
-            output=models.Output.objects.create_output(
-                job, "Loss Curve set for hazard %s" % hazard_output.id,
-                "loss_curve")).pk
+        for loss_type in loss_types(self.risk_models):
+            # add loss curve containers
+            ret.set(models.LossCurve.objects.create(
+                hazard_output_id=hazard_output.id,
+                loss_type=loss_type,
+                output=models.Output.objects.create_output(
+                    job,
+                    "loss curves. type=%s, hazard=%s" % (
+                        loss_type, hazard_output.id),
+                    "loss_curve")))
 
-        # loss maps (or conditional loss maps) ...
-        loss_map_ids = dict()
+            # then loss maps containers
+            for poe in self.rc.conditional_loss_poes or []:
+                ret.set(models.LossMap.objects.create(
+                        hazard_output_id=hazard_output.id,
+                        loss_type=loss_type,
+                        output=models.Output.objects.create_output(
+                            self.job,
+                            "loss maps. type=%s poe=%s, hazard=%s" % (
+                                loss_type, poe, hazard_output.id),
+                            "loss_map"),
+                        poe=poe))
+        return ret
 
-        if self.rc.conditional_loss_poes is not None:
-            for poe in self.rc.conditional_loss_poes:
-                loss_map_ids[poe] = models.LossMap.objects.create(
-                    hazard_output_id=hazard_output.id,
+    def create_statistical_outputs(self):
+        """
+        Create mean/quantile `models.LossCurve`/`LossMap` containers.
+
+        :returns:
+           an instance of
+           :class:`openquake.engine.calculators.risk.writers.OutputDict`
+        """
+
+        ret = writers.OutputDict()
+
+        if len(self.rc.hazard_outputs()) < 2:
+            return ret
+
+        for loss_type in loss_types(self.risk_models):
+            ret.set(models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.job,
+                    display_name='mean loss curves. type=%s' % loss_type,
+                    output_type='loss_curve'),
+                statistics='mean',
+                loss_type=loss_type))
+
+            for quantile in self.rc.quantile_loss_curves or []:
+                name = 'quantile(%s) loss curves. type=%s' % (
+                    quantile, loss_type)
+                ret.set(models.LossCurve.objects.create(
                     output=models.Output.objects.create_output(
-                        self.job,
-                        "Loss Map Set with poe %s for hazard %s" % (
-                            poe, hazard_output.id),
-                        "loss_map"),
-                    poe=poe).pk
+                        job=self.job,
+                        display_name=name,
+                        output_type='loss_curve'),
+                    statistics='quantile',
+                    quantile=quantile,
+                    loss_type=loss_type))
 
-        return [loss_curve_id, loss_map_ids]
+            for poe in self.rc.conditional_loss_poes or []:
+                ret.set(models.LossMap.objects.create(
+                    output=models.Output.objects.create_output(
+                        job=self.job,
+                        display_name="mean loss map type=%s poe=%.4f" % (
+                            loss_type, poe),
+                        output_type="loss_map"),
+                    statistics="mean",
+                    loss_type=loss_type,
+                    poe=poe))
+
+            for quantile in self.rc.quantile_loss_curves or []:
+                for poe in self.rc.conditional_loss_poes or []:
+                    name = "quantile(%.4f) loss map type=%s poe=%.4f" % (
+                        quantile, loss_type, poe)
+                    ret.set(models.LossMap.objects.create(
+                        output=models.Output.objects.create_output(
+                            job=self.job,
+                            display_name=name,
+                            output_type="loss_map"),
+                        statistics="quantile",
+                        quantile=quantile,
+                        loss_type=loss_type,
+                        poe=poe))
+
+        return ret
 
 
 class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
     """
     Extend :class:`openquake.engine.utils.stats.count_progress` to work with
-    celery task where the number of items (i.e. assets) are embedded in hazard
-    getters.
+    celery task where the number of items (i.e. assets) are embedded in
+    calculation units.
     """
-    def get_task_data(self, job_id, hazard_data, *args):
+    def get_task_data(self, job_id, units, *_args):
+        num_items = get_num_items(units)
 
-        first_hazard_data = hazard_data.values()[0]
+        return job_id, num_items
 
-        getter, _weight = first_hazard_data
-        return job_id, len(getter.assets)
+
+def get_num_items(units):
+    """
+    :param units:
+        a not empty dictionary of not empty lists of
+        :class:`openquake.engine.calculators.risk.base.CalculationUnit`
+        instances
+    """
+    # FIXME(lp). Navigating in an opaque structure is a code smell.
+    # We need to refactor the data structure used by celery tasks.
+
+    # let's get the first one
+    first_list_of_units = units.values()[0]
+
+    # get the first item in the list. Then, get the getter from it
+    # (an instance of `..hazard_getters.HazardGetter`.
+    first_getter = first_list_of_units[0].getter
+
+    # A getter keeps a reference to the list of assets we want to
+    # consider
+    num_items = len(first_getter.assets)
+
+    return num_items
+
+
+#: Hold both a Vulnerability function or a fragility function set and
+#: the IMT associated to it
+RiskModel = collections.namedtuple(
+    'RiskModel',
+    'imt vulnerability_function fragility_functions')
+
+
+#: A calculation unit holds a risklib calculator (e.g. an instance of
+#: :class:`openquake.risklib.api.Classical`), a getter that
+#: retrieves the data to work on, and the type of losses we are considering
+CalculationUnit = collections.namedtuple(
+    'CalculationUnit',
+    'calc getter')
+
+
+#: Calculator parameters are used to compute derived outputs like loss
+#: maps, disaggregation plots, quantile/mean curves. See
+#: :class:`openquake.engine.db.models.RiskCalculation` for a description
+
+CalcParams = collections.namedtuple(
+    'CalcParams', [
+        'conditional_loss_poes',
+        'poes_disagg',
+        'sites_disagg',
+        'insured_losses',
+        'quantiles',
+        'asset_life_expectancy',
+        'interest_rate',
+        'mag_bin_width',
+        'distance_bin_width',
+        'coordinate_bin_width',
+        'damage_state_ids'
+    ])
+
+
+def make_calc_params(conditional_loss_poes=None,
+                     poes_disagg=None,
+                     sites_disagg=None,
+                     insured_losses=None,
+                     quantiles=None,
+                     asset_life_expectancy=None,
+                     interest_rate=None,
+                     mag_bin_width=None,
+                     distance_bin_width=None,
+                     coordinate_bin_width=None,
+                     damage_state_ids=None):
+    """
+    Constructor of CalculatorParameters
+    """
+    return CalcParams(conditional_loss_poes,
+                      poes_disagg,
+                      sites_disagg,
+                      insured_losses,
+                      quantiles,
+                      asset_life_expectancy,
+                      interest_rate,
+                      mag_bin_width,
+                      distance_bin_width,
+                      coordinate_bin_width,
+                      damage_state_ids)
+
+
+def asset_statistics(losses, curves_poes, quantiles, weights, poes):
+    """
+    Compute output statistics (mean/quantile loss curves and maps)
+    for a single asset
+
+    :param losses:
+       the losses on which the loss curves are defined
+    :param curves_poes:
+       a numpy matrix suitable to be used with
+       :func:`openquake.engine.calculators.post_processing`
+    :param list quantiles:
+       an iterable over the quantile levels to be considered for
+       quantile outputs
+    :param list weights:
+       the weights associated with each realization. If all the elements are
+       `None`, implicit weights are taken into account
+    :param list poes:
+       the poe taken into account for computing loss maps
+
+    :returns:
+       a tuple with
+       1) mean loss curve
+       2) a list of quantile curves
+    """
+    montecarlo = weights[0] is not None
+
+    quantile_curves = []
+    for quantile in quantiles:
+        if montecarlo:
+            q_curve = post_processing.weighted_quantile_curve(
+                curves_poes, weights, quantile)
+        else:
+            q_curve = post_processing.quantile_curve(curves_poes, quantile)
+
+        quantile_curves.append((losses, q_curve))
+
+    # then mean loss curve
+    mean_curve_poes = post_processing.mean_curve(curves_poes, weights)
+    mean_curve = (losses, mean_curve_poes)
+
+    mean_map = [scientific.conditional_loss_ratio(losses, mean_curve_poes, poe)
+                for poe in poes]
+
+    quantile_maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
+                      for losses, poes in quantile_curves]
+                     for poe in poes]
+
+    return (mean_curve, quantile_curves, mean_map, quantile_maps)
+
+
+def required_imts(risk_models):
+    """
+    Get all the intensity measure types required by `risk_models`
+
+    A nested dict taxonomy -> loss_type -> `RiskModel` instance
+
+    :returns: a set with all the required imts
+    """
+    risk_models = sum([d.values() for d in risk_models.values()], [])
+    return set([m.imt for m in risk_models])
+
+
+def loss_types(risk_models):
+    return set(sum([d.keys() for d in risk_models.values()], []))

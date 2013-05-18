@@ -33,7 +33,6 @@ from openquake.engine.input import logictree
 from openquake.engine.input import source
 from openquake.engine.utils import general as general_utils
 from openquake.engine.utils import stats
-from openquake.engine.utils import config
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 

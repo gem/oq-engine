@@ -92,6 +92,7 @@ from openquake.engine import engine
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
+from openquake.engine.input import source
 from openquake.engine.job.validation import validate
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 
@@ -226,6 +227,16 @@ def set_up_arg_parser():
         help=('List outputs which were imported from a file, not calculated '
               'from a job'))
 
+    pre_proc_grp = parser.add_argument_group('Pre-processing')
+    pre_proc_grp.add_argument(
+        '--optimize-source-model',
+        '--osm',
+        help=('Optimize a source model by discretizating an area source into'
+              ' point sources, given a discretization step (in km)'),
+        nargs=3,
+        metavar=('INPUT_FILE', 'AREA_DISCRETIZATION', 'OUTPUT_FILE')
+    )
+
     return parser
 
 
@@ -271,12 +282,12 @@ def run_hazard(cfg_file, log_level, log_file, exports):
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
-                print 'Job %s ran successfully' % completed_job.id
                 print 'Calculation %d results:' % (
                     completed_job.hazard_calculation.id)
                 list_hazard_outputs(completed_job.hazard_calculation.id)
             else:
-                complain_and_exit('Job %s failed' % completed_job.id,
+                complain_and_exit('Calculation %d failed'
+                                  % completed_job.hazard_calculation.id,
                                   exit_code=1)
     except IOError as e:
         print str(e)
@@ -332,7 +343,7 @@ def _print_calcs_summary(calcs):
     if len(calcs) == 0:
         print 'None'
     else:
-        print ('calc_id | num_jobs | latest_job_status | last_update | '
+        print ('calc_id | status | last_update | '
                'description')
         for calc in calcs:
             jobs = calc.oqjob_set.all()
@@ -355,8 +366,8 @@ def _print_calcs_summary(calcs):
                     '%Y-%m-%d %H:%M:%S %Z'
                 )
 
-            print '%s | %s | %s | %s | %s' % (
-                calc.id, len(jobs), status, last_update, calc.description
+            print '%s | %s | %s | %s' % (
+                calc.id, status, last_update, calc.description
             )
 
 def list_imported_outputs():
@@ -485,12 +496,12 @@ def run_risk(
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
-                print 'Job %s ran successfully' % completed_job.id
                 print 'Calculation %d results:' % (
                     completed_job.risk_calculation.id)
                 list_risk_outputs(completed_job.risk_calculation.id)
             else:
-                complain_and_exit('Job %s failed' % completed_job.id,
+                complain_and_exit('Calculation %s failed'
+                                  % completed_job.risk_calculation.id,
                                   exit_code=1)
     except IOError as e:
         print str(e)
@@ -555,6 +566,17 @@ def confirm(prompt):
         return answer == 'y'
 
 
+def optimize_source_model(input_path, area_src_disc, output_path):
+    """
+    Read a source model and generate a new one, converting area sources to
+    point sources.
+    """
+    area_src_disc = float(area_src_disc)
+    source.optimize_source_model(input_path, area_src_disc,
+                                 output_path)
+    complain_and_exit(output_path)
+
+
 def main():
     arg_parser = set_up_arg_parser()
 
@@ -566,6 +588,9 @@ def main():
     if args.config_file:
         os.environ[config.OQ_CONFIG_FILE_VAR] = abspath(expanduser(args.config_file))
         config.refresh()
+
+    if args.optimize_source_model:
+        optimize_source_model(*args.optimize_source_model)
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'

@@ -13,9 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from StringIO import StringIO
 from tests.utils import helpers
-from tests.utils.helpers import demo_file
+from tests.utils.helpers import get_data_path
 from tests.calculators.risk import base_test
 
 from openquake.engine.db import models
@@ -28,12 +27,12 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     """
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
-            demo_file('event_based_risk/job.ini'),
-            demo_file('event_based_hazard/job.ini'), output_type="gmf")
+            get_data_path('event_based_risk/job.ini'),
+            get_data_path('event_based_hazard/job.ini'), output_type="gmf")
 
         self.calculator = event_based.EventBasedRiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
         self.calculator.pre_execute()
-
         self.job.is_running = True
         self.job.status = 'executing'
         self.job.save()
@@ -41,57 +40,15 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     def test_calculator_parameters(self):
         # Test that the specific calculation parameters are present
 
-        params = dict(zip(
-            ['conditional_loss_poes', 'insured_losses',
-             'time_span', 'tses', 'loss_curve_resolution',
-             'asset_correlation'], self.calculator.calculator_parameters))
+        params = self.calculator.calculator_parameters
 
-        self.assertEqual(80, params['loss_curve_resolution'])
-        self.assertEqual([0.1, 0.2, 0.3], params['conditional_loss_poes'])
-        self.assertEqual(True, params['insured_losses'])
-        self.assertEqual(250, params['tses'])
-        self.assertEqual(50, params['time_span'])
-        self.assertEqual(0.0, params['asset_correlation'])
-
-    def test_hazard_id(self):
-        # Test that the hazard output used by the calculator is a
-        # `openquake.engine.db.models.GmfCollection` object
-
-        outputs = self.calculator.hazard_outputs(
-            self.calculator.rc.get_hazard_calculation())
-
-        self.assertEqual(1, outputs.count())
-
-        self.assertEqual(set(["gmf"]), set([o.output_type for o in outputs]))
+        self.assertEqual([0.1, 0.2, 0.3], params.conditional_loss_poes)
+        self.assertTrue(params.insured_losses)
 
     def test_imt_validation(self):
-        # Test the validation of the imt associated with the
-        # vulnerability model that must match the one of the hazard
-        # output
-
-        cont = """\
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
-      xmlns:gml="http://www.opengis.net/gml">
-    <vulnerabilityModel>
-        <discreteVulnerabilitySet vulnerabilitySetID="QA_test1"
-                                  assetCategory="single_asset"
-                                lossCategory="loss">
-            <IML IMT="FOO">0.1    0.2    0.3    0.45    0.6</IML>
-            <discreteVulnerability vulnerabilityFunctionID="VF"
-                                   probabilisticDistribution="LN">
-                <lossRatio>0.05    0.1    0.2    0.4    0.8</lossRatio>
-                <coefficientsVariation>
-                0.5    0.4    0.3    0.2    0.1
-                </coefficientsVariation>
-            </discreteVulnerability>
-        </discreteVulnerabilitySet>
-    </vulnerabilityModel>
-</nrml>
-
-        """
         self.assertRaises(ValueError,
-                          self.calculator.parse_vulnerability_model,
-                          StringIO(cont))
+                          self.calculator.check_imts,
+                          ["FOO"])
 
     def test_celery_task(self):
         # Test that the celery task when called properly call the

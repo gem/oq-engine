@@ -15,7 +15,7 @@
 
 from tests.calculators.risk import base_test
 from tests.utils import helpers
-from tests.utils.helpers import demo_file
+from tests.utils.helpers import get_data_path
 
 from openquake.engine.db import models
 from openquake.engine.calculators.risk.event_based_bcr import core
@@ -29,10 +29,11 @@ class EventBasedBCRRiskCalculatorTestCase(
 
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
-            demo_file('event_based_bcr/job.ini'),
-            demo_file('event_based_hazard/job.ini'), output_type="gmf")
+            get_data_path('event_based_bcr/job.ini'),
+            get_data_path('event_based_hazard/job.ini'), output_type="gmf")
 
         self.calculator = core.EventBasedBCRRiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
 
     def shortDescription(self):
         """
@@ -60,26 +61,3 @@ class EventBasedBCRRiskCalculatorTestCase(
 
         self.assertEqual(3, models.BCRDistributionData.objects.filter(
             bcr_distribution__output__oq_job=self.job).count())
-
-    def test_hazard_id(self):
-        """
-        Test that the hazard output used by the calculator is a
-        `openquake.engine.db.models.HazardCurve` object
-        """
-
-        outputs = self.calculator.hazard_outputs(
-            self.calculator.rc.get_hazard_calculation())
-
-        self.assertEqual(1, outputs.count())
-
-        self.assertEqual(set(["gmf"]), set([o.output_type for o in outputs]))
-
-    def test_create_outputs(self):
-        """
-        Test that the proper output containers are created
-        """
-
-        for hazard_output in self.hazard_outputs:
-            self.assertTrue(models.BCRDistribution.objects.filter(
-                hazard_output=hazard_output,
-                pk=self.calculator.create_outputs(hazard_output)[0]).exists())

@@ -24,7 +24,7 @@ from openquake.engine.db import models
 from openquake.engine.job import validation
 
 from tests.utils import helpers
-from tests.utils.helpers import demo_file
+from tests.utils.helpers import get_data_path
 
 
 VALID_IML_IMT = {
@@ -313,7 +313,8 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types_and_levels`
         form = validation.ClassicalHazardForm(
-            instance=self.hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(
+                structural_vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
@@ -494,7 +495,8 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         self.hc.intensity_measure_types_and_levels = subset_iml_imt
 
         form = validation.EventBasedHazardForm(
-            instance=self.hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(
+                structural_vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
@@ -623,7 +625,8 @@ class DisaggHazardFormTestCase(unittest.TestCase):
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types_and_levels`
         form = validation.DisaggHazardForm(
-            instance=self.hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(
+                structural_vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
@@ -688,7 +691,8 @@ openquake.hazardlib.gsim"],
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types`
         form = validation.ScenarioHazardForm(
-            instance=self.hc, files=dict(vulnerability_file=object())
+            instance=self.hc, files=dict(
+                structural_vulnerability_file=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
@@ -706,8 +710,8 @@ openquake.hazardlib.gsim"],
 class ClassicalRiskFormTestCase(unittest.TestCase):
     def setUp(self):
         job, _ = helpers.get_fake_risk_job(
-            demo_file('classical_psha_based_risk/job.ini'),
-            demo_file('simple_fault_demo_hazard/job.ini')
+            get_data_path('classical_psha_based_risk/job.ini'),
+            get_data_path('simple_fault_demo_hazard/job.ini')
         )
         self.compulsory_arguments = dict(
             lrem_steps_per_interval=5)
@@ -755,8 +759,8 @@ class ClassicalRiskFormTestCase(unittest.TestCase):
 class ClassicalBCRRiskFormTestCase(unittest.TestCase):
     def setUp(self):
         job, _ = helpers.get_fake_risk_job(
-            demo_file('classical_psha_based_risk/job.ini'),
-            demo_file('simple_fault_demo_hazard/job.ini')
+            get_data_path('classical_psha_based_risk/job.ini'),
+            get_data_path('simple_fault_demo_hazard/job.ini')
         )
         self.compulsory_arguments = dict(
             calculation_mode="classical_bcr",
@@ -802,8 +806,8 @@ class EventBasedBCRRiskForm(unittest.TestCase):
 
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
-            demo_file('event_based_bcr/job.ini'),
-            demo_file('event_based_hazard/job.ini')
+            get_data_path('event_based_bcr/job.ini'),
+            get_data_path('event_based_hazard/job.ini')
         )
 
     def test_valid_form(self):
@@ -848,8 +852,8 @@ class EventBasedBCRRiskForm(unittest.TestCase):
 class EventBasedValidationTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
-            demo_file('event_based_risk/job.ini'),
-            demo_file('event_based_hazard/job.ini')
+            get_data_path('event_based_risk/job.ini'),
+            get_data_path('event_based_hazard/job.ini')
         )
 
     def test_valid_form_with_default_resolution(self):
@@ -905,7 +909,7 @@ class ValidateTestCase(unittest.TestCase):
         # For example, `ses_per_logic_tree_path` is an event-based hazard
         # param; if this param is specified for a classical hazard job, a
         # warning should be raised.
-        cfg_file = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        cfg_file = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = engine.prepare_job()
         params, files = engine.parse_config(open(cfg_file, 'r'))
         # Add a few superfluous parameters:

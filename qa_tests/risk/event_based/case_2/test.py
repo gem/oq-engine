@@ -39,7 +39,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
-            helpers.demo_file("event_based_hazard/job.ini"))
+            helpers.get_data_path("event_based_hazard/job.ini"))
 
         job.hazard_calculation = models.HazardCalculation.objects.create(
             owner=job.hazard_calculation.owner,
@@ -59,11 +59,13 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
             sm_lt_path="test_sm", gsim_lt_path="test_gsim",
             is_complete=False, total_items=1, completed_items=1)
 
+        gmf_coll = models.GmfCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test Hazard output", "gmf"),
+            lt_realization=lt_realization)
+
         gmf_set = models.GmfSet.objects.create(
-            gmf_collection=models.GmfCollection.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Test Hazard output", "gmf"),
-                lt_realization=lt_realization),
+            gmf_collection=gmf_coll,
             investigation_time=hc.investigation_time,
             ses_ordinal=1)
 
@@ -86,7 +88,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
-            populate_gmf_agg(job.hazard_calculation)
+            populate_gmf_agg([gmf_coll.id])
 
         return gmf_set.gmf_collection.output.id
 
@@ -119,23 +121,23 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
         poes_3 = [1., 1., 1., 0.99987659, 0.99752125,
                   0.98168436, 0.86466472, 0.63212056, 0.]
 
-        losses_1 = [0., 0.01082792, 0.02165583, 0.03248375, 0.04331167,
-                    0.05413958, 0.0649675, 0.07579541, 0.08662333]
+        losses_1 = [0., 0.01103294, 0.02206588, 0.03309883, 0.04413177,
+                    0.05516471, 0.06619765, 0.07723059, 0.08826354]
 
-        losses_2 = [0., 0.00194445, 0.00388891, 0.00583336, 0.00777782,
-                    0.00972227, 0.01166673, 0.01361118, 0.01555564]
+        losses_2 = [0., 0.00197485, 0.00394969, 0.00592454, 0.00789938,
+                    0.00987423, 0.01184907, 0.01382392, 0.01579877]
 
-        losses_3 = [0., 0.00620783, 0.01241566, 0.01862349, 0.02483132,
-                    0.03103915, 0.03724697, 0.0434548, 0.04966263]
+        losses_3 = [0., 0.00627624, 0.01255247, 0.01882871, 0.02510495,
+                    0.03138118, 0.03765742, 0.04393365, 0.05020989]
 
-        expected_aggregate_losses = [0., 40.74183549, 81.48367098,
-                                     122.22550648, 162.96734197, 203.70917746,
-                                     244.45101295,  285.19284844, 325.93468394]
+        expected_aggregate_losses = [0., 41.41612985, 82.8322597, 124.24838954,
+                                     165.66451939, 207.08064924, 248.49677909,
+                                     289.91290894, 331.32903879]
 
-        expected_event_loss_table = [325.93468394, 226.10203138, 161.34708564,
-                                     114.59153235, 114.5070817, 107.55192352,
-                                     107.16635393, 104.94262851, 94.90879987,
-                                     93.52459622]
+        expected_event_loss_table = [331.32903879, 221.56606968, 163.03223466,
+                                     117.41787935, 115.83607453,  108.22215086,
+                                     106.1758451, 105.35853998, 97.05754656,
+                                     94.89922324]
 
         return [poes_1, poes_2, poes_3, losses_1, losses_2, losses_3,
                 expected_aggregate_losses, expected_event_loss_table]

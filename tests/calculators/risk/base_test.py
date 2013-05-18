@@ -18,7 +18,7 @@ import unittest
 import mock
 
 from tests.utils import helpers
-from tests.utils.helpers import demo_file
+from tests.utils.helpers import get_data_path
 from openquake.engine.calculators.risk import base
 from openquake.engine.db import models
 from openquake.engine.utils import stats
@@ -30,18 +30,14 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
     """
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
-            demo_file('classical_psha_based_risk/job.ini'),
-            demo_file('simple_fault_demo_hazard/job.ini'))
+            get_data_path('classical_psha_based_risk/job.ini'),
+            get_data_path('simple_fault_demo_hazard/job.ini'))
+        models.JobStats.objects.create(oq_job=self.job)
 
     @property
     def hazard_calculation(self):
         "A shortcut to a the corresponding hazard calculation"
         return self.job.risk_calculation.get_hazard_calculation()
-
-    @property
-    def hazard_outputs(self):
-        return self.hazard_calculation.oqjob_set.latest(
-            'last_update').output_set.filter(output_type='hazard_curve_multi')
 
 
 class FakeRiskCalculator(base.RiskCalculator):
@@ -51,19 +47,9 @@ class FakeRiskCalculator(base.RiskCalculator):
 
     celery_task = mock.Mock()
 
-    def hazard_outputs(self, _hc):
-        return mock.Mock()
-
-    def create_getter(self, output, imt, assets):
-        return mock.Mock()
-
-    @property
-    def hazard_getter(self):
-        return "hazard_getter"
-
     @property
     def calculation_parameters(self):
-        return []
+        return base.make_calc_params()
 
 
 class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
@@ -102,32 +88,19 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 
         self.assertEqual(["a1", "a2", "a3"], asset_refs)
 
-    def test_set_risk_models(self):
+    def test_get_risk_models(self):
         # Test that Vulnerability model and functions are properly
         # stored and associated with the calculator
 
-        self.calculator.taxonomies = {'VF': 10}
-        self.calculator.set_risk_models()
-        self.assertEqual(1, len(self.calculator.vulnerability_functions))
-        self.assertEqual({'VF': 'PGA'}, self.calculator.taxonomy_imt)
+        # load exposure
+        self.calculator.get_taxonomies()
 
-    def test_create_outputs(self):
-        # Test that the proper output containers are created
-
-        for hazard_output in self.hazard_outputs:
-            [loss_curve_id, loss_map_ids] = \
-                self.calculator.create_outputs(hazard_output)
-
-            self.assertTrue(
-                models.LossCurve.objects.filter(pk=loss_curve_id).exists())
-
-            self.assertEqual(
-                sorted(self.job.risk_calculation.conditional_loss_poes),
-                sorted(loss_map_ids.keys()))
-
-            for _, map_id in loss_map_ids.items():
-                self.assertTrue(models.LossMap.objects.filter(
-                    pk=map_id).exists())
+        risk_models = self.calculator.get_risk_models()
+        self.assertEqual(1, len(risk_models))
+        self.assertTrue('VF' in risk_models)
+        self.assertEqual(1, len(risk_models['VF']))
+        self.assertTrue('structural' in risk_models['VF'])
+        self.assertEqual("PGA", risk_models['VF']['structural'].imt)
 
     def test_initialize_progress(self):
         # Tests that the progress counter has been initialized
@@ -149,7 +122,8 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
 class ParseVulnerabilityModelTestCase(unittest.TestCase):
 
     def setUp(self):
-        cfg = helpers.get_data_path('end-to-end-hazard-risk/job_risk.ini')
+        cfg = helpers.get_data_path(
+            'end-to-end-hazard-risk/job_risk_classical.ini')
         self.job = helpers.get_risk_job(cfg)
         self.calc = base.RiskCalculator(self.job)
 
@@ -189,8 +163,9 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
         self.job.risk_calculation.hazard_output = None
         with self.assertRaises(ValueError) as ar:
             self.calc.parse_vulnerability_model(vuln_content)
-        expected_error = ('The same taxonomy is associated with different imts'
-                          ' MMI and PGA')
+        expected_error = ('Error creating vulnerability function for taxonomy '
+                          'A. A taxonomy can not be associated with different '
+                          'vulnerability functions')
         self.assertEqual(expected_error, ar.exception.message)
 
     def test_lr_eq_0_cov_gt_0(self):

@@ -17,6 +17,8 @@
 """
 Core functionality for the scenario risk calculator.
 """
+import random
+import itertools
 import numpy
 from django import db
 
@@ -24,7 +26,7 @@ from openquake.risklib import api, scientific
 
 from openquake.engine import logs
 from openquake.engine.calculators.base import signal_task_complete
-from openquake.engine.calculators.risk import base, writers, hazard_getters
+from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -32,94 +34,93 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 @tasks.oqtask
 @base.count_progress_risk('r')
-def scenario(job_id, hazard, seed, vulnerability_function, imt,
-             output_containers,
-             _statistical_output_containers,
-             insured_losses, asset_correlation):
+def scenario(job_id, units, containers, params):
     """
-    Celery task for the scenario damage risk calculator.
+    Celery task for the scenario risk calculator.
 
-    :param job_id: the id of the current
-    :class:`openquake.engine.db.models.OqJob`
-    :param dict hazard:
-      A dictionary mapping IDs of
-      :class:`openquake.engine.db.models.Output` (with output_type set
-      to 'gmfscenario') to a tuple where the first element is an instance of
-      :class:`..hazard_getters.GroundMotionScenarioGetter`, and the second
-      element is the corresponding weight.
-    :param seed: the seed used to initialize the rng
-    :param str imt: the imt in long string form, i.e. SA(0.1)
-    :param output_containers: a dictionary {hazard_id: output_id}
-        where output id represents the id of the loss map
-    :param statistical_output_containers: not used at this moment
-    :param bool insured_losses: True if also insured losses should be computed
-    :param asset_correlation: asset correlation coefficient
+    :param int job_id:
+      ID of the currently running job
+    :param dict units:
+      A dict of :class:`..base.CalculationUnit` instances keyed by
+      loss type string
+    :param containers:
+      An instance of :class:`..writers.OutputDict` containing
+      output container instances (in this case only `LossMap`)
+    :param params:
+      An instance of :class:`..base.CalcParams` used to compute
+      derived outputs
+    """
+    def profile(name):
+        return EnginePerformanceMonitor(name, job_id, scenario, tracing=True)
+
+    agg = dict()
+    insured = dict()
+    with db.transaction.commit_on_success(using='reslt_writer'):
+        for loss_type in units:
+            # in scenario calculation we have only ONE calculation unit
+            unit = units[loss_type][0]
+            agg[loss_type], insured[loss_type] = do_scenario(
+                loss_type, unit, containers, params, profile)
+    num_items = base.get_num_items(units)
+    signal_task_complete(
+        job_id=job_id, num_items=num_items,
+        aggregate_losses=agg, insured_losses=insured)
+scenario.ignore_result = False
+
+
+def do_scenario(loss_type, unit, containers, params, profile):
+    """
+    See `scenario` for a description of the input parameters
     """
 
-    calc = api.Scenario(vulnerability_function, seed, asset_correlation)
-
-    hazard_getter = hazard.values()[0][0]
-
-    with EnginePerformanceMonitor('getting input from db', job_id, scenario):
-        assets, ground_motion_values, missings = hazard_getter(imt)
+    with profile('getting hazard'):
+        assets, ground_motion_values = unit.getter()
 
     if not len(assets):
         logs.LOG.info("Exit from task as no asset could be processed")
-        signal_task_complete(job_id=job_id,
-                             aggregate_losses=None,
-                             insured_aggregate_losses=None,
-                             num_items=len(missings))
         return
 
-    with EnginePerformanceMonitor(
-            'computing risk', job_id, scenario, tracing=True):
-        loss_ratio_matrix = calc(ground_motion_values)
+    with profile('computing risk'):
+        loss_ratio_matrix = unit.calc(ground_motion_values)
 
-        if insured_losses:
+        if params.insured_losses:
             insured_loss_matrix = [
                 scientific.insured_losses(
-                    loss_ratio_matrix[i], asset.value,
+                    loss_ratio_matrix[i], asset.value(loss_type),
                     asset.deductible, asset.ins_limit)
                 for i, asset in enumerate(assets)]
 
-    # There is only one output container list as there is no support
-    # for hazard logic tree
-    output_containers = output_containers.values()[0]
+    with profile('saving risk outputs'):
+        containers.write(
+            assets,
+            [losses.mean() for losses in loss_ratio_matrix],
+            [losses.std(ddof=1) for losses in loss_ratio_matrix],
+            output_type="loss_map",
+            loss_type=loss_type,
+            hazard_output_id=unit.getter.hazard_output_id,
+            insured=False)
 
-    loss_map_id = output_containers[0]
+        if params.insured_losses:
+            containers.write(
+                assets,
+                [losses.mean() for losses in insured_loss_matrix],
+                [losses.std(ddof=1) for losses in insured_loss_matrix],
+                itertools.cycle([True]),
+                output_type="loss_map",
+                loss_type=loss_type,
+                hazard_output_id=unit.getter.hazard_output_id,
+                insured=True)
 
-    if insured_losses:
-        insured_loss_map_id = output_containers[1]
-
-    with EnginePerformanceMonitor('saving loss map', job_id, scenario), \
-            db.transaction.commit_on_success(using='reslt_writer'):
-        for i, asset in enumerate(assets):
-            writers.loss_map_data(
-                loss_map_id, asset,
-                loss_ratio_matrix[i].mean(),
-                std_dev=loss_ratio_matrix[i].std(ddof=1))
-
-            if insured_losses:
-                writers.loss_map_data(
-                    insured_loss_map_id, asset,
-                    insured_loss_matrix[i].mean() / asset.value,
-                    std_dev=insured_loss_matrix[i].std(ddof=1) / asset.value)
-
-    aggregate_losses = sum(loss_ratio_matrix[i] * asset.value
+    aggregate_losses = sum(loss_ratio_matrix[i] * asset.value(loss_type)
                            for i, asset in enumerate(assets))
 
-    if insured_losses:
-        insured_aggregate_losses = (
+    if params.insured_losses:
+        insured_losses = (
             numpy.array(insured_loss_matrix).transpose().sum(axis=1))
     else:
-        insured_aggregate_losses = "Not computed"
+        insured_losses = "Not computed"
 
-    signal_task_complete(
-        job_id=job_id,
-        num_items=len(assets) + len(missings),
-        aggregate_losses=aggregate_losses,
-        insured_aggregate_losses=insured_aggregate_losses)
-scenario.ignore_result = False
+    return aggregate_losses, insured_losses
 
 
 class ScenarioRiskCalculator(base.RiskCalculator):
@@ -127,25 +128,33 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     Scenario Risk Calculator. Computes a Loss Map,
     for a given set of assets.
     """
-    hazard_getter = hazard_getters.GroundMotionScenarioGetter
 
     core_calc_task = scenario
 
     def __init__(self, job):
         super(ScenarioRiskCalculator, self).__init__(job)
-        self.aggregate_losses = None
-        self.insured_aggregate_losses = None
+        self.aggregate_losses = dict()
+        self.insured_losses = dict()
+        self.rnd = random.Random()
+        self.rnd.seed(self.rc.master_seed)
 
-    def pre_execute(self):
+    def validate_hazard(self):
+        super(ScenarioRiskCalculator, self).validate_hazard()
+        if self.rc.hazard_calculation:
+            if self.rc.hazard_calculation.calculation_mode != "scenario":
+                raise RuntimeError(
+                    "The provided hazard calculation ID "
+                    "is not a scenario calculation")
+        elif not self.rc.hazard_output.output_type == "gmf_scenario":
+            raise RuntimeError(
+                "The provided hazard output is not a gmf scenario collection")
+
+    def get_taxonomies(self):
         """
-        Override the default pre_execute to provide more detailed
-        validation.
-
-        2) If insured losses are required we check for the presence of
+        If insured losses are required we check for the presence of
         the deductible and insurance limit
         """
-        super(ScenarioRiskCalculator, self).pre_execute()
-
+        taxonomies = super(ScenarioRiskCalculator, self).get_taxonomies()
         if self.rc.insured_losses:
             queryset = self.rc.exposure_model.exposuredata_set.filter(
                 (db.models.Q(deductible__isnull=True) |
@@ -156,69 +165,77 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         queryset.all()))
                 raise RuntimeError(
                     "Deductible or insured limit missing in exposure")
+        return taxonomies
 
     def task_completed_hook(self, message):
-        aggregate_losses = message.get('aggregate_losses')
+        aggregate_losses_dict = message.get('aggregate_losses')
 
-        if aggregate_losses is not None:
-            if self.aggregate_losses is None:
-                self.aggregate_losses = numpy.zeros(aggregate_losses.shape)
-            self.aggregate_losses += aggregate_losses
+        for loss_type in base.loss_types(self.risk_models):
+            aggregate_losses = aggregate_losses_dict.get(loss_type)
+
+            if aggregate_losses is not None:
+                if self.aggregate_losses.get(loss_type) is None:
+                    self.aggregate_losses[loss_type] = (
+                        numpy.zeros(aggregate_losses.shape))
+                self.aggregate_losses[loss_type] += aggregate_losses
 
         if self.rc.insured_losses:
-            insured_aggregate_losses = message.get('insured_aggregate_losses')
-
-            if insured_aggregate_losses is not None:
-                if self.insured_aggregate_losses is None:
-                    self.insured_aggregate_losses = numpy.zeros(
-                        insured_aggregate_losses.shape)
-                self.insured_aggregate_losses += insured_aggregate_losses
+            insured_losses_dict = message.get('insured_losses')
+            for loss_type in base.loss_types(self.risk_models):
+                insured_losses = insured_losses_dict.get(
+                    loss_type)
+                if insured_losses is not None:
+                    if self.insured_losses.get(loss_type) is None:
+                        self.insured_losses[loss_type] = numpy.zeros(
+                            insured_losses.shape)
+                    self.insured_losses[loss_type] += insured_losses
 
     def post_process(self):
-        with db.transaction.commit_on_success(using='reslt_writer'):
-
-            if self.aggregate_losses is not None:
+        for loss_type, aggregate_losses in self.aggregate_losses.items():
+            with db.transaction.commit_on_success(using='reslt_writer'):
                 models.AggregateLoss.objects.create(
                     output=models.Output.objects.create_output(
-                        self.job, "Aggregate Loss",
+                        self.job,
+                        "aggregate loss. type=%s" % loss_type,
                         "aggregate_loss"),
-                    mean=numpy.mean(self.aggregate_losses),
-                    std_dev=numpy.std(self.aggregate_losses, ddof=1))
+                    loss_type=loss_type,
+                    mean=numpy.mean(aggregate_losses),
+                    std_dev=numpy.std(aggregate_losses, ddof=1))
 
-            if (self.rc.insured_losses and
-                self.insured_aggregate_losses is not None):
-                models.AggregateLoss.objects.create(
-                    output=models.Output.objects.create_output(
-                        self.job, "Insured Aggregate Loss",
-                        "aggregate_loss"),
-                    insured=True,
-                    mean=numpy.mean(self.insured_aggregate_losses),
-                    std_dev=numpy.std(self.insured_aggregate_losses, ddof=1))
+                if self.rc.insured_losses:
+                    insured_losses = self.insured_losses[loss_type]
+                    models.AggregateLoss.objects.create(
+                        output=models.Output.objects.create_output(
+                            self.job,
+                            "insured aggregate loss. type=%s" % loss_type,
+                            "aggregate_loss"),
+                        insured=True,
+                        loss_type=loss_type,
+                        mean=numpy.mean(insured_losses),
+                        std_dev=numpy.std(insured_losses, ddof=1))
 
-    def hazard_outputs(self, hazard_calculation):
+    def calculation_units(self, loss_type, assets):
         """
-        :returns: the single hazard output associated to
-        `hazard_calculation`
+        :returns:
+          a list of instances of `..base.CalculationUnit` for the given
+          `assets` to be run in the celery task
         """
 
-        # in scenario hazard calculation we do not have hazard logic
-        # tree realizations, and we have only one output
-        return hazard_calculation.oqjob_set.filter(status="complete").latest(
-            'last_update').output_set.get(output_type='gmf_scenario')
+        # assume all assets have the same taxonomy
+        taxonomy = assets[0].taxonomy
+        model = self.risk_models[taxonomy][loss_type]
 
-    def create_getter(self, output, assets):
-        """
-        See :meth:`..base.RiskCalculator.create_getter`
-        """
-        if output.output_type != 'gmf_scenario':
-            raise RuntimeError(
-                "The provided hazard output is not a ground motion field: %s"
-                % output.output_type)
-
-        # As in scenario calculation we are considering only a single
-        # realization with fix the weight to 1
-        return (self.hazard_getter(
-            output.id, assets, self.rc.best_maximum_distance), 1)
+        return [base.CalculationUnit(
+            api.Scenario(
+                model.vulnerability_function,
+                seed=self.rnd.randint(0, models.MAX_SINT_32),
+                correlation=self.rc.asset_correlation),
+            hazard_getters.GroundMotionScenarioGetter(
+                ho,
+                assets,
+                self.rc.best_maximum_distance,
+                model.imt))
+                for ho in self.rc.hazard_outputs()]
 
     @property
     def calculator_parameters(self):
@@ -227,31 +244,34 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         :class:`openquake.engine.db.RiskCalculation`
         """
 
-        return [self.rc.insured_losses, self.rc.asset_correlation or 0]
+        return base.make_calc_params(insured_losses=self.rc.insured_losses)
 
     def create_outputs(self, hazard_output):
         """
         Create the the output of a ScenarioRisk calculator
         which is a LossMap.
         """
+        ret = writers.OutputDict()
 
-        if self.rc.insured_losses:
-            insured_loss_map = [models.LossMap.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "Insured Loss Map", "loss_map"),
-                hazard_output=hazard_output,
-                insured=True).id]
-        else:
-            insured_loss_map = []
+        for loss_type in base.loss_types(self.risk_models):
+            if self.rc.insured_losses:
+                ret.set(models.LossMap.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job, "Insured Loss Map", "loss_map"),
+                    hazard_output=hazard_output,
+                    loss_type=loss_type,
+                    insured=True))
 
-        return [models.LossMap.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "Loss Map", "loss_map"),
-                hazard_output=hazard_output).id] + insured_loss_map
+            ret.set(models.LossMap.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job, "Loss Map", "loss_map"),
+                    hazard_output=hazard_output,
+                    loss_type=loss_type))
+        return ret
 
     def create_statistical_outputs(self):
         """
         Override default behaviour as BCR and scenario calculators do
         not compute mean/quantiles outputs"
         """
-        pass
+        return writers.OutputDict()
