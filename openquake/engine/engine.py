@@ -342,7 +342,8 @@ def run_calc(job, log_level, log_file, exports, job_type):
     if not job_pid:
         # calculation executor process
         try:
-            logs.init_logs_amqp_send(level=log_level, job_id=job.id)
+            logs.init_logs_amqp_send(level=log_level, calc_domain=job_type,
+                                     calc_id=job.calculation.id)
             # run the job
             job.is_running = True
             job.save()

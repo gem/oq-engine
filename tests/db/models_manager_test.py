@@ -33,7 +33,7 @@ from openquake.engine.db import models
 from openquake.engine.calculators.risk import base
 
 from tests.utils import helpers
-from tests.utils.helpers import demo_file
+from tests.utils.helpers import get_data_path
 
 
 class TestCaseWithAJob(unittest.TestCase):
@@ -41,7 +41,7 @@ class TestCaseWithAJob(unittest.TestCase):
     Abstract test case class to just setup a job
     """
     def setUp(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         self.job = helpers.get_hazard_job(cfg, username="test_user")
         for i in range(0, random.randint(1, 10)):
             models.LtRealization(
@@ -72,14 +72,15 @@ class OutputManagerTestCase(TestCaseWithAJob):
 class ExposureContainedInTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
-            demo_file('classical_psha_based_risk/job.ini'),
-            demo_file('simple_fault_demo_hazard/job.ini'))
+            get_data_path('classical_psha_based_risk/job.ini'),
+            get_data_path('simple_fault_demo_hazard/job.ini'))
         calculator = base.RiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
         calculator.pre_execute()
-        self.model = self.job.risk_calculation.exposure_model
+        self.rc = self.job.risk_calculation
 
         common_fake_args = dict(
-            exposure_model=self.model,
+            exposure_model=self.rc.exposure_model,
             stco=1,
             number_of_units=10,
             reco=1,
@@ -96,29 +97,30 @@ class ExposureContainedInTestCase(unittest.TestCase):
         asset.save()
 
     def test_simple_inclusion(self):
-        region_constraint = Polygon(((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
+        self.rc.region_constraint = Polygon(
+            ((0, 0), (0, 1), (1, 1), (1, 0), (0, 0)))
 
-        results = models.ExposureData.objects.contained_in(
-            self.model.id, "test", region_constraint, 0, 10)
+        results = models.ExposureData.objects.get_asset_chunk(
+            self.rc, "test", 0, 10)
 
         self.assertEqual(1, len(list(results)))
         self.assertEqual("test1", results[0].asset_ref)
 
     def test_inclusion_of_a_pole(self):
-        region_constraint = Polygon(
+        self.rc.region_constraint = Polygon(
             ((-1, 0), (-1, 1), (1, 1), (1, 0), (-1, 0)))
 
-        results = models.ExposureData.objects.contained_in(
-            self.model.id, "test", region_constraint, 0, 10)
+        results = models.ExposureData.objects.get_asset_chunk(
+            self.rc, "test", 0, 10)
 
         self.assertEqual(1, len(results))
         self.assertEqual("test1", results[0].asset_ref)
 
-        region_constraint = Polygon(
+        self.rc.region_constraint = Polygon(
             ((179, 10), (-179, 10), (-179, -10), (179, -10), (179, 10)))
 
-        results = models.ExposureData.objects.contained_in(
-            self.model.id, "test", region_constraint, 0, 10)
+        results = models.ExposureData.objects.get_asset_chunk(
+            self.rc, "test",  0, 10)
 
         self.assertEqual(1, len(list(results)))
         self.assertEqual("test2", results[0].asset_ref)

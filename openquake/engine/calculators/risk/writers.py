@@ -17,42 +17,50 @@
 
 """DB writing functionality for Risk calculators."""
 
-import numpy
-from scipy import interpolate
+import collections
+import itertools
 from openquake.risklib import scientific
-
-from openquake.engine import logs
-from openquake.engine.calculators import post_processing
 from openquake.engine.db import models
 
 
-def loss_map_data(loss_map_id, asset, loss_ratio, std_dev=None):
+def loss_map(
+        loss_type, loss_map_id, assets, losses, std_devs=None, absolute=False):
     """
     Create :class:`openquake.engine.db.models.LossMapData`
 
     :param int loss_map_id:
         The ID of the output container.
-    :param asset:
-        An instance of :class:`openquake.engine.db.models.ExposureData`.
-    :param float value:
-        Loss ratio value.
-    :param float std_dev:
-        Standard devation on loss ratios.
+    :param list assets:
+        A list of instances of :class:`openquake.engine.db.models.ExposureData`
+    :param loss:
+        Loss values to be written.
+    :param float std_devs:
+        Standard devations on each loss.
+    :param absolute:
+        False if the provided losses are loss ratios
     """
 
-    if std_dev is not None:
-        std_dev = std_dev * asset.value
+    for i, asset in enumerate(assets):
+        loss = losses[i]
+        if std_devs is not None:
+            std_dev = std_devs[i]
+        else:
+            std_dev = None
 
-    return models.LossMapData.objects.create(
-        loss_map_id=loss_map_id,
-        asset_ref=asset.asset_ref,
-        value=loss_ratio * asset.value,
-        std_dev=std_dev,
-        location=asset.site)
+        if not absolute:
+            loss *= asset.value(loss_type)
+            if std_devs is not None:
+                std_dev *= asset.value(loss_type)
+
+        models.LossMapData.objects.create(
+            loss_map_id=loss_map_id,
+            asset_ref=asset.asset_ref,
+            value=loss,
+            std_dev=std_dev,
+            location=asset.site)
 
 
-def bcr_distribution(
-        bcr_distribution_id, asset, eal_original, eal_retrofitted, bcr):
+def bcr_distribution(loss_type, bcr_distribution_id, assets, bcr_data):
     """
     Create a new :class:`openquake.engine.db.models.BCRDistributionData` from
     `asset_output` and links it to the output container identified by
@@ -62,26 +70,26 @@ def bcr_distribution(
         The ID of :class:`openquake.engine.db.models.BCRDistribution` instance
         that holds the BCR map.
 
-    :param asset:
-        An instance of :class:`openquake.engine.db.models.ExposureData`.
+    :param assets:
+        A list of instance of :class:`openquake.engine.db.models.ExposureData`
 
-    :param float eal_original:
-        Expected annual loss in the original model for the asset.
-    :param float eal_retrofitted:
-        Expected annual loss in the retrofitted model for the asset.
-    :param float bcr:
-        Benefit Cost Ratio parameter.
+    :param tuple bcr_data: a 3-tuple with
+      1) eal_original: expected annual loss in the original model
+      2) eal_retrofitted: expected annual loss in the retrofitted model
+      3) bcr: Benefit Cost Ratio parameter.
     """
-    models.BCRDistributionData.objects.create(
-        bcr_distribution_id=bcr_distribution_id,
-        asset_ref=asset.asset_ref,
-        average_annual_loss_original=eal_original * asset.value,
-        average_annual_loss_retrofitted=eal_retrofitted * asset.value,
-        bcr=bcr,
-        location=asset.site)
+    for asset, (eal_original, eal_retrofitted, bcr) in zip(assets, bcr_data):
+        models.BCRDistributionData.objects.create(
+            bcr_distribution_id=bcr_distribution_id,
+            asset_ref=asset.asset_ref,
+            average_annual_loss_original=eal_original * asset.value(loss_type),
+            average_annual_loss_retrofitted=(eal_retrofitted *
+                                             asset.value(loss_type)),
+            bcr=bcr,
+            location=asset.site)
 
 
-def loss_curve(loss_curve_id, asset, poes, loss_ratios, average_loss_ratio):
+def loss_curve(loss_type, loss_curve_id, assets, curves):
     """
     Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
     where the data are got by `asset_output` and the
@@ -99,144 +107,19 @@ def loss_curve(loss_curve_id, asset, poes, loss_ratios, average_loss_ratio):
     :param float average_loss_ratio:
         The average loss ratio of the curve.
     """
-    return models.LossCurveData.objects.create(
-        loss_curve_id=loss_curve_id,
-        asset_ref=asset.asset_ref,
-        location=asset.site,
-        poes=poes,
-        loss_ratios=loss_ratios,
-        asset_value=asset.value,
-        average_loss_ratio=average_loss_ratio)
+
+    for asset, (losses, poes) in itertools.izip(assets, curves):
+        models.LossCurveData.objects.create(
+            loss_curve_id=loss_curve_id,
+            asset_ref=asset.asset_ref,
+            location=asset.site,
+            poes=poes,
+            loss_ratios=losses,
+            asset_value=asset.value(loss_type),
+            average_loss_ratio=scientific.average_loss(losses, poes))
 
 
-def curve_statistics(
-        mean_loss_curve_id, quantile_loss_curve_ids,
-        mean_loss_map_ids, quantile_loss_map_ids,
-        mean_loss_fraction_ids, quantile_loss_fraction_ids,
-        weights, assets, loss_ratio_curve_matrix, hazard_montecarlo_p,
-        conditional_loss_poes, poes_disagg, assume_equal):
-    """
-    :param int mean_loss_curve_id:
-      the ID of the mean loss curve output container
-    :param dict quantile_loss_curve_id:
-      it maps quantile values to IDs of quantile loss curve output containers
-    :param dict mean_loss_map_id:
-      it maps poes to IDs of mean loss map output containers
-    :param dict quantile_loss_map_ids:
-      it maps quantile values to dicts poe -> ID of loss map output container
-    :param dict mean_loss_fraction_ids:
-      it maps poes to IDs of mean loss fraction output containers
-    :param dict quantile_loss_fraction_ids:
-      it maps quantile values to dicts poe -> ID of loss fraction output
-      containers
-    :param weights:
-      the weights of each realization considered
-    :param assets:
-      the assets on which we are computing the statistics
-    :param loss_ratio_curve_matrix:
-      a numpy 2d array that stores the individual loss curves for each asset
-      in `assets`
-    :param bool hazard_montecarlo_p:
-      True when explicit mean/quantiles calculation is used
-    :param list conditional_loss_poes:
-      The poes taken into account to compute the loss maps
-    :param list poes_disagg:
-      The poes taken into account to compute the loss maps needed for
-      disaggregation
-    :param str assume_equal:
-      equal to "support" if loss curves has the same abscissae, or "image" if
-      they have the same ordinates
-    """
-
-    for i, asset in enumerate(assets):
-        loss_ratio_curves = loss_ratio_curve_matrix[:, i]
-
-        if assume_equal == 'support':
-            # get the loss ratios only from the first curve
-            loss_ratios, _poes = loss_ratio_curves[0]
-            curves_poes = [poes for _losses, poes in loss_ratio_curves]
-        elif assume_equal == 'image':
-            non_trivial_curves = [(losses, poes)
-                                  for losses, poes in loss_ratio_curves
-                                  if losses[-1] > 0]
-            if not non_trivial_curves:  # no damage. all trivial curves
-                logs.LOG.info("No damages in asset %s" % asset)
-                loss_ratios, _poes = loss_ratio_curves[0]
-                curves_poes = [poes for _losses, poes in loss_ratio_curves]
-            else:  # standard case
-                max_losses = [losses[-1]  # we assume non-decreasing losses
-                              for losses, _poes in non_trivial_curves]
-                reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
-                loss_ratios = reference_curve[0]
-                curves_poes = [interpolate.interp1d(
-                    losses, poes, bounds_error=False, fill_value=0)(
-                        loss_ratios)
-                    for losses, poes in loss_ratio_curves]
-        else:
-            raise NotImplementedError
-
-        quantiles_poes = dict()
-
-        for quantile, quantile_loss_curve_id in (
-                quantile_loss_curve_ids.items()):
-            if hazard_montecarlo_p:
-                q_curve = post_processing.weighted_quantile_curve(
-                    curves_poes, weights, quantile)
-            else:
-                q_curve = post_processing.quantile_curve(curves_poes, quantile)
-
-            quantiles_poes[quantile] = q_curve.tolist()
-
-            loss_curve(
-                quantile_loss_curve_id,
-                asset,
-                quantiles_poes[quantile],
-                loss_ratios,
-                scientific.average_loss(loss_ratios, quantiles_poes[quantile]))
-
-        # then mean loss curve
-        mean_poes = None
-        if mean_loss_curve_id:
-            mean_curve = post_processing.mean_curve(curves_poes, weights)
-            mean_poes = mean_curve.tolist()
-
-            loss_curve(
-                mean_loss_curve_id,
-                asset,
-                mean_poes,
-                loss_ratios,
-                scientific.average_loss(loss_ratios, mean_poes))
-
-        for poe in conditional_loss_poes:
-            loss_map_data(
-                mean_loss_map_ids[poe],
-                asset,
-                scientific.conditional_loss_ratio(loss_ratios, mean_poes, poe))
-            for quantile, poes in quantiles_poes.items():
-                loss_map_data(
-                    quantile_loss_map_ids[quantile][poe],
-                    asset,
-                    scientific.conditional_loss_ratio(loss_ratios, poes, poe))
-
-        # mean and quantile loss fractions (only disaggregation by
-        # taxonomy is supported here)
-        for poe in poes_disagg:
-            loss_fraction_data(
-                mean_loss_fraction_ids[poe],
-                value=asset.taxonomy,
-                location=asset.site,
-                absolute_loss=scientific.conditional_loss_ratio(
-                    loss_ratios, mean_poes, poe) * asset.value)
-            for quantile, poes in quantiles_poes.items():
-                loss_fraction_data(
-                    quantile_loss_fraction_ids[quantile][poe],
-                    value=asset.taxonomy,
-                    location=asset.site,
-                    absolute_loss=scientific.conditional_loss_ratio(
-                        loss_ratios, poes, poe) * asset.value)
-
-
-def loss_fraction_data(loss_fraction_id, value, location, absolute_loss):
+def loss_fraction(loss_type, loss_fraction_id, assets, values, fractions):
     """
     Create, save and return an instance of
     :class:`openquake.engine.db.models.LossFractionData` associated
@@ -244,76 +127,192 @@ def loss_fraction_data(loss_fraction_id, value, location, absolute_loss):
     :param int loss_fraction_id:
        an ID to an output container instance
        of type :class:`openquake.engine.db.models.LossFraction
-    :param str value:
-       A value representing the fraction. In case of disaggregation by taxonomy
-       it is a taxonomy string.
-    :param point location: the location, the fraction refers to
-    :param float absolute_loss:
-       the absolute loss contribution of `value` in `location`
+    :param list values:
+       A list of value representing the fraction. In case of
+       disaggregation by taxonomy it is a taxonomy string.
+    :param assets: the assets, the fractions refer to
+    :param absolute_losses:
+       the absolute loss contributions of `values` in `assets`
     """
-
-    return models.LossFractionData.objects.create(
-        loss_fraction_id=loss_fraction_id,
-        value=value,
-        location=location,
-        absolute_loss=absolute_loss)
+    for asset, value, fraction in zip(assets, values, fractions):
+        models.LossFractionData.objects.create(
+            loss_fraction_id=loss_fraction_id,
+            value=value,
+            location=asset.site,
+            absolute_loss=fraction * asset.value(loss_type))
 
 
 ###
 ### Damage Distributions
 ###
 
-def damage_distribution_per_asset(fractions, rc_id, asset):
+def damage_distribution(assets, fraction_matrix, dmg_state_ids):
     """
     Save the damage distribution for a given asset.
-
-    :param fractions: numpy array with the damage fractions
-    :param rc_id: the risk_calculation_id
-    :param asset: an ExposureData instance
+    :param assets:
+       a list of ExposureData instances
+    :param fraction_matrix:
+       numpy array with the damage fractions for each asset
+    :param dmg_state_ids:
+       a list of  IDs of instances of
+       :class:`openquake.engine.db.models.DmgState` ordered by `lsi`
     """
-    dmg_states = models.DmgState.objects.filter(risk_calculation__id=rc_id)
-    mean, std = scientific.mean_std(fractions)
-    for dmg_state in dmg_states:
-        lsi = dmg_state.lsi
-        ddpa = models.DmgDistPerAsset(
-            dmg_state=dmg_state,
-            mean=mean[lsi], stddev=std[lsi],
-            exposure_data=asset)
-        ddpa.save()
+    for fractions, asset in zip(fraction_matrix, assets):
+        fractions *= asset.number_of_units
+        means, stds = scientific.mean_std(fractions)
+
+        for mean, std, dmg_state_id in zip(means, stds, dmg_state_ids):
+            models.DmgDistPerAsset.objects.create(
+                dmg_state_id=dmg_state_id,
+                mean=mean, stddev=std, exposure_data=asset)
 
 
-def damage_distribution_per_taxonomy(fractions, rc_id, taxonomy):
+def damage_distribution_per_taxonomy(fractions, dmg_state_ids, taxonomy):
     """
     Save the damage distribution for a given taxonomy, by summing over
     all assets.
 
     :param fractions: numpy array with the damage fractions
-    :param int rc_id: the risk_calculation_id
+    :param dmg_state_ids:
+       a list of  IDs of instances of
+       :class:`openquake.engine.db.models.DmgState` ordered by `lsi`
     :param str: the taxonomy string
     """
-    dmg_states = models.DmgState.objects.filter(risk_calculation__id=rc_id)
-    mean, std = scientific.mean_std(fractions)
-    for dmg_state in dmg_states:
-        lsi = dmg_state.lsi
-        ddpt = models.DmgDistPerTaxonomy(
-            dmg_state=dmg_state,
-            mean=mean[lsi], stddev=std[lsi],
-            taxonomy=taxonomy)
-        ddpt.save()
+    means, stddevs = scientific.mean_std(fractions)
+    for dmg_state_id, mean, stddev in zip(dmg_state_ids, means, stddevs):
+        models.DmgDistPerTaxonomy.objects.create(
+            dmg_state_id=dmg_state_id,
+            mean=mean, stddev=stddev, taxonomy=taxonomy)
 
 
-def total_damage_distribution(fractions, rc_id):
+def total_damage_distribution(fractions, dmg_state_ids):
     """
     Save the total distribution, by summing over all assets and taxonomies.
 
     :param fractions: numpy array with the damage fractions
-    :param int rc_id: the risk_calculation_id
+    :param dmg_state_ids:
+       a list of  IDs of instances of
+       :class:`openquake.engine.db.models.DmgState` ordered by `lsi`
     """
-    dmg_states = models.DmgState.objects.filter(risk_calculation__id=rc_id)
-    mean, std = scientific.mean_std(fractions)
-    for dmg_state in dmg_states:
-        lsi = dmg_state.lsi
-        ddt = models.DmgDistTotal(
-            dmg_state=dmg_state,
-            mean=mean[lsi], stddev=std[lsi])
-        ddt.save()
+    means, stds = scientific.mean_std(fractions)
+    for mean, std, dmg_state in zip(means, stds, dmg_state_ids):
+        models.DmgDistTotal.objects.create(
+            dmg_state_id=dmg_state, mean=mean, stddev=std)
+
+
+# A namedtuple that identifies an Output object in a risk calculation
+# E.g. A Quantile LossCurve associated with a specific hazard output is
+# OutputKey(output_type="loss_curve",
+#           loss_type="structural",
+#           hazard_output_id=foo,
+#           poe=None,
+#           quantile=bar,
+#           statistics="quantile",
+#           variable=None,
+#           insured=False)
+
+OutputKey = collections.namedtuple('OutputKey', [
+    'output_type',  # as in :class:`openquake.engine.db.models.Output`
+    'loss_type',  # as in risk output containers
+    'hazard_output_id',  # as in risk output containers
+    'poe',  # for loss map and classical loss fractions
+    'quantile',  # for quantile outputs
+    'statistics',  # as in risk output containers
+    'variable',  # for disaggregation outputs
+    'insured',  # as in :class:`openquake.engine.db.models.LossCurve`
+])
+
+
+class OutputDict(dict):
+    """
+    A dict keying OutputKey instances to database ID, with convenience
+    setter and getter methods to manage Output containers.
+
+    It also automatically links an Output type with its specific
+    writer.
+
+    Risk Calculators create OutputDict instances with Output IDs keyed
+    by OutputKey instances.
+
+    Worker tasks compute results than get the proper writer and use it
+    to actually write the results
+    """
+
+    def get(self,
+            output_type=None, loss_type=None, hazard_output_id=None, poe=None,
+            quantile=None, statistics=None, variable=None, insured=False):
+        """
+        Get the ID associated with the `OutputKey` instance built with the
+        given kwargs.
+        """
+        return self[OutputKey(output_type, loss_type, hazard_output_id, poe,
+                              quantile, statistics, variable, insured)]
+
+    def write(self, *args, **kwargs):
+        """
+        1) Get the ID associated with the `OutputKey` instance built with
+        the given kwargs.
+        2) Get a writer function from the `writers` module with
+        function name given by the `output_type` argument.
+        3) Call such function with the given positional arguments.
+        """
+        output_id = self.get(**kwargs)
+        writer = globals().get(kwargs['output_type'])
+        loss_type = kwargs['loss_type']
+        del kwargs['loss_type']
+        writer(loss_type, output_id, *args)
+
+    def write_all(self, arg, values, items,
+                  *initial_args, **initial_kwargs):
+        """
+        Call iteratively `write`.
+
+        In each call, the keyword arguments are built by merging
+        `initial_kwargs` with a dict storing the association between
+        `arg` and the value taken iteratively from `values`. The
+        positional arguments are built by chaining `initial_args` with
+        a value taken iteratively from `items`.
+
+        :param str arg: a keyword argument to be passed to `write`
+
+        :param list values: a list of keyword argument values to be
+        passed to `write`
+
+        :param list items: a list of positional arguments to be passed
+        to `write`
+        """
+        for value, item in itertools.izip(values, items):
+            kwargs = {arg: value}
+            kwargs.update(initial_kwargs)
+            args = list(initial_args) + [item]
+            self.write(*args, **kwargs)
+
+    def set(self, container):
+        """Store an ID (got from `container`) keyed by a new
+        `OutputKey` built with the attributes guessed on `container`
+
+        :param container: a django model instance of an output
+        container (e.g. a LossCurve)
+        """
+        hazard_output_id = getattr(container, "hazard_output_id")
+        loss_type = getattr(container, "loss_type")
+        poe = getattr(container, "poe", None)
+        quantile = getattr(container, "quantile", None)
+        statistics = getattr(container, "statistics", None)
+        variable = getattr(container, "variable", None)
+        insured = getattr(container, "insured", False)
+
+        key = OutputKey(
+            output_type=container.output.output_type,
+            loss_type=loss_type,
+            hazard_output_id=hazard_output_id,
+            poe=poe,
+            quantile=quantile,
+            statistics=statistics,
+            variable=variable,
+            insured=insured)
+        assert super(
+            OutputDict, self).get(
+                key, None) is None, "OutputDict can not be updated"
+
+        self[key] = container.id

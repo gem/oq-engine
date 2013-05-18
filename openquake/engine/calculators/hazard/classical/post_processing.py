@@ -21,21 +21,15 @@ Post processing functionality for the classical PSHA hazard calculator.
 E.g. mean and quantile curves.
 """
 
-import math
 import numpy
 
-from celery.task.sets import TaskSet
 from django.db import transaction
 from itertools import izip
-
-import openquake.engine
 
 from openquake.engine import logs
 from openquake.engine.calculators.hazard.general import CURVE_CACHE_SIZE
 from openquake.engine.db import models
-from openquake.engine.utils import config
-from openquake.engine.utils import tasks as utils_tasks
-from openquake.engine.utils.general import block_splitter
+from openquake.engine.utils import tasks
 from openquake.engine.writer import BulkInserter
 
 
@@ -170,57 +164,26 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             imls=map_values,
         )
 
-
-# Disabling 'invalid name'
-# pylint: disable=C0103
-hazard_curves_to_hazard_map_task = utils_tasks.oqtask(
-    hazard_curves_to_hazard_map)
-hazard_curves_to_hazard_map_task.ignore_result = False
+hazard_curves_to_hazard_map_task = tasks.oqtask(hazard_curves_to_hazard_map)
+hazard_curves_to_hazard_map_task.ignore_result = False  # this is essential
 
 
-def do_hazard_map_post_process(job):
+def hazard_curves_to_hazard_map_task_arg_gen(job):
     """
-    Create and distribute tasks for processing hazard curves into hazard maps.
+    Yield task arguments for processing hazard curves into hazard maps.
 
     :param job:
         A :class:`openquake.engine.db.models.OqJob` which has some hazard
         curves associated with it.
     """
-    logs.LOG.debug('> Post-processing - Hazard Maps')
-    block_size = int(config.get('hazard', 'concurrent_tasks'))
-
     poes = job.hazard_calculation.poes
 
-    # Stats for debug logging:
     hazard_curve_ids = models.HazardCurve.objects.filter(
         output__oq_job=job, imt__isnull=False).values_list('id', flat=True)
-    logs.LOG.debug('num haz curves: %s' % len(hazard_curve_ids))
+    logs.LOG.debug('num haz curves: %d', len(hazard_curve_ids))
 
-    # Limit the number of concurrent tasks to the configured concurrency level:
-    block_gen = block_splitter(hazard_curve_ids, block_size)
-    total_blocks = int(math.ceil(len(hazard_curve_ids) / float(block_size)))
-
-    for i, block in enumerate(block_gen):
-        logs.LOG.debug('> Hazard post-processing block, %s of %s'
-                       % (i + 1, total_blocks))
-
-        if openquake.engine.no_distribute():
-            # just execute the post-processing using the plain function form of
-            # the task
-            for hazard_curve_id in block:
-                hazard_curves_to_hazard_map_task(job.id, hazard_curve_id, poes)
-        else:
-            tasks = []
-            for hazard_curve_id in block:
-                tasks.append(hazard_curves_to_hazard_map_task.subtask(
-                    (job.id, hazard_curve_id, poes)))
-            results = TaskSet(tasks=tasks).apply_async()
-
-            utils_tasks._check_exception(results)
-
-        logs.LOG.debug('< Done Hazard Map post-processing block, %s of %s'
-                       % (i + 1, total_blocks))
-    logs.LOG.debug('< Done post-processing - Hazard Maps')
+    for hazard_curve_id in hazard_curve_ids:
+        yield job.id, hazard_curve_id, poes
 
 
 def do_uhs_post_proc(job):
@@ -352,7 +315,7 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
         if statistics == 'quantile':
             uhs.quantile = quantile
             output.display_name = (_UHS_DISP_NAME_QUANTILE_FMT
-                                % dict(poe=poe, quantile=quantile))
+                                   % dict(poe=poe, quantile=quantile))
         else:
             # mean
             output.display_name = _UHS_DISP_NAME_MEAN_FMT % dict(poe=poe)
