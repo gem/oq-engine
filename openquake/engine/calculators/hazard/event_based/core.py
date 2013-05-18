@@ -113,6 +113,11 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
+        # distance filters
+        src_filter = filters.source_site_distance_filter(hc.maximum_distance)
+        rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
+
+        # complete_logic_tree_ses flag
         cmplt_lt_ses = None
         if hc.complete_logic_tree_ses:
             cmplt_lt_ses = models.SES.objects.get(
@@ -131,10 +136,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
             hc.width_of_mfd_bin, hc.area_source_discretization))
 
-        sources_sites = ((src, hc.site_collection) for src in sources)
-        ssd_filter = filters.source_site_distance_filter(hc.maximum_distance)
-        filtered_sources = [src for src, _ in ssd_filter(sources_sites)]
-
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
@@ -148,23 +149,23 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
             ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
         with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
-            ses_poissonian = list(stochastic.stochastic_event_set_poissonian(
-                filtered_sources, hc.investigation_time))
-        if not ses_poissonian:  # this is very common due to the filtering
-            continue
+            ruptures = list(stochastic.stochastic_event_set_poissonian(
+                            sources, hc.investigation_time,
+                            hc.site_collection, src_filter, rup_filter))
+            if not ruptures:
+                continue
 
         with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
             rupture_ids = [
                 _save_ses_rupture(
                     ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
-                for i, rupture in enumerate(ses_poissonian, 1)]
+                for i, rupture in enumerate(ruptures, 1)]
 
         if hc.ground_motion_fields:
             with EnginePerformanceMonitor(
                     'computing gmfs', job_id, ses_and_gmfs):
                 gmf_cache = compute_gmf_cache(
-                    hc, gsims, ses_poissonian, rupture_ids,
-                    result_grp_ordinal)
+                    hc, gsims, ruptures, rupture_ids, result_grp_ordinal)
             with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
                 # This will be the "container" for all computed GMFs
                 # for this stochastic event set.
@@ -173,8 +174,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                     ses_ordinal=ses_rlz_n)
                 _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                            result_grp_ordinal)
-
-    logs.LOG.debug('< task complete, signalling completion')
+    logs.LOG.debug('< task complete, signaling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
@@ -644,12 +644,17 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         with EnginePerformanceMonitor(
                 'populating gmf_agg', self.job.id, tracing=True):
-            post_processing.populate_gmf_agg(self.job)
+            hc = self.job.hazard_calculation
+            gmfcollections = models.GmfCollection.objects.filter(
+                lt_realization__hazard_calculation=hc)
+            post_processing.populate_gmf_agg(c.id for c in gmfcollections)
 
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
                                           self.job.id):
-                post_processing.do_post_process(self.job)
+                self.parallelize(
+                    post_processing.gmf_to_hazard_curve_task,
+                    post_processing.gmf_to_hazard_curve_arg_gen(self.job))
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
@@ -662,4 +667,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             if self.hc.hazard_maps:
                 with EnginePerformanceMonitor(
                         'generating hazard maps', self.job.id):
-                    cls_post_proc.do_hazard_map_post_process(self.job)
+                    self.parallelize(
+                        cls_post_proc.hazard_curves_to_hazard_map_task,
+                        cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
+                            self.job))
