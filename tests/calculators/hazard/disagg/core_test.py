@@ -214,7 +214,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         )
 
     def _setup_a_new_calculator(self):
-        cfg = helpers.demo_file('disaggregation/job.ini')
+        cfg = helpers.get_data_path('disaggregation/job.ini')
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         calc = disagg_core.DisaggHazardCalculator(job)
         return job, calc
