@@ -57,7 +57,6 @@ from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import tasks
-from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
@@ -69,7 +68,8 @@ DEFAULT_GMF_REALIZATIONS = 1
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
+def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz_id, task_seed,
+                 result_grp_ordinal):
     """
     Celery task for the stochastic event set calculator.
 
@@ -137,42 +137,42 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
-    for ses_rlz_n in xrange(1, hc.ses_per_logic_tree_path + 1):
-        logs.LOG.debug('> computing stochastic event set %s of %s'
-                       % (ses_rlz_n, hc.ses_per_logic_tree_path))
+    logs.LOG.debug('> computing stochastic event set %s of %s'
+                   % (ses_rlz_n, hc.ses_per_logic_tree_path))
 
-        # This is the container for all ruptures for this stochastic event set
-        # (specified by `ordinal` and the logic tree realization).
-        # NOTE: Many tasks can contribute ruptures to this SES.
-        ses = models.SES.objects.get(
-            ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
+    # This is the container for all ruptures for this stochastic event set
+    # (specified by `ordinal` and the logic tree realization).
+    # NOTE: Many tasks can contribute ruptures to this SES.
+    ses = models.SES.objects.get(
+        ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
 
-        with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
-            ruptures = list(stochastic.stochastic_event_set_poissonian(
-                            sources, hc.investigation_time,
-                            hc.site_collection, src_filter, rup_filter))
-            if not ruptures:
-                continue
+    with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
+        ruptures = list(stochastic.stochastic_event_set_poissonian(
+                        sources, hc.investigation_time,
+                        hc.site_collection, src_filter))
+        if not ruptures:
+            return
 
-        with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
-            rupture_ids = [
-                _save_ses_rupture(
-                    ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
-                for i, rupture in enumerate(ruptures, 1)]
+    with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
+        rupture_ids = [
+            _save_ses_rupture(
+                ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
+            for i, rupture in enumerate(ruptures, 1)]
 
-        if hc.ground_motion_fields:
-            with EnginePerformanceMonitor(
-                    'computing gmfs', job_id, ses_and_gmfs):
-                gmf_cache = compute_gmf_cache(
-                    hc, gsims, ruptures, rupture_ids, result_grp_ordinal)
-            with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
-                # This will be the "container" for all computed GMFs
-                # for this stochastic event set.
-                gmf_set = models.GmfSet.objects.get(
-                    gmf_collection__lt_realization=lt_rlz,
-                    ses_ordinal=ses_rlz_n)
-                _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
-                           result_grp_ordinal)
+    if hc.ground_motion_fields:
+        with EnginePerformanceMonitor(
+                'computing gmfs', job_id, ses_and_gmfs):
+            gmf_cache = compute_gmf_cache(
+                hc, gsims, ruptures, rupture_ids, result_grp_ordinal)
+        with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
+            # This will be the "container" for all computed GMFs
+            # for this stochastic event set.
+            gmf_set = models.GmfSet.objects.get(
+                gmf_collection__lt_realization=lt_rlz,
+                ses_ordinal=ses_rlz_n)
+            _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
+                       result_grp_ordinal)
+
     logs.LOG.debug('< task complete, signaling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
@@ -425,15 +425,15 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
-            source_ids = self._get_point_source_ids(lt_rlz) + \
-                self._get_source_ids(lt_rlz)
-
+            source_ids = list(self._get_point_source_ids(lt_rlz)) + \
+                list(self._get_source_ids(lt_rlz))
             for src_id in source_ids:
-                task_seed = rnd.randint(0, models.MAX_SINT_32)
-                task_args = (self.job.id, [src_id], lt_rlz.id, task_seed,
-                             result_grp_ordinal)
-                yield task_args
-                result_grp_ordinal += 1
+                for ses_rlz_n in range(1, self.hc.ses_per_logic_tree_path + 1):
+                    task_seed = rnd.randint(0, models.MAX_SINT_32)
+                    task_args = (self.job.id, [src_id], ses_rlz_n, lt_rlz.id,
+                                 task_seed, result_grp_ordinal)
+                    yield task_args
+                    result_grp_ordinal += 1
 
     def execute(self):
         """
