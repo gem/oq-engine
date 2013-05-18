@@ -32,6 +32,7 @@ For more information on computing ground motion fields, see
 """
 
 import random
+import itertools
 
 import openquake.hazardlib.imt
 import numpy.random
@@ -425,12 +426,17 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
-            source_ids = self._get_point_source_ids(lt_rlz) + \
-                self._get_source_ids(lt_rlz)
+            point_source_ids = self._get_point_source_ids(lt_rlz)
+            other_source_ids = self._get_source_ids(lt_rlz)
+            source_iter = itertools.chain(
+                block_splitter(point_source_ids,
+                               self.point_source_block_size()),
+                block_splitter(other_source_ids,
+                               self.block_size()))
 
-            for src_id in source_ids:
+            for src_ids in source_iter:
                 task_seed = rnd.randint(0, models.MAX_SINT_32)
-                task_args = (self.job.id, [src_id], lt_rlz.id, task_seed,
+                task_args = (self.job.id, src_ids, lt_rlz.id, task_seed,
                              result_grp_ordinal)
                 yield task_args
                 result_grp_ordinal += 1
