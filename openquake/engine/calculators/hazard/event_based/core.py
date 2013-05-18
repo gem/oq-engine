@@ -32,6 +32,7 @@ For more information on computing ground motion fields, see
 """
 
 import random
+import itertools
 
 import openquake.hazardlib.imt
 import numpy.random
@@ -49,7 +50,7 @@ from openquake.hazardlib.source import SimpleFaultSource
 
 from openquake.engine import logs
 from openquake.engine import writer
-from openquake.engine.calculators import base
+from openquake.engine.utils.general import block_splitter
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as cls_post_proc)
@@ -68,7 +69,7 @@ DEFAULT_GMF_REALIZATIONS = 1
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz_id, task_seed,
+def ses_and_gmfs(job_id, sources, ses_rlz_n, lt_rlz_id, gsims, task_seed,
                  result_grp_ordinal):
     """
     Celery task for the stochastic event set calculator.
@@ -81,11 +82,6 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz_id, task_seed,
     Optionally (specified in the job configuration using the
     `ground_motion_fields` parameter), GMFs can be computed from each rupture
     in each stochastic event set. GMFs are also saved to the database.
-
-    Once all of this work is complete, a signal will be sent via AMQP to let
-    the control noe know that the work is complete. (If there is any work left
-    to be dispatched, this signal will indicate to the control node that more
-    work can be enqueued.)
 
     :param int job_id:
         ID of the currently running job.
@@ -102,8 +98,8 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz_id, task_seed,
         This ID basically corresponds to the sequence number of the task,
         in the context of the entire calculation.
     """
-    logs.LOG.debug(('> starting `stochastic_event_sets` task: job_id=%s, '
-                    'lt_realization_id=%s') % (job_id, lt_rlz_id))
+    logs.LOG.debug('> starting `stochastic_event_sets` task: job_id=%s, '
+                   'lt_realization_id=%s', job_id, lt_rlz_id)
 
     # filtering sources
     with EnginePerformanceMonitor('filtering sources', job_id, ses_and_gmfs):
@@ -112,28 +108,12 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz_id, task_seed,
 
         hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
-        # distance filters
-        src_filter = filters.source_site_distance_filter(hc.maximum_distance)
-        rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
-
         # complete_logic_tree_ses flag
         cmplt_lt_ses = None
         if hc.complete_logic_tree_ses:
             cmplt_lt_ses = models.SES.objects.get(
                 ses_collection__output__oq_job=job_id,
                 ordinal=None)
-
-        lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-        ltp = logictree.LogicTreeProcessor(hc.id)
-
-        apply_uncertainties = ltp.parse_source_model_logictree_path(
-            lt_rlz.sm_lt_path)
-
-        gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-
-        sources = list(haz_general.gen_sources(
-            src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-            hc.width_of_mfd_bin, hc.area_source_discretization))
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -144,12 +124,11 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz_id, task_seed,
     # (specified by `ordinal` and the logic tree realization).
     # NOTE: Many tasks can contribute ruptures to this SES.
     ses = models.SES.objects.get(
-        ses_collection__lt_realization=lt_rlz, ordinal=ses_rlz_n)
+        ses_collection__lt_realization__id=lt_rlz_id, ordinal=ses_rlz_n)
 
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
         ruptures = list(stochastic.stochastic_event_set_poissonian(
-                        sources, hc.investigation_time,
-                        hc.site_collection, src_filter))
+                        sources, hc.investigation_time))
         if not ruptures:
             return
 
@@ -164,17 +143,17 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz_id, task_seed,
                 'computing gmfs', job_id, ses_and_gmfs):
             gmf_cache = compute_gmf_cache(
                 hc, gsims, ruptures, rupture_ids, result_grp_ordinal)
+
         with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
             # This will be the "container" for all computed GMFs
             # for this stochastic event set.
             gmf_set = models.GmfSet.objects.get(
-                gmf_collection__lt_realization=lt_rlz,
+                gmf_collection__lt_realization__id=lt_rlz_id,
                 ses_ordinal=ses_rlz_n)
             _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                        result_grp_ordinal)
 
-    logs.LOG.debug('< task complete, signaling completion')
-    base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
+    logs.LOG.debug('< task complete')
 
 ses_and_gmfs.ignore_result = False  # essential
 
@@ -418,20 +397,45 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         source_id_list, random_seed). (random_seed will be used to seed
         numpy for temporal occurence sampling.)
         """
+        hc = self.hc
+
+        src_filter = filters.source_site_distance_filter(hc.maximum_distance)
+
+        ltp = logictree.LogicTreeProcessor(hc.id)
+
         rnd = random.Random()
-        rnd.seed(self.hc.random_seed)
+        rnd.seed(hc.random_seed)
 
         realizations = self._get_realizations()
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
-            source_ids = list(self._get_point_source_ids(lt_rlz)) + \
-                list(self._get_source_ids(lt_rlz))
-            for src_id in source_ids:
+            point_source_ids = self._get_point_source_ids(lt_rlz)
+            other_source_ids = self._get_source_ids(lt_rlz)
+
+            apply_uncertainties = ltp.parse_source_model_logictree_path(
+                lt_rlz.sm_lt_path)
+
+            gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
+
+            blocks = itertools.chain(
+                block_splitter(point_source_ids,
+                               self.point_source_block_size()),
+                block_splitter(other_source_ids,
+                               self.block_size()))
+            for src_ids in blocks:
+                source_iter = haz_general.gen_sources(
+                    src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+                    hc.width_of_mfd_bin, hc.area_source_discretization)
+                sources_sites = list(src_filter((src, hc.site_collection)
+                                                for src in source_iter))
+                if not sources_sites:
+                    continue
+                sources, _sites = zip(*sources_sites)
                 for ses_rlz_n in range(1, self.hc.ses_per_logic_tree_path + 1):
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
-                    task_args = (self.job.id, [src_id], ses_rlz_n, lt_rlz.id,
-                                 task_seed, result_grp_ordinal)
+                    task_args = (self.job.id, sources, ses_rlz_n, lt_rlz.id,
+                                 gsims, task_seed, result_grp_ordinal)
                     yield task_args
                     result_grp_ordinal += 1
 
