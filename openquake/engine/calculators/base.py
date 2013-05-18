@@ -87,13 +87,16 @@ class Calculator(object):
         NB: if the environment variable OQ_NO_DISTRIBUTE is set the
         tasks are run sequentially in the current process.
         """
+        arglist = list(task_arg_gen)
+        total = len(arglist)
+        logs.LOG.info('** Spawning %d tasks', total)
         ntasks = 0
         for argblock in general.block_splitter(
-                task_arg_gen, self.concurrent_tasks()):
+                arglist, self.concurrent_tasks()):
             tasks.parallelize(task_func, argblock, side_effect)
             ntasks += len(argblock)
-            logs.LOG.debug('Processed %d tasks of kind %s',
-                           ntasks, task_func.__name__)
+            logs.LOG.debug('Processed %d/%d tasks of kind %s',
+                           ntasks, total, task_func.__name__)
 
     def get_task_complete_callback(self, task_arg_gen, block_size,
                                    concurrent_tasks):
