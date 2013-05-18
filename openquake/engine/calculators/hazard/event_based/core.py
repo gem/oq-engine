@@ -412,6 +412,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         for lt_rlz in realizations:
             point_source_ids = self._get_point_source_ids(lt_rlz)
             other_source_ids = self._get_source_ids(lt_rlz)
+            source_iter = itertools.chain(
+                block_splitter(point_source_ids,
+                               self.point_source_block_size()),
+                block_splitter(other_source_ids,
+                               self.block_size()))
 
             apply_uncertainties = ltp.parse_source_model_logictree_path(
                 lt_rlz.sm_lt_path)
@@ -424,14 +429,16 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 block_splitter(other_source_ids,
                                self.block_size()))
             for src_ids in blocks:
-                source_iter = haz_general.gen_sources(
-                    src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-                    hc.width_of_mfd_bin, hc.area_source_discretization)
-                sources_sites = list(src_filter((src, hc.site_collection)
-                                                for src in source_iter))
-                if not sources_sites:
-                    continue
-                sources, _sites = zip(*sources_sites)
+                with EnginePerformanceMonitor(
+                        'filtering sources', self.job.id):
+                    source_iter = haz_general.gen_sources(
+                        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+                        hc.width_of_mfd_bin, hc.area_source_discretization)
+                    sources_sites = list(src_filter((src, hc.site_collection)
+                                                    for src in source_iter))
+                    if not sources_sites:
+                        continue
+                    sources, _sites = zip(*sources_sites)
                 for ses_rlz_n in range(1, self.hc.ses_per_logic_tree_path + 1):
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
                     task_args = (self.job.id, sources, ses_rlz_n, lt_rlz.id,
