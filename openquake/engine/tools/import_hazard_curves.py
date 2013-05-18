@@ -22,7 +22,7 @@ def import_hazard_curves(fileobj, user=None):
     owner = OqUser.objects.get(user_name=user) if user else get_current_user()
     out = Output.objects.create(
         owner=owner, display_name='Imported from %r' % fname,
-        output_type='gmf_scenario')
+        output_type='hazard_curve')
     f = StringIO()
     # convert the XML into a tab-separated StringIO
     rows = list(HazardCurveParser(fileobj).parse())
