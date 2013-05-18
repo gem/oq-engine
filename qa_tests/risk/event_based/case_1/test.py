@@ -37,7 +37,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
-            helpers.demo_file("event_based_hazard/job.ini"))
+            helpers.get_data_path("event_based_hazard/job.ini"))
 
         job.hazard_calculation = models.HazardCalculation.objects.create(
             owner=job.hazard_calculation.owner,
@@ -57,11 +57,13 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             sm_lt_path="test_sm", gsim_lt_path="test_gsim",
             is_complete=False, total_items=1, completed_items=1)
 
+        gmf_coll = models.GmfCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test Hazard output", "gmf"),
+            lt_realization=lt_realization)
+
         gmf_set = models.GmfSet.objects.create(
-            gmf_collection=models.GmfCollection.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Test Hazard output", "gmf"),
-                lt_realization=lt_realization),
+            gmf_collection=gmf_coll,
             investigation_time=hc.investigation_time,
             ses_ordinal=1)
 
@@ -84,7 +86,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
-            populate_gmf_agg(job.hazard_calculation)
+            populate_gmf_agg([gmf_coll.id])
 
         return gmf_set.gmf_collection.output.id
 
@@ -124,7 +126,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             [0.07021910798], [0.015239297], [0.04549904],
             [0.07021910797], [0.015239291], [0.03423366],
             [278.904436],
-            [148.35539647, 147.87487616, 147.39435584,
+            [263.37280611, 262.51974659, 261.66668707,
              30.96750422, 30.89424056, 30.82097689, 49.45179882, 49.29162539,
              49.13145195],
             expected_event_loss_table]

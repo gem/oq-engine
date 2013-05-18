@@ -39,24 +39,20 @@ This could be the target for future optimizations.
 """
 
 import itertools
-import math
 import numpy
-import openquake
 
-from celery.task.sets import TaskSet
 from django import db
+from celery.task import task
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.utils import config
-from openquake.engine.utils import tasks as utils_tasks
-from openquake.engine.utils.general import block_splitter
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.utils import tasks
+
 
 HAZ_CURVE_DISP_NAME_FMT = 'hazard-curve-rlz-%(rlz)s-%(imt)s'
 
 
-def gmf_post_process_arg_gen(job):
+def gmf_to_hazard_curve_arg_gen(job):
     """
     Generate a sequence of args for the GMF to hazard curve post-processing job
     for a given ``job``. These are task args.
@@ -119,7 +115,7 @@ def gmf_post_process_arg_gen(job):
 
 # Disabling "Unused argument 'job_id'" (this parameter is required by @oqtask):
 # pylint: disable=W0613
-@utils_tasks.oqtask
+@tasks.oqtask
 def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
                              invest_time, duration, sa_period=None,
                              sa_damping=None):
@@ -177,76 +173,54 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
     models.HazardCurveData.objects.create(
         hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.wkt2d,
         weight=lt_rlz.weight)
-gmf_to_hazard_curve_task.ignore_result = False
+gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
-def populate_gmf_agg(hc):
+@task
+def insert_into_gmf_agg(gmf_collection_id, chunk_id, nchunks):
     """
-    Populate the table gmf_agg from gmf and gmf_set.
+    Aggregate the GMVs from the tables gmf and gmf_set in chunks.
+
+    :param int _job_id: used for logging purposes
+    :param rlz: a realization object
+    :param int chunk_id: an integer from 0 to nchunks
+    :param int nchunks: the number of chunks
     """
     # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
     # if location is of geography type, hence the need to cast it to geometry
-    GMF_AGG = '''\
+    insert_query = '''-- running
     INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping, sa_period,
                                location, gmvs, rupture_ids)
     SELECT gmf_collection_id, imt, sa_damping, sa_period, location::geometry,
        array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
        array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
     FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
-    WHERE a.gmf_set_id=b.id AND gmf_collection_id=%d
+    WHERE a.gmf_set_id=b.id AND gmf_collection_id={} AND a.id % {} = {}
     GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
-'''
-    rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+    '''.format(gmf_collection_id, nchunks, chunk_id)
+
     curs = db.connections['reslt_writer'].cursor()
     with db.transaction.commit_on_success(using='reslt_writer'):
-        for rlz in rlzs:
-            coll = models.GmfCollection.objects.get(lt_realization=rlz)
-            curs.execute(GMF_AGG % coll.id)
-            # TODO: delete the copied rows from gmf; this can be done
-            # only after changing the export procedure to read from gmf_agg
+        curs.execute(insert_query)
+        logs.LOG.debug(insert_query)
+        # TODO: delete the copied rows from gmf; this can be done
+        # only after changing the export procedure to read from gmf_agg
 
 
-def do_post_process(job):
+def populate_gmf_agg(gmf_collection_ids, nchunks=1):
     """
-    Run the GMF to hazard curve post-processing tasks for the given ``job``.
+    Populate the table gmf_agg from gmf and gmf_set.
 
-    :param job:
-        A :class:`openquake.engine.db.models.OqJob` instance.
+    :param gmf_collection_ids:
+        A sequence of ids
+    :param nchunks:
+        The number of chunks in which to split the parallel computation
     """
-    logs.LOG.debug('> Post-processing - GMFs to Hazard Curves')
-    block_size = int(config.get('hazard', 'concurrent_tasks'))
-    block_gen = block_splitter(gmf_post_process_arg_gen(job), block_size)
-
-    hc = job.hazard_calculation
-
-    # Stats for debug logging:
-    n_imts = len(hc.intensity_measure_types_and_levels)
-    n_sites = len(hc.points_to_compute())
-    n_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc).count()
-
-    total_blocks = int(math.ceil(
-        (n_imts * n_sites * n_rlzs) / float(block_size)))
-
-    for i, block in enumerate(block_gen):
-        logs.LOG.debug('> GMF post-processing block, %s of %s'
-                       % (i + 1, total_blocks))
-
-        with EnginePerformanceMonitor('gmf_to_hazard, block=%d' % i, job.id):
-            if openquake.engine.no_distribute():
-                for the_args in block:
-                    gmf_to_hazard_curve_task(*the_args)
-            else:
-                tasks = []
-                for the_args in block:
-                    tasks.append(gmf_to_hazard_curve_task.subtask(the_args))
-                results = TaskSet(tasks=tasks).apply_async()
-
-                # Check for Exceptions in the results and raise
-                utils_tasks._check_exception(results)
-
-        logs.LOG.debug('< Done GMF post-processing block, %s of %s'
-                       % (i + 1, total_blocks))
-    logs.LOG.debug('< Done post-processing - GMFs to Hazard Curves')
+    for coll_id in gmf_collection_ids:
+        allargs = [(coll_id, chunk_id, nchunks) for chunk_id in range(nchunks)]
+        # parallelizing the insert is effective because all the time is spent
+        # in the aggregration query, not in the insert.
+        tasks.parallelize(insert_into_gmf_agg, allargs)
 
 
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):

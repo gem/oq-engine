@@ -77,7 +77,12 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             if hasattr(self, 'expected_outputs'):
                 expected_outputs = self.expected_outputs()
                 for i, output in enumerate(self.actual_xml_outputs(job)):
-                    [exported_file] = export.risk.export(output.id, result_dir)
+                    try:
+                        [exported_file] = export.risk.export(
+                            output.id, result_dir)
+                    except:
+                        print "Error in exporting %s" % output
+                        raise
 
                     msg = "not enough outputs (expected=%d, got=%s)" % (
                         len(expected_outputs), self.actual_xml_outputs(job))

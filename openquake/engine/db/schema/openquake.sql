@@ -29,6 +29,7 @@ CREATE SCHEMA riski;
 CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
 CREATE SCHEMA htemp;
+CREATE SCHEMA rtemp;
 
 
 
@@ -139,7 +140,11 @@ CREATE TABLE uiapi.input (
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'source_model_logic_tree', 'gsim_logic_tree',
                              'exposure', 'fragility', 'rupture_model',
-                             'vulnerability', 'vulnerability_retrofitted',
+                             'structural_vulnerability',
+                             'contents_vulnerability',
+                             'non_structural_vulnerability',
+                             'occupancy_vulnerability',
+                             'structural_vulnerability_retrofitted',
                              'site_model')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
@@ -191,8 +196,8 @@ CREATE TABLE uiapi.performance (
     task VARCHAR,
     operation VARCHAR NOT NULL,
     duration FLOAT,
-    pymemory INTEGER,
-    pgmemory INTEGER
+    pymemory BIGINT,
+    pgmemory BIGINT
 )  TABLESPACE uiapi_ts;
 
 
@@ -370,8 +375,10 @@ CREATE TABLE uiapi.risk_calculation (
 
     -- BCR (Benefit-Cost Ratio) parameters:
     interest_rate float,
-    asset_life_expectancy float
+    asset_life_expectancy float,
 
+    -- Scenario parameters:
+    time_event VARCHAR
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'region_constraint', 4326, 'POLYGON', 2);
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'sites_disagg', 4326, 'MULTIPOINT', 2);
@@ -769,6 +776,9 @@ CREATE TABLE hzrdr.lt_realization (
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
+       CHECK(loss_type IN ('structural', 'non_structural',
+                           'contents', 'occupancy')),
     hazard_output_id INTEGER NULL,
     insured BOOLEAN NOT NULL DEFAULT false,
     -- poe is significant only for non-scenario calculations
@@ -801,6 +811,9 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_fraction (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
+       CHECK(loss_type IN ('structural', 'non_structural',
+                           'contents', 'occupancy')),
     hazard_output_id INTEGER NULL,
     variable VARCHAR NOT NULL,
     statistics VARCHAR CONSTRAINT loss_fraction_statistics
@@ -833,6 +846,9 @@ ALTER TABLE riskr.loss_fraction_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.aggregate_loss (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
+       CHECK(loss_type IN ('structural', 'non_structural',
+                           'contents', 'occupancy')),
     insured BOOLEAN NOT NULL DEFAULT false,
     mean float NOT NULL,
     std_dev float NULL
@@ -846,6 +862,9 @@ CREATE TABLE riskr.event_loss (
     -- FK to uiapi.output.id. The corresponding row must have
     -- output_type == event_loss
     output_id INTEGER NOT NULL,
+    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
+       CHECK(loss_type IN ('structural', 'non_structural',
+                           'contents', 'occupancy')),
     rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
     aggregate_loss float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -855,6 +874,9 @@ CREATE TABLE riskr.event_loss (
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
+    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
+       CHECK(loss_type IN ('structural', 'non_structural',
+                           'contents', 'occupancy')),
     hazard_output_id INTEGER NULL,
     aggregate BOOLEAN NOT NULL DEFAULT false,
     insured BOOLEAN NOT NULL DEFAULT false,
@@ -910,6 +932,9 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
+       CHECK(loss_type IN ('structural', 'non_structural',
+                           'contents', 'occupancy')),
     hazard_output_id INTEGER NULL
 ) TABLESPACE riskr_ts;
 
@@ -1007,6 +1032,13 @@ CREATE TABLE riski.exposure_model (
     -- structural cost unit
     stco_unit VARCHAR,
 
+    -- non structural cost type
+    non_stco_type VARCHAR CONSTRAINT non_stco_type_value
+        CHECK(non_stco_type IS NULL OR non_stco_type = 'per_asset'
+              OR non_stco_type = 'per_area' OR non_stco_type = 'aggregated'),
+    -- non structural cost unit
+    non_stco_unit VARCHAR,
+
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE riski_ts;
@@ -1024,6 +1056,8 @@ CREATE TABLE riski.exposure_data (
 
     -- structural cost
     stco float CONSTRAINT stco_value CHECK(stco >= 0.0),
+    -- non structural cost
+    non_stco float CONSTRAINT non_stco_value CHECK(stco >= 0.0),
     -- retrofitting cost
     reco float CONSTRAINT reco_value CHECK(reco >= 0.0),
     -- contents cost
@@ -1053,6 +1087,7 @@ CREATE TABLE riski.occupancy (
     description VARCHAR NOT NULL,
     occupants INTEGER NOT NULL
 ) TABLESPACE riski_ts;
+
 
 -- keep track of sources considered in a calculation, per logic tree realization
 CREATE TABLE htemp.source_progress (
@@ -1412,26 +1447,36 @@ ON DELETE CASCADE;
 ---------------------- views ----------------------------
 -- convenience view to analyze the performance of the jobs;
 -- for instance the slowest operations can be extracted with
--- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_hazard;
-CREATE VIEW uiapi.performance_hazard AS
-SELECT h.id AS hazard_calculation_id, description, p.* FROM (
+-- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_view;
+CREATE VIEW uiapi.performance_view AS
+SELECT h.id AS calculation_id, description, 'hazard' AS job_type, p.* FROM (
      SELECT oq_job_id, operation, sum(duration) AS duration,
-     max(pymemory) AS pymemory, max(pgmemory) AS pgmemory, count(*) AS counts
+     max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
+     count(*) AS counts
      FROM uiapi.performance
-     GROUP BY oq_job_id, operation ORDER BY oq_job_id, duration DESC) AS p
+     GROUP BY oq_job_id, operation) AS p
 INNER JOIN uiapi.oq_job AS o
 ON p.oq_job_id=o.id
 INNER JOIN uiapi.hazard_calculation AS h
-ON h.id=o.hazard_calculation_id;
-
--- companion view for risk
-CREATE VIEW uiapi.performance_risk AS
-SELECT r.id AS risk_calculation_id, description, p.* FROM (
+ON h.id=o.hazard_calculation_id
+UNION ALL
+SELECT r.id AS calculation_id, description, 'risk' AS job_type, p.* FROM (
      SELECT oq_job_id, operation, sum(duration) AS duration,
-     max(pymemory) AS pymemory, max(pgmemory) AS pgmemory, count(*) AS counts
+     max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
+     count(*) AS counts
      FROM uiapi.performance
-     GROUP BY oq_job_id, operation ORDER BY oq_job_id, duration DESC) AS p
+     GROUP BY oq_job_id, operation) AS p
 INNER JOIN uiapi.oq_job AS o
 ON p.oq_job_id=o.id
 INNER JOIN uiapi.risk_calculation AS r
 ON r.id=o.risk_calculation_id;
+
+-- gmf_agg per job
+CREATE VIEW hzrdr.gmf_agg_job AS
+   SELECT c.oq_job_id, a.*
+   FROM hzrdr.gmf_agg AS a
+   INNER JOIN hzrdr.gmf_collection AS b
+   ON a.gmf_collection_id=b.id
+   INNER JOIN uiapi.output AS c
+   ON b.output_id=c.id
+   WHERE output_type='gmf';

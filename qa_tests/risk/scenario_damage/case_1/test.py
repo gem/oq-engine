@@ -131,7 +131,7 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
-            helpers.demo_file("scenario_hazard/job.ini"))
+            helpers.get_data_path("scenario_hazard/job.ini"))
         hc = job.hazard_calculation
         job.hazard_calculation = models.HazardCalculation.objects.create(
             owner=hc.owner, truncation_level=hc.truncation_level,
@@ -160,6 +160,6 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     def expected_outputs(self):
         return [self.EXPECTED_DMG_DIST_PER_ASSET,
+                self.EXPECTED_COLLAPSE_MAP,
                 self.EXPECTED_DMG_DIST_PER_TAXONOMY,
-                self.EXPECTED_DMG_DIST_TOTAL,
-                self.EXPECTED_COLLAPSE_MAP]
+                self.EXPECTED_DMG_DIST_TOTAL]
