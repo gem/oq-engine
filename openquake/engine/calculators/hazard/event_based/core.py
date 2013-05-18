@@ -56,7 +56,7 @@ from openquake.engine.calculators.hazard.classical import (
 from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
-from openquake.engine.utils import stats, tasks as utils_tasks
+from openquake.engine.utils import tasks
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
@@ -68,8 +68,7 @@ DEFAULT_GMF_REALIZATIONS = 1
 
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
-@utils_tasks.oqtask
-@stats.count_progress('h')
+@tasks.oqtask
 def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
     """
     Celery task for the stochastic event set calculator.
@@ -176,6 +175,8 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
                            result_grp_ordinal)
     logs.LOG.debug('< task complete, signaling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
+
+ses_and_gmfs.ignore_result = False  # essential
 
 
 def compute_gmf_cache(hc, gsims, ruptures, rupture_ids,
@@ -408,7 +409,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
     core_calc_task = ses_and_gmfs
 
-    def task_arg_gen(self, block_size):
+    def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -416,13 +417,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         Yielded results are quadruples of (job_id, realization_id,
         source_id_list, random_seed). (random_seed will be used to seed
         numpy for temporal occurence sampling.)
-
-        :param int block_size:
-            The (max) number of work items for each task. In this case,
-            sources.
         """
-        point_source_block_size = self.point_source_block_size()
-
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
 
@@ -430,34 +425,22 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
-            # separate point sources from all the other types, since
-            # we distribution point sources in different sized chunks
-            # point sources first
-            point_source_ids = self._get_point_source_ids(lt_rlz)
+            source_ids = self._get_point_source_ids(lt_rlz) + \
+                self._get_source_ids(lt_rlz)
 
-            for block in block_splitter(point_source_ids,
-                                        point_source_block_size):
-                # Since this seed will used for numpy random seeding, it needs
-                # to be positive (since numpy will convert it to a unsigned
-                # long).
+            for src_id in source_ids:
                 task_seed = rnd.randint(0, models.MAX_SINT_32)
-                task_args = (self.job.id, block, lt_rlz.id, task_seed,
+                task_args = (self.job.id, [src_id], lt_rlz.id, task_seed,
                              result_grp_ordinal)
                 yield task_args
                 result_grp_ordinal += 1
 
-            # now for area and fault sources
-            other_source_ids = self._get_source_ids(lt_rlz)
-
-            for block in block_splitter(other_source_ids, block_size):
-                # Since this seed will used for numpy random seeding, it needs
-                # to be positive (since numpy will convert it to a unsigned
-                # long).
-                task_seed = rnd.randint(0, models.MAX_SINT_32)
-                task_args = (self.job.id, block, lt_rlz.id, task_seed,
-                             result_grp_ordinal)
-                yield task_args
-                result_grp_ordinal += 1
+    def execute(self):
+        """
+        Run ses_and_gmfs in parallel
+        """
+        self.parallelize(self.core_calc_task, self.task_arg_gen())
+        logs.LOG.progress("calculation 100% complete")
 
     def initialize_ses_db_records(self, lt_rlz):
         """
