@@ -393,9 +393,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
 
-        Yielded results are quadruples of (job_id, realization_id,
-        source_id_list, random_seed). (random_seed will be used to seed
-        numpy for temporal occurence sampling.)
+        Yielded results are tuples of the form
+
+        (job_id, sources, ses_rlz_n, lt_rlz_id, gsims,
+         task_seed, result_grp_ordinal)
+
+        (random_seed will be used to seed numpy for temporal occurence
+        sampling).
         """
         hc = self.hc
 
