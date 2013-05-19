@@ -20,7 +20,6 @@ import unittest
 import mock
 import numpy
 
-from collections import namedtuple
 from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
@@ -296,80 +295,107 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         finally:
             self._unpatch_calc()
 
-
-class TaskArgGenTestCase(unittest.TestCase):
-    Job = namedtuple('Job', 'id, hazard_calculation')
-    HC = namedtuple('HazardCalculation', 'random_seed')
-    Rlz = namedtuple('Realization', 'id')
-
     def test_task_arg_gen(self):
-        random_seed = 793
-        hc = self.HC(random_seed)
-        job = self.Job(1066, hc)
+        hc = self.job.hazard_calculation
 
-        base_path = (
-            'openquake.engine.calculators.hazard.general.BaseHazardCalculator'
-        )
-        calc = core.EventBasedHazardCalculator(job)
+        self.calc.initialize_sources()
+        self.calc.initialize_realizations()
 
-        # Set up mocks:
-        # point_source_block_size
-        pt_src_block_size_patch = helpers.patch(
-            '%s.%s' % (base_path, 'point_source_block_size')
-        )
-        pt_src_block_size_mock = pt_src_block_size_patch.start()
-        pt_src_block_size_mock.return_value = 5
+        [rlz1, rlz2] = models.LtRealization.objects.filter(
+            hazard_calculation=hc).order_by('id')
 
-        # _get_realizations
-        get_rlz_patch = helpers.patch(
-            '%s.%s' % (base_path, '_get_realizations')
-        )
-        get_rlz_mock = get_rlz_patch.start()
-        get_rlz_mock.return_value = [self.Rlz(5), self.Rlz(6)]
-
-        # _get_point_source_ids
-        get_pt_patch = helpers.patch(
-            '%s.%s' % (base_path, '_get_point_source_ids')
-        )
-        get_pt_mock = get_pt_patch.start()
-        get_pt_mock.return_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-
-        # _get_source_ids
-        get_src_patch = helpers.patch('%s.%s' % (base_path, '_get_source_ids'))
-        get_src_mock = get_src_patch.start()
-        get_src_mock.return_value = [100, 101, 102, 103, 104]
-
-        expected = [
-            (1066, [1, 2, 3, 4, 5], 5, 1715084553, 1),
-            (1066, [6, 7, 8, 9, 10], 5, 1610237348, 2),
-            (1066, [11], 5, 208009464, 3),
-            (1066, [100, 101], 5, 61227963, 4),
-            (1066, [102, 103], 5, 962290868, 5),
-            (1066, [104], 5, 1851493799, 6),
-            (1066, [1, 2, 3, 4, 5], 6, 1726414414, 7),
-            (1066, [6, 7, 8, 9, 10], 6, 1251340915, 8),
-            (1066, [11], 6, 1914465987, 9),
-            (1066, [100, 101], 6, 824295930, 10),
-            (1066, [102, 103], 6, 1698161031, 11),
-            (1066, [104], 6, 1690626266, 12),
+        expected = [  # sources, ses_id, rlz_id, seed, result_grp_ordinal
+            (['PointSource'], 1, rlz1.id,
+             ['ChiouYoungs2008'], 1711655216, 1),
+            (['PointSource'], 2, rlz1.id,
+             ['ChiouYoungs2008'], 1038305917, 2),
+            (['PointSource'], 3, rlz1.id,
+             ['ChiouYoungs2008'], 836289861, 3),
+            (['PointSource'], 4, rlz1.id,
+             ['ChiouYoungs2008'], 1781144172, 4),
+            (['PointSource'], 5, rlz1.id,
+             ['ChiouYoungs2008'], 1869241528, 5),
+            (['AreaSource'], 1, rlz1.id,
+             ['ChiouYoungs2008'], 215682727, 6),
+            (['AreaSource'], 2, rlz1.id,
+             ['ChiouYoungs2008'], 1101399957, 7),
+            (['AreaSource'], 3, rlz1.id,
+             ['ChiouYoungs2008'], 2054512780, 8),
+            (['AreaSource'], 4, rlz1.id,
+             ['ChiouYoungs2008'], 1550095676, 9),
+            (['AreaSource'], 5, rlz1.id,
+             ['ChiouYoungs2008'], 1537531637, 10),
+            (['SimpleFaultSource'], 1, rlz1.id,
+             ['ChiouYoungs2008'], 834081132, 11),
+            (['SimpleFaultSource'], 2, rlz1.id,
+             ['ChiouYoungs2008'], 2109160433, 12),
+            (['SimpleFaultSource'], 3, rlz1.id,
+             ['ChiouYoungs2008'], 1527803099, 13),
+            (['SimpleFaultSource'], 4, rlz1.id,
+             ['ChiouYoungs2008'], 1876252834, 14),
+            (['SimpleFaultSource'], 5, rlz1.id,
+             ['ChiouYoungs2008'], 1712942246, 15),
+            (['ComplexFaultSource'], 1, rlz1.id,
+             ['ChiouYoungs2008'], 219667398, 16),
+            (['ComplexFaultSource'], 2, rlz1.id,
+             ['ChiouYoungs2008'], 332999334, 17),
+            (['ComplexFaultSource'], 3, rlz1.id,
+             ['ChiouYoungs2008'], 1017801655, 18),
+            (['ComplexFaultSource'], 4, rlz1.id,
+             ['ChiouYoungs2008'], 1577927432, 19),
+            (['ComplexFaultSource'], 5, rlz1.id,
+             ['ChiouYoungs2008'], 1810736590, 20),
+            (['PointSource'], 1, rlz2.id,
+             ['ChiouYoungs2008'], 745519017, 21),
+            (['PointSource'], 2, rlz2.id,
+             ['ChiouYoungs2008'], 2107357950, 22),
+            (['PointSource'], 3, rlz2.id,
+             ['ChiouYoungs2008'], 1305437041, 23),
+            (['PointSource'], 4, rlz2.id,
+             ['ChiouYoungs2008'], 75519567, 24),
+            (['PointSource'], 5, rlz2.id,
+             ['ChiouYoungs2008'], 179387370, 25),
+            (['AreaSource'], 1, rlz2.id,
+             ['ChiouYoungs2008'], 1653492095, 26),
+            (['AreaSource'], 2, rlz2.id,
+             ['ChiouYoungs2008'], 176278337, 27),
+            (['AreaSource'], 3, rlz2.id,
+             ['ChiouYoungs2008'], 777508283, 28),
+            (['AreaSource'], 4, rlz2.id,
+             ['ChiouYoungs2008'], 718002527, 29),
+            (['AreaSource'], 5, rlz2.id,
+             ['ChiouYoungs2008'], 1872666256, 30),
+            (['SimpleFaultSource'], 1, rlz2.id,
+             ['ChiouYoungs2008'], 796266430, 31),
+            (['SimpleFaultSource'], 2, rlz2.id,
+             ['ChiouYoungs2008'], 646033314, 32),
+            (['SimpleFaultSource'], 3, rlz2.id,
+             ['ChiouYoungs2008'], 289567826, 33),
+            (['SimpleFaultSource'], 4, rlz2.id,
+             ['ChiouYoungs2008'], 1964698790, 34),
+            (['SimpleFaultSource'], 5, rlz2.id,
+             ['ChiouYoungs2008'], 613832594, 35),
+            (['ComplexFaultSource'], 1, rlz2.id,
+             ['ChiouYoungs2008'], 1858181087, 36),
+            (['ComplexFaultSource'], 2, rlz2.id,
+             ['ChiouYoungs2008'], 195127891, 37),
+            (['ComplexFaultSource'], 3, rlz2.id,
+             ['ChiouYoungs2008'], 1761641849, 38),
+            (['ComplexFaultSource'], 4, rlz2.id,
+             ['ChiouYoungs2008'], 259827383, 39),
+            (['ComplexFaultSource'], 5, rlz2.id,
+             ['ChiouYoungs2008'], 1464146382, 40),
         ]
 
-        try:
-            actual = list(calc.task_arg_gen(block_size=2))
-            self.assertEqual(expected, actual)
-        finally:
-            self.assertEqual(1, pt_src_block_size_mock.call_count)
-            pt_src_block_size_mock.stop()
-            pt_src_block_size_patch.stop()
+        # an utility to display the generated arguments in a nicer way
+        def display_args(job_id, sources, ses_rlz_n, lt_rlz_id, gsims,
+                         task_seed, result_grp_ordinal):
+            return ([s.__class__.__name__ for s in sources],
+                    ses_rlz_n,
+                    lt_rlz_id,
+                    [v.__class__.__name__ for v in gsims.itervalues()],
+                    task_seed,
+                    result_grp_ordinal)
 
-            self.assertEqual(1, get_rlz_mock.call_count)
-            get_rlz_mock.stop()
-            get_rlz_patch.stop()
-
-            self.assertEqual(2, get_pt_mock.call_count)
-            get_pt_mock.stop()
-            get_pt_patch.stop()
-
-            self.assertEqual(2, get_src_mock.call_count)
-            get_src_mock.stop()
-            get_src_patch.stop()
+        actual = [display_args(*args) for args in self.calc.task_arg_gen()]
+        self.assertEqual(expected, actual)
