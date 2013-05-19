@@ -127,11 +127,6 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
         source_iter = haz_general.gen_sources(
             src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
             hc.width_of_mfd_bin, hc.area_source_discretization)
-        sources_sites = list(src_filter((src, hc.site_collection)
-                                        for src in source_iter))
-        if not sources_sites:
-            return
-        sources, _sites = zip(*sources_sites)
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -146,7 +141,8 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
 
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
         ruptures = list(stochastic.stochastic_event_set_poissonian(
-                        sources, hc.investigation_time))
+                        source_iter, hc.investigation_time, hc.site_collection,
+                        src_filter))
         if not ruptures:
             return
 
