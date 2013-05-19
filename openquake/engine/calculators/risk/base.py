@@ -367,7 +367,8 @@ class RiskCalculator(base.Calculator):
         if missing:
             raise ValueError(
                 "There is no hazard output in "
-                "%s; the available IMTs are %s" % (", ".join(missing), imts))
+                "%s; the available IMTs are {%s}" % (", ".join(missing),
+                                                     ", ".join(imts)))
 
     def check_taxonomies(self, taxonomies):
         """
