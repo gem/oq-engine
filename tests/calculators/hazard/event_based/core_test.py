@@ -17,6 +17,7 @@
 import os
 import getpass
 import unittest
+import itertools
 import mock
 import numpy
 
@@ -305,97 +306,64 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             hazard_calculation=hc).order_by('id')
 
         expected = [  # sources, ses_id, rlz_id, seed, result_grp_ordinal
-            (['PointSource'], 1, rlz1.id,
-             ['ChiouYoungs2008'], 1711655216, 1),
-            (['PointSource'], 2, rlz1.id,
-             ['ChiouYoungs2008'], 1038305917, 2),
-            (['PointSource'], 3, rlz1.id,
-             ['ChiouYoungs2008'], 836289861, 3),
-            (['PointSource'], 4, rlz1.id,
-             ['ChiouYoungs2008'], 1781144172, 4),
-            (['PointSource'], 5, rlz1.id,
-             ['ChiouYoungs2008'], 1869241528, 5),
-            (['AreaSource'], 1, rlz1.id,
-             ['ChiouYoungs2008'], 215682727, 6),
-            (['AreaSource'], 2, rlz1.id,
-             ['ChiouYoungs2008'], 1101399957, 7),
-            (['AreaSource'], 3, rlz1.id,
-             ['ChiouYoungs2008'], 2054512780, 8),
-            (['AreaSource'], 4, rlz1.id,
-             ['ChiouYoungs2008'], 1550095676, 9),
-            (['AreaSource'], 5, rlz1.id,
-             ['ChiouYoungs2008'], 1537531637, 10),
-            (['SimpleFaultSource'], 1, rlz1.id,
-             ['ChiouYoungs2008'], 834081132, 11),
-            (['SimpleFaultSource'], 2, rlz1.id,
-             ['ChiouYoungs2008'], 2109160433, 12),
-            (['SimpleFaultSource'], 3, rlz1.id,
-             ['ChiouYoungs2008'], 1527803099, 13),
-            (['SimpleFaultSource'], 4, rlz1.id,
-             ['ChiouYoungs2008'], 1876252834, 14),
-            (['SimpleFaultSource'], 5, rlz1.id,
-             ['ChiouYoungs2008'], 1712942246, 15),
-            (['ComplexFaultSource'], 1, rlz1.id,
-             ['ChiouYoungs2008'], 219667398, 16),
-            (['ComplexFaultSource'], 2, rlz1.id,
-             ['ChiouYoungs2008'], 332999334, 17),
-            (['ComplexFaultSource'], 3, rlz1.id,
-             ['ChiouYoungs2008'], 1017801655, 18),
-            (['ComplexFaultSource'], 4, rlz1.id,
-             ['ChiouYoungs2008'], 1577927432, 19),
-            (['ComplexFaultSource'], 5, rlz1.id,
-             ['ChiouYoungs2008'], 1810736590, 20),
-            (['PointSource'], 1, rlz2.id,
-             ['ChiouYoungs2008'], 745519017, 21),
-            (['PointSource'], 2, rlz2.id,
-             ['ChiouYoungs2008'], 2107357950, 22),
-            (['PointSource'], 3, rlz2.id,
-             ['ChiouYoungs2008'], 1305437041, 23),
-            (['PointSource'], 4, rlz2.id,
-             ['ChiouYoungs2008'], 75519567, 24),
-            (['PointSource'], 5, rlz2.id,
-             ['ChiouYoungs2008'], 179387370, 25),
-            (['AreaSource'], 1, rlz2.id,
-             ['ChiouYoungs2008'], 1653492095, 26),
-            (['AreaSource'], 2, rlz2.id,
-             ['ChiouYoungs2008'], 176278337, 27),
-            (['AreaSource'], 3, rlz2.id,
-             ['ChiouYoungs2008'], 777508283, 28),
-            (['AreaSource'], 4, rlz2.id,
-             ['ChiouYoungs2008'], 718002527, 29),
-            (['AreaSource'], 5, rlz2.id,
-             ['ChiouYoungs2008'], 1872666256, 30),
-            (['SimpleFaultSource'], 1, rlz2.id,
-             ['ChiouYoungs2008'], 796266430, 31),
-            (['SimpleFaultSource'], 2, rlz2.id,
-             ['ChiouYoungs2008'], 646033314, 32),
-            (['SimpleFaultSource'], 3, rlz2.id,
-             ['ChiouYoungs2008'], 289567826, 33),
-            (['SimpleFaultSource'], 4, rlz2.id,
-             ['ChiouYoungs2008'], 1964698790, 34),
-            (['SimpleFaultSource'], 5, rlz2.id,
-             ['ChiouYoungs2008'], 613832594, 35),
-            (['ComplexFaultSource'], 1, rlz2.id,
-             ['ChiouYoungs2008'], 1858181087, 36),
-            (['ComplexFaultSource'], 2, rlz2.id,
-             ['ChiouYoungs2008'], 195127891, 37),
-            (['ComplexFaultSource'], 3, rlz2.id,
-             ['ChiouYoungs2008'], 1761641849, 38),
-            (['ComplexFaultSource'], 4, rlz2.id,
-             ['ChiouYoungs2008'], 259827383, 39),
-            (['ComplexFaultSource'], 5, rlz2.id,
-             ['ChiouYoungs2008'], 1464146382, 40),
+            ([1], 1, rlz1.id, 1711655216, 1),
+            ([1], 2, rlz1.id, 1038305917, 2),
+            ([1], 3, rlz1.id, 836289861, 3),
+            ([1], 4, rlz1.id, 1781144172, 4),
+            ([1], 5, rlz1.id, 1869241528, 5),
+            ([2], 1, rlz1.id, 215682727, 6),
+            ([2], 2, rlz1.id, 1101399957, 7),
+            ([2], 3, rlz1.id, 2054512780, 8),
+            ([2], 4, rlz1.id, 1550095676, 9),
+            ([2], 5, rlz1.id, 1537531637, 10),
+            ([3], 1, rlz1.id, 834081132, 11),
+            ([3], 2, rlz1.id, 2109160433, 12),
+            ([3], 3, rlz1.id, 1527803099, 13),
+            ([3], 4, rlz1.id, 1876252834, 14),
+            ([3], 5, rlz1.id, 1712942246, 15),
+            ([4], 1, rlz1.id, 219667398, 16),
+            ([4], 2, rlz1.id, 332999334, 17),
+            ([4], 3, rlz1.id, 1017801655, 18),
+            ([4], 4, rlz1.id, 1577927432, 19),
+            ([4], 5, rlz1.id, 1810736590, 20),
+            ([1], 1, rlz2.id, 745519017, 21),
+            ([1], 2, rlz2.id, 2107357950, 22),
+            ([1], 3, rlz2.id, 1305437041, 23),
+            ([1], 4, rlz2.id, 75519567, 24),
+            ([1], 5, rlz2.id, 179387370, 25),
+            ([2], 1, rlz2.id, 1653492095, 26),
+            ([2], 2, rlz2.id, 176278337, 27),
+            ([2], 3, rlz2.id, 777508283, 28),
+            ([2], 4, rlz2.id, 718002527, 29),
+            ([2], 5, rlz2.id, 1872666256, 30),
+            ([3], 1, rlz2.id, 796266430, 31),
+            ([3], 2, rlz2.id, 646033314, 32),
+            ([3], 3, rlz2.id, 289567826, 33),
+            ([3], 4, rlz2.id, 1964698790, 34),
+            ([3], 5, rlz2.id, 613832594, 35),
+            ([4], 1, rlz2.id, 1858181087, 36),
+            ([4], 2, rlz2.id, 195127891, 37),
+            ([4], 3, rlz2.id, 1761641849, 38),
+            ([4], 4, rlz2.id, 259827383, 39),
+            ([4], 5, rlz2.id, 1464146382, 40),
         ]
 
-        # an utility to display the generated arguments in a nicer way
-        def display_args(job_id, sources, ses_rlz_n, lt_rlz_id, gsims,
-                         task_seed, result_grp_ordinal):
-            return ([s.__class__.__name__ for s in sources],
-                    ses_rlz_n,
-                    lt_rlz_id,
-                    [v.__class__.__name__ for v in gsims.itervalues()],
-                    task_seed,
-                    result_grp_ordinal)
+        # utilities to present the generated arguments in a nicer way
+        dic = {}
+        counter = itertools.count(1)
 
-        actual = [display_args(*args) for args in self.calc.task_arg_gen()]
+        def src_no(src_id):
+            try:
+                return dic[src_id]
+            except KeyError:
+                dic[src_id] = counter.next()
+                return dic[src_id]
+
+        def process_args(arg_gen):
+            for (job_id, source_ids, ses_rlz_n, lt_rlz, task_seed,
+                 result_grp_ordinal) in arg_gen:
+                yield (map(src_no, source_ids), ses_rlz_n, lt_rlz.id,
+                       task_seed, result_grp_ordinal)
+
+        actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)

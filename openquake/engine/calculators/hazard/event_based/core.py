@@ -69,7 +69,7 @@ DEFAULT_GMF_REALIZATIONS = 1
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def ses_and_gmfs(job_id, sources, ses_rlz_n, lt_rlz_id, gsims, task_seed,
+def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
                  result_grp_ordinal):
     """
     Celery task for the stochastic event set calculator.
@@ -99,32 +99,50 @@ def ses_and_gmfs(job_id, sources, ses_rlz_n, lt_rlz_id, gsims, task_seed,
         in the context of the entire calculation.
     """
     logs.LOG.debug('> starting `stochastic_event_sets` task: job_id=%s, '
-                   'lt_realization_id=%s', job_id, lt_rlz_id)
+                   'lt_realization_id=%s', job_id, lt_rlz.id)
+
+    numpy.random.seed(task_seed)
+
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+
+    # complete_logic_tree_ses flag
+    cmplt_lt_ses = None
+    if hc.complete_logic_tree_ses:
+        cmplt_lt_ses = models.SES.objects.get(
+            ses_collection__output__oq_job=job_id,
+            ordinal=None)
 
     # filtering sources
     with EnginePerformanceMonitor('filtering sources', job_id, ses_and_gmfs):
 
-        numpy.random.seed(task_seed)
+        src_filter = filters.source_site_distance_filter(hc.maximum_distance)
 
-        hc = models.HazardCalculation.objects.get(oqjob=job_id)
+        ltp = logictree.LogicTreeProcessor(hc.id)
 
-        # complete_logic_tree_ses flag
-        cmplt_lt_ses = None
-        if hc.complete_logic_tree_ses:
-            cmplt_lt_ses = models.SES.objects.get(
-                ses_collection__output__oq_job=job_id,
-                ordinal=None)
+        apply_uncertainties = ltp.parse_source_model_logictree_path(
+            lt_rlz.sm_lt_path)
+
+        gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
+
+        source_iter = haz_general.gen_sources(
+            src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+            hc.width_of_mfd_bin, hc.area_source_discretization)
+        sources_sites = list(src_filter((src, hc.site_collection)
+                                        for src in source_iter))
+        if not sources_sites:
+            return
+        sources, _sites = zip(*sources_sites)
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
-    logs.LOG.debug('> computing stochastic event set %s of %s'
-                   % (ses_rlz_n, hc.ses_per_logic_tree_path))
+    logs.LOG.debug('> computing stochastic event set %s of %s',
+                   ses_rlz_n, hc.ses_per_logic_tree_path)
 
     # This is the container for all ruptures for this stochastic event set
     # (specified by `ordinal` and the logic tree realization).
     # NOTE: Many tasks can contribute ruptures to this SES.
     ses = models.SES.objects.get(
-        ses_collection__lt_realization__id=lt_rlz_id, ordinal=ses_rlz_n)
+        ses_collection__lt_realization__id=lt_rlz.id, ordinal=ses_rlz_n)
 
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
         ruptures = list(stochastic.stochastic_event_set_poissonian(
@@ -148,7 +166,7 @@ def ses_and_gmfs(job_id, sources, ses_rlz_n, lt_rlz_id, gsims, task_seed,
             # This will be the "container" for all computed GMFs
             # for this stochastic event set.
             gmf_set = models.GmfSet.objects.get(
-                gmf_collection__lt_realization__id=lt_rlz_id,
+                gmf_collection__lt_realization__id=lt_rlz.id,
                 ses_ordinal=ses_rlz_n)
             _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                        result_grp_ordinal)
@@ -402,51 +420,22 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         sampling).
         """
         hc = self.hc
-
-        src_filter = filters.source_site_distance_filter(hc.maximum_distance)
-
-        ltp = logictree.LogicTreeProcessor(hc.id)
-
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-
         realizations = self._get_realizations()
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
-            point_source_ids = self._get_point_source_ids(lt_rlz)
-            other_source_ids = self._get_source_ids(lt_rlz)
-            source_iter = itertools.chain(
-                block_splitter(point_source_ids,
-                               self.point_source_block_size()),
-                block_splitter(other_source_ids,
-                               self.block_size()))
-
-            apply_uncertainties = ltp.parse_source_model_logictree_path(
-                lt_rlz.sm_lt_path)
-
-            gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-
             blocks = itertools.chain(
-                block_splitter(point_source_ids,
+                block_splitter(self._get_point_source_ids(lt_rlz),
                                self.point_source_block_size()),
-                block_splitter(other_source_ids,
+                block_splitter(self._get_source_ids(lt_rlz),
                                self.block_size()))
             for src_ids in blocks:
-                with EnginePerformanceMonitor(
-                        'filtering sources', self.job.id):
-                    source_iter = haz_general.gen_sources(
-                        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-                        hc.width_of_mfd_bin, hc.area_source_discretization)
-                    sources_sites = list(src_filter((src, hc.site_collection)
-                                                    for src in source_iter))
-                    if not sources_sites:
-                        continue
-                    sources, _sites = zip(*sources_sites)
                 for ses_rlz_n in range(1, self.hc.ses_per_logic_tree_path + 1):
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
-                    task_args = (self.job.id, sources, ses_rlz_n, lt_rlz.id,
-                                 gsims, task_seed, result_grp_ordinal)
+                    task_args = (self.job.id, src_ids, ses_rlz_n, lt_rlz,
+                                 task_seed, result_grp_ordinal)
                     yield task_args
                     result_grp_ordinal += 1
 
