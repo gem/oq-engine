@@ -246,43 +246,24 @@ def store_site_data(hc_id, site_model_inp, mesh):
     :param mesh:
         Calculation points of interest, as a
         :class:`openquake.hazardlib.geo.mesh.Mesh`.
-    :returns:
-        The :class:`openquake.engine.db.models.SiteData` object that was
-        created to store computation points of interest with associated site
-        parameters.
     """
-    lons = []
-    lats = []
-    vs30s = []
-    vs30_types = []
-    z1pt0s = []
-    z2pt5s = []
-
+    # TODO: make it fast with the CacheInserter
     for pt in mesh:
-        smd = get_closest_site_model_data(site_model_inp, pt)
-
-        lons.append(pt.longitude)
-        lats.append(pt.latitude)
-
-        vs30s.append(smd.vs30)
-        vs30_types.append(smd.vs30_type)
-        z1pt0s.append(smd.z1pt0)
-        z2pt5s.append(smd.z2pt5)
-
-    site_data = models.SiteData(hazard_calculation_id=hc_id)
-    site_data.lons = numpy.array(lons)
-    site_data.lats = numpy.array(lats)
-    site_data.vs30s = numpy.array(vs30s)
-    # We convert from strings to booleans here because this is what a hazardlib
-    # SiteCollection expects for the vs30 type. If we do the conversion here,
-    # we only do it once and we can directly consume the data on the worker
-    # side without having to convert inside each task.
-    site_data.vs30_measured = numpy.array(vs30_types) == 'measured'
-    site_data.z1pt0s = numpy.array(z1pt0s)
-    site_data.z2pt5s = numpy.array(z2pt5s)
-    site_data.save()
-
-    return site_data
+        if site_model_inp:
+            smd = get_closest_site_model_data(site_model_inp, pt)
+            measured = smd.vs30_type == 'measured'
+            x, y = pt.longitude, pt.latitude
+        else:
+            smd = pt
+            measured = pt.vs30measured == 'measured'
+            x, y = pt.location.longitude, pt.location.latitude
+        models.SiteData.objects.create(
+            hazard_calculation_id=hc_id,
+            location='POINT(%s %s)' % (x, y),
+            vs30=smd.vs30,
+            vs30_measured=measured,
+            z1pt0=smd.z1pt0,
+            z2pt5=smd.z2pt5)
 
 
 def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
@@ -756,8 +737,18 @@ class BaseHazardCalculator(base.Calculator):
                 input=site_model_inp)
 
             validate_site_model(site_model_data, mesh)
+        else:
+            # Use the calculation parameters to make a site collection
+            points = self.hc.points_to_compute()
+            mesh = [
+                openquake.hazardlib.site.Site(
+                    pt, self.hc.reference_vs30_value,
+                    self.hc.reference_vs30_type,
+                    self.hc.reference_depth_to_2pt5km_per_sec,
+                    self.hc.reference_depth_to_1pt0km_per_sec)
+                for pt in points]
 
-            store_site_data(self.hc.id, site_model_inp, mesh)
+        store_site_data(self.hc.id, site_model_inp, mesh)
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914

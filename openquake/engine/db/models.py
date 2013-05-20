@@ -906,26 +906,11 @@ def get_site_collection(hc):
     :returns:
         :class:`openquake.hazardlib.site.SiteCollection` instance.
     """
-    site_data = SiteData.objects.filter(hazard_calculation=hc.id)
-    if len(site_data) > 0:
-        site_data = site_data[0]
-        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
-                    site_data.vs30_measured, site_data.z1pt0s,
-                    site_data.z2pt5s)
-        sites = [openquake.hazardlib.site.Site(
-            openquake.hazardlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
-            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
-    else:
-        # Use the calculation reference parameters to make a site collection.
-        points = hc.points_to_compute()
-        measured = hc.reference_vs30_type == 'measured'
-        sites = [
-            openquake.hazardlib.site.Site(pt, hc.reference_vs30_value,
-                                          measured,
-                                          hc.reference_depth_to_2pt5km_per_sec,
-                                          hc.reference_depth_to_1pt0km_per_sec)
-            for pt in points]
-
+    sites = [
+        openquake.hazardlib.site.Site(
+            openquake.hazardlib.geo.Point(row.location.x, row.location.y),
+            row.vs30, row.vs30_measured, row.z1pt0, row.z2pt5)
+        for row in SiteData.objects.filter(hazard_calculation=hc.id)]
     return openquake.hazardlib.site.SiteCollection(sites)
 
 
@@ -2833,14 +2818,11 @@ class SiteData(djm.Model):
     """
 
     hazard_calculation = djm.ForeignKey('HazardCalculation')
-    lons = fields.PickleField()
-    lats = fields.PickleField()
-    vs30s = fields.PickleField()
-    # `vs30_measured` stores a numpy array of booleans.
-    # If a value is `False`, this means that the vs30 value is 'inferred'.
-    vs30_measured = fields.PickleField()
-    z1pt0s = fields.PickleField()
-    z2pt5s = fields.PickleField()
+    location = djm.PointField(srid=DEFAULT_SRID)
+    vs30 = djm.FloatField()
+    vs30_measured = djm.BooleanField()
+    z1pt0 = djm.FloatField()
+    z2pt5 = djm.FloatField()
 
     class Meta:
         db_table = 'htemp\".\"site_data'

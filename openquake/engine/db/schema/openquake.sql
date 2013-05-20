@@ -1116,12 +1116,11 @@ CREATE TABLE htemp.site_data (
     hazard_calculation_id INTEGER NOT NULL,
     -- All 6 fields will contain pickled numpy arrays with all of the locations
     -- and site parameters for the sites of interest for a calculation.
-    lons BYTEA NOT NULL,
-    lats BYTEA NOT NULL,
-    vs30s BYTEA NOT NULL,
-    vs30_measured BYTEA NOT NULL,
-    z1pt0s BYTEA NOT NULL,
-    z2pt5s BYTEA NOT NULL
+    location GEOGRAPHY NOT NULL,
+    vs30 FLOAT NOT NULL,
+    vs30_measured BOOLEAN NOT NULL,
+    z1pt0 FLOAT NOT NULL,
+    z2pt5 FLOAT NOT NULL
 ) TABLESPACE htemp_ts;
 
 
