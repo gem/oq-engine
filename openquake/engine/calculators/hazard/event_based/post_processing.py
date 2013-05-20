@@ -42,7 +42,6 @@ import itertools
 import numpy
 
 from django import db
-from celery.task import task
 
 from openquake.engine import logs
 from openquake.engine.db import models
@@ -176,15 +175,13 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
 gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
-@task
-def insert_into_gmf_agg(point_wkt):
+@tasks.oqtask
+def insert_into_gmf_agg(job_id, point_wkt):
     """
     Aggregate the GMVs from the tables gmf and gmf_set in chunks.
 
     :param int _job_id: used for logging purposes
-    :param rlz: a realization object
-    :param int chunk_id: an integer from 0 to nchunks
-    :param int nchunks: the number of chunks
+    :param point_wkt: the Well Known Text format
     """
     # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
     # if location is of geography type, hence the need to cast it to geometry
@@ -202,24 +199,10 @@ def insert_into_gmf_agg(point_wkt):
     curs = db.connections['reslt_writer'].cursor()
     with db.transaction.commit_on_success(using='reslt_writer'):
         curs.execute(insert_query)
-        logs.LOG.debug(insert_query)
         # TODO: delete the copied rows from gmf; this can be done
         # only after changing the export procedure to read from gmf_agg
 
-
-def populate_gmf_agg(points):
-    """
-    Populate the table gmf_agg from gmf and gmf_set.
-
-    :param gmf_collection_ids:
-        A sequence of ids
-    :param nchunks:
-        The number of chunks in which to split the parallel computation
-    """
-    # parallelizing the insert is effective because all the time is spent
-    # in the aggregration query, not in the insert.
-    tasks.parallelize(insert_into_gmf_agg,
-                      ((point.wkt2d,) for point in points))
+insert_into_gmf_agg.ignore_result = False  # essential
 
 
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
