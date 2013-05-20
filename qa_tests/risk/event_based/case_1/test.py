@@ -48,6 +48,9 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             calculation_mode="event_based",
             investigation_time=50,
             ses_per_logic_tree_path=1)
+        # tricks to fool the oqtask decorator
+        job.is_running = True
+        job.status = 'post_processing'
         job.save()
         hc = job.hazard_calculation
 
@@ -86,7 +89,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                     rupture_ids=map(str, rupture_ids),
                     result_grp_ordinal=1,
                     location=wkt)
-                insert_into_gmf_agg(wkt)
+                insert_into_gmf_agg(job.id, wkt)
 
         return gmf_set.gmf_collection.output.id
 
