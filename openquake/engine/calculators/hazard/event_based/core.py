@@ -98,9 +98,6 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
         This ID basically corresponds to the sequence number of the task,
         in the context of the entire calculation.
     """
-    logs.LOG.debug('> starting `stochastic_event_sets` task: job_id=%s, '
-                   'lt_realization_id=%s', job_id, lt_rlz.id)
-
     numpy.random.seed(task_seed)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
@@ -112,27 +109,24 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
             ses_collection__output__oq_job=job_id,
             ordinal=None)
 
-    # filtering sources
-    with EnginePerformanceMonitor('filtering sources', job_id, ses_and_gmfs):
+    # preparing sources
 
-        src_filter = filters.source_site_distance_filter(hc.maximum_distance)
-        rup_filter = filters.source_site_distance_filter(hc.maximum_distance)
+    ltp = logictree.LogicTreeProcessor(hc.id)
 
-        ltp = logictree.LogicTreeProcessor(hc.id)
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+        lt_rlz.sm_lt_path)
 
-        apply_uncertainties = ltp.parse_source_model_logictree_path(
-            lt_rlz.sm_lt_path)
+    gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
-        gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
+    source_iter = haz_general.gen_sources(
+        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+        hc.width_of_mfd_bin, hc.area_source_discretization)
 
-        source_iter = haz_general.gen_sources(
-            src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-            hc.width_of_mfd_bin, hc.area_source_discretization)
+    src_filter = filters.source_site_distance_filter(hc.maximum_distance)
+    rup_filter = filters.source_site_distance_filter(hc.maximum_distance)
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
-    logs.LOG.debug('> computing stochastic event set %s of %s',
-                   ses_rlz_n, hc.ses_per_logic_tree_path)
 
     # This is the container for all ruptures for this stochastic event set
     # (specified by `ordinal` and the logic tree realization).
@@ -168,7 +162,8 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
             _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                        result_grp_ordinal)
 
-    logs.LOG.debug('< task complete')
+    logs.LOG.debug('computed stochastic event set %d of %d for rlz_id=%d',
+                   ses_rlz_n, hc.ses_per_logic_tree_path, lt_rlz.id)
 
 ses_and_gmfs.ignore_result = False  # essential
 
