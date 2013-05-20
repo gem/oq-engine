@@ -117,7 +117,7 @@ class PreExecuteTestCase(unittest.TestCase):
             calc.pre_execute()
         self.assertEqual(
             "There is no hazard output in SA(0.1); "
-            "the available IMTs are [u'PGA']",
+            "the available IMTs are ['PGA']",
             ar.exception.message)
 
     def test_pre_execute_check_imts_no_errors(self):
@@ -150,6 +150,7 @@ class PreExecuteTestCase(unittest.TestCase):
         )
         models.JobStats.objects.create(oq_job=risk_job)
         calc = classical.ClassicalRiskCalculator(risk_job)
+        helpers.store_one_site(haz_job.hazard_calculation)
 
         # In contrast to the test above (`test_pre_execute_check_imts_raises`),
         # we expect no errors to be raised.
