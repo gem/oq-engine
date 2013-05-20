@@ -95,8 +95,8 @@ class Calculator(object):
                 arglist, self.concurrent_tasks()):
             tasks.parallelize(task_func, argblock, lambda _: None)
             ntasks += len(argblock)
-            logs.LOG.debug('Processed %d/%d tasks of kind %s',
-                           ntasks, total, task_func.__name__)
+            logs.LOG.info('Processed %d/%d tasks of kind %s',
+                          ntasks, total, task_func.__name__)
 
     def get_task_complete_callback(self, task_arg_gen, block_size,
                                    concurrent_tasks):
