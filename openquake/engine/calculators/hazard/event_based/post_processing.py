@@ -181,7 +181,7 @@ def insert_into_gmf_agg(job_id, point_wkt):
     Aggregate the GMVs from the tables gmf and gmf_set in chunks.
 
     :param int _job_id: used for logging purposes
-    :param point_wkt: the Well Known Text format
+    :param str point_wkt: point in WKT format
     """
     # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
     # if location is of geography type, hence the need to cast it to geometry
