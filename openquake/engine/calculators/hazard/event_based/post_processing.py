@@ -177,7 +177,7 @@ gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
 @task
-def insert_into_gmf_agg(gmf_collection_id, chunk_id, nchunks):
+def insert_into_gmf_agg(point_wkt):
     """
     Aggregate the GMVs from the tables gmf and gmf_set in chunks.
 
@@ -195,9 +195,9 @@ def insert_into_gmf_agg(gmf_collection_id, chunk_id, nchunks):
        array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
        array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
     FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
-    WHERE a.gmf_set_id=b.id AND gmf_collection_id={} AND a.id % {} = {}
+    WHERE a.gmf_set_id=b.id AND location::geometry ~= 'SRID=4326;{}'::geometry
     GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
-    '''.format(gmf_collection_id, nchunks, chunk_id)
+    '''.format(point_wkt)
 
     curs = db.connections['reslt_writer'].cursor()
     with db.transaction.commit_on_success(using='reslt_writer'):
@@ -207,7 +207,7 @@ def insert_into_gmf_agg(gmf_collection_id, chunk_id, nchunks):
         # only after changing the export procedure to read from gmf_agg
 
 
-def populate_gmf_agg(gmf_collection_ids, nchunks=1):
+def populate_gmf_agg(points):
     """
     Populate the table gmf_agg from gmf and gmf_set.
 
@@ -216,11 +216,10 @@ def populate_gmf_agg(gmf_collection_ids, nchunks=1):
     :param nchunks:
         The number of chunks in which to split the parallel computation
     """
-    for coll_id in gmf_collection_ids:
-        allargs = [(coll_id, chunk_id, nchunks) for chunk_id in range(nchunks)]
-        # parallelizing the insert is effective because all the time is spent
-        # in the aggregration query, not in the insert.
-        tasks.parallelize(insert_into_gmf_agg, allargs)
+    # parallelizing the insert is effective because all the time is spent
+    # in the aggregration query, not in the insert.
+    tasks.parallelize(insert_into_gmf_agg,
+                      ((point.wkt2d,) for point in points))
 
 
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
