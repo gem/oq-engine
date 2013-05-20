@@ -219,6 +219,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         calc = disagg_core.DisaggHazardCalculator(job)
         return job, calc
 
+    @unittest.skip
     def test_pre_execute(self):
         base_path = ('openquake.engine.calculators.hazard.disaggregation.core'
                      '.DisaggHazardCalculator')
