@@ -123,7 +123,7 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
         hc.width_of_mfd_bin, hc.area_source_discretization)
 
     src_filter = filters.source_site_distance_filter(hc.maximum_distance)
-    rup_filter = filters.source_site_distance_filter(hc.maximum_distance)
+    rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
