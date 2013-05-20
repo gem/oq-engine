@@ -419,10 +419,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         result_grp_ordinal = 1
         for lt_rlz in realizations:
             blocks = itertools.chain(
+                block_splitter(self._get_source_ids(lt_rlz),
+                               self.block_size()),
                 block_splitter(self._get_point_source_ids(lt_rlz),
                                self.point_source_block_size()),
-                block_splitter(self._get_source_ids(lt_rlz),
-                               self.block_size()))
+            )  # first the complex sources, then the point sources
             for src_ids in blocks:
                 for ses_rlz_n in range(1, self.hc.ses_per_logic_tree_path + 1):
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
