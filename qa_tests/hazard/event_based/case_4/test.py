@@ -13,8 +13,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import numpy
 import os
+
+import numpy
 
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
