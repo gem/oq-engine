@@ -43,6 +43,7 @@ from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config, get_calculator_class
+from openquake.engine.calculators.hazard.general import store_site_data
 
 CD = os.path.dirname(__file__)  # current directory
 
@@ -108,6 +109,20 @@ mock_module.mocksignature = _patched_mocksignature
 
 def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
+
+
+def store_one_site(hc):
+    """
+    Save a record in SiteData, to be used for testing purposes
+    """
+    models.SiteData.objects.create(
+        hazard_calculation_id=hc.id,
+        location='POINT(42 42)',
+        vs30=hc.reference_vs30_value,
+        vs30_measured=hc.reference_vs30_type == 'measured',
+        z1pt0=hc.reference_depth_to_2pt5km_per_sec,
+        z2pt5=hc.reference_depth_to_1pt0km_per_sec,
+    )
 
 
 def demo_file(file_name):
