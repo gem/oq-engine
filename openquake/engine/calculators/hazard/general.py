@@ -247,8 +247,9 @@ def store_site_data(hc_id, site_model_inp, mesh):
         Calculation points of interest, as a
         :class:`openquake.hazardlib.geo.mesh.Mesh`.
     """
-    # TODO: make it fast with the CacheInserter
+    cache = writer.CacheInserter(1000)
     for pt in mesh:
+
         if site_model_inp:
             smd = get_closest_site_model_data(site_model_inp, pt)
             measured = smd.vs30_type == 'measured'
@@ -257,13 +258,15 @@ def store_site_data(hc_id, site_model_inp, mesh):
             smd = pt
             measured = pt.vs30measured == 'measured'
             x, y = pt.location.longitude, pt.location.latitude
-        models.SiteData.objects.create(
-            hazard_calculation_id=hc_id,
-            location='POINT(%s %s)' % (x, y),
-            vs30=smd.vs30,
-            vs30_measured=measured,
-            z1pt0=smd.z1pt0,
-            z2pt5=smd.z2pt5)
+
+        cache.add(models.SiteData(
+                  hazard_calculation_id=hc_id,
+                  location='POINT(%s %s)' % (x, y),
+                  vs30=smd.vs30,
+                  vs30_measured=measured,
+                  z1pt0=smd.z1pt0,
+                  z2pt5=smd.z2pt5))
+    cache.flush()
 
 
 def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
@@ -742,7 +745,8 @@ class BaseHazardCalculator(base.Calculator):
             points = self.hc.points_to_compute()
             mesh = [
                 openquake.hazardlib.site.Site(
-                    pt, self.hc.reference_vs30_value,
+                    pt,
+                    self.hc.reference_vs30_value,
                     self.hc.reference_vs30_type,
                     self.hc.reference_depth_to_2pt5km_per_sec,
                     self.hc.reference_depth_to_1pt0km_per_sec)

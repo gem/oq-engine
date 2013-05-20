@@ -219,7 +219,6 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         calc = disagg_core.DisaggHazardCalculator(job)
         return job, calc
 
-    @unittest.skip
     def test_pre_execute(self):
         base_path = ('openquake.engine.calculators.hazard.disaggregation.core'
                      '.DisaggHazardCalculator')
@@ -240,7 +239,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
         # we don't expect the site collection to be loaded yet:
         self.assertIsNone(self.calc.hc._site_collection)
-
+        helpers.store_one_site(self.calc.hc)
         self.calc.pre_execute()
 
         # make sure the site_collection is loaded:

@@ -44,7 +44,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         calc = core.ClassicalHazardCalculator(job)
         return job, calc
 
-    @unittest.skip
     def test_pre_execute(self):
         # Most of the pre-execute functionality is implement in other methods.
         # For this test, just make sure each method gets called.
@@ -65,12 +64,14 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         mocks = [p.start() for p in patches]
 
-        self.calc.hc.init_site_collection = lambda: []  # no site collection
+        # we don't expect the site collection to be loaded yet:
+        self.assertIsNone(self.calc.hc._site_collection)
 
+        helpers.store_one_site(self.calc.hc)
         self.calc.pre_execute()
 
-        # the site_collection is not loaded:
-        #self.assertIsNone(self.calc.hc._site_collection)
+        # make sure the site_collection is loaded:
+        self.assertIsNotNone(self.calc.hc._site_collection)
 
         for i, m in enumerate(mocks):
             self.assertEqual(1, m.call_count)
