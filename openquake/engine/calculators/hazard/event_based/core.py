@@ -115,7 +115,6 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
 
         # distance filters
         src_filter = filters.source_site_distance_filter(hc.maximum_distance)
-        rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
 
         # complete_logic_tree_ses flag
         cmplt_lt_ses = None
@@ -151,7 +150,7 @@ def ses_and_gmfs(job_id, src_ids, lt_rlz_id, task_seed, result_grp_ordinal):
         with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
             ruptures = list(stochastic.stochastic_event_set_poissonian(
                             sources, hc.investigation_time,
-                            hc.site_collection, src_filter, rup_filter))
+                            hc.site_collection, src_filter))
             if not ruptures:
                 continue
 
