@@ -24,7 +24,7 @@ from tests.utils import helpers
 
 from openquake.engine.db import models
 from openquake.engine.calculators.hazard.event_based.post_processing import \
-    populate_gmf_agg
+    insert_into_gmf_agg
 
 # FIXME(lp). This is a regression test. Data has not been validated
 # by an alternative reliable implemantation
@@ -50,6 +50,9 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
             calculation_mode="event_based",
             investigation_time=50,
             ses_per_logic_tree_path=1)
+        # tricks to fool the oqtask decorator
+        job.is_running = True
+        job.status = 'post_processing'
         job.save()
         hc = job.hazard_calculation
 
@@ -81,14 +84,15 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                 job, hc, lt_realization, len(gmv_matrix[0]))
 
             for i, gmvs in enumerate(gmv_matrix):
+
+                wkt = "POINT(%s)" % locations[i]
                 models.Gmf.objects.create(
                     gmf_set=gmf_set,
                     imt="PGA", gmvs=gmvs,
                     rupture_ids=map(str, rupture_ids),
                     result_grp_ordinal=1,
-                    location="POINT(%s)" % locations[i])
-
-            populate_gmf_agg([gmf_coll.id])
+                    location=wkt)
+                insert_into_gmf_agg(job.id, wkt)
 
         return gmf_set.gmf_collection.output.id
 
