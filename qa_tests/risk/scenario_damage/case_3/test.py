@@ -115,14 +115,15 @@ class ScenarioDamageRiskCase3TestCase(risk.BaseRiskQATestCase):
 
         output = models.Output.objects.create_output(
             job, "Test Hazard output", "gmf_scenario")
+        models.GmfCollection.objects.create(output=output)
 
         with open(CSVFILE, 'rb') as csvfile:
             gmfreader = csv.reader(csvfile, delimiter=',')
             locations = gmfreader.next()
             arr = numpy.array([[float(x) for x in row] for row in gmfreader])
             for i, gmvs in enumerate(arr.transpose()):
-                models.GmfScenario.objects.create(
-                    output=output,
+                models.GmfAgg.objects.create(
+                    gmf_collection=output.gmfcollection,
                     imt="PGA",
                     gmvs=gmvs,
                     location="POINT(%s)" % locations[i])
