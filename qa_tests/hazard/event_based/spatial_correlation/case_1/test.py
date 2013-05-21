@@ -17,7 +17,6 @@ import numpy
 import os
 
 from nose.plugins.attrib import attr
-from openquake.engine.db import models
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.event_based.spatial_correlation import _utils as sc_utils
 
