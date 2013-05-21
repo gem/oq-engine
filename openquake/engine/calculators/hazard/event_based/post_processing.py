@@ -176,43 +176,36 @@ gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
 @tasks.oqtask
-def insert_into_gmf_agg(job_id, *points_wkt):
+def insert_into_gmf_agg(job_id, point_wkt):
     """
     Aggregate the GMVs from the tables gmf and gmf_set.
 
     :param int _job_id: used for logging purposes
-    :param points_wkt: a tuple of points in WKT format
+    :param str point_wkt: a point in WKT format
     """
-    # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
-    # if location is of geography type, hence the need to cast it to geometry
     insert_query = '''-- running
     INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping, sa_period,
                                location, gmvs, rupture_ids)
-    SELECT gmf_collection_id, imt, sa_damping, sa_period, location::geometry,
+    SELECT gmf_collection_id, imt, sa_damping, sa_period, location,
        array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
        array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
     FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
-    WHERE a.gmf_set_id=b.id AND location::geometry ~= 'SRID=4326;%s'::geometry
-    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
+    WHERE a.gmf_set_id=b.id AND location ~= 'SRID=4326;%s'::geometry
+    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location;
     '''
     curs = db.connections['reslt_writer'].cursor()
-    for point_wkt in points_wkt:
-        with db.transaction.commit_on_success(using='reslt_writer'):
-            curs.execute(insert_query % point_wkt)
-            # TODO: delete the copied rows from gmf; this can be done
-            # only after changing the export procedure to read from gmf_agg
+    with db.transaction.commit_on_success(using='reslt_writer'):
+        curs.execute(insert_query % point_wkt)
+        # TODO: delete the copied rows from gmf; this can be done
+        # only after changing the export procedure to read from gmf_agg
 
 insert_into_gmf_agg.ignore_result = False  # essential
 
 
-def insert_into_gmf_agg_arg_gen(job, ntasks=16):
-    """Split in parallel tasks"""
-    points = job.hazard_calculation.points_to_compute()
-    blksize, rest = divmod(len(points), ntasks)
-    if rest:
-        blksize += 1
-    for block in block_splitter(points, blksize):
-        yield (job.id,) + tuple(p.wkt2d for p in block)
+def insert_into_gmf_agg_arg_gen(job):
+    """Yield the WKT for each point to compute"""
+    for point in job.hazard_calculation.points_to_compute():
+        yield job.id, point.wkt2d
 
 
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
