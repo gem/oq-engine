@@ -97,7 +97,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
             [losses.std(ddof=1) for losses in loss_ratio_matrix],
             output_type="loss_map",
             loss_type=loss_type,
-            hazard_output_id=unit.getter.hazard_output_id,
+            hazard_output_id=unit.getter.hazard_output.id,
             insured=False)
 
         if params.insured_losses:
@@ -108,7 +108,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
                 itertools.cycle([True]),
                 output_type="loss_map",
                 loss_type=loss_type,
-                hazard_output_id=unit.getter.hazard_output_id,
+                hazard_output_id=unit.getter.hazard_output.id,
                 insured=True)
 
     aggregate_losses = sum(loss_ratio_matrix[i] * asset.value(loss_type)

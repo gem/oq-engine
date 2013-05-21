@@ -2020,10 +2020,10 @@ def get_gmfs_scenario(output, imt=None):
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
         for gmf in GmfAgg.objects.filter(
-                gmfcollection=coll, imt=imt,
+                gmf_collection=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
-                nodes[i].append(_GroundMotionFieldNode(gmv, loc))
+                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.location))
         for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
                 imt=imt,
