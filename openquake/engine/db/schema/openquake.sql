@@ -635,10 +635,11 @@ CREATE TABLE hzrdr.gmf (
 -- find the corresponding ground motion value in gmvs at the same
 -- index.
     rupture_ids int[],
-    result_grp_ordinal INTEGER NOT NULL,
-
-    location GEOGRAPHY(point) NOT NULL
+    result_grp_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'gmf', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.gmf ALTER COLUMN location SET NOT NULL;
+
 
 CREATE TABLE hzrdr.gmf_agg (
     id SERIAL PRIMARY KEY,
