@@ -1813,7 +1813,7 @@ class GmfCollection(djm.Model):
                      'where parent_id=%s', (self.id,))
         return [self.__class__.objects.get(pk=r[0]) for r in curs]
 
-    def get_gmfs_per_ses(self, location=None, orderby=False):
+    def get_gmfs_per_ses(self, orderby=False):
         """
         Get the ground motion fields per SES in a good format for
         the XML export.
@@ -1824,7 +1824,7 @@ class GmfCollection(djm.Model):
             tot_time = 0.0
             fake_ses_id = 1
             for coll in children:
-                for g in coll.get_gmfs_per_ses(location):
+                for g in coll.get_gmfs_per_ses(orderby):
                     all_gmfs.append(g)
                     tot_time += g.investigation_time
             if all_gmfs:
@@ -1832,25 +1832,21 @@ class GmfCollection(djm.Model):
                     itertools.chain(*all_gmfs), tot_time, fake_ses_id)
             return
         # leaf of the tree
-        where = 'WHERE gmf_collection_id=%d' % self.id
-        if location:
-            where += " AND location::geometry ~= 'SRID=4326;%s::geometry'" \
-                % location
         ses_coll = SESCollection.objects.get(
             lt_realization=self.lt_realization)
 
         for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
             query = """
-        select imt, sa_period, sa_damping, rupture_id,
+        SELECT imt, sa_period, sa_damping, rupture_id,
         array_agg(gmv), array_agg(ST_X(geometry(location))),
-        array_agg(ST_Y(geometry(location))) from (
-           select imt, sa_period, sa_damping,
-           unnest(rupture_ids) as rupture_id, location, unnest(gmvs) as gmv
-           from hzrdr.gmf_agg %s) as x,
+        array_agg(ST_Y(geometry(location))) FROM (
+           SELECT imt, sa_period, sa_damping,
+           unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
+           from hzrdr.gmf_agg WHERE gmf_collection_id=%d) AS x,
            hzrdr.ses_rupture as y
         where x.rupture_id=y.id AND ses_id=%d
         group by imt, sa_period, sa_damping, rupture_id
-        """ % (where, ses.id)
+        """ % (self.id, ses.id)
             if orderby:  # may be used in tests to get reproducible results
                 query += 'order by imt, sa_period, sa_damping, rupture_id;'
             curs = getcursor('job_init')
