@@ -256,7 +256,7 @@ class GroundMotionValuesGetter(HazardGetter):
                     self.asset_dict[missing_asset_id], self.max_distance))
 
         distinct_gmf_ids = tuple(set(gmf_ids))
-        cursor = getcursor('job_init')
+        cursor = models.getcursor('job_init')
 
         if self.hazard_output.output_type == 'gmf_scenario':
             gmfs = dict((i, models.GmfAgg.objects.get(pk=i).gmvs)
@@ -343,5 +343,3 @@ class GroundMotionValuesGetter(HazardGetter):
                 assets.append(asset_id)
                 gmf_ids.append(gmf_id)
         return assets, gmf_ids
-
-        cursor = models.getcursor('job_init')
