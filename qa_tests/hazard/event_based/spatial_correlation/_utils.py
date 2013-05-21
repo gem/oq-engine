@@ -38,17 +38,15 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
         stochastic event sets.
     """
     assert len(gmvs_site_1) == len(gmvs_site_2)
-    total_gmvs = len(gmvs_site_1)
 
     half_delta = float(delta_gmv) / 2
-    gmv_close = lambda v: (gmv - half_delta <= v
-                           <= gmv + half_delta)
+    gmv_close = lambda v: (gmv - half_delta <= v <= gmv + half_delta)
     count = 0
     for gmv_site_1, gmv_site_2 in itertools.izip(gmvs_site_1, gmvs_site_2):
         if gmv_close(gmv_site_1) and gmv_close(gmv_site_2):
             count += 1
 
-    prob = 1 - math.exp( - (float(count) / (time_span * num_ses)) * time_span)
+    prob = 1 - math.exp(- (float(count) / (time_span * num_ses)) * time_span)
     return prob
 
 
@@ -63,14 +61,9 @@ def get_gmvs_for_location(location, job_id):
     :returns:
         `list` of ground motion values, as floats
     """
-    gmf_sets = models.GmfSet.objects.filter(
+    [gmfagg] = models.GmfAgg.objects.filter(
         gmf_collection__output__oq_job=job_id
-    )
-    gmfs = list(itertools.chain(*(s.iter_gmfs(location=location)
-                                  for s in gmf_sets)))
+    ).extra(
+        where=["location::geometry ~= 'SRID=4326;%s'::geometry" % location])
 
-    gmf_nodes = list(itertools.chain(*[list(x) for x in gmfs]))
-
-    gmvs = [x.gmv for x in gmf_nodes]
-
-    return gmvs
+    return gmfagg.gmvs
