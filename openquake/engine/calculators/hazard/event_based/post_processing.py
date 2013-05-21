@@ -42,11 +42,10 @@ import itertools
 import numpy
 
 from django import db
-from celery.task import task
 
-from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
+from openquake.engine.utils.general import block_splitter
 
 
 HAZ_CURVE_DISP_NAME_FMT = 'hazard-curve-rlz-%(rlz)s-%(imt)s'
@@ -176,51 +175,37 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
 gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
-@task
-def insert_into_gmf_agg(gmf_collection_id, chunk_id, nchunks):
+@tasks.oqtask
+def insert_into_gmf_agg(job_id, point_wkt):
     """
-    Aggregate the GMVs from the tables gmf and gmf_set in chunks.
+    Aggregate the GMVs from the tables gmf and gmf_set.
 
     :param int _job_id: used for logging purposes
-    :param rlz: a realization object
-    :param int chunk_id: an integer from 0 to nchunks
-    :param int nchunks: the number of chunks
+    :param str point_wkt: a point in WKT format
     """
-    # IMPORTANT: in PostGIS 1.5 GROUP BY location does not work properly
-    # if location is of geography type, hence the need to cast it to geometry
     insert_query = '''-- running
     INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping, sa_period,
                                location, gmvs, rupture_ids)
-    SELECT gmf_collection_id, imt, sa_damping, sa_period, location::geometry,
+    SELECT gmf_collection_id, imt, sa_damping, sa_period, location,
        array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
        array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
     FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
-    WHERE a.gmf_set_id=b.id AND gmf_collection_id={} AND a.id % {} = {}
-    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
-    '''.format(gmf_collection_id, nchunks, chunk_id)
-
+    WHERE a.gmf_set_id=b.id AND location ~= 'SRID=4326;%s'::geometry
+    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location;
+    '''
     curs = db.connections['reslt_writer'].cursor()
     with db.transaction.commit_on_success(using='reslt_writer'):
-        curs.execute(insert_query)
-        logs.LOG.debug(insert_query)
+        curs.execute(insert_query % point_wkt)
         # TODO: delete the copied rows from gmf; this can be done
         # only after changing the export procedure to read from gmf_agg
 
+insert_into_gmf_agg.ignore_result = False  # essential
 
-def populate_gmf_agg(gmf_collection_ids, nchunks=1):
-    """
-    Populate the table gmf_agg from gmf and gmf_set.
 
-    :param gmf_collection_ids:
-        A sequence of ids
-    :param nchunks:
-        The number of chunks in which to split the parallel computation
-    """
-    for coll_id in gmf_collection_ids:
-        allargs = [(coll_id, chunk_id, nchunks) for chunk_id in range(nchunks)]
-        # parallelizing the insert is effective because all the time is spent
-        # in the aggregration query, not in the insert.
-        tasks.parallelize(insert_into_gmf_agg, allargs)
+def insert_into_gmf_agg_arg_gen(job):
+    """Yield the WKT for each point to compute"""
+    for point in job.hazard_calculation.points_to_compute():
+        yield job.id, point.wkt2d
 
 
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
