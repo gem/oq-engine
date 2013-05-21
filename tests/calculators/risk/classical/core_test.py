@@ -117,7 +117,7 @@ class PreExecuteTestCase(unittest.TestCase):
             calc.pre_execute()
         self.assertEqual(
             "There is no hazard output in SA(0.1); "
-            "the available IMTs are ['PGA']",
+            "the available IMTs are [u'PGA']",
             ar.exception.message)
 
     def test_pre_execute_check_imts_no_errors(self):
