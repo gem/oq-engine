@@ -84,7 +84,7 @@ def do_event_based(loss_type, units, containers, params, profile):
     event_loss_table = collections.Counter()
 
     for unit in units:
-        hid = unit.getter.hazard_output_id
+        hid = unit.getter.hazard_output.id
         outputs = individual_outputs(loss_type, unit, params, profile)
 
         if not outputs.assets:
