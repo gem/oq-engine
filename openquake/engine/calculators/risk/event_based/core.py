@@ -436,7 +436,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             for loss_type, event_loss_table in self.event_loss_tables.items():
                 for hazard_output in self.rc.hazard_outputs():
                     gmf_sets = hazard_output.gmfcollection.gmfset_set.all()
-
                     aggregate_losses = [
                         event_loss_table[rupture.id]
                         for rupture in models.SESRupture.objects.filter(
