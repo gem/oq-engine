@@ -27,19 +27,10 @@ import numpy
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
-from django.db import connections
-
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
 KILOMETERS_TO_METERS = 1000
-
-
-# a Django cursor perform some caching which is polluting the
-# memory profiler, this is why we are using the underlying cursor
-def getcursor(route):
-    """Return a psycogp2 cursor from a Django route"""
-    return connections[route].connection.cursor()
 
 
 class HazardGetter(object):
@@ -213,7 +204,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         if site.wkt in self._cache:
             return self._cache[site.wkt]
 
-        cursor = getcursor('job_init')
+        cursor = models.getcursor('job_init')
 
         query = """
         SELECT
@@ -270,7 +261,7 @@ class GroundMotionValuesGetter(HazardGetter):
 
         # get the sorted ruptures from all the distinct GMFs
         distinct_gmf_ids = tuple(set(gmf_ids))
-        cursor = getcursor('job_init')
+        cursor = models.getcursor('job_init')
         cursor.execute('''\
         SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
         WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
@@ -294,7 +285,7 @@ class GroundMotionValuesGetter(HazardGetter):
         return ret
 
     def get_data(self, imt):
-        cursor = getcursor('job_init')
+        cursor = models.getcursor('job_init')
 
         imt_type, sa_period, sa_damping = models.parse_imt(imt)
         spectral_filters = ""
@@ -355,7 +346,7 @@ class GroundMotionScenarioGetter(HazardGetter):
     approach used in :class:`GroundMotionValuesGetter`.
     """
     def get_data(self, imt):
-        cursor = getcursor('job_init')
+        cursor = models.getcursor('job_init')
 
         # See the comment in `GroundMotionValuesGetter.get_data` for
         # an explanation of the query
