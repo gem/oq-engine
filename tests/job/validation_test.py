@@ -849,7 +849,7 @@ class EventBasedBCRRiskForm(unittest.TestCase):
         self.assertFalse(form.is_valid())
 
 
-class EventBasedValidationTestCase(unittest.TestCase):
+class EventBasedRiskValidationTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
             get_data_path('event_based_risk/job.ini'),
