@@ -913,6 +913,36 @@ class EventBasedRiskValidationTestCase(unittest.TestCase):
         self.assertEqual(expected_errors, dict(form.errors))
 
 
+class ScenarioRiskValidationTestCase(unittest.TestCase):
+
+    def test_invalid_form(self):
+        rc = models.RiskCalculation(
+            calculation_mode='scenario',
+            owner=helpers.default_user(),
+            region_constraint=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'),
+            maximum_distance=100,
+            master_seed=666,
+            asset_correlation='foo',
+            insured_losses=True,
+        )
+
+        form = validation.ScenarioRiskForm(
+            instance=rc,
+            files=dict(occupancy_vulnerability_file=object())
+        )
+
+        expected_errors = {
+            'asset_correlation': [u'Enter a number.',
+                                  u'Asset Correlation must be >= 0 and <= 1'],
+             'time_event': ['Scenario Risk requires time_event when an '
+                            'occupancy vulnerability model is given'],
+        }
+        self.assertFalse(form.is_valid())
+        self.assertEqual(expected_errors, dict(form.errors))
+
+
 class ValidateTestCase(unittest.TestCase):
     """
     Tests for :func:`openquake.engine.job.validation.validate`.
