@@ -623,9 +623,9 @@ class EventBasedRiskForm(BaseOQModelForm):
         super_valid = super(EventBasedRiskForm, self).is_valid()
         rc = self.instance          # RiskCalculation instance
 
-        if rc.sites_disagg and not [rc.mag_bin_width and
-                                    rc.coordinate_bin_width and
-                                    rc.distance_bin_width]:
+        if rc.sites_disagg and not (rc.mag_bin_width
+                                    and rc.coordinate_bin_width
+                                    and rc.distance_bin_width):
             self._add_error('sites_disagg', "disaggregation requires "
                             "mag_bin_width, coordinate_bin_width, "
                             "distance_bin_width")
