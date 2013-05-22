@@ -30,7 +30,6 @@ import numpy
 
 from django.db import transaction, connections
 from django.db.models import Sum
-from django.core.exceptions import ObjectDoesNotExist
 from shapely import geometry
 
 from openquake.hazardlib import correlation
@@ -56,7 +55,7 @@ from openquake.engine.input import source
 from openquake.engine.utils import config
 from openquake.engine.utils import stats
 from openquake.engine.utils.general import block_splitter
-
+from openquake.engine.performance import EnginePerformanceMonitor
 
 #: Maximum number of hazard curves to cache, for selects or inserts
 CURVE_CACHE_SIZE = 100000
@@ -996,11 +995,13 @@ class BaseHazardCalculator(base.Calculator):
                 outputs = outputs.exclude(output_type='hazard_curve_multi')
 
             for output in outputs:
-                exported_files.extend(hazard_export.export(
-                    output.id, self.job.hazard_calculation.export_dir))
+                with EnginePerformanceMonitor(
+                        'exporting %s' % output.output_type, self.job.id):
+                    fname = hazard_export.export(
+                        output.id, self.job.hazard_calculation.export_dir)
+                    exported_files.extend(fname)
+                    logs.LOG.debug('exported %s' % fname)
 
-            for exp_file in exported_files:
-                logs.LOG.debug('exported %s' % exp_file)
         logs.LOG.debug('< done with exports')
 
         return exported_files
