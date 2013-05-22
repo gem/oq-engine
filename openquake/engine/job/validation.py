@@ -667,7 +667,7 @@ class ScenarioRiskForm(BaseOQModelForm):
         rc = self.instance          # RiskCalculation instance
 
         if 'occupancy_vulnerability_file' in self.files:
-            if rc.time_event is None:
+            if not rc.time_event:
                 self._add_error('time_event', "Scenario Risk requires "
                                 "time_event when an occupancy vulnerability "
                                 "model is given")
