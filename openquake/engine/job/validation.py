@@ -707,12 +707,12 @@ def region_is_valid(mdl):
     for ring in mdl.region.coords:
         lons = [lon for lon, _ in ring]
         lats = [lat for _, lat in ring]
-        if not all([-180 <= x <= 180 for x in lons]):
-            valid = False
-            errors.append('Longitude values must in the range [-180, 180]')
-        if not all([-90 <= x <= 90 for x in lats]):
-            valid = False
-            errors.append('Latitude values must be in the range [-90, 90]')
+
+        errors.extend(_lons_lats_are_valid(lons, lats))
+
+    if errors:
+        valid = False
+
     return valid, errors
 
 
@@ -734,12 +734,10 @@ def sites_is_valid(mdl):
 
     lons = [pt.x for pt in mdl.sites]
     lats = [pt.y for pt in mdl.sites]
-    if not all([-180 <= x <= 180 for x in lons]):
+
+    errors.extend(_lons_lats_are_valid(lons, lats))
+    if errors:
         valid = False
-        errors.append('Longitude values must in the range [-180, 180]')
-    if not all([-90 <= x <= 90 for x in lats]):
-        valid = False
-        errors.append('Latitude values must be in the range [-90, 90]')
 
     return valid, errors
 
@@ -753,14 +751,29 @@ def sites_disagg_is_valid(mdl):
 
     lons = [pt.x for pt in mdl.sites_disagg]
     lats = [pt.y for pt in mdl.sites_disagg]
-    if not all([-180 <= x <= 180 for x in lons]):
+
+    errors.extend(_lons_lats_are_valid(lons, lats))
+    if errors:
         valid = False
-        errors.append('Longitude values must in the range [-180, 180]')
-    if not all([-90 <= x <= 90 for x in lats]):
-        valid = False
-        errors.append('Latitude values must be in the range [-90, 90]')
 
     return valid, errors
+
+
+def _lons_lats_are_valid(lons, lats):
+    """
+    Helper function for validating lons/lats.
+
+    :returns:
+        A list of error messages, or an empty list.
+    """
+    errors = []
+
+    if not all([-180 <= x <= 180 for x in lons]):
+        errors.append('Longitude values must in the range [-180, 180]')
+    if not all([-90 <= x <= 90 for x in lats]):
+        errors.append('Latitude values must be in the range [-90, 90]')
+
+    return errors
 
 
 def random_seed_is_valid(mdl):
