@@ -1209,3 +1209,8 @@ def uniform_hazard_spectra_is_valid(mdl):
     if mdl.uniform_hazard_spectra and mdl.poes is None:
         return False, ['`poes` are required to compute UHS']
     return True, []
+
+
+def time_event_is_valid(_mdl):
+    # Any string is allowed, or `None`.
+    return True, []
