@@ -635,10 +635,11 @@ CREATE TABLE hzrdr.gmf (
 -- find the corresponding ground motion value in gmvs at the same
 -- index.
     rupture_ids int[],
-    result_grp_ordinal INTEGER NOT NULL,
-
-    location GEOGRAPHY(point) NOT NULL
+    result_grp_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'gmf', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.gmf ALTER COLUMN location SET NOT NULL;
+
 
 CREATE TABLE hzrdr.gmf_agg (
     id SERIAL PRIMARY KEY,
@@ -659,7 +660,8 @@ CREATE TABLE hzrdr.gmf_agg (
         --    OR ((imt != 'SA') AND (sa_damping IS NULL))),
     gmvs float[],
     rupture_ids int[],
-    location GEOGRAPHY(point) NOT NULL
+    location GEOGRAPHY(point) NOT NULL,
+    UNIQUE (gmf_collection_id, imt, sa_period, sa_damping, location)
 ) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf_scenario (
@@ -1479,3 +1481,19 @@ CREATE VIEW hzrdr.gmf_agg_job AS
    INNER JOIN uiapi.output AS c
    ON b.output_id=c.id
    WHERE output_type='gmf';
+
+
+-- associations parent->children
+CREATE VIEW hzrdr.gmf_collection_family AS
+  SELECT j.id as oq_job_id, hazard_calculation_id,
+  c1.id AS parent_id, c2.id AS child_id
+  FROM uiapi.oq_job AS j
+  INNER JOIN uiapi.output AS o1
+  ON o1.oq_job_id=j.id
+  INNER JOIN uiapi.output AS o2
+  ON o2.oq_job_id=j.id
+  INNER JOIN hzrdr.gmf_collection AS c1
+  ON c1.output_id=o1.id
+  INNER JOIN hzrdr.gmf_collection AS c2
+  ON c2.output_id=o2.id
+  WHERE o1.output_type='complete_lt_gmf' AND o2.output_type='gmf';
