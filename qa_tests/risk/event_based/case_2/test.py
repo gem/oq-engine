@@ -92,7 +92,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                     rupture_ids=map(str, rupture_ids),
                     result_grp_ordinal=1,
                     location=wkt)
-                insert_into_gmf_agg(job.id, wkt)
+                insert_into_gmf_agg(job.id, gmf_set.id)
 
         return gmf_set.gmf_collection.output.id
 
