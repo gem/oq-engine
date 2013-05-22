@@ -1151,7 +1151,7 @@ def insured_losses_is_valid(_mdl):
 def loss_curve_resolution_is_valid(mdl):
     if mdl.calculation_mode == 'event_based':
         if (mdl.loss_curve_resolution is not None and
-                mdl.loss_curve_resolution < 1):
+                mdl.loss_curve_resolution <= 1):
             return False, ['Loss Curve Resolution must be > 1.']
     return True, []
 
