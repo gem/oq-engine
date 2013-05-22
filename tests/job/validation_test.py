@@ -893,14 +893,14 @@ class EventBasedRiskValidationTestCase(unittest.TestCase):
             hazard_output=self.job.risk_calculation.hazard_output,
             sites_disagg='-180.1 38.113, -122.114 38.113',
             coordinate_bin_width=0.0,
-            loss_curve_resolution=1,
+            loss_curve_resolution=0,
             mag_bin_width=0.0,
         )
 
         expected_errors = {
             'coordinate_bin_width': ['Coordinate bin width must be > 0.0'],
             'distance_bin_width': ['Distance bin width must be > 0.0'],
-            'loss_curve_resolution': ['Loss Curve Resolution must be > 1.'],
+            'loss_curve_resolution': ['Loss Curve Resolution must be >= 1'],
             'mag_bin_width': ['Magnitude bin width must be > 0.0'],
             'sites_disagg': ['Longitude values must in the range [-180, 180]',
                              'disaggregation requires mag_bin_width, '
