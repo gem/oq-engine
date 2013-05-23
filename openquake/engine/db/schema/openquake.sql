@@ -702,19 +702,6 @@ CREATE TABLE hzrdr.disagg_result (
 SELECT AddGeometryColumn('hzrdr', 'disagg_result', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.disagg_result ALTER COLUMN location SET NOT NULL;
 
-
--- GMF data.
--- TODO: DEPRECATED; use gmf_collection, gmf_set, and gmf
-CREATE TABLE hzrdr.gmf_data (
-    id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,
-    -- Ground motion value
-    ground_motion float NOT NULL
-) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'gmf_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
-
-
 -- Uniform Hazard Spectra
 --
 -- A collection of Uniform Hazard Spectrum which share a set of periods.
@@ -1243,10 +1230,6 @@ ON DELETE CASCADE;
 ALTER TABLE hzrdr.hazard_curve_data
 ADD CONSTRAINT hzrdr_hazard_curve_data_hazard_curve_fk
 FOREIGN KEY (hazard_curve_id) REFERENCES hzrdr.hazard_curve(id) ON DELETE CASCADE;
-
-ALTER TABLE hzrdr.gmf_data
-ADD CONSTRAINT hzrdr_gmf_data_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 -- gmf_collection -> output FK
 ALTER TABLE hzrdr.gmf_collection
