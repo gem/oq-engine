@@ -68,7 +68,7 @@ def compute_gmfs(job_id, sites, rupture_id, gmfcoll_id, realizations):
         The parsed rupture model from which we will generate
         ground motion fields.
     :param gmfcoll_id:
-        gmfcoll_id identifies the reference to the output record
+        the id of a :class:`openquake.engine.db.models.GmfCollection` record
     :param realizations:
         Number of realizations to create.
     """
@@ -98,7 +98,7 @@ def save_gmf(gmfcoll_id, gmf_dict, points_to_compute):
     Helper method to save computed GMF data to the database.
 
     :param int gmfcoll_id:
-        gmfcoll_id identifies the reference to the output record.
+        the id of a :class:`openquake.engine.db.models.GmfCollection` record
     :param dict gmf_dict:
         The GMF results during the calculation.
     :param points_to_compute:
