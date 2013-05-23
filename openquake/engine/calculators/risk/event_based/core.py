@@ -434,15 +434,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             time_span, tses = self.hazard_times()
             for loss_type, event_loss_table in self.event_loss_tables.items():
                 for hazard_output in self.rc.hazard_outputs():
-
-                    all_ses = models.SES.objects.filter(
-                        ses_collection__lt_realization=
+                    ruptures = models.SESRupture.objects.filter(
+                        ses__ses_collection__lt_realization=
                         hazard_output.gmfcollection.lt_realization)
-
                     aggregate_losses = [
                         event_loss_table[rupture.id]
-                        for rupture in models.SESRupture.objects.filter(
-                            ses__pk__in=set(ses.id for ses in all_ses))
+                        for rupture in ruptures
                         if rupture.id in event_loss_table]
 
                     if aggregate_losses:
