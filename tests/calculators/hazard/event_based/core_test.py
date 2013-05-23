@@ -255,13 +255,11 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             # check that the parameters are read correctly from the files
             self.assertEqual(hc.ses_per_logic_tree_path, 5)
 
-            # Check that we have the right number of gmf_sets.
-            # The correct number is (num_real * ses_per_logic_tree_path).
+            # Check that the gmf_sets were deleted by populate_gmf_agg
             gmf_sets = models.GmfSet.objects.filter(
                 gmf_collection__output__oq_job=job.id,
                 gmf_collection__lt_realization__isnull=False)
-            # 2 realizations, 5 ses_per_logic_tree_path
-            self.assertEqual(10, gmf_sets.count())
+            self.assertEqual(0, gmf_sets.count())
 
             # check that we called the right number of times the patched
             # functions: 40 = 2 Lt * 4 sources * 5 ses = 8 tasks * 5 ses

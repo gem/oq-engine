@@ -333,22 +333,31 @@ class ParseImtTestCase(unittest.TestCase):
         self.assertEqual(None, sa_damping)
 
 
-# This class is intentionally left empty, since
-# at the present all the features of GmfSet.iter_gmvs
-# are exercised and covered in EventBasedExportTestCase.
-# In the future GmfSet will likely change (we want a
-# more efficient way to import/export large numbers of GMFs)
-# and we may want to add more specific tests here; in particular
-# we will need three tests complete_logic_tree_gmf_iter,
-# gmf_by_location_iter and no_filtering_gmf_iter.
-# NB: GmfSet.iter_gmvs is also tested in pg_importer_test.py
 class GmfsPerSesTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cfg = helpers.get_data_path('event_based_hazard/job.ini')
         job = helpers.get_hazard_job(cfg)
-        gmf_agg1 = helpers.create_gmf_agg_records(job)[0]
-        gmf_agg2 = helpers.create_gmf_agg_records(job)[0]
+        rlz1 = models.LtRealization.objects.create(
+            hazard_calculation=job.hazard_calculation,
+            ordinal=1, seed=1, weight=None,
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+            is_complete=False, total_items=1, completed_items=1)
+        rlz2 = models.LtRealization.objects.create(
+            hazard_calculation=job.hazard_calculation,
+            ordinal=2, seed=1, weight=None,
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+            is_complete=False, total_items=1, completed_items=1)
+        ses_coll1 = models.SESCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test SES Collection 1", "ses"),
+            lt_realization=rlz1)
+        ses_coll2 = models.SESCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test SES Collection 2", "ses"),
+            lt_realization=rlz2)
+        gmf_agg1 = helpers.create_gmf_agg_records(job, rlz1, ses_coll1)[0]
+        gmf_agg2 = helpers.create_gmf_agg_records(job, rlz2, ses_coll2)[0]
         cls.gmf_coll1 = gmf_agg1.gmf_collection
         cls.parent_coll = models.GmfCollection.objects.create(
             output=models.Output.objects.create_output(
