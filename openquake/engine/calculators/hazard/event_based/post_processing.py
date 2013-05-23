@@ -185,17 +185,16 @@ def insert_into_gmf_agg(job_id, gmf_collection_id):
     insert_query = '''-- running
     INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping, sa_period,
                                location, gmvs, rupture_ids)
-    SELECT gmf_collection_id, imt, sa_damping, sa_period, location,
+    SELECT b.gmf_collection_id, imt, sa_damping, sa_period, location::geometry,
        array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
        array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
     FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
-    WHERE a.gmf_set_id=b.id AND gmf_collection_id=%d
-    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location;
+    WHERE a.gmf_set_id=b.id AND b.gmf_collection_id=%d
+    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::geometry;
     '''
     curs = db.connections['reslt_writer'].cursor()
     with db.transaction.commit_on_success(using='reslt_writer'):
         curs.execute(insert_query % gmf_collection_id)
-        print insert_query % gmf_collection_id
         curs.execute('DELETE FROM hzrdr.gmf_set '
                      'WHERE gmf_collection_id=%d' % gmf_collection_id)
 
