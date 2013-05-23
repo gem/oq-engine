@@ -642,6 +642,9 @@ def get_hazard_job(cfg, username=None):
 def get_risk_job(cfg, username=None, hazard_calculation_id=None,
                  hazard_output_id=None):
     """
+    Given a path to a config file and a hazard_calculation_id
+    (or, alternatively, a hazard_output_id, create a
+    :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
     username = username if username is not None else default_user().user_name
 
@@ -666,36 +669,45 @@ def get_risk_job(cfg, username=None, hazard_calculation_id=None,
     return job
 
 
-def create_gmf_agg_records(hazard_job, rlz=None):
+def create_gmfset(hazard_job, rlz=None):
     """
-    Returns the created records.
+    Returns the created GmfSet object.
     """
     hc = hazard_job.hazard_calculation
 
     rlz = rlz or models.LtRealization.objects.create(
-        hazard_calculation=hazard_job.hazard_calculation,
-        ordinal=1, seed=1, weight=None,
+        hazard_calculation=hc, ordinal=1, seed=1, weight=None,
         sm_lt_path="test_sm", gsim_lt_path="test_gsim",
         is_complete=False, total_items=1, completed_items=1)
-
-    rupture_ids = get_rupture_ids(hazard_job, hc, rlz, 3)
 
     gmf_coll = models.GmfCollection.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test Hazard output", "gmf"),
         lt_realization=rlz)
 
-    models.GmfSet.objects.create(
+    gmfset = models.GmfSet.objects.create(
         gmf_collection=gmf_coll,
         investigation_time=hc.investigation_time,
         ses_ordinal=1)
+
+    return gmfset
+
+
+def create_gmf_agg_records(hazard_job, rlz=None):
+    """
+    Returns the created records.
+    """
+    gmfset = create_gmfset(hazard_job, rlz)
+
+    rupture_ids = get_rupture_ids(
+        hazard_job, hazard_job.hazard_calculation, rlz, 3)
 
     records = []
     for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
                   "POINT(15.48 38.091)", "POINT(15.565 38.17)",
                   "POINT(15.481 38.25)"]:
         records.append(models.GmfAgg.objects.create(
-            gmf_collection=gmf_coll,
+            gmf_collection=gmfset.gmf_collection,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
             rupture_ids=rupture_ids,
