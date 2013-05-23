@@ -14,8 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
-import numpy
 
 from nose.plugins.attrib import attr as noseattr
 
@@ -23,8 +21,6 @@ from qa_tests import risk
 from tests.utils import helpers
 
 from openquake.engine.db import models
-from openquake.engine.calculators.hazard.event_based.post_processing import \
-    insert_into_gmf_agg
 
 
 # FIXME(lp). This is just a regression test
@@ -38,47 +34,10 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     def hazard_id(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("event_based_hazard/job.ini"))
+        gmf_coll = helpers.create_gmf_from_csv(job, os.path.join(
+            os.path.dirname(__file__), 'gmf.csv'))
 
-        job.hazard_calculation = models.HazardCalculation.objects.create(
-            owner=job.hazard_calculation.owner,
-            truncation_level=job.hazard_calculation.truncation_level,
-            maximum_distance=job.hazard_calculation.maximum_distance,
-            intensity_measure_types_and_levels=(
-                job.hazard_calculation.intensity_measure_types_and_levels),
-            calculation_mode="event_based",
-            investigation_time=50,
-            ses_per_logic_tree_path=1)
-        # tricks to fool the oqtask decorator
-        job.is_running = True
-        job.status = 'post_processing'
-        job.save()
-        hc = job.hazard_calculation
-
-        gmf_set = helpers.create_gmfset(job)
-
-        with open(os.path.join(
-                os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
-            gmfreader = csv.reader(csvfile, delimiter=',')
-            locations = gmfreader.next()
-
-            gmv_matrix = numpy.array([[float(x) for x in row]
-                                      for row in gmfreader]).transpose()
-
-            rupture_ids = helpers.get_rupture_ids(
-                job, hc, gmf_set.gmf_collection.lt_realization,
-                len(gmv_matrix[0]))
-
-            for i, gmvs in enumerate(gmv_matrix):
-                wkt = "POINT(%s)" % locations[i]
-                models.Gmf.objects.create(
-                    gmf_set=gmf_set,
-                    imt="PGA", gmvs=gmvs,
-                    rupture_ids=map(str, rupture_ids),
-                    result_grp_ordinal=1,
-                    location=wkt)
-                insert_into_gmf_agg(job.id, gmf_set.id)
-
-        return gmf_set.gmf_collection.output.id
+        return gmf_coll.output.id
 
     def actual_data(self, job):
         return ([curve.average_loss_ratio
