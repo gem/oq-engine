@@ -696,14 +696,16 @@ def create_gmfset(hazard_job, rlz=None):
     return gmfset
 
 
-def create_gmf_agg_records(hazard_job, rlz=None):
+def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
     """
     Returns the created records.
     """
     gmfset = create_gmfset(hazard_job, rlz)
-
-    rupture_ids = get_rupture_ids(hazard_job, rlz, 3)
-
+    ses_coll = ses_coll or models.SESCollection.objects.create(
+        output=models.Output.objects.create_output(
+            hazard_job, "Test SES Collection", "ses"),
+        lt_realization=gmfset.gmf_collection.lt_realization)
+    rupture_ids = get_rupture_ids(hazard_job, ses_coll, 3)
     records = []
     for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
                   "POINT(15.48 38.091)", "POINT(15.565 38.17)",
@@ -754,7 +756,7 @@ def create_gmf_from_csv(job, fname):
                 rupture_ids=map(str, rupture_ids),
                 result_grp_ordinal=1,
                 location=wkt)
-            insert_into_gmf_agg(job.id, gmf_set.id)
+        insert_into_gmf_agg(job.id, gmf_set.gmf_collection.id)
 
     return gmf_set.gmf_collection
 
@@ -833,7 +835,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     return job, files
 
 
-def get_rupture_ids(job, lt_realization, num):
+def get_rupture_ids(job, ses_collection, num):
     """
     :returns: a list of IDs of newly created ruptures associated with
     `job` and an instance of
@@ -842,17 +844,14 @@ def get_rupture_ids(job, lt_realization, num):
     rupture has a magnitude ranging from 0 to 10, no geographic
     information and result_grp_ordinal set to 1.
 
-    :param lt_realization: an instance of
-    :class:`openquake.engine.db.models.LtRealization` to be associated
+    :param ses_collection: an instance of
+    :class:`openquake.engine.db.models.SESCollection` to be associated
     with the newly created SES object
 
     :param int num: the number of ruptures to create
     """
     ses = models.SES.objects.create(
-        ses_collection=models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection", "ses"),
-            lt_realization=lt_realization),
+        ses_collection=ses_collection,
         investigation_time=job.hazard_calculation.investigation_time,
         ordinal=1)
 
