@@ -806,11 +806,17 @@ if [ -z "$GEM_SRC_PKG" ]; then
     echo "env var GEM_SRC_PKG not set, exit"
     exit 0
 fi
-GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
-mksafedir "$GEM_BUILD_PKG"
-GEM_BUILD_EXTR="${GEM_SRC_PKG}/extr"
-mksafedir "$GEM_BUILD_EXTR"
-cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb  $GEM_BUILD_PKG
-cd "$GEM_BUILD_EXTR"
-dpkg -x $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb .
-dpkg -e $GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_*.deb
+pkg_list="$(ls ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-*_*.deb | sed 's@[^ ]*/@@g;s@_[^ ]*@@g')"
+for pkg in $pkg_list; do
+    GEM_BUILD_PKG="${GEM_SRC_PKG}/${pkg}/pkg"
+    mksafedir "$GEM_BUILD_PKG"
+    GEM_BUILD_EXTR="${GEM_SRC_PKG}/${pkg}/extr"
+    mksafedir "$GEM_BUILD_EXTR"
+
+    cp  ${GEM_BUILD_ROOT}/${pkg}_*.deb  $GEM_BUILD_PKG
+    cd "$GEM_BUILD_EXTR"
+    dpkg -x $GEM_BUILD_PKG/${pkg}_*.deb .
+    dpkg -e $GEM_BUILD_PKG/${pkg}_*.deb
+    cd -
+done
+
