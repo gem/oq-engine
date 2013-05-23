@@ -47,7 +47,8 @@ class DummyConnection(object):
         self.data = stringio.getvalue()
         self.table = table
         self.columns = columns
-        
+
+
 class BulkInserterTestCase(unittest.TestCase):
     """
     Unit tests for the BulkInserter class, which simplifies database
