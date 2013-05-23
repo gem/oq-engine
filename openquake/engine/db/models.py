@@ -2100,21 +2100,6 @@ class DisaggResult(djm.Model):
         db_table = 'hzrdr\".\"disagg_result'
 
 
-class GmfData(djm.Model):
-    '''
-    Ground Motion Field data
-
-    DEPRECATED. See instead :class:`GmfCollection`, :class:`GmfSet`,
-    :class:`Gmf`, and :class:`GmfNode`.
-    '''
-    output = djm.ForeignKey('Output')
-    ground_motion = djm.FloatField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_data'
-
-
 class UHS(djm.Model):
     """
     UHS/Uniform Hazard Spectra:
@@ -2659,7 +2644,7 @@ class AssetManager(djm.GeoManager):
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
             """.format(occupants=occupants, occupants_cond=occupants_cond),
-            args))
+                     args))
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
