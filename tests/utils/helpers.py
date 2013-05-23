@@ -736,7 +736,10 @@ def create_gmf_from_csv(job, fname):
     job.save()
 
     gmf_set = create_gmfset(job)
-
+    ses_coll = models.SESCollection.objects.create(
+        output=models.Output.objects.create_output(
+            job, "Test SES Collection", "ses"),
+        lt_realization=gmf_set.gmf_collection.lt_realization)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
@@ -744,9 +747,7 @@ def create_gmf_from_csv(job, fname):
         gmv_matrix = numpy.array([[float(x) for x in row]
                                   for row in gmfreader]).transpose()
 
-        rupture_ids = get_rupture_ids(
-            job, gmf_set.gmf_collection.lt_realization,
-            len(gmv_matrix[0]))
+        rupture_ids = get_rupture_ids(job, ses_coll, len(gmv_matrix[0]))
 
         for i, gmvs in enumerate(gmv_matrix):
             wkt = "POINT(%s)" % locations[i]
