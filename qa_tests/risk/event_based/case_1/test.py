@@ -54,21 +54,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
         job.save()
         hc = job.hazard_calculation
 
-        lt_realization = models.LtRealization.objects.create(
-            hazard_calculation=job.hazard_calculation,
-            ordinal=1, seed=1, weight=None,
-            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-            is_complete=False, total_items=1, completed_items=1)
-
-        gmf_coll = models.GmfCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test Hazard output", "gmf"),
-            lt_realization=lt_realization)
-
-        gmf_set = models.GmfSet.objects.create(
-            gmf_collection=gmf_coll,
-            investigation_time=hc.investigation_time,
-            ses_ordinal=1)
+        gmf_set = helpers.create_gmfset(job)
 
         with open(os.path.join(
                 os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
@@ -79,7 +65,8 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                                       for row in gmfreader]).transpose()
 
             rupture_ids = helpers.get_rupture_ids(
-                job, hc, lt_realization, len(gmv_matrix[0]))
+                job, hc, gmf_set.gmf_collection.lt_realization,
+                len(gmv_matrix[0]))
 
             for i, gmvs in enumerate(gmv_matrix):
                 wkt = "POINT(%s)" % locations[i]
