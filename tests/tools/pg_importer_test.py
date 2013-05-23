@@ -19,7 +19,7 @@
 import unittest
 from django.db import connection
 from openquake.engine.tools.pg_importer import PGImporter
-from openquake.engine.db.models import Output, GmfCollection, OqJob
+from openquake.engine.db.models import Output, GmfCollection
 from tests.utils import data
 from cStringIO import StringIO
 
