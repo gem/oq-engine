@@ -16,10 +16,11 @@
 
 """Base code for calculator classes."""
 
+import math
+
 import kombu
 
 import openquake.engine
-
 from openquake.engine import logs
 from openquake.engine.utils import config, tasks, general
 
@@ -87,16 +88,17 @@ class Calculator(object):
         NB: if the environment variable OQ_NO_DISTRIBUTE is set the
         tasks are run sequentially in the current process.
         """
+        taskname = task_func.__name__
         arglist = list(task_arg_gen)
         total = len(arglist)
-        logs.LOG.info('** Spawning %d tasks', total)
+        logs.LOG.progress('spawning %d tasks of kind %s', total, taskname)
         ntasks = 0
         for argblock in general.block_splitter(
                 arglist, self.concurrent_tasks()):
             tasks.parallelize(task_func, argblock, lambda _: None)
             ntasks += len(argblock)
-            logs.LOG.info('Processed %d/%d tasks of kind %s',
-                          ntasks, total, task_func.__name__)
+            percent = math.ceil(float(ntasks) / total * 100)
+            logs.LOG.progress('> %s %3d%% complete', taskname, percent)
 
     def get_task_complete_callback(self, task_arg_gen, block_size,
                                    concurrent_tasks):
