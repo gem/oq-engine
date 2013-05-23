@@ -23,7 +23,7 @@ from django.db import transaction
 
 from openquake.engine import writer
 
-from openquake.engine.db.models import OqUser, GmfData, GmfAgg
+from openquake.engine.db.models import OqUser, GmfAgg
 from openquake.engine.writer import BulkInserter, CacheInserter
 
 
@@ -112,8 +112,8 @@ class BulkInserterTestCase(unittest.TestCase):
         fields = inserter.fields
         inserter.flush()
 
-        self.assertEquals('INSERT INTO "admin"."oq_user" (%s) VALUES' \
-                              ' (%%s, %%s)' %
+        self.assertEquals('INSERT INTO "admin"."oq_user" (%s) VALUES'
+                          ' (%%s, %%s)' %
                           (", ".join(fields)), connection.sql)
 
         inserter.add_entry(user_name='user1', full_name='An user')
@@ -121,26 +121,21 @@ class BulkInserterTestCase(unittest.TestCase):
         fields = inserter.fields
         inserter.flush()
 
-        self.assertEquals('INSERT INTO "admin"."oq_user" (%s) VALUES' \
-                              ' (%%s, %%s), (%%s, %%s)' %
+        self.assertEquals('INSERT INTO "admin"."oq_user" (%s) VALUES'
+                          ' (%%s, %%s), (%%s, %%s)' %
                           (", ".join(fields)), connection.sql)
 
     @transaction.commit_on_success('reslt_writer')
     def test_flush_geometry(self):
-        inserter = BulkInserter(GmfData)
+        inserter = BulkInserter(GmfAgg)
         connection = writer.connections['reslt_writer']
 
-        inserter.add_entry(location='POINT(1 1)', output_id=1)
+        inserter.add_entry(location='POINT(1 1)')
         fields = inserter.fields
         inserter.flush()
-
-        if fields[0] == 'output_id':
-            values = '%s, GeomFromText(%s, 4326)'
-        else:
-            values = 'GeomFromText(%s, 4326), %s'
-
-        self.assertEquals('INSERT INTO "hzrdr"."gmf_data" (%s) VALUES (%s)' %
-                          (", ".join(fields), values), connection.sql)
+        self.assertEquals('INSERT INTO "hzrdr"."gmf_agg" (%s) VALUES (%s)' %
+                          (", ".join(fields), 'GeomFromText(%s, 4326)'),
+                          connection.sql)
 
 
 class CacheInserterTestCase(unittest.TestCase):
@@ -154,7 +149,7 @@ class CacheInserterTestCase(unittest.TestCase):
 
     def tearDown(self):
         writer.connections = self.connections
-    
+
     # this test is probably too strict and testing implementation details
     def test_insert_gmf(self):
         cache = CacheInserter(10)
