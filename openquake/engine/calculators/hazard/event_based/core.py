@@ -434,10 +434,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
     def execute(self):
         """
-        Run ses_and_gmfs in parallel
+        Run ses_and_gmfs in parallel.
         """
         self.parallelize(self.core_calc_task, self.task_arg_gen())
-        logs.LOG.progress("calculation 100% complete")
 
     def initialize_ses_db_records(self, lt_rlz):
         """
