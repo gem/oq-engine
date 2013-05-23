@@ -1122,7 +1122,7 @@ class RiskCalculation(djm.Model):
         """
         hc = self.hazard_calculation or \
             self.hazard_output.oq_job.hazard_calculation
-        ses_outputs = hc.oqjob_set.filter(status="complete").latest(
+        ses_outputs = hc.oqjob_set.filter().latest(
             'last_update').output_set.filter(output_type='ses')
         ids = [ses_output.sescollection.id for ses_output in ses_outputs]
         return SES.objects.filter(ses_collection__pk__in=ids)
