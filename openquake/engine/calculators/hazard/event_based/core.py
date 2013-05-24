@@ -411,8 +411,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 .values_list('parsed_source_id', flat=True)
 
             all_ses = list(models.SES.objects.filter(
-                ses_collection__lt_realization=lt_rlz).order_by('ordinal'))
-            # NB: performs the query on the SES only once per realization
+                           ses_collection__lt_realization=lt_rlz,
+                           ordinal__isnull=False).order_by('ordinal'))
 
             for src_ids in block_splitter(sources, self.preferred_block_size):
                 for ses in all_ses:
