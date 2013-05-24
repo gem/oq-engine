@@ -99,7 +99,7 @@ def do_classical_bcr(loss_type, units, containers, params, profile):
                 assets, zip(eal_original, eal_retrofitted, bcr_results),
                 output_type="bcr_distribution",
                 loss_type=loss_type,
-                hazard_output_id=unit_orig.getter.hazard_output_id)
+                hazard_output_id=unit_orig.getter.hazard_output.id)
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
