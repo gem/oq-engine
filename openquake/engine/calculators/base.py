@@ -89,6 +89,7 @@ class Calculator(object):
         tasks are run sequentially in the current process.
         """
         taskname = task_func.__name__
+        logs.LOG.progress('building arglist')
         arglist = list(task_arg_gen)
         total = len(arglist)
         logs.LOG.progress('spawning %d tasks of kind %s', total, taskname)
