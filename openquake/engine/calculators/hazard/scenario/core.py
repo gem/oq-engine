@@ -187,14 +187,14 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         self.progress['total'] = len(self.hc.site_collection)
 
         # create a record in the output table
-        self.output = models.Output.objects.create(
+        output = models.Output.objects.create(
             owner=self.job.owner,
             oq_job=self.job,
             display_name="gmf_scenario",
             output_type="gmf_scenario")
 
         # create an associated gmf_collection record
-        self.gmfcoll = models.GmfCollection.objects.create(output=self.output)
+        self.gmfcoll = models.GmfCollection.objects.create(output=output)
 
     def task_arg_gen(self, block_size):
         """
