@@ -20,6 +20,9 @@ bd=openquake/bin
 %:
 	dh --with python2 --with quilt --buildsystem=python_distutils $@
 
+python-oq-engine-common:
+	dh --with python2 --with quilt --buildsystem=python_distutils $@
+
 override_dh_quilt_patch:
 	dh_quilt_patch
 	cp openquake/__init__.py /tmp
