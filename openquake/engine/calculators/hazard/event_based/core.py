@@ -32,7 +32,6 @@ For more information on computing ground motion fields, see
 """
 
 import random
-import itertools
 
 import openquake.hazardlib.imt
 import numpy.random
@@ -48,7 +47,7 @@ from openquake.hazardlib.source import CharacteristicFaultSource
 from openquake.hazardlib.source import ComplexFaultSource
 from openquake.hazardlib.source import SimpleFaultSource
 
-from openquake.engine import writer
+from openquake.engine import writer, logs
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
@@ -394,8 +393,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         Yielded results are tuples of the form
 
-        (job_id, sources, ses_rlz_n, lt_rlz_id, gsims,
-         task_seed, result_grp_ordinal)
+        (job_id, src_ids, ses, task_seed, result_grp_ordinal)
 
         (random_seed will be used to seed numpy for temporal occurence
         sampling).
@@ -407,23 +405,16 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
-            blocks = itertools.chain(
-                block_splitter(self._get_source_ids(lt_rlz),
-                               self.block_size()),
-                block_splitter(self._get_point_source_ids(lt_rlz),
-                               self.point_source_block_size()),
-            )
-            # first the complex sources, then the point sources: this is
-            # simply to perform the big work at the beginning, to avoid
-            # giving the users the false impression that things are going too
-            # fast; notice however that there are plans to remove the block
-            # size as an user-defined parameter:
-            # https://bugs.launchpad.net/oq-engine/+bug/1183329
+            sources = models.SourceProgress.objects\
+                .filter(is_complete=False, lt_realization=lt_rlz)\
+                .order_by('id')\
+                .values_list('parsed_source_id', flat=True)
 
             all_ses = list(models.SES.objects.filter(
                 ses_collection__lt_realization=lt_rlz).order_by('ordinal'))
-            # performs the query on the SES only once per realization
-            for src_ids in blocks:
+            # NB: performs the query on the SES only once per realization
+
+            for src_ids in block_splitter(sources, self.preferred_block_size):
                 for ses in all_ses:
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
                     task_args = (self.job.id, src_ids, ses, task_seed,

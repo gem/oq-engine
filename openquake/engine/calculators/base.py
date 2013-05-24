@@ -83,7 +83,6 @@ class Calculator(object):
 
         :param task_func: a `celery` task callable
         :param task_args: an iterable over positional arguments
-        :param side_effect: a function return_value -> None
 
         NB: if the environment variable OQ_NO_DISTRIBUTE is set the
         tasks are run sequentially in the current process.
