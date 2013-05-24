@@ -17,10 +17,10 @@
 import os
 import getpass
 import unittest
+import itertools
 import mock
 import numpy
 
-from collections import namedtuple
 from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
@@ -294,80 +294,77 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         finally:
             self._unpatch_calc()
 
-
-class TaskArgGenTestCase(unittest.TestCase):
-    Job = namedtuple('Job', 'id, hazard_calculation')
-    HC = namedtuple('HazardCalculation', 'random_seed')
-    Rlz = namedtuple('Realization', 'id')
-
     def test_task_arg_gen(self):
-        random_seed = 793
-        hc = self.HC(random_seed)
-        job = self.Job(1066, hc)
+        hc = self.job.hazard_calculation
 
-        base_path = (
-            'openquake.engine.calculators.hazard.general.BaseHazardCalculator'
-        )
-        calc = core.EventBasedHazardCalculator(job)
+        self.calc.initialize_sources()
+        self.calc.initialize_realizations()
 
-        # Set up mocks:
-        # point_source_block_size
-        pt_src_block_size_patch = helpers.patch(
-            '%s.%s' % (base_path, 'point_source_block_size')
-        )
-        pt_src_block_size_mock = pt_src_block_size_patch.start()
-        pt_src_block_size_mock.return_value = 5
+        [rlz1, rlz2] = models.LtRealization.objects.filter(
+            hazard_calculation=hc).order_by('id')
 
-        # _get_realizations
-        get_rlz_patch = helpers.patch(
-            '%s.%s' % (base_path, '_get_realizations')
-        )
-        get_rlz_mock = get_rlz_patch.start()
-        get_rlz_mock.return_value = [self.Rlz(5), self.Rlz(6)]
+        [s1, s2, s3, s4, s5] = self.calc.initialize_ses_db_records(rlz1)
+        [t1, t2, t3, t4, t5] = self.calc.initialize_ses_db_records(rlz2)
 
-        # _get_point_source_ids
-        get_pt_patch = helpers.patch(
-            '%s.%s' % (base_path, '_get_point_source_ids')
-        )
-        get_pt_mock = get_pt_patch.start()
-        get_pt_mock.return_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-
-        # _get_source_ids
-        get_src_patch = helpers.patch('%s.%s' % (base_path, '_get_source_ids'))
-        get_src_mock = get_src_patch.start()
-        get_src_mock.return_value = [100, 101, 102, 103, 104]
-
-        expected = [
-            (1066, [1, 2, 3, 4, 5], 5, 1715084553, 1),
-            (1066, [6, 7, 8, 9, 10], 5, 1610237348, 2),
-            (1066, [11], 5, 208009464, 3),
-            (1066, [100, 101], 5, 61227963, 4),
-            (1066, [102, 103], 5, 962290868, 5),
-            (1066, [104], 5, 1851493799, 6),
-            (1066, [1, 2, 3, 4, 5], 6, 1726414414, 7),
-            (1066, [6, 7, 8, 9, 10], 6, 1251340915, 8),
-            (1066, [11], 6, 1914465987, 9),
-            (1066, [100, 101], 6, 824295930, 10),
-            (1066, [102, 103], 6, 1698161031, 11),
-            (1066, [104], 6, 1690626266, 12),
+        expected = [  # sources, ses_id, seed, result_grp_ordinal
+            ([1], s1, 1711655216, 1),
+            ([1], s2, 1038305917, 2),
+            ([1], s3, 836289861, 3),
+            ([1], s4, 1781144172, 4),
+            ([1], s5, 1869241528, 5),
+            ([2], s1, 215682727, 6),
+            ([2], s2, 1101399957, 7),
+            ([2], s3, 2054512780, 8),
+            ([2], s4, 1550095676, 9),
+            ([2], s5, 1537531637, 10),
+            ([3], s1, 834081132, 11),
+            ([3], s2, 2109160433, 12),
+            ([3], s3, 1527803099, 13),
+            ([3], s4, 1876252834, 14),
+            ([3], s5, 1712942246, 15),
+            ([4], s1, 219667398, 16),
+            ([4], s2, 332999334, 17),
+            ([4], s3, 1017801655, 18),
+            ([4], s4, 1577927432, 19),
+            ([4], s5, 1810736590, 20),
+            ([1], t1, 745519017, 21),
+            ([1], t2, 2107357950, 22),
+            ([1], t3, 1305437041, 23),
+            ([1], t4, 75519567, 24),
+            ([1], t5, 179387370, 25),
+            ([2], t1, 1653492095, 26),
+            ([2], t2, 176278337, 27),
+            ([2], t3, 777508283, 28),
+            ([2], t4, 718002527, 29),
+            ([2], t5, 1872666256, 30),
+            ([3], t1, 796266430, 31),
+            ([3], t2, 646033314, 32),
+            ([3], t3, 289567826, 33),
+            ([3], t4, 1964698790, 34),
+            ([3], t5, 613832594, 35),
+            ([4], t1, 1858181087, 36),
+            ([4], t2, 195127891, 37),
+            ([4], t3, 1761641849, 38),
+            ([4], t4, 259827383, 39),
+            ([4], t5, 1464146382, 40),
         ]
 
-        try:
-            actual = list(calc.task_arg_gen(block_size=2))
-            self.assertEqual(expected, actual)
-        finally:
-            self.assertEqual(1, pt_src_block_size_mock.call_count)
-            pt_src_block_size_mock.stop()
-            pt_src_block_size_patch.stop()
+        # utilities to present the generated arguments in a nicer way
+        dic = {}
+        counter = itertools.count(1)
 
-            self.assertEqual(1, get_rlz_mock.call_count)
-            get_rlz_mock.stop()
-            get_rlz_patch.stop()
+        def src_no(src_id):
+            try:
+                return dic[src_id]
+            except KeyError:
+                dic[src_id] = counter.next()
+                return dic[src_id]
 
-            self.assertEqual(2, get_pt_mock.call_count)
-            get_pt_mock.stop()
-            get_pt_patch.stop()
+        def process_args(arg_gen):
+            for (job_id, source_ids, ses, task_seed,
+                 result_grp_ordinal) in arg_gen:
+                yield (map(src_no, source_ids), ses,
+                       task_seed, result_grp_ordinal)
 
-            self.assertEqual(2, get_src_mock.call_count)
-            get_src_mock.stop()
-            get_src_patch.stop()
+        actual = list(process_args(self.calc.task_arg_gen()))
+        self.assertEqual(expected, actual)
