@@ -421,7 +421,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             # https://bugs.launchpad.net/oq-engine/+bug/1183329
 
             all_ses = list(models.SES.objects.filter(
-                ses_collection__lt_realization=lt_rlz).order_by('ordinal'))
+                           ses_collection__lt_realization=lt_rlz,
+                           ordinal__isnull=False).order_by('ordinal'))
             # performs the query on the SES only once per realization
             for src_ids in blocks:
                 for ses in all_ses:
