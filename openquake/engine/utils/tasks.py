@@ -146,7 +146,7 @@ def oqtask(task_func):
             res = task_func(*args, **kwargs)
         # TODO: should we do something different with the JobCompletedError?
         except Exception, err:
-            logs.LOG.critical('Error occurred in task: %s' % str(err))
+            logs.LOG.critical('Error occurred in task: %s', err)
             logs.LOG.exception(err)
             raise
         else:
