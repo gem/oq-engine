@@ -415,6 +415,8 @@ class BaseHazardCalculator(base.Calculator):
     functionality, like initialization procedures.
     """
 
+    preferred_block_size = 1  # will be overridden
+
     def __init__(self, *args, **kwargs):
         super(BaseHazardCalculator, self).__init__(*args, **kwargs)
 
@@ -697,14 +699,14 @@ class BaseHazardCalculator(base.Calculator):
             fragility_format, _limit_states = parser.next()
 
             if (fragility_format == "continuous" and
-                hc.calculation_mode != "scenario"):
+                    hc.calculation_mode != "scenario"):
                 raise NotImplementedError(
                     "Getting IMT and levels from "
                     "a continuous fragility model is not yet supported")
 
-            hc.intensity_measure_types_and_levels = dict([
+            hc.intensity_measure_types_and_levels = dict(
                 (iml['IMT'], iml['imls'])
-                for _taxonomy, iml, _params, _no_damage_limit in parser])
+                for _taxonomy, iml, _params, _no_damage_limit in parser)
             hc.intensity_measure_types = (
                 hc.intensity_measure_types_and_levels.keys())
             hc.save()
@@ -1025,26 +1027,70 @@ class BaseHazardCalculator(base.Calculator):
             hazard_calculation=self.hc.id)
         num_rlzs = realizations.count()
 
-        # Compute the number of tasks.
-        block_size = self.block_size()
-        num_tasks = 0
-        nses = self.hc.ses_per_logic_tree_path
-        for lt_rlz in realizations:
-            # Each realization has the potential to choose a random source
-            # model, and thus there may be a variable number of tasks for each
-            # realization (depending on the number of the sources in the model
-            # which was chosen for the realization).
-            num_sources = models.SourceProgress.objects.filter(
-                lt_realization=lt_rlz).count()
-            if nses:  # for event based calculators
-                num_sources *= nses
-            num_tasks += math.ceil(float(num_sources) / block_size)
-
         [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
         job_stats.num_sites = num_sites
-        job_stats.num_tasks = num_tasks
+        job_stats.num_tasks = self.calc_num_tasks()
         job_stats.num_realizations = num_rlzs
         job_stats.save()
+
+    def calc_num_tasks(self):
+        """
+        The number of tasks is inferred from the configuration parameter
+        concurrent_tasks (c), from the number of sources per realization
+        (n) and from the number of stochastic event sets (s) by using
+        the formula::
+
+                     N * n
+         num_tasks = ----- * s
+                       b
+
+        where N is the number of realizations and b is the block_size,
+        defined as::
+
+             N * n * s
+         b = ---------
+              100 * c
+
+        The divisions are intended rounded to the closest upper integer
+        (ceil). The mechanism is intended to generate a number of tasks
+        close to 100 * c independently on the number of sources and SES.
+        For instance, with c = 512, you should expect the engine to
+        generate at most 51200 tasks; they could be much less in case
+        of few sources and few SES; the minimum number of tasks generated
+        is::
+
+          num_tasks_min = N * n * s
+
+        To have good concurrency the number of tasks must be bigger than
+        the number of the cores (which is essentially c) but not too big,
+        otherwise all the time would be wasted in passing arguments.
+        Generating 100 times more tasks than cores gives a nice progress
+        percentage. There is no more motivation than that.
+
+        NB: s can be different from 1 only in event based calculations.
+        """
+
+        preferred_num_tasks = self.concurrent_tasks() * 100
+        num_ses = self.hc.ses_per_logic_tree_path or 1
+
+        num_sources = []  # number of sources per realization
+        for lt_rlz in self._get_realizations():
+            n = models.SourceProgress.objects.filter(
+                lt_realization=lt_rlz).count()
+            num_sources.append(n)
+            logs.LOG.info('Found %d sources for realization %d',
+                          n, lt_rlz.id)
+        total_sources = sum(num_sources)
+        logs.LOG.info('Total number of sources: %d', total_sources)
+
+        self.preferred_block_size = int(
+            math.ceil(float(total_sources * num_ses) / preferred_num_tasks))
+        logs.LOG.info('Using block size: %d', self.preferred_block_size)
+
+        num_tasks = [math.ceil(float(n) / self.preferred_block_size) * num_ses
+                     for n in num_sources]
+
+        return int(sum(num_tasks))
 
     def do_aggregate_post_proc(self):
         """
