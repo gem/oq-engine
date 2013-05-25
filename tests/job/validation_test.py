@@ -849,7 +849,7 @@ class EventBasedBCRRiskForm(unittest.TestCase):
         self.assertFalse(form.is_valid())
 
 
-class EventBasedValidationTestCase(unittest.TestCase):
+class EventBasedRiskValidationTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
             get_data_path('event_based_risk/job.ini'),
@@ -887,15 +887,60 @@ class EventBasedValidationTestCase(unittest.TestCase):
         rc = models.RiskCalculation(
             calculation_mode="event_based",
             owner=helpers.default_user(),
-            loss_curve_resolution=-10,
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
                 '-122.0 38.113))'),
-            hazard_output=self.job.risk_calculation.hazard_output)
+            hazard_output=self.job.risk_calculation.hazard_output,
+            sites_disagg='-180.1 38.113, -122.114 38.113',
+            coordinate_bin_width=0.0,
+            loss_curve_resolution=0,
+            mag_bin_width=0.0,
+        )
+
+        expected_errors = {
+            'coordinate_bin_width': ['Coordinate bin width must be > 0.0'],
+            'distance_bin_width': ['Distance bin width must be > 0.0'],
+            'loss_curve_resolution': ['Loss Curve Resolution must be >= 1'],
+            'mag_bin_width': ['Magnitude bin width must be > 0.0'],
+            'sites_disagg': ['Longitude values must in the range [-180, 180]',
+                             'disaggregation requires mag_bin_width, '
+                             'coordinate_bin_width, distance_bin_width'],
+        }
 
         form = validation.EventBasedRiskForm(
             instance=rc, files=None)
         self.assertFalse(form.is_valid())
+        self.assertEqual(expected_errors, dict(form.errors))
+
+
+class ScenarioRiskValidationTestCase(unittest.TestCase):
+
+    def test_invalid_form(self):
+        rc = models.RiskCalculation(
+            calculation_mode='scenario',
+            owner=helpers.default_user(),
+            region_constraint=(
+                'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
+                '-122.0 38.113))'),
+            maximum_distance=100,
+            master_seed=666,
+            asset_correlation='foo',
+            insured_losses=True,
+        )
+
+        form = validation.ScenarioRiskForm(
+            instance=rc,
+            files=dict(occupancy_vulnerability_file=object())
+        )
+
+        expected_errors = {
+            'asset_correlation': [u'Enter a number.',
+                                  u'Asset Correlation must be >= 0 and <= 1'],
+             'time_event': ['Scenario Risk requires time_event when an '
+                            'occupancy vulnerability model is given'],
+        }
+        self.assertFalse(form.is_valid())
+        self.assertEqual(expected_errors, dict(form.errors))
 
 
 class ValidateTestCase(unittest.TestCase):

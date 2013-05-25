@@ -48,7 +48,6 @@ from openquake.hazardlib.source import CharacteristicFaultSource
 from openquake.hazardlib.source import ComplexFaultSource
 from openquake.hazardlib.source import SimpleFaultSource
 
-from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.calculators.hazard import general as haz_general
@@ -69,8 +68,7 @@ DEFAULT_GMF_REALIZATIONS = 1
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
-                 result_grp_ordinal):
+def ses_and_gmfs(job_id, src_ids, ses, task_seed, result_grp_ordinal):
     """
     Celery task for the stochastic event set calculator.
 
@@ -112,6 +110,7 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
     # preparing sources
 
     ltp = logictree.LogicTreeProcessor(hc.id)
+    lt_rlz = ses.ses_collection.lt_realization
 
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
@@ -127,13 +126,6 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
-
-    # This is the container for all ruptures for this stochastic event set
-    # (specified by `ordinal` and the logic tree realization).
-    # NOTE: Many tasks can contribute ruptures to this SES.
-    ses = models.SES.objects.get(
-        ses_collection__lt_realization__id=lt_rlz.id, ordinal=ses_rlz_n)
-
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
         ruptures = list(stochastic.stochastic_event_set_poissonian(
                         source_iter, hc.investigation_time, hc.site_collection,
@@ -158,12 +150,9 @@ def ses_and_gmfs(job_id, src_ids, ses_rlz_n, lt_rlz, task_seed,
             # for this stochastic event set.
             gmf_set = models.GmfSet.objects.get(
                 gmf_collection__lt_realization__id=lt_rlz.id,
-                ses_ordinal=ses_rlz_n)
+                ses_ordinal=ses.ordinal)
             _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
                        result_grp_ordinal)
-
-    logs.LOG.debug('computed stochastic event set %d of %d for rlz_id=%d',
-                   ses_rlz_n, hc.ses_per_logic_tree_path, lt_rlz.id)
 
 ses_and_gmfs.ignore_result = False  # essential
 
@@ -423,21 +412,31 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                                self.block_size()),
                 block_splitter(self._get_point_source_ids(lt_rlz),
                                self.point_source_block_size()),
-            )  # first the complex sources, then the point sources
+            )
+            # first the complex sources, then the point sources: this is
+            # simply to perform the big work at the beginning, to avoid
+            # giving the users the false impression that things are going too
+            # fast; notice however that there are plans to remove the block
+            # size as an user-defined parameter:
+            # https://bugs.launchpad.net/oq-engine/+bug/1183329
+
+            all_ses = list(models.SES.objects.filter(
+                           ses_collection__lt_realization=lt_rlz,
+                           ordinal__isnull=False).order_by('ordinal'))
+            # performs the query on the SES only once per realization
             for src_ids in blocks:
-                for ses_rlz_n in range(1, self.hc.ses_per_logic_tree_path + 1):
+                for ses in all_ses:
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
-                    task_args = (self.job.id, src_ids, ses_rlz_n, lt_rlz,
-                                 task_seed, result_grp_ordinal)
+                    task_args = (self.job.id, src_ids, ses, task_seed,
+                                 result_grp_ordinal)
                     yield task_args
                     result_grp_ordinal += 1
 
     def execute(self):
         """
-        Run ses_and_gmfs in parallel
+        Run ses_and_gmfs in parallel.
         """
         self.parallelize(self.core_calc_task, self.task_arg_gen())
-        logs.LOG.progress("calculation 100% complete")
 
     def initialize_ses_db_records(self, lt_rlz):
         """
@@ -448,6 +447,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         Stochastic event set ruptures computed for this realization will be
         associated to these containers.
+
+        NOTE: Many tasks can contribute ruptures to the same SES.
         """
         output = models.Output.objects.create(
             owner=self.job.owner,
@@ -458,11 +459,14 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
+        all_ses = []
         for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
-            models.SES.objects.create(
-                ses_collection=ses_coll,
-                investigation_time=self.hc.investigation_time,
-                ordinal=i)
+            all_ses.append(
+                models.SES.objects.create(
+                    ses_collection=ses_coll,
+                    investigation_time=self.hc.investigation_time,
+                    ordinal=i))
+        return all_ses
 
     def initialize_complete_lt_ses_db_records(self):
         """
