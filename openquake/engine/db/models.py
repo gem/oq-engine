@@ -1956,7 +1956,7 @@ class GmfAgg(djm.Model):
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
     gmvs = fields.FloatArrayField()
-    rupture_ids = fields.IntArrayField()
+    rupture_ids = fields.IntArrayField(null=True)
     site = djm.ForeignKey('SiteData')
     objects = djm.GeoManager()
 

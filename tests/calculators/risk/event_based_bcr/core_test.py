@@ -42,10 +42,9 @@ class EventBasedBCRRiskCalculatorTestCase(
         return None
 
     def test_complete_workflow(self):
-        """
-        Test the complete risk classical calculation workflow and test
-        for the presence of the outputs
-        """
+        # Test the complete risk classical calculation workflow and test
+        # for the presence of the outputs
+
         self.calculator.pre_execute()
 
         self.job.is_running = True
