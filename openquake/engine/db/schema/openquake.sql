@@ -660,8 +660,8 @@ CREATE TABLE hzrdr.gmf_agg (
         --    OR ((imt != 'SA') AND (sa_damping IS NULL))),
     gmvs float[],
     rupture_ids int[],
-    location GEOGRAPHY(point) NOT NULL,
-    UNIQUE (gmf_collection_id, imt, sa_period, sa_damping, location)
+    site_id INTEGER NOT NULL, -- fk -> site_data
+    UNIQUE (gmf_collection_id, imt, sa_period, sa_damping, site_id)
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1090,18 +1090,17 @@ CREATE TABLE htemp.hazard_curve_progress (
     result_matrix BYTEA NOT NULL
 ) TABLESPACE htemp_ts;
 
--- pre-computed calculation point of interest to site parameters table
+-- calculation points of interest with parameters extracted from site_model or hc
 CREATE TABLE htemp.site_data (
     id SERIAL PRIMARY KEY,
-    hazard_calculation_id INTEGER NOT NULL,
-    -- All 6 fields will contain pickled numpy arrays with all of the locations
-    -- and site parameters for the sites of interest for a calculation.
-    location GEOGRAPHY NOT NULL,
+    hazard_job_id INTEGER NOT NULL,
     vs30 FLOAT NOT NULL,
     vs30_measured BOOLEAN NOT NULL,
     z1pt0 FLOAT NOT NULL,
     z2pt5 FLOAT NOT NULL
 ) TABLESPACE htemp_ts;
+SELECT AddGeometryColumn('htemp', 'site_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE htemp.site_data ALTER COLUMN location SET NOT NULL;
 
 
 ------------------------------------------------------------------------
@@ -1408,9 +1407,16 @@ ON DELETE CASCADE;
 
 -- htemp.site_data to uiapi.hazard_calculation FK
 ALTER TABLE htemp.site_data
-ADD CONSTRAINT htemp_site_data_hazard_calculation_fk
-FOREIGN KEY (hazard_calculation_id)
-REFERENCES uiapi.hazard_calculation(id)
+ADD CONSTRAINT htemp_site_data_hazard_job_fk
+FOREIGN KEY (hazard_job_id)
+REFERENCES uiapi.oq_job(id)
+ON DELETE CASCADE;
+
+-- hzrdr.gmf_agg to htemp.site_data FK
+ALTER TABLE hzrdr.gmf_agg
+ADD CONSTRAINT hzrdr_gmf_agg_site_data_fk
+FOREIGN KEY (site_id)
+REFERENCES htemp.site_data(id)
 ON DELETE CASCADE;
 
 ---------------------- views ----------------------------
