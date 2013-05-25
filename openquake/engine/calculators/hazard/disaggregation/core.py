@@ -548,5 +548,4 @@ BaseHazardCalculator.get_task_complete_callback`
             lt_realization__hazard_calculation=self.hc.id).delete()
         models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=self.hc.id).delete()
-        models.SiteData.objects.filter(hazard_calculation=self.hc.id).delete()
         logs.LOG.debug('< done cleaning up temporary DB data')
