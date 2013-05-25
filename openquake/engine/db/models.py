@@ -898,10 +898,21 @@ class HazardCalculation(djm.Model):
                 self.intensity_measure_types_and_levels.keys())
 
 
+# XXX: do we really need a hazardlib SiteCollection?
+class SiteDataCollection(openquake.hazardlib.site.SiteCollection):
+    def __init__(self, sites):
+        self.sites = sites
+        super(SiteDataCollection, self).__init__(sites)
+
+    def __iter__(self):
+        for site in self.sites:
+            yield site
+
+
 def get_site_collection(hc):
     """
-    Create a `SiteCollection`, which is needed by hazardlib to perform various
-    calculation tasks (such computing hazard curves and GMFs).
+    Create a `SiteDataCollection`, which is needed by hazardlib to perform
+    various calculation tasks (such computing hazard curves and GMFs).
 
     :param hc:
         Instance of a :class:`HazardCalculation`. We need this in order to get
@@ -909,15 +920,17 @@ def get_site_collection(hc):
         site data or access reference site parameters.
 
     :returns:
-        :class:`openquake.hazardlib.site.SiteCollection` instance.
+        :class:`openquake.engine.db.models.SiteDataCollection` instance.
     """
-    sites = [
-        openquake.hazardlib.site.Site(
+    sites = []
+    for row in SiteData.objects.filter(
+            hazard_job__hazard_calculation=hc.id):
+        site = openquake.hazardlib.site.Site(
             openquake.hazardlib.geo.Point(row.location.x, row.location.y),
             row.vs30, row.vs30_measured, row.z1pt0, row.z2pt5)
-        for row in SiteData.objects.filter(
-            hazard_job__hazard_calculation=hc.id)]
-    return openquake.hazardlib.site.SiteCollection(sites)
+        site.id = row.id
+        sites.append(site)
+    return SiteDataCollection(sites)
 
 
 class RiskCalculation(djm.Model):
@@ -1812,11 +1825,12 @@ class GmfCollection(djm.Model):
         for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
             query = """
         SELECT imt, sa_period, sa_damping, rupture_id,
-        array_agg(gmv), array_agg(ST_X(geometry(location))),
-        array_agg(ST_Y(geometry(location))) FROM (
+        array_agg(gmv), array_agg(ST_X(location)),
+        array_agg(ST_Y(location)) FROM (
            SELECT imt, sa_period, sa_damping,
            unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           from hzrdr.gmf_agg WHERE gmf_collection_id=%d) AS x,
+           FROM hzrdr.gmf_agg, htemp.site_data
+           WHERE site_id = htemp.site_data.id AND gmf_collection_id=%d) AS x,
            hzrdr.ses_rupture as y
         where x.rupture_id=y.id AND ses_id=%d
         group by imt, sa_period, sa_damping, rupture_id
@@ -2008,7 +2022,7 @@ def get_gmfs_scenario(output, imt=None):
                 gmf_collection=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
-                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.location))
+                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.site.location))
         for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
                 imt=imt,
