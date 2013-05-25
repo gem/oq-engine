@@ -52,10 +52,9 @@ class ClassicalRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         self.assertEqual(1, mocked_writer.call_count)
 
     def test_complete_workflow(self):
-        """
-        Test the complete risk classical calculation workflow and test
-        for the presence of the outputs
-        """
+        # Test the complete risk classical calculation workflow and test
+        # for the presence of the outputs
+
         self.calculator.pre_execute()
 
         self.job.is_running = True
@@ -150,6 +149,7 @@ class PreExecuteTestCase(unittest.TestCase):
         )
         models.JobStats.objects.create(oq_job=risk_job)
         calc = classical.ClassicalRiskCalculator(risk_job)
+        helpers.store_one_site(haz_job)
 
         # In contrast to the test above (`test_pre_execute_check_imts_raises`),
         # we expect no errors to be raised.

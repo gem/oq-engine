@@ -268,7 +268,6 @@ BaseHazardCalculator.finalize_hazard_curves`
             lt_realization__hazard_calculation=self.hc.id).delete()
         models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=self.hc.id).delete()
-        models.SiteData.objects.filter(hazard_calculation=self.hc.id).delete()
         logs.LOG.debug('< done cleaning up temporary DB data')
 
     def post_process(self):

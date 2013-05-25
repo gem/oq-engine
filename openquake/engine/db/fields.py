@@ -147,6 +147,8 @@ class IntArrayField(djm.Field):
         return 'int[]'
 
     def get_prep_value(self, value):
+        if value is None:
+            return
         return "{%s}" % ','.join(str(v) for v in value)
 
 

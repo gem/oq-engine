@@ -239,7 +239,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
         # we don't expect the site collection to be loaded yet:
         self.assertIsNone(self.calc.hc._site_collection)
-
+        helpers.store_one_site(self.calc.job)
         self.calc.pre_execute()
 
         # make sure the site_collection is loaded:

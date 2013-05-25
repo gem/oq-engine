@@ -14,9 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
 
-import numpy
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
@@ -34,31 +32,9 @@ class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
     def hazard_id(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("scenario_hazard/job.ini"))
-        hc = job.hazard_calculation
-        job.hazard_calculation = models.HazardCalculation.objects.create(
-            owner=hc.owner, truncation_level=hc.truncation_level,
-            maximum_distance=hc.maximum_distance,
-            intensity_measure_types=["PGA"],
-            calculation_mode="scenario")
-        job.status = "complete"
-        job.save()
-
-        output = models.Output.objects.create_output(
-            job, "Test Hazard output", "gmf_scenario")
-
         fname = os.path.join(os.path.dirname(__file__), 'gmf_scenario.csv')
-        with open(fname, 'rb') as csvfile:
-            gmfreader = csv.reader(csvfile, delimiter=',')
-            locations = gmfreader.next()
-
-            arr = numpy.array([[float(x) for x in row] for row in gmfreader])
-            for i, gmvs in enumerate(arr):
-                models.GmfScenario.objects.create(
-                    output=output,
-                    imt="PGA",
-                    gmvs=gmvs,
-                    location="POINT(%s)" % locations[i])
-        return output.id
+        gmfcoll = helpers.populate_gmf_agg_from_csv(job, fname)
+        return gmfcoll.output.id
 
     def actual_data(self, job):
         maps = models.LossMapData.objects.filter(
