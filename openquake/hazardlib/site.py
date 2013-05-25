@@ -79,6 +79,7 @@ class Site(object):
             * vs30measured (`True`/`False`)
             * z1pt0
             * z2pt5
+            * id
         """
         return dict(
             location=self.location,
@@ -86,6 +87,7 @@ class Site(object):
             vs30measured=self.vs30measured,
             z1pt0=self.z1pt0,
             z2pt5=self.z2pt5,
+            id=self.id,
         )
 
     def __setstate__(self, state):
@@ -97,6 +99,7 @@ class Site(object):
         self.vs30measured = state['vs30measured']
         self.z1pt0 = state['z1pt0']
         self.z2pt5 = state['z2pt5']
+        self.id = state['id']
 
     def __eq__(self, other):
         """
