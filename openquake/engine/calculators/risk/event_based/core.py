@@ -168,8 +168,8 @@ class UnitOutputs(object):
 
 def individual_outputs(loss_type, unit, params, profile):
     event_loss_table = collections.Counter()
-    with profile('getting hazard'):
-        assets, (ground_motion_values, ruptures) = unit.getter()
+    with profile('getting hazard') as p:
+        assets, (ground_motion_values, ruptures) = unit.getter(p)
 
     with profile('computing losses, loss curves and maps'):
         loss_matrix, curves = unit.calc(ground_motion_values)
