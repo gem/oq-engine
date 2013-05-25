@@ -67,7 +67,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # we don't expect the site collection to be loaded yet:
         self.assertIsNone(self.calc.hc._site_collection)
 
-        helpers.store_one_site(self.calc.hc)
+        helpers.store_one_site(self.calc.job)
         self.calc.pre_execute()
 
         # make sure the site_collection is loaded:
@@ -122,8 +122,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         num_pts_to_compute = len(
             self.job.hazard_calculation.points_to_compute())
 
-        site_data = models.SiteData.objects.filter(
-            hazard_calculation=self.job.hazard_calculation.id)
+        site_data = models.SiteData.objects.filter(hazard_job=self.job)
 
         # The site model is good. Now test that `site_data` was computed.
         # For now, just test the length.
@@ -381,9 +380,6 @@ store_site_model'
         sp = models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=hc.id)
         self.assertEqual(0, len(sp))
-
-        sd = models.SiteData.objects.filter(hazard_calculation=hc.id)
-        self.assertEqual(0, len(sd))
 
     def test_hazard_curves_task(self):
         # Test the `hazard_curves` task, but execute it as a normal function

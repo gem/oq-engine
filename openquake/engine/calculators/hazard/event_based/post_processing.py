@@ -79,7 +79,7 @@ def gmf_to_hazard_curve_arg_gen(job):
         :class:`openquake.engine.db.models.OqJob` instance.
     """
     hc = job.hazard_calculation
-    points = hc.points_to_compute()
+    points = models.SiteData.objects.filter(hazard_job=job)
 
     lt_realizations = models.LtRealization.objects.filter(
         hazard_calculation=hc.id)
@@ -125,7 +125,7 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
     :param int job_id:
         ID of a currently running :class:`openquake.engine.db.models.OqJob`.
     :param point:
-        A :class:`openquake.hazardlib.geo.point.Point` instance.
+        A :class:`openquake.engine.db.models.SiteData` instance.
     :param int lt_rlz_id:
         ID of a :class:`openquake.engine.db.models.LtRealization` for the
         current calculation.
@@ -161,15 +161,15 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
         gmf_collection__lt_realization=lt_rlz_id,
         imt=imt,
         sa_period=sa_period,
-        sa_damping=sa_damping).extra(where=[
-            "location::geometry ~= 'SRID=4326;%s'::geometry" % point.wkt2d])
+        sa_damping=sa_damping,
+        site=point)
     gmvs = list(itertools.chain(*(g.gmvs for g in gmfs)))
 
     # Compute the hazard curve PoEs:
     hc_poes = gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
     # Save:
     models.HazardCurveData.objects.create(
-        hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.wkt2d,
+        hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.location,
         weight=lt_rlz.weight)
 gmf_to_hazard_curve_task.ignore_result = False  # essential
 
@@ -179,27 +179,23 @@ def insert_into_gmf_agg(job_id, gmf_collection_id):
     """
     Aggregate the GMVs from the tables gmf and gmf_set.
 
-    :param int _job_id: used for logging purposes
-    :param str point_wkt: a point in WKT format
+    :param int job_id: a reference to :class:`openquake.engine.db.models.OqJob`
+    :param int gmf_collection_id: a reference to :class:`openquake.engine.db.models.GmfCollection`
     """
-    # NB: GROUP BY location is broken, it does not raise any error,
-    # but silently aggregates the records uncorrectly, by giving
-    # a different number of rows than the expected one; hence, the
-    # need to cast to location::text
     insert_query = '''-- running
     INSERT INTO hzrdr.gmf_agg (gmf_collection_id, imt, sa_damping, sa_period,
-                               location, gmvs, rupture_ids)
-    SELECT b.gmf_collection_id, imt, sa_damping, sa_period,
-       geography(location::text),
+                               site_id, gmvs, rupture_ids)
+    SELECT b.gmf_collection_id, imt, sa_damping, sa_period, c.id,
        array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
        array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
-    FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b
-    WHERE a.gmf_set_id=b.id AND b.gmf_collection_id=%d
-    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, location::text;
+    FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b, htemp.site_data AS c
+    WHERE a.gmf_set_id=b.id AND a.location = c.location
+    AND c.hazard_job_id = %d AND gmf_collection_id = %d
+    GROUP BY gmf_collection_id, imt, sa_damping, sa_period, c.id
     '''
     curs = db.connections['reslt_writer'].cursor()
     with db.transaction.commit_on_success(using='reslt_writer'):
-        curs.execute(insert_query % gmf_collection_id)
+        curs.execute(insert_query % (job_id, gmf_collection_id))
         curs.execute('DELETE FROM hzrdr.gmf_set '
                      'WHERE gmf_collection_id=%d' % gmf_collection_id)
 

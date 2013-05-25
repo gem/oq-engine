@@ -225,7 +225,7 @@ def get_closest_site_model_data(input_model, point):
         return None
 
 
-def store_site_data(hc_id, site_model_inp, mesh):
+def store_site_data(job_id, site_model_inp, mesh):
     """
     Given a ``mesh`` of points (calculation points of interest) and a
     site model (``site_model_inp``), get the closest site model data
@@ -236,8 +236,8 @@ def store_site_data(hc_id, site_model_inp, mesh):
     model. Otherwise, the same 4 reference site parameters are used for all
     sites.
 
-    :param int hc_id:
-        ID of a :class:`~openquake.engine.db.models.HazardCalculation`.
+    :param int job_id:
+        ID of a :class:`~openquake.engine.db.models.OqJob`.
     :param site_model_inp:
         An :class:`~openquake.engine.db.models.Input` with an
         `input_type` == 'site_model'. This tells us which site model dataset to
@@ -258,13 +258,15 @@ def store_site_data(hc_id, site_model_inp, mesh):
             measured = pt.vs30measured == 'measured'
             x, y = pt.location.longitude, pt.location.latitude
 
-        cache.add(models.SiteData(
-                  hazard_calculation_id=hc_id,
-                  location='POINT(%s %s)' % (x, y),
-                  vs30=smd.vs30,
-                  vs30_measured=measured,
-                  z1pt0=smd.z1pt0,
-                  z2pt5=smd.z2pt5))
+        site = models.SiteData(
+            hazard_job_id=job_id,
+            location='POINT(%s %s)' % (x, y),
+            vs30=smd.vs30,
+            vs30_measured=measured,
+            z1pt0=smd.z1pt0,
+            z2pt5=smd.z2pt5)
+        cache.add(site)
+
     cache.flush()
 
 
@@ -751,7 +753,7 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.reference_depth_to_1pt0km_per_sec)
                 for pt in points]
 
-        store_site_data(self.hc.id, site_model_inp, mesh)
+        store_site_data(self.job.id, site_model_inp, mesh)
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914

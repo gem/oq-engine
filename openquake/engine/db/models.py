@@ -915,7 +915,8 @@ def get_site_collection(hc):
         openquake.hazardlib.site.Site(
             openquake.hazardlib.geo.Point(row.location.x, row.location.y),
             row.vs30, row.vs30_measured, row.z1pt0, row.z2pt5)
-        for row in SiteData.objects.filter(hazard_calculation=hc.id)]
+        for row in SiteData.objects.filter(
+            hazard_job__hazard_calculation=hc.id)]
     return openquake.hazardlib.site.SiteCollection(sites)
 
 
@@ -1940,10 +1941,9 @@ class GmfAgg(djm.Model):
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
-    location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
     rupture_ids = fields.IntArrayField()
-
+    site = djm.ForeignKey('SiteData')
     objects = djm.GeoManager()
 
     class Meta:
@@ -2798,12 +2798,12 @@ class SiteData(djm.Model):
     parameters are use for all points of interest).
     """
 
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
-    location = djm.PointField(srid=DEFAULT_SRID)
+    hazard_job = djm.ForeignKey('OqJob')
     vs30 = djm.FloatField()
     vs30_measured = djm.BooleanField()
     z1pt0 = djm.FloatField()
     z2pt5 = djm.FloatField()
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'htemp\".\"site_data'
