@@ -119,10 +119,6 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
         imt_name = imt.__class__.__name__
 
         for i, site in enumerate(sites):
-            try:
-                site.id
-            except AttributeError:
-                import pdb; pdb.set_trace()
             inserter.add_entry(
                 gmf_collection_id=gmfcoll_id,
                 imt=imt_name,
