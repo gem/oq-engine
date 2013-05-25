@@ -40,6 +40,9 @@ class Site(object):
     :param z2pt5:
         Vertical distance from earth surface to the layer where seismic waves
         start to propagate with a speed above 2.5 km/sec, in km.
+    :param id:
+        Optional parameter with default None. If given, it should be an
+        integer identifying the site univocally.
 
     :raises ValueError:
         If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
@@ -48,9 +51,9 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
-    __slots__ = 'location vs30 vs30measured z1pt0 z2pt5'.split()
+    __slots__ = 'location vs30 vs30measured z1pt0 z2pt5 id'.split()
 
-    def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5):
+    def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5, id=None):
         if not vs30 > 0:
             raise ValueError('vs30 must be positive')
         if not z1pt0 > 0:
@@ -62,6 +65,7 @@ class Site(object):
         self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
+        self.id = id
 
     def __getstate__(self):
         """
