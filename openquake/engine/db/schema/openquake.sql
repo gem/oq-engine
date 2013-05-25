@@ -1091,7 +1091,7 @@ CREATE TABLE htemp.hazard_curve_progress (
 ) TABLESPACE htemp_ts;
 
 -- calculation points of interest with parameters extracted from site_model or hc
-CREATE TABLE htemp.site_data (
+CREATE TABLE hzrdi.site_data (
     id SERIAL PRIMARY KEY,
     hazard_job_id INTEGER NOT NULL,
     vs30 FLOAT NOT NULL,
@@ -1099,8 +1099,8 @@ CREATE TABLE htemp.site_data (
     z1pt0 FLOAT NOT NULL,
     z2pt5 FLOAT NOT NULL
 ) TABLESPACE htemp_ts;
-SELECT AddGeometryColumn('htemp', 'site_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE htemp.site_data ALTER COLUMN location SET NOT NULL;
+SELECT AddGeometryColumn('hzrdi', 'site_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdi.site_data ALTER COLUMN location SET NOT NULL;
 
 
 ------------------------------------------------------------------------
@@ -1405,18 +1405,18 @@ FOREIGN KEY (lt_realization_id)
 REFERENCES hzrdr.lt_realization(id)
 ON DELETE CASCADE;
 
--- htemp.site_data to uiapi.hazard_calculation FK
-ALTER TABLE htemp.site_data
-ADD CONSTRAINT htemp_site_data_hazard_job_fk
+-- hzrdi.site_data to uiapi.hazard_calculation FK
+ALTER TABLE hzrdi.site_data
+ADD CONSTRAINT hzrdi_site_data_hazard_job_fk
 FOREIGN KEY (hazard_job_id)
 REFERENCES uiapi.oq_job(id)
 ON DELETE CASCADE;
 
--- hzrdr.gmf_agg to htemp.site_data FK
+-- hzrdr.gmf_agg to hzrdi.site_data FK
 ALTER TABLE hzrdr.gmf_agg
 ADD CONSTRAINT hzrdr_gmf_agg_site_data_fk
 FOREIGN KEY (site_id)
-REFERENCES htemp.site_data(id)
+REFERENCES hzrdi.site_data(id)
 ON DELETE CASCADE;
 
 ---------------------- views ----------------------------

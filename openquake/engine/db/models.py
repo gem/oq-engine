@@ -1829,8 +1829,8 @@ class GmfCollection(djm.Model):
         array_agg(ST_Y(location)) FROM (
            SELECT imt, sa_period, sa_damping,
            unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           FROM hzrdr.gmf_agg, htemp.site_data
-           WHERE site_id = htemp.site_data.id AND gmf_collection_id=%d) AS x,
+           FROM hzrdr.gmf_agg, hzrdi.site_data
+           WHERE site_id = hzrdi.site_data.id AND gmf_collection_id=%d) AS x,
            hzrdr.ses_rupture as y
         where x.rupture_id=y.id AND ses_id=%d
         group by imt, sa_period, sa_damping, rupture_id
@@ -2820,4 +2820,4 @@ class SiteData(djm.Model):
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
-        db_table = 'htemp\".\"site_data'
+        db_table = 'hzrdi\".\"site_data'
