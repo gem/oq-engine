@@ -103,7 +103,7 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
         An :class:`openquake.engine.db.models.SiteDataCollection` object,
         representing all of the points of interest for a calculation.
     """
-    inserter = writer.BulkInserter(models.GmfAgg)
+    inserter = writer.CacheInserter(1000)
 
     for imt, gmfs_ in gmf_dict.iteritems():
         # ``gmfs`` comes in as a numpy.matrix
@@ -119,13 +119,14 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
         imt_name = imt.__class__.__name__
 
         for i, site in enumerate(sites):
-            inserter.add_entry(
+            inserter.add(models.GmfAgg(
                 gmf_collection_id=gmfcoll_id,
                 imt=imt_name,
                 sa_period=sa_period,
                 sa_damping=sa_damping,
                 site_id=site.id,
-                gmvs=gmfarray[i].tolist())
+                rupture_ids=None,
+                gmvs=gmfarray[i].tolist()))
 
     inserter.flush()
 
