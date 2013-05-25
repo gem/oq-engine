@@ -103,7 +103,8 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
         An :class:`openquake.engine.db.models.SiteDataCollection` object,
         representing all of the points of interest for a calculation.
     """
-    inserter = writer.CacheInserter(1000)
+    inserter = writer.CacheInserter(100)
+    # NB: GmfAgg may contain large arrays and the cache may become large
 
     for imt, gmfs_ in gmf_dict.iteritems():
         # ``gmfs`` comes in as a numpy.matrix
