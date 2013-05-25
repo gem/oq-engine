@@ -323,12 +323,12 @@ class GroundMotionValuesGetter(HazardGetter):
   SELECT DISTINCT ON (e.id) e.id, g.id
   FROM riski.exposure_data AS e
   JOIN htemp.site_data AS s
-  ON ST_DWithin(e.site, s.location, %s)
+  ON ST_DWithin(e.site::geography, s.location::geography, %s)
   JOIN hzrdr.gmf_agg AS g
   ON g.site_id = s.id
   WHERE taxonomy = %s AND exposure_model_id = %s AND
         e.site && %s AND imt = %s AND gmf_collection_id = %s {}
-  ORDER BY e.id, ST_Distance(e.site, s.location, false)
+  ORDER BY e.id, ST_Distance(e.site::geography, s.location::geography, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
