@@ -147,7 +147,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
         ret = [base.CalculationUnit(
             api.ScenarioDamage(model.fragility_functions),
-            hazard_getters.GroundMotionScenarioGetter(
+            hazard_getters.GroundMotionValuesGetter(
                 ho,
                 assets,
                 self.rc.best_maximum_distance,
