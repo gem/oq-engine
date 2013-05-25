@@ -322,7 +322,7 @@ class GroundMotionValuesGetter(HazardGetter):
         query = """
   SELECT DISTINCT ON (e.id) e.id, g.id
   FROM riski.exposure_data AS e
-  JOIN htemp.site_data AS s
+  JOIN hzrdi.site_data AS s
   ON ST_DWithin(e.site::geography, s.location::geography, %s)
   JOIN hzrdr.gmf_agg AS g
   ON g.site_id = s.id
