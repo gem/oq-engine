@@ -68,11 +68,11 @@ GRANT SELECT,INSERT,UPDATE ON admin.oq_user      TO oq_admin;
 GRANT SELECT,INSERT,UPDATE ON admin.organization TO oq_admin;
 
 -- htemp schema
-GRANT SELECT,INSERT,DELETE        ON htemp.site_data             TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.source_progress       TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.hazard_curve_progress TO oq_reslt_writer;
 
 -- hzrdi schema
+GRANT SELECT,INSERT ON hzrdi.site_data            TO oq_job_init;
 GRANT SELECT,INSERT ON hzrdi.parsed_source        TO oq_job_init;
 GRANT SELECT,INSERT ON hzrdi.parsed_rupture_model TO oq_job_init;
 GRANT SELECT,INSERT ON hzrdi.site_model           TO oq_job_init;
@@ -80,6 +80,8 @@ GRANT SELECT,INSERT ON hzrdi.site_model           TO oq_job_init;
 -- hzrdr schema
 GRANT SELECT,INSERT        ON hzrdr.hazard_curve      TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON hzrdr.hazard_curve_data TO oq_reslt_writer;
+
+
 GRANT SELECT,INSERT        ON hzrdr.gmf_collection    TO oq_reslt_writer;
 GRANT SELECT,INSERT,DELETE ON hzrdr.gmf_set           TO oq_reslt_writer;
 GRANT SELECT,INSERT,DELETE ON hzrdr.gmf               TO oq_reslt_writer;
