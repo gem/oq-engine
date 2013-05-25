@@ -114,13 +114,14 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def store_one_site(hc):
+def store_one_site(job, xy=(42, 42)):
     """
     Save a record in SiteData, to be used for testing purposes
     """
-    models.SiteData.objects.create(
-        hazard_calculation_id=hc.id,
-        location='POINT(42 42)',
+    hc = job.hazard_calculation
+    return models.SiteData.objects.create(
+        hazard_job=job,
+        location='POINT(%s %s)' % xy,
         vs30=hc.reference_vs30_value,
         vs30_measured=hc.reference_vs30_type == 'measured',
         z1pt0=hc.reference_depth_to_2pt5km_per_sec,
@@ -722,15 +723,16 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
         lt_realization=gmfset.gmf_collection.lt_realization)
     rupture_ids = get_rupture_ids(hazard_job, ses_coll, 3)
     records = []
-    for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
-                  "POINT(15.48 38.091)", "POINT(15.565 38.17)",
-                  "POINT(15.481 38.25)"]:
+    for point in [(15.310, 38.225), (15.71, 37.225),
+                  (15.48, 38.091), (15.565, 38.17),
+                  (15.481, 38.25)]:
+        site = store_one_site(hazard_job, point)
         records.append(models.GmfAgg.objects.create(
             gmf_collection=gmfset.gmf_collection,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
             rupture_ids=rupture_ids,
-            location=point))
+            site=site))
 
     return records
 
