@@ -419,12 +419,14 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             # fast; notice however that there are plans to remove the block
             # size as an user-defined parameter:
             # https://bugs.launchpad.net/oq-engine/+bug/1183329
+
+            all_ses = list(models.SES.objects.filter(
+                           ses_collection__lt_realization=lt_rlz,
+                           ordinal__isnull=False).order_by('ordinal'))
+            # performs the query on the SES only once per realization
             for src_ids in blocks:
-                for ses_rlz_n in range(1, self.hc.ses_per_logic_tree_path + 1):
+                for ses in all_ses:
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
-                    ses = models.SES.objects.get(
-                        ses_collection__lt_realization=lt_rlz,
-                        ordinal=ses_rlz_n)
                     task_args = (self.job.id, src_ids, ses, task_seed,
                                  result_grp_ordinal)
                     yield task_args

@@ -44,6 +44,7 @@ from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config, get_calculator_class
+from openquake.engine.calculators.hazard.general import store_site_data
 from openquake.engine.calculators.hazard.event_based.post_processing import \
     insert_into_gmf_agg
 
@@ -111,6 +112,21 @@ mock_module.mocksignature = _patched_mocksignature
 
 def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
+
+
+def store_one_site(job, xy=(42, 42)):
+    """
+    Save a record in SiteData, to be used for testing purposes
+    """
+    hc = job.hazard_calculation
+    return models.SiteData.objects.create(
+        hazard_job=job,
+        location='POINT(%s %s)' % xy,
+        vs30=hc.reference_vs30_value,
+        vs30_measured=hc.reference_vs30_type == 'measured',
+        z1pt0=hc.reference_depth_to_2pt5km_per_sec,
+        z2pt5=hc.reference_depth_to_1pt0km_per_sec,
+    )
 
 
 def demo_file(file_name):
@@ -707,35 +723,39 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
         lt_realization=gmfset.gmf_collection.lt_realization)
     rupture_ids = get_rupture_ids(hazard_job, ses_coll, 3)
     records = []
-    for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
-                  "POINT(15.48 38.091)", "POINT(15.565 38.17)",
-                  "POINT(15.481 38.25)"]:
+    for point in [(15.310, 38.225), (15.71, 37.225),
+                  (15.48, 38.091), (15.565, 38.17),
+                  (15.481, 38.25)]:
+        site = store_one_site(hazard_job, point)
         records.append(models.GmfAgg.objects.create(
             gmf_collection=gmfset.gmf_collection,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
             rupture_ids=rupture_ids,
-            location=point))
+            site=site))
 
     return records
 
 
+# NB: create_gmf_from_csv and populate_gmf_agg_from_csv
+# will be unified in the future
 def create_gmf_from_csv(job, fname):
-    job.hazard_calculation = models.HazardCalculation.objects.create(
-        owner=job.hazard_calculation.owner,
-        truncation_level=job.hazard_calculation.truncation_level,
-        maximum_distance=job.hazard_calculation.maximum_distance,
-        intensity_measure_types_and_levels=(
-            job.hazard_calculation.intensity_measure_types_and_levels),
-        calculation_mode="event_based",
-        investigation_time=50,
-        ses_per_logic_tree_path=1)
+    """
+    Populate the gmf_agg table for an event_based calculation.
+    """
+    hc = job.hazard_calculation
+    hc.investigation_time = 50
+    hc.ses_per_logic_tree_path = 1
+    hc.save()
+
     # tricks to fool the oqtask decorator
     job.is_running = True
     job.status = 'post_processing'
     job.save()
 
     gmf_set = create_gmfset(job)
+    gmf_coll = gmf_set.gmf_collection
+
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             job, "Test SES Collection", "ses"),
@@ -744,22 +764,52 @@ def create_gmf_from_csv(job, fname):
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
 
-        gmv_matrix = numpy.array([[float(x) for x in row]
-                                  for row in gmfreader]).transpose()
+        gmv_matrix = numpy.array(
+            [map(float, row) for row in gmfreader]).transpose()
 
         rupture_ids = get_rupture_ids(job, ses_coll, len(gmv_matrix[0]))
 
         for i, gmvs in enumerate(gmv_matrix):
-            wkt = "POINT(%s)" % locations[i]
-            models.Gmf.objects.create(
-                gmf_set=gmf_set,
+
+            point = tuple(map(float, locations[i].split()))
+            models.GmfAgg.objects.create(
+                gmf_collection=gmf_coll,
                 imt="PGA", gmvs=gmvs,
                 rupture_ids=map(str, rupture_ids),
-                result_grp_ordinal=1,
-                location=wkt)
-        insert_into_gmf_agg(job.id, gmf_set.gmf_collection.id)
+                site=store_one_site(job, point))
 
-    return gmf_set.gmf_collection
+    return gmf_coll
+
+
+def populate_gmf_agg_from_csv(job, fname):
+    """
+    Populate the gmf_agg table for a scenario calculation.
+    """
+    # tricks to fool the oqtask decorator
+    job.is_running = True
+    job.status = 'post_processing'
+    job.save()
+
+    gmf_coll = models.GmfCollection.objects.create(
+        output=models.Output.objects.create_output(
+            job, "Test Hazard output", "gmf_scenario"))
+
+    with open(fname, 'rb') as csvfile:
+        gmfreader = csv.reader(csvfile, delimiter=',')
+        locations = gmfreader.next()
+
+        gmv_matrix = numpy.array(
+            [map(float, row) for row in gmfreader]).transpose()
+
+        for i, gmvs in enumerate(gmv_matrix):
+            point = tuple(map(float, locations[i].split()))
+            models.GmfAgg.objects.create(
+                imt="PGA",
+                gmf_collection=gmf_coll,
+                gmvs=gmvs,
+                site=store_one_site(job, point))
+
+    return gmf_coll
 
 
 def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
@@ -807,14 +857,17 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 location="%s" % point)
 
     elif output_type == "gmf_scenario":
-        output = models.Output.objects.create_output(
-            hazard_job, "Test Hazard output", "gmf_scenario")
-        for point in ["POINT(15.48 38.0900001)", "POINT(15.565 38.17)",
-                      "POINT(15.481 38.25)"]:
-            hazard_output = models.GmfScenario.objects.create(
-                output=output,
+        hazard_output = models.GmfCollection.objects.create(
+            output=models.Output.objects.create_output(
+                hazard_job, "Test gmf scenario output", "gmf_scenario"))
+
+        for point in [(15.48, 38.0900001), (15.565, 38.17),
+                      (15.481, 38.25)]:
+            site = store_one_site(hazard_job, point)
+            models.GmfAgg.objects.create(
+                gmf_collection=hazard_output,
                 imt="PGA",
-                location=point,
+                site=site,
                 gmvs=[0.1, 0.2, 0.3])
 
     else:

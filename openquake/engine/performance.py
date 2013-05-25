@@ -107,7 +107,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         self.operation = operation
         self.job_id = job_id
         if task:
-            self.task = task.__name__
+            self.task = task
             self.task_id = task.request.id
         else:
             self.task = None
@@ -133,6 +133,14 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         super(EnginePerformanceMonitor, self).__init__(
             [self.pypid, self.pgpid])
 
+    def __call__(self, operation):
+        """
+        Return a copy of the monitor usable for a different operation
+        in the same task.
+        """
+        return self.__class__(operation, self.job_id, self.task, self.tracing,
+                              self.profile_pymem, self.profile_pgmem)
+
     def on_exit(self):
         """
         Save the memory consumption on the uiapi.performance table.
@@ -152,7 +160,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             perf = models.Performance(
                 oq_job_id=self.job_id,
                 task_id=self.task_id,
-                task=self.task,
+                task=getattr(self.task, '__name__', None),
                 operation=self.operation,
                 start_time=self.start_time,
                 duration=self.duration,
@@ -187,6 +195,9 @@ class DummyMonitor(object):
         pass
 
     def __enter__(self):
+        return self
+
+    def __call__(self, operation):
         return self
 
     def __exit__(self, etype, exc, tb):

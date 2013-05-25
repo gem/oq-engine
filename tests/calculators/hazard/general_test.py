@@ -22,7 +22,6 @@ import openquake.hazardlib
 from collections import namedtuple
 
 from openquake.hazardlib import geo as hazardlib_geo
-from nose.plugins.attrib import attr
 
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
@@ -397,6 +396,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
 
         mocks = [p.start() for p in patches]
 
+        helpers.store_one_site(job)
         get_calculator_class(
             'hazard',
             job.hazard_calculation.calculation_mode)(job).pre_execute()
