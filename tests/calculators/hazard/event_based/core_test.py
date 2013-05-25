@@ -255,13 +255,11 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             # check that the parameters are read correctly from the files
             self.assertEqual(hc.ses_per_logic_tree_path, 5)
 
-            # Check that we have the right number of gmf_sets.
-            # The correct number is (num_real * ses_per_logic_tree_path).
+            # Check that the gmf_sets were deleted by populate_gmf_agg
             gmf_sets = models.GmfSet.objects.filter(
                 gmf_collection__output__oq_job=job.id,
                 gmf_collection__lt_realization__isnull=False)
-            # 2 realizations, 5 ses_per_logic_tree_path
-            self.assertEqual(10, gmf_sets.count())
+            self.assertEqual(0, gmf_sets.count())
 
             # check that we called the right number of times the patched
             # functions: 40 = 2 Lt * 4 sources * 5 ses = 8 tasks * 5 ses
@@ -305,47 +303,50 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         [rlz1, rlz2] = models.LtRealization.objects.filter(
             hazard_calculation=hc).order_by('id')
 
-        expected = [  # sources, ses_id, rlz_id, seed, result_grp_ordinal
-            ([1], 1, rlz1.id, 1711655216, 1),
-            ([1], 2, rlz1.id, 1038305917, 2),
-            ([1], 3, rlz1.id, 836289861, 3),
-            ([1], 4, rlz1.id, 1781144172, 4),
-            ([1], 5, rlz1.id, 1869241528, 5),
-            ([2], 1, rlz1.id, 215682727, 6),
-            ([2], 2, rlz1.id, 1101399957, 7),
-            ([2], 3, rlz1.id, 2054512780, 8),
-            ([2], 4, rlz1.id, 1550095676, 9),
-            ([2], 5, rlz1.id, 1537531637, 10),
-            ([3], 1, rlz1.id, 834081132, 11),
-            ([3], 2, rlz1.id, 2109160433, 12),
-            ([3], 3, rlz1.id, 1527803099, 13),
-            ([3], 4, rlz1.id, 1876252834, 14),
-            ([3], 5, rlz1.id, 1712942246, 15),
-            ([4], 1, rlz1.id, 219667398, 16),
-            ([4], 2, rlz1.id, 332999334, 17),
-            ([4], 3, rlz1.id, 1017801655, 18),
-            ([4], 4, rlz1.id, 1577927432, 19),
-            ([4], 5, rlz1.id, 1810736590, 20),
-            ([1], 1, rlz2.id, 745519017, 21),
-            ([1], 2, rlz2.id, 2107357950, 22),
-            ([1], 3, rlz2.id, 1305437041, 23),
-            ([1], 4, rlz2.id, 75519567, 24),
-            ([1], 5, rlz2.id, 179387370, 25),
-            ([2], 1, rlz2.id, 1653492095, 26),
-            ([2], 2, rlz2.id, 176278337, 27),
-            ([2], 3, rlz2.id, 777508283, 28),
-            ([2], 4, rlz2.id, 718002527, 29),
-            ([2], 5, rlz2.id, 1872666256, 30),
-            ([3], 1, rlz2.id, 796266430, 31),
-            ([3], 2, rlz2.id, 646033314, 32),
-            ([3], 3, rlz2.id, 289567826, 33),
-            ([3], 4, rlz2.id, 1964698790, 34),
-            ([3], 5, rlz2.id, 613832594, 35),
-            ([4], 1, rlz2.id, 1858181087, 36),
-            ([4], 2, rlz2.id, 195127891, 37),
-            ([4], 3, rlz2.id, 1761641849, 38),
-            ([4], 4, rlz2.id, 259827383, 39),
-            ([4], 5, rlz2.id, 1464146382, 40),
+        [s1, s2, s3, s4, s5] = self.calc.initialize_ses_db_records(rlz1)
+        [t1, t2, t3, t4, t5] = self.calc.initialize_ses_db_records(rlz2)
+
+        expected = [  # sources, ses_id, seed, result_grp_ordinal
+            ([1], s1, 1711655216, 1),
+            ([1], s2, 1038305917, 2),
+            ([1], s3, 836289861, 3),
+            ([1], s4, 1781144172, 4),
+            ([1], s5, 1869241528, 5),
+            ([2], s1, 215682727, 6),
+            ([2], s2, 1101399957, 7),
+            ([2], s3, 2054512780, 8),
+            ([2], s4, 1550095676, 9),
+            ([2], s5, 1537531637, 10),
+            ([3], s1, 834081132, 11),
+            ([3], s2, 2109160433, 12),
+            ([3], s3, 1527803099, 13),
+            ([3], s4, 1876252834, 14),
+            ([3], s5, 1712942246, 15),
+            ([4], s1, 219667398, 16),
+            ([4], s2, 332999334, 17),
+            ([4], s3, 1017801655, 18),
+            ([4], s4, 1577927432, 19),
+            ([4], s5, 1810736590, 20),
+            ([1], t1, 745519017, 21),
+            ([1], t2, 2107357950, 22),
+            ([1], t3, 1305437041, 23),
+            ([1], t4, 75519567, 24),
+            ([1], t5, 179387370, 25),
+            ([2], t1, 1653492095, 26),
+            ([2], t2, 176278337, 27),
+            ([2], t3, 777508283, 28),
+            ([2], t4, 718002527, 29),
+            ([2], t5, 1872666256, 30),
+            ([3], t1, 796266430, 31),
+            ([3], t2, 646033314, 32),
+            ([3], t3, 289567826, 33),
+            ([3], t4, 1964698790, 34),
+            ([3], t5, 613832594, 35),
+            ([4], t1, 1858181087, 36),
+            ([4], t2, 195127891, 37),
+            ([4], t3, 1761641849, 38),
+            ([4], t4, 259827383, 39),
+            ([4], t5, 1464146382, 40),
         ]
 
         # utilities to present the generated arguments in a nicer way
@@ -360,9 +361,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                 return dic[src_id]
 
         def process_args(arg_gen):
-            for (job_id, source_ids, ses_rlz_n, lt_rlz, task_seed,
+            for (job_id, source_ids, ses, task_seed,
                  result_grp_ordinal) in arg_gen:
-                yield (map(src_no, source_ids), ses_rlz_n, lt_rlz.id,
+                yield (map(src_no, source_ids), ses,
                        task_seed, result_grp_ordinal)
 
         actual = list(process_args(self.calc.task_arg_gen()))

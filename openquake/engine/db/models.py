@@ -1950,25 +1950,9 @@ class GmfAgg(djm.Model):
         db_table = 'hzrdr\".\"gmf_agg'
 
 
-class GmfScenario(djm.Model):
-    """
-    Ground Motion Field: A collection of ground motion values and their
-    respective geographical locations.
-    """
-    output = djm.ForeignKey('Output')
-    imt = djm.TextField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-    gmvs = fields.FloatArrayField()
-
-    objects = djm.GeoManager()
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_scenario'
-
-
 def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
-    Iterator for walking through all :class:`GmfScenario` objects associated
+    Iterator for walking through all :class:`GmfAgg` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
@@ -1984,21 +1968,22 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
     job = output.oq_job
     hc = job.hazard_calculation
+    coll = output.gmfcollection
     if imt is None:
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
     else:
         imts = [parse_imt(imt)]
-    for imt, sa_period, _ in imts:
-        if imt == 'SA':
-            imt = 'SA(%s)' % sa_period
+    for imt, sa_period, sa_damping in imts:
         for gmf in order_by_location(
-                GmfScenario.objects.filter(output__id=output.id, imt=imt)):
+                GmfAgg.objects.filter(
+                gmf_collection=coll, imt=imt,
+                sa_period=sa_period, sa_damping=sa_damping)):
             yield sort(gmf.gmvs)
 
 
 def get_gmfs_scenario(output, imt=None):
     """
-    Iterator for walking through all :class:`GmfScenario` objects associated
+    Iterator for walking through all :class:`GmfAgg` objects associated
     to a given output. Notice that the fields are ordered according to the
     location, so it is possible to get reproducible outputs in the test cases.
 
@@ -2012,18 +1997,18 @@ def get_gmfs_scenario(output, imt=None):
     """
     job = output.oq_job
     hc = job.hazard_calculation
+    coll = output.gmfcollection
     if imt is None:
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        imt_long = 'SA(%s)' % sa_period if imt == 'SA' else imt
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfScenario.objects.filter(
-                output__id=output.id, imt=imt_long):
-            loc = gmf.location
+        for gmf in GmfAgg.objects.filter(
+                gmf_collection=coll, imt=imt,
+                sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
-                nodes[i].append(_GroundMotionFieldNode(gmv, loc))
+                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.location))
         for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
                 imt=imt,
@@ -2083,21 +2068,6 @@ class DisaggResult(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"disagg_result'
-
-
-class GmfData(djm.Model):
-    '''
-    Ground Motion Field data
-
-    DEPRECATED. See instead :class:`GmfCollection`, :class:`GmfSet`,
-    :class:`Gmf`, and :class:`GmfNode`.
-    '''
-    output = djm.ForeignKey('Output')
-    ground_motion = djm.FloatField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_data'
 
 
 class UHS(djm.Model):
@@ -2644,7 +2614,7 @@ class AssetManager(djm.GeoManager):
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
             """.format(occupants=occupants, occupants_cond=occupants_cond),
-            args))
+                     args))
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """

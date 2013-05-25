@@ -1023,6 +1023,7 @@ class BaseHazardCalculator(base.Calculator):
         # Compute the number of tasks.
         block_size = self.block_size()
         num_tasks = 0
+        nses = self.hc.ses_per_logic_tree_path
         for lt_rlz in realizations:
             # Each realization has the potential to choose a random source
             # model, and thus there may be a variable number of tasks for each
@@ -1030,6 +1031,8 @@ class BaseHazardCalculator(base.Calculator):
             # which was chosen for the realization).
             num_sources = models.SourceProgress.objects.filter(
                 lt_realization=lt_rlz).count()
+            if nses:  # for event based calculators
+                num_sources *= nses
             num_tasks += math.ceil(float(num_sources) / block_size)
 
         [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
