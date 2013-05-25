@@ -76,11 +76,6 @@ COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.'
 
 COMMENT ON COLUMN hzrdr.gmf.rupture_ids IS 'a vector of ids to the hzrdr.ses_rupture table. for each id you can find the corresponding ground motion value in gmvs at the same index';
 
-COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';
-COMMENT ON COLUMN hzrdr.gmf_data.ground_motion IS 'Ground motion for a specific site';
-COMMENT ON COLUMN hzrdr.gmf_data.location IS 'Site coordinates';
-
-
 COMMENT ON TABLE hzrdr.hazard_map IS 'A complete hazard map, for a given IMT and PoE';
 COMMENT ON COLUMN hzrdr.hazard_map.poe IS 'Probability of exceedence';
 COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
