@@ -27,6 +27,7 @@ import numpy
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
+from openquake.engine.performance import DummyMonitor
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
@@ -237,15 +238,17 @@ class GroundMotionValuesGetter(HazardGetter):
     def container(self, hazard_output):
         return hazard_output.gmfcollection
 
-    def __call__(self):
+    def __call__(self, monitor=DummyMonitor()):
         """
+        :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor`
         :returns:
             A tuple with two elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is a
             pair (gmfs, ruptures) with the closest ground motion value for each
             asset.
         """
-        asset_ids, gmf_ids = self.get_data(self.imt)
+        with monitor('associating asset_ids <-> gmf_ids'):
+            asset_ids, gmf_ids = self.get_data(self.imt)
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
         for missing_asset_id in missing_asset_ids:
@@ -267,25 +270,28 @@ class GroundMotionValuesGetter(HazardGetter):
         elif not gmf_ids:  # all missing
             return [], ([], [])
 
-        # get the sorted ruptures from all the distinct GMFs
         cursor = models.getcursor('job_init')
-        cursor.execute('''\
+
+        # get the sorted ruptures from all the distinct GMFs
+        with monitor('getting unique ruptures'):
+            cursor.execute('''\
         SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
         WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
-        # TODO: in principle it should be possible to remove the ORDER BY; see
-        # why qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
-        # breaks if I do so (MS)
-        sorted_ruptures = numpy.array([r[0] for r in cursor.fetchall()])
+            # TODO: in principle it should be possible to remove the ORDER BY;
+            # qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
+            # breaks if I do so (MS)
+            sorted_ruptures = numpy.array([r[0] for r in cursor.fetchall()])
 
         # get the data from the distinct GMFs
-        cursor.execute('''\
-        SELECT id, gmvs, rupture_ids FROM hzrdr.gmf_agg
-        WHERE id in %s''', (distinct_gmf_ids,))
-        gmfs = {}
-        for gmf_id, gmvs, ruptures in cursor.fetchall():
-            gmvd = dict(zip(ruptures, gmvs))
-            gmvs = numpy.array([gmvd.get(r, 0.) for r in sorted_ruptures])
-            gmfs[gmf_id] = gmvs
+        with monitor('getting gmvs and rupture_ids'):
+            cursor.execute('''\
+            SELECT id, gmvs, rupture_ids FROM hzrdr.gmf_agg
+            WHERE id in %s''', (distinct_gmf_ids,))
+            gmfs = {}
+            for gmf_id, gmvs, ruptures in cursor.fetchall():
+                gmvd = dict(zip(ruptures, gmvs))
+                gmvs = numpy.array([gmvd.get(r, 0.) for r in sorted_ruptures])
+                gmfs[gmf_id] = gmvs
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
                ([gmfs[i] for i in gmf_ids], sorted_ruptures))
