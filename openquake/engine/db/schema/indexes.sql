@@ -22,8 +22,8 @@ CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name)
 -- admin.revision_info
 CREATE UNIQUE INDEX admin_revision_info_artefact_uniq_idx ON admin.revision_info(artefact);
 
--- htemp.site_data
-CREATE INDEX htemp_site_data_location_idx ON htemp.site_data(location);
+-- hzrdi.site_data
+CREATE INDEX hzrdi_site_data_location_idx ON hzrdi.site_data(location);
 
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);

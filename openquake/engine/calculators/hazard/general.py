@@ -230,7 +230,7 @@ def store_site_data(job_id, site_model_inp, mesh):
     Given a ``mesh`` of points (calculation points of interest) and a
     site model (``site_model_inp``), get the closest site model data
     for each points and store the mesh point location plus the site parameters
-    as a single record in the `htemp.site_data` table.
+    as a single record in the `hzrdi.site_data` table.
 
     NOTE: This should only be necessary for calculations which specify a site
     model. Otherwise, the same 4 reference site parameters are used for all
@@ -718,7 +718,7 @@ class BaseHazardCalculator(base.Calculator):
         calculation geometry. For each point, do distance queries on the site
         model and get the site parameters which are closest to the point of
         interest. This aggregation of points to the closest site parameters
-        is what we store in `htemp.site_data`. (Computing this once prior to
+        is what we store in `hzrdi.site_data`. (Computing this once prior to
         starting the calculation is optimal, since each task will need to
         consider all sites.)
         """
