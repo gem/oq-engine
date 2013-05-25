@@ -23,6 +23,7 @@ from nose.plugins.attrib import attr
 
 from openquake.engine import engine
 from openquake.engine.calculators.hazard.classical import core as cls_core
+from openquake.engine.calculators.hazard.scenario import core as scen_core
 from openquake.engine.db import models
 
 from tests.utils import helpers
@@ -494,10 +495,10 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         self.assertEqual(expected_len, len(site_coll.z2pt5))
 
     def test_get_site_collection_with_reference_parameters(self):
-        cfg = helpers.get_data_path(
-            'simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('scenario_hazard/job.ini')
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
-
+        calc = scen_core.ScenarioHazardCalculator(job)
+        calc.initialize_site_model()
         site_coll = models.get_site_collection(job.hazard_calculation)
 
         # all of the parameters should be the same:

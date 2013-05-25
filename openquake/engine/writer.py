@@ -26,6 +26,7 @@ from django.db import transaction
 from django.db import connections
 from django.db import router
 from django.contrib.gis.db.models.fields import GeometryField
+from django.contrib.gis.geos.point import Point
 
 LOGGER = logging.getLogger('serializer')
 
@@ -167,6 +168,8 @@ class CacheInserter(object):
             col = getattr(obj, f)
             if col is None:
                 col = r'\N'
+            elif isinstance(col, Point):
+                col = 'SRID=4326;' + col.wkt
             elif isinstance(col, GeometryField):
                 col = col.wkt()
             elif isinstance(col, list):  # for arrays; this is fragile

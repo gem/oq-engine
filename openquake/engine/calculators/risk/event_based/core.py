@@ -84,7 +84,7 @@ def do_event_based(loss_type, units, containers, params, profile):
     event_loss_table = collections.Counter()
 
     for unit in units:
-        hid = unit.getter.hazard_output_id
+        hid = unit.getter.hazard_output.id
         outputs = individual_outputs(loss_type, unit, params, profile)
 
         if not outputs.assets:
@@ -168,8 +168,8 @@ class UnitOutputs(object):
 
 def individual_outputs(loss_type, unit, params, profile):
     event_loss_table = collections.Counter()
-    with profile('getting hazard'):
-        assets, (ground_motion_values, ruptures) = unit.getter()
+    assets, (ground_motion_values, ruptures) = unit.getter(
+        profile('getting hazard'))
 
     with profile('computing losses, loss curves and maps'):
         loss_matrix, curves = unit.calc(ground_motion_values)

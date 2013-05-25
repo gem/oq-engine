@@ -898,10 +898,21 @@ class HazardCalculation(djm.Model):
                 self.intensity_measure_types_and_levels.keys())
 
 
+# XXX: do we really need a hazardlib SiteCollection?
+class SiteDataCollection(openquake.hazardlib.site.SiteCollection):
+    def __init__(self, sites):
+        self.sites = sites
+        super(SiteDataCollection, self).__init__(sites)
+
+    def __iter__(self):
+        for site in self.sites:
+            yield site
+
+
 def get_site_collection(hc):
     """
-    Create a `SiteCollection`, which is needed by hazardlib to perform various
-    calculation tasks (such computing hazard curves and GMFs).
+    Create a `SiteDataCollection`, which is needed by hazardlib to perform
+    various calculation tasks (such computing hazard curves and GMFs).
 
     :param hc:
         Instance of a :class:`HazardCalculation`. We need this in order to get
@@ -909,29 +920,17 @@ def get_site_collection(hc):
         site data or access reference site parameters.
 
     :returns:
-        :class:`openquake.hazardlib.site.SiteCollection` instance.
+        :class:`openquake.engine.db.models.SiteDataCollection` instance.
     """
-    site_data = SiteData.objects.filter(hazard_calculation=hc.id)
-    if len(site_data) > 0:
-        site_data = site_data[0]
-        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
-                    site_data.vs30_measured, site_data.z1pt0s,
-                    site_data.z2pt5s)
-        sites = [openquake.hazardlib.site.Site(
-            openquake.hazardlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
-            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
-    else:
-        # Use the calculation reference parameters to make a site collection.
-        points = hc.points_to_compute()
-        measured = hc.reference_vs30_type == 'measured'
-        sites = [
-            openquake.hazardlib.site.Site(pt, hc.reference_vs30_value,
-                                          measured,
-                                          hc.reference_depth_to_2pt5km_per_sec,
-                                          hc.reference_depth_to_1pt0km_per_sec)
-            for pt in points]
-
-    return openquake.hazardlib.site.SiteCollection(sites)
+    sites = []
+    for row in SiteData.objects.filter(
+            hazard_job__hazard_calculation=hc.id):
+        site = openquake.hazardlib.site.Site(
+            openquake.hazardlib.geo.Point(row.location.x, row.location.y),
+            row.vs30, row.vs30_measured, row.z1pt0, row.z2pt5)
+        site.id = row.id
+        sites.append(site)
+    return SiteDataCollection(sites)
 
 
 class RiskCalculation(djm.Model):
@@ -1826,11 +1825,12 @@ class GmfCollection(djm.Model):
         for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
             query = """
         SELECT imt, sa_period, sa_damping, rupture_id,
-        array_agg(gmv), array_agg(ST_X(geometry(location))),
-        array_agg(ST_Y(geometry(location))) FROM (
+        array_agg(gmv), array_agg(ST_X(location)),
+        array_agg(ST_Y(location)) FROM (
            SELECT imt, sa_period, sa_damping,
            unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           from hzrdr.gmf_agg WHERE gmf_collection_id=%d) AS x,
+           FROM hzrdr.gmf_agg, htemp.site_data
+           WHERE site_id = htemp.site_data.id AND gmf_collection_id=%d) AS x,
            hzrdr.ses_rupture as y
         where x.rupture_id=y.id AND ses_id=%d
         group by imt, sa_period, sa_damping, rupture_id
@@ -1955,35 +1955,18 @@ class GmfAgg(djm.Model):
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
-    location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
-    rupture_ids = fields.IntArrayField()
-
+    rupture_ids = fields.IntArrayField(null=True)
+    site = djm.ForeignKey('SiteData')
     objects = djm.GeoManager()
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_agg'
 
 
-class GmfScenario(djm.Model):
-    """
-    Ground Motion Field: A collection of ground motion values and their
-    respective geographical locations.
-    """
-    output = djm.ForeignKey('Output')
-    imt = djm.TextField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-    gmvs = fields.FloatArrayField()
-
-    objects = djm.GeoManager()
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_scenario'
-
-
 def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
-    Iterator for walking through all :class:`GmfScenario` objects associated
+    Iterator for walking through all :class:`GmfAgg` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
@@ -1999,21 +1982,22 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
     job = output.oq_job
     hc = job.hazard_calculation
+    coll = output.gmfcollection
     if imt is None:
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
     else:
         imts = [parse_imt(imt)]
-    for imt, sa_period, _ in imts:
-        if imt == 'SA':
-            imt = 'SA(%s)' % sa_period
-        for gmf in order_by_location(
-                GmfScenario.objects.filter(output__id=output.id, imt=imt)):
+    for imt, sa_period, sa_damping in imts:
+        for gmf in GmfAgg.objects.filter(
+                gmf_collection=coll, imt=imt,
+                sa_period=sa_period, sa_damping=sa_damping).\
+                order_by('site'):
             yield sort(gmf.gmvs)
 
 
 def get_gmfs_scenario(output, imt=None):
     """
-    Iterator for walking through all :class:`GmfScenario` objects associated
+    Iterator for walking through all :class:`GmfAgg` objects associated
     to a given output. Notice that the fields are ordered according to the
     location, so it is possible to get reproducible outputs in the test cases.
 
@@ -2027,18 +2011,18 @@ def get_gmfs_scenario(output, imt=None):
     """
     job = output.oq_job
     hc = job.hazard_calculation
+    coll = output.gmfcollection
     if imt is None:
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        imt_long = 'SA(%s)' % sa_period if imt == 'SA' else imt
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfScenario.objects.filter(
-                output__id=output.id, imt=imt_long):
-            loc = gmf.location
+        for gmf in GmfAgg.objects.filter(
+                gmf_collection=coll, imt=imt,
+                sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
-                nodes[i].append(_GroundMotionFieldNode(gmv, loc))
+                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.site.location))
         for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
                 imt=imt,
@@ -2828,15 +2812,12 @@ class SiteData(djm.Model):
     parameters are use for all points of interest).
     """
 
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
-    lons = fields.PickleField()
-    lats = fields.PickleField()
-    vs30s = fields.PickleField()
-    # `vs30_measured` stores a numpy array of booleans.
-    # If a value is `False`, this means that the vs30 value is 'inferred'.
-    vs30_measured = fields.PickleField()
-    z1pt0s = fields.PickleField()
-    z2pt5s = fields.PickleField()
+    hazard_job = djm.ForeignKey('OqJob')
+    vs30 = djm.FloatField()
+    vs30_measured = djm.BooleanField()
+    z1pt0 = djm.FloatField()
+    z2pt5 = djm.FloatField()
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
         db_table = 'htemp\".\"site_data'
