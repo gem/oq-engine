@@ -664,15 +664,6 @@ CREATE TABLE hzrdr.gmf_agg (
     UNIQUE (gmf_collection_id, imt, sa_period, sa_damping, location)
 ) TABLESPACE hzrdr_ts;
 
-CREATE TABLE hzrdr.gmf_scenario (
-    id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,  -- FK to output.id
-    imt VARCHAR NOT NULL,
-    gmvs float[],
-    location GEOGRAPHY(point) NOT NULL,
-    UNIQUE (output_id, imt, location)
-) TABLESPACE hzrdr_ts;
-
 
 CREATE TABLE hzrdr.disagg_result (
     id SERIAL PRIMARY KEY,
@@ -701,19 +692,6 @@ CREATE TABLE hzrdr.disagg_result (
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'disagg_result', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.disagg_result ALTER COLUMN location SET NOT NULL;
-
-
--- GMF data.
--- TODO: DEPRECATED; use gmf_collection, gmf_set, and gmf
-CREATE TABLE hzrdr.gmf_data (
-    id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,
-    -- Ground motion value
-    ground_motion float NOT NULL
-) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'gmf_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
-
 
 -- Uniform Hazard Spectra
 --
@@ -1243,10 +1221,6 @@ ALTER TABLE hzrdr.hazard_curve_data
 ADD CONSTRAINT hzrdr_hazard_curve_data_hazard_curve_fk
 FOREIGN KEY (hazard_curve_id) REFERENCES hzrdr.hazard_curve(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.gmf_data
-ADD CONSTRAINT hzrdr_gmf_data_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
-
 -- gmf_collection -> output FK
 ALTER TABLE hzrdr.gmf_collection
 ADD CONSTRAINT hzrdr_gmf_collection_output_fk
@@ -1268,12 +1242,6 @@ ON DELETE CASCADE;
 ALTER TABLE hzrdr.gmf
 ADD CONSTRAINT hzrdr_gmf_gmf_set_fk
 FOREIGN KEY (gmf_set_id) REFERENCES hzrdr.gmf_set(id)
-ON DELETE CASCADE;
-
--- gmf_scenario -> output FK
-ALTER TABLE hzrdr.gmf_scenario
-ADD CONSTRAINT hzrdr_gmf_scenario_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id)
 ON DELETE CASCADE;
 
 -- disagg_result -> output FK
