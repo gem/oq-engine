@@ -23,7 +23,7 @@ from django.db import transaction
 
 from openquake.engine import writer
 
-from openquake.engine.db.models import OqUser, GmfAgg
+from openquake.engine.db.models import OqUser, SiteData
 from openquake.engine.writer import BulkInserter, CacheInserter
 
 
@@ -47,7 +47,8 @@ class DummyConnection(object):
         self.data = stringio.getvalue()
         self.table = table
         self.columns = columns
-        
+
+
 class BulkInserterTestCase(unittest.TestCase):
     """
     Unit tests for the BulkInserter class, which simplifies database
@@ -125,47 +126,12 @@ class BulkInserterTestCase(unittest.TestCase):
                           ' (%%s, %%s), (%%s, %%s)' %
                           (", ".join(fields)), connection.sql)
 
-    @transaction.commit_on_success('reslt_writer')
-    def test_flush_geometry(self):
-        inserter = BulkInserter(GmfAgg)
-        connection = writer.connections['reslt_writer']
-
-        inserter.add_entry(location='POINT(1 1)')
-        fields = inserter.fields
-        inserter.flush()
-        self.assertEquals('INSERT INTO "hzrdr"."gmf_agg" (%s) VALUES (%s)' %
-                          (", ".join(fields), 'GeomFromText(%s, 4326)'),
-                          connection.sql)
-
 
 class CacheInserterTestCase(unittest.TestCase):
     """
     Unit tests for the CacheInserter class.
     """
-    def setUp(self):
-        self.connections = writer.connections
-        writer.connections = dict(
-            admin=DummyConnection(), reslt_writer=DummyConnection())
-
-    def tearDown(self):
-        writer.connections = self.connections
-
-    # this test is probably too strict and testing implementation details
-    def test_insert_gmf(self):
-        cache = CacheInserter(10)
-        gmf1 = GmfAgg(
-            gmf_collection_id=1, imt='PGA', gmvs=[], rupture_ids=[],
-            location='POINT(-122.5000 37.5000)')
-        gmf2 = GmfAgg(
-            gmf_collection_id=1, imt='PGA', gmvs=[], rupture_ids=[],
-            location='POINT(-121.5000 37.5000)')
-        cache.add(gmf1)
-        cache.add(gmf2)
-        cache.flush()
-        connection = writer.connections['reslt_writer']
-        self.assertEqual(connection.data, '1	PGA	\N	\N	POINT (-122.5000000000000000 37.5000000000000000)	{}	{}')
-        self.assertEqual(connection.table, '"hzrdr"."gmf_agg"')
-        self.assertEqual(
-            connection.columns,
-            ['gmf_collection_id', 'imt', 'sa_period', 'sa_damping',
-             'location', 'gmvs', 'rupture_ids'])
+    # the tests were intentionally removed since they were testing
+    # implementation details; the CacheInserter is heavily used and
+    # changing it would break other tests anyway
+    # I may add tests in the future, but it is a low priority
