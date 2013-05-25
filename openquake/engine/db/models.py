@@ -1988,10 +1988,10 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        for gmf in order_by_location(
-                GmfAgg.objects.filter(
+        for gmf in GmfAgg.objects.filter(
                 gmf_collection=coll, imt=imt,
-                sa_period=sa_period, sa_damping=sa_damping)):
+                sa_period=sa_period, sa_damping=sa_damping).\
+                order_by('site'):
             yield sort(gmf.gmvs)
 
 
