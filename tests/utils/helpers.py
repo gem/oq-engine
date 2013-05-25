@@ -737,7 +737,7 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
     return records
 
 
-def create_gmf_from_csv(job, fname):
+def create_gmf_from_csv_old(job, fname):
     job.hazard_calculation = models.HazardCalculation.objects.create(
         owner=job.hazard_calculation.owner,
         truncation_level=job.hazard_calculation.truncation_level,
@@ -777,6 +777,37 @@ def create_gmf_from_csv(job, fname):
         insert_into_gmf_agg(job.id, gmf_set.gmf_collection.id)
 
     return gmf_set.gmf_collection
+
+
+def populate_gmf_agg_from_csv(job, fname):
+    """
+    Populate the gmf_agg table for a scenario calculation.
+    """
+    # tricks to fool the oqtask decorator
+    job.is_running = True
+    job.status = 'post_processing'
+    job.save()
+
+    gmf_coll = models.GmfCollection.objects.create(
+        output=models.Output.objects.create_output(
+            job, "Test Hazard output", "gmf_scenario"))
+
+    with open(fname, 'rb') as csvfile:
+        gmfreader = csv.reader(csvfile, delimiter=',')
+        locations = gmfreader.next()
+
+        gmv_matrix = numpy.array(
+            [map(float, row) for row in gmfreader]).transpose()
+
+        for i, gmvs in enumerate(gmv_matrix):
+            point = tuple(map(float, locations[i].split()))
+            models.GmfAgg.objects.create(
+                imt="PGA",
+                gmf_collection=gmf_coll,
+                gmvs=gmvs,
+                site=store_one_site(job, point))
+
+    return gmf_coll
 
 
 def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
@@ -828,12 +859,13 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             output=models.Output.objects.create_output(
                 hazard_job, "Test gmf scenario output", "gmf_scenario"))
 
-        for point in ["POINT(15.48 38.0900001)", "POINT(15.565 38.17)",
-                      "POINT(15.481 38.25)"]:
+        for point in [(15.48, 38.0900001), (15.565, 38.17),
+                      (15.481, 38.25)]:
+            site = store_one_site(hazard_job, point)
             models.GmfAgg.objects.create(
                 gmf_collection=hazard_output,
                 imt="PGA",
-                location=point,
+                site=site,
                 gmvs=[0.1, 0.2, 0.3])
 
     else:
