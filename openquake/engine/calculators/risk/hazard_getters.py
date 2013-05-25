@@ -326,13 +326,14 @@ class GroundMotionValuesGetter(HazardGetter):
   ON ST_DWithin(e.site::geography, s.location::geography, %s)
   JOIN hzrdr.gmf_agg AS g
   ON g.site_id = s.id
-  WHERE taxonomy = %s AND exposure_model_id = %s AND
-        e.site && %s AND imt = %s AND gmf_collection_id = %s {}
+  WHERE s.hazard_job_id = %s AND taxonomy = %s AND exposure_model_id = %s
+        AND e.site && %s AND imt = %s AND gmf_collection_id = %s {}
   ORDER BY e.id, ST_Distance(e.site::geography, s.location::geography, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
         args = (self.max_distance * KILOMETERS_TO_METERS,
+                self.hazard_output.oq_job.id,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
                 assets_extent.wkt) + args
