@@ -14,14 +14,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
 
-import numpy
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
 from tests.utils import helpers
-from openquake.engine.db import models
 
 
 CSVFILE = os.path.join(os.path.dirname(os.path.dirname(__file__)),
@@ -104,31 +101,8 @@ class ScenarioDamageRiskCase3TestCase(risk.BaseRiskQATestCase):
     def hazard_id(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("scenario_hazard/job.ini"))
-        hc = job.hazard_calculation
-        job.hazard_calculation = models.HazardCalculation.objects.create(
-            owner=hc.owner, truncation_level=hc.truncation_level,
-            maximum_distance=hc.maximum_distance,
-            intensity_measure_types=["PGA"],
-            calculation_mode="scenario")
-        job.status = "complete"
-        job.save()
-
-        output = models.Output.objects.create_output(
-            job, "Test Hazard output", "gmf_scenario")
-        models.GmfCollection.objects.create(output=output)
-
-        with open(CSVFILE, 'rb') as csvfile:
-            gmfreader = csv.reader(csvfile, delimiter=',')
-            locations = gmfreader.next()
-            arr = numpy.array([[float(x) for x in row] for row in gmfreader])
-            for i, gmvs in enumerate(arr.transpose()):
-                models.GmfAgg.objects.create(
-                    gmf_collection=output.gmfcollection,
-                    imt="PGA",
-                    gmvs=gmvs,
-                    location="POINT(%s)" % locations[i])
-
-        return output.id
+        gmfcoll = helpers.populate_gmf_agg_from_csv(job, CSVFILE)
+        return gmfcoll.output.id
 
     def expected_outputs(self):
         return [self.EXPECTED_DMG_DIST_PER_ASSET,
