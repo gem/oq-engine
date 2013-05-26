@@ -44,7 +44,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         models.JobStats.objects.create(oq_job=self.job)
 
     def test_donot_save_trivial_gmf(self):
-        gmf_set = mock.Mock()
+        ses = mock.Mock()
 
         # setup two ground motion fields on a region made by three
         # locations. On the first two locations the values are
@@ -56,26 +56,23 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         gmf_dict = {PGA: dict(rupture_ids=[1, 2], gmvs=gmvs)}
 
         fake_bulk_inserter = mock.Mock()
-        with helpers.patch('openquake.engine.writer.BulkInserter') as m:
+        with helpers.patch('openquake.engine.writer.CacheInserter') as m:
             m.return_value = fake_bulk_inserter
             core._save_gmfs(
-                gmf_set, gmf_dict, [mock.Mock(), mock.Mock(), mock.Mock()], 1)
-            self.assertEqual(2, fake_bulk_inserter.add_entry.call_count)
+                ses, gmf_dict, [mock.Mock(), mock.Mock(), mock.Mock()])
+            self.assertEqual(2, fake_bulk_inserter.add.call_count)
 
     def test_save_only_nonzero_gmvs(self):
-        gmf_set = mock.Mock()
+        ses = mock.Mock()
 
         gmvs = numpy.matrix([[0.0, 0, 1]])
         gmf_dict = {PGA: dict(rupture_ids=[1, 2, 3], gmvs=gmvs)}
 
         fake_bulk_inserter = mock.Mock()
-        with helpers.patch('openquake.engine.writer.BulkInserter') as m:
+        with helpers.patch('openquake.engine.writer.CacheInserter') as m:
             m.return_value = fake_bulk_inserter
-            core._save_gmfs(
-                gmf_set, gmf_dict, [mock.Mock()], 1)
-            call_args = fake_bulk_inserter.add_entry.call_args_list[0][1]
-            self.assertEqual([1], call_args['gmvs'])
-            self.assertEqual([3], call_args['rupture_ids'])
+            core._save_gmfs(ses, gmf_dict, [mock.Mock()])
+            self.assertEqual(1, fake_bulk_inserter.add.call_count)
 
     def test_initialize_ses_db_records(self):
         hc = self.job.hazard_calculation
@@ -242,7 +239,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             save_rup_mock = core._save_ses_rupture
             save_gmf_mock = core._save_gmfs
 
-            # run the calculation in process and check the outputs
+            # run the calculation in process (to easy debugging)
+            # and check the outputs
             os.environ['OQ_NO_DISTRIBUTE'] = '1'
             try:
                 job = helpers.run_hazard_job(self.cfg)
@@ -254,12 +252,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
             # check that the parameters are read correctly from the files
             self.assertEqual(hc.ses_per_logic_tree_path, 5)
-
-            # Check that the gmf_sets were deleted by populate_gmf_agg
-            gmf_sets = models.GmfSet.objects.filter(
-                gmf_collection__output__oq_job=job.id,
-                gmf_collection__lt_realization__isnull=False)
-            self.assertEqual(0, gmf_sets.count())
 
             # check that we called the right number of times the patched
             # functions: 40 = 2 Lt * 4 sources * 5 ses = 8 tasks * 5 ses
@@ -306,47 +298,47 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         [s1, s2, s3, s4, s5] = self.calc.initialize_ses_db_records(rlz1)
         [t1, t2, t3, t4, t5] = self.calc.initialize_ses_db_records(rlz2)
 
-        expected = [  # sources, ses_id, seed, result_grp_ordinal
-            ([1], s1, 1711655216, 1),
-            ([1], s2, 1038305917, 2),
-            ([1], s3, 836289861, 3),
-            ([1], s4, 1781144172, 4),
-            ([1], s5, 1869241528, 5),
-            ([2], s1, 215682727, 6),
-            ([2], s2, 1101399957, 7),
-            ([2], s3, 2054512780, 8),
-            ([2], s4, 1550095676, 9),
-            ([2], s5, 1537531637, 10),
-            ([3], s1, 834081132, 11),
-            ([3], s2, 2109160433, 12),
-            ([3], s3, 1527803099, 13),
-            ([3], s4, 1876252834, 14),
-            ([3], s5, 1712942246, 15),
-            ([4], s1, 219667398, 16),
-            ([4], s2, 332999334, 17),
-            ([4], s3, 1017801655, 18),
-            ([4], s4, 1577927432, 19),
-            ([4], s5, 1810736590, 20),
-            ([1], t1, 745519017, 21),
-            ([1], t2, 2107357950, 22),
-            ([1], t3, 1305437041, 23),
-            ([1], t4, 75519567, 24),
-            ([1], t5, 179387370, 25),
-            ([2], t1, 1653492095, 26),
-            ([2], t2, 176278337, 27),
-            ([2], t3, 777508283, 28),
-            ([2], t4, 718002527, 29),
-            ([2], t5, 1872666256, 30),
-            ([3], t1, 796266430, 31),
-            ([3], t2, 646033314, 32),
-            ([3], t3, 289567826, 33),
-            ([3], t4, 1964698790, 34),
-            ([3], t5, 613832594, 35),
-            ([4], t1, 1858181087, 36),
-            ([4], t2, 195127891, 37),
-            ([4], t3, 1761641849, 38),
-            ([4], t4, 259827383, 39),
-            ([4], t5, 1464146382, 40),
+        expected = [  # sources, ses_id, seed
+            ([1], s1, 1711655216),
+            ([1], s2, 1038305917),
+            ([1], s3, 836289861),
+            ([1], s4, 1781144172),
+            ([1], s5, 1869241528),
+            ([2], s1, 215682727),
+            ([2], s2, 1101399957),
+            ([2], s3, 2054512780),
+            ([2], s4, 1550095676),
+            ([2], s5, 1537531637),
+            ([3], s1, 834081132),
+            ([3], s2, 2109160433),
+            ([3], s3, 1527803099),
+            ([3], s4, 1876252834),
+            ([3], s5, 1712942246),
+            ([4], s1, 219667398),
+            ([4], s2, 332999334),
+            ([4], s3, 1017801655),
+            ([4], s4, 1577927432),
+            ([4], s5, 1810736590),
+            ([1], t1, 745519017),
+            ([1], t2, 2107357950),
+            ([1], t3, 1305437041),
+            ([1], t4, 75519567),
+            ([1], t5, 179387370),
+            ([2], t1, 1653492095),
+            ([2], t2, 176278337),
+            ([2], t3, 777508283),
+            ([2], t4, 718002527),
+            ([2], t5, 1872666256),
+            ([3], t1, 796266430),
+            ([3], t2, 646033314),
+            ([3], t3, 289567826),
+            ([3], t4, 1964698790),
+            ([3], t5, 613832594),
+            ([4], t1, 1858181087),
+            ([4], t2, 195127891),
+            ([4], t3, 1761641849),
+            ([4], t4, 259827383),
+            ([4], t5, 1464146382),
         ]
 
         # utilities to present the generated arguments in a nicer way
@@ -361,10 +353,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                 return dic[src_id]
 
         def process_args(arg_gen):
-            for (job_id, source_ids, ses, task_seed,
-                 result_grp_ordinal) in arg_gen:
-                yield (map(src_no, source_ids), ses,
-                       task_seed, result_grp_ordinal)
+            for job_id, source_ids, ses, task_seed in arg_gen:
+                yield map(src_no, source_ids), ses, task_seed
 
         actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)

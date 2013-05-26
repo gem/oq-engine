@@ -44,9 +44,7 @@ from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config, get_calculator_class
-from openquake.engine.calculators.hazard.general import store_site_data
-from openquake.engine.calculators.hazard.event_based.post_processing import \
-    insert_into_gmf_agg
+
 
 CD = os.path.dirname(__file__)  # current directory
 
@@ -721,7 +719,7 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
         output=models.Output.objects.create_output(
             hazard_job, "Test SES Collection", "ses"),
         lt_realization=gmfset.gmf_collection.lt_realization)
-    rupture_ids = get_rupture_ids(hazard_job, ses_coll, 3)
+    ruptures = get_ruptures(hazard_job, ses_coll, 3)
     records = []
     for point in [(15.310, 38.225), (15.71, 37.225),
                   (15.48, 38.091), (15.565, 38.17),
@@ -729,9 +727,10 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
         site = store_one_site(hazard_job, point)
         records.append(models.GmfAgg.objects.create(
             gmf_collection=gmfset.gmf_collection,
+            ses=ruptures[0].ses,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
-            rupture_ids=rupture_ids,
+            rupture_ids=[r.id for r in ruptures],
             site=site))
 
     return records
@@ -767,15 +766,16 @@ def create_gmf_from_csv(job, fname):
         gmv_matrix = numpy.array(
             [map(float, row) for row in gmfreader]).transpose()
 
-        rupture_ids = get_rupture_ids(job, ses_coll, len(gmv_matrix[0]))
+        ruptures = get_ruptures(job, ses_coll, len(gmv_matrix[0]))
 
         for i, gmvs in enumerate(gmv_matrix):
 
             point = tuple(map(float, locations[i].split()))
             models.GmfAgg.objects.create(
                 gmf_collection=gmf_coll,
+                ses=ruptures[0].ses,
                 imt="PGA", gmvs=gmvs,
-                rupture_ids=map(str, rupture_ids),
+                rupture_ids=[r.id for r in ruptures],
                 site=store_one_site(job, point))
 
     return gmf_coll
@@ -889,9 +889,9 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     return job, files
 
 
-def get_rupture_ids(job, ses_collection, num):
+def get_ruptures(job, ses_collection, num):
     """
-    :returns: a list of IDs of newly created ruptures associated with
+    :returns: a list of newly created ruptures associated with
     `job` and an instance of
     :class:`openquake.engine.db.models.HazardCalculation`. It also
     creates a father :class:`openquake.engine.db.models.SES`. Each
@@ -920,7 +920,7 @@ def get_rupture_ids(job, ses_collection, num):
             is_from_fault_source=False,
             lons=[], lats=[], depths=[],
             result_grp_ordinal=1,
-            rupture_ordinal=0).id
+            rupture_ordinal=0)
         for i in range(num)]
 
 
