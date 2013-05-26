@@ -68,7 +68,7 @@ DEFAULT_GMF_REALIZATIONS = 1
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def ses_and_gmfs(job_id, src_ids, ses, task_seed, result_grp_ordinal):
+def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     """
     Celery task for the stochastic event set calculator.
 
@@ -91,10 +91,6 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed, result_grp_ordinal):
     :param int task_seed:
         Value for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields.
-    :param int result_grp_ordinal:
-        The result group in which the calculation results will be placed.
-        This ID basically corresponds to the sequence number of the task,
-        in the context of the entire calculation.
     """
     numpy.random.seed(task_seed)
 
@@ -136,14 +132,14 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed, result_grp_ordinal):
     with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
         rupture_ids = [
             _save_ses_rupture(
-                ses, rupture, cmplt_lt_ses, result_grp_ordinal, i)
+                ses, rupture, cmplt_lt_ses, i)
             for i, rupture in enumerate(ruptures, 1)]
 
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
                 'computing gmfs', job_id, ses_and_gmfs):
             gmf_cache = compute_gmf_cache(
-                hc, gsims, ruptures, rupture_ids, result_grp_ordinal)
+                hc, gsims, ruptures, rupture_ids)
 
         with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
             # This will be the "container" for all computed GMFs
@@ -151,14 +147,12 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed, result_grp_ordinal):
             gmf_set = models.GmfSet.objects.get(
                 gmf_collection__lt_realization__id=lt_rlz.id,
                 ses_ordinal=ses.ordinal)
-            _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
-                       result_grp_ordinal)
+            _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute())
 
 ses_and_gmfs.ignore_result = False  # essential
 
 
-def compute_gmf_cache(hc, gsims, ruptures, rupture_ids,
-                      result_grp_ordinal):
+def compute_gmf_cache(hc, gsims, ruptures, rupture_ids):
     """
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for all IMTs.
@@ -203,7 +197,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids,
 
 @transaction.commit_on_success(using='reslt_writer')
 def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
-                      result_grp_ordinal, rupture_ordinal):
+                      rupture_ordinal):
     """
     Helper function for saving stochastic event set ruptures to the database.
 
@@ -216,13 +210,8 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         :class:`openquake.engine.db.models.SES` representing the `complete
         logic tree` stochastic event set.
         If not None, save a copy of the input `rupture` to this SES.
-    :param int result_grp_ordinal:
-        The result group in which the calculation results will be placed.
-        This ID basically corresponds to the sequence number of the task,
-        in the context of the entire calculation.
     :param int rupture_ordinal:
-        The ordinal of a rupture with a given result group (indicated by
-        ``result_grp_ordinal``).
+        The ordinal of a rupture with a given result group.
     """
     is_from_fault_source = (
         rupture.source_typology in (ComplexFaultSource, SimpleFaultSource)
@@ -294,7 +283,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         lons=lons,
         lats=lats,
         depths=depths,
-        result_grp_ordinal=result_grp_ordinal,
+        result_grp_ordinal=1,
         rupture_ordinal=rupture_ordinal,
     ).id
 
@@ -313,7 +302,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
             lons=lons,
             lats=lats,
             depths=depths,
-            result_grp_ordinal=result_grp_ordinal,
+            result_grp_ordinal=1,
             rupture_ordinal=rupture_ordinal,
         )
 
@@ -321,7 +310,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
+def _save_gmfs(gmf_set, gmf_dict, points_to_compute):
     """
     Helper method to save computed GMF data to the database.
 
@@ -333,11 +322,6 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
     :param points_to_compute:
         An :class:`openquake.hazardlib.geo.mesh.Mesh` object, representing all
         of the points of interest for a calculation.
-    :param int result_grp_ordinal:
-        The sequence number (1 to N) of the task which computed these results.
-
-        A calculation consists of N tasks, so this tells us which task computed
-        the data.
     """
 
     inserter = writer.BulkInserter(models.Gmf)
@@ -374,7 +358,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
                     location=location.wkt2d,
                     gmvs=gmvs,
                     rupture_ids=relevant_rupture_ids,
-                    result_grp_ordinal=result_grp_ordinal,
+                    result_grp_ordinal=1,
                 )
 
     inserter.flush()
@@ -394,8 +378,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         Yielded results are tuples of the form
 
-        (job_id, sources, ses_rlz_n, lt_rlz_id, gsims,
-         task_seed, result_grp_ordinal)
+        (job_id, sources, ses_rlz_n, lt_rlz_id, gsims, task_seed)
 
         (random_seed will be used to seed numpy for temporal occurence
         sampling).
@@ -405,7 +388,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rnd.seed(hc.random_seed)
         realizations = self._get_realizations()
 
-        result_grp_ordinal = 1
         for lt_rlz in realizations:
             blocks = itertools.chain(
                 block_splitter(self._get_source_ids(lt_rlz),
@@ -427,10 +409,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             for src_ids in blocks:
                 for ses in all_ses:
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
-                    task_args = (self.job.id, src_ids, ses, task_seed,
-                                 result_grp_ordinal)
+                    task_args = (self.job.id, src_ids, ses, task_seed)
                     yield task_args
-                    result_grp_ordinal += 1
 
     def execute(self):
         """
