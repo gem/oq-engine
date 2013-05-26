@@ -1825,16 +1825,16 @@ class GmfCollection(djm.Model):
         for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
             query = """
         SELECT imt, sa_period, sa_damping, rupture_id,
-        array_agg(gmv), array_agg(ST_X(location)),
-        array_agg(ST_Y(location)) FROM (
-           SELECT imt, sa_period, sa_damping,
-           unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           FROM hzrdr.gmf_agg, hzrdi.site_data
-           WHERE site_id = hzrdi.site_data.id AND gmf_collection_id=%d) AS x,
-           hzrdr.ses_rupture as y
-        where x.rupture_id=y.id AND ses_id=%d
-        group by imt, sa_period, sa_damping, rupture_id
-        """ % (self.id, ses.id)
+               array_agg(gmv) AS gmvs,
+               array_agg(ST_X(location)) AS xs,
+               array_agg(ST_Y(location)) AS ys
+        FROM (SELECT imt, sa_period, sa_damping, ses_id,
+             unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
+             FROM hzrdr.gmf_agg, hzrdi.site_data
+             WHERE site_id = hzrdi.site_data.id AND hazard_job_id=%d
+             AND gmf_collection_id=%d AND ses_id=%d) AS x
+        GROUP BY imt, sa_period, sa_damping, rupture_id
+        """ % (ses.ses_collection.output.oq_job.id, self.id, ses.id)
             if orderby:  # may be used in tests to get reproducible results
                 query += 'order by imt, sa_period, sa_damping, rupture_id;'
             curs = getcursor('job_init')
@@ -1952,6 +1952,7 @@ class GmfAgg(djm.Model):
     respective geographical locations.
     """
     gmf_collection = djm.ForeignKey('GmfCollection')
+    ses = djm.ForeignKey('SES', null=True)
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
