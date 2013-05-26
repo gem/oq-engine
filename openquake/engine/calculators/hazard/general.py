@@ -265,6 +265,7 @@ def store_site_data(job_id, site_model_inp, mesh):
             vs30_measured=measured,
             z1pt0=smd.z1pt0,
             z2pt5=smd.z2pt5)
+
         cache.add(site)
 
     cache.flush()
@@ -752,7 +753,6 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.reference_depth_to_2pt5km_per_sec,
                     self.hc.reference_depth_to_1pt0km_per_sec)
                 for pt in points]
-
         store_site_data(self.job.id, site_model_inp, mesh)
 
     # Silencing 'Too many local variables'
