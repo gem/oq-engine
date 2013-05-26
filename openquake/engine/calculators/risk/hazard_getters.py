@@ -238,7 +238,7 @@ class GroundMotionValuesGetter(HazardGetter):
     def container(self, hazard_output):
         return hazard_output.gmfcollection
 
-    def __call__(self, monitor=DummyMonitor()):
+    def __call__(self, rupture_ids=None, monitor=DummyMonitor()):
         """
         :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor`
         :returns:
@@ -268,19 +268,9 @@ class GroundMotionValuesGetter(HazardGetter):
                     [gmfs[i] for i in gmf_ids])
 
         elif not gmf_ids:  # all missing
-            return [], ([], [])
+            return [], []
 
         cursor = models.getcursor('job_init')
-
-        # get the sorted ruptures from all the distinct GMFs
-        with monitor('getting ruptures'):
-            cursor.execute('''\
-        SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
-        WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
-            # TODO: in principle it should be possible to remove the ORDER BY;
-            # qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
-            # breaks if I do so (MS)
-            sorted_ruptures = numpy.array([r[0] for r in cursor.fetchall()])
 
         # get the data from the distinct GMFs
         with monitor('getting gmvs'):
@@ -290,11 +280,11 @@ class GroundMotionValuesGetter(HazardGetter):
             gmfs = {}
             for gmf_id, gmvs, ruptures in cursor.fetchall():
                 gmvd = dict(zip(ruptures, gmvs))
-                gmvs = numpy.array([gmvd.get(r, 0.) for r in sorted_ruptures])
+                gmvs = numpy.array([gmvd.get(r, 0.) for r in rupture_ids])
                 gmfs[gmf_id] = gmvs
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
-               ([gmfs[i] for i in gmf_ids], sorted_ruptures))
+               [gmfs[i] for i in gmf_ids])
         return ret
 
     def get_data(self, imt):
