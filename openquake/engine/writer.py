@@ -142,23 +142,22 @@ class CacheInserter(object):
         alias = router.db_for_write(last.__class__)
         meta = last.__class__._meta
         tname = '"%s"' % meta.db_table
-        fields = []
-        for f in meta._field_name_cache[1:]:  # skip the first field, the id
-            col = getattr(last, f.name)
-            fname = f.name + '_id' if hasattr(col, 'id') else f.name
-            fields.append(fname)
+        colnames = [f.attname for f in meta._field_name_cache[1:]]
+        # skip the first field, the id
 
         # generate a big string with the objects and save it with COPY FROM
-        text = '\n'.join(self.to_line(obj, fields) for obj in objects)
+        text = '\n'.join(self.to_line(obj, colnames) for obj in objects)
         curs = connections[alias].cursor()
-        curs.copy_from(StringIO(text), tname, columns=fields)
+        curs.copy_from(StringIO(text), tname, columns=colnames)
+        ## TODO: should we add an assert that the number of rows stored
+        ## in the db is the expected one? I (MS) have seen a case where
+        ## this fails silently (it was for True/False not converted in t/f)
         last.save()  # this "commits" the operation
 
         LOGGER.debug('saved %d rows in uiapi.performance', len(self.values))
         self.values = []
 
-    @staticmethod
-    def to_line(obj, fields):
+    def to_line(self, obj, fields):
         """
         Convert the fields of a Django object into a line string suitable
         for import via COPY FROM. The encoding is UTF8.
@@ -168,13 +167,25 @@ class CacheInserter(object):
             col = getattr(obj, f)
             if col is None:
                 col = r'\N'
+            elif isinstance(col, bool):
+                col = 't' if col else 'f'
             elif isinstance(col, Point):
                 col = 'SRID=4326;' + col.wkt
             elif isinstance(col, GeometryField):
                 col = col.wkt()
-            elif isinstance(col, list):  # for arrays; this is fragile
-                col = '{%s}' % str(col)[1:-1]
+            elif isinstance(col, list):  # for numeric arrays; this is fragile
+                col = self.array_to_pgstring(col)
             else:
                 col = unicode(col).encode('utf8')
             cols.append(col)
         return '\t'.join(cols)
+
+    @staticmethod
+    def array_to_pgstring(a):
+        ls = []
+        for n in a:
+            s = str(n)
+            if s.endswith('L'):  # strip the trailing "L"
+                s = s[:-1]
+            ls.append(s)
+        return '{%s}' % ','.join(ls)

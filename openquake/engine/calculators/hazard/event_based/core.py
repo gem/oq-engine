@@ -142,12 +142,7 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
                 hc, gsims, ruptures, rupture_ids)
 
         with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
-            # This will be the "container" for all computed GMFs
-            # for this stochastic event set.
-            gmf_set = models.GmfSet.objects.get(
-                gmf_collection__lt_realization__id=lt_rlz.id,
-                ses_ordinal=ses.ordinal)
-            _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute())
+            _save_gmfs(ses, gmf_cache, hc.site_collection)
 
 ses_and_gmfs.ignore_result = False  # essential
 
@@ -163,7 +158,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids):
     if hc.ground_motion_correlation_model is not None:
         correl_model = haz_general.get_correl_model(hc)
 
-    n_points = len(hc.points_to_compute())
+    n_points = len(hc.site_collection)
 
     # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
     gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_points, 0)),
@@ -310,21 +305,21 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmfs(gmf_set, gmf_dict, points_to_compute):
+def _save_gmfs(ses, gmf_dict, points_to_compute):
     """
     Helper method to save computed GMF data to the database.
-
-    :param gmf_set:
-        A :class:`openquake.engine.db.models.GmfSet` instance, which will be
-        the "container" for these GMFs.
+    :param ses:
+        A :class:`openquake.engine.db.models.SES` instance
     :param dict gmf_dict:
         The dict used to cache/buffer up GMF results during the calculation.
     :param points_to_compute:
         An :class:`openquake.hazardlib.geo.mesh.Mesh` object, representing all
         of the points of interest for a calculation.
     """
+    gmf_coll = models.GmfCollection.objects.get(
+        lt_realization=ses.ses_collection.lt_realization)
 
-    inserter = writer.BulkInserter(models.Gmf)
+    inserter = writer.CacheInserter(100)  # beware of a cache too large
 
     for imt, gmf_data in gmf_dict.iteritems():
 
@@ -342,24 +337,22 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute):
             sa_damping = imt.damping
         imt_name = imt.__class__.__name__
 
-        for all_gmvs, location in zip(gmfs, points_to_compute):
+        for all_gmvs, site in zip(gmfs, points_to_compute):
             # take only the nonzero ground motion values and the
             # corresponding rupture ids
             nonzero_gmvs_idxs = numpy.where(all_gmvs != 0)
             gmvs = all_gmvs[nonzero_gmvs_idxs].tolist()
             relevant_rupture_ids = rupture_ids[nonzero_gmvs_idxs].tolist()
-
             if gmvs:
-                inserter.add_entry(
-                    gmf_set_id=gmf_set.id,
+                inserter.add(models.GmfAgg(
+                    gmf_collection=gmf_coll,
+                    ses_id=ses.id,
                     imt=imt_name,
                     sa_period=sa_period,
                     sa_damping=sa_damping,
-                    location=location.wkt2d,
+                    site_id=site.id,
                     gmvs=gmvs,
-                    rupture_ids=relevant_rupture_ids,
-                    result_grp_ordinal=1,
-                )
+                    rupture_ids=relevant_rupture_ids))
 
     inserter.flush()
 
@@ -495,6 +488,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         investigation_time = self._compute_investigation_time(self.hc)
 
+        # to remove
         models.GmfSet.objects.create(
             gmf_collection=gmf_coll,
             investigation_time=investigation_time)
@@ -547,6 +541,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         gmf_coll = models.GmfCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
+        # to remove
         for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
             models.GmfSet.objects.create(
                 gmf_collection=gmf_coll,
@@ -606,11 +601,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         If requested, perform additional processing of GMFs to produce hazard
         curves.
         """
-        with EnginePerformanceMonitor(
-                'populating gmf_agg', self.job.id, tracing=True):
-            self.parallelize(
-                post_processing.insert_into_gmf_agg,
-                post_processing.insert_into_gmf_agg_arg_gen(self.job))
 
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',

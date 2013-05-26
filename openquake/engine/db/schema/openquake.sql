@@ -643,25 +643,24 @@ ALTER TABLE hzrdr.gmf ALTER COLUMN location SET NOT NULL;
 
 CREATE TABLE hzrdr.gmf_agg (
     id SERIAL PRIMARY KEY,
-    gmf_collection_id INTEGER NOT NULL REFERENCES hzrdr.gmf_collection(id)
-    ON DELETE CASCADE,
+    gmf_collection_id INTEGER NOT NULL, -- fk -> gmf_collection
+    ses_id INTEGER, -- fk -> ses
     imt VARCHAR NOT NULL,
-        --CONSTRAINT hazard_curve_imt
-        --CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
+        CONSTRAINT hazard_curve_imt
+        CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
     sa_period float,
-        -- CONSTRAINT gmf_sa_period
-        --CHECK(
-        --    ((imt = 'SA') AND (sa_period IS NOT NULL))
-        --    OR ((imt != 'SA') AND (sa_period IS NULL))),
+        CONSTRAINT gmf_sa_period
+        CHECK(
+            ((imt = 'SA') AND (sa_period IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_period IS NULL))),
     sa_damping float,
-        --CONSTRAINT gmf_sa_damping
-        --CHECK(
-        --    ((imt = 'SA') AND (sa_damping IS NOT NULL))
-        --    OR ((imt != 'SA') AND (sa_damping IS NULL))),
-    gmvs float[],
+        CONSTRAINT gmf_sa_damping
+        CHECK(
+            ((imt = 'SA') AND (sa_damping IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_damping IS NULL))),
+    gmvs float[] NOT NULL,
     rupture_ids int[],
-    site_id INTEGER NOT NULL, -- fk -> site_data
-    UNIQUE (gmf_collection_id, imt, sa_period, sa_damping, site_id)
+    site_id INTEGER NOT NULL -- fk -> site_data
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1101,7 +1100,7 @@ CREATE TABLE hzrdi.site_data (
 ) TABLESPACE htemp_ts;
 SELECT AddGeometryColumn('hzrdi', 'site_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdi.site_data ALTER COLUMN location SET NOT NULL;
-
+-- unique (location, hazard_job_id)
 
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
@@ -1417,6 +1416,18 @@ ALTER TABLE hzrdr.gmf_agg
 ADD CONSTRAINT hzrdr_gmf_agg_site_data_fk
 FOREIGN KEY (site_id)
 REFERENCES hzrdi.site_data(id)
+ON DELETE CASCADE;
+
+ALTER TABLE hzrdr.gmf_agg
+ADD CONSTRAINT hzrdr_gmf_agg_gmf_collection_fk
+FOREIGN KEY (gmf_collection_id)
+REFERENCES hzrdr.gmf_collection(id)
+ON DELETE CASCADE;
+
+ALTER TABLE hzrdr.gmf_agg
+ADD CONSTRAINT hzrdr_gmf_agg_ses_fk
+FOREIGN KEY (ses_id)
+REFERENCES hzrdr.ses(id)
 ON DELETE CASCADE;
 
 ---------------------- views ----------------------------
