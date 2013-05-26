@@ -167,10 +167,12 @@ class UnitOutputs(object):
 
 
 def individual_outputs(loss_type, unit, params, profile):
-    ruptures = sorted(models.SESRupture.objects.filter(
-        ses__ses_collection__lt_realization=
-        unit.getter.hazard_output.gmfcollection.lt_realization
-    ).values_list('id', flat=True))
+
+    with profile('getting ruptures'):
+        ruptures = sorted(models.SESRupture.objects.filter(
+            ses__ses_collection__lt_realization=
+            unit.getter.hazard_output.gmfcollection.lt_realization
+        ).values_list('id', flat=True))
 
     event_loss_table = collections.Counter()
 
