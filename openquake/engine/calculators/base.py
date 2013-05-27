@@ -176,6 +176,7 @@ class Calculator(object):
         initialize result records, perform detailed parsing of input data, etc.
         """
 
+    # this method is completely overridden in the event based calculator
     def execute(self):
         """
         Calculation work is parallelized over sources, which means that each
