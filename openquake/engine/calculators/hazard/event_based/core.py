@@ -64,6 +64,9 @@ from openquake.engine.performance import EnginePerformanceMonitor
 #: hazard calculator.
 DEFAULT_GMF_REALIZATIONS = 1
 
+# NB: beware of large caches
+inserter = writer.CacheInserter(models.Gmf, 1000)
+
 
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
@@ -339,9 +342,6 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         A calculation consists of N tasks, so this tells us which task computed
         the data.
     """
-
-    inserter = writer.CacheInserter(models.Gmf, 100)
-
     for imt, gmf_data in gmf_dict.iteritems():
 
         gmfs = gmf_data['gmvs']
