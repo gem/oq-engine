@@ -1374,7 +1374,8 @@ class Output(djm.Model):
         if getattr(self.output_container, 'statistics', None) is not None:
             return self.StatisticalParams(self.output_container.statistics,
                                           self.output_container.quantile)
-        elif getattr(self.output_container, 'hazard_output_id', None) is not None:
+        elif getattr(
+                self.output_container, 'hazard_output_id', None) is not None:
             return self.output_container.hazard_output.statistical_params
         else:
             return self.StatisticalParams(None, None)
