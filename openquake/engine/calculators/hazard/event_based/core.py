@@ -377,8 +377,6 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
                     result_grp_ordinal=result_grp_ordinal,
                 ))
 
-    inserter.flush()
-
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
