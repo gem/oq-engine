@@ -1268,36 +1268,51 @@ class Output(djm.Model):
         'hazard_metadata',
         'investigation_time statistics quantile sm_path gsim_path')
 
+    #: Hold the full paths in the model trees of ground shaking
+    #: intensity models and of source models, respectively.
+    LogicTreePath = collections.namedtuple(
+        'logic_tree_path',
+        'gsim_path sm_path')
+
+    #: Hold the statistical params (statistics, quantile).
+    StatisticalParams = collections.namedtuple(
+        'statistical_params',
+        'statistics quantile')
+
     owner = djm.ForeignKey('OqUser')
     oq_job = djm.ForeignKey('OqJob')  # nullable in the case of an output
     # coming from an external source, with no job associated
     display_name = djm.TextField()
-    OUTPUT_TYPE_CHOICES = (
+    HAZARD_OUTPUT_TYPE_CHOICES = (
+        (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
+        (u'complete_lt_ses', u'Complete Logic Tree SES'),
+        (u'disagg_matrix', u'Disaggregation Matrix'),
+        (u'gmf', u'Ground Motion Field'),
+        (u'hazard_curve', u'Hazard Curve'),
+        (u'hazard_curve_multi', u'Hazard Curve (multiple imts)'),
+        (u'hazard_map', u'Hazard Map'),
+        (u'ses', u'Stochastic Event Set'),
+        (u'uh_spectra', u'Uniform Hazard Spectra'),
+    )
+
+    RISK_OUTPUT_TYPE_CHOICES = (
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
         (u'aggregate_losses', u'Aggregate Losses'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
         (u'collapse_map', u'Collapse Map Distribution'),
-        (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
-        (u'complete_lt_ses', u'Complete Logic Tree SES'),
-        (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
         (u'event_loss', u'Event Loss Table'),
-        (u'gmf', u'Ground Motion Field'),
-        (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
-        (u'hazard_curve', u'Hazard Curve'),
-        (u'hazard_curve_multi', u'Hazard Curve (multiple imts)'),
-        (u'hazard_map', u'Hazard Map'),
         (u'loss_curve', u'Loss Curve'),
+        (u'loss_fraction', u'Loss fractions'),
         # FIXME(lp). We should distinguish between conditional losses
         # and loss map
         (u'loss_map', u'Loss Map'),
-        (u'ses', u'Stochastic Event Set'),
-        (u'uh_spectra', u'Uniform Hazard Spectra'),
-        (u'unknown', u'Unknown'),
     )
-    output_type = djm.TextField(choices=OUTPUT_TYPE_CHOICES)
+
+    output_type = djm.TextField(
+        choices=HAZARD_OUTPUT_TYPE_CHOICES + RISK_OUTPUT_TYPE_CHOICES)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     objects = OutputManager()
@@ -1311,8 +1326,58 @@ class Output(djm.Model):
     def is_hazard_curve(self):
         return self.output_type in ['hazard_curve', 'hazard_curve_multi']
 
-    def is_gmf_scenario(self):
-        return self.output_type == 'gmf_scenario'
+    @property
+    def output_container(self):
+        """
+        :returns: the output container associated with this output
+        """
+
+        # FIXME(lp). for some reasons, an agg_loss_curve does not have
+        # its proper container.
+
+        if self.output_type == 'agg_loss_curve':
+            return self.loss_curve
+
+        return getattr(self, self.output_type.replace('_', ''))
+
+    @property
+    def lt_realization_paths(self):
+        """
+        :returns: an instance of `LogicTreePath` the output is
+        associated with associated with. Otherwise, it returns a tuple
+        with a couple of None
+        """
+        hazard_output_types = [el[0] for el in self.HAZARD_OUTPUT_TYPE_CHOICES]
+        risk_output_types = [el[0] for el in self.RISK_OUTPUT_TYPE_CHOICES]
+        container = self.output_container
+
+        if self.output_type in hazard_output_types:
+            lt_realization = getattr(container, 'lt_realization', None)
+        elif self.output_type in risk_output_types:
+            if getattr(container, 'hazard_output_id', None):
+                return container.hazard_output.lt_realization_paths
+        else:
+            raise RuntimeError("unexpected output type %s" % self.output_type)
+
+        if lt_realization is not None:
+            return self.LogicTreePath(
+                lt_realization.gsim_path, lt_realization.sm_path)
+        else:
+            return self.LogicTreePath(None, None)
+
+    @property
+    def statistical_params(self):
+        """
+        :returns: an instance of `StatisticalParams` the output is
+        associated with
+        """
+        if getattr(self.container, 'statistics', None) is not None:
+            return self.StatisticalParams(self.container.statistics,
+                                          self.container.quantile)
+        elif getattr(self.container, 'hazard_output_id', None) is not None:
+            return self.container.hazard_output.statistical_params
+        else:
+            return self.StatisticalParams(None, None)
 
     @property
     def hazard_metadata(self):
@@ -1331,77 +1396,13 @@ class Output(djm.Model):
                 * gsim_path: a list representing the gsim logic tree path
 
         """
+        investigation_time = self.oq_job\
+                                 .risk_calculation\
+                                 .get_hazard_calculation()\
+                                 .investigation_time
 
-        rc = self.oq_job.risk_calculation
-        hc = rc.get_hazard_calculation()
-
-        investigation_time = hc.investigation_time
-
-        # in scenario calculation we do not have neither statistics
-        # neither logic tree realizations
-
-        # if ``hazard_output`` is None, then the risk output is
-        # computed over multiple hazard outputs (related to different
-        # logic tree realizations). Then, We do not have to collect
-        # metadata regarding statistics or logic tree
-        statistics = None
-        quantile = None
-        sm_lt_path = None
-        gsim_lt_path = None
-
-        if rc.calculation_mode != 'scenario':
-            # Two cases:
-            # - hazard_output
-            # - hazard_calculation
-            if rc.hazard_output is not None:
-                ho = rc.hazard_output
-
-                if ho.is_hazard_curve():
-                    lt = rc.hazard_output.hazardcurve.lt_realization
-                    if lt is None:
-                        # statistical result:
-                        statistics = ho.hazardcurve.statistics
-                        quantile = ho.hazardcurve.quantile
-                    else:
-                        sm_lt_path = lt.sm_lt_path
-                        gsim_lt_path = lt.gsim_lt_path
-                else:
-                    lt = ho.gmfcollection.lt_realization
-                    sm_lt_path = lt.sm_lt_path
-                    gsim_lt_path = lt.gsim_lt_path
-            elif rc.hazard_calculation is not None:
-                # we're consuming multiple outputs from a single hazard
-                # calculation
-                if self.output_type in ['loss_curve', 'agg_loss_curve']:
-                    the_output = self.loss_curve
-                elif self.output_type == 'loss_map':
-                    the_output = self.loss_map
-                elif self.output_type == 'loss_fraction':
-                    the_output = self.loss_fraction
-                else:
-                    raise RuntimeError(
-                        'Error getting hazard metadata: Unexpected output_type'
-                        ' "%s"' % self.output_type
-                    )
-
-                if the_output.hazard_output_id is not None:
-                    haz_output = the_output.hazard_output
-
-                    if haz_output.is_hazard_curve():
-                        haz = haz_output.hazardcurve
-                    else:
-                        haz = haz_output.gmfcollection
-
-                    if haz.lt_realization is not None:
-                        sm_lt_path = haz.lt_realization.sm_lt_path
-                        gsim_lt_path = haz.lt_realization.gsim_lt_path
-                else:
-                    if self.output_type == 'loss_curve':
-                        # FIXME(lp). This is clearly not correct
-
-                        # it's a mean/quantile loss curve
-                        statistics = self.loss_curve.statistics
-                        quantile = self.loss_curve.quantile
+        statistics, quantile = self.statistical_params
+        gsim_lt_path, sm_lt_path = self.lt_realization_paths
 
         return self.HazardMetadata(investigation_time,
                                    statistics, quantile,
