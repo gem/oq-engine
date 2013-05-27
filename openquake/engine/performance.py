@@ -98,7 +98,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     """
 
     # globals per process
-    cache = CacheInserter(1000)  # store at most 1,000 objects
+    cache = CacheInserter(models.Performance, 1000)  # store at most 1k objects
     pgpid = None
     pypid = None
 

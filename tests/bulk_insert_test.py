@@ -152,7 +152,7 @@ class CacheInserterTestCase(unittest.TestCase):
 
     # this test is probably too strict and testing implementation details
     def test_insert_gmf(self):
-        cache = CacheInserter(10)
+        cache = CacheInserter(GmfAgg, 10)
         gmf1 = GmfAgg(
             gmf_collection_id=1, imt='PGA', gmvs=[], rupture_ids=[],
             location='POINT(-122.5000 37.5000)')
@@ -163,7 +163,7 @@ class CacheInserterTestCase(unittest.TestCase):
         cache.add(gmf2)
         cache.flush()
         connection = writer.connections['reslt_writer']
-        self.assertEqual(connection.data, '1	PGA	\N	\N	POINT (-122.5000000000000000 37.5000000000000000)	{}	{}')
+        self.assertEqual(connection.data, '1\tPGA\t\\N\t\\N\tSRID=4326;POINT (-122.5000000000000000 37.5000000000000000)\t{}\t{}\n1\tPGA\t\\N\t\\N\tSRID=4326;POINT (-121.5000000000000000 37.5000000000000000)\t{}\t{}')
         self.assertEqual(connection.table, '"hzrdr"."gmf_agg"')
         self.assertEqual(
             connection.columns,
