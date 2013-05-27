@@ -63,7 +63,7 @@ class HazardGetter(object):
     """
     def __init__(self, hazard_output, assets, max_distance, imt):
         self.hazard_output = hazard_output
-        hazard = self.container(hazard_output)
+        hazard = hazard_output.output_container
         self.hazard_id = hazard.id
         self.assets = assets
         self.max_distance = max_distance
@@ -82,13 +82,6 @@ class HazardGetter(object):
             for asset in self.assets])
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
         self.all_asset_ids = set(self.asset_dict)
-
-    def container(self, hazard_output):
-        """
-        Returns the corresponding output container object from an
-        Hazard :class:`openquake.engine.db.models.Output` instance
-        """
-        raise NotImplementedError
 
     def __repr__(self):
         return "<%s max_distance=%s assets=%s>" % (
@@ -153,9 +146,6 @@ class HazardCurveGetterPerAsset(HazardGetter):
         super(HazardCurveGetterPerAsset, self).__init__(
             hazard, assets, max_distance, imt)
         self._cache = {}
-
-    def container(self, hazard_output):
-        return hazard_output.hazardcurve
 
     def get_data(self, imt):
         """
@@ -233,9 +223,6 @@ class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     """
-
-    def container(self, hazard_output):
-        return hazard_output.gmfcollection
 
     def __call__(self):
         """
