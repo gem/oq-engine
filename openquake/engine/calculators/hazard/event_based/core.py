@@ -387,6 +387,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
     core_calc_task = ses_and_gmfs
 
+    preferred_block_size = 1  # will be overridden in calc_num_tasks
+
     def calc_num_tasks(self):
         """
         The number of tasks is inferred from the configuration parameter
