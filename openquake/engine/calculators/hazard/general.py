@@ -443,7 +443,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
-    def task_arg_gen(self, block_size):
+    def task_arg_gen(self, block_size, check_num_task=True):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -461,6 +461,7 @@ class BaseHazardCalculator(base.Calculator):
 
         realizations = self._get_realizations()
 
+        n = 0  # number of yielded arguments
         for lt_rlz in realizations:
             # separate point sources from all the other types, since
             # we distribution point sources in different sized chunks
@@ -471,13 +472,21 @@ class BaseHazardCalculator(base.Calculator):
                                         point_source_block_size):
                 task_args = (self.job.id, block, lt_rlz.id)
                 yield task_args
-
+                n += 1
             # now for area and fault sources
             other_source_ids = self._get_source_ids(lt_rlz)
 
             for block in block_splitter(other_source_ids, block_size):
                 task_args = (self.job.id, block, lt_rlz.id)
                 yield task_args
+                n += 1
+
+        # this sanity check should go into a unit test, and will likely
+        # go there in the future
+        if check_num_task:
+            num_tasks = models.JobStats.objects.get(
+                oq_job=self.job.id).num_tasks
+            assert num_tasks == n, 'Expected %d tasks, got %d' % (num_tasks, n)
 
     def _get_realizations(self):
         """
@@ -683,14 +692,14 @@ class BaseHazardCalculator(base.Calculator):
             fragility_format, _limit_states = parser.next()
 
             if (fragility_format == "continuous" and
-                hc.calculation_mode != "scenario"):
+                    hc.calculation_mode != "scenario"):
                 raise NotImplementedError(
                     "Getting IMT and levels from "
                     "a continuous fragility model is not yet supported")
 
-            hc.intensity_measure_types_and_levels = dict([
+            hc.intensity_measure_types_and_levels = dict(
                 (iml['IMT'], iml['imls'])
-                for _taxonomy, iml, _params, _no_damage_limit in parser])
+                for _taxonomy, iml, _params, _no_damage_limit in parser)
             hc.intensity_measure_types = (
                 hc.intensity_measure_types_and_levels.keys())
             hc.save()
@@ -1022,26 +1031,49 @@ class BaseHazardCalculator(base.Calculator):
             hazard_calculation=self.hc.id)
         num_rlzs = realizations.count()
 
-        # Compute the number of tasks.
-        block_size = self.block_size()
-        num_tasks = 0
-        nses = self.hc.ses_per_logic_tree_path
-        for lt_rlz in realizations:
-            # Each realization has the potential to choose a random source
-            # model, and thus there may be a variable number of tasks for each
-            # realization (depending on the number of the sources in the model
-            # which was chosen for the realization).
-            num_sources = models.SourceProgress.objects.filter(
-                lt_realization=lt_rlz).count()
-            if nses:  # for event based calculators
-                num_sources *= nses
-            num_tasks += math.ceil(float(num_sources) / block_size)
-
         [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
         job_stats.num_sites = num_sites
-        job_stats.num_tasks = num_tasks
+        job_stats.num_tasks = self.calc_num_tasks()
         job_stats.num_realizations = num_rlzs
         job_stats.save()
+
+    def calc_num_tasks(self):
+        """
+        The number of tasks is inferred from the number of sources
+        per realization by using the formula::
+
+                     N * n   N * n0
+         num_tasks = ----- + ------
+                       b       b0
+
+        where:
+
+          N is the number of realizations
+          n is the number of complex source
+          n0 is the number of point sources
+          b is the the block_size
+          b0 is the the point_source_block_size
+
+        The divisions are intended rounded to the closest upper integer
+        (ceil).
+        """
+        num_tasks = 0
+        block_size = self.block_size()
+        point_source_block_size = self.point_source_block_size()
+        total_sources = 0
+        for lt_rlz in self._get_realizations():
+            n = len(self._get_source_ids(lt_rlz))
+            n0 = len(self._get_point_source_ids(lt_rlz))
+            logs.LOG.debug('complex sources: %s, point sources: %d', n, n0)
+            total_sources += n + n0
+            ntasks = math.ceil(float(n) / block_size)
+            ntasks0 = math.ceil(float(n0) / point_source_block_size)
+            logs.LOG.debug(
+                'complex sources tasks: %s, point sources tasks: %d',
+                ntasks, ntasks0)
+            num_tasks += ntasks + ntasks0
+        logs.LOG.info('Total number of sources: %d', total_sources)
+        return int(num_tasks)
 
     def do_aggregate_post_proc(self):
         """
