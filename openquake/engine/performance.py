@@ -133,7 +133,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         super(EnginePerformanceMonitor, self).__init__(
             [self.pypid, self.pgpid])
 
-    def __call__(self, operation):
+    def copy(self, operation):
         """
         Return a copy of the monitor usable for a different operation
         in the same task.
@@ -191,14 +191,15 @@ class DummyMonitor(object):
     from openquake.engine.performance import DummyMonitor as EnginePerformanceMonitor
     Disabling the monitor can improve the performance.
     """
-    def __init__(self, *args, **kw):
-        pass
+    def __init__(self, operation='', job_id=0, *args, **kw):
+        self.operation = operation
+        self.job_id = job_id
 
     def __enter__(self):
         return self
 
-    def __call__(self, operation):
-        return self
+    def copy(self, operation):
+        return self.__class__(operation, self.job_id)
 
     def __exit__(self, etype, exc, tb):
         pass
