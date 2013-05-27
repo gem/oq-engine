@@ -495,10 +495,12 @@ class BaseHazardCalculator(base.Calculator):
                 yield task_args
                 n += 1
 
+        if self.__class__.__name__ == 'DisaggHazardCalculator':  # kludge
+            return  # the tasks management is different in the calculator
+            # this should be managed in a saner way
+
         # sanity check to protect against future changes of the distribution
         num_tasks = models.JobStats.objects.get(oq_job=self.job.id).num_tasks
-        if num_tasks != n:
-            import pdb; pdb.set_trace()
         assert num_tasks == n, 'Expected %d tasks, got %d' % (num_tasks, n)
 
     def _get_realizations(self):
