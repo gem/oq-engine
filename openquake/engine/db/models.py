@@ -1337,6 +1337,8 @@ class Output(djm.Model):
             return self.loss_curve
         elif self.output_type == 'hazard_curve_multi':
             return self.hazard_curve
+        elif self.output_type == 'gmf_scenario':
+            return self.gmf_collection
 
         return getattr(self, self.output_type)
 
