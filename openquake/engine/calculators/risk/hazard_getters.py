@@ -247,7 +247,7 @@ class GroundMotionValuesGetter(HazardGetter):
             pair (gmfs, ruptures) with the closest ground motion value for each
             asset.
         """
-        with monitor('associating asset_ids <-> gmf_ids'):
+        with monitor.copy('associating asset_ids <-> gmf_ids'):
             asset_ids, gmf_ids = self.get_data(self.imt)
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
@@ -273,7 +273,7 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor = models.getcursor('job_init')
 
         # get the data from the distinct GMFs
-        with monitor('getting gmvs'):
+        with monitor.copy('getting gmvs'):
             cursor.execute('''\
             SELECT id, gmvs, rupture_ids FROM hzrdr.gmf_agg
             WHERE id in %s''', (distinct_gmf_ids,))
