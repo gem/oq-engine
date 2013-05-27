@@ -152,7 +152,7 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
             arr = numpy.array([[float(x) for x in row] for row in gmfreader])
             for i, gmvs in enumerate(arr.transpose()):
                 models.GmfAgg.objects.create(
-                    gmf_collection=output.gmfcollection,
+                    gmf_collection=output.gmf,
                     imt="PGA",
                     gmvs=gmvs,
                     location="POINT(%s)" % locations[i])

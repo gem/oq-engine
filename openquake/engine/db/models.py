@@ -1096,10 +1096,10 @@ class RiskCalculation(djm.Model):
 
         if self.calculation_mode in ["classical", "classical_bcr"]:
             filters = dict(output_type='hazard_curve_multi',
-                           hazardcurve__lt_realization__isnull=False)
+                           hazard_curve__lt_realization__isnull=False)
         elif self.calculation_mode in ["event_based", "event_based_bcr"]:
             filters = dict(output_type='gmf',
-                           gmfcollection__lt_realization__isnull=False)
+                           gmf__lt_realization__isnull=False)
         elif self.calculation_mode in ['scenario', 'scenario_damage']:
             filters = dict(output_type='gmf_scenario')
         else:
@@ -1288,6 +1288,7 @@ class Output(djm.Model):
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'gmf', u'Ground Motion Field'),
+        (u'gmf_scenario', u'Ground Motion Field'),
         (u'hazard_curve', u'Hazard Curve'),
         (u'hazard_curve_multi', u'Hazard Curve (multiple imts)'),
         (u'hazard_map', u'Hazard Map'),
@@ -1306,8 +1307,6 @@ class Output(djm.Model):
         (u'event_loss', u'Event Loss Table'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_fraction', u'Loss fractions'),
-        # FIXME(lp). We should distinguish between conditional losses
-        # and loss map
         (u'loss_map', u'Loss Map'),
     )
 
@@ -1338,7 +1337,11 @@ class Output(djm.Model):
         elif self.output_type == 'hazard_curve_multi':
             return self.hazard_curve
         elif self.output_type == 'gmf_scenario':
-            return self.gmf_collection
+            return self.gmf
+        elif self.output_type == "complete_lt_gmf":
+            return self.gmf
+        elif self.output_type == "complete_lt_ses":
+            return self.ses
 
         return getattr(self, self.output_type)
 
@@ -1354,18 +1357,19 @@ class Output(djm.Model):
         container = self.output_container
 
         if self.output_type in hazard_output_types:
-            lt_realization = getattr(container, 'lt_realization', None)
+            if container.lt_realization_id is not None:
+                return self.LogicTreePath(
+                    container.lt_realization.gsim_lt_path,
+                    container.lt_realization.sm_lt_path)
+            else:
+                return self.LogicTreePath(None, None)
         elif self.output_type in risk_output_types:
             if getattr(container, 'hazard_output_id', None):
                 return container.hazard_output.lt_realization_paths
-        else:
-            raise RuntimeError("unexpected output type %s" % self.output_type)
+            else:
+                return self.LogicTreePath(None, None)
 
-        if lt_realization is not None:
-            return self.LogicTreePath(
-                lt_realization.gsim_lt_path, lt_realization.sm_lt_path)
-        else:
-            return self.LogicTreePath(None, None)
+        raise RuntimeError("unexpected output type %s" % self.output_type)
 
     @property
     def statistical_params(self):
@@ -1612,7 +1616,7 @@ class SESCollection(djm.Model):
 
     See also :class:`SES` and :class:`SESRupture`.
     """
-    output = djm.OneToOneField('Output', related_name="ses_collection")
+    output = djm.OneToOneField('Output', related_name="ses")
     # If `lt_realization` is None, this is a `complete logic tree`
     # Stochastic Event Set Collection, containing a single stochastic
     # event set containing all of the ruptures from the entire
@@ -1785,7 +1789,7 @@ class GmfCollection(djm.Model):
     A collection of ground motion field (GMF) sets for a given logic tree
     realization.
     """
-    output = djm.OneToOneField('Output', related_name="gmf_collection")
+    output = djm.OneToOneField('Output', related_name="gmf")
     # If `lt_realization` is None, this is a `complete logic tree`
     # GMF Collection, containing a single GMF set containing all of the ground
     # motion fields in the calculation.
@@ -1988,7 +1992,7 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
     job = output.oq_job
     hc = job.hazard_calculation
-    coll = output.gmfcollection
+    coll = output.gmf
     if imt is None:
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
     else:
@@ -2017,7 +2021,7 @@ def get_gmfs_scenario(output, imt=None):
     """
     job = output.oq_job
     hc = job.hazard_calculation
-    coll = output.gmfcollection
+    coll = output.gmf
     if imt is None:
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
     else:
@@ -2098,7 +2102,7 @@ class UHS(djm.Model):
 
     Records in this table contain metadata for a collection of UHS data.
     """
-    output = djm.OneToOneField('Output', null=True)
+    output = djm.OneToOneField('Output', null=True, related_name="uh_spectra")
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -2438,7 +2442,7 @@ class EventLoss(djm.Model):
 
     #: Foreign key to an :class:`openquake.engine.db.models.Output`
     #: object with output_type == event_loss
-    output = djm.OneToOneField('Output', related_name="event_loss")
+    output = djm.ForeignKey('Output', related_name="event_loss")
     rupture = djm.ForeignKey('SESRupture')
     aggregate_loss = djm.FloatField()
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
