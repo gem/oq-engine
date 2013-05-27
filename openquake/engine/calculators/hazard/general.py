@@ -477,6 +477,7 @@ class BaseHazardCalculator(base.Calculator):
 
         realizations = self._get_realizations()
 
+        n = 0  # number of yielded arguments
         for lt_rlz in realizations:
             # separate point sources from all the other types, since
             # we distribution point sources in different sized chunks
@@ -487,13 +488,20 @@ class BaseHazardCalculator(base.Calculator):
                                         point_source_block_size):
                 task_args = (self.job.id, block, lt_rlz.id)
                 yield task_args
-
+                n += 1
             # now for area and fault sources
             other_source_ids = self._get_source_ids(lt_rlz)
 
             for block in block_splitter(other_source_ids, block_size):
                 task_args = (self.job.id, block, lt_rlz.id)
                 yield task_args
+                n += 1
+
+        # sanity check to protect against future changes of the distribution
+        num_tasks = models.JobStats.objects.get(oq_job=self.job.id).num_tasks
+        if num_tasks != n:
+            import pdb; pdb.set_trace()
+        assert num_tasks == n, 'Expected %d tasks, got %d' % (num_tasks, n)
 
     def _get_realizations(self):
         """
@@ -1035,62 +1043,41 @@ class BaseHazardCalculator(base.Calculator):
 
     def calc_num_tasks(self):
         """
-        The number of tasks is inferred from the configuration parameter
-        concurrent_tasks (c), from the number of sources per realization
-        (n) and from the number of stochastic event sets (s) by using
-        the formula::
+        The number of tasks is inferred from the number of sources
+        per realization by using the formula::
 
-                     N * n
-         num_tasks = ----- * s
-                       b
+                     N * n   N * n0
+         num_tasks = ----- + ------
+                       b       b0
 
-        where N is the number of realizations and b is the block_size,
-        defined as::
+        where:
 
-             N * n * s
-         b = ---------
-              100 * c
+          N is the number of realizations
+          n is the number of complex source
+          n0 is the number of point sources
+          b is the the block_size
+          b is the the point_source_block_size
 
         The divisions are intended rounded to the closest upper integer
-        (ceil). The mechanism is intended to generate a number of tasks
-        close to 100 * c independently on the number of sources and SES.
-        For instance, with c = 512, you should expect the engine to
-        generate at most 51200 tasks; they could be much less in case
-        of few sources and few SES; the minimum number of tasks generated
-        is::
-
-          num_tasks_min = N * n * s
-
-        To have good concurrency the number of tasks must be bigger than
-        the number of the cores (which is essentially c) but not too big,
-        otherwise all the time would be wasted in passing arguments.
-        Generating 100 times more tasks than cores gives a nice progress
-        percentage. There is no more motivation than that.
-
-        NB: s can be different from 1 only in event based calculations.
+        (ceil).
         """
-
-        preferred_num_tasks = self.concurrent_tasks() * 100
-        num_ses = self.hc.ses_per_logic_tree_path or 1
-
-        num_sources = []  # number of sources per realization
+        num_tasks = 0
+        block_size = self.block_size()
+        point_source_block_size = self.point_source_block_size()
+        total_sources = 0
         for lt_rlz in self._get_realizations():
-            n = models.SourceProgress.objects.filter(
-                lt_realization=lt_rlz).count()
-            num_sources.append(n)
-            logs.LOG.info('Found %d sources for realization %d',
-                          n, lt_rlz.id)
-        total_sources = sum(num_sources)
+            n = len(self._get_source_ids(lt_rlz))
+            n0 = len(self._get_point_source_ids(lt_rlz))
+            logs.LOG.debug('complex sources: %s, point sources: %d', n, n0)
+            total_sources += n + n0
+            ntasks = math.ceil(float(n) / block_size)
+            ntasks0 = math.ceil(float(n0) / point_source_block_size)
+            logs.LOG.debug(
+                'complex sources tasks: %s, point sources tasks: %d',
+                ntasks, ntasks0)
+            num_tasks += ntasks + ntasks0
         logs.LOG.info('Total number of sources: %d', total_sources)
-
-        self.preferred_block_size = int(
-            math.ceil(float(total_sources * num_ses) / preferred_num_tasks))
-        logs.LOG.info('Using block size: %d', self.preferred_block_size)
-
-        num_tasks = [math.ceil(float(n) / self.preferred_block_size) * num_ses
-                     for n in num_sources]
-
-        return int(sum(num_tasks))
+        return int(num_tasks)
 
     def do_aggregate_post_proc(self):
         """
