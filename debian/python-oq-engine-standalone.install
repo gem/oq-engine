@@ -1,3 +1,2 @@
-usr/lib/python2.7/dist-packages/openquake/engine/openquake.cfg usr/share/doc/python-oq-engine-standalone
-usr/lib/python2.7/dist-packages/openquake/engine/celeryconfig.py usr/share/doc/python-oq-engine-standalone
-
+usr/lib/python2.7/dist-packages/openquake/engine/openquake.cfg usr/openquake/engine
+usr/lib/python2.7/dist-packages/openquake/engine/celeryconfig.py etc/openquake
