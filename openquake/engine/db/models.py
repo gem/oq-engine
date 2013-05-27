@@ -1297,7 +1297,7 @@ class Output(djm.Model):
 
     RISK_OUTPUT_TYPE_CHOICES = (
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
-        (u'aggregate_losses', u'Aggregate Losses'),
+        (u'aggregate_loss', u'Aggregate Losses'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
         (u'collapse_map', u'Collapse Map Distribution'),
         (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
@@ -1332,13 +1332,13 @@ class Output(djm.Model):
         :returns: the output container associated with this output
         """
 
-        # FIXME(lp). for some reasons, an agg_loss_curve does not have
-        # its proper container.
-
+        # FIXME(lp). Remove the following outstanding exceptions
         if self.output_type == 'agg_loss_curve':
             return self.loss_curve
+        elif self.output_type == 'hazard_curve_multi':
+            return self.hazard_curve
 
-        return getattr(self, self.output_type.replace('_', ''))
+        return getattr(self, self.output_type)
 
     @property
     def lt_realization_paths(self):
@@ -1361,7 +1361,7 @@ class Output(djm.Model):
 
         if lt_realization is not None:
             return self.LogicTreePath(
-                lt_realization.gsim_path, lt_realization.sm_path)
+                lt_realization.gsim_lt_path, lt_realization.sm_lt_path)
         else:
             return self.LogicTreePath(None, None)
 
@@ -1371,11 +1371,11 @@ class Output(djm.Model):
         :returns: an instance of `StatisticalParams` the output is
         associated with
         """
-        if getattr(self.container, 'statistics', None) is not None:
-            return self.StatisticalParams(self.container.statistics,
-                                          self.container.quantile)
-        elif getattr(self.container, 'hazard_output_id', None) is not None:
-            return self.container.hazard_output.statistical_params
+        if getattr(self.output_container, 'statistics', None) is not None:
+            return self.StatisticalParams(self.output_container.statistics,
+                                          self.output_container.quantile)
+        elif getattr(self.output_container, 'hazard_output_id', None) is not None:
+            return self.output_container.hazard_output.statistical_params
         else:
             return self.StatisticalParams(None, None)
 
@@ -1428,7 +1428,7 @@ class HazardMap(djm.Model):
     '''
     Hazard Map header (information which pertains to entire map)
     '''
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', related_name="hazard_map")
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -1479,7 +1479,8 @@ class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
     '''
-    output = djm.OneToOneField('Output', null=True)
+    output = djm.OneToOneField(
+        'Output', null=True, related_name="hazard_curve")
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -1608,7 +1609,7 @@ class SESCollection(djm.Model):
 
     See also :class:`SES` and :class:`SESRupture`.
     """
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', related_name="ses_collection")
     # If `lt_realization` is None, this is a `complete logic tree`
     # Stochastic Event Set Collection, containing a single stochastic
     # event set containing all of the ruptures from the entire
@@ -1781,7 +1782,7 @@ class GmfCollection(djm.Model):
     A collection of ground motion field (GMF) sets for a given logic tree
     realization.
     """
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', related_name="gmf_collection")
     # If `lt_realization` is None, this is a `complete logic tree`
     # GMF Collection, containing a single GMF set containing all of the ground
     # motion fields in the calculation.
@@ -2065,7 +2066,7 @@ class DisaggResult(djm.Model):
     hazard curve, logic tree path information, and investigation time.
     """
 
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', related_name="disagg_matrix")
     lt_realization = djm.ForeignKey('LtRealization')
     investigation_time = djm.FloatField()
     imt = djm.TextField(choices=IMT_CHOICES)
@@ -2358,7 +2359,7 @@ class LossMapData(djm.Model):
 
 
 class AggregateLoss(djm.Model):
-    output = djm.OneToOneField("Output")
+    output = djm.OneToOneField("Output", related_name="aggregate_loss")
     insured = djm.BooleanField(default=False)
     mean = djm.FloatField()
     std_dev = djm.FloatField()
@@ -2434,7 +2435,7 @@ class EventLoss(djm.Model):
 
     #: Foreign key to an :class:`openquake.engine.db.models.Output`
     #: object with output_type == event_loss
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', related_name="event_loss")
     rupture = djm.ForeignKey('SESRupture')
     aggregate_loss = djm.FloatField()
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
@@ -2449,8 +2450,7 @@ class BCRDistribution(djm.Model):
     '''
 
     output = djm.OneToOneField("Output", related_name="bcr_distribution")
-    hazard_output = djm.OneToOneField(
-        "Output", related_name="risk_bcr_distribution")
+    hazard_output = djm.OneToOneField("Output")
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
