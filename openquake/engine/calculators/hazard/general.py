@@ -457,7 +457,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
-    def task_arg_gen(self, block_size):
+    def task_arg_gen(self, block_size, check_num_task=True):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -495,13 +495,12 @@ class BaseHazardCalculator(base.Calculator):
                 yield task_args
                 n += 1
 
-        if self.__class__.__name__ == 'DisaggHazardCalculator':  # kludge
-            return  # the tasks management is different in the calculator
-            # this should be managed in a saner way
-
-        # sanity check to protect against future changes of the distribution
-        num_tasks = models.JobStats.objects.get(oq_job=self.job.id).num_tasks
-        assert num_tasks == n, 'Expected %d tasks, got %d' % (num_tasks, n)
+        # this sanity check should go into a unit test, and will likely
+        # go there in the future
+        if check_num_task:
+            num_tasks = models.JobStats.objects.get(
+                oq_job=self.job.id).num_tasks
+            assert num_tasks == n, 'Expected %d tasks, got %d' % (num_tasks, n)
 
     def _get_realizations(self):
         """
