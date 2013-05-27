@@ -340,7 +340,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         the data.
     """
 
-    inserter = writer.BulkInserter(models.Gmf)
+    inserter = writer.CacheInserter(models.Gmf, 100)
 
     for imt, gmf_data in gmf_dict.iteritems():
 
@@ -366,7 +366,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
             relevant_rupture_ids = rupture_ids[nonzero_gmvs_idxs].tolist()
 
             if gmvs:
-                inserter.add_entry(
+                inserter.add(models.Gmf(
                     gmf_set_id=gmf_set.id,
                     imt=imt_name,
                     sa_period=sa_period,
@@ -375,7 +375,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
                     gmvs=gmvs,
                     rupture_ids=relevant_rupture_ids,
                     result_grp_ordinal=result_grp_ordinal,
-                )
+                ))
 
     inserter.flush()
 
