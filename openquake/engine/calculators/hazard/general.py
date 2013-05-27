@@ -415,8 +415,6 @@ class BaseHazardCalculator(base.Calculator):
     functionality, like initialization procedures.
     """
 
-    preferred_block_size = 1  # will be overridden
-
     def __init__(self, *args, **kwargs):
         super(BaseHazardCalculator, self).__init__(*args, **kwargs)
 
@@ -1056,7 +1054,7 @@ class BaseHazardCalculator(base.Calculator):
           n is the number of complex source
           n0 is the number of point sources
           b is the the block_size
-          b is the the point_source_block_size
+          b0 is the the point_source_block_size
 
         The divisions are intended rounded to the closest upper integer
         (ceil).
