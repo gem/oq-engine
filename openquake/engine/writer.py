@@ -20,6 +20,7 @@ Base classes for the output methods of the various codecs.
 """
 
 import logging
+import atexit
 from cStringIO import StringIO
 
 from django.db import transaction
@@ -202,3 +203,7 @@ class CacheInserter(object):
                 s = s[:-1]
             ls.append(s)
         return '{%s}' % ','.join(ls)
+
+
+# just to make sure that flushall is always called
+atexit.register(CacheInserter.flushall)
