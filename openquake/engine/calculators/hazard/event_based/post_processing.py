@@ -79,7 +79,7 @@ def gmf_to_hazard_curve_arg_gen(job):
         :class:`openquake.engine.db.models.OqJob` instance.
     """
     hc = job.hazard_calculation
-    points = models.SiteData.objects.filter(hazard_job=job)
+    points = models.SiteData.objects.filter(hazard_calculation=hc)
 
     lt_realizations = models.LtRealization.objects.filter(
         hazard_calculation=hc.id)
@@ -190,12 +190,13 @@ def insert_into_gmf_agg(job_id, gmf_collection_id):
        array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
     FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b, hzrdi.site_data AS c
     WHERE a.gmf_set_id=b.id AND a.location = c.location
-    AND c.hazard_job_id = %d AND gmf_collection_id = %d
+    AND c.hazard_calculation_id = %d AND gmf_collection_id = %d
     GROUP BY gmf_collection_id, imt, sa_damping, sa_period, c.id
     '''
     curs = db.connections['reslt_writer'].cursor()
+    hc_id = models.OqJob.objects.get(pk=job_id).hazard_calculation.id
     with db.transaction.commit_on_success(using='reslt_writer'):
-        curs.execute(insert_query % (job_id, gmf_collection_id))
+        curs.execute(insert_query % (hc_id, gmf_collection_id))
         curs.execute('DELETE FROM hzrdr.gmf_set '
                      'WHERE gmf_collection_id=%d' % gmf_collection_id)
 
