@@ -36,7 +36,7 @@ from datetime import datetime
 import openquake.hazardlib
 import numpy
 
-from django.db import connections
+from django.db import transaction, connections
 from django.contrib.gis.db import models as djm
 from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
@@ -923,8 +923,7 @@ def get_site_collection(hc):
         :class:`openquake.engine.db.models.SiteDataCollection` instance.
     """
     sites = []
-    for row in SiteData.objects.filter(
-            hazard_job__hazard_calculation=hc.id):
+    for row in SiteData.objects.filter(hazard_calculation=hc.id):
         site = openquake.hazardlib.site.Site(
             openquake.hazardlib.geo.Point(row.location.x, row.location.y),
             row.vs30, row.vs30_measured, row.z1pt0, row.z2pt5)
@@ -1831,23 +1830,27 @@ class GmfCollection(djm.Model):
         ses_coll = SESCollection.objects.get(
             lt_realization=self.lt_realization)
 
+        hc = ses_coll.output.oq_job.hazard_calculation
+
         for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
             query = """
         SELECT imt, sa_period, sa_damping, rupture_id,
-        array_agg(gmv), array_agg(ST_X(location)),
-        array_agg(ST_Y(location)) FROM (
+        array_agg(gmv), array_agg(ST_X(location::geometry)),
+        array_agg(ST_Y(location::geometry)) FROM (
            SELECT imt, sa_period, sa_damping,
            unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
            FROM hzrdr.gmf_agg, hzrdi.site_data
-           WHERE site_id = hzrdi.site_data.id AND gmf_collection_id=%d) AS x,
+           WHERE site_id = hzrdi.site_data.id
+           AND hazard_calculation_id=%d AND gmf_collection_id=%d) AS x,
            hzrdr.ses_rupture as y
         where x.rupture_id=y.id AND ses_id=%d
         group by imt, sa_period, sa_damping, rupture_id
-        """ % (self.id, ses.id)
+        """ % (hc.id, self.id, ses.id)
             if orderby:  # may be used in tests to get reproducible results
                 query += 'order by imt, sa_period, sa_damping, rupture_id;'
-            curs = getcursor('job_init')
-            curs.execute(query)
+            with transaction.commit_on_success(using='job_init'):
+                curs = getcursor('job_init')
+                curs.execute(query)
             gmfs = []
             for imt, sa_period, sa_damping, rupture_id, gmvs, xs, ys in curs:
                 nodes = [_GroundMotionFieldNode(gmv, _Point(x, y))
@@ -2820,7 +2823,7 @@ class SiteData(djm.Model):
     parameters are use for all points of interest).
     """
 
-    hazard_job = djm.ForeignKey('OqJob')
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
     vs30 = djm.FloatField()
     vs30_measured = djm.BooleanField()
     z1pt0 = djm.FloatField()
