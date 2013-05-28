@@ -345,7 +345,7 @@ def export_ses(output, target_dir):
         gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
     path = _get_result_export_path(haz_calc.id, target_dir,
-                                   output.sescollection)
+                                   output.ses)
 
     writer = writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
     writer.serialize(ses_coll)
