@@ -65,7 +65,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 DEFAULT_GMF_REALIZATIONS = 1
 
 # NB: beware of large caches
-inserter = writer.CacheInserter(models.Gmf, 1000)
+inserter = writer.CacheInserter(models.Gmf, 10000)
 
 
 # Disabling pylint for 'Too many local variables'
