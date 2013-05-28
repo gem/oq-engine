@@ -11,7 +11,6 @@
     <xs:complexType name="ExposureModel">
         <xs:all>
             <xs:element name="description" minOccurs="0" type="xs:string"/>
-            <xs:element name="asset" type="ExposureModelAsset"/>
             <xs:element name="area" minOccurs="0" type="ExposureModelArea"/>
             <xs:element name="businessInterruptionCost"
                         minOccurs="0"
@@ -29,16 +28,13 @@
                         type="ExposureModelCost"
                         minOccurs="0" />
             <xs:element name="deductible" type="AbsoluteType" minOccurs="0"/>
-            <xs:element name="coverageLimit" type="AbsoluteType" minOccurs="0"/>
+            <xs:element name="insuranceLimit" type="AbsoluteType" minOccurs="0"/>
             <xs:element name="assets" type="Assets" />
         </xs:all>
 
         <xs:attribute name="id" type="xs:string" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="ExposureModelAsset">
-         <xs:attribute name="category" type="AssetCategory" use="required"/>
-         <xs:attribute name="taxonomySource" type="xs:string" use="optional"/>
+        <xs:attribute name="category" type="AssetCategory" use="required"/>
+        <xs:attribute name="taxonomySource" type="xs:string" use="optional"/>
     </xs:complexType>
 
     <xs:complexType name="ExposureModelArea">
@@ -64,15 +60,8 @@
     <xs:complexType name="Asset">
          <xs:sequence minOccurs="0" maxOccurs="unbounded">
              <xs:element name="location" type="Location"/>
-
-             <xs:element name="cost"
-                         minOccurs="0"
-                         maxOccurs="unbounded"
-                         type="Cost"/>
-             <xs:element name="occupancy"
-                         minOccurs="0"
-                         maxOccurs="unbounded"
-                         type="Occupancy"/>
+             <xs:element name="costs" type="Costs"/>
+             <xs:element name="occupancies" type="Occupancies" minOccurs="0"/>
          </xs:sequence>
          <xs:attribute name="id" type="xs:string" use="required"/>
          <xs:attribute name="area" type="PositiveDoubleType" use="optional"/>
@@ -80,7 +69,26 @@
          <xs:attribute name="taxonomy" type="xs:string" use="required"/>
     </xs:complexType>
 
-     <xs:complexType name="Cost">
+
+    <xs:complexType name="Costs">
+         <xs:sequence>
+            <xs:element name="cost"
+                        minOccurs="0"
+                        maxOccurs="unbounded"
+                        type="Cost"/>
+          </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Occupancies">
+         <xs:sequence>
+            <xs:element name="occupancy"
+                        minOccurs="0"
+                        maxOccurs="unbounded"
+                        type="Occupancy"/>
+         </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Cost">
          <xs:attribute name="type"
                        use="required"
                        type="CostType"/>
@@ -90,7 +98,7 @@
          <xs:attribute name="deductible"
                        use="optional"
                        type="PositiveDoubleType"/>
-         <xs:attribute name="coverageLimit"
+         <xs:attribute name="insuranceLimit"
                        use="optional"
                        type="PositiveDoubleType"/>
          <xs:attribute name="retrofitted"

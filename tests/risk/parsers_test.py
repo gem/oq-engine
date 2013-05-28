@@ -38,7 +38,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
 <?xml version='1.0' encoding='utf-8'?>
   <nrml xmlns:gml="http://www.opengis.net/gml"
     xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <exposureModel gml:id="ep1"/>
+    <exposureModel id="ep1"/>
 </nrml>
 """
 
@@ -48,57 +48,48 @@ class ExposureModelParserTestCase(unittest.TestCase):
     def test_parsing(self):
         exposure = """\
 <?xml version='1.0' encoding='utf-8'?>
-  <nrml xmlns:gml="http://www.opengis.net/gml"
-    xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
 
-  <exposureModel gml:id="ep1">
-    <config/>
-    <exposureList gml:id="PAV01" areaType="per_asset" areaUnit="GBP"
-      assetCategory="buildings" cocoType="per_area" cocoUnit="CHF"
-      recoType="aggregated" recoUnit="EUR" stcoType="aggregated"
-      stcoUnit="USD" nonStcoType="aggregated"
-      nonStcoUnit="USD">
+  <exposureModel id="ep1"
+                 category="buildings"
+                 taxonomySource="Pavia buildings">
+    <area type="per_asset" unit="GBP"/>
+    <contentsCost type="per_area" unit="CHF"/>
+    <retrofittedStructuralCost type="aggregated" unit="EUR"/>
+    <structuralCost type="aggregated" unit="USD"/>
+    <nonStructuralCost type="aggregated" unit="USD"/>
 
-      <gml:description>Buildings in Pavia</gml:description>
-      <taxonomySource>Pavia taxonomy</taxonomySource>
-      <assetDefinition gml:id="asset_01">
-        <site>
-          <gml:Point srsName="epsg:4326">
-            <gml:pos>9.15000 45.16667</gml:pos>
-          </gml:Point>
-        </site>
+    <description>Buildings in Pavia</description>
 
-        <area>120</area>
-        <coco>12.95</coco>
-        <deductible>55</deductible>
-        <limit>999</limit>
-        <number>7</number>
-        <reco>109876</reco>
-        <stco>150000</stco>
-        <nonstco>25000</nonstco>
-        <taxonomy>RC/DMRF-D/LR</taxonomy>
-      </assetDefinition>
+    <assets>
+      <asset id="asset_01" area="120" units="7" taxonomy="RC/DMRF-D/LR">
+        <location lon="9.15000" lat="45.16667"/>
 
-      <assetDefinition gml:id="asset_02">
-        <site>
-          <gml:Point srsName="epsg:4326">
-            <gml:pos>9.15333 45.12200</gml:pos>
-          </gml:Point>
-        </site>
+        <costs>
+          <cost type="contents" value="12.95" />
+          <cost type="structural" value="150000"
+                deductible="55" insuranceLimit="999"
+                retrofitted="109876"/>
+          <cost type="nonStructural" value="25000" />
+        </costs>
+      </asset>
 
-        <area>119</area>
-        <coco>21.95</coco>
-        <deductible>66</deductible>
-        <limit>1999</limit>
-        <number>6</number>
-        <occupants description="day">12</occupants>
-        <occupants description="night">50</occupants>
-        <reco>205432</reco>
-        <stco>250000</stco>
-        <taxonomy>RC/DMRF-D/HR</taxonomy>
-      </assetDefinition>
+      <asset id="asset_02" area="119" units="6" taxonomy="RC/DMRF-D/HR">
+        <location lon="9.15333" lat="45.12200"/>
 
-    </exposureList>
+        <costs>
+          <cost type="contents" value="21.95"/>
+          <cost type="structural" value="250000"
+                insuranceLimit="1999" deductible="66"
+                retrofitted="205432"/>
+        </costs>
+
+        <occupancies>
+          <occupancy period="day" occupants="12"/>
+          <occupancy period="night" occupants="50"/>
+        </occupancies>
+      </asset>
+    </assets>
   </exposureModel>
 </nrml>
 """
@@ -133,30 +124,30 @@ class ExposureModelParserTestCase(unittest.TestCase):
             ([9.15333, 45.12200], [
                 parsers.OCCUPANCY(12, "day"),
                 parsers.OCCUPANCY(50, "night")], {
-                 "area": 119.0,
-                 "areaType": "per_asset",
-                 "areaUnit": "GBP",
-                 "assetCategory": "buildings",
-                 "assetID": "asset_02",
-                 "coco": 21.95,
-                 "cocoType": "per_area",
-                 "cocoUnit": "CHF",
-                 "deductible": 66.0,
-                 "limit": 1999.0,
-                 "listDescription": "Buildings in Pavia",
-                 "listID": "PAV01",
-                 "number": 6.0,
-                 "reco": 205432.0,
-                 "recoType": "aggregated",
-                 "recoUnit": "EUR",
-                 "stco": 250000.0,
-                 "stcoType": "aggregated",
-                 "stcoUnit": "USD",
-                 "nonStcoType": "aggregated",
-                 "nonStcoUnit": "USD",
-                 "taxonomy": "RC/DMRF-D/HR",
-                 "taxonomySource": "Pavia taxonomy",
-            }),
+                    "area": 119.0,
+                    "areaType": "per_asset",
+                    "areaUnit": "GBP",
+                    "assetCategory": "buildings",
+                    "assetID": "asset_02",
+                    "coco": 21.95,
+                    "cocoType": "per_area",
+                    "cocoUnit": "CHF",
+                    "deductible": 66.0,
+                    "limit": 1999.0,
+                    "listDescription": "Buildings in Pavia",
+                    "listID": "PAV01",
+                    "number": 6.0,
+                    "reco": 205432.0,
+                    "recoType": "aggregated",
+                    "recoUnit": "EUR",
+                    "stco": 250000.0,
+                    "stcoType": "aggregated",
+                    "stcoUnit": "USD",
+                    "nonStcoType": "aggregated",
+                    "nonStcoUnit": "USD",
+                    "taxonomy": "RC/DMRF-D/HR",
+                    "taxonomySource": "Pavia taxonomy",
+                }),
         ]
 
         parser = parsers.ExposureModelParser(StringIO.StringIO(exposure))
