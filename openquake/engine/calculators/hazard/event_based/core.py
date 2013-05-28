@@ -65,7 +65,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 DEFAULT_GMF_REALIZATIONS = 1
 
 # NB: beware of large caches
-inserter = writer.CacheInserter(models.Gmf, 10000)
+inserter = writer.CacheInserter(models.Gmf, 1000)
 
 
 # Disabling pylint for 'Too many local variables'
@@ -148,14 +148,15 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed, result_grp_ordinal):
             gmf_cache = compute_gmf_cache(
                 hc, gsims, ruptures, rupture_ids, result_grp_ordinal)
 
-        with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
+        with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs)\
+                as monitor:
             # This will be the "container" for all computed GMFs
             # for this stochastic event set.
             gmf_set = models.GmfSet.objects.get(
                 gmf_collection__lt_realization__id=lt_rlz.id,
                 ses_ordinal=ses.ordinal)
             _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
-                       result_grp_ordinal)
+                       result_grp_ordinal, monitor)
 
 ses_and_gmfs.ignore_result = False  # essential
 
@@ -324,7 +325,8 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
+def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal,
+               monitor=writer.DummyMonitor()):
     """
     Helper method to save computed GMF data to the database.
 
@@ -376,6 +378,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
                     rupture_ids=relevant_rupture_ids,
                     result_grp_ordinal=result_grp_ordinal,
                 ))
+    inserter.flush(monitor)
 
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
