@@ -225,7 +225,7 @@ def get_closest_site_model_data(input_model, point):
         return None
 
 
-def store_site_data(job_id, site_model_inp, mesh):
+def store_site_data(hc_id, site_model_inp, mesh):
     """
     Given a ``mesh`` of points (calculation points of interest) and a
     site model (``site_model_inp``), get the closest site model data
@@ -259,7 +259,7 @@ def store_site_data(job_id, site_model_inp, mesh):
             x, y = pt.location.longitude, pt.location.latitude
 
         site = models.SiteData(
-            hazard_job_id=job_id,
+            hazard_calculation_id=hc_id,
             location='POINT(%s %s)' % (x, y),
             vs30=smd.vs30,
             vs30_measured=measured,
@@ -762,7 +762,7 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.reference_depth_to_1pt0km_per_sec)
                 for pt in points]
 
-        store_site_data(self.job.id, site_model_inp, mesh)
+        store_site_data(self.job.hazard_calculation.id, site_model_inp, mesh)
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
