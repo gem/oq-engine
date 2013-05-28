@@ -32,6 +32,15 @@ from openquake.engine.utils import stats
 from tests.utils import helpers
 
 
+def make_mock_points(n):
+    points = []
+    for _ in range(n):
+        point = mock.Mock()
+        point.wkt2d = 'XXX'
+        points.append(point)
+    return points
+
+
 class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     """
     Tests for the core functionality of the event-based hazard calculator.
@@ -49,18 +58,16 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # setup two ground motion fields on a region made by three
         # locations. On the first two locations the values are
         # nonzero, in the third one is zero. Then, we will expect the
-        # bulk inserter to add only two entries.
+        # cache inserter to add only two entries.
         gmvs = numpy.matrix([[1., 1.],
                              [1., 1.],
                              [0., 0.]])
         gmf_dict = {PGA: dict(rupture_ids=[1, 2], gmvs=gmvs)}
 
-        fake_bulk_inserter = mock.Mock()
-        with helpers.patch('openquake.engine.writer.BulkInserter') as m:
-            m.return_value = fake_bulk_inserter
-            core._save_gmfs(
-                gmf_set, gmf_dict, [mock.Mock(), mock.Mock(), mock.Mock()], 1)
-            self.assertEqual(2, fake_bulk_inserter.add_entry.call_count)
+        points = make_mock_points(3)
+        with mock.patch.object(core.inserter, 'add') as m:
+            core._save_gmfs(gmf_set, gmf_dict, points, 1)
+            self.assertEqual(2, m.call_count)
 
     def test_save_only_nonzero_gmvs(self):
         gmf_set = mock.Mock()
@@ -68,14 +75,10 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         gmvs = numpy.matrix([[0.0, 0, 1]])
         gmf_dict = {PGA: dict(rupture_ids=[1, 2, 3], gmvs=gmvs)}
 
-        fake_bulk_inserter = mock.Mock()
-        with helpers.patch('openquake.engine.writer.BulkInserter') as m:
-            m.return_value = fake_bulk_inserter
-            core._save_gmfs(
-                gmf_set, gmf_dict, [mock.Mock()], 1)
-            call_args = fake_bulk_inserter.add_entry.call_args_list[0][1]
-            self.assertEqual([1], call_args['gmvs'])
-            self.assertEqual([3], call_args['rupture_ids'])
+        points = make_mock_points(1)
+        with mock.patch.object(core.inserter, 'add') as m:
+            core._save_gmfs(gmf_set, gmf_dict, points, 1)
+            self.assertEqual(1, m.call_count)
 
     def test_initialize_ses_db_records(self):
         hc = self.job.hazard_calculation

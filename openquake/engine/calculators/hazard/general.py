@@ -246,7 +246,7 @@ def store_site_data(job_id, site_model_inp, mesh):
         Calculation points of interest, as a
         :class:`openquake.hazardlib.geo.mesh.Mesh`.
     """
-    cache = writer.CacheInserter(1000)
+    cache = writer.CacheInserter(models.SiteData, 1000)
     for pt in mesh:
 
         if site_model_inp:
