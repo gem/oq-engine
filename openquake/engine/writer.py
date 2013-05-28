@@ -109,25 +109,6 @@ class BulkInserter(object):
         self.count = 0
 
 
-class DummyMonitor(object):
-    """
-    This class makes it easy to disable the monitoring
-    in client code. Disabling the monitor can improve the performance.
-    """
-    def __init__(self, operation='', job_id=0, *args, **kw):
-        self.operation = operation
-        self.job_id = job_id
-
-    def __enter__(self):
-        return self
-
-    def copy(self, operation):
-        return self.__class__(operation, self.job_id)
-
-    def __exit__(self, etype, exc, tb):
-        pass
-
-
 # In the future this class may replace openquake.engine.writer.BulkInserter
 # since it is much more efficient (even hundreds of times for bulky updates)
 # being based on COPY FROM. CacheInserter objects are not thread-safe.
@@ -171,12 +152,18 @@ class CacheInserter(object):
         if len(self.values) >= self.max_cache_size:
             self.flush()
 
-    def flush(self, monitor=DummyMonitor()):
+    def flush(self, monitor=None):
         """
         Save the pending objects on the database with a COPY FROM.
         """
         if not self.values:
             return
+
+        if monitor is None:
+            # hack to avoid a circular import; in the future we may
+            # remove the instrumentation from the CacheInserter (MS)
+            from openquake.engine.performance import DummyMonitor
+            monitor = DummyMonitor()
 
         # perform some introspection
         objects = self.values

@@ -27,7 +27,7 @@ import numpy
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
-from openquake.engine.writer import DummyMonitor
+from openquake.engine.performance import DummyMonitor
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
@@ -238,15 +238,16 @@ class GroundMotionValuesGetter(HazardGetter):
     def container(self, hazard_output):
         return hazard_output.gmfcollection
 
-    def __call__(self, monitor=DummyMonitor()):
+    def __call__(self, monitor=None):
         """
-        :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor`
+        :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor` or None
         :returns:
             A tuple with two elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is a
             pair (gmfs, ruptures) with the closest ground motion value for each
             asset.
         """
+        monitor = monitor or DummyMonitor()
         with monitor.copy('associating asset_ids <-> gmf_ids'):
             asset_ids, gmf_ids = self.get_data(self.imt)
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
