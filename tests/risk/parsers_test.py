@@ -113,10 +113,10 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 parsers.COST("structural", 150000.0, 109876.0, 55.0, 999.0),
                 parsers.COST("nonStructural", 25000.0, None, None, None)
             ], {
-                "contentsCost": ("per_area", "CHF"),
-                "retrofittedStructuralCost": ("aggregated", "EUR"),
-                "structuralCost": ("aggregated", "USD"),
-                "nonStructuralCost": ("aggregated", "USD"),
+                "contents": ("per_area", "CHF"),
+                "retrofittedStructural": ("aggregated", "EUR"),
+                "structural": ("aggregated", "USD"),
+                "nonStructural": ("aggregated", "USD"),
             }),
             ([9.15333, 45.12200], [
                 parsers.OCCUPANCY(12, "day"),
@@ -136,10 +136,10 @@ class ExposureModelParserTestCase(unittest.TestCase):
                     parsers.COST(
                         "structural", 250000.0, 205432.0, 66.0, 1999.0)
                 ], {
-                    "contentsCost": ("per_area", "CHF"),
-                    "retrofittedStructuralCost": ("aggregated", "EUR"),
-                    "structuralCost": ("aggregated", "USD"),
-                    "nonStructuralCost": ("aggregated", "USD"),
+                    "contents": ("per_area", "CHF"),
+                    "retrofittedStructural": ("aggregated", "EUR"),
+                    "structural": ("aggregated", "USD"),
+                    "nonStructural": ("aggregated", "USD"),
                 }),
         ]
 

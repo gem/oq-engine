@@ -114,7 +114,7 @@ class ExposureModelParser(object):
                         self._current_meta['insuranceLimitIsAbsolute'] = (
                             el.get('isAbsolute'))
                     else:
-                        self._conversions[el.tag[len(NRML):]] = (
+                        self._conversions[el.tag[len(NRML):-4]] = (
                             el.get('type'), el.get('unit'))
 
             elif event == 'end' and element.tag == '%sasset' % NRML:
