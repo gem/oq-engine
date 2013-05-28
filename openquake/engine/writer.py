@@ -20,6 +20,7 @@ Base classes for the output methods of the various codecs.
 """
 
 import logging
+import weakref
 import atexit
 from cStringIO import StringIO
 
@@ -135,7 +136,7 @@ class CacheInserter(object):
     Bulk insert bunches of Django objects by converting them in strings
     and by using COPY FROM.
     """
-    instances = []
+    instances = weakref.WeakSet()
 
     @classmethod
     def flushall(cls):
@@ -156,7 +157,7 @@ class CacheInserter(object):
         # skip the first field, the id
 
         self.values = []
-        self.instances.append(self)
+        self.instances.add(self)
 
     def add(self, obj):
         """
