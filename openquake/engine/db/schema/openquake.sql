@@ -1093,15 +1093,13 @@ CREATE TABLE htemp.hazard_curve_progress (
 -- calculation points of interest with parameters extracted from site_model or hc
 CREATE TABLE hzrdi.site_data (
     id SERIAL PRIMARY KEY,
-    hazard_job_id INTEGER NOT NULL,
+    hazard_calculation_id INTEGER NOT NULL,
     vs30 FLOAT NOT NULL,
     vs30_measured BOOLEAN NOT NULL,
     z1pt0 FLOAT NOT NULL,
-    z2pt5 FLOAT NOT NULL
+    z2pt5 FLOAT NOT NULL,
+    location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE htemp_ts;
-SELECT AddGeometryColumn('hzrdi', 'site_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdi.site_data ALTER COLUMN location SET NOT NULL;
-
 
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
@@ -1407,9 +1405,9 @@ ON DELETE CASCADE;
 
 -- hzrdi.site_data to uiapi.hazard_calculation FK
 ALTER TABLE hzrdi.site_data
-ADD CONSTRAINT hzrdi_site_data_hazard_job_fk
-FOREIGN KEY (hazard_job_id)
-REFERENCES uiapi.oq_job(id)
+ADD CONSTRAINT hzrdi_site_data_hazard_calculation_fk
+FOREIGN KEY (hazard_calculation_id)
+REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
 
 -- hzrdr.gmf_agg to hzrdi.site_data FK
