@@ -21,212 +21,39 @@ set -e
 # load debconf suite
 . /usr/share/debconf/confmodule
 
-GEM_DEB_PACKAGE="python-oq-engine"
+GEM_DEB_PACKAGE="python-oq-engine-common"
 PG_CONF="/etc/postgresql/9.1/main/postgresql.conf"
 
-if [ -f /usr/sbin/rabbitmqctl ]; then
-    # create rabbitmq configuration for python-celery
-    celeryuser_count=`rabbitmqctl list_users | grep celeryuser | wc -l`
-    if [ $celeryuser_count -eq 0 ]; then
-        rabbitmqctl add_user celeryuser celery
-    fi;
-    celeryvhost_count=`rabbitmqctl list_vhosts | grep celeryvhost | wc -l`
-    if [ $celeryvhost_count -eq 0 ]; then
-        rabbitmqctl add_vhost celeryvhost
-        rabbitmqctl set_permissions -p celeryvhost celeryuser ".*" ".*" ".*"
-    fi;
-fi
 
 HDIR=/usr/openquake/engine
 IDIR=/usr/share/pyshared/openquake/engine
 mkdir -p $HDIR
 chmod 1777 $HDIR
-for vdir in /var/lib/openquake ; do
-    if [ ! -d $vdir ]; then
-        mkdir -p $vdir 2>/dev/null || echo "Failed to create $vdir, please make sure all is proper."
-    fi
-    chown -R root.openquake $vdir 2>/dev/null || echo "Failed to change the $vdir owner, please make sure all is proper."
-    chmod 1770 $vdir 2>/dev/null || echo "Failed to change the $vdir permissions, please make sure all is proper."
-done
 
-rm -f $HDIR/celeryconfig.py.new_in_this_release
-if [ -f $HDIR/celeryconfig.py ]; then
-    diff $IDIR/celeryconfig.py $HDIR/celeryconfig.py >/dev/null || cp $IDIR/celeryconfig.py $HDIR/celeryconfig.py.new_in_this_release
-else
-    cp $IDIR/celeryconfig.py $HDIR
-    chmod 666 $HDIR/celeryconfig.py
-fi
+DDIR="/usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos"
 
-if [ `cat /etc/group | grep ^openquake: | wc -l` -eq 0 ]; then
-    addgroup --system openquake
-fi
-
-SDIR=/etc/openquake
-for cfg in openquake.cfg
-do
-    rm -f $SDIR/$cfg.new_in_this_release
-    if [ -f $SDIR/$cfg ]; then
-        if ! diff $IDIR/$cfg $SDIR/$cfg >/dev/null; then
-            cp $IDIR/$cfg $SDIR/$cfg.new_in_this_release
-        fi
-    else
-        mkdir -p $SDIR
-        cp $IDIR/$cfg $SDIR
-        chmod 644 $SDIR/$cfg
-    fi
-done
-chown -R root.openquake $SDIR
-
-#
-#  NOTE
-#        look 'debian/config' file if you want to change something here
-#
-# is postgresql installed on this system?
-if [ -f "$PG_CONF" ]; then
-    # does a bad explicit configuration exist?
-    if grep -q '^[ 	]*standard_conforming_strings[ 	]*=' "$PG_CONF" ; then
-        if grep -q '^[ 	]*standard_conforming_strings[ 	]*=[ 	]*on' "$PG_CONF" ; then
-            db_get python-oq-engine/override-psql-std-conf-str || true
-            if [ "$RET" = "true" ]; then
-                if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
-                    cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
-                fi
-                sed -i 's/^[ 	]*standard_conforming_strings[ 	]*=.*/# ADDED BY python-oq-engine\nstandard_conforming_strings = off/g' "$PG_CONF"
-            fi
-        fi
-    elif grep -q  '^[ 	]*#[ 	]*standard_conforming_strings[ 	]*=' "$PG_CONF" ; then
-        if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
-            cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
-        fi
-        sed -i 's/^[ 	]*#[ 	]*standard_conforming_strings[ 	]*=.*/# ADDED BY python-oq-engine\nstandard_conforming_strings = off/g' "$PG_CONF"
-    else
-        if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
-            cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
-        fi
-        echo "# ADDED BY python-oq-engine" >>  "$PG_CONF"
-        echo "standard_conforming_strings = off" >>  "$PG_CONF"
+cd $DDIR && find . | grep gz$ | xargs gunzip -f
+# Last but not least copy the smoke tests into a more prominent place.
+if [ -d $HDIR/demos ]; then
+    # are existing demos different from the ones we just installed?
+    if ! diff -qrN $HDIR/demos $DDIR >/dev/null ; then
+        # The demos do differ, move the old demos out of the way.
+        tstamp=`date +"%Y-%m-%d-%H-%M-%S"`
+        mv  $HDIR/demos $HDIR/demos.backup-from-$tstamp
     fi
 fi
-
-if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
-    # postgres is installed, flatten and recreate the database.
-
-    # Restart postgres in order to get rid of idle/open connections
-    # held by celeryd processes.
-
-    # stop celeryd.
-    if [ -x /etc/init.d/celeryd ]; then
-        /etc/init.d/celeryd stop
-    else
-        for pid in `ps ax | grep celeryd | grep -v grep | awk '{print $1}'`; do
-            kill -15 $pid
-        done
-    fi
-    # Make sure the celeryd  processes are gone.
-    sleep 3
-    for pid in `ps ax | grep celeryd | grep -v grep | awk '{print $1}'`; do
-        kill -9 $pid
-    done
-
-    /etc/init.d/postgresql restart 9.1
-
-    pgport=`cat /etc/postgresql/9.1/main/postgresql.conf | perl -wane ' if ($_ =~ /^\s*port\s*=/) { s/^\s*port\s*=\s*(\d+).*$/$1/; print $_; }'`
-    LOGFILE=/var/tmp/openquake-db-installation
-    rm -f $LOGFILE
-    su -c "/usr/bin/oq_create_db --yes --db-name=openquake --db-port=$pgport --schema-path=$IDIR/db/schema > $LOGFILE 2>&1" postgres
-    for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer
-    do
-        su -c "psql -p $pgport -c \"ALTER ROLE $dbu WITH PASSWORD 'openquake'\" >> $LOGFILE 2>&1" postgres
-    done
-    chmod 644 $LOGFILE
-
-    num_of_errors=`grep -i error $LOGFILE | grep -v "is not empty" | grep -v error_msg_ | wc -l`
-    if [ $num_of_errors -gt 0 ]; then
-        echo "Failed to initialise the openquake database"
-        echo "Please file a bug here:"
-        echo "    https://bugs.launchpad.net/openquake/+filebug"
-        echo "and attach this file to it:"
-        echo "    $LOGFILE"
-        su -c "psql -p $pgport c \"DROP DATABASE openquake\" >/dev/null 2>&1" postgres
-        db_stop
-        exit 1
-    fi
-
-    PG_ROOT=/etc/postgresql/9.1/main
-    # Do we already have oq_* database users configured and how many?
-    oq_config_lines=`grep oq_ $PG_ROOT/pg_hba.conf | grep -v '^#' | wc -l`
-    # Do we already have oq_* database users *auto-configured* and how many?
-    auto_oq_config_lines=`grep oq_ $PG_ROOT/pg_hba.conf | grep -v '^#' | grep '^local' | wc -l`
-    if [ $oq_config_lines -eq $auto_oq_config_lines ]; then
-        # The oq_* db users (if any) have been auto-configured i.e. it's OK
-        # if we flatten them.
-        rm -f $PG_ROOT/pg_hba.conf.orig
-        mv $PG_ROOT/pg_hba.conf $PG_ROOT/pg_hba.conf.orig
-        for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer
-        do
-            echo "local   openquake   $dbu                   md5" >> $PG_ROOT/pg_hba.conf
-        done
-        cat $PG_ROOT/pg_hba.conf.orig | grep -v 'local..*oq_' >> $PG_ROOT/pg_hba.conf
-        /etc/init.d/postgresql reload 9.1
-    else
-        echo ""
-        echo "============================================================"
-        echo "Your system seems to have a custom pg_hba.conf (postgres"
-        echo "authentication configuration)"
-        echo ""
-        echo "Please ask the system administrator to grant access to the"
-        echo "'openquake' database to the following users:"
-        echo ""
-        echo "      oq_admin oq_job_init oq_job_superv oq_reslt_writer"
-        echo "============================================================"
-        echo ""
-    fi
-
-    # Restart the remaining services just to be on the safe side.
-    /etc/init.d/rabbitmq-server restart
-    /etc/init.d/redis-server restart
-
-    # Restart celeryd
-    if [ -x /etc/init.d/celeryd ]; then
-        /etc/init.d/celeryd start
-    else
-        # NOTE: when started without an init.d script celeryd must be run as normal user, not root.
-        rm -f /tmp/celeryd.log
-        echo "celeryd has been stopped, remember to start it before running new calculations"
-    fi
-
-    DDIR="/usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos"
-
-    cd $DDIR && find . | grep gz$ | xargs gunzip -f
-    # Last but not least copy the smoke tests into a more prominent place.
-    if [ -d $HDIR/demos ]; then
-        # are existing demos different from the ones we just installed?
-        if ! diff -qrN $HDIR/demos $DDIR >/dev/null ; then
-            # The demos do differ, move the old demos out of the way.
-            tstamp=`date +"%Y-%m-%d-%H-%M-%S"`
-            mv  $HDIR/demos $HDIR/demos.backup-from-$tstamp
-        fi
-    fi
-    # If the $HDIR/demos directory is still in place the old/new demos do not
-    # differ i.e. there's no point in installing them again.
-    if [ ! -d $HDIR/demos ]; then
-        cp -a $DDIR $HDIR
-        cd $HDIR/demos && chown -R root.openquake .
-        # Make the demo files writable by owner and group.
-        cd $HDIR/demos && find . -type f | xargs chmod 664
-        cd $HDIR/demos && find . -type d | xargs chmod 775
-    fi
+# If the $HDIR/demos directory is still in place the old/new demos do not
+# differ i.e. there's no point in installing them again.
+if [ ! -d $HDIR/demos ]; then
+    cp -a $DDIR $HDIR
+    cd $HDIR/demos && chown -R root.openquake .
+    # Make the demo files writable by owner and group.
+    cd $HDIR/demos && find . -type f | xargs chmod 664
+    cd $HDIR/demos && find . -type d | xargs chmod 775
 fi
 
 # Last but not least delete obsolete .pyc files in /usr/openquake/engine
 find /usr/openquake/engine -type f -name \*.pyc -exec rm -f {} \;
-
-#touch /tmp/mop-pause
-#while [ 1 ]; do
-#    if [ -f /tmp/mop-pause ]; then
-#        sleep 1
-#    fi
-#done
 
 # dh_installdeb will replace this with shell code automatically
 # generated by other debhelper scripts.
