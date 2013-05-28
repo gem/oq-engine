@@ -116,12 +116,15 @@ class CacheInserter(object):
     Bulk insert bunches of Django objects by converting them in strings
     and by using COPY FROM.
     """
-    inserters = []
+    instances = []
 
     @classmethod
     def flushall(cls):
-        for self in cls.inserters:
-            self.flush()
+        """
+        Flush the caches of all the instances of CacheInserter.
+        """
+        for instance in cls.instances:
+            instance.flush()
 
     def __init__(self, dj_model, max_cache_size):
         self.table = dj_model
@@ -134,7 +137,7 @@ class CacheInserter(object):
         # skip the first field, the id
 
         self.values = []
-        self.inserters.append(self)
+        self.instances.append(self)
 
     def add(self, obj):
         """
