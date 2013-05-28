@@ -134,10 +134,10 @@ class ExportTestCase(unittest.TestCase):
     def test_export_aggregate_loss(self):
         writer = 'csv.writer'
 
-        self.output_mock.aggregateloss.id = 0
-        self.output_mock.aggregateloss.mean = 1
-        self.output_mock.aggregateloss.std_dev = 2
-        self.output_mock.aggregateloss.loss_type = "structural"
+        self.output_mock.aggregate_loss.id = 0
+        self.output_mock.aggregate_loss.mean = 1
+        self.output_mock.aggregate_loss.std_dev = 2
+        self.output_mock.aggregate_loss.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_aggregate_loss(self.output_mock, "/tmp/")
