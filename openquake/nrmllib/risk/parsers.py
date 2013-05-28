@@ -174,7 +174,6 @@ def _to_costs(element):
             float(otag.attrib['value']),
             retrofitted, deductible, limit))
 
-    assert costs, "At least one cost is required in %s" % element
     return costs
 
 
