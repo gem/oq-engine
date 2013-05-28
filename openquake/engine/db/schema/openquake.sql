@@ -1419,13 +1419,21 @@ FOREIGN KEY (site_id)
 REFERENCES hzrdi.site_data(id)
 ON DELETE CASCADE;
 
+
+-- this function is used in the performance_view, cannot go in functions.sql
+CREATE FUNCTION maxint(a INTEGER, b INTEGER) RETURNS INTEGER AS $$
+SELECT CASE WHEN $1 > $2 THEN $1 ELSE $2 END;
+$$ LANGUAGE SQL IMMUTABLE;
+
 ---------------------- views ----------------------------
 -- convenience view to analyze the performance of the jobs;
 -- for instance the slowest operations can be extracted with
 -- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_view;
 CREATE VIEW uiapi.performance_view AS
 SELECT h.id AS calculation_id, description, 'hazard' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation, sum(duration) AS duration,
+     SELECT oq_job_id, operation,
+     sum(duration) AS tot_duration,
+     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
      max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance
@@ -1436,7 +1444,9 @@ INNER JOIN uiapi.hazard_calculation AS h
 ON h.id=o.hazard_calculation_id
 UNION ALL
 SELECT r.id AS calculation_id, description, 'risk' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation, sum(duration) AS duration,
+     SELECT oq_job_id, operation,
+     sum(duration) AS tot_duration,
+     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
      max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance

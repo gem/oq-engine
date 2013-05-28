@@ -27,7 +27,7 @@ import numpy
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
-from openquake.engine.performance import DummyMonitor
+from openquake.engine.writer import DummyMonitor
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
