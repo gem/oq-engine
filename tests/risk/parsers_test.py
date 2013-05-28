@@ -99,6 +99,8 @@ class ExposureModelParserTestCase(unittest.TestCase):
         expected_result = [
             ([9.15000, 45.16667], [], {
                 "area": 120.0,
+                "areaType": "per_asset",
+                "areaUnit": "GBP",
                 "category": "buildings",
                 "id": "asset_01",
                 "description": "Buildings in Pavia",
@@ -111,7 +113,6 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 parsers.COST("structural", 150000.0, 109876.0, 55.0, 999.0),
                 parsers.COST("nonStructural", 25000.0, None, None, None)
             ], {
-                "area": ("per_asset", "GBP"),
                 "contentsCost": ("per_area", "CHF"),
                 "retrofittedStructuralCost": ("aggregated", "EUR"),
                 "structuralCost": ("aggregated", "USD"),
@@ -121,6 +122,8 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 parsers.OCCUPANCY(12, "day"),
                 parsers.OCCUPANCY(50, "night")], {
                     "area": 119.0,
+                    "areaType": "per_asset",
+                    "areaUnit": "GBP",
                     "category": "buildings",
                     "id": "asset_02",
                     "description": "Buildings in Pavia",
@@ -133,7 +136,6 @@ class ExposureModelParserTestCase(unittest.TestCase):
                     parsers.COST(
                         "structural", 250000.0, 205432.0, 66.0, 1999.0)
                 ], {
-                    "area": ("per_asset", "GBP"),
                     "contentsCost": ("per_area", "CHF"),
                     "retrofittedStructuralCost": ("aggregated", "EUR"),
                     "structuralCost": ("aggregated", "USD"),

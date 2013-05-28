@@ -97,17 +97,25 @@ class ExposureModelParser(object):
                 if desc is not None:
                     self._current_meta['description'] = str(desc.text)
 
-                taxsrc = element.get('taxonomySource')
-                if taxsrc is not None:
-                    self._current_meta['taxonomySource'] = str(taxsrc)
+                self._current_meta['taxonomySource'] = element.get(
+                    'taxonomySource')
 
                 asset_category = str(element.get('category'))
                 self._current_meta['category'] = asset_category
 
             if event == 'start' and element.tag == "%sconversions" % NRML:
                 for el in element.findall(".//"):
-                    self._conversions[el.tag[len(NRML):]] = (
-                        el.get('type'), el.get('unit'))
+                    if el.tag[len(NRML):] == "area":
+                        self._current_meta['areaType'] = el.get('type')
+                        self._current_meta['areaUnit'] = el.get('unit')
+                    elif el.tag[len(NRML):] == "deductible":
+                        self._current_meta['deductibleIsAbsolute'] = (
+                            el.get('isAbsolute'))
+                        self._current_meta['insuranceLimitIsAbsolute'] = (
+                            el.get('isAbsolute'))
+                    else:
+                        self._conversions[el.tag[len(NRML):]] = (
+                            el.get('type'), el.get('unit'))
 
             elif event == 'end' and element.tag == '%sasset' % NRML:
                 site_data = (_to_site(element), _to_occupancy(element),
