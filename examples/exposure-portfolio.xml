@@ -9,14 +9,16 @@
       Sample buildings 
     </description>
 
-    <area type="per_asset" unit="square meters"/>
-    <businessInterruptionCost type="per_area" unit="EUR"/>
-    <contentsCost type="per_area" unit="USD"/>
-    <nonStructuralCost type="aggregated" unit="YEN" />
-    <structuralCost type="aggregated" unit="YEN" />
-    <retrofittedStructuralCost type="aggregated" unit="EUR"/>
-    <deductible isAbsolute="false"/>
-    <insuranceLimit isAbsolute="false"/>
+    <conversions>
+      <area type="per_asset" unit="square meters"/>
+      <businessInterruptionCost type="per_area" unit="EUR"/>
+      <contentsCost type="per_area" unit="USD"/>
+      <nonStructuralCost type="aggregated" unit="YEN" />
+      <structuralCost type="aggregated" unit="YEN" />
+      <retrofittedStructuralCost type="aggregated" unit="EUR"/>
+      <deductible isAbsolute="false"/>
+      <insuranceLimit isAbsolute="false"/>
+    </conversions>
 
     <assets>
       <asset id="asset_01" area="120" units="7" taxonomy="RC/DMRF-D/LR">

@@ -53,11 +53,13 @@ class ExposureModelParserTestCase(unittest.TestCase):
   <exposureModel id="ep1"
                  category="buildings"
                  taxonomySource="Pavia buildings">
-    <area type="per_asset" unit="GBP"/>
-    <contentsCost type="per_area" unit="CHF"/>
-    <retrofittedStructuralCost type="aggregated" unit="EUR"/>
-    <structuralCost type="aggregated" unit="USD"/>
-    <nonStructuralCost type="aggregated" unit="USD"/>
+        <conversions>
+          <area type="per_asset" unit="GBP"/>
+          <contentsCost type="per_area" unit="CHF"/>
+          <retrofittedStructuralCost type="aggregated" unit="EUR"/>
+          <structuralCost type="aggregated" unit="USD"/>
+          <nonStructuralCost type="aggregated" unit="USD"/>
+        </conversions>
 
     <description>Buildings in Pavia</description>
 
@@ -97,66 +99,61 @@ class ExposureModelParserTestCase(unittest.TestCase):
         expected_result = [
             ([9.15000, 45.16667], [], {
                 "area": 120.0,
-                "areaType": "per_asset",
-                "areaUnit": "GBP",
-                "assetCategory": "buildings",
-                "assetID": "asset_01",
-                "coco": 12.95,
-                "cocoType": "per_area",
-                "cocoUnit": "CHF",
-                "deductible": 55.0,
-                "limit": 999.0,
-                "listDescription": "Buildings in Pavia",
-                "listID": "PAV01",
-                "number": 7.0,
-                "reco": 109876.0,
-                "recoType": "aggregated",
-                "recoUnit": "EUR",
-                "stco": 150000.0,
-                "nonstco": 25000.0,
-                "stcoType": "aggregated",
-                "stcoUnit": "USD",
-                "nonStcoType": "aggregated",
-                "nonStcoUnit": "USD",
+                "category": "buildings",
+                "id": "asset_01",
+                "description": "Buildings in Pavia",
+                "exposureID": "ep1",
+                "units": 7.0,
                 "taxonomy": "RC/DMRF-D/LR",
-                "taxonomySource": "Pavia taxonomy",
+                "taxonomySource": "Pavia buildings",
+            }, [
+                parsers.COST("contents", 12.95, None, None, None),
+                parsers.COST("structural", 150000.0, 109876.0, 55.0, 999.0),
+                parsers.COST("nonStructural", 25000.0, None, None, None)
+            ], {
+                "area": ("per_asset", "GBP"),
+                "contentsCost": ("per_area", "CHF"),
+                "retrofittedStructuralCost": ("aggregated", "EUR"),
+                "structuralCost": ("aggregated", "USD"),
+                "nonStructuralCost": ("aggregated", "USD"),
             }),
             ([9.15333, 45.12200], [
                 parsers.OCCUPANCY(12, "day"),
                 parsers.OCCUPANCY(50, "night")], {
                     "area": 119.0,
-                    "areaType": "per_asset",
-                    "areaUnit": "GBP",
-                    "assetCategory": "buildings",
-                    "assetID": "asset_02",
-                    "coco": 21.95,
-                    "cocoType": "per_area",
-                    "cocoUnit": "CHF",
-                    "deductible": 66.0,
-                    "limit": 1999.0,
-                    "listDescription": "Buildings in Pavia",
-                    "listID": "PAV01",
-                    "number": 6.0,
-                    "reco": 205432.0,
-                    "recoType": "aggregated",
-                    "recoUnit": "EUR",
-                    "stco": 250000.0,
-                    "stcoType": "aggregated",
-                    "stcoUnit": "USD",
-                    "nonStcoType": "aggregated",
-                    "nonStcoUnit": "USD",
+                    "category": "buildings",
+                    "id": "asset_02",
+                    "description": "Buildings in Pavia",
+                    "exposureID": "ep1",
+                    "units": 6.0,
                     "taxonomy": "RC/DMRF-D/HR",
-                    "taxonomySource": "Pavia taxonomy",
+                    "taxonomySource": "Pavia buildings",
+                }, [
+                    parsers.COST("contents", 21.95, None, None, None),
+                    parsers.COST(
+                        "structural", 250000.0, 205432.0, 66.0, 1999.0)
+                ], {
+                    "area": ("per_asset", "GBP"),
+                    "contentsCost": ("per_area", "CHF"),
+                    "retrofittedStructuralCost": ("aggregated", "EUR"),
+                    "structuralCost": ("aggregated", "USD"),
+                    "nonStructuralCost": ("aggregated", "USD"),
                 }),
         ]
 
         parser = parsers.ExposureModelParser(StringIO.StringIO(exposure))
-        for ctr, (exposure_point, occupancy_data, exposure_data) \
-                in enumerate(parser):
 
+        i = None
+        for ctr, (exposure_point, occupancy_data, exposure_data,
+                  costs, conversions) in enumerate(parser):
             self.assertEqual(expected_result[ctr][0], exposure_point)
             self.assertEqual(expected_result[ctr][1], occupancy_data)
             self.assertEqual(expected_result[ctr][2], exposure_data)
+            self.assertEqual(expected_result[ctr][3], costs)
+            self.assertEqual(expected_result[ctr][4], conversions)
+            i = ctr
+
+        self.assertEqual(2, i + 1)
 
 
 class VulnerabilityModelParserTestCase(unittest.TestCase):
