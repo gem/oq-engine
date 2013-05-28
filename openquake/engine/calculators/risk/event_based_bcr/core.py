@@ -73,7 +73,7 @@ def do_event_based_bcr(loss_type, units, containers, params, profile):
     for unit_orig, unit_retro in utils.pairwise(units):
         ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__lt_realization=
-            unit_orig.getter.hazard_output.gmfcollection.lt_realization
+            unit_orig.getter.hazard_output.gmf.lt_realization
         ).order_by('ses').values_list('id', flat=True)
 
         with profile('getting hazard'):
