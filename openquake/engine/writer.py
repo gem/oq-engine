@@ -162,7 +162,7 @@ class CacheInserter(object):
         if not self.nlines:
             return
 
-        # generate a big string with the objects and save it with COPY FROM
+        # save the StringIO object with a COPY FROM
         with transaction.commit_on_success(using=self.alias):
             curs = connections[self.alias].cursor()
             self.stringio.reset()
