@@ -27,7 +27,7 @@ from celery.task import task
 from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.writer import CacheInserter
 
 
 def _map_reduce(task_func, task_args, agg, acc):
@@ -152,6 +152,6 @@ def oqtask(task_func):
         else:
             return res
         finally:
-            EnginePerformanceMonitor.cache.flush()  # flush performance data
+            CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
     return task(wrapped, ignore_result=True, queue=celery_queue)
