@@ -193,9 +193,7 @@ class Calculator(object):
         enqueued, we just wait until all of the tasks conclude.
 
         It is possible to override this method to change the distribution
-        mechanism. At the moment this is done only in the event based
-        calculator which is able to distribute both for sources and for
-        stochastic events sets.
+        mechanism.
         """
         if openquake.engine.no_distribute():
             logs.LOG.warn('Calculation task distribution is disabled')
