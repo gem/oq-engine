@@ -31,8 +31,8 @@ For more information on computing ground motion fields, see
 :mod:`openquake.hazardlib.calc.gmf`.
 """
 
+import math
 import random
-import itertools
 
 import openquake.hazardlib.imt
 import numpy.random
@@ -48,7 +48,7 @@ from openquake.hazardlib.source import CharacteristicFaultSource
 from openquake.hazardlib.source import ComplexFaultSource
 from openquake.hazardlib.source import SimpleFaultSource
 
-from openquake.engine import writer
+from openquake.engine import writer, logs
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
@@ -63,6 +63,9 @@ from openquake.engine.performance import EnginePerformanceMonitor
 #: Always 1 for the computation of ground motion fields in the event-based
 #: hazard calculator.
 DEFAULT_GMF_REALIZATIONS = 1
+
+# NB: beware of large caches
+inserter = writer.CacheInserter(models.Gmf, 1000)
 
 
 # Disabling pylint for 'Too many local variables'
@@ -145,14 +148,15 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed, result_grp_ordinal):
             gmf_cache = compute_gmf_cache(
                 hc, gsims, ruptures, rupture_ids, result_grp_ordinal)
 
-        with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
+        with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs)\
+                as monitor:
             # This will be the "container" for all computed GMFs
             # for this stochastic event set.
             gmf_set = models.GmfSet.objects.get(
                 gmf_collection__lt_realization__id=lt_rlz.id,
                 ses_ordinal=ses.ordinal)
             _save_gmfs(gmf_set, gmf_cache, hc.points_to_compute(),
-                       result_grp_ordinal)
+                       result_grp_ordinal, monitor)
 
 ses_and_gmfs.ignore_result = False  # essential
 
@@ -321,7 +325,8 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
+def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal,
+               monitor):
     """
     Helper method to save computed GMF data to the database.
 
@@ -339,9 +344,6 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
         A calculation consists of N tasks, so this tells us which task computed
         the data.
     """
-
-    inserter = writer.BulkInserter(models.Gmf)
-
     for imt, gmf_data in gmf_dict.iteritems():
 
         gmfs = gmf_data['gmvs']
@@ -366,7 +368,7 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
             relevant_rupture_ids = rupture_ids[nonzero_gmvs_idxs].tolist()
 
             if gmvs:
-                inserter.add_entry(
+                inserter.add(models.Gmf(
                     gmf_set_id=gmf_set.id,
                     imt=imt_name,
                     sa_period=sa_period,
@@ -375,9 +377,10 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal):
                     gmvs=gmvs,
                     rupture_ids=relevant_rupture_ids,
                     result_grp_ordinal=result_grp_ordinal,
-                )
+                ))
 
-    inserter.flush()
+    with monitor.copy('bulk inserting into Gmf'):
+        inserter.flush()
 
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
@@ -387,6 +390,64 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
     core_calc_task = ses_and_gmfs
 
+    preferred_block_size = 1  # will be overridden in calc_num_tasks
+
+    def calc_num_tasks(self):
+        """
+        The number of tasks is inferred from the configuration parameter
+        concurrent_tasks (c), from the number of sources per realization
+        (n) and from the number of stochastic event sets (s) by using
+        the formula::
+
+                     N * n
+         num_tasks = ----- * s
+                       b
+
+        where N is the number of realizations and b is the block_size,
+        defined as::
+
+             N * n * s
+         b = ---------
+              100 * c
+
+        The divisions are intended rounded to the closest upper integer
+        (ceil). The mechanism is intended to generate a number of tasks
+        close to 100 * c independently on the number of sources and SES.
+        For instance, with c = 512, you should expect the engine to
+        generate at most 51200 tasks; they could be much less in case
+        of few sources and few SES; the minimum number of tasks generated
+        is::
+
+          num_tasks_min = N * n * s
+
+        To have good concurrency the number of tasks must be bigger than
+        the number of the cores (which is essentially c) but not too big,
+        otherwise all the time would be wasted in passing arguments.
+        Generating 100 times more tasks than cores gives a nice progress
+        percentage. There is no more motivation than that.
+        """
+        preferred_num_tasks = self.concurrent_tasks() * 100
+        num_ses = self.hc.ses_per_logic_tree_path
+
+        num_sources = []  # number of sources per realization
+        for lt_rlz in self._get_realizations():
+            n = models.SourceProgress.objects.filter(
+                lt_realization=lt_rlz).count()
+            num_sources.append(n)
+            logs.LOG.info('Found %d sources for realization %d',
+                          n, lt_rlz.id)
+        total_sources = sum(num_sources)
+        logs.LOG.info('Total number of sources: %d', total_sources)
+
+        self.preferred_block_size = int(
+            math.ceil(float(total_sources * num_ses) / preferred_num_tasks))
+        logs.LOG.info('Using block size: %d', self.preferred_block_size)
+
+        num_tasks = [math.ceil(float(n) / self.preferred_block_size) * num_ses
+                     for n in num_sources]
+
+        return int(sum(num_tasks))
+
     def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
@@ -394,8 +455,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         Yielded results are tuples of the form
 
-        (job_id, sources, ses_rlz_n, lt_rlz_id, gsims,
-         task_seed, result_grp_ordinal)
+        (job_id, src_ids, ses, task_seed, result_grp_ordinal)
 
         (random_seed will be used to seed numpy for temporal occurence
         sampling).
@@ -407,24 +467,16 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         result_grp_ordinal = 1
         for lt_rlz in realizations:
-            blocks = itertools.chain(
-                block_splitter(self._get_source_ids(lt_rlz),
-                               self.block_size()),
-                block_splitter(self._get_point_source_ids(lt_rlz),
-                               self.point_source_block_size()),
-            )
-            # first the complex sources, then the point sources: this is
-            # simply to perform the big work at the beginning, to avoid
-            # giving the users the false impression that things are going too
-            # fast; notice however that there are plans to remove the block
-            # size as an user-defined parameter:
-            # https://bugs.launchpad.net/oq-engine/+bug/1183329
+            sources = models.SourceProgress.objects\
+                .filter(is_complete=False, lt_realization=lt_rlz)\
+                .order_by('id')\
+                .values_list('parsed_source_id', flat=True)
 
             all_ses = list(models.SES.objects.filter(
                            ses_collection__lt_realization=lt_rlz,
                            ordinal__isnull=False).order_by('ordinal'))
-            # performs the query on the SES only once per realization
-            for src_ids in blocks:
+
+            for src_ids in block_splitter(sources, self.preferred_block_size):
                 for ses in all_ses:
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
                     task_args = (self.job.id, src_ids, ses, task_seed,
