@@ -323,27 +323,17 @@ class RiskCalculator(base.Calculator):
                 risk_models[taxonomy][loss_type] = model
 
             if vfs:
-                field_kwarg = dict(
-                    structural=dict(stco__isnull=True),
-                    non_structural=dict(nonstco__isnull=True),
-                    contents=dict(coco__isnull=True),
-                    occupancy=dict(occupany__isnull=True))[loss_type]
-                if self.rc.exposure_model.exposuredata_set.filter(
-                        **field_kwarg).exists():
-                    raise ValueError("Invalid exposure model "
-                                     "for type %s. Some assets don't match "
-                                     "with filter %s" % (
-                                         loss_type, field_kwarg))
-                fields = dict(
-                    structural=["stco_type", "stco_unit"],
-                    non_structural=["non_stco_type", "non_stco_unit"],
-                    contents=["coco_type", "coco_unit"])
-                if loss_type in fields:
-                    if any([not getattr(self.rc.exposure_model, field, False)
-                            for field in fields[loss_type]]):
-                        raise ValueError("Invalid exposure model "
-                                         "for type %s. %s are required" % (
-                                             loss_type, fields[loss_type]))
+
+                if loss_type != "occupants":
+                    if not self.rc.exposure_model.exposuredata_set.filter(
+                            cost__cost_type__name=loss_type).exists():
+                        raise ValueError("Invalid exposure "
+                                         "for computing loss type %s. ")
+                else:
+                    if self.rc.exposure_model.exposuredata_set.filter(
+                            occupancy__isnull=True).exists():
+                        raise ValueError("Invalid exposure "
+                                         "for computing occupancy losses.")
 
         if not risk_models:
             raise ValueError(
