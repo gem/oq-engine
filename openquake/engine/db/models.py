@@ -2779,6 +2779,7 @@ class Cost(djm.Model):
     exposure_data = djm.ForeignKey(ExposureData)
     cost_type = djm.ForeignKey(CostType)
     converted_cost = djm.FloatField()
+    converted_retrofitted_cost = djm.FloatField(null=True)
     deductible_absolute = djm.FloatField(null=True, blank=True)
     insurance_limit_absolute = djm.FloatField(null=True, blank=True)
 
