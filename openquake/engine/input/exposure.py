@@ -124,22 +124,23 @@ class ExposureDBWriter(object):
             else:
                 retrofitted = None
 
+            converted_cost = models.ExposureData.per_asset_value(
+                cost.value, cost_type.conversion,
+                asset.area, values.get("areaType"),
+                asset.units, values["category"])
             models.Cost.objects.create(
                 exposure_data=asset,
                 cost_type=cost_type,
-                converted_cost=models.ExposureData.per_asset_value(
-                    cost.value, cost_type.conversion,
-                    asset.area, values.get("areaType"),
-                    asset.units, values["category"]),
+                converted_cost=converted_cost,
                 converted_retrofitted_cost=retrofitted,
                 deductible_absolute=models.make_absolute(
                     cost.deductible,
-                    cost.value,
-                    values.get("deductibleIsAbsolute")),
+                    cost,
+                    values.get("deductibleIsAbsolute", True)),
                 insurance_limit_absolute=models.make_absolute(
                     cost.limit,
-                    cost.value,
-                    values.get("insuranceLimitIsAbsolute")))
+                    converted_cost,
+                    values.get("insuranceLimitIsAbsolute", True)))
 
         for odata in occupancy:
             models.Occupancy.objects.create(exposure_data=asset,
