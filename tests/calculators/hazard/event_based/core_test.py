@@ -27,6 +27,7 @@ from openquake.hazardlib.imt import PGA
 
 from openquake.engine.db import models
 from openquake.engine.calculators.hazard.event_based import core
+from openquake.engine.performance import DummyMonitor
 from openquake.engine.utils import stats
 
 from tests.utils import helpers
@@ -66,7 +67,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         points = make_mock_points(3)
         with mock.patch.object(core.inserter, 'add') as m:
-            core._save_gmfs(gmf_set, gmf_dict, points, 1)
+            core._save_gmfs(gmf_set, gmf_dict, points, 1, DummyMonitor())
             self.assertEqual(2, m.call_count)
 
     def test_save_only_nonzero_gmvs(self):
@@ -77,7 +78,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         points = make_mock_points(1)
         with mock.patch.object(core.inserter, 'add') as m:
-            core._save_gmfs(gmf_set, gmf_dict, points, 1)
+            core._save_gmfs(gmf_set, gmf_dict, points, 1, DummyMonitor())
             self.assertEqual(1, m.call_count)
 
     def test_initialize_ses_db_records(self):
