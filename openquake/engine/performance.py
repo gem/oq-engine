@@ -181,3 +181,22 @@ class EnginePerformanceMonitor(PerformanceMonitor):
 
 ## makes sure the performance results are flushed in the db at the end
 atexit.register(EnginePerformanceMonitor.cache.flush)
+
+
+class DummyMonitor(object):
+    """
+    This class makes it easy to disable the monitoring
+    in client code. Disabling the monitor can improve the performance.
+    """
+    def __init__(self, operation='', job_id=0, *args, **kw):
+        self.operation = operation
+        self.job_id = job_id
+
+    def __enter__(self):
+        return self
+
+    def copy(self, operation):
+        return self.__class__(operation, self.job_id)
+
+    def __exit__(self, etype, exc, tb):
+        pass
