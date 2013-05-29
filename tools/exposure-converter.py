@@ -6,6 +6,7 @@ proper <cost> tag
 """
 
 import sys
+import os
 from lxml import etree
 from openquake import nrmllib
 
@@ -75,11 +76,12 @@ def convert(filename, output_filename):
         costTypes = {}
         types_el = etree.SubElement(conversions, "costTypes")
 
-        for el, new_el in (("coco", "contentsCost"),
-                           ("stco", "structuralCost"),
-                           ("nonStco", "nonStructuralCost")):
+        for el, new_el in (("coco", "contents"),
+                           ("stco", "structural"),
+                           ("nonStco", "non_structural")):
             if get(find(exposure, 'exposureList'), "%sUnit" % el):
-                costTypes[el] = etree.SubElement(types_el, new_el)
+                costTypes[el] = etree.SubElement(types_el, "costType")
+                costTypes[el].set('name', new_el)
                 safe_set(costTypes[el], 'unit',
                          get(find(exposure, 'exposureList'), "%sUnit" % el))
                 safe_set(
@@ -111,7 +113,7 @@ def convert(filename, output_filename):
             costs = etree.SubElement(element, "costs")
             for el, cost_type in (("coco", "contents"),
                                   ("stco", "structural"),
-                                  ("nonStco", "nonStructural")):
+                                  ("nonStco", "non_structural")):
                 if text(asset_element, el) is not None:
                     cost = etree.SubElement(costs, "cost")
                     safe_set(cost, "type", cost_type)
@@ -136,7 +138,7 @@ def convert(filename, output_filename):
 
 if __name__ == "__main__":
     if len(sys.argv) <= 2:
-        print "Usage: %s <filename to convert> <new filename>" % (
+        print "Usage: %s <filename to convert> <new filename> <swap>" % (
             sys.argv[0])
         sys.exit(1)
 
