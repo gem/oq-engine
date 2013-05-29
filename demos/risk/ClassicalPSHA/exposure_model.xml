@@ -3,7 +3,9 @@
   <exposureModel id="ep" category="buildings">
     <description>Exposure model for buildings in Nepal</description>
     <conversions>
-      <structuralCost unit="USD" type="per_asset"/>
+      <costTypes>
+        <costType name="structural" unit="USD" type="per_asset"/>
+      </costTypes>
     </conversions>
     <assets>
       <asset id="a1" taxonomy="W" units="1">
