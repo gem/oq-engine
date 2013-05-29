@@ -176,7 +176,6 @@ class Calculator(object):
         initialize result records, perform detailed parsing of input data, etc.
         """
 
-    # this method is completely overridden in the event based calculator
     def execute(self):
         """
         Calculation work is parallelized over sources, which means that each
@@ -192,6 +191,9 @@ class Calculator(object):
         2. Wait for tasks to signal completion (via AMQP message) and enqueue a
         new task each time another completes. Once all of the job work is
         enqueued, we just wait until all of the tasks conclude.
+
+        It is possible to override this method to change the distribution
+        mechanism.
         """
         if openquake.engine.no_distribute():
             logs.LOG.warn('Calculation task distribution is disabled')
