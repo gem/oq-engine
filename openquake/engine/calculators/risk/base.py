@@ -323,7 +323,6 @@ class RiskCalculator(base.Calculator):
                 risk_models[taxonomy][loss_type] = model
 
             if vfs:
-
                 if loss_type != "occupants":
                     if not self.rc.exposure_model.exposuredata_set.filter(
                             cost__cost_type__name=loss_type).exists():
