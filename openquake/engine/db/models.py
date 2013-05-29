@@ -2568,6 +2568,9 @@ class ExposureModel(djm.Model):
         return ExposureData.objects.taxonomies_contained_in(
             self.id, region_constraint)
 
+    def unit(self, cost_type):
+        return self.costtype_set.get(name=cost_type).unit
+
 
 class CostType(djm.Model):
     COST_TYPE_CHOICES = (
