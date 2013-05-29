@@ -2586,6 +2586,9 @@ class CostType(djm.Model):
     name = djm.TextField(choices=COST_TYPE_CHOICES)
     conversion = djm.TextField(choices=CONVERSION_CHOICES)
     unit = djm.TextField(null=True)
+    retrofitted_conversion = djm.TextField(
+        null=True, choices=CONVERSION_CHOICES)
+    retrofitted_unit = djm.TextField(null=True)
 
     class Meta:
         db_table = 'riski\".\"cost_type'
@@ -2631,14 +2634,14 @@ class AssetManager(djm.GeoManager):
             args += (rc.time_event,)
         args += (size, offset)
 
-        costs = ""
+        costs = []
         costs_join = ""
 
         for cost_type in rc.exposure_model.costtype_set.all():
             # here the max value is irrelevant as we are sureto join
             # against one row
-            costs += "max(%s.converted_cost) AS %s " % (cost_type.name,
-                                                        cost_type.name)
+            costs.append("max(%s.converted_cost) AS %s " % (cost_type.name,
+                                                            cost_type.name))
             costs_join += """
             JOIN riski.cost AS %(name)s
             ON %(name)s.cost_type_id = '%(id)s' AND
@@ -2662,7 +2665,7 @@ class AssetManager(djm.GeoManager):
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
             """.format(occupants=occupants, occupants_cond=occupants_cond,
-                       costs=costs, costs_join=costs_join), args))
+                       costs=", ".join(costs), costs_join=costs_join), args))
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
@@ -2752,10 +2755,18 @@ class ExposureData(djm.Model):
         # the one provided by get_asset_chunk
         return getattr(self, loss_type)
 
+    def retrofitted(self, loss_type):
+        # we expect an annotation retrofitted_"loss_type" to be present like
+        # the one provided by get_asset_chunk
+
+        return getattr(self, "retrofitted_%s" % loss_type)
+
 
 def make_absolute(limit, value, is_absolute=None):
     """
-    :returns: `limit` if `is_absolute` is True, else `limit` * `value`
+    :returns:
+        `limit` if `is_absolute` is True or `limit` is None,
+        else `limit` * `value`
     """
     if limit is not None:
         if not is_absolute:

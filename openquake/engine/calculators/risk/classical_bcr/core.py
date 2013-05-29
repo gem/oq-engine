@@ -146,21 +146,6 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
                         model_retro.imt))])
         return units
 
-    def get_taxonomies(self):
-        """
-        Override the default get_taxonomies to provide more detailed
-        validation of the exposure.
-
-        Check that the reco value is present in the exposure
-        """
-        taxonomies = super(ClassicalBCRRiskCalculator, self).get_taxonomies()
-
-        if (self.rc.exposure_model.exposuredata_set.filter(
-                reco__isnull=True)).exists():
-            raise ValueError("Some assets do not have retrofitted costs")
-
-        return taxonomies
-
     @property
     def calculator_parameters(self):
         """
