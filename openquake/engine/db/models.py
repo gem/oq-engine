@@ -2642,8 +2642,18 @@ class AssetManager(djm.GeoManager):
             # against one row
             costs.append("max(%s.converted_cost) AS %s " % (cost_type.name,
                                                             cost_type.name))
+            costs.append(
+                "max(%s.converted_retrofitted_cost) AS retrofitted_%s " % (
+                    cost_type.name, cost_type.name))
+            costs.append(
+                "max(%s.deductible_absolute) AS deductible_%s " % (
+                    cost_type.name, cost_type.name))
+            costs.append(
+                "max(%s.insurance_limit_absolute) AS insurance_limit_%s " % (
+                    cost_type.name, cost_type.name))
+
             costs_join += """
-            JOIN riski.cost AS %(name)s
+            LEFT JOIN riski.cost AS %(name)s
             ON %(name)s.cost_type_id = '%(id)s' AND
             %(name)s.exposure_data_id = riski.exposure_data.id """ % dict(
                 name=cost_type.name, id=cost_type.id)
@@ -2750,16 +2760,20 @@ class ExposureData(djm.Model):
                 return cost * area * number_of_units
         raise ValueError("Invalid input")
 
+    # we expect several annotations depending on "loss_type" to be
+    # present. See `get_asset_chunk` for details.
+
     def value(self, loss_type):
-        # we expect an annotation "loss_type" to be present like
-        # the one provided by get_asset_chunk
         return getattr(self, loss_type)
 
     def retrofitted(self, loss_type):
-        # we expect an annotation retrofitted_"loss_type" to be present like
-        # the one provided by get_asset_chunk
-
         return getattr(self, "retrofitted_%s" % loss_type)
+
+    def deductible(self, loss_type):
+        return getattr(self, "deductible_%s" % loss_type)
+
+    def insurance_limit(self, loss_type):
+        return getattr(self, "insurance_limit_%s" % loss_type)
 
 
 def make_absolute(limit, value, is_absolute=None):

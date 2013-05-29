@@ -133,7 +133,9 @@ class ExposureDBWriter(object):
                     asset.units, values["category"]),
                 converted_retrofitted_cost=retrofitted,
                 deductible_absolute=models.make_absolute(
-                    cost.deductible, values.get("deductibleIsAbsolute")),
+                    cost.deductible,
+                    cost.value,
+                    values.get("deductibleIsAbsolute")),
                 insurance_limit_absolute=models.make_absolute(
                     cost.limit,
                     cost.value,
