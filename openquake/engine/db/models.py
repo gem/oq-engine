@@ -1347,8 +1347,9 @@ class Output(djm.Model):
     def lt_realization_paths(self):
         """
         :returns: an instance of `LogicTreePath` the output is
-        associated with associated with. Otherwise, it returns a tuple
-        with a couple of None
+        associated with. When the output is not associated with any
+        logic tree branch then it returns a LogicTreePath namedtuple
+        with a couple of None.
         """
         hazard_output_types = [el[0] for el in self.HAZARD_OUTPUT_TYPE_CHOICES]
         risk_output_types = [el[0] for el in self.RISK_OUTPUT_TYPE_CHOICES]

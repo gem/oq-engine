@@ -326,7 +326,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
 
 @transaction.commit_on_success(using='reslt_writer')
 def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal,
-               monitor=writer.DummyMonitor()):
+               monitor):
     """
     Helper method to save computed GMF data to the database.
 
@@ -378,7 +378,9 @@ def _save_gmfs(gmf_set, gmf_dict, points_to_compute, result_grp_ordinal,
                     rupture_ids=relevant_rupture_ids,
                     result_grp_ordinal=result_grp_ordinal,
                 ))
-    inserter.flush(monitor)
+
+    with monitor.copy('bulk inserting into Gmf'):
+        inserter.flush()
 
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
