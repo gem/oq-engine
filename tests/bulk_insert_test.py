@@ -47,7 +47,8 @@ class DummyConnection(object):
         self.data = stringio.getvalue()
         self.table = table
         self.columns = columns
-        
+
+
 class BulkInserterTestCase(unittest.TestCase):
     """
     Unit tests for the BulkInserter class, which simplifies database
@@ -163,7 +164,7 @@ class CacheInserterTestCase(unittest.TestCase):
         cache.add(gmf2)
         cache.flush()
         connection = writer.connections['reslt_writer']
-        self.assertEqual(connection.data, '1\tPGA\t\\N\t\\N\tSRID=4326;POINT (-122.5000000000000000 37.5000000000000000)\t{}\t{}\n1\tPGA\t\\N\t\\N\tSRID=4326;POINT (-121.5000000000000000 37.5000000000000000)\t{}\t{}')
+        self.assertEqual(connection.data, '1\tPGA\t\\N\t\\N\tSRID=4326;POINT (-122.5000000000000000 37.5000000000000000)\t{}\t{}\n1\tPGA\t\\N\t\\N\tSRID=4326;POINT (-121.5000000000000000 37.5000000000000000)\t{}\t{}\n')
         self.assertEqual(connection.table, '"hzrdr"."gmf_agg"')
         self.assertEqual(
             connection.columns,
