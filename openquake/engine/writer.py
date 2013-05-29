@@ -148,32 +148,22 @@ class CacheInserter(object):
         the max_cache_size, flush it on the database.
         """
         assert isinstance(obj, self.table)
-        self.values.append(obj)
+        self.values.append(self.to_line(obj))
         if len(self.values) >= self.max_cache_size:
             self.flush()
 
-    def flush(self, monitor=None):
+    def flush(self):
         """
         Save the pending objects on the database with a COPY FROM.
         """
         if not self.values:
             return
 
-        if monitor is None:
-            # hack to avoid a circular import; in the future we may
-            # remove the instrumentation from the CacheInserter (MS)
-            from openquake.engine.performance import DummyMonitor
-            monitor = DummyMonitor()
-
-        # perform some introspection
-        objects = self.values
-
         # generate a big string with the objects and save it with COPY FROM
-        text = '\n'.join(self.to_line(obj) for obj in objects)
+        text = '\n'.join(self.values)
         with transaction.commit_on_success(using=self.alias):
             curs = connections[self.alias].cursor()
-            with monitor.copy('bulk inserting into %s' % self.tname):
-                curs.copy_from(StringIO(text), self.tname, columns=self.fields)
+            curs.copy_from(StringIO(text), self.tname, columns=self.fields)
 
         ## TODO: should we add an assert that the number of rows stored
         ## in the db is the expected one? I (MS) have seen a case where
