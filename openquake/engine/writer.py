@@ -165,6 +165,7 @@ class CacheInserter(object):
         # generate a big string with the objects and save it with COPY FROM
         with transaction.commit_on_success(using=self.alias):
             curs = connections[self.alias].cursor()
+            self.stringio.reset()
             curs.copy_from(self.stringio, self.tname, columns=self.fields)
             self.stringio.close()
             self.stringio = StringIO()
