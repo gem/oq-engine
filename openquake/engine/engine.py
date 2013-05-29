@@ -34,7 +34,7 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import monitor, get_calculator_class
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.writer import CacheInserter
 
 
 INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
@@ -439,7 +439,7 @@ def _do_run_calc(job, exports, calc, job_type):
     _switch_to_job_phase(job, job_type, "clean_up")
     calc.clean_up()
 
-    EnginePerformanceMonitor.cache.flush()  # save performance info
+    CacheInserter.flushall()  # flush caches into the db
 
     _switch_to_job_phase(job, job_type, "complete")
     logs.LOG.debug("*> complete")
