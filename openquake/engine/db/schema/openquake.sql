@@ -1002,12 +1002,17 @@ CREATE TABLE riski.cost_type (
     exposure_model_id INTEGER NOT NULL,
  
     name VARCHAR NOT NULL,
-    conversion VARCHAR CONSTRAINT conversion_value
-        CHECK(conversion IS NULL
-              OR conversion = 'per_asset'
+    conversion VARCHAR NOT NULL CONSTRAINT conversion_value
+        CHECK(conversion = 'per_asset'
               OR conversion = 'per_area'
               OR conversion = 'aggregated'),
-    unit VARCHAR
+    unit VARCHAR,
+    retrofitted_conversion VARCHAR CONSTRAINT retrofitted_conversion_value
+        CHECK(retrofitted_conversion IS NULL
+              OR retrofitted_conversion = 'per_asset'
+              OR retrofitted_conversion = 'per_area'
+              OR retrofitted_conversion = 'aggregated'),
+    retrofitted_unit VARCHAR
 ) TABLESPACE riski_ts;
 
 
@@ -1034,8 +1039,10 @@ CREATE TABLE riski.cost (
     id SERIAL PRIMARY KEY,
     exposure_data_id INTEGER NOT NULL,
     cost_type_id INTEGER NOT NULL,
-    converted_cost float CONSTRAINT converted_cost_value
+    converted_cost float NOT NULL CONSTRAINT converted_cost_value
          CHECK(converted_cost >= 0.0),
+    converted_retrofitted_cost float CONSTRAINT converted_retrofitted_cost_value
+         CHECK(converted_retrofitted_cost >= 0.0),
     deductible_absolute float CONSTRAINT deductible_value
          CHECK(deductible_absolute >= 0.0),
     insurance_limit_absolute float CONSTRAINT insurance_limit_value
