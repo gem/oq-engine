@@ -711,7 +711,7 @@ def create_gmfset(hazard_job, rlz=None):
     return gmfset
 
 
-def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
+def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
     """
     Returns the created records.
     """
@@ -722,9 +722,11 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
         lt_realization=gmfset.gmf_collection.lt_realization)
     rupture_ids = get_rupture_ids(hazard_job, ses_coll, 3)
     records = []
-    for point in [(15.310, 38.225), (15.71, 37.225),
+    if points is None:
+        points = [(15.310, 38.225), (15.71, 37.225),
                   (15.48, 38.091), (15.565, 38.17),
-                  (15.481, 38.25)]:
+                  (15.481, 38.25)]
+    for point in points:
         site = store_one_site(hazard_job.hazard_calculation, point)
         records.append(models.GmfAgg.objects.create(
             gmf_collection=gmfset.gmf_collection,
