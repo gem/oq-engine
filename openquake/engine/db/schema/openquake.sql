@@ -1046,7 +1046,8 @@ CREATE TABLE riski.cost (
     deductible_absolute float CONSTRAINT deductible_value
          CHECK(deductible_absolute >= 0.0),
     insurance_limit_absolute float CONSTRAINT insurance_limit_value
-         CHECK(insurance_limit_absolute >= 0.0)
+         CHECK(insurance_limit_absolute >= 0.0),
+    UNIQUE (exposure_data_id, cost_type_id)
 ) TABLESPACE riski_ts;
 
 
