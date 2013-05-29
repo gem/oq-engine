@@ -85,12 +85,16 @@ class ExposureDBWriter(object):
                 deductible_absolute=values.get("deductibleIsAbsolute"),
                 insurance_limit_absolute=values.get("limitIsAbsolute"))
 
-            for name, (conversion, unit) in conversions.items():
+            for name, (conversion, unit,
+                       retrofitted_conversion, retrofitted_unit) in (
+                           conversions.items()):
                 self.conversions[name] = models.CostType.objects.create(
                     exposure_model=self.model,
                     name=name,
                     conversion=conversion,
-                    unit=unit)
+                    unit=unit,
+                    retrofitted_conversion=retrofitted_conversion,
+                    retrofitted_unit=retrofitted_unit)
 
         asset = models.ExposureData.objects.create(
             exposure_model=self.model, asset_ref=values["id"],
@@ -99,8 +103,27 @@ class ExposureDBWriter(object):
             units=values.get("units"),
             site="POINT(%s %s)" % (point[0], point[1]))
 
+        for cost_type in self.conversions:
+            if not any([cost_type == cost.type for cost in costs]):
+                raise ValueError("Invalid Exposure. "
+                                 "Missing cost %s for asset %s" % (
+                                     cost_type, asset.asset_ref))
+
         for cost in costs:
-            cost_type = self.conversions[cost.type]
+            cost_type = self.conversions.get(cost.type, None)
+
+            if cost_type is None:
+                raise ValueError("Invalid Exposure. Missing conversion "
+                                 "for cost type %s" % cost.type)
+
+            if cost.retrofitted is not None:
+                retrofitted = models.ExposureData.per_asset_value(
+                    cost.retrofitted, cost_type.retrofitted_conversion,
+                    asset.area, values.get("areaType"),
+                    asset.units, values["category"])
+            else:
+                retrofitted = None
+
             models.Cost.objects.create(
                 exposure_data=asset,
                 cost_type=cost_type,
@@ -108,6 +131,7 @@ class ExposureDBWriter(object):
                     cost.value, cost_type.conversion,
                     asset.area, values.get("areaType"),
                     asset.units, values["category"]),
+                converted_retrofitted_cost=retrofitted,
                 deductible_absolute=models.make_absolute(
                     cost.deductible, values.get("deductibleIsAbsolute")),
                 insurance_limit_absolute=models.make_absolute(
