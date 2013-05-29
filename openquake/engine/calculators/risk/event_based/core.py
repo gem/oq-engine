@@ -225,8 +225,8 @@ def insured_losses(loss_type, unit, assets, loss_ratio_matrix):
             scientific.insured_losses(
                 losses,
                 asset.value(loss_type),
-                asset.deductible,
-                asset.ins_limit),
+                asset.deductible(loss_type),
+                asset.insurance_limit(loss_type)),
             tses=unit.calc.tses,
             time_span=unit.calc.time_span)
         # FIXME(lp). Insured losses are still computed as absolute
@@ -414,12 +414,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         taxonomies = super(EventBasedRiskCalculator, self).get_taxonomies()
 
-        if (self.rc.insured_losses and
+        assets_without_limits = (
             self.rc.exposure_model.exposuredata_set.filter(
-                (db.models.Q(deductible__isnull=True) |
-                 db.models.Q(ins_limit__isnull=True))).exists()):
+                (db.models.Q(cost__deductible_absolute__isnull=True) |
+                 db.models.Q(cost__insurance_limit_absolute__isnull=True))))
+
+        if self.rc.insured_losses and assets_without_limits.exists():
             raise RuntimeError(
-                "Deductible or insured limit missing in exposure")
+                "Deductible or insured limit missing in exposure for "
+                "some assets")
 
         # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
 
