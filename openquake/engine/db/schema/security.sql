@@ -95,6 +95,8 @@ GRANT SELECT,INSERT        ON hzrdr.ses_rupture       TO oq_reslt_writer;
 
 -- riski schema
 GRANT SELECT,INSERT        ON riski.exposure_data    TO oq_job_init;
+GRANT SELECT,INSERT        ON riski.cost             TO oq_job_init;
+GRANT SELECT,INSERT        ON riski.cost_type        TO oq_job_init;
 GRANT SELECT,INSERT        ON riski.exposure_model   TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON riski.occupancy        TO oq_job_init;
 
