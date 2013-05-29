@@ -70,8 +70,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
         <costs>
           <cost type="contents" value="12.95" />
           <cost type="structural" value="150000"
-                deductible="55" insuranceLimit="999"
-                retrofitted="109876"/>
+                deductible="55" insuranceLimit="999"/>
           <cost type="nonStructural" value="25000" />
         </costs>
       </asset>
@@ -82,8 +81,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
         <costs>
           <cost type="contents" value="21.95"/>
           <cost type="structural" value="250000"
-                insuranceLimit="1999" deductible="66"
-                retrofitted="205432"/>
+                insuranceLimit="1999" deductible="66"/>
         </costs>
 
         <occupancies>
@@ -110,7 +108,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 "taxonomySource": "Pavia buildings",
             }, [
                 parsers.COST("contents", 12.95, None, None, None),
-                parsers.COST("structural", 150000.0, 109876.0, 55.0, 999.0),
+                parsers.COST("structural", 150000.0, None, 55.0, 999.0),
                 parsers.COST("nonStructural", 25000.0, None, None, None)
             ], {
                 "contents": ("per_area", "CHF"),
@@ -134,7 +132,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 }, [
                     parsers.COST("contents", 21.95, None, None, None),
                     parsers.COST(
-                        "structural", 250000.0, 205432.0, 66.0, 1999.0)
+                        "structural", 250000.0, None, 66.0, 1999.0)
                 ], {
                     "contents": ("per_area", "CHF"),
                     "retrofittedStructural": ("aggregated", "EUR"),

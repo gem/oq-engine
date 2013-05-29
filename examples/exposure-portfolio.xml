@@ -25,10 +25,11 @@
           <location lon="9.15000" lat="45.16667" />
 
           <costs>
-            <cost type="structural" value="150000" retrofitted="109876" deductible=".1" insuranceLimit="0.8"/>
-            <cost type="nonStructural" value="25000" retrofitted="10" deductible=".09" insuranceLimit="0.82"/>
-            <cost type="contents" value="12.95" retrofitted="10" deductible=".5" insuranceLimit=".7"/>
-            <cost type="businessInterruption" value="40" retrofitted="10" deductible=".5" insuranceLimit="0.8"/>
+            <cost type="structural" value="150000" deductible=".1" insuranceLimit="0.8"/>
+            <cost type="retrofittedStructural" value="109876"/>
+            <cost type="nonStructural" value="25000" deductible=".09" insuranceLimit="0.82"/>
+            <cost type="contents" value="12.95" deductible=".5" insuranceLimit=".7"/>
+            <cost type="businessInterruption" value="40" deductible=".5" insuranceLimit="0.8"/>
           </costs>
 
           <occupancies>
@@ -42,7 +43,8 @@
           <location lon="9.15333" lat="45.12200" />
 
           <costs>
-            <cost type="structural" value="250000" retrofitted="205432"/>
+            <cost type="structural" value="250000"/>
+            <cost type="structural" value="205432"/>
             <cost type="nonStructural" value="21000"/>
             <cost type="contents" value="21.95"/>
             <cost type="businessInterruption" value="40"/>
@@ -59,7 +61,8 @@
           <location lon="9.14777" lat="45.17999" />
 
           <costs>
-            <cost type="structural" value="500000" retrofitted="495432"/>
+            <cost type="structural" value="500000"/>
+            <cost type="structural" value="495432"/>
             <cost type="contents" value="30.95"/>
           </costs>
 

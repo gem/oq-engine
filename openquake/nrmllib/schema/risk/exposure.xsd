@@ -97,7 +97,7 @@
     <xs:complexType name="Cost">
          <xs:attribute name="type"
                        use="required"
-                       type="CostType"/>
+                       type="xs:string"/>
          <xs:attribute name="value"
                        use="required"
                        type="PositiveDoubleType"/>
@@ -105,9 +105,6 @@
                        use="optional"
                        type="PositiveDoubleType"/>
          <xs:attribute name="insuranceLimit"
-                       use="optional"
-                       type="PositiveDoubleType"/>
-         <xs:attribute name="retrofitted"
                        use="optional"
                        type="PositiveDoubleType"/>
      </xs:complexType>
@@ -120,15 +117,6 @@
                        type="PositiveIntegerType"
                        use="required"/>
      </xs:complexType>
-
-    <xs:simpleType name="CostType">
-        <xs:restriction base="xs:string">
-            <xs:enumeration value="structural"/>
-            <xs:enumeration value="contents"/>
-            <xs:enumeration value="businessInterruption"/>
-            <xs:enumeration value="nonStructural"/>
-        </xs:restriction>
-    </xs:simpleType>
 
     <xs:simpleType name="ExposureModelCostType">
         <xs:restriction base="xs:string">
