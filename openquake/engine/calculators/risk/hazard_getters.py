@@ -225,8 +225,9 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """
 
-    def __call__(self, monitor=None):
+    def __call__(self, rupture_ids=(), monitor=None):
         """
+        :param rupture_ids: a list of rupture ids
         :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor`
                         or None
         :returns:
