@@ -109,25 +109,6 @@ class BulkInserter(object):
         self.count = 0
 
 
-class DummyMonitor(object):
-    """
-    This class makes it easy to disable the monitoring
-    in client code. Disabling the monitor can improve the performance.
-    """
-    def __init__(self, operation='', job_id=0, *args, **kw):
-        self.operation = operation
-        self.job_id = job_id
-
-    def __enter__(self):
-        return self
-
-    def copy(self, operation):
-        return self.__class__(operation, self.job_id)
-
-    def __exit__(self, etype, exc, tb):
-        pass
-
-
 # In the future this class may replace openquake.engine.writer.BulkInserter
 # since it is much more efficient (even hundreds of times for bulky updates)
 # being based on COPY FROM. CacheInserter objects are not thread-safe.
@@ -167,26 +148,22 @@ class CacheInserter(object):
         the max_cache_size, flush it on the database.
         """
         assert isinstance(obj, self.table)
-        self.values.append(obj)
+        self.values.append(self.to_line(obj))
         if len(self.values) >= self.max_cache_size:
             self.flush()
 
-    def flush(self, monitor=DummyMonitor()):
+    def flush(self):
         """
         Save the pending objects on the database with a COPY FROM.
         """
         if not self.values:
             return
 
-        # perform some introspection
-        objects = self.values
-
         # generate a big string with the objects and save it with COPY FROM
-        text = '\n'.join(self.to_line(obj) for obj in objects)
+        text = '\n'.join(self.values)
         with transaction.commit_on_success(using=self.alias):
             curs = connections[self.alias].cursor()
-            with monitor.copy('bulk inserting into %s' % self.tname):
-                curs.copy_from(StringIO(text), self.tname, columns=self.fields)
+            curs.copy_from(StringIO(text), self.tname, columns=self.fields)
 
         ## TODO: should we add an assert that the number of rows stored
         ## in the db is the expected one? I (MS) have seen a case where
