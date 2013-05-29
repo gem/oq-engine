@@ -23,24 +23,16 @@
     <xs:complexType name="Conversions">
         <xs:all>
             <xs:element name="area" minOccurs="0" type="ExposureModelArea"/>
-            <xs:element name="businessInterruptionCost"
-                        minOccurs="0"
-                        type="ExposureModelCost"/>
-            <xs:element name="contentsCost"
-                        minOccurs="0"
-                        type="ExposureModelCost"/>
-            <xs:element name="nonStructuralCost"
-                        minOccurs="0"
-                        type="ExposureModelCost"/>
-            <xs:element name="structuralCost"
-                        minOccurs="0"
-                        type="ExposureModelCost"/>
-            <xs:element name="retrofittedStructuralCost"
-                        type="ExposureModelCost"
-                        minOccurs="0" />
+            <xs:element name="costTypes" minOccurs="0" type="CostTypes"/>
             <xs:element name="deductible" type="AbsoluteType" minOccurs="0"/>
             <xs:element name="insuranceLimit" type="AbsoluteType" minOccurs="0"/>
         </xs:all>
+    </xs:complexType>
+
+    <xs:complexType name="CostTypes">
+        <xs:sequence>
+            <xs:element name="costType" type="CostType" maxOccurs="unbounded"/>
+        </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="ExposureModelArea">
@@ -48,9 +40,12 @@
          <xs:attribute name="unit" type="xs:string" use="required"/>
     </xs:complexType>
 
-    <xs:complexType name="ExposureModelCost">
+    <xs:complexType name="CostType">
+         <xs:attribute name="name" type="xs:string" use="required"/>
          <xs:attribute name="type" type="ExposureModelCostType" use="required"/>
          <xs:attribute name="unit" type="AssetValueUnit" use="required"/>
+         <xs:attribute name="retrofittedType" type="ExposureModelCostType" use="optional"/>
+         <xs:attribute name="retrofittedUnit" type="AssetValueUnit" use="optional"/>
     </xs:complexType>
 
     <xs:complexType name="AbsoluteType">
@@ -100,6 +95,9 @@
                        type="xs:string"/>
          <xs:attribute name="value"
                        use="required"
+                       type="PositiveDoubleType"/>
+         <xs:attribute name="retrofitted"
+                       use="optional"
                        type="PositiveDoubleType"/>
          <xs:attribute name="deductible"
                        use="optional"

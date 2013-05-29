@@ -11,11 +11,14 @@
 
     <conversions>
       <area type="per_asset" unit="square meters"/>
-      <businessInterruptionCost type="per_area" unit="EUR"/>
-      <contentsCost type="per_area" unit="USD"/>
-      <nonStructuralCost type="aggregated" unit="YEN" />
-      <structuralCost type="aggregated" unit="YEN" />
-      <retrofittedStructuralCost type="aggregated" unit="EUR"/>
+      
+      <costTypes>
+          <costType name="businessInterruption" type="per_area" unit="EUR"/>
+          <costType name="contents" type="per_area" unit="USD"/>
+          <costType name="nonStructural" type="aggregated" unit="YEN" />
+          <costType name="structural" type="aggregated" unit="YEN"
+                    retrofittedType="aggregated" retrofittedUnit="EUR"/>
+      </costTypes>
       <deductible isAbsolute="false"/>
       <insuranceLimit isAbsolute="false"/>
     </conversions>
@@ -25,8 +28,7 @@
           <location lon="9.15000" lat="45.16667" />
 
           <costs>
-            <cost type="structural" value="150000" deductible=".1" insuranceLimit="0.8"/>
-            <cost type="retrofittedStructural" value="109876"/>
+            <cost type="structural" value="150000" deductible=".1" insuranceLimit="0.8" retrofitted="109876"/>
             <cost type="nonStructural" value="25000" deductible=".09" insuranceLimit="0.82"/>
             <cost type="contents" value="12.95" deductible=".5" insuranceLimit=".7"/>
             <cost type="businessInterruption" value="40" deductible=".5" insuranceLimit="0.8"/>

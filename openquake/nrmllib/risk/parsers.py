@@ -56,9 +56,9 @@ class ExposureModelParser(object):
       property called `type` (the type of cost, e.g. structural),
       a property named `value`, a property named `retrofitted` (optional)
       a property named `deductible` and a property named `insuranceLimit`.
-    * the fifth element holds the cost conversions with a dictionary mapping a
-      cost type with a tuple with two elements (representing type and unit)
-
+    * the fifth element holds the cost types with a dictionary mapping a
+      cost type with a tuple with four elements (representing type and unit for
+      standard and retrofitted case)
 
     :param source:
         Filename or file-like object containing the XML data.
@@ -70,7 +70,7 @@ class ExposureModelParser(object):
 
         # contains the data of the node currently parsed.
         self._current_meta = {}
-        self._conversions = {}
+        self._cost_types = {}
 
     def __iter__(self):
         for i in self._parse():
@@ -113,14 +113,16 @@ class ExposureModelParser(object):
                             el.get('isAbsolute'))
                         self._current_meta['insuranceLimitIsAbsolute'] = (
                             el.get('isAbsolute'))
-                    else:
-                        self._conversions[el.tag[len(NRML):-4]] = (
-                            el.get('type'), el.get('unit'))
+            if event == 'start' and element.tag == "%scostTypes" % NRML:
+                for el in element.findall(".//"):
+                    self._cost_types[el.get('name')] = (
+                        el.get('type'), el.get('unit'),
+                        el.get('retrofittedType'), el.get('retrofittedUnit'))
 
             elif event == 'end' and element.tag == '%sasset' % NRML:
                 site_data = (_to_site(element), _to_occupancy(element),
                              self._to_site_attributes(element),
-                             _to_costs(element), self._conversions)
+                             _to_costs(element), self._cost_types)
                 del element
                 yield site_data
 

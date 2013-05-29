@@ -55,10 +55,12 @@ class ExposureModelParserTestCase(unittest.TestCase):
                  taxonomySource="Pavia buildings">
         <conversions>
           <area type="per_asset" unit="GBP"/>
-          <contentsCost type="per_area" unit="CHF"/>
-          <retrofittedStructuralCost type="aggregated" unit="EUR"/>
-          <structuralCost type="aggregated" unit="USD"/>
-          <nonStructuralCost type="aggregated" unit="USD"/>
+          <costTypes>
+             <costType name="contents" type="per_area" unit="CHF"/>
+             <costType name="structural" type="aggregated" unit="USD"
+                       retrofittedType="aggregated" retrofittedUnit="EUR"/>
+             <costType name="nonStructural" type="aggregated" unit="USD"/>
+          </costTypes>
         </conversions>
 
     <description>Buildings in Pavia</description>
@@ -111,10 +113,9 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 parsers.COST("structural", 150000.0, None, 55.0, 999.0),
                 parsers.COST("nonStructural", 25000.0, None, None, None)
             ], {
-                "contents": ("per_area", "CHF"),
-                "retrofittedStructural": ("aggregated", "EUR"),
-                "structural": ("aggregated", "USD"),
-                "nonStructural": ("aggregated", "USD"),
+                "contents": ("per_area", "CHF", None, None),
+                "structural": ("aggregated", "USD", "aggregated", "EUR"),
+                "nonStructural": ("aggregated", "USD", None, None),
             }),
             ([9.15333, 45.12200], [
                 parsers.OCCUPANCY(12, "day"),
@@ -134,10 +135,9 @@ class ExposureModelParserTestCase(unittest.TestCase):
                     parsers.COST(
                         "structural", 250000.0, None, 66.0, 1999.0)
                 ], {
-                    "contents": ("per_area", "CHF"),
-                    "retrofittedStructural": ("aggregated", "EUR"),
-                    "structural": ("aggregated", "USD"),
-                    "nonStructural": ("aggregated", "USD"),
+                    "contents": ("per_area", "CHF", None, None),
+                    "structural": ("aggregated", "USD", "aggregated", "EUR"),
+                    "nonStructural": ("aggregated", "USD", None, None),
                 }),
         ]
 
