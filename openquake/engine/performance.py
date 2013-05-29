@@ -98,7 +98,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     """
 
     # globals per process
-    cache = CacheInserter(1000)  # store at most 1,000 objects
+    cache = CacheInserter(models.Performance, 1000)  # store at most 1k objects
     pgpid = None
     pypid = None
 
@@ -186,10 +186,7 @@ atexit.register(EnginePerformanceMonitor.cache.flush)
 class DummyMonitor(object):
     """
     This class makes it easy to disable the monitoring
-    in client code, by simply changing an import statement:
-
-    from openquake.engine.performance import DummyMonitor as EnginePerformanceMonitor
-    Disabling the monitor can improve the performance.
+    in client code. Disabling the monitor can improve the performance.
     """
     def __init__(self, operation='', job_id=0, *args, **kw):
         self.operation = operation
