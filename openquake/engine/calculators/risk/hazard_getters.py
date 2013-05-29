@@ -225,17 +225,17 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """
 
-    def __call__(self, monitor=DummyMonitor()):
+    def __call__(self, monitor=None):
         """
-        :param monitor:
-            an instance of
-            :class:`openquake.engine.performance.EnginePerformanceMonitor`
+        :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor` or
+        None
         :returns:
             A tuple with two elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is a
             pair (gmfs, ruptures) with the closest ground motion value for each
             asset.
         """
+        monitor = monitor or DummyMonitor()
         with monitor.copy('associating asset_ids <-> gmf_ids'):
             asset_ids, gmf_ids = self.get_data(self.imt)
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
