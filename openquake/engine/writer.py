@@ -137,7 +137,8 @@ class CacheInserter(object):
         self.fields = [f.attname for f in meta._field_name_cache[1:]]
         # skip the first field, the id
 
-        self.values = []
+        self.nlines = 0
+        self.stringio = StringIO()
         self.instances.add(self)
 
     def add(self, obj):
@@ -148,29 +149,32 @@ class CacheInserter(object):
         the max_cache_size, flush it on the database.
         """
         assert isinstance(obj, self.table)
-        self.values.append(self.to_line(obj))
-        if len(self.values) >= self.max_cache_size:
+        line = self.to_line(obj)
+        self.stringio.write(line + '\n')
+        self.nlines += 1
+        if self.nlines >= self.max_cache_size:
             self.flush()
 
     def flush(self):
         """
         Save the pending objects on the database with a COPY FROM.
         """
-        if not self.values:
+        if not self.nlines:
             return
 
         # generate a big string with the objects and save it with COPY FROM
-        text = '\n'.join(self.values)
         with transaction.commit_on_success(using=self.alias):
             curs = connections[self.alias].cursor()
-            curs.copy_from(StringIO(text), self.tname, columns=self.fields)
+            curs.copy_from(self.stringio, self.tname, columns=self.fields)
+            self.stringio.close()
+            self.stringio = StringIO()
 
         ## TODO: should we add an assert that the number of rows stored
         ## in the db is the expected one? I (MS) have seen a case where
         ## this fails silently (it was for True/False not converted in t/f)
 
-        LOGGER.debug('saved %d rows in %s', len(self.values), self.tname)
-        self.values = []
+        LOGGER.debug('saved %d rows in %s', self.nlines, self.tname)
+        self.nlines = 0
 
     def to_line(self, obj):
         """
