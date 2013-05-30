@@ -56,6 +56,7 @@ import unittest
 import warnings
 import numpy as np
 from copy import deepcopy
+from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.seismicity.catalogue import Catalogue
@@ -283,6 +284,44 @@ class TestPointSource(unittest.TestCase):
         self.assertEqual(ver.exception.message,
                          'Unrecognised selection type for point source!')
         
+       
+    def test_create_oqnmrl_point_source(self):
+        '''
+        Tests the conversion of a point source to an instance of the :class:
+        oqnrmllib.models.PointSource 
+        '''
+        # Define a complete source
+        self.point_source = mtkPointSource('001', 
+            'A Point Source', 
+            trt='Active Shallow Crust',
+            geometry = Point(10., 10.),
+            upper_depth = 0.,
+            lower_depth = 20.,
+            mag_scale_rel=None,
+            rupt_aspect_ratio=1.0,
+            mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
+            nodal_plane_dist=None,
+            hypo_depth_dist=None)
+
+        expected_source = models.PointSource(
+            '001',
+            'A Point Source',
+            geometry=models.PointGeometry('POINT(10.0 10.0)', 0., 20.),
+            mag_scale_rel='WC1994',
+            rupt_aspect_ratio=1.0,
+            mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
+            nodal_plane_dist=None,
+            hypo_depth_dist=None)
+        test_source = self.point_source.create_oqnrml_source(use_defaults=True)
+        self.assertTrue(isinstance(test_source, models.PointSource))
+        self.assertEqual(test_source.id, expected_source.id)
+        self.assertEqual(test_source.name, expected_source.name)
+        self.assertDictEqual(test_source.geometry.__dict__,
+                             expected_source.geometry.__dict__)
+        self.assertAlmostEqual(test_source.mfd.b_val, 
+                               expected_source.mfd.b_val)
         
+            
+
     def tearDown(self):
         warnings.resetwarnings()

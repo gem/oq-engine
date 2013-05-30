@@ -52,6 +52,8 @@ general class to describe a set of seismogenic sources
 '''
 
 import numpy as np
+from openquake.nrmllib import models
+from openquake.nrmllib.hazard.writers import SourceModelXMLWriter
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
@@ -90,3 +92,26 @@ class mtkSourceModel(object):
         Returns the number of sources in the model
         '''
         return len(self.sources)
+
+
+    def serialise_to_nrml(self, filename, use_defaults=False):
+        '''
+        Writes the source model to a nrml source model file given by the 
+        filename
+
+        :param str filename:
+            Path to output file
+
+        :param bool use_defaults:
+            Boolean to indicate whether to use default values (True) or not.
+            If set to False, ValueErrors will be raised when an essential
+            attribute is missing.
+        '''
+        output_model = models.SourceModel(name=self.name, sources=[])
+
+        for source in self.sources:
+            output_model.sources.append(
+                source.create_oqnrml_source(use_defaults))
+
+        writer = SourceModelXMLWriter(filename)
+        writer.serialize(output_model)

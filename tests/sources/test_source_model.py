@@ -51,9 +51,17 @@ Tests the construction and methods of the
 :class: hmtk.sources.source_model.mtkSourceModel
 '''
 
+import os
 import unittest
+from hmtk.parsers.source_model.nrml04_parser import nrmlSourceModelParser
 from hmtk.sources.source_model import mtkSourceModel
 from hmtk.sources.point_source import mtkPointSource
+
+
+BASE_PATH = os.path.join(os.path.dirname(__file__), 'test_source_files')
+
+MODEL_PATH = os.path.join(BASE_PATH, 'mixed_source_model_nrml4_2.xml')
+TEST_PATH = os.path.join(BASE_PATH, 'source_model_writer_test.xml')
 
 class TestSourceModel(unittest.TestCase):
     '''
@@ -84,4 +92,29 @@ class TestSourceModel(unittest.TestCase):
                 mtkPointSource('103', 'Point 3'))
             self.assertEqual(ver.exception.message, 
                              'Sources must be input as list!')
+
+    def test_nrml_writer(self):
+        '''
+        Tests the source model writer
+        '''
+        # Load a full source model
+        parser = nrmlSourceModelParser(MODEL_PATH)
+        source_model = parser.read_file(2.0)
+        # Write to file
+        source_model.serialise_to_nrml(TEST_PATH, True)
+        # Load file back
+        parser = nrmlSourceModelParser(TEST_PATH)
+        source_model_test = parser.read_file(2.0)
+        for i in range(0, source_model.get_number_sources()):
+            orig_source = source_model.sources[i]
+            test_source = source_model_test.sources[i]
+            self.assertEqual(orig_source.name, test_source.name)
+            self.assertEqual(orig_source.mag_scale_rel,
+                             test_source.mag_scale_rel)
+            #print orig_source.__dict__, test_source.__dict__
+            #self.assertDictEqual(orig_source.__dict__, test_source.__dict__)
+        # Remove the test file
+        os.system('rm ' + TEST_PATH)
+
+        
 

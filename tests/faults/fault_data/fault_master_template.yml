@@ -100,7 +100,7 @@ Fault_Model:
           Minimum_Magnitude: 4.5
           b_value: [0.8, 0.05]
           ####################################################
-        - Model_Name: YoungsCoppersmithExp
+        - Model_Name: YoungsCoppersmithExponential
           # Example constructor of the Youngs & Coppersmith (1985) Exponential model      
           MFD_spacing: 0.1
           Model_Weight: 0.3
@@ -110,7 +110,7 @@ Fault_Model:
           b_value: [0.8, 0.05]
           ####################################################
           # Example constructor of the Youngs & Coppersmith (1985) Characteristic model        
-        - Model_Name: YoungsCoppersmithChar
+        - Model_Name: YoungsCoppersmithCharacteristic
           Model_Weight: 0.3
           Maximum_Magnitude: 
           Maximum_Magnitude_Uncertainty: 

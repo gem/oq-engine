@@ -54,9 +54,11 @@ nrml.models.ComplexFaultSource
 import warnings
 import numpy as np
 from math import fabs
+from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
+import hmtk.sources.source_conversion_utils as conv
 
 class mtkComplexFaultSource(object):
     '''
@@ -100,6 +102,7 @@ class mtkComplexFaultSource(object):
         self.name = name 
         self.trt = trt
         self.geometry = geometry
+        self.fault_edges = None
         self.mag_scale_rel = mag_scale_rel
         self.rupt_aspect_ratio = rupt_aspect_ratio
         self.mfd = mfd
@@ -127,21 +130,21 @@ class mtkComplexFaultSource(object):
         if not isinstance(input_geometry, list) or len(input_geometry) < 2:
             raise ValueError('Complex fault geometry incorrectly defined')
         
-        fault_edges = []
+        self.fault_edges = []
         for edge in input_geometry:
             if not isinstance(edge, Line):
                 if not isinstance(edge, np.ndarray):
                     raise ValueError('Unrecognised or unsupported geometry '
                                      'definition')
                 else:
-                    fault_edges.append(Line([Point(row[0], row[1], row[2]) 
+                    self.fault_edges.append(Line([Point(row[0], row[1], row[2]) 
                                              for row in edge]))
             else:
-                fault_edges.append(edge)
+                self.fault_edges.append(edge)
             # Updates the upper and lower sesmogenic depths to reflect geometry
             self._get_minmax_edges(edge)
         # Build fault surface
-        self.geometry = ComplexFaultSurface.from_fault_data(fault_edges, 
+        self.geometry = ComplexFaultSurface.from_fault_data(self.fault_edges, 
                                                             mesh_spacing)
         # Get a mean dip
         self.dip = self.geometry.get_dip()
@@ -217,3 +220,29 @@ class mtkComplexFaultSource(object):
             warnings.warn('Source %s (%s) has fewer than 5 events' 
                 %(self.id, self.name))
 
+    def create_oqnrml_source(self, use_defaults=False):
+        '''
+        Converts the complex source into an instance of the :class:
+        openquake.nrmllib.models.ComplexFaultSource
+
+        :param bool use_defaults:
+            If set to True, will input default values of rupture aspect
+            ratio and magnitude scaling relation where missing. If false, 
+            value errors will be raised if information is missing.
+        '''
+        if not isinstance(self.rake, float):
+            raise ValueError('Cannot create complex source - rake is missing!')
+
+        # Render complex geometry to linestrings
+        complex_geometry = conv.complex_trace_to_wkt_linestring(
+            self.fault_edges)
+
+        return models.ComplexFaultSource(
+            self.id,
+            self.name, 
+            self.trt, 
+            complex_geometry, 
+            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults), 
+            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults), 
+            conv.render_mfd(self.mfd),
+            self.rake)  
