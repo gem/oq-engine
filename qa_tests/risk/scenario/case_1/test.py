@@ -36,6 +36,7 @@ class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
         gmfcoll = helpers.populate_gmf_agg_from_csv(job, fname)
         return gmfcoll.output.id
 
+
     def actual_data(self, job):
         maps = models.LossMapData.objects.filter(
             loss_map__output__oq_job=job,
