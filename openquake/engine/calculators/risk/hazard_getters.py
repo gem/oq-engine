@@ -64,7 +64,7 @@ class HazardGetter(object):
     """
     def __init__(self, hazard_output, assets, max_distance, imt):
         self.hazard_output = hazard_output
-        hazard = self.container(hazard_output)
+        hazard = hazard_output.output_container
         self.hazard_id = hazard.id
         self.assets = assets
         self.max_distance = max_distance
@@ -83,13 +83,6 @@ class HazardGetter(object):
             for asset in self.assets])
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
         self.all_asset_ids = set(self.asset_dict)
-
-    def container(self, hazard_output):
-        """
-        Returns the corresponding output container object from an
-        Hazard :class:`openquake.engine.db.models.Output` instance
-        """
-        raise NotImplementedError
 
     def __repr__(self):
         return "<%s max_distance=%s assets=%s>" % (
@@ -154,9 +147,6 @@ class HazardCurveGetterPerAsset(HazardGetter):
         super(HazardCurveGetterPerAsset, self).__init__(
             hazard, assets, max_distance, imt)
         self._cache = {}
-
-    def container(self, hazard_output):
-        return hazard_output.hazardcurve
 
     def get_data(self, imt):
         """
@@ -235,19 +225,19 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """
 
-    def container(self, hazard_output):
-        return hazard_output.gmfcollection
-
-    def __call__(self, monitor=DummyMonitor()):
+    def __call__(self, rupture_ids=(), monitor=None):
         """
+        :param rupture_ids: a list of rupture ids
         :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor`
+                        or None
         :returns:
             A tuple with two elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is a
             pair (gmfs, ruptures) with the closest ground motion value for each
             asset.
         """
-        with monitor('associating asset_ids <-> gmf_ids'):
+        monitor = monitor or DummyMonitor()
+        with monitor.copy('associating asset_ids <-> gmf_ids'):
             asset_ids, gmf_ids = self.get_data(self.imt)
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
@@ -268,33 +258,23 @@ class GroundMotionValuesGetter(HazardGetter):
                     [gmfs[i] for i in gmf_ids])
 
         elif not gmf_ids:  # all missing
-            return [], ([], [])
+            return [], []
 
         cursor = models.getcursor('job_init')
 
-        # get the sorted ruptures from all the distinct GMFs
-        with monitor('getting ruptures'):
-            cursor.execute('''\
-        SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
-        WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
-            # TODO: in principle it should be possible to remove the ORDER BY;
-            # qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
-            # breaks if I do so (MS)
-            sorted_ruptures = numpy.array([r[0] for r in cursor.fetchall()])
-
         # get the data from the distinct GMFs
-        with monitor('getting gmvs'):
+        with monitor.copy('getting gmvs'):
             cursor.execute('''\
             SELECT id, gmvs, rupture_ids FROM hzrdr.gmf_agg
             WHERE id in %s''', (distinct_gmf_ids,))
             gmfs = {}
             for gmf_id, gmvs, ruptures in cursor.fetchall():
                 gmvd = dict(zip(ruptures, gmvs))
-                gmvs = numpy.array([gmvd.get(r, 0.) for r in sorted_ruptures])
+                gmvs = numpy.array([gmvd.get(r, 0.) for r in rupture_ids])
                 gmfs[gmf_id] = gmvs
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
-               ([gmfs[i] for i in gmf_ids], sorted_ruptures))
+               [gmfs[i] for i in gmf_ids])
         return ret
 
     def get_data(self, imt):
@@ -326,14 +306,15 @@ class GroundMotionValuesGetter(HazardGetter):
   ON ST_DWithin(e.site::geography, s.location::geography, %s)
   JOIN hzrdr.gmf_agg AS g
   ON g.site_id = s.id
-  WHERE s.hazard_job_id = %s AND taxonomy = %s AND exposure_model_id = %s
-        AND e.site && %s AND imt = %s AND gmf_collection_id = %s {}
+  WHERE s.hazard_calculation_id = %s
+  AND taxonomy = %s AND exposure_model_id = %s
+  AND e.site && %s AND imt = %s AND gmf_collection_id = %s {}
   ORDER BY e.id, ST_Distance(e.site::geography, s.location::geography, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
         args = (self.max_distance * KILOMETERS_TO_METERS,
-                self.hazard_output.oq_job.id,
+                self.hazard_output.oq_job.hazard_calculation.id,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
                 assets_extent.wkt) + args
