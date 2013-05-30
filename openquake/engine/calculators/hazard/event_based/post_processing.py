@@ -189,7 +189,7 @@ def insert_into_gmf_agg(job_id, gmf_collection_id):
        array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
        array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
     FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b, hzrdi.site_data AS c
-    WHERE a.gmf_set_id=b.id AND a.location = c.location
+    WHERE a.gmf_set_id=b.id AND a.location::text = c.location::text
     AND c.hazard_calculation_id = %d AND gmf_collection_id = %d
     GROUP BY gmf_collection_id, imt, sa_damping, sa_period, c.id
     '''
