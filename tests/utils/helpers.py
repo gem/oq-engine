@@ -112,13 +112,12 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def store_one_site(job, xy=(42, 42)):
+def store_one_site(hc, xy=(42, 42)):
     """
     Save a record in SiteData, to be used for testing purposes
     """
-    hc = job.hazard_calculation
     return models.SiteData.objects.create(
-        hazard_job=job,
+        hazard_calculation=hc,
         location='POINT(%s %s)' % xy,
         vs30=hc.reference_vs30_value,
         vs30_measured=hc.reference_vs30_type == 'measured',
@@ -710,7 +709,7 @@ def create_gmfset(hazard_job, rlz=None):
     return gmfset
 
 
-def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
+def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
     """
     Returns the created records.
     """
@@ -721,10 +720,12 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
         lt_realization=gmfset.gmf_collection.lt_realization)
     ruptures = get_ruptures(hazard_job, ses_coll, 3)
     records = []
-    for point in [(15.310, 38.225), (15.71, 37.225),
+    if points is None:
+        points = [(15.310, 38.225), (15.71, 37.225),
                   (15.48, 38.091), (15.565, 38.17),
-                  (15.481, 38.25)]:
-        site = store_one_site(hazard_job, point)
+                  (15.481, 38.25)]
+    for point in points:
+        site = store_one_site(hazard_job.hazard_calculation, point)
         records.append(models.GmfAgg.objects.create(
             gmf_collection=gmfset.gmf_collection,
             ses=ruptures[0].ses,
@@ -776,7 +777,7 @@ def create_gmf_from_csv(job, fname):
                 ses=ruptures[0].ses,
                 imt="PGA", gmvs=gmvs,
                 rupture_ids=[r.id for r in ruptures],
-                site=store_one_site(job, point))
+                site=store_one_site(job.hazard_calculation, point))
 
     return gmf_coll
 
@@ -807,7 +808,7 @@ def populate_gmf_agg_from_csv(job, fname):
                 imt="PGA",
                 gmf_collection=gmf_coll,
                 gmvs=gmvs,
-                site=store_one_site(job, point))
+                site=store_one_site(job.hazard_calculation, point))
 
     return gmf_coll
 
@@ -863,7 +864,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
 
         for point in [(15.48, 38.0900001), (15.565, 38.17),
                       (15.481, 38.25)]:
-            site = store_one_site(hazard_job, point)
+            site = store_one_site(hazard_job.hazard_calculation, point)
             models.GmfAgg.objects.create(
                 gmf_collection=hazard_output,
                 imt="PGA",

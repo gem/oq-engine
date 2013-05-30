@@ -50,19 +50,19 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
     return prob
 
 
-def get_gmvs_for_location(location, job_id):
+def get_gmvs_for_location(location, hc_id):
     """
     Get a list of GMVs (as floats) for a given ``location`` and ``job_id``.
 
     :param str location:
-        Location as POINT WKT
-    :param int job_id:
-        Job ID
+        Location as a POINT string Well Known Text format
+    :param int hc_id:
+        Hazard Calculation ID
     :returns:
         `list` of ground motion values, as floats
     """
-    [site] = models.SiteData.objects.filter(hazard_job=job_id).extra(
-        where=["location::geometry ~= 'SRID=4326;%s'::geometry" % location])
+    [site] = models.SiteData.objects.filter(hazard_calculation=hc_id).extra(
+        where=["location = 'SRID=4326;%s'::geography" % location])
     gmvs = []
     for gmf in models.GmfAgg.objects.filter(site=site).order_by('ses'):
         gmvs.extend(gmf.gmvs)

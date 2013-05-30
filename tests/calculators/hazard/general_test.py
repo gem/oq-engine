@@ -396,7 +396,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
 
         mocks = [p.start() for p in patches]
 
-        helpers.store_one_site(job)
+        helpers.store_one_site(job.hazard_calculation)
         get_calculator_class(
             'hazard',
             job.hazard_calculation.calculation_mode)(job).pre_execute()
@@ -477,7 +477,8 @@ class TaskArgGenTestCase(unittest.TestCase):
         ]
 
         try:
-            actual = list(calc.task_arg_gen(block_size=2))
+            actual = list(calc.task_arg_gen(
+                          block_size=2, check_num_task=False))
             self.assertEqual(expected, actual)
         finally:
             self.assertEqual(1, pt_src_block_size_mock.call_count)
