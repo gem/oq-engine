@@ -83,7 +83,6 @@ class Calculator(object):
 
         :param task_func: a `celery` task callable
         :param task_args: an iterable over positional arguments
-        :param side_effect: a function return_value -> None
 
         NB: if the environment variable OQ_NO_DISTRIBUTE is set the
         tasks are run sequentially in the current process.
@@ -192,6 +191,9 @@ class Calculator(object):
         2. Wait for tasks to signal completion (via AMQP message) and enqueue a
         new task each time another completes. Once all of the job work is
         enqueued, we just wait until all of the tasks conclude.
+
+        It is possible to override this method to change the distribution
+        mechanism.
         """
         if openquake.engine.no_distribute():
             logs.LOG.warn('Calculation task distribution is disabled')
