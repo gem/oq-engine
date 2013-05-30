@@ -1837,8 +1837,8 @@ class GmfCollection(djm.Model):
             query = """
         SELECT imt, sa_period, sa_damping, rupture_id,
                array_agg(gmv) AS gmvs,
-               array_agg(ST_X(location)) AS xs,
-               array_agg(ST_Y(location)) AS ys
+               array_agg(ST_X(location::geometry)) AS xs,
+               array_agg(ST_Y(location::geometry)) AS ys
         FROM (SELECT imt, sa_period, sa_damping, ses_id,
              unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
              FROM hzrdr.gmf_agg, hzrdi.site_data
