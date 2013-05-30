@@ -142,7 +142,7 @@ CREATE TABLE uiapi.input (
                              'exposure', 'fragility', 'rupture_model',
                              'structural_vulnerability',
                              'contents_vulnerability',
-                             'non_structural_vulnerability',
+                             'nonstructural_vulnerability',
                              'occupancy_vulnerability',
                              'structural_vulnerability_retrofitted',
                              'site_model')),
