@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+	<exposureModel gml:id="ep">
+		<exposureList gml:id="exp_mod_1" assetCategory="buildings" stcoType="per_asset" stcoUnit="USD" cocoType="aggregated" cocoUnit="USD">
+		<gml:description>Exposure model for buildings</gml:description>
+			<assetDefinition gml:id="a1">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>81.2985 29.1098</gml:pos>
+					</gml:Point>
+				</site>
+				<number>3</number>
+				<occupants description="day">20</occupants>
+				<occupants description="transit">38</occupants>
+				<occupants description="night">50</occupants>
+				<stco>1000</stco>
+				<taxonomy>RM</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a2">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>83.082298 27.9006</gml:pos>
+					</gml:Point>
+				</site>
+				<number>500</number>
+				<occupants description="day">30</occupants>
+				<occupants description="transit">35</occupants>
+				<occupants description="night">40</occupants>
+				<stco>4</stco>
+				<taxonomy>RC</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a3">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>85.747703 27.9015</gml:pos>
+					</gml:Point>
+				</site>
+				<number>1000</number>
+				<occupants description="day">15</occupants>
+				<occupants description="transit">20</occupants>
+				<occupants description="night">30</occupants>
+				<stco>1</stco>
+				<taxonomy>W</taxonomy>
+			</assetDefinition>
+		</exposureList>
+	</exposureModel>
+</nrml>
