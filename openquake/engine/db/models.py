@@ -550,7 +550,7 @@ class HazardCalculation(djm.Model):
     ########################
     # Logic Tree parameters:
     ########################
-    random_seed = djm.IntegerField()
+    random_seed = djm.IntegerField(null=True, blank=True)
     number_of_logic_tree_samples = djm.IntegerField(null=True, blank=True)
 
     ###############################################

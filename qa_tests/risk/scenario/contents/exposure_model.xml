@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+	<exposureModel gml:id="ep">
+		<exposureList gml:id="exp_mod_1" assetCategory="buildings" stcoType="per_asset" stcoUnit="USD" cocoType="aggregated" cocoUnit="USD">
+		<gml:description>Exposure model for buildings</gml:description>
+			<assetDefinition gml:id="a1">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>81.2985 29.1098</gml:pos>
+					</gml:Point>
+				</site>
+				<coco>100</coco>
+				<number>3</number>
+				<stco>1000</stco>
+				<taxonomy>RM</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a2">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>83.082298 27.9006</gml:pos>
+					</gml:Point>
+				</site>
+				<coco>200</coco>
+				<number>500</number>
+				<stco>4</stco>
+				<taxonomy>RC</taxonomy>
+			</assetDefinition>
+			<assetDefinition gml:id="a3">
+				<site>
+					<gml:Point srsName="epsg:4326">
+					<gml:pos>85.747703 27.9015</gml:pos>
+					</gml:Point>
+				</site>
+				<coco>300</coco>
+				<number>1000</number>
+				<stco>1</stco>
+				<taxonomy>W</taxonomy>
+			</assetDefinition>
+		</exposureList>
+	</exposureModel>
+</nrml>
