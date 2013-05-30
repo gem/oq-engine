@@ -381,8 +381,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         self.initialize_pr_data()
 
     def task_arg_gen(self, block_size):
-        arg_gen = super(DisaggHazardCalculator, self).task_arg_gen(block_size)
-
+        arg_gen = super(DisaggHazardCalculator, self).task_arg_gen(
+            block_size, check_num_task=False)
         for args in arg_gen:
             yield args + ('hazard_curve', )
 

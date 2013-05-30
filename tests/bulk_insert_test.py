@@ -23,7 +23,7 @@ from django.db import transaction
 
 from openquake.engine import writer
 
-from openquake.engine.db.models import OqUser, SiteData
+from openquake.engine.db.models import OqUser, GmfAgg
 from openquake.engine.writer import BulkInserter, CacheInserter
 
 
@@ -131,7 +131,32 @@ class CacheInserterTestCase(unittest.TestCase):
     """
     Unit tests for the CacheInserter class.
     """
-    # the tests were intentionally removed since they were testing
-    # implementation details; the CacheInserter is heavily used and
-    # changing it would break other tests anyway
-    # I may add tests in the future, but it is a low priority
+    def setUp(self):
+        self.connections = writer.connections
+        writer.connections = dict(
+            admin=DummyConnection(), reslt_writer=DummyConnection())
+
+    def tearDown(self):
+        writer.connections = self.connections
+
+    # this test is probably too strict and testing implementation details
+    def test_insert_gmf(self):
+        cache = CacheInserter(GmfAgg, 10)
+        gmf1 = GmfAgg(
+            gmf_collection_id=1, imt='PGA', gmvs=[], rupture_ids=[],
+            site_id=1)
+        gmf2 = GmfAgg(
+            gmf_collection_id=1, imt='PGA', gmvs=[], rupture_ids=[],
+            site_id=2)
+        cache.add(gmf1)
+        cache.add(gmf2)
+        cache.flush()
+        connection = writer.connections['reslt_writer']
+        self.assertEqual(
+            connection.data,
+            '1\t\\N\tPGA\t\\N\t\\N\t{}\t{}\t1\n1\t\\N\tPGA\t\\N\t\\N\t{}\t{}\t2\n')
+        self.assertEqual(connection.table, '"hzrdr"."gmf_agg"')
+        self.assertEqual(
+            connection.columns,
+            ['gmf_collection_id', 'ses_id', 'imt', 'sa_period', 'sa_damping',
+             'gmvs', 'rupture_ids', 'site_id'])
