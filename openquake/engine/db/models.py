@@ -296,7 +296,7 @@ class Input(djm.Model):
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
         (u'structural_vulnerability', u'Structural Vulnerability'),
-        (u'non_structural_vulnerability', u'Non Structural Vulnerability'),
+        (u'nonstructural_vulnerability', u'Non Structural Vulnerability'),
         (u'contents_vulnerability', u'Contents Vulnerability'),
         (u'occupancy_vulnerability', u'Occupancy Vulnerability'),
         (u'structural_vulnerability_retrofitted',
@@ -2660,6 +2660,8 @@ class AssetManager(djm.GeoManager):
             ON %(name)s.cost_type_id = '%(id)s' AND
             %(name)s.exposure_data_id = riski.exposure_data.id """ % dict(
                 name=cost_type.name, id=cost_type.id)
+
+        # TODO(lp). Check ST_Intersects
 
         return list(
             self.raw("""
