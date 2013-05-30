@@ -687,14 +687,18 @@ class BaseHazardCalculator(base.Calculator):
                 intensity_measure_types_and_levels = dict([
                     (record['IMT'], record['IML'])
                     for record in parsers.VulnerabilityModelParser(content)])
-                intensity_measure_types = list(set(
-                    record['IMT']
-                    for record in parsers.VulnerabilityModelParser(content)))
+                intensity_measure_types = (
+                    intensity_measure_types_and_levels.keys())
 
                 hc.intensity_measure_types_and_levels.update(
                     intensity_measure_types_and_levels)
                 hc.intensity_measure_types.extend(intensity_measure_types)
+            hc.intensity_measure_types = set(hc.intensity_measure_types)
             hc.save()
+            logs.LOG.info("Got IMT and levels "
+                          "from vulnerability models: %s - %s" % (
+                              hc.intensity_measure_types_and_levels,
+                              hc.intensity_measure_types))
 
         queryset = self.hc.inputs.filter(input_type='fragility')
         if queryset.exists():

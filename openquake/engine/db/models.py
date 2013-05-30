@@ -298,7 +298,7 @@ class Input(djm.Model):
         (u'structural_vulnerability', u'Structural Vulnerability'),
         (u'nonstructural_vulnerability', u'Non Structural Vulnerability'),
         (u'contents_vulnerability', u'Contents Vulnerability'),
-        (u'occupancy_vulnerability', u'Occupancy Vulnerability'),
+        (u'occupants_vulnerability', u'Occupants Vulnerability'),
         (u'structural_vulnerability_retrofitted',
          u'Structural Vulnerability Retrofitted'),
         (u'site_model', u'Site Model'),
@@ -2628,11 +2628,11 @@ class AssetManager(djm.GeoManager):
 
         args = (rc.exposure_model.id, taxonomy,
                 "SRID=4326; %s" % rc.region_constraint.wkt)
+
+        occupants = "AVG(riski.occupancy.occupants::REAL) AS occupants"
         if rc.time_event is None:
-            occupants = "AVG(riski.occupancy.occupants)"
             occupants_cond = "1 = 1"
         else:
-            occupants = "riski.occupancy.occupants"
             occupants_cond = "riski.occupancy.period = %s"
             args += (rc.time_event,)
         args += (size, offset)
@@ -2666,7 +2666,7 @@ class AssetManager(djm.GeoManager):
         return list(
             self.raw("""
             SELECT riski.exposure_data.*,
-                   {occupants} AS occupancy,
+                   {occupants},
                    {costs}
             FROM riski.exposure_data
             LEFT JOIN riski.occupancy
