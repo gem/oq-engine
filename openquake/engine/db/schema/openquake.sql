@@ -1092,15 +1092,13 @@ CREATE TABLE htemp.hazard_curve_progress (
 -- calculation points of interest with parameters extracted from site_model or hc
 CREATE TABLE hzrdi.site_data (
     id SERIAL PRIMARY KEY,
-    hazard_job_id INTEGER NOT NULL,
+    hazard_calculation_id INTEGER NOT NULL,
     vs30 FLOAT NOT NULL,
     vs30_measured BOOLEAN NOT NULL,
     z1pt0 FLOAT NOT NULL,
-    z2pt5 FLOAT NOT NULL
+    z2pt5 FLOAT NOT NULL,
+    location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE htemp_ts;
-SELECT AddGeometryColumn('hzrdi', 'site_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdi.site_data ALTER COLUMN location SET NOT NULL;
--- unique (location, hazard_job_id)
 
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
@@ -1406,9 +1404,9 @@ ON DELETE CASCADE;
 
 -- hzrdi.site_data to uiapi.hazard_calculation FK
 ALTER TABLE hzrdi.site_data
-ADD CONSTRAINT hzrdi_site_data_hazard_job_fk
-FOREIGN KEY (hazard_job_id)
-REFERENCES uiapi.oq_job(id)
+ADD CONSTRAINT hzrdi_site_data_hazard_calculation_fk
+FOREIGN KEY (hazard_calculation_id)
+REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
 
 -- hzrdr.gmf_agg to hzrdi.site_data FK
@@ -1430,13 +1428,21 @@ FOREIGN KEY (ses_id)
 REFERENCES hzrdr.ses(id)
 ON DELETE CASCADE;
 
+
+-- this function is used in the performance_view, cannot go in functions.sql
+CREATE FUNCTION maxint(a INTEGER, b INTEGER) RETURNS INTEGER AS $$
+SELECT CASE WHEN $1 > $2 THEN $1 ELSE $2 END;
+$$ LANGUAGE SQL IMMUTABLE;
+
 ---------------------- views ----------------------------
 -- convenience view to analyze the performance of the jobs;
 -- for instance the slowest operations can be extracted with
 -- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_view;
 CREATE VIEW uiapi.performance_view AS
 SELECT h.id AS calculation_id, description, 'hazard' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation, sum(duration) AS duration,
+     SELECT oq_job_id, operation,
+     sum(duration) AS tot_duration,
+     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
      max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance
@@ -1447,7 +1453,9 @@ INNER JOIN uiapi.hazard_calculation AS h
 ON h.id=o.hazard_calculation_id
 UNION ALL
 SELECT r.id AS calculation_id, description, 'risk' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation, sum(duration) AS duration,
+     SELECT oq_job_id, operation,
+     sum(duration) AS tot_duration,
+     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
      max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance

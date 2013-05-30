@@ -67,7 +67,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # we don't expect the site collection to be loaded yet:
         self.assertIsNone(self.calc.hc._site_collection)
 
-        helpers.store_one_site(self.calc.job)
+        helpers.store_one_site(self.calc.job.hazard_calculation)
         self.calc.pre_execute()
 
         # make sure the site_collection is loaded:
@@ -122,7 +122,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         num_pts_to_compute = len(
             self.job.hazard_calculation.points_to_compute())
 
-        site_data = models.SiteData.objects.filter(hazard_job=self.job)
+        site_data = models.SiteData.objects.filter(
+            hazard_calculation=self.job.hazard_calculation)
 
         # The site model is good. Now test that `site_data` was computed.
         # For now, just test the length.
