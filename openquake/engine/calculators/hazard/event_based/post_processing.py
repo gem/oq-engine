@@ -79,7 +79,7 @@ def gmf_to_hazard_curve_arg_gen(job):
         :class:`openquake.engine.db.models.OqJob` instance.
     """
     hc = job.hazard_calculation
-    points = models.SiteData.objects.filter(hazard_job=job)
+    points = models.SiteData.objects.filter(hazard_calculation=hc)
 
     lt_realizations = models.LtRealization.objects.filter(
         hazard_calculation=hc.id)
