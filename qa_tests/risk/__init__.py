@@ -121,6 +121,10 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
 
 class End2EndRiskQATestCase(BaseRiskQATestCase):
+    """
+    Run an end-to-end calculation (by first running an hazard
+    calculation, then running a risk calculation
+    """
     def _run_test(self):
         result_dir = tempfile.mkdtemp()
 
@@ -144,3 +148,39 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
                         StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
             shutil.rmtree(result_dir)
+
+
+class LogicTreeBasedTestCase(object):
+    """
+    A class meant to mixed-in with a BaseRiskQATestCase or
+    End2EndRiskQATestCase that runs a risk calculation by giving in
+    input an hazard calculation id
+    """
+
+    def run_risk(self, cfg, hazard_id):
+        """
+        Given the path to job config file, run the job and assert that it was
+        successful. If this assertion passes, return the completed job.
+
+        :param str cfg:
+            Path to a job config file.
+        :param int hazard_id:
+            ID of the hazard calculation used by the risk calculation
+        :returns:
+            The completed :class:`~openquake.engine.db.models.OqJob`.
+        :raises:
+            :exc:`AssertionError` if the job was not successfully run.
+        """
+        completed_job = helpers.run_risk_job(
+            cfg, hazard_calculation_id=hazard_id)
+        self.assertEqual('complete', completed_job.status)
+
+        return completed_job
+
+    def hazard_id(self):
+        """
+        :returns: the greatest hazard calculation id (which
+        corresponds to the latest started hazard calculation.
+        """
+        return models.HazardCalculation.objects.all().order_by('-id')[0].id
+
