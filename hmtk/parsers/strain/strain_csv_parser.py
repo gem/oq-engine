@@ -76,7 +76,6 @@ class ReadStrainCsv(object):
         '''
         '''
         self.filename = strain_file
-        #self.region_filename = regionalisation_file
         self.strain = GeodeticStrain()
 
 
