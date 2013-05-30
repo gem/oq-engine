@@ -407,14 +407,6 @@ class BaseHazardCalculator(base.Calculator):
         self.progress.update(in_queue=0)
 
     @property
-    def computation_mesh(self):
-        """
-        :class:`openquake.hazardlib.geo.mesh.Mesh` representing the points
-        of interest for the calculation.
-        """
-        return self.hc.points_to_compute()
-
-    @property
     def hc(self):
         """
         A shorter and more convenient way of accessing the
@@ -540,7 +532,7 @@ class BaseHazardCalculator(base.Calculator):
         is need to export the full hazard curve results).
         """
         im = self.hc.intensity_measure_types_and_levels
-        points = self.computation_mesh
+        points = self.hc.points_to_compute()
 
         # prepare site locations for the stored function call
         lons = '{%s}' % ', '.join(str(v) for v in points.lons)
@@ -743,7 +735,7 @@ class BaseHazardCalculator(base.Calculator):
             store_site_model(
                 site_model_inp, StringIO.StringIO(site_model_content))
 
-            mesh = self.computation_mesh
+            mesh = self.hc.points_to_compute()
 
             # Get the site model records we stored:
             site_model_data = models.SiteModel.objects.filter(
@@ -976,7 +968,7 @@ class BaseHazardCalculator(base.Calculator):
             :class:`openquake.engine.db.models.LtRealization` object to
             associate with these inital hazard curve values.
         """
-        num_points = len(self.computation_mesh)
+        num_points = len(self.hc.points_to_compute())
 
         im_data = self.hc.intensity_measure_types_and_levels
         for imt, imls in im_data.items():
@@ -1026,7 +1018,7 @@ class BaseHazardCalculator(base.Calculator):
         the job has been fully initialized.
         """
         # Record num sites, num realizations, and num tasks.
-        num_sites = len(self.computation_mesh)
+        num_sites = len(self.hc.points_to_compute())
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc.id)
         num_rlzs = realizations.count()
