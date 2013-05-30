@@ -6,7 +6,6 @@ proper <cost> tag
 """
 
 import sys
-import os
 from lxml import etree
 from openquake import nrmllib
 
@@ -129,6 +128,14 @@ def convert(filename, output_filename):
                         safe_set(
                             cost,
                             "insuranceLimit", text(asset_element, "limit"))
+
+            if find(asset_element, "occupants") is not None:
+                occupancies = etree.SubElement(element, "occupancies")
+                for occ in asset_element.findall(
+                        ".//{%s}occupants" % nrmllib.NAMESPACE):
+                    new_occ = etree.SubElement(occupancies, "occupancy")
+                    new_occ.set("occupants", occ.text)
+                    new_occ.set("period", get(occ, "description"))
 
         output.write(etree.tostring(root,
                                     pretty_print=True,
