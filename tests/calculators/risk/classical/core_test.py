@@ -149,7 +149,7 @@ class PreExecuteTestCase(unittest.TestCase):
         )
         models.JobStats.objects.create(oq_job=risk_job)
         calc = classical.ClassicalRiskCalculator(risk_job)
-        helpers.store_one_site(haz_job)
+        helpers.store_one_site(calc.hc)
 
         # In contrast to the test above (`test_pre_execute_check_imts_raises`),
         # we expect no errors to be raised.
