@@ -672,10 +672,10 @@ class BaseHazardCalculator(base.Calculator):
         vulnerability model (if there is one)
         """
 
-        queryset = self.hc.inputs.filter(input_type__in=[
-            'structural_vulnerability', 'nonstructural_vulnerability',
-            'contents_vulnerability', 'occupancy_vulnerability'])
-
+        queryset = self.hc.inputs.filter(
+            input_type__in=[vf_type
+                            for vf_type, _desc
+                            in models.Input.VULNERABILITY_TYPE_CHOICES])
         if queryset.exists():
             hc = self.hc
             hc.intensity_measure_types_and_levels = dict()
