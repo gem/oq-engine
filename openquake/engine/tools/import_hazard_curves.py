@@ -40,18 +40,18 @@ def import_hazard_curves(fileobj, user=None):
 
     f = StringIO()
     # convert the XML into a tab-separated StringIO
-    hcmodel = HazardCurveParser(fileobj).parse()
+    hazcurve = HazardCurveParser(fileobj).parse()
     haz_curve = models.HazardCurve.objects.create(
-        investigation_time=hcmodel.investigation_time,
-        imt=hcmodel.imt,
-        imls=hcmodel.imls,
-        quantile=hcmodel.quantile,
-        statistics=hcmodel.statistics,
-        sa_damping=hcmodel.sa_damping,
-        sa_period=hcmodel.sa_period,
+        investigation_time=hazcurve.investigation_time,
+        imt=hazcurve.imt,
+        imls=hazcurve.imls,
+        quantile=hazcurve.quantile,
+        statistics=hazcurve.statistics,
+        sa_damping=hazcurve.sa_damping,
+        sa_period=hazcurve.sa_period,
         output=out)
     hazard_curve_id = str(haz_curve.id)
-    for poes, loc in hcmodel:
+    for poes, loc in hazcurve:
         poes = '{%s}' % str(poes)[1:-1]
         print >> f, '\t'.join([hazard_curve_id, poes, 'SRID=4326;' + loc])
     f.reset()
