@@ -138,7 +138,8 @@ CREATE TABLE uiapi.input (
     --      vulnerability file (vulnerability)
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('unknown', 'source', 'source_model_logic_tree', 'gsim_logic_tree',
+        CHECK(input_type IN ('unknown', 'source',
+                             'source_model_logic_tree', 'gsim_logic_tree',
                              'exposure', 'fragility', 'rupture_model',
                              'structural_vulnerability',
                              'contents_vulnerability',
@@ -756,9 +757,7 @@ CREATE TABLE hzrdr.lt_realization (
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL,
     insured BOOLEAN NOT NULL DEFAULT false,
     -- poe is significant only for non-scenario calculations
@@ -791,9 +790,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_fraction (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL,
     variable VARCHAR NOT NULL,
     statistics VARCHAR CONSTRAINT loss_fraction_statistics
@@ -826,9 +823,7 @@ ALTER TABLE riskr.loss_fraction_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.aggregate_loss (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     insured BOOLEAN NOT NULL DEFAULT false,
     mean float NOT NULL,
     std_dev float NULL
@@ -842,9 +837,7 @@ CREATE TABLE riskr.event_loss (
     -- FK to uiapi.output.id. The corresponding row must have
     -- output_type == event_loss
     output_id INTEGER NOT NULL,
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
     aggregate_loss float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -854,9 +847,7 @@ CREATE TABLE riskr.event_loss (
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL,
     aggregate BOOLEAN NOT NULL DEFAULT false,
     insured BOOLEAN NOT NULL DEFAULT false,
@@ -912,9 +903,7 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL
 ) TABLESPACE riskr_ts;
 

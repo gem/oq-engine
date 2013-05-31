@@ -673,7 +673,7 @@ class BaseHazardCalculator(base.Calculator):
         """
 
         queryset = self.hc.inputs.filter(input_type__in=[
-            'structural_vulnerability', 'non_structural_vulnerability',
+            'structural_vulnerability', 'nonstructural_vulnerability',
             'contents_vulnerability', 'occupancy_vulnerability'])
 
         if queryset.exists():
