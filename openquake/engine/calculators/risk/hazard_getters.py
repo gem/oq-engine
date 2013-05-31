@@ -232,9 +232,8 @@ class GroundMotionValuesGetter(HazardGetter):
                         or None
         :returns:
             A tuple with two elements. The first is an array of instances of
-            :class:`openquake.engine.db.models.ExposureData`, the second is a
-            pair (gmfs, ruptures) with the closest ground motion value for each
-            asset.
+            :class:`openquake.engine.db.models.ExposureData`, the second is an
+            array with the closest ground motion values for each asset.
         """
         monitor = monitor or DummyMonitor()
         with monitor.copy('associating asset_ids <-> gmf_ids'):
@@ -303,13 +302,13 @@ class GroundMotionValuesGetter(HazardGetter):
   SELECT DISTINCT ON (e.id) e.id, g.id
   FROM riski.exposure_data AS e
   JOIN hzrdi.site_data AS s
-  ON ST_DWithin(e.site::geography, s.location::geography, %s)
+  ON ST_DWithin(e.site, s.location, %s)
   JOIN hzrdr.gmf_agg AS g
   ON g.site_id = s.id
   WHERE s.hazard_calculation_id = %s
   AND taxonomy = %s AND exposure_model_id = %s
   AND e.site && %s AND imt = %s AND gmf_collection_id = %s {}
-  ORDER BY e.id, ST_Distance(e.site::geography, s.location::geography, false)
+  ORDER BY e.id, ST_Distance(e.site, s.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
@@ -320,8 +319,6 @@ class GroundMotionValuesGetter(HazardGetter):
                 assets_extent.wkt) + args
 
         cursor.execute(query, args)
-        # print cursor.mogrify(query, args)
-
         data = cursor.fetchall()
 
         assets, gmf_ids = [], []
