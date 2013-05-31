@@ -636,8 +636,9 @@ def main():
     # import
     elif args.load_gmf is not None:
         with open(args.load_gmf) as f:
-            out = import_gmf_scenario(f)
-            print 'Added output id=%d of type %s' % (out.id, out.output_type)
+            out, hc = import_gmf_scenario(f)
+            print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
+                % (out.id, out.output_type, hc.id)
     elif args.list_imported_outputs:
         list_imported_outputs()
     else:
