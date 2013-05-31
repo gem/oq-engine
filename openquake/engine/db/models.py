@@ -296,10 +296,9 @@ class Input(djm.Model):
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
         (u'site_model', u'Site Model'),
-        (u'rupture_model', u'Rupture Model')
-    )
+        (u'rupture_model', u'Rupture Model'),
 
-    VULNERABILITY_TYPE_CHOICES = (
+        # vulnerability models
         (u'structural_vulnerability', u'Structural Vulnerability'),
         (u'nonstructural_vulnerability', u'Non Structural Vulnerability'),
         (u'contents_vulnerability', u'Contents Vulnerability'),
@@ -309,8 +308,11 @@ class Input(djm.Model):
         (u'structural_vulnerability_retrofitted',
          u'Structural Vulnerability Retrofitted'))
 
-    input_type = djm.TextField(
-        choices=INPUT_TYPE_CHOICES + VULNERABILITY_TYPE_CHOICES)
+    VULNERABILITY_TYPE_CHOICES = [choice
+                                  for choice in INPUT_TYPE_CHOICES
+                                  if choice[0].endswith('vulnerability')]
+
+    input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
 
     hazard_calculations = djm.ManyToManyField('HazardCalculation',
                                               through='Input2hcalc',
