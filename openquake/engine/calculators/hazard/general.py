@@ -690,7 +690,7 @@ class BaseHazardCalculator(base.Calculator):
                 intensity_measure_types = (
                     intensity_measure_types_and_levels.keys())
 
-                for imt, levels in intensity_measure_types_and_levels:
+                for imt, levels in intensity_measure_types_and_levels.items():
                     if (imt in hc.intensity_measure_types_and_levels and
                         (set(hc.intensity_measure_types_and_levels) -
                          set(levels))):
@@ -701,6 +701,7 @@ class BaseHazardCalculator(base.Calculator):
 
                 hc.intensity_measure_types.extend(intensity_measure_types)
 
+            # remove possible duplicates
             if hc.intensity_measure_types is not None:
                 hc.intensity_measure_types = list(set(
                     hc.intensity_measure_types))
