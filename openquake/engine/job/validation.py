@@ -558,7 +558,8 @@ class ClassicalRiskForm(BaseOQModelForm):
             'conditional_loss_poes',
             'mean_loss_curves',
             'quantile_loss_curves',
-            'poes_disagg'
+            'poes_disagg',
+            'export_dir',
         )
 
 
@@ -575,6 +576,7 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
             'lrem_steps_per_interval',
             'interest_rate',
             'asset_life_expectancy',
+            'export_dir',
         )
 
 
@@ -593,6 +595,7 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
             'asset_correlation',
             'interest_rate',
             'asset_life_expectancy',
+            'export_dir',
         )
 
 
@@ -617,15 +620,16 @@ class EventBasedRiskForm(BaseOQModelForm):
             'mag_bin_width',
             'distance_bin_width',
             'coordinate_bin_width',
+            'export_dir',
         )
 
     def is_valid(self):
         super_valid = super(EventBasedRiskForm, self).is_valid()
         rc = self.instance          # RiskCalculation instance
 
-        if rc.sites_disagg and not [rc.mag_bin_width and
-                                    rc.coordinate_bin_width and
-                                    rc.distance_bin_width]:
+        if rc.sites_disagg and not (rc.mag_bin_width
+                                    and rc.coordinate_bin_width
+                                    and rc.distance_bin_width):
             self._add_error('sites_disagg', "disaggregation requires "
                             "mag_bin_width, coordinate_bin_width, "
                             "distance_bin_width")
@@ -643,6 +647,7 @@ class ScenarioDamageRiskForm(BaseOQModelForm):
             'description',
             'region_constraint',
             'maximum_distance',
+            'export_dir',
         )
 
 
@@ -659,7 +664,8 @@ class ScenarioRiskForm(BaseOQModelForm):
             'master_seed',
             'asset_correlation',
             'insured_losses',
-            'time_event'
+            'time_event',
+            'export_dir',
         )
 
     def is_valid(self):
@@ -667,7 +673,7 @@ class ScenarioRiskForm(BaseOQModelForm):
         rc = self.instance          # RiskCalculation instance
 
         if 'occupancy_vulnerability_file' in self.files:
-            if rc.time_event is None:
+            if not rc.time_event:
                 self._add_error('time_event', "Scenario Risk requires "
                                 "time_event when an occupancy vulnerability "
                                 "model is given")
@@ -707,12 +713,12 @@ def region_is_valid(mdl):
     for ring in mdl.region.coords:
         lons = [lon for lon, _ in ring]
         lats = [lat for _, lat in ring]
-        if not all([-180 <= x <= 180 for x in lons]):
-            valid = False
-            errors.append('Longitude values must in the range [-180, 180]')
-        if not all([-90 <= x <= 90 for x in lats]):
-            valid = False
-            errors.append('Latitude values must be in the range [-90, 90]')
+
+        errors.extend(_lons_lats_are_valid(lons, lats))
+
+    if errors:
+        valid = False
+
     return valid, errors
 
 
@@ -734,12 +740,10 @@ def sites_is_valid(mdl):
 
     lons = [pt.x for pt in mdl.sites]
     lats = [pt.y for pt in mdl.sites]
-    if not all([-180 <= x <= 180 for x in lons]):
+
+    errors.extend(_lons_lats_are_valid(lons, lats))
+    if errors:
         valid = False
-        errors.append('Longitude values must in the range [-180, 180]')
-    if not all([-90 <= x <= 90 for x in lats]):
-        valid = False
-        errors.append('Latitude values must be in the range [-90, 90]')
 
     return valid, errors
 
@@ -753,14 +757,29 @@ def sites_disagg_is_valid(mdl):
 
     lons = [pt.x for pt in mdl.sites_disagg]
     lats = [pt.y for pt in mdl.sites_disagg]
-    if not all([-180 <= x <= 180 for x in lons]):
+
+    errors.extend(_lons_lats_are_valid(lons, lats))
+    if errors:
         valid = False
-        errors.append('Longitude values must in the range [-180, 180]')
-    if not all([-90 <= x <= 90 for x in lats]):
-        valid = False
-        errors.append('Latitude values must be in the range [-90, 90]')
 
     return valid, errors
+
+
+def _lons_lats_are_valid(lons, lats):
+    """
+    Helper function for validating lons/lats.
+
+    :returns:
+        A list of error messages, or an empty list.
+    """
+    errors = []
+
+    if not all([-180 <= x <= 180 for x in lons]):
+        errors.append('Longitude values must in the range [-180, 180]')
+    if not all([-90 <= x <= 90 for x in lats]):
+        errors.append('Latitude values must be in the range [-90, 90]')
+
+    return errors
 
 
 def random_seed_is_valid(mdl):
@@ -1139,7 +1158,7 @@ def loss_curve_resolution_is_valid(mdl):
     if mdl.calculation_mode == 'event_based':
         if (mdl.loss_curve_resolution is not None and
                 mdl.loss_curve_resolution < 1):
-            return False, ['Loss Curve Resolution must be > 1.']
+            return False, ['Loss Curve Resolution must be >= 1']
     return True, []
 
 
@@ -1195,4 +1214,9 @@ def hazard_maps_is_valid(mdl):
 def uniform_hazard_spectra_is_valid(mdl):
     if mdl.uniform_hazard_spectra and mdl.poes is None:
         return False, ['`poes` are required to compute UHS']
+    return True, []
+
+
+def time_event_is_valid(_mdl):
+    # Any string is allowed, or `None`.
     return True, []

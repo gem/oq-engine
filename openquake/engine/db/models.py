@@ -87,6 +87,11 @@ MAX_SINT_32 = (2 ** 31) - 1
 LOSS_TYPES = ["structural", "non_structural", "occupants", "contents"]
 
 
+def getcursor(route):
+    """Return a cursor from a Django route"""
+    return connections[route].cursor()
+
+
 def order_by_location(queryset):
     """
     Utility function to order a queryset by location. This works even if
@@ -1091,10 +1096,10 @@ class RiskCalculation(djm.Model):
 
         if self.calculation_mode in ["classical", "classical_bcr"]:
             filters = dict(output_type='hazard_curve_multi',
-                           hazardcurve__lt_realization__isnull=False)
+                           hazard_curve__lt_realization__isnull=False)
         elif self.calculation_mode in ["event_based", "event_based_bcr"]:
             filters = dict(output_type='gmf',
-                           gmfcollection__lt_realization__isnull=False)
+                           gmf__lt_realization__isnull=False)
         elif self.calculation_mode in ['scenario', 'scenario_damage']:
             filters = dict(output_type='gmf_scenario')
         else:
@@ -1263,36 +1268,50 @@ class Output(djm.Model):
         'hazard_metadata',
         'investigation_time statistics quantile sm_path gsim_path')
 
+    #: Hold the full paths in the model trees of ground shaking
+    #: intensity models and of source models, respectively.
+    LogicTreePath = collections.namedtuple(
+        'logic_tree_path',
+        'gsim_path sm_path')
+
+    #: Hold the statistical params (statistics, quantile).
+    StatisticalParams = collections.namedtuple(
+        'statistical_params',
+        'statistics quantile')
+
     owner = djm.ForeignKey('OqUser')
     oq_job = djm.ForeignKey('OqJob')  # nullable in the case of an output
     # coming from an external source, with no job associated
     display_name = djm.TextField()
-    OUTPUT_TYPE_CHOICES = (
-        (u'agg_loss_curve', u'Aggregate Loss Curve'),
-        (u'aggregate_losses', u'Aggregate Losses'),
-        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
-        (u'collapse_map', u'Collapse Map Distribution'),
+    HAZARD_OUTPUT_TYPE_CHOICES = (
         (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
         (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'disagg_matrix', u'Disaggregation Matrix'),
+        (u'gmf', u'Ground Motion Field'),
+        (u'gmf_scenario', u'Ground Motion Field'),
+        (u'hazard_curve', u'Hazard Curve'),
+        (u'hazard_curve_multi', u'Hazard Curve (multiple imts)'),
+        (u'hazard_map', u'Hazard Map'),
+        (u'ses', u'Stochastic Event Set'),
+        (u'uh_spectra', u'Uniform Hazard Spectra'),
+    )
+
+    RISK_OUTPUT_TYPE_CHOICES = (
+        (u'agg_loss_curve', u'Aggregate Loss Curve'),
+        (u'aggregate_loss', u'Aggregate Losses'),
+        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
+        (u'collapse_map', u'Collapse Map Distribution'),
         (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
         (u'event_loss', u'Event Loss Table'),
-        (u'gmf', u'Ground Motion Field'),
-        (u'gmf_scenario', u'Ground Motion Field by Scenario Calculator'),
-        (u'hazard_curve', u'Hazard Curve'),
-        (u'hazard_curve_multi', u'Hazard Curve (multiple imts)'),
-        (u'hazard_map', u'Hazard Map'),
         (u'loss_curve', u'Loss Curve'),
-        # FIXME(lp). We should distinguish between conditional losses
-        # and loss map
+        (u'loss_fraction', u'Loss fractions'),
         (u'loss_map', u'Loss Map'),
-        (u'ses', u'Stochastic Event Set'),
-        (u'uh_spectra', u'Uniform Hazard Spectra'),
-        (u'unknown', u'Unknown'),
     )
-    output_type = djm.TextField(choices=OUTPUT_TYPE_CHOICES)
+
+    output_type = djm.TextField(
+        choices=HAZARD_OUTPUT_TYPE_CHOICES + RISK_OUTPUT_TYPE_CHOICES)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     objects = OutputManager()
@@ -1306,8 +1325,67 @@ class Output(djm.Model):
     def is_hazard_curve(self):
         return self.output_type in ['hazard_curve', 'hazard_curve_multi']
 
-    def is_gmf_scenario(self):
-        return self.output_type == 'gmf_scenario'
+    @property
+    def output_container(self):
+        """
+        :returns: the output container associated with this output
+        """
+
+        # FIXME(lp). Remove the following outstanding exceptions
+        if self.output_type == 'agg_loss_curve':
+            return self.loss_curve
+        elif self.output_type == 'hazard_curve_multi':
+            return self.hazard_curve
+        elif self.output_type == 'gmf_scenario':
+            return self.gmf
+        elif self.output_type == "complete_lt_gmf":
+            return self.gmf
+        elif self.output_type == "complete_lt_ses":
+            return self.ses
+
+        return getattr(self, self.output_type)
+
+    @property
+    def lt_realization_paths(self):
+        """
+        :returns: an instance of `LogicTreePath` the output is
+        associated with. When the output is not associated with any
+        logic tree branch then it returns a LogicTreePath namedtuple
+        with a couple of None.
+        """
+        hazard_output_types = [el[0] for el in self.HAZARD_OUTPUT_TYPE_CHOICES]
+        risk_output_types = [el[0] for el in self.RISK_OUTPUT_TYPE_CHOICES]
+        container = self.output_container
+
+        if self.output_type in hazard_output_types:
+            if container.lt_realization_id is not None:
+                return self.LogicTreePath(
+                    container.lt_realization.gsim_lt_path,
+                    container.lt_realization.sm_lt_path)
+            else:
+                return self.LogicTreePath(None, None)
+        elif self.output_type in risk_output_types:
+            if getattr(container, 'hazard_output_id', None):
+                return container.hazard_output.lt_realization_paths
+            else:
+                return self.LogicTreePath(None, None)
+
+        raise RuntimeError("unexpected output type %s" % self.output_type)
+
+    @property
+    def statistical_params(self):
+        """
+        :returns: an instance of `StatisticalParams` the output is
+        associated with
+        """
+        if getattr(self.output_container, 'statistics', None) is not None:
+            return self.StatisticalParams(self.output_container.statistics,
+                                          self.output_container.quantile)
+        elif getattr(
+                self.output_container, 'hazard_output_id', None) is not None:
+            return self.output_container.hazard_output.statistical_params
+        else:
+            return self.StatisticalParams(None, None)
 
     @property
     def hazard_metadata(self):
@@ -1326,77 +1404,13 @@ class Output(djm.Model):
                 * gsim_path: a list representing the gsim logic tree path
 
         """
+        investigation_time = self.oq_job\
+                                 .risk_calculation\
+                                 .get_hazard_calculation()\
+                                 .investigation_time
 
-        rc = self.oq_job.risk_calculation
-        hc = rc.get_hazard_calculation()
-
-        investigation_time = hc.investigation_time
-
-        # in scenario calculation we do not have neither statistics
-        # neither logic tree realizations
-
-        # if ``hazard_output`` is None, then the risk output is
-        # computed over multiple hazard outputs (related to different
-        # logic tree realizations). Then, We do not have to collect
-        # metadata regarding statistics or logic tree
-        statistics = None
-        quantile = None
-        sm_lt_path = None
-        gsim_lt_path = None
-
-        if rc.calculation_mode != 'scenario':
-            # Two cases:
-            # - hazard_output
-            # - hazard_calculation
-            if rc.hazard_output is not None:
-                ho = rc.hazard_output
-
-                if ho.is_hazard_curve():
-                    lt = rc.hazard_output.hazardcurve.lt_realization
-                    if lt is None:
-                        # statistical result:
-                        statistics = ho.hazardcurve.statistics
-                        quantile = ho.hazardcurve.quantile
-                    else:
-                        sm_lt_path = lt.sm_lt_path
-                        gsim_lt_path = lt.gsim_lt_path
-                else:
-                    lt = ho.gmfcollection.lt_realization
-                    sm_lt_path = lt.sm_lt_path
-                    gsim_lt_path = lt.gsim_lt_path
-            elif rc.hazard_calculation is not None:
-                # we're consuming multiple outputs from a single hazard
-                # calculation
-                if self.output_type in ['loss_curve', 'agg_loss_curve']:
-                    the_output = self.loss_curve
-                elif self.output_type == 'loss_map':
-                    the_output = self.loss_map
-                elif self.output_type == 'loss_fraction':
-                    the_output = self.loss_fraction
-                else:
-                    raise RuntimeError(
-                        'Error getting hazard metadata: Unexpected output_type'
-                        ' "%s"' % self.output_type
-                    )
-
-                if the_output.hazard_output_id is not None:
-                    haz_output = the_output.hazard_output
-
-                    if haz_output.is_hazard_curve():
-                        haz = haz_output.hazardcurve
-                    else:
-                        haz = haz_output.gmfcollection
-
-                    if haz.lt_realization is not None:
-                        sm_lt_path = haz.lt_realization.sm_lt_path
-                        gsim_lt_path = haz.lt_realization.gsim_lt_path
-                else:
-                    if self.output_type == 'loss_curve':
-                        # FIXME(lp). This is clearly not correct
-
-                        # it's a mean/quantile loss curve
-                        statistics = self.loss_curve.statistics
-                        quantile = self.loss_curve.quantile
+        statistics, quantile = self.statistical_params
+        gsim_lt_path, sm_lt_path = self.lt_realization_paths
 
         return self.HazardMetadata(investigation_time,
                                    statistics, quantile,
@@ -1422,7 +1436,7 @@ class HazardMap(djm.Model):
     '''
     Hazard Map header (information which pertains to entire map)
     '''
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', related_name="hazard_map")
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -1473,7 +1487,8 @@ class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
     '''
-    output = djm.OneToOneField('Output', null=True)
+    output = djm.OneToOneField(
+        'Output', null=True, related_name="hazard_curve")
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -1602,7 +1617,7 @@ class SESCollection(djm.Model):
 
     See also :class:`SES` and :class:`SESRupture`.
     """
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', related_name="ses")
     # If `lt_realization` is None, this is a `complete logic tree`
     # Stochastic Event Set Collection, containing a single stochastic
     # event set containing all of the ruptures from the entire
@@ -1740,12 +1755,42 @@ class SESRupture(djm.Model):
         return None
 
 
+class _GmfsPerSES(object):
+    """
+    An iterator object storing all the GMFs generated by the
+    ruptures in a given SES.
+    """
+    def __init__(self, gmfs, investigation_time, stochastic_event_set_id):
+        self._gmfs = iter(gmfs)
+        self.investigation_time = investigation_time
+        self.stochastic_event_set_id = stochastic_event_set_id
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        return self._gmfs.next()
+
+    def __str__(self):
+        return ('GMFsPerSES(investigation_time=%f, '
+                'stochastic_event_set_id=%s,\n%s)' % (
+                self.investigation_time,
+                self.stochastic_event_set_id,
+                '\n'.join(sorted(map(str, self._gmfs)))))
+
+
+class _Point(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
 class GmfCollection(djm.Model):
     """
     A collection of ground motion field (GMF) sets for a given logic tree
     realization.
     """
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', related_name="gmf")
     # If `lt_realization` is None, this is a `complete logic tree`
     # GMF Collection, containing a single GMF set containing all of the ground
     # motion fields in the calculation.
@@ -1754,11 +1799,66 @@ class GmfCollection(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf_collection'
 
-    def __iter__(self):
+    # NB: uses the helper view gmf_collection_family
+    def get_children(self):
         """
-        Iterator for walking through all child :class:`GmfSet` objects.
+        Get the children of a given gmf_collection, if any.
+        :returns:
+          A list of :class:`openquake.engine.db.models.GmfCollection` instances
         """
-        return GmfSet.objects.filter(gmf_collection=self.id).iterator()
+        curs = getcursor('job_init')
+        curs.execute('select child_id from hzrdr.gmf_collection_family '
+                     'where parent_id=%s', (self.id,))
+        return [self.__class__.objects.get(pk=r[0]) for r in curs]
+
+    def get_gmfs_per_ses(self, orderby=False):
+        """
+        Get the ground motion fields per SES in a good format for
+        the XML export.
+        """
+        children = self.get_children()
+        if children:  # complete logic tree
+            all_gmfs = []
+            tot_time = 0.0
+            fake_ses_id = 1
+            for coll in children:
+                for g in coll.get_gmfs_per_ses(orderby):
+                    all_gmfs.append(g)
+                    tot_time += g.investigation_time
+            if all_gmfs:
+                yield _GmfsPerSES(
+                    itertools.chain(*all_gmfs), tot_time, fake_ses_id)
+            return
+        # leaf of the tree
+        ses_coll = SESCollection.objects.get(
+            lt_realization=self.lt_realization)
+
+        for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
+            query = """
+        SELECT imt, sa_period, sa_damping, rupture_id,
+        array_agg(gmv), array_agg(ST_X(geometry(location))),
+        array_agg(ST_Y(geometry(location))) FROM (
+           SELECT imt, sa_period, sa_damping,
+           unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
+           from hzrdr.gmf_agg WHERE gmf_collection_id=%d) AS x,
+           hzrdr.ses_rupture as y
+        where x.rupture_id=y.id AND ses_id=%d
+        group by imt, sa_period, sa_damping, rupture_id
+        """ % (self.id, ses.id)
+            if orderby:  # may be used in tests to get reproducible results
+                query += 'order by imt, sa_period, sa_damping, rupture_id;'
+            curs = getcursor('job_init')
+            curs.execute(query)
+            gmfs = []
+            for imt, sa_period, sa_damping, rupture_id, gmvs, xs, ys in curs:
+                nodes = [_GroundMotionFieldNode(gmv, _Point(x, y))
+                         for gmv, x, y in zip(gmvs, xs, ys)]
+                gmfs.append(
+                    _GroundMotionField(
+                        imt, sa_period, sa_damping, rupture_id, nodes))
+            yield _GmfsPerSES(gmfs, ses.investigation_time, ses.id)
+
+    __iter__ = get_gmfs_per_ses
 
 
 class GmfSet(djm.Model):
@@ -1793,88 +1893,6 @@ class GmfSet(djm.Model):
                 ses_collection__lt_realization=rlz,
                 ordinal=self.ses_ordinal).id
 
-    # Disabling pylint for 'Too many local variables'
-    # pylint: disable=R0914
-    def __iter__(self):
-        """
-        Iterator for walking through all child :class:`Gmf` objects.
-        """
-        return self.iter_gmfs()
-
-    def iter_gmfs(self, location=None, imts=None):
-        """
-        Queries for and iterates over child :class:`Gmf` records, with the
-        option of specifying a ``location``.
-
-        :param location:
-            An (optional) parameter for filtering :class:`GMFs <Gmf>`.
-            ``location`` is expected to be a point represented as WKT.
-
-            Example: `POINT(21.1 45.8)`
-
-        :param imts:
-            A list of IMT triples; if not given, all the calculated IMTs
-            are taken in consideration (no filtering)
-        """
-        job = self.gmf_collection.output.oq_job
-        if self.ses_ordinal is None:  # complete logic tree
-            # Get all of the GmfSets associated with a logic tree realization,
-            # for this calculation.
-            lt_gmf_sets = GmfSet.objects\
-                .filter(
-                    gmf_collection__output__oq_job=job,
-                    gmf_collection__lt_realization__isnull=False)\
-                .order_by('id')
-            for gmf in itertools.chain(
-                    *(each_set.iter_gmfs(location=location)
-                      for each_set in lt_gmf_sets)):
-                yield gmf
-        else:
-            num_tasks = JobStats.objects.get(oq_job=job.id).num_tasks
-            imts = imts or \
-                map(parse_imt, job.hazard_calculation.intensity_measure_types)
-
-            for imt, sa_period, sa_damping in imts:
-                for result_grp_ordinal in xrange(1, num_tasks + 1):
-                    gmfs = order_by_location(
-                        Gmf.objects.filter(
-                            gmf_set=self.id,
-                            imt=imt,
-                            sa_period=sa_period,
-                            sa_damping=sa_damping,
-                            result_grp_ordinal=result_grp_ordinal))
-                    if location is not None:
-                        gmfs = gmfs.extra(
-                            # The `location` field is a GEOGRAPHY type, so an
-                            # explicit cast is needed to compare geometry:
-                            where=["location::geometry ~= "
-                                   "'SRID=4326;%s'::geometry" % location]
-                        )
-
-                    if len(gmfs) == 0:
-                        # There are no GMFs in this result group for the given
-                        # search parameters.
-                        continue
-
-                    # collect gmf nodes for each event
-                    gmf_nodes = collections.OrderedDict()
-                    for gmf in gmfs:
-                        for gmv, rupture_id in zip(gmf.gmvs, gmf.rupture_ids):
-                            if not rupture_id in gmf_nodes:
-                                gmf_nodes[rupture_id] = []
-                            gmf_nodes[rupture_id].append(
-                                _GroundMotionFieldNode(
-                                    gmv=gmv, location=gmf.location))
-
-                    # then yield ground motion fields for each rupture
-                    first = gmfs[0]
-                    for rupture_id in gmf_nodes:
-                        yield _GroundMotionField(
-                            imt=first.imt, sa_period=first.sa_period,
-                            sa_damping=first.sa_damping,
-                            rupture_id=rupture_id,
-                            gmf_nodes=gmf_nodes[rupture_id])
-
 
 class _GroundMotionField(object):
 
@@ -1900,14 +1918,17 @@ class _GroundMotionField(object):
         mdata = ('imt=%(imt)s sa_period=%(sa_period)s '
                  'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)d' %
                  vars(self))
-        return 'GMF(%s\n%s)' % (mdata, '\n'.join(map(str, self.gmf_nodes)))
+        nodes = sorted(map(str, self.gmf_nodes))
+        return 'GMF(%s\n%s)' % (mdata, '\n'.join(nodes))
 
 
 class _GroundMotionFieldNode(object):
 
-    def __init__(self, gmv, location):
+    # the signature is not (gmv, x, y) because the XML writer expect a location
+    # object
+    def __init__(self, gmv, loc):
         self.gmv = gmv
-        self.location = location  # must have x and y attributes
+        self.location = loc
 
     def __str__(self):
         "Return lon, lat and gmv of the node in a compact string form"
@@ -1954,25 +1975,9 @@ class GmfAgg(djm.Model):
         db_table = 'hzrdr\".\"gmf_agg'
 
 
-class GmfScenario(djm.Model):
-    """
-    Ground Motion Field: A collection of ground motion values and their
-    respective geographical locations.
-    """
-    output = djm.ForeignKey('Output')
-    imt = djm.TextField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-    gmvs = fields.FloatArrayField()
-
-    objects = djm.GeoManager()
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_scenario'
-
-
 def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
-    Iterator for walking through all :class:`GmfScenario` objects associated
+    Iterator for walking through all :class:`GmfAgg` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
@@ -1988,21 +1993,22 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
     job = output.oq_job
     hc = job.hazard_calculation
+    coll = output.gmf
     if imt is None:
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
     else:
         imts = [parse_imt(imt)]
-    for imt, sa_period, _ in imts:
-        if imt == 'SA':
-            imt = 'SA(%s)' % sa_period
+    for imt, sa_period, sa_damping in imts:
         for gmf in order_by_location(
-                GmfScenario.objects.filter(output__id=output.id, imt=imt)):
+                GmfAgg.objects.filter(
+                gmf_collection=coll, imt=imt,
+                sa_period=sa_period, sa_damping=sa_damping)):
             yield sort(gmf.gmvs)
 
 
 def get_gmfs_scenario(output, imt=None):
     """
-    Iterator for walking through all :class:`GmfScenario` objects associated
+    Iterator for walking through all :class:`GmfAgg` objects associated
     to a given output. Notice that the fields are ordered according to the
     location, so it is possible to get reproducible outputs in the test cases.
 
@@ -2016,18 +2022,18 @@ def get_gmfs_scenario(output, imt=None):
     """
     job = output.oq_job
     hc = job.hazard_calculation
+    coll = output.gmf
     if imt is None:
         imts = [parse_imt(x) for x in hc.intensity_measure_types]
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        imt_long = 'SA(%s)' % sa_period if imt == 'SA' else imt
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfScenario.objects.filter(
-                output__id=output.id, imt=imt_long):
+        for gmf in GmfAgg.objects.filter(
+                gmf_collection=coll, imt=imt,
+                sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
-                nodes[i].append(
-                    _GroundMotionFieldNode(gmv=gmv, location=gmf.location))
+                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.location))
         for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
                 imt=imt,
@@ -2068,7 +2074,7 @@ class DisaggResult(djm.Model):
     hazard curve, logic tree path information, and investigation time.
     """
 
-    output = djm.OneToOneField('Output')
+    output = djm.OneToOneField('Output', related_name="disagg_matrix")
     lt_realization = djm.ForeignKey('LtRealization')
     investigation_time = djm.FloatField()
     imt = djm.TextField(choices=IMT_CHOICES)
@@ -2089,21 +2095,6 @@ class DisaggResult(djm.Model):
         db_table = 'hzrdr\".\"disagg_result'
 
 
-class GmfData(djm.Model):
-    '''
-    Ground Motion Field data
-
-    DEPRECATED. See instead :class:`GmfCollection`, :class:`GmfSet`,
-    :class:`Gmf`, and :class:`GmfNode`.
-    '''
-    output = djm.ForeignKey('Output')
-    ground_motion = djm.FloatField()
-    location = djm.PointField(srid=DEFAULT_SRID)
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_data'
-
-
 class UHS(djm.Model):
     """
     UHS/Uniform Hazard Spectra:
@@ -2112,7 +2103,7 @@ class UHS(djm.Model):
 
     Records in this table contain metadata for a collection of UHS data.
     """
-    output = djm.OneToOneField('Output', null=True)
+    output = djm.OneToOneField('Output', null=True, related_name="uh_spectra")
     # FK only required for non-statistical results (i.e., mean or quantile
     # curves).
     lt_realization = djm.ForeignKey('LtRealization', null=True)
@@ -2376,7 +2367,7 @@ class LossMapData(djm.Model):
 
 
 class AggregateLoss(djm.Model):
-    output = djm.OneToOneField("Output")
+    output = djm.OneToOneField("Output", related_name="aggregate_loss")
     insured = djm.BooleanField(default=False)
     mean = djm.FloatField()
     std_dev = djm.FloatField()
@@ -2452,7 +2443,7 @@ class EventLoss(djm.Model):
 
     #: Foreign key to an :class:`openquake.engine.db.models.Output`
     #: object with output_type == event_loss
-    output = djm.OneToOneField('Output')
+    output = djm.ForeignKey('Output', related_name="event_loss")
     rupture = djm.ForeignKey('SESRupture')
     aggregate_loss = djm.FloatField()
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
@@ -2467,8 +2458,7 @@ class BCRDistribution(djm.Model):
     '''
 
     output = djm.OneToOneField("Output", related_name="bcr_distribution")
-    hazard_output = djm.OneToOneField(
-        "Output", related_name="risk_bcr_distribution")
+    hazard_output = djm.OneToOneField("Output")
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
@@ -2648,7 +2638,7 @@ class AssetManager(djm.GeoManager):
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
             """.format(occupants=occupants, occupants_cond=occupants_cond),
-            args))
+                     args))
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """

@@ -263,13 +263,13 @@ def export_aggregate_loss_csv(output, target_dir):
     """
     filepath = os.path.join(target_dir,
                             AGGREGATE_LOSS_FILENAME_FMT % (
-                                output.aggregateloss.id))
+                                output.aggregate_loss.id))
 
     with open(filepath, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter='|')
         writer.writerow(['Mean', 'Standard Deviation'])
-        writer.writerow([output.aggregateloss.mean,
-                        output.aggregateloss.std_dev])
+        writer.writerow([output.aggregate_loss.mean,
+                        output.aggregate_loss.std_dev])
     return filepath
 
 export_aggregate_loss = export_aggregate_loss_csv
