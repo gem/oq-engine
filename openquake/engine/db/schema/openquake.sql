@@ -144,6 +144,7 @@ CREATE TABLE uiapi.input (
                              'structural_vulnerability',
                              'contents_vulnerability',
                              'nonstructural_vulnerability',
+                             'business_interruption_vulnerability',
                              'occupancy_vulnerability',
                              'structural_vulnerability_retrofitted',
                              'site_model')),
