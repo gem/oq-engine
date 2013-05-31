@@ -1,3 +1,4 @@
+import os
 import argparse
 from cStringIO import StringIO
 from openquake.nrmllib.hazard.parsers import GMFScenarioParser
@@ -13,15 +14,29 @@ def import_gmf_scenario(fileobj, user=None):
     Works both with XML files and tab-separated files with format
     (imt, gmvs, location).
     :returns: the generated :class:`openquake.engine.db.models.Output` object
+    and the generated :class:`openquake.engine.db.models.HazardCalculation`
+    object.
     """
     fname = fileobj.name
     curs = connections['reslt_writer'].cursor().cursor.cursor  # DB API cursor
+
     owner = models.OqUser.objects.get(user_name=user) \
         if user else get_current_user()
+
+    hc = models.HazardCalculation.objects.create(
+        owner=owner,
+        base_path=os.path.dirname(fname),
+        description='Scenario importer, file %s' % os.path.basename(fname),
+        calculation_mode='scenario', intensity_measure_types_and_levels={},
+        maximum_distance=100)
+        # XXX: probably the maximum_distance should be entered by the user
+
     out = models.Output.objects.create(
         owner=owner, display_name='Imported from %r' % fname,
         output_type='gmf_scenario')
+
     coll_id = str(models.GmfCollection.objects.create(output=out).id)
+
     f = StringIO()
     if fname.endswith('.xml'):
         # convert the XML into a tab-separated StringIO
@@ -49,7 +64,7 @@ def import_gmf_scenario(fileobj, user=None):
         curs.connection.commit()
     finally:
         f.close()
-    return out
+    return out, hc
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
