@@ -635,10 +635,11 @@ CREATE TABLE hzrdr.gmf (
 -- find the corresponding ground motion value in gmvs at the same
 -- index.
     rupture_ids int[],
-    result_grp_ordinal INTEGER NOT NULL,
-
-    location GEOGRAPHY(point) NOT NULL
+    result_grp_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'gmf', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.gmf ALTER COLUMN location SET NOT NULL;
+
 
 CREATE TABLE hzrdr.gmf_agg (
     id SERIAL PRIMARY KEY,
@@ -659,16 +660,8 @@ CREATE TABLE hzrdr.gmf_agg (
         --    OR ((imt != 'SA') AND (sa_damping IS NULL))),
     gmvs float[],
     rupture_ids int[],
-    location GEOGRAPHY(point) NOT NULL
-) TABLESPACE hzrdr_ts;
-
-CREATE TABLE hzrdr.gmf_scenario (
-    id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,  -- FK to output.id
-    imt VARCHAR NOT NULL,
-    gmvs float[],
     location GEOGRAPHY(point) NOT NULL,
-    UNIQUE (output_id, imt, location)
+    UNIQUE (gmf_collection_id, imt, sa_period, sa_damping, location)
 ) TABLESPACE hzrdr_ts;
 
 
@@ -699,19 +692,6 @@ CREATE TABLE hzrdr.disagg_result (
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'disagg_result', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.disagg_result ALTER COLUMN location SET NOT NULL;
-
-
--- GMF data.
--- TODO: DEPRECATED; use gmf_collection, gmf_set, and gmf
-CREATE TABLE hzrdr.gmf_data (
-    id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,
-    -- Ground motion value
-    ground_motion float NOT NULL
-) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'gmf_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
-
 
 -- Uniform Hazard Spectra
 --
@@ -1242,10 +1222,6 @@ ALTER TABLE hzrdr.hazard_curve_data
 ADD CONSTRAINT hzrdr_hazard_curve_data_hazard_curve_fk
 FOREIGN KEY (hazard_curve_id) REFERENCES hzrdr.hazard_curve(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.gmf_data
-ADD CONSTRAINT hzrdr_gmf_data_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
-
 -- gmf_collection -> output FK
 ALTER TABLE hzrdr.gmf_collection
 ADD CONSTRAINT hzrdr_gmf_collection_output_fk
@@ -1267,12 +1243,6 @@ ON DELETE CASCADE;
 ALTER TABLE hzrdr.gmf
 ADD CONSTRAINT hzrdr_gmf_gmf_set_fk
 FOREIGN KEY (gmf_set_id) REFERENCES hzrdr.gmf_set(id)
-ON DELETE CASCADE;
-
--- gmf_scenario -> output FK
-ALTER TABLE hzrdr.gmf_scenario
-ADD CONSTRAINT hzrdr_gmf_scenario_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id)
 ON DELETE CASCADE;
 
 -- disagg_result -> output FK
@@ -1444,13 +1414,21 @@ FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
 
+
+-- this function is used in the performance_view, cannot go in functions.sql
+CREATE FUNCTION maxint(a INTEGER, b INTEGER) RETURNS INTEGER AS $$
+SELECT CASE WHEN $1 > $2 THEN $1 ELSE $2 END;
+$$ LANGUAGE SQL IMMUTABLE;
+
 ---------------------- views ----------------------------
 -- convenience view to analyze the performance of the jobs;
 -- for instance the slowest operations can be extracted with
 -- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_view;
 CREATE VIEW uiapi.performance_view AS
 SELECT h.id AS calculation_id, description, 'hazard' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation, sum(duration) AS duration,
+     SELECT oq_job_id, operation,
+     sum(duration) AS tot_duration,
+     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
      max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance
@@ -1461,7 +1439,9 @@ INNER JOIN uiapi.hazard_calculation AS h
 ON h.id=o.hazard_calculation_id
 UNION ALL
 SELECT r.id AS calculation_id, description, 'risk' AS job_type, p.* FROM (
-     SELECT oq_job_id, operation, sum(duration) AS duration,
+     SELECT oq_job_id, operation,
+     sum(duration) AS tot_duration,
+     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
      max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
      count(*) AS counts
      FROM uiapi.performance
@@ -1480,3 +1460,19 @@ CREATE VIEW hzrdr.gmf_agg_job AS
    INNER JOIN uiapi.output AS c
    ON b.output_id=c.id
    WHERE output_type='gmf';
+
+
+-- associations parent->children
+CREATE VIEW hzrdr.gmf_collection_family AS
+  SELECT j.id as oq_job_id, hazard_calculation_id,
+  c1.id AS parent_id, c2.id AS child_id
+  FROM uiapi.oq_job AS j
+  INNER JOIN uiapi.output AS o1
+  ON o1.oq_job_id=j.id
+  INNER JOIN uiapi.output AS o2
+  ON o2.oq_job_id=j.id
+  INNER JOIN hzrdr.gmf_collection AS c1
+  ON c1.output_id=o1.id
+  INNER JOIN hzrdr.gmf_collection AS c2
+  ON c2.output_id=o2.id
+  WHERE o1.output_type='complete_lt_gmf' AND o2.output_type='gmf';

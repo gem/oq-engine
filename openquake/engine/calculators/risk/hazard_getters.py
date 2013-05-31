@@ -27,19 +27,11 @@ import numpy
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
-from django.db import connections
-
+from openquake.engine.performance import DummyMonitor
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
 KILOMETERS_TO_METERS = 1000
-
-
-# a Django cursor perform some caching which is polluting the
-# memory profiler, this is why we are using the underlying cursor
-def getcursor(route):
-    """Return a psycogp2 cursor from a Django route"""
-    return connections[route].connection.cursor()
 
 
 class HazardGetter(object):
@@ -51,9 +43,8 @@ class HazardGetter(object):
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
 
-    :attr int hazard_output_id:
-        The ID of an Hazard Output object
-        :class:`openquake.engine.db.models.Output`
+    :attr int hazard_output:
+        A Hazard Output object :class:`openquake.engine.db.models.Output`
 
     :attr int hazard_id:
         The ID of an Hazard Output container object
@@ -72,8 +63,8 @@ class HazardGetter(object):
         The weight (if applicable) to be given to the retrieved data
     """
     def __init__(self, hazard_output, assets, max_distance, imt):
-        self.hazard_output_id = hazard_output.id
-        hazard = self.container(hazard_output)
+        self.hazard_output = hazard_output
+        hazard = hazard_output.output_container
         self.hazard_id = hazard.id
         self.assets = assets
         self.max_distance = max_distance
@@ -92,13 +83,6 @@ class HazardGetter(object):
             for asset in self.assets])
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
         self.all_asset_ids = set(self.asset_dict)
-
-    def container(self, hazard_output):
-        """
-        Returns the corresponding output container object from an
-        Hazard :class:`openquake.engine.db.models.Output` instance
-        """
-        raise NotImplementedError
 
     def __repr__(self):
         return "<%s max_distance=%s assets=%s>" % (
@@ -164,9 +148,6 @@ class HazardCurveGetterPerAsset(HazardGetter):
             hazard, assets, max_distance, imt)
         self._cache = {}
 
-    def container(self, hazard_output):
-        return hazard_output.hazardcurve
-
     def get_data(self, imt):
         """
         Calls ``get_by_site`` for each asset and pack the results as
@@ -213,7 +194,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         if site.wkt in self._cache:
             return self._cache[site.wkt]
 
-        cursor = getcursor('job_init')
+        cursor = models.getcursor('job_init')
 
         query = """
         SELECT
@@ -244,18 +225,19 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """
 
-    def container(self, hazard_output):
-        return hazard_output.gmfcollection
-
-    def __call__(self):
+    def __call__(self, monitor=None):
         """
+        :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor` or
+        None
         :returns:
             A tuple with two elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is a
             pair (gmfs, ruptures) with the closest ground motion value for each
             asset.
         """
-        asset_ids, gmf_ids = self.get_data(self.imt)
+        monitor = monitor or DummyMonitor()
+        with monitor.copy('associating asset_ids <-> gmf_ids'):
+            asset_ids, gmf_ids = self.get_data(self.imt)
         missing_asset_ids = self.all_asset_ids - set(asset_ids)
 
         for missing_asset_id in missing_asset_ids:
@@ -265,36 +247,47 @@ class GroundMotionValuesGetter(HazardGetter):
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
 
-        if not asset_ids:  # all missing
+        distinct_gmf_ids = tuple(set(gmf_ids))
+        cursor = models.getcursor('job_init')
+
+        if self.hazard_output.output_type == 'gmf_scenario':
+            gmfs = dict((i, models.GmfAgg.objects.get(pk=i).gmvs)
+                        for i in distinct_gmf_ids)
+            return ([self.asset_dict[asset_id] for asset_id in asset_ids],
+                    [gmfs[i] for i in gmf_ids])
+
+        elif not gmf_ids:  # all missing
             return [], ([], [])
 
+        cursor = models.getcursor('job_init')
+
         # get the sorted ruptures from all the distinct GMFs
-        distinct_gmf_ids = tuple(set(gmf_ids))
-        cursor = getcursor('job_init')
-        cursor.execute('''\
+        with monitor.copy('getting ruptures'):
+            cursor.execute('''\
         SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
         WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
-        # TODO: in principle it should be possible to remove the ORDER BY; see
-        # why qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
-        # breaks if I do so (MS)
-        sorted_ruptures = numpy.array([r[0] for r in cursor.fetchall()])
+            # TODO: in principle it should be possible to remove the ORDER BY;
+            # qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
+            # breaks if I do so (MS)
+            sorted_ruptures = numpy.array([r[0] for r in cursor.fetchall()])
 
         # get the data from the distinct GMFs
-        cursor.execute('''\
-        SELECT id, gmvs, rupture_ids FROM hzrdr.gmf_agg
-        WHERE id in %s''', (distinct_gmf_ids,))
-        gmfs = {}
-        for gmf_id, gmvs, ruptures in cursor.fetchall():
-            gmvd = dict(zip(ruptures, gmvs))
-            gmvs = numpy.array([gmvd.get(r, 0.) for r in sorted_ruptures])
-            gmfs[gmf_id] = gmvs
+        with monitor.copy('getting gmvs'):
+            cursor.execute('''\
+            SELECT id, gmvs, rupture_ids FROM hzrdr.gmf_agg
+            WHERE id in %s''', (distinct_gmf_ids,))
+            gmfs = {}
+            for gmf_id, gmvs, ruptures in cursor.fetchall():
+                gmvd = dict(zip(ruptures, gmvs))
+                gmvs = numpy.array([gmvd.get(r, 0.) for r in sorted_ruptures])
+                gmfs[gmf_id] = gmvs
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
                ([gmfs[i] for i in gmf_ids], sorted_ruptures))
         return ret
 
     def get_data(self, imt):
-        cursor = getcursor('job_init')
+        cursor = models.getcursor('job_init')
 
         imt_type, sa_period, sa_damping = models.parse_imt(imt)
         spectral_filters = ""
@@ -345,50 +338,3 @@ class GroundMotionValuesGetter(HazardGetter):
                 assets.append(asset_id)
                 gmf_ids.append(gmf_id)
         return assets, gmf_ids
-
-
-# TODO: this calls will disappear soon: see
-# https://bugs.launchpad.net/oq-engine/+bug/1170628
-class GroundMotionScenarioGetter(HazardGetter):
-    """
-    Hazard getter for loading ground motion values. It uses the same
-    approach used in :class:`GroundMotionValuesGetter`.
-    """
-    def get_data(self, imt):
-        cursor = getcursor('job_init')
-
-        # See the comment in `GroundMotionValuesGetter.get_data` for
-        # an explanation of the query
-        query = """
-  SELECT DISTINCT ON (riski.exposure_data.id) riski.exposure_data.id,
-         gmf_table.gmvs
-  FROM riski.exposure_data JOIN (
-    SELECT location, gmvs
-           FROM hzrdr.gmf_scenario
-           WHERE hzrdr.gmf_scenario.imt = %s
-           AND hzrdr.gmf_scenario.output_id = %s
-           AND hzrdr.gmf_scenario.location && %s) gmf_table
-  ON ST_DWithin(riski.exposure_data.site, gmf_table.location, %s)
-  WHERE taxonomy = %s AND exposure_model_id = %s
-  ORDER BY riski.exposure_data.id,
-    ST_Distance(riski.exposure_data.site, gmf_table.location, false)
-           """
-
-        assets_extent = self._assets_mesh.get_convex_hull()
-        args = (imt, self.hazard_id,
-                assets_extent.dilate(self.max_distance).wkt,
-                self.max_distance * KILOMETERS_TO_METERS,
-                self.assets[0].taxonomy,
-                self.assets[0].exposure_model_id)
-        cursor.execute(query, args)
-        # print cursor.mogrify(query, args)
-        assets, gmfs = [], []
-        for asset_id, gmvs in cursor.fetchall():
-            # the query may return spurious assets outside the considered block
-            if asset_id in self.asset_dict:  # in block
-                assets.append(asset_id)
-                gmfs.append(gmvs)
-        return assets, gmfs
-
-    def container(self, hazard_output):
-        return hazard_output

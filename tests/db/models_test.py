@@ -14,8 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import getpass
-import itertools
-import string
 import unittest
 import mock
 
@@ -335,17 +333,111 @@ class ParseImtTestCase(unittest.TestCase):
         self.assertEqual(None, sa_damping)
 
 
-# This class is intentionally left empty, since
-# at the present all the features of GmfSet.iter_gmvs
-# are exercised and covered in EventBasedExportTestCase.
-# In the future GmfSet will likely change (we want a
-# more efficient way to import/export large numbers of GMFs)
-# and we may want to add more specific tests here; in particular
-# we will need three tests complete_logic_tree_gmf_iter,
-# gmf_by_location_iter and no_filtering_gmf_iter.
-# NB: GmfSet.iter_gmvs is also tested in pg_importer_test.py
-class GmfSetIterTestCase(unittest.TestCase):
-    pass
+class GmfsPerSesTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cfg = helpers.get_data_path('event_based_hazard/job.ini')
+        job = helpers.get_hazard_job(cfg)
+        rlz1 = models.LtRealization.objects.create(
+            hazard_calculation=job.hazard_calculation,
+            ordinal=1, seed=1, weight=None,
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+            is_complete=False, total_items=1, completed_items=1)
+        rlz2 = models.LtRealization.objects.create(
+            hazard_calculation=job.hazard_calculation,
+            ordinal=2, seed=1, weight=None,
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+            is_complete=False, total_items=1, completed_items=1)
+        ses_coll1 = models.SESCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test SES Collection 1", "ses"),
+            lt_realization=rlz1)
+        ses_coll2 = models.SESCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test SES Collection 2", "ses"),
+            lt_realization=rlz2)
+        gmf_agg1 = helpers.create_gmf_agg_records(job, rlz1, ses_coll1)[0]
+        gmf_agg2 = helpers.create_gmf_agg_records(job, rlz2, ses_coll2)[0]
+        cls.gmf_coll1 = gmf_agg1.gmf_collection
+        cls.parent_coll = models.GmfCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test Hazard output", "complete_lt_gmf"))
+        cls.ruptures1 = tuple(gmf_agg1.rupture_ids)
+        cls.ruptures2 = tuple(gmf_agg2.rupture_ids)
+        cls.investigation_time = job.hazard_calculation.investigation_time
+
+    def test_branch_lt(self):
+        all_gmfs = list(self.gmf_coll1.get_gmfs_per_ses(orderby=True))
+        self.assertEqual(len(all_gmfs), 1)
+        gmfs = all_gmfs[0]
+        expected = """\
+GMFsPerSES(investigation_time=%f, stochastic_event_set_id=%d,
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.1000000>
+<X= 15.48000, Y= 38.09100, GMV=0.1000000>
+<X= 15.48100, Y= 38.25000, GMV=0.1000000>
+<X= 15.56500, Y= 38.17000, GMV=0.1000000>
+<X= 15.71000, Y= 37.22500, GMV=0.1000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.2000000>
+<X= 15.48000, Y= 38.09100, GMV=0.2000000>
+<X= 15.48100, Y= 38.25000, GMV=0.2000000>
+<X= 15.56500, Y= 38.17000, GMV=0.2000000>
+<X= 15.71000, Y= 37.22500, GMV=0.2000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.3000000>
+<X= 15.48000, Y= 38.09100, GMV=0.3000000>
+<X= 15.48100, Y= 38.25000, GMV=0.3000000>
+<X= 15.56500, Y= 38.17000, GMV=0.3000000>
+<X= 15.71000, Y= 37.22500, GMV=0.3000000>))""" % (
+            (self.investigation_time, gmfs.stochastic_event_set_id) +
+            self.ruptures1)
+        self.assertEqual(str(gmfs), expected)
+
+    def test_complete_lt(self):
+        all_gmfs = list(self.parent_coll.get_gmfs_per_ses(orderby=True))
+        self.assertEqual(len(all_gmfs), 1)
+        gmfs = all_gmfs[0]
+        expected = """\
+GMFsPerSES(investigation_time=100.000000, stochastic_event_set_id=1,
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.1000000>
+<X= 15.48000, Y= 38.09100, GMV=0.1000000>
+<X= 15.48100, Y= 38.25000, GMV=0.1000000>
+<X= 15.56500, Y= 38.17000, GMV=0.1000000>
+<X= 15.71000, Y= 37.22500, GMV=0.1000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.2000000>
+<X= 15.48000, Y= 38.09100, GMV=0.2000000>
+<X= 15.48100, Y= 38.25000, GMV=0.2000000>
+<X= 15.56500, Y= 38.17000, GMV=0.2000000>
+<X= 15.71000, Y= 37.22500, GMV=0.2000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.3000000>
+<X= 15.48000, Y= 38.09100, GMV=0.3000000>
+<X= 15.48100, Y= 38.25000, GMV=0.3000000>
+<X= 15.56500, Y= 38.17000, GMV=0.3000000>
+<X= 15.71000, Y= 37.22500, GMV=0.3000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.1000000>
+<X= 15.48000, Y= 38.09100, GMV=0.1000000>
+<X= 15.48100, Y= 38.25000, GMV=0.1000000>
+<X= 15.56500, Y= 38.17000, GMV=0.1000000>
+<X= 15.71000, Y= 37.22500, GMV=0.1000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.2000000>
+<X= 15.48000, Y= 38.09100, GMV=0.2000000>
+<X= 15.48100, Y= 38.25000, GMV=0.2000000>
+<X= 15.56500, Y= 38.17000, GMV=0.2000000>
+<X= 15.71000, Y= 37.22500, GMV=0.2000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+<X= 15.31000, Y= 38.22500, GMV=0.3000000>
+<X= 15.48000, Y= 38.09100, GMV=0.3000000>
+<X= 15.48100, Y= 38.25000, GMV=0.3000000>
+<X= 15.56500, Y= 38.17000, GMV=0.3000000>
+<X= 15.71000, Y= 37.22500, GMV=0.3000000>))""" % (
+            self.ruptures1 + self.ruptures2)
+        self.assertEqual(str(gmfs), expected)
 
 
 class PrepGeometryTestCase(unittest.TestCase):
