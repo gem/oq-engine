@@ -559,5 +559,12 @@ class HazardCurveParserTestCase(unittest.TestCase):
     def test_parse(self):
         for curve, expected in self.EXPECTED.iteritems():
             parser = parsers.HazardCurveParser(curve)
-            parsed = list(parser.parse())
-            self.assertEqual(parsed, expected)
+            model = parser.parse()
+            got = [{'imls': model.imls,
+                    'imt': model.imt,
+                    'investigation_time': model.investigation_time,
+                    'quantile': model.quantile,
+                    'sa_damping': model.sa_damping,
+                    'sa_period': model.sa_period,
+                    'statistics': model.statistics}] + list(model)
+            self.assertEqual(got, expected)

@@ -612,7 +612,6 @@ class GMFScenarioParser(object):
 
 class HazardCurveParser(object):
     _CURVES_TAG = '{%s}hazardCurves' % openquake.nrmllib.NAMESPACE
-    _IMLS_TAG = '{%s}IMLs' % openquake.nrmllib.NAMESPACE
     _CURVE_TAG = '{%s}hazardCurve' % openquake.nrmllib.NAMESPACE
 
     def __init__(self, source):
@@ -622,15 +621,20 @@ class HazardCurveParser(object):
         """
         Parse the source XML content for a hazard curve.
         :returns:
-            an iterable yield first a header dictionary and then a sequence
-            of (poes, location) in string form
+            Populated :class:`openquake.nrmllib.models.HazardCurveModel` object
         """
         schema = etree.XMLSchema(etree.parse(
             openquake.nrmllib.nrml_schema_file()))
-        tree = etree.iterparse(self.source, schema=schema)
+        tree = etree.iterparse(
+            self.source, events=('start', 'end'), schema=schema)
+        hc_iter = self._parse(tree)
+        header = hc_iter.next()
+        return models.HazardCurveModel(data_iter=hc_iter, **header)
+
+    def _parse(self, tree):
         header = {}
-        for _, element in tree:
-            if element.tag == self._CURVES_TAG:
+        for event, element in tree:
+            if element.tag == self._CURVES_TAG and event == 'start':
                 a = element.attrib
                 header['investigation_time'] = a['investigationTime']
                 header['imt'] = a['IMT']
@@ -638,10 +642,9 @@ class HazardCurveParser(object):
                 header['sa_damping'] = a.get('saDamping')
                 header['statistics'] = a.get('statistics')
                 header['quantile'] = a.get('quantileValue')
-            elif element.tag == self._IMLS_TAG:
-                header['imls'] = map(float, element.text.split())
+                header['imls'] = map(float, element[0].text.split())
                 yield header
-            elif element.tag == self._CURVE_TAG:
+            elif element.tag == self._CURVE_TAG and event == 'end':
                 point, poes = element
                 location = 'POINT(%s)' % ' '.join(point[0].text.split())
                 poes_array = map(float, poes.text.split())
