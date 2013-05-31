@@ -295,16 +295,22 @@ class Input(djm.Model):
         (u'gsim_logic_tree', u'Ground Shaking Intensity Model Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
-        (u'structural_vulnerability', u'Structural Vulnerability'),
-        (u'nonstructural_vulnerability', u'Non Structural Vulnerability'),
-        (u'contents_vulnerability', u'Contents Vulnerability'),
-        (u'occupancy_vulnerability', u'Occupancy Vulnerability'),
-        (u'structural_vulnerability_retrofitted',
-         u'Structural Vulnerability Retrofitted'),
         (u'site_model', u'Site Model'),
         (u'rupture_model', u'Rupture Model')
     )
-    input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
+
+    VULNERABILITY_TYPE_CHOICES = (
+        (u'structural_vulnerability', u'Structural Vulnerability'),
+        (u'nonstructural_vulnerability', u'Non Structural Vulnerability'),
+        (u'contents_vulnerability', u'Contents Vulnerability'),
+        (u'business_interruption_vulnerability',
+         u'Business Interruption Vulnerability'),
+        (u'occupants_vulnerability', u'Occupants Vulnerability'),
+        (u'structural_vulnerability_retrofitted',
+         u'Structural Vulnerability Retrofitted'))
+
+    input_type = djm.TextField(
+        choices=INPUT_TYPE_CHOICES + VULNERABILITY_TYPE_CHOICES)
 
     hazard_calculations = djm.ManyToManyField('HazardCalculation',
                                               through='Input2hcalc',
