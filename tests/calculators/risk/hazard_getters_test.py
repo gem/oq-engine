@@ -100,7 +100,7 @@ class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
     hazard_demo = get_data_path('scenario_hazard/job.ini')
     risk_demo = get_data_path('scenario_risk/job.ini')
     hazard_output_type = 'gmf_scenario'
-    getter_class = hazard_getters.GroundMotionScenarioGetter
+    getter_class = hazard_getters.GroundMotionValuesGetter
     taxonomy = 'RM'
 
     def test_call(self):

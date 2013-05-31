@@ -22,7 +22,6 @@ import openquake.hazardlib
 from collections import namedtuple
 
 from openquake.hazardlib import geo as hazardlib_geo
-from nose.plugins.attrib import attr
 
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
@@ -477,7 +476,8 @@ class TaskArgGenTestCase(unittest.TestCase):
         ]
 
         try:
-            actual = list(calc.task_arg_gen(block_size=2))
+            actual = list(calc.task_arg_gen(
+                          block_size=2, check_num_task=False))
             self.assertEqual(expected, actual)
         finally:
             self.assertEqual(1, pt_src_block_size_mock.call_count)

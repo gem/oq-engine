@@ -98,7 +98,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     """
 
     # globals per process
-    cache = CacheInserter(1000)  # store at most 1,000 objects
+    cache = CacheInserter(models.Performance, 1000)  # store at most 1k objects
     pgpid = None
     pypid = None
 
@@ -107,7 +107,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         self.operation = operation
         self.job_id = job_id
         if task:
-            self.task = task.__name__
+            self.task = task
             self.task_id = task.request.id
         else:
             self.task = None
@@ -133,6 +133,14 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         super(EnginePerformanceMonitor, self).__init__(
             [self.pypid, self.pgpid])
 
+    def copy(self, operation):
+        """
+        Return a copy of the monitor usable for a different operation
+        in the same task.
+        """
+        return self.__class__(operation, self.job_id, self.task, self.tracing,
+                              self.profile_pymem, self.profile_pgmem)
+
     def on_exit(self):
         """
         Save the memory consumption on the uiapi.performance table.
@@ -152,7 +160,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
             perf = models.Performance(
                 oq_job_id=self.job_id,
                 task_id=self.task_id,
-                task=self.task,
+                task=getattr(self.task, '__name__', None),
                 operation=self.operation,
                 start_time=self.start_time,
                 duration=self.duration,
@@ -178,16 +186,17 @@ atexit.register(EnginePerformanceMonitor.cache.flush)
 class DummyMonitor(object):
     """
     This class makes it easy to disable the monitoring
-    in client code, by simply changing an import statement:
-
-    from openquake.engine.performance import DummyMonitor as EnginePerformanceMonitor
-    Disabling the monitor can improve the performance.
+    in client code. Disabling the monitor can improve the performance.
     """
-    def __init__(self, *args, **kw):
-        pass
+    def __init__(self, operation='', job_id=0, *args, **kw):
+        self.operation = operation
+        self.job_id = job_id
 
     def __enter__(self):
         return self
+
+    def copy(self, operation):
+        return self.__class__(operation, self.job_id)
 
     def __exit__(self, etype, exc, tb):
         pass
