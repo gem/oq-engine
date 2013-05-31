@@ -44,9 +44,6 @@ from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config, get_calculator_class
-from openquake.engine.calculators.hazard.general import store_site_data
-from openquake.engine.calculators.hazard.event_based.post_processing import \
-    insert_into_gmf_agg
 
 CD = os.path.dirname(__file__)  # current directory
 
