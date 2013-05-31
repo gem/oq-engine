@@ -31,7 +31,6 @@ import openquake.hazardlib.gsim
 
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators import base
-from openquake.engine import logs
 from openquake.engine.utils import tasks, stats
 from openquake.engine.db import models
 from openquake.engine.input import source
@@ -47,17 +46,17 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 @tasks.oqtask
 @stats.count_progress('h')
-def gmfs(job_id, sites, rupture_id, output_id, task_seed, realizations):
+def gmfs(job_id, sites, rupture_id, gmfcoll_id, task_seed, realizations):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
     """
     numpy.random.seed(task_seed)
-    compute_gmfs(job_id, sites, rupture_id, output_id, realizations)
+    compute_gmfs(job_id, sites, rupture_id, gmfcoll_id, realizations)
     base.signal_task_complete(job_id=job_id, num_items=len(sites))
 
 
-def compute_gmfs(job_id, sites, rupture_id, output_id, realizations):
+def compute_gmfs(job_id, sites, rupture_id, gmfcoll_id, realizations):
     """
     Compute ground motion fields and store them in the db.
 
@@ -68,8 +67,8 @@ def compute_gmfs(job_id, sites, rupture_id, output_id, realizations):
     :param rupture_id:
         The parsed rupture model from which we will generate
         ground motion fields.
-    :param output_id:
-        output_id idenfitifies the reference to the output record.
+    :param gmfcoll_id:
+        the id of a :class:`openquake.engine.db.models.GmfCollection` record
     :param realizations:
         Number of realizations to create.
     """
@@ -90,23 +89,23 @@ def compute_gmfs(job_id, sites, rupture_id, output_id, realizations):
             correlation_model=correlation_model)
 
     with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
-        save_gmf(output_id, gmf, sites.mesh)
+        save_gmf(gmfcoll_id, gmf, sites.mesh)
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def save_gmf(output_id, gmf_dict, points_to_compute):
+def save_gmf(gmfcoll_id, gmf_dict, points_to_compute):
     """
     Helper method to save computed GMF data to the database.
 
-    :param int output_id:
-        Output_id identifies the reference to the output record.
+    :param int gmfcoll_id:
+        the id of a :class:`openquake.engine.db.models.GmfCollection` record
     :param dict gmf_dict:
         The GMF results during the calculation.
     :param points_to_compute:
         An :class:`openquake.hazardlib.geo.mesh.Mesh` object, representing
         all of the points of interest for a calculation.
     """
-    inserter = writer.BulkInserter(models.GmfScenario)
+    inserter = writer.BulkInserter(models.GmfAgg)
 
     for imt, gmfs_ in gmf_dict.iteritems():
         # ``gmfs`` comes in as a numpy.matrix
@@ -114,14 +113,19 @@ def save_gmf(output_id, gmf_dict, points_to_compute):
         # in the way that we want
         gmfarray = numpy.array(gmfs_)
 
-        imt_name = imt.__class__.__name__
+        sa_period = None
+        sa_damping = None
         if isinstance(imt, openquake.hazardlib.imt.SA):
-            imt_name += '(%s)' % imt.period
+            sa_period = imt.period
+            sa_damping = imt.damping
+        imt_name = imt.__class__.__name__
 
         for i, location in enumerate(points_to_compute):
             inserter.add_entry(
-                output_id=output_id,
+                gmf_collection_id=gmfcoll_id,
                 imt=imt_name,
+                sa_period=sa_period,
+                sa_damping=sa_damping,
                 location=location.wkt2d,
                 gmvs=gmfarray[i].tolist())
 
@@ -182,13 +186,15 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
         self.progress['total'] = len(self.hc.site_collection)
 
-        # Store a record in the output table.
-        self.output = models.Output.objects.create(
+        # create a record in the output table
+        output = models.Output.objects.create(
             owner=self.job.owner,
             oq_job=self.job,
             display_name="gmf_scenario",
             output_type="gmf_scenario")
-        self.output.save()
+
+        # create an associated gmf_collection record
+        self.gmfcoll = models.GmfCollection.objects.create(output=output)
 
     def task_arg_gen(self, block_size):
         """
@@ -196,7 +202,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         task arg tuples. Each tuple of args applies to a single task.
 
         Yielded results are 6-uples of the form (job_id,
-        sites, rupture_id, output_id, task_seed, realizations)
+        sites, rupture_id, gmfcoll_id, task_seed, realizations)
         (task_seed will be used to seed numpy for temporal occurence sampling).
 
         :param int block_size:
@@ -211,5 +217,5 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         for sites in block_splitter(self.hc.site_collection, BLOCK_SIZE):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
             yield (self.job.id, SiteCollection(sites),
-                   rupture_id, self.output.id, task_seed,
+                   rupture_id, self.gmfcoll.id, task_seed,
                    self.hc.number_of_ground_motion_fields)

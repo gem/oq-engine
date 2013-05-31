@@ -14,8 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
-import numpy
 
 from nose.plugins.attrib import attr as noseattr
 
@@ -23,8 +21,6 @@ from qa_tests import risk
 from tests.utils import helpers
 
 from openquake.engine.db import models
-from openquake.engine.calculators.hazard.event_based.post_processing import \
-    populate_gmf_agg
 
 # FIXME(lp). This is a regression test. Data has not been validated
 # by an alternative reliable implemantation
@@ -40,57 +36,10 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
     def hazard_id(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("event_based_hazard/job.ini"))
+        gmf_coll = helpers.create_gmf_from_csv(job, os.path.join(
+            os.path.dirname(__file__), 'gmf.csv'))
 
-        job.hazard_calculation = models.HazardCalculation.objects.create(
-            owner=job.hazard_calculation.owner,
-            truncation_level=job.hazard_calculation.truncation_level,
-            maximum_distance=job.hazard_calculation.maximum_distance,
-            intensity_measure_types_and_levels=(
-                job.hazard_calculation.intensity_measure_types_and_levels),
-            calculation_mode="event_based",
-            investigation_time=50,
-            ses_per_logic_tree_path=1)
-        job.save()
-        hc = job.hazard_calculation
-
-        lt_realization = models.LtRealization.objects.create(
-            hazard_calculation=job.hazard_calculation,
-            ordinal=1, seed=1, weight=None,
-            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-            is_complete=False, total_items=1, completed_items=1)
-
-        gmf_coll = models.GmfCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test Hazard output", "gmf"),
-            lt_realization=lt_realization)
-
-        gmf_set = models.GmfSet.objects.create(
-            gmf_collection=gmf_coll,
-            investigation_time=hc.investigation_time,
-            ses_ordinal=1)
-
-        with open(os.path.join(
-                os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
-            gmfreader = csv.reader(csvfile, delimiter=',')
-            locations = gmfreader.next()
-
-            gmv_matrix = numpy.array([[float(x) for x in row]
-                                      for row in gmfreader]).transpose()
-
-            rupture_ids = helpers.get_rupture_ids(
-                job, hc, lt_realization, len(gmv_matrix[0]))
-
-            for i, gmvs in enumerate(gmv_matrix):
-                models.Gmf.objects.create(
-                    gmf_set=gmf_set,
-                    imt="PGA", gmvs=gmvs,
-                    rupture_ids=map(str, rupture_ids),
-                    result_grp_ordinal=1,
-                    location="POINT(%s)" % locations[i])
-
-            populate_gmf_agg([gmf_coll.id])
-
-        return gmf_set.gmf_collection.output.id
+        return gmf_coll.output.id
 
     def actual_data(self, job):
         return ([curve.poes
