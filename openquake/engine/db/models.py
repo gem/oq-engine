@@ -84,7 +84,7 @@ MAX_SINT_32 = (2 ** 31) - 1
 
 
 #: Kind of supported type of loss outputs
-LOSS_TYPES = ["structural", "non_structural", "occupants", "contents"]
+LOSS_TYPES = ["structural", "nonstructural", "occupants", "contents"]
 
 
 def getcursor(route):
