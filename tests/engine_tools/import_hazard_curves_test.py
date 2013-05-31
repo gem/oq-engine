@@ -8,7 +8,7 @@ from openquake.engine.db.models import HazardCurve, HazardCurveData
 
 class ImportHazardCurvesTestCase(unittest.TestCase):
 
-    def test_import_hazard_curves(self):
+    def test_import_hazard_curves_pga(self):
         repodir = os.path.dirname(os.path.dirname(nrmllib.__path__[0]))
         fileobj = open(os.path.join(
                        repodir, 'examples', 'hazard-curves-pga.xml'))
@@ -18,3 +18,14 @@ class ImportHazardCurvesTestCase(unittest.TestCase):
         self.assertEqual(len(data), 2)  # 2 rows entered
         self.assertEqual(hcalc.description,
                          'HazardCurve importer, file hazard-curves-pga.xml')
+
+    def test_import_hazard_curves_sa(self):
+        repodir = os.path.dirname(os.path.dirname(nrmllib.__path__[0]))
+        fileobj = open(os.path.join(
+                       repodir, 'examples', 'hazard-curves-sa.xml'))
+        out, hcalc = import_hazard_curves(fileobj, 'openquake')
+        [hc] = HazardCurve.objects.filter(output=out)
+        data = HazardCurveData.objects.filter(hazard_curve=hc)
+        self.assertEqual(len(data), 2)  # 2 rows entered
+        self.assertEqual(hcalc.description,
+                         'HazardCurve importer, file hazard-curves-sa.xml')
