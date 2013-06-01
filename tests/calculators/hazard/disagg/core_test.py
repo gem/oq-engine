@@ -224,26 +224,23 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
                      '.DisaggHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))
-        init_sm_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_site_model'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
         record_stats_patch = helpers.patch(
             '%s.%s' % (base_path, 'record_init_stats'))
         init_pr_data_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_pr_data'))
-        patches = (init_src_patch, init_sm_patch, init_rlz_patch,
+        patches = (init_src_patch, init_rlz_patch,
                    record_stats_patch, init_pr_data_patch)
 
         mocks = [p.start() for p in patches]
 
         # we don't expect the site collection to be loaded yet:
-        self.assertIsNone(self.calc.hc._site_collection)
-        helpers.store_one_site(self.calc.hc)
+        self.assertIsNone(self.calc.hc.site_collection)
         self.calc.pre_execute()
 
         # make sure the site_collection is loaded:
-        self.assertIsNotNone(self.calc.hc._site_collection)
+        self.assertIsNotNone(self.calc.hc.site_collection)
 
         for i, m in enumerate(mocks):
             self.assertEqual(1, m.call_count)

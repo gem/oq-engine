@@ -118,12 +118,7 @@ def store_one_site(hc, xy=(42, 42)):
     """
     return models.SiteData.objects.create(
         hazard_calculation=hc,
-        location='POINT(%s %s)' % xy,
-        vs30=hc.reference_vs30_value,
-        vs30_measured=hc.reference_vs30_type == 'measured',
-        z1pt0=hc.reference_depth_to_2pt5km_per_sec,
-        z2pt5=hc.reference_depth_to_1pt0km_per_sec,
-    )
+        location='POINT(%s %s)' % xy)
 
 
 def demo_file(file_name):
