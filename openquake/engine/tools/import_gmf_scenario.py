@@ -1,10 +1,29 @@
 import os
 import argparse
-from cStringIO import StringIO
 from openquake.nrmllib.hazard.parsers import GMFScenarioParser
 from openquake.engine.db import models
+from openquake.engine import writer
 from openquake.engine.engine import get_current_user
-from django.db import connections
+
+
+def import_rows(hc, gmf_coll, rows):
+    """
+    Import a list of records into the gmf_agg and site_data tables.
+
+    :param hc: :class:`openquake.engine.db.models.HazardCalculation` instance
+    :param gmf_coll: :class:`openquake.engine.db.models.GmfCollection` instance
+    """
+    gmfs = []
+    site_id = {}  # dictionary wkt -> site id
+    for imt_type, sa_period, sa_damping, gmvs, wkt in rows:
+        if wkt not in site_id:  # create a new site
+            site_id[wkt] = models.SiteData.objects.create(
+                hazard_calculation=hc, location=wkt).id
+        gmfs.append(
+            models.GmfAgg(
+                imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
+                gmvs=gmvs, site_id=site_id[wkt], gmf_collection=gmf_coll))
+    writer.CacheInserter.saveall(gmfs)
 
 
 def import_gmf_scenario(fileobj, user=None):
@@ -18,7 +37,6 @@ def import_gmf_scenario(fileobj, user=None):
     object.
     """
     fname = fileobj.name
-    curs = connections['reslt_writer'].cursor().cursor.cursor  # DB API cursor
 
     owner = models.OqUser.objects.get(user_name=user) \
         if user else get_current_user()
@@ -35,9 +53,9 @@ def import_gmf_scenario(fileobj, user=None):
         owner=owner, display_name='Imported from %r' % fname,
         output_type='gmf_scenario')
 
-    coll_id = str(models.GmfCollection.objects.create(output=out).id)
+    gmf_coll = models.GmfCollection.objects.create(output=out)
 
-    f = StringIO()
+    rows = []
     if fname.endswith('.xml'):
         # convert the XML into a tab-separated StringIO
         for imt, gmvs, loc in GMFScenarioParser(fileobj).parse():
@@ -45,25 +63,11 @@ def import_gmf_scenario(fileobj, user=None):
             sa_period = '\N' if sa_period is None else str(sa_period)
             sa_damping = '\N' if sa_damping is None else str(sa_damping)
             gmvs = '{%s}' % str(gmvs)[1:-1]
-            print >> f, '\t'.join([coll_id, imt_type, sa_period, sa_damping,
-                                   gmvs, loc])
+            rows.append([imt_type, sa_period, sa_damping, gmvs, loc])
     else:  # assume a tab-separated file
         for line in fileobj:
-            f.write('\t'.join([coll_id, line]))
-    f.seek(0)  # rewind
-    ## import the file-like object with a COPY FROM
-    try:
-        curs.copy_expert(
-            'copy hzrdr.gmf_agg (gmf_collection_id, '
-            'imt, sa_period, sa_damping, gmvs, location) '
-            'from stdin', f)
-    except:
-        curs.connection.rollback()
-        raise
-    else:
-        curs.connection.commit()
-    finally:
-        f.close()
+            rows.append(line.split('\t'))
+    import_rows(hc, gmf_coll, rows)
     return out, hc
 
 if __name__ == '__main__':

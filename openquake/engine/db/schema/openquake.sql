@@ -1094,10 +1094,6 @@ CREATE TABLE htemp.hazard_curve_progress (
 CREATE TABLE hzrdi.site_data (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
-    vs30 FLOAT NOT NULL,
-    vs30_measured BOOLEAN NOT NULL,
-    z1pt0 FLOAT NOT NULL,
-    z2pt5 FLOAT NOT NULL,
     location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE htemp_ts;
 
