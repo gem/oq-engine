@@ -127,6 +127,29 @@ class CacheInserter(object):
         for instance in cls.instances:
             instance.flush()
 
+    @classmethod
+    def saveall(cls, objects):
+        """
+        Save a sequence of Django objects in the database in a single
+        transaction, by using a COPY FROM. Returns the ids of the inserted
+        objects.
+        """
+        self = cls(objects[0].__class__, 1000)
+        curs = connections[self.alias].cursor()
+        seq = self.tname.replace('"', '') + '_id_seq'
+        with transaction.commit_on_success(using=self.alias):
+            reserve_ids = "select nextval('%s') "\
+                "from generate_series(1, %d)" % (seq, len(objects))
+            curs.execute(reserve_ids)
+            ids = [i for (i,) in curs.fetchall()]
+            stringio = StringIO()
+            for i, obj in zip(ids, objects):
+                stringio.write('%d\t%s\n' % (i, self.to_line(obj)))
+            stringio.reset()
+            curs.copy_from(stringio, self.tname)
+            stringio.close()
+        return ids
+
     def __init__(self, dj_model, max_cache_size):
         self.table = dj_model
         self.max_cache_size = max_cache_size
@@ -202,6 +225,10 @@ class CacheInserter(object):
 
     @staticmethod
     def array_to_pgstring(a):
+        """
+        Convert a Python list/array into the Postgres string-representation
+        of it.
+        """
         ls = []
         for n in a:
             s = str(n)
