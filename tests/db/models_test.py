@@ -484,7 +484,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         calc.initialize_sources()
         calc.initialize_site_model()
 
-        site_coll = models.get_site_collection(job.hazard_calculation)
+        site_coll = job.hazard_calculation.site_collection
         # Since we're using a pretty big site model, it's a bit excessive to
         # check each and every value.
         # Instead, we'll just test that the lenth of each site collection attr
@@ -502,13 +502,13 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         calc = scen_core.ScenarioHazardCalculator(job)
         calc.initialize_site_model()
-        site_coll = models.get_site_collection(job.hazard_calculation)
+        site_coll = job.hazard_calculation.site_collection
 
         # all of the parameters should be the same:
         self.assertTrue((site_coll.vs30 == 760).all())
         self.assertTrue((site_coll.vs30measured).all())
-        self.assertTrue((site_coll.z1pt0 == 5).all())
-        self.assertTrue((site_coll.z2pt5 == 100).all())
+        self.assertTrue((site_coll.z1pt0 == 100).all())
+        self.assertTrue((site_coll.z2pt5 == 5).all())
 
         # just for sanity, make sure the meshes are correct (the locations)
         job_mesh = job.hazard_calculation.points_to_compute()

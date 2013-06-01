@@ -79,31 +79,17 @@ def store_site_model(input_mdl, site_model_source):
     :param site_model_source:
         Filename or file-like object containing the site model XML data.
     :returns:
-        `list` of :class:`openquake.engine.db.models.SiteModel` objects. These
-        represent to newly-inserted `hzrdi.site_model` records.
+        `list` of ids of the newly-inserted `hzrdi.site_model` records.
     """
     parser = nrml_parsers.SiteModelParser(site_model_source)
-
-    sm_data = []
-
-    inserter = writer.BulkInserter(models.SiteModel)
-
-    for node in parser.parse():
-        sm = dict()
-        # sm = models.SiteModel()
-        sm['vs30'] = node.vs30
-        sm['vs30_type'] = node.vs30_type
-        sm['z1pt0'] = node.z1pt0
-        sm['z2pt5'] = node.z2pt5
-        sm['location'] = node.wkt
-        sm['input_id'] = input_mdl.id
-        # sm.save()
-        # sm_data.append(sm)
-        inserter.add_entry(**sm)
-
-    inserter.flush()
-
-    return sm_data
+    data = [models.SiteModel(vs30=node.vs30,
+                             vs30_type=node.vs30_type,
+                             z1pt0=node.z1pt0,
+                             z2pt5=node.z2pt5,
+                             location=node.wkt,
+                             input_id=input_mdl.id)
+            for node in parser.parse()]
+    return writer.CacheInserter.saveall(data)
 
 
 def validate_site_model(sm_nodes, mesh):
@@ -178,6 +164,7 @@ def get_site_model(hc_id):
     return site_model[0]
 
 
+## TODO: this could be implemented with a view, now that there is a site table
 def get_closest_site_model_data(input_model, point):
     """Get the closest available site model data from the database for a given
     site model :class:`~openquake.engine.db.models.Input` and
@@ -223,51 +210,6 @@ def get_closest_site_model_data(input_model, point):
         return site_model_data[0]
     else:
         return None
-
-
-def store_site_data(hc_id, site_model_inp, mesh):
-    """
-    Given a ``mesh`` of points (calculation points of interest) and a
-    site model (``site_model_inp``), get the closest site model data
-    for each points and store the mesh point location plus the site parameters
-    as a single record in the `hzrdi.site_data` table.
-
-    NOTE: This should only be necessary for calculations which specify a site
-    model. Otherwise, the same 4 reference site parameters are used for all
-    sites.
-
-    :param int job_id:
-        ID of a :class:`~openquake.engine.db.models.OqJob`.
-    :param site_model_inp:
-        An :class:`~openquake.engine.db.models.Input` with an
-        `input_type` == 'site_model'. This tells us which site model dataset to
-        query.
-    :param mesh:
-        Calculation points of interest, as a
-        :class:`openquake.hazardlib.geo.mesh.Mesh`.
-    """
-    cache = writer.CacheInserter(models.SiteData, 1000)
-    for pt in mesh:
-
-        if site_model_inp:
-            smd = get_closest_site_model_data(site_model_inp, pt)
-            measured = smd.vs30_type == 'measured'
-            x, y = pt.longitude, pt.latitude
-        else:
-            smd = pt
-            measured = pt.vs30measured == 'measured'
-            x, y = pt.location.longitude, pt.location.latitude
-
-        site = models.SiteData(
-            hazard_calculation_id=hc_id,
-            location='POINT(%s %s)' % (x, y),
-            vs30=smd.vs30,
-            vs30_measured=measured,
-            z1pt0=smd.z1pt0,
-            z2pt5=smd.z2pt5)
-        cache.add(site)
-
-    cache.flush()
 
 
 def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
@@ -393,6 +335,21 @@ def get_correl_model(hc):
         return None
 
     return correl_model_cls(**hc.ground_motion_correlation_params)
+
+
+# this is needed until we fix SiteCollection in hazardlib;
+# the issue is the reset of the depts
+class SiteCollection(openquake.hazardlib.site.SiteCollection):
+    def __init__(self, sites):
+        self.sites = sites
+        super(SiteCollection, self).__init__(sites)
+        #for site in sites:
+        #    site.z1pt0 = 0
+        #    site.z2pt5 = 0
+
+    def __iter__(self):
+        for site in self.sites:
+            yield site
 
 
 class BaseHazardCalculator(base.Calculator):
@@ -719,14 +676,15 @@ class BaseHazardCalculator(base.Calculator):
         calculation geometry. For each point, do distance queries on the site
         model and get the site parameters which are closest to the point of
         interest. This aggregation of points to the closest site parameters
-        is what we store in `hzrdi.site_data`. (Computing this once prior to
-        starting the calculation is optimal, since each task will need to
-        consider all sites.)
+        is what we store in the `site_collection` field.
+        If the computation does not specify a site model the same 4 reference
+        site parameters are used for all sites.
         """
         logs.LOG.progress("initializing site model")
 
         site_model_inp = get_site_model(self.hc.id)
-        if site_model_inp is not None:
+
+        if site_model_inp:
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
             site_model_content = site_model_inp.model_content.raw_content_ascii
@@ -735,26 +693,44 @@ class BaseHazardCalculator(base.Calculator):
             store_site_model(
                 site_model_inp, StringIO.StringIO(site_model_content))
 
-            mesh = self.hc.points_to_compute()
-
             # Get the site model records we stored:
             site_model_data = models.SiteModel.objects.filter(
                 input=site_model_inp)
 
-            validate_site_model(site_model_data, mesh)
-        else:
-            # Use the calculation parameters to make a site collection
             points = self.hc.points_to_compute()
-            mesh = [
-                openquake.hazardlib.site.Site(
-                    pt,
-                    self.hc.reference_vs30_value,
-                    self.hc.reference_vs30_type,
-                    self.hc.reference_depth_to_2pt5km_per_sec,
-                    self.hc.reference_depth_to_1pt0km_per_sec)
-                for pt in points]
+            validate_site_model(site_model_data, points)
+        else:
+            points = self.hc.points_to_compute()
 
-        store_site_data(self.job.hazard_calculation.id, site_model_inp, mesh)
+        sites = []
+        sitedata = []
+        for pt in points:
+            x, y = pt.longitude, pt.latitude
+            if site_model_inp:
+                smd = get_closest_site_model_data(site_model_inp, pt)
+                measured = smd.vs30_type == 'measured'
+                vs30 = smd.vs30
+                z1pt0 = smd.z1pt0
+                z2pt5 = smd.z2pt5
+            else:
+                vs30 = self.hc.reference_vs30_value
+                measured = self.hc.reference_vs30_type == 'measured'
+                z1pt0 = self.hc.reference_depth_to_1pt0km_per_sec
+                z2pt5 = self.hc.reference_depth_to_2pt5km_per_sec
+
+            sites.append(openquake.hazardlib.site.Site(
+                         pt, vs30, measured, z1pt0, z2pt5))
+
+            sitedata.append(
+                models.SiteData(hazard_calculation_id=self.hc.id,
+                                location='POINT(%s %s)' % (x, y)))
+
+        ids = writer.CacheInserter.saveall(sitedata)
+        # store the site_data ids into the Site objects
+        for site, site_id in zip(sites, ids):
+            site.id = site_id
+        self.hc.site_collection = SiteCollection(sites)
+        self.hc.save()
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914

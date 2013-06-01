@@ -30,18 +30,17 @@ import itertools
 import operator
 import os
 import re
-
 from datetime import datetime
 
-import openquake.hazardlib
 import numpy
 
 from django.db import transaction, connections
 from django.contrib.gis.db import models as djm
-from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
 
+from openquake.hazardlib import geo as hazardlib_geo
 from openquake.engine.db import fields
+
 
 #: Default Spectral Acceleration damping. At the moment, this is not
 #: configurable.
@@ -538,14 +537,9 @@ class HazardCalculation(djm.Model):
     region_grid_spacing = djm.FloatField(null=True, blank=True)
     # The points of interest for a calculation.
     sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
-
-    # We we create a `openquake.hazardlib.site.SiteCollection` for the
-    # calculation, we can cache it here to avoid recomputing every time
-    # we need to use it in a task context. For large regions, this can be
-    # quite expensive.
-    _site_collection = fields.PickleField(
-        null=True, blank=True, db_column='site_collection'
-    )
+    # this is initialized by initialize_site_model
+    site_collection = fields.PickleField(
+        null=True, blank=True, db_column='site_collection')
 
     ########################
     # Logic Tree parameters:
@@ -789,45 +783,6 @@ class HazardCalculation(djm.Model):
         self._points_to_compute = None
         super(HazardCalculation, self).__init__(*args, **kwargs)
 
-    @property
-    def site_collection(self):
-        """
-        Get the :class:`openquake.hazardlib.site.SiteCollection` for this
-        calculation.
-
-        Because this data is costly to compute, we try to only compute it once
-        and cache it in the DB. See :meth:`init_site_collection`.
-        """
-        if self._site_collection is None:
-            self.init_site_collection()
-        return self._site_collection
-
-    def init_site_collection(self):
-        """
-        Compute, cache, and save (to the DB) the
-        :class:`openquake.hazardlib.site.SiteCollection` which represents
-        the calculation sites of interest with associated soil parameters.
-
-        A `SiteCollection` is a combination of the geometry of interest for the
-        calculation, which is basically just a collection of geographical
-        points, and the soil associated soil parameters for each point.
-
-        .. note::
-            For computational efficiency, the `site_collection` should only be
-            computed once and cached in the database. If the computation
-            geometry or site parameters change during runtime, which highly
-            unlikely to occur in typical calculation scenarios, you will need
-            to recompute the site collection by calling this method again.
-
-            In this case, it obvious that such a thing should be done carefully
-            and with much discretion.
-
-            Ideally, this method should only be called once at the very
-            beginning a calculation.
-        """
-        self._site_collection = get_site_collection(self)
-        self.save()
-
     def individual_curves_per_location(self):
         """
         Returns the number of individual curves per location, that are
@@ -896,40 +851,6 @@ class HazardCalculation(djm.Model):
 
         return (self.intensity_measure_types or
                 self.intensity_measure_types_and_levels.keys())
-
-
-# XXX: do we really need a hazardlib SiteCollection?
-class SiteDataCollection(openquake.hazardlib.site.SiteCollection):
-    def __init__(self, sites):
-        self.sites = sites
-        super(SiteDataCollection, self).__init__(sites)
-
-    def __iter__(self):
-        for site in self.sites:
-            yield site
-
-
-def get_site_collection(hc):
-    """
-    Create a `SiteDataCollection`, which is needed by hazardlib to perform
-    various calculation tasks (such computing hazard curves and GMFs).
-
-    :param hc:
-        Instance of a :class:`HazardCalculation`. We need this in order to get
-        the points of interest for a calculation as well as load pre-computed
-        site data or access reference site parameters.
-
-    :returns:
-        :class:`openquake.engine.db.models.SiteDataCollection` instance.
-    """
-    sites = []
-    for row in SiteData.objects.filter(hazard_calculation=hc.id):
-        site = openquake.hazardlib.site.Site(
-            openquake.hazardlib.geo.Point(row.location.x, row.location.y),
-            row.vs30, row.vs30_measured, row.z1pt0, row.z2pt5)
-        site.id = row.id
-        sites.append(site)
-    return SiteDataCollection(sites)
 
 
 class RiskCalculation(djm.Model):
@@ -2825,10 +2746,6 @@ class SiteData(djm.Model):
     """
 
     hazard_calculation = djm.ForeignKey('HazardCalculation')
-    vs30 = djm.FloatField()
-    vs30_measured = djm.BooleanField()
-    z1pt0 = djm.FloatField()
-    z2pt5 = djm.FloatField()
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
