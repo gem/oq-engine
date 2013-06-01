@@ -503,8 +503,8 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         # all of the parameters should be the same:
         self.assertTrue((site_coll.vs30 == 760).all())
         self.assertTrue((site_coll.vs30measured).all())
-        self.assertTrue((site_coll.z1pt0 == 5).all())
-        self.assertTrue((site_coll.z2pt5 == 100).all())
+        self.assertTrue((site_coll.z1pt0 == 100).all())
+        self.assertTrue((site_coll.z2pt5 == 5).all())
 
         # just for sanity, make sure the meshes are correct (the locations)
         job_mesh = job.hazard_calculation.points_to_compute()
