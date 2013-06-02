@@ -111,15 +111,6 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def store_one_site(hc, xy=(42, 42)):
-    """
-    Save a record in SiteData, to be used for testing purposes
-    """
-    return models.SiteData.objects.create(
-        hazard_calculation=hc,
-        location='POINT(%s %s)' % xy)
-
-
 def demo_file(file_name):
     """
     Take a file name and return the full path to the file in the demos
