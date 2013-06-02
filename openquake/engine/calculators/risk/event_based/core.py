@@ -168,16 +168,10 @@ class UnitOutputs(object):
 
 def individual_outputs(loss_type, unit, params, profile):
 
-    with profile('getting ruptures'):
-        ruptures = models.SESRupture.objects.filter(
-            ses__ses_collection__lt_realization=
-            unit.getter.hazard_output.gmf.lt_realization
-        ).values_list('id', flat=True)
-
     event_loss_table = collections.Counter()
 
-    assets, ground_motion_values = unit.getter(
-        ruptures, profile('getting hazard'))
+    assets, (ground_motion_values, ruptures) = unit.getter(
+        profile('getting hazard'))
 
     with profile('computing losses, loss curves and maps'):
         loss_matrix, curves = unit.calc(ground_motion_values)
