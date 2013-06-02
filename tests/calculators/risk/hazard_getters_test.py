@@ -90,7 +90,7 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        assets, gmfs = self.getter()
+        assets, (gmfs, _) = self.getter()
         self.assertEqual([], assets)
         self.assertEqual(0, len(gmfs))
 

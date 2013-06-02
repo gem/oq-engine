@@ -256,7 +256,7 @@ class GroundMotionValuesGetter(HazardGetter):
                     [gmfs[i] for i in gmf_ids])
 
         elif not gmf_ids:  # all missing
-            return [], []
+            return [], ([], [])
 
         cursor = models.getcursor('job_init')
 
