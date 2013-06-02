@@ -703,9 +703,10 @@ class BaseHazardCalculator(base.Calculator):
             points = self.hc.points_to_compute()
 
         sites = []
-        sitedata = []
+        coords = []
         for pt in points:
-            x, y = pt.longitude, pt.latitude
+            coords.append((pt.longitude, pt.latitude))
+
             if site_model_inp:
                 smd = get_closest_site_model_data(site_model_inp, pt)
                 measured = smd.vs30_type == 'measured'
@@ -721,13 +722,11 @@ class BaseHazardCalculator(base.Calculator):
             sites.append(openquake.hazardlib.site.Site(
                          pt, vs30, measured, z1pt0, z2pt5))
 
-            sitedata.append(
-                models.SiteData(hazard_calculation_id=self.hc.id,
-                                location='POINT(%s %s)' % (x, y)))
+        # store the sites
+        site_ids = self.hc.save_sites(coords)
 
-        ids = writer.CacheInserter.saveall(sitedata)
-        # store the site_data ids into the Site objects
-        for site, site_id in zip(sites, ids):
+        # store the ids into the Site objects
+        for site, site_id in zip(sites, site_ids):
             site.id = site_id
         self.hc.site_collection = SiteCollection(sites)
         self.hc.save()

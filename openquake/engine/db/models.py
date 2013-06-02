@@ -40,7 +40,7 @@ from shapely import wkt
 
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.engine.db import fields
-
+from openquake.engine import writer
 
 #: Default Spectral Acceleration damping. At the moment, this is not
 #: configurable.
@@ -851,6 +851,18 @@ class HazardCalculation(djm.Model):
 
         return (self.intensity_measure_types or
                 self.intensity_measure_types_and_levels.keys())
+
+    def save_sites(self, coordinates):
+        """
+        Save all the gives sites on the hzrdi.site_data table.
+
+        :param coordinates: a sequence of (lon, lat) pairs
+        :returns: the ids of the inserted SiteData instances
+        """
+        sites = [SiteData(hazard_calculation=self,
+                          location='POINT(%s %s)' % coord)
+                 for coord in coordinates]
+        return writer.CacheInserter.saveall(sites)
 
 
 class RiskCalculation(djm.Model):
