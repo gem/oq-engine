@@ -854,12 +854,12 @@ class HazardCalculation(djm.Model):
 
     def save_sites(self, coordinates):
         """
-        Save all the gives sites on the hzrdi.site_data table.
+        Save all the gives sites on the hzrdi.hazard_site table.
 
         :param coordinates: a sequence of (lon, lat) pairs
-        :returns: the ids of the inserted SiteData instances
+        :returns: the ids of the inserted HazardSite instances
         """
-        sites = [SiteData(hazard_calculation=self,
+        sites = [HazardSite(hazard_calculation=self,
                           location='POINT(%s %s)' % coord)
                  for coord in coordinates]
         return writer.CacheInserter.saveall(sites)
@@ -1773,8 +1773,8 @@ class GmfCollection(djm.Model):
         array_agg(ST_Y(location::geometry)) FROM (
            SELECT imt, sa_period, sa_damping,
            unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           FROM hzrdr.gmf_agg, hzrdi.site_data
-           WHERE site_id = hzrdi.site_data.id
+           FROM hzrdr.gmf_agg, hzrdi.hazard_site
+           WHERE site_id = hzrdi.hazard_site.id
            AND hazard_calculation_id=%d AND gmf_collection_id=%d) AS x,
            hzrdr.ses_rupture as y
         where x.rupture_id=y.id AND ses_id=%d
@@ -1903,7 +1903,7 @@ class GmfAgg(djm.Model):
     sa_damping = djm.FloatField(null=True)
     gmvs = fields.FloatArrayField()
     rupture_ids = fields.IntArrayField(null=True)
-    site = djm.ForeignKey('SiteData')
+    site = djm.ForeignKey('HazardSite')
     objects = djm.GeoManager()
 
     class Meta:
@@ -2746,7 +2746,7 @@ class HazardCurveProgress(djm.Model):
         db_table = 'htemp\".\"hazard_curve_progress'
 
 
-class SiteData(djm.Model):
+class HazardSite(djm.Model):
     """
     Contains pre-computed site parameter matrices. ``lons`` and ``lats``
     represent the calculation sites of interest. The associated site parameters
@@ -2761,4 +2761,4 @@ class SiteData(djm.Model):
     location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
-        db_table = 'hzrdi\".\"site_data'
+        db_table = 'hzrdi\".\"hazard_site'

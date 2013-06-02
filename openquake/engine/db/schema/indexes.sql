@@ -22,11 +22,11 @@ CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name)
 -- admin.revision_info
 CREATE UNIQUE INDEX admin_revision_info_artefact_uniq_idx ON admin.revision_info(artefact);
 
--- hzrdi.site_data
-CREATE INDEX hzrdi_site_data_id_hazard_calculation_idx
-ON hzrdi.site_data(id, hazard_calculation_id);
-CREATE UNIQUE INDEX hzrdi_site_data_location_hazard_calculation_uniq_idx
-ON hzrdi.site_data(location, hazard_calculation_id);
+-- hzrdi.hazard_site
+CREATE INDEX hzrdi_hazard_site_id_hazard_calculation_idx
+ON hzrdi.hazard_site(id, hazard_calculation_id);
+CREATE UNIQUE INDEX hzrdi_hazard_site_location_hazard_calculation_uniq_idx
+ON hzrdi.hazard_site(location, hazard_calculation_id);
 
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);
