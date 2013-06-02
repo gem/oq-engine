@@ -225,9 +225,8 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """
 
-    def __call__(self, rupture_ids=(), monitor=None):
+    def __call__(self, monitor=None):
         """
-        :param rupture_ids: a list of rupture ids
         :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor`
                         or None
         :returns:
@@ -261,6 +260,16 @@ class GroundMotionValuesGetter(HazardGetter):
 
         cursor = models.getcursor('job_init')
 
+        # get the sorted ruptures from all the distinct GMFs
+        with monitor.copy('getting ruptures'):
+            cursor.execute('''\
+        SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
+        WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
+            # TODO: in principle it should be possible to remove the ORDER BY;
+            # qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
+            # breaks if I do so (MS)
+            rupture_ids = numpy.array([r[0] for r in cursor.fetchall()])
+
         # get the data from the distinct GMFs
         with monitor.copy('getting gmvs'):
             cursor.execute('''\
@@ -273,7 +282,7 @@ class GroundMotionValuesGetter(HazardGetter):
                 gmfs[gmf_id] = gmvs
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
-               [gmfs[i] for i in gmf_ids])
+               ([gmfs[i] for i in gmf_ids], rupture_ids))
         return ret
 
     def get_data(self, imt):
