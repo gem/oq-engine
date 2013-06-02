@@ -12,6 +12,7 @@ def import_rows(hc, gmf_coll, rows):
 
     :param hc: :class:`openquake.engine.db.models.HazardCalculation` instance
     :param gmf_coll: :class:`openquake.engine.db.models.GmfCollection` instance
+    :param rows: a list of records (imt_type, sa_period, sa_damping, gmvs, wkt)
     """
     gmfs = []
     site_id = {}  # dictionary wkt -> site id
@@ -23,6 +24,7 @@ def import_rows(hc, gmf_coll, rows):
             models.GmfAgg(
                 imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
                 gmvs=gmvs, site_id=site_id[wkt], gmf_collection=gmf_coll))
+    del site_id
     writer.CacheInserter.saveall(gmfs)
 
 
