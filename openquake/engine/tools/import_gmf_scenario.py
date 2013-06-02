@@ -8,7 +8,7 @@ from openquake.engine.engine import get_current_user
 
 def import_rows(hc, gmf_coll, rows):
     """
-    Import a list of records into the gmf_agg and site_data tables.
+    Import a list of records into the gmf_agg and hazard_site tables.
 
     :param hc: :class:`openquake.engine.db.models.HazardCalculation` instance
     :param gmf_coll: :class:`openquake.engine.db.models.GmfCollection` instance
@@ -18,7 +18,7 @@ def import_rows(hc, gmf_coll, rows):
     site_id = {}  # dictionary wkt -> site id
     for imt_type, sa_period, sa_damping, gmvs, wkt in rows:
         if wkt not in site_id:  # create a new site
-            site_id[wkt] = models.SiteData.objects.create(
+            site_id[wkt] = models.HazardSite.objects.create(
                 hazard_calculation=hc, location=wkt).id
         gmfs.append(
             models.GmfAgg(

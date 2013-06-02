@@ -79,7 +79,7 @@ def gmf_to_hazard_curve_arg_gen(job):
         :class:`openquake.engine.db.models.OqJob` instance.
     """
     hc = job.hazard_calculation
-    sites = models.SiteData.objects.filter(hazard_calculation=hc)
+    sites = models.HazardSite.objects.filter(hazard_calculation=hc)
 
     lt_realizations = models.LtRealization.objects.filter(
         hazard_calculation=hc.id)
@@ -125,7 +125,7 @@ def gmf_to_hazard_curve_task(job_id, site, lt_rlz_id, imt, imls, hc_coll_id,
     :param int job_id:
         ID of a currently running :class:`openquake.engine.db.models.OqJob`.
     :param site:
-        A :class:`openquake.engine.db.models.SiteData` instance.
+        A :class:`openquake.engine.db.models.HazardSite` instance.
     :param int lt_rlz_id:
         ID of a :class:`openquake.engine.db.models.LtRealization` for the
         current calculation.
@@ -188,7 +188,7 @@ def insert_into_gmf_agg(job_id, gmf_collection_id):
     SELECT b.gmf_collection_id, imt, sa_damping, sa_period, c.id,
        array_concat(gmvs ORDER BY gmf_set_id, result_grp_ordinal),
        array_concat(rupture_ids ORDER BY gmf_set_id, result_grp_ordinal)
-    FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b, hzrdi.site_data AS c
+    FROM hzrdr.gmf AS a, hzrdr.gmf_set AS b, hzrdi.hazard_site AS c
     WHERE a.gmf_set_id=b.id AND a.location::text = c.location::text
     AND c.hazard_calculation_id = %d AND gmf_collection_id = %d
     GROUP BY gmf_collection_id, imt, sa_damping, sa_period, c.id
