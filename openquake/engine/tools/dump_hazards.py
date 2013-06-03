@@ -203,13 +203,6 @@ class HazardDumper(object):
                   to stdout with (format '%s')""" % (coll_ids, self.format),
             self.outdir, 'hzrdr.gmf_agg.csv', 'w')
 
-    def gmf_scenario(self, output):
-        """Dump gmf_scenario"""
-        self.curs.copy("""copy (select * from hzrdr.gmf_scenario
-                     where output_id in %s)
-                     to stdout with (format '%s')""" % (output, self.format),
-                       self.outdir, 'hzrdr.gmf_scenario.csv', 'w')
-
     def dump(self, *hazard_calculation_ids):
         """
         Dump all the data associated to a given hazard_calculation_id
@@ -239,10 +232,8 @@ class HazardDumper(object):
             ids = _tuplestr(output_ids)
             if output_type == 'hazard_curve':
                 self.hazard_curve(ids)
-            elif output_type == 'gmf':
+            elif output_type in ('gmf', 'gmf_scenario'):
                 self.gmf_collection(ids)
-            elif output_type == 'gmf_scenario':
-                self.gmf_scenario(ids)
 
     def mktar(self):
         """
