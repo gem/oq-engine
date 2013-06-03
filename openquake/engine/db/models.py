@@ -2634,8 +2634,13 @@ class AssetManager(djm.GeoManager):
         right occupants value for the risk calculation given in input
         """
 
+        # default query arguments: the current exposure model, the
+        # given taxonomy and the asset region constraint
         args = (rc.exposure_model.id, taxonomy,
                 "SRID=4326; %s" % rc.region_constraint.wkt)
+
+        # if time_event is not specified we compute the number of
+        # occupants by averaging the occupancy data for each asset.
         if rc.time_event is None:
             occupants = "AVG(riski.occupancy.occupants)"
             occupants_cond = "1 = 1"
@@ -2644,6 +2649,13 @@ class AssetManager(djm.GeoManager):
             occupants_cond = "riski.occupancy.period = %s"
             args += (rc.time_event,)
         args += (size, offset)
+
+        # For each cost type associated with the exposure model we
+        # join the `cost` table to the current queryset in order to
+        # lookup for a cost value for each asset.
+
+        # Actually we extract 4 values: the cost, the retrofitted
+        # cost, the deductible and the insurance limit
 
         costs = []
         costs_join = ""
@@ -2668,8 +2680,6 @@ class AssetManager(djm.GeoManager):
             ON %(name)s.cost_type_id = '%(id)s' AND
             %(name)s.exposure_data_id = riski.exposure_data.id """ % dict(
                 name=cost_type.name, id=cost_type.id)
-
-        # TODO(lp). Check ST_Intersects
 
         return list(
             self.raw("""

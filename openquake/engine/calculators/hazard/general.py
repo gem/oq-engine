@@ -687,19 +687,18 @@ class BaseHazardCalculator(base.Calculator):
                 intensity_measure_types_and_levels = dict([
                     (record['IMT'], record['IML'])
                     for record in parsers.VulnerabilityModelParser(content)])
-                intensity_measure_types = (
-                    intensity_measure_types_and_levels.keys())
 
                 for imt, levels in intensity_measure_types_and_levels.items():
                     if (imt in hc.intensity_measure_types_and_levels and
-                        (set(hc.intensity_measure_types_and_levels) -
+                        (set(hc.intensity_measure_types_and_levels[imt]) -
                          set(levels))):
                         logs.LOG.warning("The same IMT %s is associated with "
                                          "different levels" % imt)
                     else:
                         hc.intensity_measure_types_and_levels[imt] = levels
 
-                hc.intensity_measure_types.extend(intensity_measure_types)
+                hc.intensity_measure_types.extend(
+                    intensity_measure_types_and_levels)
 
             # remove possible duplicates
             if hc.intensity_measure_types is not None:
@@ -728,8 +727,7 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types_and_levels = dict(
                 (iml['IMT'], iml['imls'])
                 for _taxonomy, iml, _params, _no_damage_limit in parser)
-            hc.intensity_measure_types = list(set(
-                hc.intensity_measure_types_and_levels.keys()))
+            hc.intensity_measure_types = hc.intensity_measure_types_and_levels
 
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
