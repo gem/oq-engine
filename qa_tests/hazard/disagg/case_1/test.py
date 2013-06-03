@@ -80,7 +80,6 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
         try:
             target_dir = tempfile.mkdtemp()
             [result_file] = haz_export.export(rlz1.output.id, target_dir)
-
             expected = StringIO.StringIO(test_data.EXPECTED_XML_DISAGG)
             self.assert_disagg_xml_almost_equal(expected, result_file)
             self.assertTrue(qa_utils.validates_against_xml_schema(result_file))
