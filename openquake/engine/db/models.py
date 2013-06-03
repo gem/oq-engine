@@ -935,8 +935,8 @@ def get_site_collection(hc):
         sites = [
             openquake.hazardlib.site.Site(pt, hc.reference_vs30_value,
                                           measured,
-                                          hc.reference_depth_to_2pt5km_per_sec,
-                                          hc.reference_depth_to_1pt0km_per_sec)
+                                          hc.reference_depth_to_1pt0km_per_sec,
+                                          hc.reference_depth_to_2pt5km_per_sec)
             for pt in points]
 
     return openquake.hazardlib.site.SiteCollection(sites)
