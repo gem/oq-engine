@@ -2787,15 +2787,33 @@ class ExposureData(djm.Model):
     # present. See `get_asset_chunk` for details.
 
     def value(self, loss_type):
+        """
+        Extract the value of the asset for the given `loss_type`.
+        Although the Django Model definition does not have a value for
+        each loss type, we rely on the fact that an annotation on the
+        asset named `loss_type` is present.
+        """
         return getattr(self, loss_type)
 
     def retrofitted(self, loss_type):
+        """
+        Extract the retrofitted cost of the asset for the given
+        `loss_type`. See the method `value` for details.
+        """
         return getattr(self, "retrofitted_%s" % loss_type)
 
     def deductible(self, loss_type):
+        """
+        Extract the deductible limit of the asset for the given
+        `loss_type`. See the method `value` for details.
+        """
         return getattr(self, "deductible_%s" % loss_type)
 
     def insurance_limit(self, loss_type):
+        """
+        Extract the insurance limit of the asset for the given
+        `loss_type`. See the method `value` for details.
+        """
         return getattr(self, "insurance_limit_%s" % loss_type)
 
 
