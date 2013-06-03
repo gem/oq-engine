@@ -608,3 +608,44 @@ class GMFScenarioParser(object):
                 point_value_list = []
         for (location, imt), gmvs in gmf.iteritems():
             yield imt, '{%s}' % ','.join(gmvs), location
+
+
+class HazardCurveParser(object):
+    _CURVES_TAG = '{%s}hazardCurves' % openquake.nrmllib.NAMESPACE
+    _CURVE_TAG = '{%s}hazardCurve' % openquake.nrmllib.NAMESPACE
+
+    def __init__(self, source):
+        self.source = source
+
+    def parse(self):
+        """
+        Parse the source XML content for a hazard curve.
+        :returns:
+            Populated :class:`openquake.nrmllib.models.HazardCurveModel` object
+        """
+        schema = etree.XMLSchema(etree.parse(
+            openquake.nrmllib.nrml_schema_file()))
+        tree = etree.iterparse(
+            self.source, events=('start', 'end'), schema=schema)
+        hc_iter = self._parse(tree)
+        header = hc_iter.next()
+        return models.HazardCurveModel(data_iter=hc_iter, **header)
+
+    def _parse(self, tree):
+        header = {}
+        for event, element in tree:
+            if element.tag == self._CURVES_TAG and event == 'start':
+                a = element.attrib
+                header['investigation_time'] = a['investigationTime']
+                header['imt'] = a['IMT']
+                header['sa_period'] = a.get('saPeriod')
+                header['sa_damping'] = a.get('saDamping')
+                header['statistics'] = a.get('statistics')
+                header['quantile'] = a.get('quantileValue')
+                header['imls'] = map(float, element[0].text.split())
+                yield header
+            elif element.tag == self._CURVE_TAG and event == 'end':
+                point, poes = element
+                location = 'POINT(%s)' % ' '.join(point[0].text.split())
+                poes_array = map(float, poes.text.split())
+                yield poes_array, location
