@@ -48,7 +48,7 @@ def import_gmf_scenario(fileobj, user=None):
         base_path=os.path.dirname(fname),
         description='Scenario importer, file %s' % os.path.basename(fname),
         calculation_mode='scenario', maximum_distance=100)
-        # XXX: probably the maximum_distance should be entered by the user
+    # XXX: probably the maximum_distance should be entered by the user
 
     out = models.Output.objects.create(
         owner=owner, display_name='Imported from %r' % fname,
