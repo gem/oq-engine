@@ -285,8 +285,15 @@ def statistics(assets, curve_matrix, weights, params):
 
     # transpose maps and fractions to have P/F/Q items of N-sized lists
     mean_maps = numpy.array(mean_maps).transpose()
-    quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
-    quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
+
+    # FIXME(lp). When no quantile levels are given the following code
+    # fails
+    if (len(quantile_curves) and len(quantile_curves[0])):
+        quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
+        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
+    else:
+        quantile_curves = None
+        quantile_maps = None
 
     return StatisticalOutputs(
         assets, mean_curves, mean_maps, quantile_curves, quantile_maps)

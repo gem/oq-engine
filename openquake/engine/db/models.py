@@ -2681,8 +2681,7 @@ class AssetManager(djm.GeoManager):
             %(name)s.exposure_data_id = riski.exposure_data.id """ % dict(
                 name=cost_type.name, id=cost_type.id)
 
-        return list(
-            self.raw("""
+        query = """
             SELECT riski.exposure_data.*,
                    {occupants} AS occupancy,
                    {costs}
@@ -2698,7 +2697,9 @@ class AssetManager(djm.GeoManager):
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
             """.format(occupants=occupants, occupants_cond=occupants_cond,
-                       costs=", ".join(costs), costs_join=costs_join), args))
+                       costs=", ".join(costs), costs_join=costs_join)
+
+        return list(self.raw(query, args))
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
