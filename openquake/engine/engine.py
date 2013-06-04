@@ -256,7 +256,7 @@ def create_hazard_calculation(owner, params, files):
         params["export_dir"] = os.path.abspath(params["export_dir"])
 
     haz_calc_fields = models.HazardCalculation._meta.get_all_field_names()
-    for param in set(params.keys()) - set(haz_calc_fields):
+    for param in set(params) - set(haz_calc_fields):
         msg = "Unknown parameter '%s'. Ignoring."
         msg %= param
         warnings.warn(msg, RuntimeWarning)

@@ -227,13 +227,14 @@ class GroundMotionValuesGetter(HazardGetter):
 
     def __call__(self, monitor=None):
         """
-        :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor` or
-        None
+        :param monitor:
+           an instance of
+           :class:`openquake.engine.performance.EnginePerformanceMonitor`
+           or None
         :returns:
             A tuple with two elements. The first is an array of instances of
-            :class:`openquake.engine.db.models.ExposureData`, the second is a
-            pair (gmfs, ruptures) with the closest ground motion value for each
-            asset.
+            :class:`openquake.engine.db.models.ExposureData`, the second is an
+            array with the closest ground motion values for each asset.
         """
         monitor = monitor or DummyMonitor()
         with monitor.copy('associating asset_ids <-> gmf_ids'):
@@ -269,7 +270,7 @@ class GroundMotionValuesGetter(HazardGetter):
             # TODO: in principle it should be possible to remove the ORDER BY;
             # qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
             # breaks if I do so (MS)
-            sorted_ruptures = numpy.array([r[0] for r in cursor.fetchall()])
+            rupture_ids = numpy.array([r[0] for r in cursor.fetchall()])
 
         # get the data from the distinct GMFs
         with monitor.copy('getting gmvs'):
@@ -279,11 +280,11 @@ class GroundMotionValuesGetter(HazardGetter):
             gmfs = {}
             for gmf_id, gmvs, ruptures in cursor.fetchall():
                 gmvd = dict(zip(ruptures, gmvs))
-                gmvs = numpy.array([gmvd.get(r, 0.) for r in sorted_ruptures])
+                gmvs = numpy.array([gmvd.get(r, 0.) for r in rupture_ids])
                 gmfs[gmf_id] = gmvs
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
-               ([gmfs[i] for i in gmf_ids], sorted_ruptures))
+               ([gmfs[i] for i in gmf_ids], rupture_ids))
         return ret
 
     def get_data(self, imt):
@@ -309,26 +310,26 @@ class GroundMotionValuesGetter(HazardGetter):
         # ``ORDER BY ST_Distance`` does the job to select the closest
         # gmvs
         query = """
-  SELECT DISTINCT ON (riski.exposure_data.id)
-        riski.exposure_data.id, gmf_agg.id
-  FROM riski.exposure_data JOIN hzrdr.gmf_agg
-  ON ST_DWithin(riski.exposure_data.site, gmf_agg.location, %s)
-  WHERE taxonomy = %s AND exposure_model_id = %s AND
-        riski.exposure_data.site && %s AND imt = %s AND
-        gmf_collection_id = %s {}
-  ORDER BY riski.exposure_data.id,
-           ST_Distance(riski.exposure_data.site, gmf_agg.location, false)
+  SELECT DISTINCT ON (exp.id) exp.id, gmf.id
+  FROM riski.exposure_data AS exp
+  JOIN hzrdi.hazard_site AS hsite
+  ON ST_DWithin(exp.site, hsite.location, %s)
+  JOIN hzrdr.gmf_agg AS gmf
+  ON gmf.site_id = hsite.id
+  WHERE hsite.hazard_calculation_id = %s
+  AND taxonomy = %s AND exposure_model_id = %s
+  AND exp.site && %s AND imt = %s AND gmf_collection_id = %s {}
+  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
         args = (self.max_distance * KILOMETERS_TO_METERS,
+                self.hazard_output.oq_job.hazard_calculation.id,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
                 assets_extent.wkt) + args
 
         cursor.execute(query, args)
-        # print cursor.mogrify(query, args)
-
         data = cursor.fetchall()
 
         assets, gmf_ids = [], []
