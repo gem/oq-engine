@@ -71,18 +71,14 @@ def do_event_based_bcr(loss_type, units, containers, params, profile):
     See `event_based_bcr` for docstring
     """
     for unit_orig, unit_retro in utils.pairwise(units):
-        ruptures = models.SESRupture.objects.filter(
-            ses__ses_collection__lt_realization=
-            unit_orig.getter.hazard_output.gmf.lt_realization
-        ).order_by('ses').values_list('id', flat=True)
 
         with profile('getting hazard'):
-            assets, gmvs = unit_orig.getter(ruptures)
+            assets, (gmvs, _) = unit_orig.getter()
             if len(assets) == 0:
                 logs.LOG.info("Exit from task as no asset could be processed")
                 return
 
-            _, gmvs_retro = unit_retro.getter(ruptures)
+            _, (gmvs_retro, _) = unit_retro.getter()
 
         with profile('computing bcr'):
             _, original_loss_curves = unit_orig.calc(gmvs)

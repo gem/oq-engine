@@ -31,8 +31,8 @@ def import_hazard_curves(fileobj, user=None):
         owner=owner,
         base_path=os.path.dirname(fname),
         description='HazardCurve importer, file %s' % os.path.basename(fname),
-        calculation_mode='classical', intensity_measure_types_and_levels={},
-        maximum_distance=100)  # XXX: what about the maximum_distance?
+        calculation_mode='classical', maximum_distance=100)
+    # XXX: what about the maximum_distance?
 
     out = models.Output.objects.create(
         owner=owner, display_name='Imported from %r' % fname,

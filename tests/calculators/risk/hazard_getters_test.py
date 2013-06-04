@@ -83,22 +83,14 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
     taxonomy = 'RM'
 
     def test_call(self):
-        ruptures = sorted(models.SESRupture.objects.filter(
-            ses__ses_collection__lt_realization=
-            self.getter.hazard_output.gmf.lt_realization
-        ).values_list('id', flat=True))
-        assets, gmfs = self.getter(ruptures)
+        assets, (gmfs, _ruptures) = self.getter()
         self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
         numpy.testing.assert_allclose([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]],
                                       gmfs)
 
     def test_filter(self):
-        ruptures = sorted(models.SESRupture.objects.filter(
-            ses__ses_collection__lt_realization=
-            self.getter.hazard_output.gmf.lt_realization
-        ).values_list('id', flat=True))
         self.getter.max_distance = 0.00001  # 1 cm
-        assets, gmfs = self.getter(ruptures)
+        assets, (gmfs, _) = self.getter()
         self.assertEqual([], assets)
         self.assertEqual(0, len(gmfs))
 

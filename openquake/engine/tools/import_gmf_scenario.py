@@ -8,21 +8,23 @@ from openquake.engine.engine import get_current_user
 
 def import_rows(hc, gmf_coll, rows):
     """
-    Import a list of records into the gmf_agg and site_data tables.
+    Import a list of records into the gmf_agg and hazard_site tables.
 
     :param hc: :class:`openquake.engine.db.models.HazardCalculation` instance
     :param gmf_coll: :class:`openquake.engine.db.models.GmfCollection` instance
+    :param rows: a list of records (imt_type, sa_period, sa_damping, gmvs, wkt)
     """
     gmfs = []
     site_id = {}  # dictionary wkt -> site id
     for imt_type, sa_period, sa_damping, gmvs, wkt in rows:
         if wkt not in site_id:  # create a new site
-            site_id[wkt] = models.SiteData.objects.create(
+            site_id[wkt] = models.HazardSite.objects.create(
                 hazard_calculation=hc, location=wkt).id
         gmfs.append(
             models.GmfAgg(
                 imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
                 gmvs=gmvs, site_id=site_id[wkt], gmf_collection=gmf_coll))
+    del site_id
     writer.CacheInserter.saveall(gmfs)
 
 
@@ -45,9 +47,8 @@ def import_gmf_scenario(fileobj, user=None):
         owner=owner,
         base_path=os.path.dirname(fname),
         description='Scenario importer, file %s' % os.path.basename(fname),
-        calculation_mode='scenario', intensity_measure_types_and_levels={},
-        maximum_distance=100)
-        # XXX: probably the maximum_distance should be entered by the user
+        calculation_mode='scenario', maximum_distance=100)
+    # XXX: probably the maximum_distance should be entered by the user
 
     out = models.Output.objects.create(
         owner=owner, display_name='Imported from %r' % fname,

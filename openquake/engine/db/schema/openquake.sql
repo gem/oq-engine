@@ -660,7 +660,7 @@ CREATE TABLE hzrdr.gmf_agg (
             OR ((imt != 'SA') AND (sa_damping IS NULL))),
     gmvs float[] NOT NULL,
     rupture_ids int[],
-    site_id INTEGER NOT NULL -- fk -> site_data
+    site_id INTEGER NOT NULL, -- fk -> hazard_site
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1090,7 +1090,7 @@ CREATE TABLE htemp.hazard_curve_progress (
 ) TABLESPACE htemp_ts;
 
 -- calculation points of interest with parameters extracted from site_model or hc
-CREATE TABLE hzrdi.site_data (
+CREATE TABLE hzrdi.hazard_site (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
     location GEOGRAPHY(point) NOT NULL
@@ -1398,18 +1398,18 @@ FOREIGN KEY (lt_realization_id)
 REFERENCES hzrdr.lt_realization(id)
 ON DELETE CASCADE;
 
--- hzrdi.site_data to uiapi.hazard_calculation FK
-ALTER TABLE hzrdi.site_data
-ADD CONSTRAINT hzrdi_site_data_hazard_calculation_fk
+-- hzrdi.hazard_site to uiapi.hazard_calculation FK
+ALTER TABLE hzrdi.hazard_site
+ADD CONSTRAINT hzrdi_hazard_site_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
 
--- hzrdr.gmf_agg to hzrdi.site_data FK
+-- hzrdr.gmf_agg to hzrdi.hazard_site FK
 ALTER TABLE hzrdr.gmf_agg
-ADD CONSTRAINT hzrdr_gmf_agg_site_data_fk
+ADD CONSTRAINT hzrdr_gmf_agg_hazard_site_fk
 FOREIGN KEY (site_id)
-REFERENCES hzrdi.site_data(id)
+REFERENCES hzrdi.hazard_site(id)
 ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.gmf_agg
