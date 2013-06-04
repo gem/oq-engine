@@ -221,9 +221,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         # (if a site model was specified, that is).
         self.initialize_site_model()
 
-        # Once the site model is init'd, create and cache the site collection;
-        self.hc.init_site_collection()
-
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach
         # the `execute` phase.
@@ -268,7 +265,6 @@ BaseHazardCalculator.finalize_hazard_curves`
             lt_realization__hazard_calculation=self.hc.id).delete()
         models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=self.hc.id).delete()
-        models.SiteData.objects.filter(hazard_calculation=self.hc.id).delete()
         logs.LOG.debug('< done cleaning up temporary DB data')
 
     def post_process(self):
