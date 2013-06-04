@@ -44,8 +44,6 @@ from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config, get_calculator_class
-from openquake.engine.calculators.hazard.event_based.post_processing import \
-    insert_into_gmf_agg
 
 CD = os.path.dirname(__file__)  # current directory
 
@@ -696,7 +694,7 @@ def create_gmfset(hazard_job, rlz=None):
     return gmfset
 
 
-def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
+def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
     """
     Returns the created records.
     """
@@ -707,35 +705,40 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None):
         lt_realization=gmfset.gmf_collection.lt_realization)
     rupture_ids = get_rupture_ids(hazard_job, ses_coll, 3)
     records = []
-    for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
-                  "POINT(15.48 38.091)", "POINT(15.565 38.17)",
-                  "POINT(15.481 38.25)"]:
+    if points is None:
+        points = [(15.310, 38.225), (15.71, 37.225),
+                  (15.48, 38.091), (15.565, 38.17),
+                  (15.481, 38.25)]
+    for site_id in hazard_job.hazard_calculation.save_sites(points):
         records.append(models.GmfAgg.objects.create(
             gmf_collection=gmfset.gmf_collection,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
             rupture_ids=rupture_ids,
-            location=point))
+            site_id=site_id))
 
     return records
 
 
+# NB: create_gmf_from_csv and populate_gmf_agg_from_csv
+# will be unified in the future
 def create_gmf_from_csv(job, fname):
-    job.hazard_calculation = models.HazardCalculation.objects.create(
-        owner=job.hazard_calculation.owner,
-        truncation_level=job.hazard_calculation.truncation_level,
-        maximum_distance=job.hazard_calculation.maximum_distance,
-        intensity_measure_types_and_levels=(
-            job.hazard_calculation.intensity_measure_types_and_levels),
-        calculation_mode="event_based",
-        investigation_time=50,
-        ses_per_logic_tree_path=1)
+    """
+    Populate the gmf_agg table for an event_based calculation.
+    """
+    hc = job.hazard_calculation
+    hc.investigation_time = 50
+    hc.ses_per_logic_tree_path = 1
+    hc.save()
+
     # tricks to fool the oqtask decorator
     job.is_running = True
     job.status = 'post_processing'
     job.save()
 
     gmf_set = create_gmfset(job)
+    gmf_coll = gmf_set.gmf_collection
+
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             job, "Test SES Collection", "ses"),
@@ -744,22 +747,54 @@ def create_gmf_from_csv(job, fname):
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
 
-        gmv_matrix = numpy.array([[float(x) for x in row]
-                                  for row in gmfreader]).transpose()
+        gmv_matrix = numpy.array(
+            [map(float, row) for row in gmfreader]).transpose()
 
         rupture_ids = get_rupture_ids(job, ses_coll, len(gmv_matrix[0]))
 
         for i, gmvs in enumerate(gmv_matrix):
-            wkt = "POINT(%s)" % locations[i]
-            models.Gmf.objects.create(
-                gmf_set=gmf_set,
+
+            point = tuple(map(float, locations[i].split()))
+            [site_id] = job.hazard_calculation.save_sites([point])
+            models.GmfAgg.objects.create(
+                gmf_collection=gmf_coll,
                 imt="PGA", gmvs=gmvs,
                 rupture_ids=map(str, rupture_ids),
-                result_grp_ordinal=1,
-                location=wkt)
-        insert_into_gmf_agg(job.id, gmf_set.gmf_collection.id)
+                site_id=site_id)
 
-    return gmf_set.gmf_collection
+    return gmf_coll
+
+
+def populate_gmf_agg_from_csv(job, fname):
+    """
+    Populate the gmf_agg table for a scenario calculation.
+    """
+    # tricks to fool the oqtask decorator
+    job.is_running = True
+    job.status = 'post_processing'
+    job.save()
+
+    gmf_coll = models.GmfCollection.objects.create(
+        output=models.Output.objects.create_output(
+            job, "Test Hazard output", "gmf_scenario"))
+
+    with open(fname, 'rb') as csvfile:
+        gmfreader = csv.reader(csvfile, delimiter=',')
+        locations = gmfreader.next()
+
+        gmv_matrix = numpy.array(
+            [map(float, row) for row in gmfreader]).transpose()
+
+        for i, gmvs in enumerate(gmv_matrix):
+            point = tuple(map(float, locations[i].split()))
+            [site_id] = job.hazard_calculation.save_sites([point])
+            models.GmfAgg.objects.create(
+                imt="PGA",
+                gmf_collection=gmf_coll,
+                gmvs=gmvs,
+                site_id=site_id)
+
+    return gmf_coll
 
 
 def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
@@ -811,12 +846,13 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             output=models.Output.objects.create_output(
                 hazard_job, "Test gmf scenario output", "gmf_scenario"))
 
-        for point in ["POINT(15.48 38.0900001)", "POINT(15.565 38.17)",
-                      "POINT(15.481 38.25)"]:
+        site_ids = hazard_job.hazard_calculation.save_sites(
+            [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])
+        for site_id in site_ids:
             models.GmfAgg.objects.create(
                 gmf_collection=hazard_output,
                 imt="PGA",
-                location=point,
+                site_id=site_id,
                 gmvs=[0.1, 0.2, 0.3])
 
     else:

@@ -79,31 +79,17 @@ def store_site_model(input_mdl, site_model_source):
     :param site_model_source:
         Filename or file-like object containing the site model XML data.
     :returns:
-        `list` of :class:`openquake.engine.db.models.SiteModel` objects. These
-        represent to newly-inserted `hzrdi.site_model` records.
+        `list` of ids of the newly-inserted `hzrdi.site_model` records.
     """
     parser = nrml_parsers.SiteModelParser(site_model_source)
-
-    sm_data = []
-
-    inserter = writer.BulkInserter(models.SiteModel)
-
-    for node in parser.parse():
-        sm = dict()
-        # sm = models.SiteModel()
-        sm['vs30'] = node.vs30
-        sm['vs30_type'] = node.vs30_type
-        sm['z1pt0'] = node.z1pt0
-        sm['z2pt5'] = node.z2pt5
-        sm['location'] = node.wkt
-        sm['input_id'] = input_mdl.id
-        # sm.save()
-        # sm_data.append(sm)
-        inserter.add_entry(**sm)
-
-    inserter.flush()
-
-    return sm_data
+    data = [models.SiteModel(vs30=node.vs30,
+                             vs30_type=node.vs30_type,
+                             z1pt0=node.z1pt0,
+                             z2pt5=node.z2pt5,
+                             location=node.wkt,
+                             input_id=input_mdl.id)
+            for node in parser.parse()]
+    return writer.CacheInserter.saveall(data)
 
 
 def validate_site_model(sm_nodes, mesh):
@@ -178,6 +164,7 @@ def get_site_model(hc_id):
     return site_model[0]
 
 
+## TODO: this could be implemented with a view, now that there is a site table
 def get_closest_site_model_data(input_model, point):
     """Get the closest available site model data from the database for a given
     site model :class:`~openquake.engine.db.models.Input` and
@@ -223,65 +210,6 @@ def get_closest_site_model_data(input_model, point):
         return site_model_data[0]
     else:
         return None
-
-
-def store_site_data(hc_id, site_model_inp, mesh):
-    """
-    Given a ``mesh`` of points (calculation points of interest) and a
-    site model (``site_model_inp``), get the closest site model data
-    for each points and store the mesh point location plus the site parameters
-    as a single record in the `htemp.site_data` table.
-
-    NOTE: This should only be necessary for calculations which specify a site
-    model. Otherwise, the same 4 reference site parameters are used for all
-    sites.
-
-    :param int hc_id:
-        ID of a :class:`~openquake.engine.db.models.HazardCalculation`.
-    :param site_model_inp:
-        An :class:`~openquake.engine.db.models.Input` with an
-        `input_type` == 'site_model'. This tells us which site model dataset to
-        query.
-    :param mesh:
-        Calculation points of interest, as a
-        :class:`openquake.hazardlib.geo.mesh.Mesh`.
-    :returns:
-        The :class:`openquake.engine.db.models.SiteData` object that was
-        created to store computation points of interest with associated site
-        parameters.
-    """
-    lons = []
-    lats = []
-    vs30s = []
-    vs30_types = []
-    z1pt0s = []
-    z2pt5s = []
-
-    for pt in mesh:
-        smd = get_closest_site_model_data(site_model_inp, pt)
-
-        lons.append(pt.longitude)
-        lats.append(pt.latitude)
-
-        vs30s.append(smd.vs30)
-        vs30_types.append(smd.vs30_type)
-        z1pt0s.append(smd.z1pt0)
-        z2pt5s.append(smd.z2pt5)
-
-    site_data = models.SiteData(hazard_calculation_id=hc_id)
-    site_data.lons = numpy.array(lons)
-    site_data.lats = numpy.array(lats)
-    site_data.vs30s = numpy.array(vs30s)
-    # We convert from strings to booleans here because this is what a hazardlib
-    # SiteCollection expects for the vs30 type. If we do the conversion here,
-    # we only do it once and we can directly consume the data on the worker
-    # side without having to convert inside each task.
-    site_data.vs30_measured = numpy.array(vs30_types) == 'measured'
-    site_data.z1pt0s = numpy.array(z1pt0s)
-    site_data.z2pt5s = numpy.array(z2pt5s)
-    site_data.save()
-
-    return site_data
 
 
 def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
@@ -409,6 +337,18 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
+# FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
+# the issue is the reset of the depts; we need QA tests for that
+class SiteCollection(openquake.hazardlib.site.SiteCollection):
+    def __init__(self, sites):
+        self.sites = sites
+        super(SiteCollection, self).__init__(sites)
+
+    def __iter__(self):
+        for site in self.sites:
+            yield site
+
+
 class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
@@ -419,14 +359,6 @@ class BaseHazardCalculator(base.Calculator):
         super(BaseHazardCalculator, self).__init__(*args, **kwargs)
 
         self.progress.update(in_queue=0)
-
-    @property
-    def computation_mesh(self):
-        """
-        :class:`openquake.hazardlib.geo.mesh.Mesh` representing the points
-        of interest for the calculation.
-        """
-        return self.hc.points_to_compute()
 
     @property
     def hc(self):
@@ -554,7 +486,7 @@ class BaseHazardCalculator(base.Calculator):
         is need to export the full hazard curve results).
         """
         im = self.hc.intensity_measure_types_and_levels
-        points = self.computation_mesh
+        points = self.hc.points_to_compute()
 
         # prepare site locations for the stored function call
         lons = '{%s}' % ', '.join(str(v) for v in points.lons)
@@ -672,10 +604,10 @@ class BaseHazardCalculator(base.Calculator):
         vulnerability model (if there is one)
         """
 
-        queryset = self.hc.inputs.filter(input_type__in=[
-            'structural_vulnerability', 'non_structural_vulnerability',
-            'contents_vulnerability', 'occupancy_vulnerability'])
-
+        queryset = self.hc.inputs.filter(
+            input_type__in=[vf_type
+                            for vf_type, _desc
+                            in models.Input.VULNERABILITY_TYPE_CHOICES])
         if queryset.exists():
             hc = self.hc
             hc.intensity_measure_types_and_levels = dict()
@@ -687,13 +619,23 @@ class BaseHazardCalculator(base.Calculator):
                 intensity_measure_types_and_levels = dict([
                     (record['IMT'], record['IML'])
                     for record in parsers.VulnerabilityModelParser(content)])
-                intensity_measure_types = (
-                    intensity_measure_types_and_levels.keys())
 
-                hc.intensity_measure_types_and_levels.update(
+                for imt, levels in intensity_measure_types_and_levels.items():
+                    if (imt in hc.intensity_measure_types_and_levels and
+                        (set(hc.intensity_measure_types_and_levels[imt]) -
+                         set(levels))):
+                        logs.LOG.warning("The same IMT %s is associated with "
+                                         "different levels" % imt)
+                    else:
+                        hc.intensity_measure_types_and_levels[imt] = levels
+
+                hc.intensity_measure_types.extend(
                     intensity_measure_types_and_levels)
-                hc.intensity_measure_types.extend(intensity_measure_types)
-            hc.intensity_measure_types = set(hc.intensity_measure_types)
+
+            # remove possible duplicates
+            if hc.intensity_measure_types is not None:
+                hc.intensity_measure_types = list(set(
+                    hc.intensity_measure_types))
             hc.save()
             logs.LOG.info("Got IMT and levels "
                           "from vulnerability models: %s - %s" % (
@@ -702,6 +644,9 @@ class BaseHazardCalculator(base.Calculator):
 
         queryset = self.hc.inputs.filter(input_type='fragility')
         if queryset.exists():
+            hc.intensity_measure_types_and_levels = dict()
+            hc.intensity_measure_types = list()
+
             parser = iter(parsers.FragilityModelParser(
                 StringIO.StringIO(
                     queryset.all()[0].model_content.raw_content_ascii)))
@@ -718,9 +663,8 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types_and_levels = dict(
                 (iml['IMT'], iml['imls'])
                 for _taxonomy, iml, _params, _no_damage_limit in parser)
-            hc.intensity_measure_types = (
-                hc.intensity_measure_types_and_levels.keys())
-            hc.save()
+            hc.intensity_measure_types.extend(
+                hc.intensity_measure_types_and_levels)
 
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
@@ -745,14 +689,15 @@ class BaseHazardCalculator(base.Calculator):
         calculation geometry. For each point, do distance queries on the site
         model and get the site parameters which are closest to the point of
         interest. This aggregation of points to the closest site parameters
-        is what we store in `htemp.site_data`. (Computing this once prior to
-        starting the calculation is optimal, since each task will need to
-        consider all sites.)
+        is what we store in the `site_collection` field.
+        If the computation does not specify a site model the same 4 reference
+        site parameters are used for all sites.
         """
         logs.LOG.progress("initializing site model")
 
         site_model_inp = get_site_model(self.hc.id)
-        if site_model_inp is not None:
+
+        if site_model_inp:
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
             site_model_content = site_model_inp.model_content.raw_content_ascii
@@ -761,15 +706,43 @@ class BaseHazardCalculator(base.Calculator):
             store_site_model(
                 site_model_inp, StringIO.StringIO(site_model_content))
 
-            mesh = self.computation_mesh
-
             # Get the site model records we stored:
             site_model_data = models.SiteModel.objects.filter(
                 input=site_model_inp)
 
-            validate_site_model(site_model_data, mesh)
+            points = self.hc.points_to_compute()
+            validate_site_model(site_model_data, points)
+        else:
+            points = self.hc.points_to_compute()
 
-            store_site_data(self.hc.id, site_model_inp, mesh)
+        sites = []
+        coords = []
+        for pt in points:
+            coords.append((pt.longitude, pt.latitude))
+
+            if site_model_inp:
+                smd = get_closest_site_model_data(site_model_inp, pt)
+                measured = smd.vs30_type == 'measured'
+                vs30 = smd.vs30
+                z1pt0 = smd.z1pt0
+                z2pt5 = smd.z2pt5
+            else:
+                vs30 = self.hc.reference_vs30_value
+                measured = self.hc.reference_vs30_type == 'measured'
+                z1pt0 = self.hc.reference_depth_to_1pt0km_per_sec
+                z2pt5 = self.hc.reference_depth_to_2pt5km_per_sec
+
+            sites.append(openquake.hazardlib.site.Site(
+                         pt, vs30, measured, z1pt0, z2pt5))
+
+        # store the sites
+        site_ids = self.hc.save_sites(coords)
+
+        # store the ids into the Site objects
+        for site, site_id in zip(sites, site_ids):
+            site.id = site_id
+        self.hc.site_collection = SiteCollection(sites)
+        self.hc.save()
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
@@ -983,7 +956,7 @@ class BaseHazardCalculator(base.Calculator):
             :class:`openquake.engine.db.models.LtRealization` object to
             associate with these inital hazard curve values.
         """
-        num_points = len(self.computation_mesh)
+        num_points = len(self.hc.points_to_compute())
 
         im_data = self.hc.intensity_measure_types_and_levels
         for imt, imls in im_data.items():
@@ -1033,7 +1006,7 @@ class BaseHazardCalculator(base.Calculator):
         the job has been fully initialized.
         """
         # Record num sites, num realizations, and num tasks.
-        num_sites = len(self.computation_mesh)
+        num_sites = len(self.hc.points_to_compute())
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc.id)
         num_rlzs = realizations.count()
