@@ -19,8 +19,7 @@
 import unittest
 from django.db import connection
 from openquake.engine.tools.pg_importer import PGImporter
-from openquake.engine.db.models import Output, GmfCollection
-from tests.utils import data
+from openquake.engine.db.models import Output
 from cStringIO import StringIO
 
 
@@ -56,19 +55,3 @@ $out2	1	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
         last_id = self.imp.import_templ('uiapi.output', output_str)
         self.assertEqual(last_id, out.id + 2)  # inserted 2 rows
         self.imp.conn.rollback()  # cleanup
-
-    def testImportGmfCollection(self):
-        gmf_coll_orig_id = GmfCollection.objects.latest('id').id
-
-        data.import_a_gmf_collection(self.imp.conn)
-
-        gmf_coll_id = GmfCollection.objects.latest('id').id
-        self.assertEqual(gmf_coll_orig_id + 1, gmf_coll_id)
-
-        # check that the db contains the expected GmfAgg rows
-        out = Output.objects.latest('id')
-        [coll] = GmfCollection.objects.filter(output=out)
-        got = to_csv(self.imp.conn, 'hzrdr.gmf_agg',
-                     'imt,sa_period,sa_damping,gmvs,rupture_ids,location',
-                     'gmf_collection_id=%d' % coll.id)
-        self.assertEqual(got, data.gmf_agg_expected)

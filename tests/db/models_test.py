@@ -23,6 +23,7 @@ from nose.plugins.attrib import attr
 
 from openquake.engine import engine
 from openquake.engine.calculators.hazard.classical import core as cls_core
+from openquake.engine.calculators.hazard.scenario import core as scen_core
 from openquake.engine.db import models
 
 from tests.utils import helpers
@@ -357,7 +358,10 @@ class GmfsPerSesTestCase(unittest.TestCase):
                 job, "Test SES Collection 2", "ses"),
             lt_realization=rlz2)
         gmf_agg1 = helpers.create_gmf_agg_records(job, rlz1, ses_coll1)[0]
-        gmf_agg2 = helpers.create_gmf_agg_records(job, rlz2, ses_coll2)[0]
+        points = [(15.3, 38.22), (15.7, 37.22),
+                  (15.4, 38.09), (15.56, 38.1), (15.2, 38.2)]
+        gmf_agg2 = helpers.create_gmf_agg_records(
+            job, rlz2, ses_coll2, points)[0]
         cls.gmf_coll1 = gmf_agg1.gmf_collection
         cls.parent_coll = models.GmfCollection.objects.create(
             output=models.Output.objects.create_output(
@@ -418,24 +422,24 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
 <X= 15.48100, Y= 38.25000, GMV=0.3000000>
 <X= 15.56500, Y= 38.17000, GMV=0.3000000>
 <X= 15.71000, Y= 37.22500, GMV=0.3000000>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
-<X= 15.31000, Y= 38.22500, GMV=0.1000000>
-<X= 15.48000, Y= 38.09100, GMV=0.1000000>
-<X= 15.48100, Y= 38.25000, GMV=0.1000000>
-<X= 15.56500, Y= 38.17000, GMV=0.1000000>
-<X= 15.71000, Y= 37.22500, GMV=0.1000000>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
-<X= 15.31000, Y= 38.22500, GMV=0.2000000>
-<X= 15.48000, Y= 38.09100, GMV=0.2000000>
-<X= 15.48100, Y= 38.25000, GMV=0.2000000>
-<X= 15.56500, Y= 38.17000, GMV=0.2000000>
-<X= 15.71000, Y= 37.22500, GMV=0.2000000>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
-<X= 15.31000, Y= 38.22500, GMV=0.3000000>
-<X= 15.48000, Y= 38.09100, GMV=0.3000000>
-<X= 15.48100, Y= 38.25000, GMV=0.3000000>
-<X= 15.56500, Y= 38.17000, GMV=0.3000000>
-<X= 15.71000, Y= 37.22500, GMV=0.3000000>))""" % (
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
+<X= 15.20000, Y= 38.20000, GMV=0.1000000>
+<X= 15.30000, Y= 38.22000, GMV=0.1000000>
+<X= 15.40000, Y= 38.09000, GMV=0.1000000>
+<X= 15.56000, Y= 38.10000, GMV=0.1000000>
+<X= 15.70000, Y= 37.22000, GMV=0.1000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
+<X= 15.20000, Y= 38.20000, GMV=0.2000000>
+<X= 15.30000, Y= 38.22000, GMV=0.2000000>
+<X= 15.40000, Y= 38.09000, GMV=0.2000000>
+<X= 15.56000, Y= 38.10000, GMV=0.2000000>
+<X= 15.70000, Y= 37.22000, GMV=0.2000000>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
+<X= 15.20000, Y= 38.20000, GMV=0.3000000>
+<X= 15.30000, Y= 38.22000, GMV=0.3000000>
+<X= 15.40000, Y= 38.09000, GMV=0.3000000>
+<X= 15.56000, Y= 38.10000, GMV=0.3000000>
+<X= 15.70000, Y= 37.22000, GMV=0.3000000>))""" % (
             self.ruptures1 + self.ruptures2)
         self.assertEqual(str(gmfs), expected)
 
@@ -476,11 +480,11 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         job = helpers.get_hazard_job(cfg)
         calc = cls_core.ClassicalHazardCalculator(job)
 
-        # Bootstrap the `site_data` table:
+        # Bootstrap the `hazard_site` table:
         calc.initialize_sources()
         calc.initialize_site_model()
 
-        site_coll = models.get_site_collection(job.hazard_calculation)
+        site_coll = job.hazard_calculation.site_collection
         # Since we're using a pretty big site model, it's a bit excessive to
         # check each and every value.
         # Instead, we'll just test that the lenth of each site collection attr
@@ -494,11 +498,11 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         self.assertEqual(expected_len, len(site_coll.z2pt5))
 
     def test_get_site_collection_with_reference_parameters(self):
-        cfg = helpers.get_data_path(
-            'simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('scenario_hazard/job.ini')
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
-
-        site_coll = models.get_site_collection(job.hazard_calculation)
+        calc = scen_core.ScenarioHazardCalculator(job)
+        calc.initialize_site_model()
+        site_coll = job.hazard_calculation.site_collection
 
         # all of the parameters should be the same:
         self.assertTrue((site_coll.vs30 == 760).all())
