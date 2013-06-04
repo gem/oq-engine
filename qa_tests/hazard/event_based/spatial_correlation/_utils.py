@@ -61,7 +61,7 @@ def get_gmvs_for_location(location, hc_id):
     :returns:
         `list` of ground motion values, as floats
     """
-    [site] = models.SiteData.objects.filter(hazard_calculation=hc_id).extra(
+    [site] = models.HazardSite.objects.filter(hazard_calculation=hc_id).extra(
         where=["location::geometry ~= 'SRID=4326;%s'::geometry" % location])
     gmvs = []
     for gmf in models.GmfAgg.objects.filter(site=site).order_by('ses'):
