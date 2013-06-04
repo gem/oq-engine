@@ -341,13 +341,12 @@ class FragilityModelParser(object):
                                     findone('params', ffc).attrib['stddev'])))
                               for ffc in find('ffc', ffs)]
             all_params = map(
-                    lambda x: x[1],
-                    sorted(all_params,
-                           key=lambda x: self.limit_states.index(x[0])))
+                lambda x: x[1],
+                sorted(all_params,
+                       key=lambda x: self.limit_states.index(x[0])))
             yield taxonomy, iml, all_params, no_damage_limit
 
     def _check_limit_state(self, lsi, ls):
         if ls != self.limit_states[lsi]:
             raise ValueError('Expected limitState %s, got %s' %
                              (self.limit_states[lsi], ls))
-

@@ -395,7 +395,6 @@ class HypocentralDepth(object):
         ])
 
 
-
 class SiteModel(object):
     """Basic object representation of a single node in a model of site-specific
     parameters.
