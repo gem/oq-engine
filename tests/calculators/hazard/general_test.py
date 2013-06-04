@@ -395,7 +395,6 @@ class ParseRiskModelsTestCase(unittest.TestCase):
 
         mocks = [p.start() for p in patches]
 
-        helpers.store_one_site(job.hazard_calculation)
         get_calculator_class(
             'hazard',
             job.hazard_calculation.calculation_mode)(job).pre_execute()

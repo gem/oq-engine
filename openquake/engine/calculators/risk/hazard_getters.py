@@ -225,9 +225,8 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values.
     """
 
-    def __call__(self, rupture_ids=(), monitor=None):
+    def __call__(self, monitor=None):
         """
-        :param rupture_ids: a list of rupture ids
         :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor`
                         or None
         :returns:
@@ -257,9 +256,19 @@ class GroundMotionValuesGetter(HazardGetter):
                     [gmfs[i] for i in gmf_ids])
 
         elif not gmf_ids:  # all missing
-            return [], []
+            return [], ([], [])
 
         cursor = models.getcursor('job_init')
+
+        # get the sorted ruptures from all the distinct GMFs
+        with monitor.copy('getting ruptures'):
+            cursor.execute('''\
+        SELECT distinct unnest(array_concat(rupture_ids)) FROM hzrdr.gmf_agg
+        WHERE id in %s ORDER BY unnest''', (distinct_gmf_ids,))
+            # TODO: in principle it should be possible to remove the ORDER BY;
+            # qa_tests.risk.event_based.case_3.test.EventBasedRiskCase3TestCase
+            # breaks if I do so (MS)
+            rupture_ids = numpy.array([r[0] for r in cursor.fetchall()])
 
         # get the data from the distinct GMFs
         with monitor.copy('getting gmvs'):
@@ -273,7 +282,7 @@ class GroundMotionValuesGetter(HazardGetter):
                 gmfs[gmf_id] = gmvs
 
         ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
-               [gmfs[i] for i in gmf_ids])
+               ([gmfs[i] for i in gmf_ids], rupture_ids))
         return ret
 
     def get_data(self, imt):
@@ -299,16 +308,16 @@ class GroundMotionValuesGetter(HazardGetter):
         # ``ORDER BY ST_Distance`` does the job to select the closest
         # gmvs
         query = """
-  SELECT DISTINCT ON (e.id) e.id, g.id
-  FROM riski.exposure_data AS e
-  JOIN hzrdi.site_data AS s
-  ON ST_DWithin(e.site, s.location, %s)
-  JOIN hzrdr.gmf_agg AS g
-  ON g.site_id = s.id
-  WHERE s.hazard_calculation_id = %s
+  SELECT DISTINCT ON (exp.id) exp.id, gmf.id
+  FROM riski.exposure_data AS exp
+  JOIN hzrdi.hazard_site AS hsite
+  ON ST_DWithin(exp.site, hsite.location, %s)
+  JOIN hzrdr.gmf_agg AS gmf
+  ON gmf.site_id = hsite.id
+  WHERE hsite.hazard_calculation_id = %s
   AND taxonomy = %s AND exposure_model_id = %s
-  AND e.site && %s AND imt = %s AND gmf_collection_id = %s {}
-  ORDER BY e.id, ST_Distance(e.site, s.location, false)
+  AND exp.site && %s AND imt = %s AND gmf_collection_id = %s {}
+  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()

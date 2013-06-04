@@ -79,7 +79,7 @@ def gmf_to_hazard_curve_arg_gen(job):
         :class:`openquake.engine.db.models.OqJob` instance.
     """
     hc = job.hazard_calculation
-    points = models.SiteData.objects.filter(hazard_calculation=hc)
+    sites = models.HazardSite.objects.filter(hazard_calculation=hc)
 
     lt_realizations = models.LtRealization.objects.filter(
         hazard_calculation=hc.id)
@@ -106,26 +106,26 @@ def gmf_to_hazard_curve_arg_gen(job):
                 sa_period=sa_period,
                 sa_damping=sa_damping)
 
-            for point in points:
-                yield (job.id, point, lt_rlz.id, imt, imls, hc_coll.id,
+            for site in sites:
+                yield (job.id, site, lt_rlz.id, imt, imls, hc_coll.id,
                        invest_time, duration, sa_period, sa_damping)
 
 
 # Disabling "Unused argument 'job_id'" (this parameter is required by @oqtask):
 # pylint: disable=W0613
 @tasks.oqtask
-def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
+def gmf_to_hazard_curve_task(job_id, site, lt_rlz_id, imt, imls, hc_coll_id,
                              invest_time, duration, sa_period=None,
                              sa_damping=None):
     """
-    For a given job, point, realization, and IMT, compute a hazard curve and
+    For a given job, site, realization, and IMT, compute a hazard curve and
     save it to the database. The hazard curve will be computed from all
-    available ground motion data for the specified point and realization.
+    available ground motion data for the specified site and realization.
 
     :param int job_id:
         ID of a currently running :class:`openquake.engine.db.models.OqJob`.
-    :param point:
-        A :class:`openquake.engine.db.models.SiteData` instance.
+    :param site:
+        A :class:`openquake.engine.db.models.HazardSite` instance.
     :param int lt_rlz_id:
         ID of a :class:`openquake.engine.db.models.LtRealization` for the
         current calculation.
@@ -169,7 +169,7 @@ def gmf_to_hazard_curve_task(job_id, point, lt_rlz_id, imt, imls, hc_coll_id,
     hc_poes = gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
     # Save:
     models.HazardCurveData.objects.create(
-        hazard_curve_id=hc_coll_id, poes=hc_poes, location=point.location,
+        hazard_curve_id=hc_coll_id, poes=hc_poes, location=site.location,
         weight=lt_rlz.weight)
 gmf_to_hazard_curve_task.ignore_result = False  # essential
 
