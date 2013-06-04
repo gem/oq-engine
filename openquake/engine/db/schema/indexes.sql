@@ -22,6 +22,12 @@ CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name)
 -- admin.revision_info
 CREATE UNIQUE INDEX admin_revision_info_artefact_uniq_idx ON admin.revision_info(artefact);
 
+-- hzrdi.hazard_site
+CREATE INDEX hzrdi_hazard_site_id_hazard_calculation_idx
+ON hzrdi.hazard_site(id, hazard_calculation_id);
+CREATE UNIQUE INDEX hzrdi_hazard_site_location_hazard_calculation_uniq_idx
+ON hzrdi.hazard_site(location, hazard_calculation_id);
+
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);
 
@@ -67,7 +73,7 @@ CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(
 CREATE INDEX hzrdr_lt_realization_hazard_calculation_id_idx on hzrdr.lt_realization(hazard_calculation_id);
 
 -- gmf_agg
-CREATE INDEX hzrdr_gmf_agg_idx on hzrdr.gmf_agg using gist(location);
+CREATE INDEX hzrdr_gmf_agg_idx on hzrdr.gmf_agg(site_id);
 
 -- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
