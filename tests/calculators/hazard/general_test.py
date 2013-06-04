@@ -54,7 +54,7 @@ class StoreSiteModelTestCase(unittest.TestCase):
                  z1pt0=104.0, z2pt5=5.4),
         ]
 
-        ret_val = general.store_site_model(inp, site_model)
+        ids = general.store_site_model(inp, site_model)
 
         actual_site_model = models.SiteModel.objects.filter(
             input=inp.id).order_by('id')
@@ -71,9 +71,8 @@ class StoreSiteModelTestCase(unittest.TestCase):
 
         # last, check that the `store_site_model` function returns all of the
         # newly-inserted records
-        # an `equals` check just compares the ids
-        for i, val in enumerate(ret_val):
-            self.assertEqual(val, actual_site_model[i])
+        for i, id in enumerate(ids):
+            self.assertEqual(id, actual_site_model[i].id)
 
 
 class ValidateSiteModelTestCase(unittest.TestCase):
