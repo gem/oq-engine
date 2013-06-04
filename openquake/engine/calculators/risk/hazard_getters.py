@@ -308,16 +308,16 @@ class GroundMotionValuesGetter(HazardGetter):
         # ``ORDER BY ST_Distance`` does the job to select the closest
         # gmvs
         query = """
-  SELECT DISTINCT ON (e.id) e.id, g.id
-  FROM riski.exposure_data AS e
-  JOIN hzrdi.hazard_site AS s
-  ON ST_DWithin(e.site, s.location, %s)
-  JOIN hzrdr.gmf_agg AS g
-  ON g.site_id = s.id
-  WHERE s.hazard_calculation_id = %s
+  SELECT DISTINCT ON (exp.id) exp.id, gmf.id
+  FROM riski.exposure_data AS exp
+  JOIN hzrdi.hazard_site AS hsite
+  ON ST_DWithin(exp.site, hsite.location, %s)
+  JOIN hzrdr.gmf_agg AS gmf
+  ON gmf.site_id = hsite.id
+  WHERE hsite.hazard_calculation_id = %s
   AND taxonomy = %s AND exposure_model_id = %s
-  AND e.site && %s AND imt = %s AND gmf_collection_id = %s {}
-  ORDER BY e.id, ST_Distance(e.site, s.location, false)
+  AND exp.site && %s AND imt = %s AND gmf_collection_id = %s {}
+  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
            """.format(spectral_filters)  # this will fill in the {}
 
         assets_extent = self._assets_mesh.get_convex_hull()
