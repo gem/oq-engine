@@ -88,7 +88,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
                 scientific.insured_losses(
                     loss_ratio_matrix[i], asset.value(loss_type),
                     asset.deductible(loss_type),
-                    asset.insurance_limit(deductible))
+                    asset.insurance_limit(loss_type))
                 for i, asset in enumerate(assets)]
 
     with profile('saving risk outputs'):
