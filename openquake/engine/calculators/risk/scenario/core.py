@@ -158,8 +158,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         taxonomies = super(ScenarioRiskCalculator, self).get_taxonomies()
         if self.rc.insured_losses:
             queryset = self.rc.exposure_model.exposuredata_set.filter(
-                (db.models.Q(cost__deductible__isnull=True) |
-                 db.models.Q(cost__insurance_limit__isnull=True)))
+                (db.models.Q(cost__deductible_absolute__isnull=True) |
+                 db.models.Q(cost__insurance_limit_absolute__isnull=True)))
             if queryset.exists():
                 logs.LOG.error(
                     "missing insured limits in exposure for assets %s" % (
