@@ -109,17 +109,17 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 "taxonomy": "RC/DMRF-D/LR",
                 "taxonomySource": "Pavia buildings",
             }, [
-                parsers.COST("contents", 12.95, None, None, None),
-                parsers.COST("structural", 150000.0, None, 55.0, 999.0),
-                parsers.COST("nonStructural", 25000.0, None, None, None)
+                parsers.Cost("contents", 12.95, None, None, None),
+                parsers.Cost("structural", 150000.0, None, 55.0, 999.0),
+                parsers.Cost("nonStructural", 25000.0, None, None, None)
             ], {
                 "contents": ("per_area", "CHF", None, None),
                 "structural": ("aggregated", "USD", "aggregated", "EUR"),
                 "nonStructural": ("aggregated", "USD", None, None),
             }),
             ([9.15333, 45.12200], [
-                parsers.OCCUPANCY(12, "day"),
-                parsers.OCCUPANCY(50, "night")], {
+                parsers.Occupancy(12, "day"),
+                parsers.Occupancy(50, "night")], {
                     "area": 119.0,
                     "areaType": "per_asset",
                     "areaUnit": "GBP",
@@ -131,8 +131,8 @@ class ExposureModelParserTestCase(unittest.TestCase):
                     "taxonomy": "RC/DMRF-D/HR",
                     "taxonomySource": "Pavia buildings",
                 }, [
-                    parsers.COST("contents", 21.95, None, None, None),
-                    parsers.COST(
+                    parsers.Cost("contents", 21.95, None, None, None),
+                    parsers.Cost(
                         "structural", 250000.0, None, 66.0, 1999.0)
                 ], {
                     "contents": ("per_area", "CHF", None, None),

@@ -26,8 +26,8 @@ import openquake.nrmllib
 NRML = "{%s}" % openquake.nrmllib.NAMESPACE
 GML = "{%s}" % openquake.nrmllib.GML_NAMESPACE
 
-OCCUPANCY = namedtuple("OCCUPANCY", "occupants period")
-COST = namedtuple("COST", "type value retrofitted deductible limit")
+Occupancy = namedtuple("Occupancy", "occupants period")
+Cost = namedtuple("Cost", "type value retrofitted deductible limit")
 
 
 class ExposureModelParser(object):
@@ -155,7 +155,7 @@ def _to_occupancy(element):
 
     occupancy_data = []
     for otag in element.findall('.//%soccupancy' % NRML):
-        occupancy_data.append(OCCUPANCY(
+        occupancy_data.append(Occupancy(
             int(otag.attrib['occupants']),
             otag.attrib["period"]))
     return occupancy_data
@@ -179,7 +179,7 @@ def _to_costs(element):
         if limit is not None:
             limit = float(limit)
 
-        costs.append(COST(
+        costs.append(Cost(
             otag.attrib['type'],
             float(otag.attrib['value']),
             retrofitted, deductible, limit))
