@@ -326,8 +326,9 @@ class RiskCalculator(base.Calculator):
                 if loss_type != "occupants":
                     if not self.rc.exposure_model.exposuredata_set.filter(
                             cost__cost_type__name=loss_type).exists():
-                        raise ValueError("Invalid exposure "
-                                         "for computing loss type %s. ")
+                        raise ValueError(
+                            "Invalid exposure "
+                            "for computing loss type %s. " % loss_type)
                 else:
                     if self.rc.exposure_model.exposuredata_set.filter(
                             occupancy__isnull=True).exists():

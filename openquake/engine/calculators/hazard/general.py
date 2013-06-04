@@ -727,7 +727,8 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types_and_levels = dict(
                 (iml['IMT'], iml['imls'])
                 for _taxonomy, iml, _params, _no_damage_limit in parser)
-            hc.intensity_measure_types = hc.intensity_measure_types_and_levels
+            hc.intensity_measure_types.extend(
+                hc.intensity_measure_types_and_levels)
 
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
