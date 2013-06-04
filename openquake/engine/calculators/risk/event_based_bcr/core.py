@@ -71,6 +71,7 @@ def do_event_based_bcr(loss_type, units, containers, params, profile):
     See `event_based_bcr` for docstring
     """
     for unit_orig, unit_retro in utils.pairwise(units):
+
         with profile('getting hazard'):
             assets, (gmvs, _) = unit_orig.getter()
             if len(assets) == 0:

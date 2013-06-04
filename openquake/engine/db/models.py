@@ -30,18 +30,17 @@ import itertools
 import operator
 import os
 import re
-
 from datetime import datetime
 
-import openquake.hazardlib
 import numpy
 
-from django.db import connections
+from django.db import transaction, connections
 from django.contrib.gis.db import models as djm
-from openquake.hazardlib import geo as hazardlib_geo
 from shapely import wkt
 
+from openquake.hazardlib import geo as hazardlib_geo
 from openquake.engine.db import fields
+from openquake.engine import writer
 
 #: Default Spectral Acceleration damping. At the moment, this is not
 #: configurable.
@@ -546,14 +545,9 @@ class HazardCalculation(djm.Model):
     region_grid_spacing = djm.FloatField(null=True, blank=True)
     # The points of interest for a calculation.
     sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
-
-    # We we create a `openquake.hazardlib.site.SiteCollection` for the
-    # calculation, we can cache it here to avoid recomputing every time
-    # we need to use it in a task context. For large regions, this can be
-    # quite expensive.
-    _site_collection = fields.PickleField(
-        null=True, blank=True, db_column='site_collection'
-    )
+    # this is initialized by initialize_site_model
+    site_collection = fields.PickleField(
+        null=True, blank=True, db_column='site_collection')
 
     ########################
     # Logic Tree parameters:
@@ -797,45 +791,6 @@ class HazardCalculation(djm.Model):
         self._points_to_compute = None
         super(HazardCalculation, self).__init__(*args, **kwargs)
 
-    @property
-    def site_collection(self):
-        """
-        Get the :class:`openquake.hazardlib.site.SiteCollection` for this
-        calculation.
-
-        Because this data is costly to compute, we try to only compute it once
-        and cache it in the DB. See :meth:`init_site_collection`.
-        """
-        if self._site_collection is None:
-            self.init_site_collection()
-        return self._site_collection
-
-    def init_site_collection(self):
-        """
-        Compute, cache, and save (to the DB) the
-        :class:`openquake.hazardlib.site.SiteCollection` which represents
-        the calculation sites of interest with associated soil parameters.
-
-        A `SiteCollection` is a combination of the geometry of interest for the
-        calculation, which is basically just a collection of geographical
-        points, and the soil associated soil parameters for each point.
-
-        .. note::
-            For computational efficiency, the `site_collection` should only be
-            computed once and cached in the database. If the computation
-            geometry or site parameters change during runtime, which highly
-            unlikely to occur in typical calculation scenarios, you will need
-            to recompute the site collection by calling this method again.
-
-            In this case, it obvious that such a thing should be done carefully
-            and with much discretion.
-
-            Ideally, this method should only be called once at the very
-            beginning a calculation.
-        """
-        self._site_collection = get_site_collection(self)
-        self.save()
-
     def individual_curves_per_location(self):
         """
         Returns the number of individual curves per location, that are
@@ -905,41 +860,17 @@ class HazardCalculation(djm.Model):
         return (self.intensity_measure_types or
                 self.intensity_measure_types_and_levels.keys())
 
+    def save_sites(self, coordinates):
+        """
+        Save all the gives sites on the hzrdi.hazard_site table.
 
-def get_site_collection(hc):
-    """
-    Create a `SiteCollection`, which is needed by hazardlib to perform various
-    calculation tasks (such computing hazard curves and GMFs).
-
-    :param hc:
-        Instance of a :class:`HazardCalculation`. We need this in order to get
-        the points of interest for a calculation as well as load pre-computed
-        site data or access reference site parameters.
-
-    :returns:
-        :class:`openquake.hazardlib.site.SiteCollection` instance.
-    """
-    site_data = SiteData.objects.filter(hazard_calculation=hc.id)
-    if len(site_data) > 0:
-        site_data = site_data[0]
-        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
-                    site_data.vs30_measured, site_data.z1pt0s,
-                    site_data.z2pt5s)
-        sites = [openquake.hazardlib.site.Site(
-            openquake.hazardlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
-            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
-    else:
-        # Use the calculation reference parameters to make a site collection.
-        points = hc.points_to_compute()
-        measured = hc.reference_vs30_type == 'measured'
-        sites = [
-            openquake.hazardlib.site.Site(pt, hc.reference_vs30_value,
-                                          measured,
-                                          hc.reference_depth_to_1pt0km_per_sec,
-                                          hc.reference_depth_to_2pt5km_per_sec)
-            for pt in points]
-
-    return openquake.hazardlib.site.SiteCollection(sites)
+        :param coordinates: a sequence of (lon, lat) pairs
+        :returns: the ids of the inserted HazardSite instances
+        """
+        sites = [HazardSite(hazard_calculation=self,
+                          location='POINT(%s %s)' % coord)
+                 for coord in coordinates]
+        return writer.CacheInserter.saveall(sites)
 
 
 class RiskCalculation(djm.Model):
@@ -1841,22 +1772,27 @@ class GmfCollection(djm.Model):
         ses_coll = SESCollection.objects.get(
             lt_realization=self.lt_realization)
 
+        hc = ses_coll.output.oq_job.hazard_calculation
+
         for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
             query = """
         SELECT imt, sa_period, sa_damping, rupture_id,
-        array_agg(gmv), array_agg(ST_X(geometry(location))),
-        array_agg(ST_Y(geometry(location))) FROM (
+        array_agg(gmv), array_agg(ST_X(location::geometry)),
+        array_agg(ST_Y(location::geometry)) FROM (
            SELECT imt, sa_period, sa_damping,
            unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           from hzrdr.gmf_agg WHERE gmf_collection_id=%d) AS x,
+           FROM hzrdr.gmf_agg, hzrdi.hazard_site
+           WHERE site_id = hzrdi.hazard_site.id
+           AND hazard_calculation_id=%d AND gmf_collection_id=%d) AS x,
            hzrdr.ses_rupture as y
         where x.rupture_id=y.id AND ses_id=%d
         group by imt, sa_period, sa_damping, rupture_id
-        """ % (self.id, ses.id)
+        """ % (hc.id, self.id, ses.id)
             if orderby:  # may be used in tests to get reproducible results
                 query += 'order by imt, sa_period, sa_damping, rupture_id;'
-            curs = getcursor('job_init')
-            curs.execute(query)
+            with transaction.commit_on_success(using='job_init'):
+                curs = getcursor('job_init')
+                curs.execute(query)
             gmfs = []
             for imt, sa_period, sa_damping, rupture_id, gmvs, xs, ys in curs:
                 nodes = [_GroundMotionFieldNode(gmv, _Point(x, y))
@@ -1973,10 +1909,9 @@ class GmfAgg(djm.Model):
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
-    location = djm.PointField(srid=DEFAULT_SRID)
     gmvs = fields.FloatArrayField()
-    rupture_ids = fields.IntArrayField()
-
+    rupture_ids = fields.IntArrayField(null=True)
+    site = djm.ForeignKey('HazardSite')
     objects = djm.GeoManager()
 
     class Meta:
@@ -2007,10 +1942,10 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        for gmf in order_by_location(
-                GmfAgg.objects.filter(
+        for gmf in GmfAgg.objects.filter(
                 gmf_collection=coll, imt=imt,
-                sa_period=sa_period, sa_damping=sa_damping)):
+                sa_period=sa_period, sa_damping=sa_damping).\
+                order_by('site'):
             yield sort(gmf.gmvs)
 
 
@@ -2041,7 +1976,7 @@ def get_gmfs_scenario(output, imt=None):
                 gmf_collection=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
-                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.location))
+                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.site.location))
         for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
                 imt=imt,
@@ -2880,7 +2815,7 @@ class HazardCurveProgress(djm.Model):
         db_table = 'htemp\".\"hazard_curve_progress'
 
 
-class SiteData(djm.Model):
+class HazardSite(djm.Model):
     """
     Contains pre-computed site parameter matrices. ``lons`` and ``lats``
     represent the calculation sites of interest. The associated site parameters
@@ -2892,14 +2827,7 @@ class SiteData(djm.Model):
     """
 
     hazard_calculation = djm.ForeignKey('HazardCalculation')
-    lons = fields.PickleField()
-    lats = fields.PickleField()
-    vs30s = fields.PickleField()
-    # `vs30_measured` stores a numpy array of booleans.
-    # If a value is `False`, this means that the vs30 value is 'inferred'.
-    vs30_measured = fields.PickleField()
-    z1pt0s = fields.PickleField()
-    z2pt5s = fields.PickleField()
+    location = djm.PointField(srid=DEFAULT_SRID)
 
     class Meta:
-        db_table = 'htemp\".\"site_data'
+        db_table = 'hzrdi\".\"hazard_site'
