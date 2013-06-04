@@ -337,15 +337,12 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-# this is needed until we fix SiteCollection in hazardlib;
-# the issue is the reset of the depts
+# FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
+# the issue is the reset of the depts; we need QA tests for that
 class SiteCollection(openquake.hazardlib.site.SiteCollection):
     def __init__(self, sites):
         self.sites = sites
         super(SiteCollection, self).__init__(sites)
-        #for site in sites:
-        #    site.z1pt0 = 0
-        #    site.z2pt5 = 0
 
     def __iter__(self):
         for site in self.sites:
