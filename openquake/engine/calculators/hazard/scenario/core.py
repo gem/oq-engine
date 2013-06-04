@@ -26,7 +26,6 @@ from openquake.nrmllib.hazard.parsers import RuptureModelParser
 
 # HAZARDLIB
 from openquake.hazardlib.calc import ground_motion_fields
-from openquake.hazardlib.site import SiteCollection
 import openquake.hazardlib.gsim
 
 from openquake.engine.calculators.hazard import general as haz_general
@@ -87,25 +86,25 @@ def compute_gmfs(job_id, sites, rupture_id, gmfcoll_id, realizations):
             rupture_mdl, sites, imts, gsim,
             hc.truncation_level, realizations=realizations,
             correlation_model=correlation_model)
-
     with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
-        save_gmf(gmfcoll_id, gmf, sites.mesh)
+        save_gmf(gmfcoll_id, gmf, sites)
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def save_gmf(gmfcoll_id, gmf_dict, points_to_compute):
+def save_gmf(gmfcoll_id, gmf_dict, sites):
     """
     Helper method to save computed GMF data to the database.
 
     :param int gmfcoll_id:
         the id of a :class:`openquake.engine.db.models.GmfCollection` record
     :param dict gmf_dict:
-        The GMF results during the calculation.
-    :param points_to_compute:
-        An :class:`openquake.hazardlib.geo.mesh.Mesh` object, representing
-        all of the points of interest for a calculation.
+        The GMF results during the calculation
+    :param sites:
+        An :class:`openquake.engine.calculators.hazard.general.SiteCollection`
+        object
     """
-    inserter = writer.BulkInserter(models.GmfAgg)
+    inserter = writer.CacheInserter(models.GmfAgg, 100)
+    # NB: GmfAgg may contain large arrays and the cache may become large
 
     for imt, gmfs_ in gmf_dict.iteritems():
         # ``gmfs`` comes in as a numpy.matrix
@@ -120,14 +119,15 @@ def save_gmf(gmfcoll_id, gmf_dict, points_to_compute):
             sa_damping = imt.damping
         imt_name = imt.__class__.__name__
 
-        for i, location in enumerate(points_to_compute):
-            inserter.add_entry(
+        for i, site in enumerate(sites):
+            inserter.add(models.GmfAgg(
                 gmf_collection_id=gmfcoll_id,
                 imt=imt_name,
                 sa_period=sa_period,
                 sa_damping=sa_damping,
-                location=location.wkt2d,
-                gmvs=gmfarray[i].tolist())
+                site_id=site.id,
+                rupture_ids=None,
+                gmvs=gmfarray[i].tolist()))
 
     inserter.flush()
 
@@ -181,9 +181,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # for all sites.
         self.initialize_site_model()
 
-        # Once the site model is init'd, create and cache the site collection;
-        self.hc.init_site_collection()
-
         self.progress['total'] = len(self.hc.site_collection)
 
         # create a record in the output table
@@ -214,8 +211,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         inp = models.inputs4hcalc(self.hc.id, 'rupture_model')[0]
         ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
         rupture_id = [rupture.id for rupture in ruptures][0]  # only one
+
         for sites in block_splitter(self.hc.site_collection, BLOCK_SIZE):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
-            yield (self.job.id, SiteCollection(sites),
+            yield (self.job.id, haz_general.SiteCollection(sites),
                    rupture_id, self.gmfcoll.id, task_seed,
                    self.hc.number_of_ground_motion_fields)

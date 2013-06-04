@@ -140,7 +140,11 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
                 expected_outputs = self.expected_outputs()
                 for i, output in enumerate(self.actual_xml_outputs(job)):
                     [exported_file] = export.risk.export(output.id, result_dir)
-                    self.assert_xml_equal(
-                        StringIO.StringIO(expected_outputs[i]), exported_file)
+                    try:
+                        self.assert_xml_equal(
+                            StringIO.StringIO(expected_outputs[i]),
+                            exported_file)
+                    except:
+                        import pdb; pdb.set_trace()
         finally:
             shutil.rmtree(result_dir)
