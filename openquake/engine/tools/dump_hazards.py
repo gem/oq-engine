@@ -117,7 +117,7 @@ class HazardDumper(object):
         self.outdir = outdir
 
     def hazard_calculation(self, ids):
-        """Dump hazard_calculation, lt_realization"""
+        """Dump hazard_calculation, lt_realization, hazard_site"""
         self.curs.copy(
             """copy (select * from uiapi.hazard_calculation where id in %s)
                   to stdout with (format '%s')""" % (ids, self.format),
@@ -127,6 +127,11 @@ class HazardDumper(object):
                   where hazard_calculation_id in %s)
                   to stdout with (format '%s')""" % (ids, self.format),
             self.outdir, 'hzrdr.lt_realization.csv', 'w')
+        self.curs.copy(
+            """copy (select * from hzrdi.hazard_site
+                  where hazard_calculation_id in %s)
+                  to stdout with (format '%s')""" % (ids, self.format),
+            self.outdir, 'hzrdi.hazard_site.csv', 'w')
 
     def performance(self, *job_ids):
         """Dump performance"""
