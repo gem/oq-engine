@@ -126,18 +126,6 @@ class BulkInserterTestCase(unittest.TestCase):
                           ' (%%s, %%s), (%%s, %%s)' %
                           (", ".join(fields)), connection.sql)
 
-    @transaction.commit_on_success('reslt_writer')
-    def test_flush_geometry(self):
-        inserter = BulkInserter(GmfAgg)
-        connection = writer.connections['reslt_writer']
-
-        inserter.add_entry(location='POINT(1 1)')
-        fields = inserter.fields
-        inserter.flush()
-        self.assertEquals('INSERT INTO "hzrdr"."gmf_agg" (%s) VALUES (%s)' %
-                          (", ".join(fields), 'GeomFromText(%s, 4326)'),
-                          connection.sql)
-
 
 class CacheInserterTestCase(unittest.TestCase):
     """
@@ -156,17 +144,19 @@ class CacheInserterTestCase(unittest.TestCase):
         cache = CacheInserter(GmfAgg, 10)
         gmf1 = GmfAgg(
             gmf_collection_id=1, imt='PGA', gmvs=[], rupture_ids=[],
-            location='POINT(-122.5000 37.5000)')
+            site_id=1)
         gmf2 = GmfAgg(
             gmf_collection_id=1, imt='PGA', gmvs=[], rupture_ids=[],
-            location='POINT(-121.5000 37.5000)')
+            site_id=2)
         cache.add(gmf1)
         cache.add(gmf2)
         cache.flush()
         connection = writer.connections['reslt_writer']
-        self.assertEqual(connection.data, '1\tPGA\t\\N\t\\N\tSRID=4326;POINT (-122.5000000000000000 37.5000000000000000)\t{}\t{}\n1\tPGA\t\\N\t\\N\tSRID=4326;POINT (-121.5000000000000000 37.5000000000000000)\t{}\t{}\n')
+        self.assertEqual(
+            connection.data,
+            '1\tPGA\t\\N\t\\N\t{}\t{}\t1\n1\tPGA\t\\N\t\\N\t{}\t{}\t2\n')
         self.assertEqual(connection.table, '"hzrdr"."gmf_agg"')
         self.assertEqual(
             connection.columns,
             ['gmf_collection_id', 'imt', 'sa_period', 'sa_damping',
-             'location', 'gmvs', 'rupture_ids'])
+             'gmvs', 'rupture_ids', 'site_id'])
