@@ -1,42 +1,32 @@
-<?xml version="1.0"?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <exposureModel gml:id="ep">
-        <config/>
-        <exposureList gml:id="Messina" stcoType="aggregated" stcoUnit="USD" assetCategory="buildings">
-            <gml:description>Collection of existing building in the region of Messina, Italy
-            </gml:description>
-            <taxonomySource>Messina taxonomy</taxonomySource>
-            <assetDefinition gml:id="a1">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                    <gml:pos>15.48 38.09</gml:pos>
-                    </gml:Point>
-                </site>
-                <number>3000</number>
-                <stco>3000</stco>
-                <taxonomy>RM</taxonomy>
-            </assetDefinition>
-            <assetDefinition gml:id="a2">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>15.56 38.17</gml:pos>
-                    </gml:Point>
-                </site>
-                <number>2000</number>
-                <stco>2000</stco>
-                <taxonomy>RC</taxonomy>
-            </assetDefinition>
-            <assetDefinition gml:id="a3">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                    <gml:pos>15.48 38.25</gml:pos>
-                    </gml:Point>
-                </site>
-                <number>1000</number>
-                <stco>1000</stco>
-                <taxonomy>RM</taxonomy>
-            </assetDefinition>
-        </exposureList>
-    </exposureModel>
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings" taxonomySource="Messina taxonomy">
+    <description>Collection of existing building in the region of Messina, Italy
+            </description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="aggregated"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="RM" units="3000">
+        <location lon="15.48" lat="38.09"/>
+        <costs>
+          <cost type="structural" value="3000"/>
+        </costs>
+      </asset>
+      <asset id="a2" taxonomy="RC" units="2000">
+        <location lon="15.56" lat="38.17"/>
+        <costs>
+          <cost type="structural" value="2000"/>
+        </costs>
+      </asset>
+      <asset id="a3" taxonomy="RM" units="1000">
+        <location lon="15.48" lat="38.25"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
 </nrml>
