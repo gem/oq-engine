@@ -96,7 +96,7 @@ CREATE INDEX riski_exposure_data_taxonomy_idx ON riski.exposure_data(taxonomy);
 CREATE INDEX riski_exposure_data_exposure_model_id_idx on riski.exposure_data(exposure_model_id);
 CREATE INDEX riski_exposure_data_site_stx_idx ON riski.exposure_data(ST_X(geometry(site)));
 CREATE INDEX riski_exposure_data_site_sty_idx ON riski.exposure_data(ST_Y(geometry(site)));
-
+CREATE INDEX riski_cost_type_name_idx ON riski.cost_type(name);
 
 -- uiapi indexes
 CREATE INDEX uiapi_input_model_content_id_idx on uiapi.input(model_content_id);

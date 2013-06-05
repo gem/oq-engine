@@ -83,7 +83,7 @@ MAX_SINT_32 = (2 ** 31) - 1
 
 
 #: Kind of supported type of loss outputs
-LOSS_TYPES = ["structural", "non_structural", "occupants", "contents"]
+LOSS_TYPES = ["structural", "nonstructural", "occupants", "contents"]
 
 
 def getcursor(route):
@@ -294,15 +294,23 @@ class Input(djm.Model):
         (u'gsim_logic_tree', u'Ground Shaking Intensity Model Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
-        (u'structural_vulnerability', u'Structural Vulnerability'),
-        (u'non_structural_vulnerability', u'Non Structural Vulnerability'),
-        (u'contents_vulnerability', u'Contents Vulnerability'),
-        (u'occupancy_vulnerability', u'Occupancy Vulnerability'),
-        (u'structural_vulnerability_retrofitted',
-         u'Structural Vulnerability Retrofitted'),
         (u'site_model', u'Site Model'),
-        (u'rupture_model', u'Rupture Model')
-    )
+        (u'rupture_model', u'Rupture Model'),
+
+        # vulnerability models
+        (u'structural_vulnerability', u'Structural Vulnerability'),
+        (u'nonstructural_vulnerability', u'Non Structural Vulnerability'),
+        (u'contents_vulnerability', u'Contents Vulnerability'),
+        (u'business_interruption_vulnerability',
+         u'Business Interruption Vulnerability'),
+        (u'occupants_vulnerability', u'Occupants Vulnerability'),
+        (u'structural_vulnerability_retrofitted',
+         u'Structural Vulnerability Retrofitted'))
+
+    VULNERABILITY_TYPE_CHOICES = [choice
+                                  for choice in INPUT_TYPE_CHOICES
+                                  if choice[0].endswith('vulnerability')]
+
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
 
     hazard_calculations = djm.ManyToManyField('HazardCalculation',
@@ -2470,7 +2478,6 @@ class ExposureModel(djm.Model):
     A risk exposure model
     '''
 
-    owner = djm.ForeignKey("OqUser")
     input = djm.OneToOneField("Input")
     name = djm.TextField()
     description = djm.TextField(null=True)
@@ -2483,22 +2490,8 @@ class ExposureModel(djm.Model):
     )
     area_type = djm.TextField(null=True, choices=AREA_CHOICES)
     area_unit = djm.TextField(null=True)
-    COST_CHOICES = (
-        (u'aggregated', u'Aggregated economic value'),
-        (u'per_area', u'Per area economic value'),
-        (u'per_asset', u'Per asset economic value'),
-    )
-    stco_type = djm.TextField(null=True, choices=COST_CHOICES,
-                              help_text="structural cost type")
-    stco_unit = djm.TextField(null=True, help_text="structural cost unit")
-    reco_type = djm.TextField(null=True, choices=COST_CHOICES,
-                              help_text="retrofitting cost type")
-    reco_unit = djm.TextField(null=True, help_text="retrofitting cost unit")
-    coco_type = djm.TextField(null=True, choices=COST_CHOICES,
-                              help_text="contents cost type")
-    coco_unit = djm.TextField(null=True, help_text="contents cost unit")
-
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    deductible_absolute = djm.BooleanField(default=True)
+    insurance_limit_absolute = djm.BooleanField(default=True)
 
     class Meta:
         db_table = 'riski\".\"exposure_model'
@@ -2515,6 +2508,34 @@ class ExposureModel(djm.Model):
         return ExposureData.objects.taxonomies_contained_in(
             self.id, region_constraint)
 
+    def unit(self, cost_type):
+        return self.costtype_set.get(name=cost_type).unit
+
+
+class CostType(djm.Model):
+    COST_TYPE_CHOICES = (
+        ("structuralCost", "structuralCost"),
+        ("retrofittedStructuralCost", "retrofittedStructuralCost"),
+        ("nonStructuralCost", "nonStructuralCost"),
+        ("contentsCost", "contentsCost"),
+        ("businessInterruptionCost", "businessInterruptionCost"))
+    CONVERSION_CHOICES = (
+        (u'aggregated', u'Aggregated economic value'),
+        (u'per_area', u'Per area economic value'),
+        (u'per_asset', u'Per asset economic value'),
+    )
+
+    exposure_model = djm.ForeignKey(ExposureModel)
+    name = djm.TextField(choices=COST_TYPE_CHOICES)
+    conversion = djm.TextField(choices=CONVERSION_CHOICES)
+    unit = djm.TextField(null=True)
+    retrofitted_conversion = djm.TextField(
+        null=True, choices=CONVERSION_CHOICES)
+    retrofitted_unit = djm.TextField(null=True)
+
+    class Meta:
+        db_table = 'riski\".\"cost_type'
+
 
 class Occupancy(djm.Model):
     '''
@@ -2522,7 +2543,7 @@ class Occupancy(djm.Model):
     '''
 
     exposure_data = djm.ForeignKey("ExposureData")
-    description = djm.TextField()
+    period = djm.TextField()
     occupants = djm.IntegerField()
 
     class Meta:
@@ -2545,23 +2566,61 @@ class AssetManager(djm.GeoManager):
         right occupants value for the risk calculation given in input
         """
 
+        # default query arguments: the current exposure model, the
+        # given taxonomy and the asset region constraint
         args = (rc.exposure_model.id, taxonomy,
                 "SRID=4326; %s" % rc.region_constraint.wkt)
+
+        # if time_event is not specified we compute the number of
+        # occupants by averaging the occupancy data for each asset.
         if rc.time_event is None:
             occupants = "AVG(riski.occupancy.occupants)"
             occupants_cond = "1 = 1"
         else:
             occupants = "riski.occupancy.occupants"
-            occupants_cond = "riski.occupancy.description = %s"
+            occupants_cond = "riski.occupancy.period = %s"
             args += (rc.time_event,)
         args += (size, offset)
 
-        return list(
-            self.raw("""
-            SELECT riski.exposure_data.*, {occupants} AS occupancy
+        # For each cost type associated with the exposure model we
+        # join the `cost` table to the current queryset in order to
+        # lookup for a cost value for each asset.
+
+        # Actually we extract 4 values: the cost, the retrofitted
+        # cost, the deductible and the insurance limit
+
+        costs = []
+        costs_join = ""
+
+        for cost_type in rc.exposure_model.costtype_set.all():
+            # here the max value is irrelevant as we are sureto join
+            # against one row
+            costs.append("max(%s.converted_cost) AS %s " % (cost_type.name,
+                                                            cost_type.name))
+            costs.append(
+                "max(%s.converted_retrofitted_cost) AS retrofitted_%s " % (
+                    cost_type.name, cost_type.name))
+            costs.append(
+                "max(%s.deductible_absolute) AS deductible_%s " % (
+                    cost_type.name, cost_type.name))
+            costs.append(
+                "max(%s.insurance_limit_absolute) AS insurance_limit_%s " % (
+                    cost_type.name, cost_type.name))
+
+            costs_join += """
+            LEFT JOIN riski.cost AS %(name)s
+            ON %(name)s.cost_type_id = '%(id)s' AND
+            %(name)s.exposure_data_id = riski.exposure_data.id """ % dict(
+                name=cost_type.name, id=cost_type.id)
+
+        query = """
+            SELECT riski.exposure_data.*,
+                   {occupants} AS occupancy,
+                   {costs}
             FROM riski.exposure_data
             LEFT JOIN riski.occupancy
             ON riski.exposure_data.id = riski.occupancy.exposure_data_id
+            {costs_join}
             WHERE exposure_model_id = %s AND
                   taxonomy = %s AND
                   ST_COVERS(ST_GeographyFromText(%s), site) AND
@@ -2569,8 +2628,10 @@ class AssetManager(djm.GeoManager):
             GROUP BY riski.exposure_data.id
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
-            """.format(occupants=occupants, occupants_cond=occupants_cond),
-                     args))
+            """.format(occupants=occupants, occupants_cond=occupants_cond,
+                       costs=", ".join(costs), costs_join=costs_join)
+
+        return list(self.raw(query, args))
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
@@ -2603,24 +2664,10 @@ class ExposureData(djm.Model):
     asset_ref = djm.TextField()
     taxonomy = djm.TextField()
     site = djm.PointField(geography=True)
-    # Override the default manager with a GeoManager instance in order to
-    # enable spatial queries.
-    objects = djm.GeoManager()
 
-    stco = djm.FloatField(null=True, help_text="structural cost")
-    reco = djm.FloatField(null=True, help_text="retrofitting cost")
-    coco = djm.FloatField(null=True, help_text="contents cost")
-
-    number_of_units = djm.FloatField(
-        null=True, help_text="number of assets, people etc.")
+    units = djm.FloatField(
+        null=True, help_text="number of assets, people, etc.")
     area = djm.FloatField(null=True)
-
-    ins_limit = djm.FloatField(
-        null=True, help_text="insurance coverage limit")
-    deductible = djm.FloatField(
-        null=True, help_text="insurance deductible")
-
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     objects = AssetManager()
 
@@ -2669,41 +2716,63 @@ class ExposureData(djm.Model):
                 return cost * area * number_of_units
         raise ValueError("Invalid input")
 
+    # we expect several annotations depending on "loss_type" to be
+    # present. See `get_asset_chunk` for details.
+
     def value(self, loss_type):
         """
-        The per-asset value.
+        Extract the value of the asset for the given `loss_type`.
+        Although the Django Model definition does not have a value for
+        each loss type, we rely on the fact that an annotation on the
+        asset named `loss_type` is present.
         """
-        if loss_type == "structural":
-            cost = self.stco
-            cost_type = self.exposure_model.stco_type
-        elif loss_type == "non_structural":
-            cost = self.non_stco
-            cost_type = self.non_stco_type
-        elif loss_type == "contents":
-            cost = self.coco
-            cost_type = self.exposure_model.coco_type
-        elif loss_type == "occupancy":
-            # we expect a django annotation called occupants to be
-            # present (like the one provided by #get_asset_chunk)
-            cost_type = "aggregated"
-            cost = self.occupants
-        return self.per_asset_value(
-            cost=cost, cost_type=cost_type,
-            area=self.area, area_type=self.exposure_model.area_type,
-            number_of_units=self.number_of_units,
-            category=self.exposure_model.category)
+        return getattr(self, loss_type)
 
-    @property
-    def retrofitting_cost(self):
+    def retrofitted(self, loss_type):
         """
-        The retrofitting per-asset value.
+        Extract the retrofitted cost of the asset for the given
+        `loss_type`. See the method `value` for details.
         """
-        return self.per_asset_value(
-            cost=self.reco, cost_type=self.exposure_model.reco_type,
-            area=self.area, area_type=self.exposure_model.area_type,
-            number_of_units=self.number_of_units,
-            category=self.exposure_model.category)
+        return getattr(self, "retrofitted_%s" % loss_type)
 
+    def deductible(self, loss_type):
+        """
+        Extract the deductible limit of the asset for the given
+        `loss_type`. See the method `value` for details.
+        """
+        return getattr(self, "deductible_%s" % loss_type)
+
+    def insurance_limit(self, loss_type):
+        """
+        Extract the insurance limit of the asset for the given
+        `loss_type`. See the method `value` for details.
+        """
+        return getattr(self, "insurance_limit_%s" % loss_type)
+
+
+def make_absolute(limit, value, is_absolute=None):
+    """
+    :returns:
+        `limit` if `is_absolute` is True or `limit` is None,
+        else `limit` * `value`
+    """
+    if limit is not None:
+        if not is_absolute:
+            return value * limit
+        else:
+            return limit
+
+
+class Cost(djm.Model):
+    exposure_data = djm.ForeignKey(ExposureData)
+    cost_type = djm.ForeignKey(CostType)
+    converted_cost = djm.FloatField()
+    converted_retrofitted_cost = djm.FloatField(null=True)
+    deductible_absolute = djm.FloatField(null=True, blank=True)
+    insurance_limit_absolute = djm.FloatField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'riski\".\"cost'
 
 ## Tables in the 'htemp' schema.
 
