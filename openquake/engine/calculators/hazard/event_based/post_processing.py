@@ -162,7 +162,7 @@ def gmf_to_hazard_curve_task(job_id, site, lt_rlz_id, imt, imls, hc_coll_id,
         imt=imt,
         sa_period=sa_period,
         sa_damping=sa_damping,
-        site=point).order_by('ses')
+        site=site).order_by('ses')
     gmvs = list(itertools.chain(*(g.gmvs for g in gmfs)))
 
     # Compute the hazard curve PoEs:
