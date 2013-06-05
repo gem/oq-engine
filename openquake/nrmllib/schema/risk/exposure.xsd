@@ -11,7 +11,7 @@
     <xs:complexType name="ExposureModel">
         <xs:all>
             <xs:element name="description" minOccurs="0" type="xs:string"/>
-            <xs:element name="conversions" type="Conversions" />
+            <xs:element name="conversions" type="Conversions" minOccurs="0" />
             <xs:element name="assets" type="Assets" />
         </xs:all>
 
