@@ -1,86 +1,78 @@
 <?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel
+      id="my_exposure_model"
+      category="buildings"
+      taxonomySource="PAGER">
 
-    <!-- exposureModel is a gml:Feature -->
-    <exposureModel gml:id="ep1">
-        <config/>
+    <description>
+      Sample buildings 
+    </description>
 
-        <!--
-             coco: contents type
-             reco: retrofitting type
-             stco: structural type
+    <conversions>
+      <area type="per_asset" unit="square meters"/>
+      
+      <costTypes>
+          <costType name="business_interruption" type="per_area" unit="EUR"/>
+          <costType name="contents" type="per_area" unit="USD"/>
+          <costType name="non_structural" type="aggregated" unit="YEN" />
+          <costType name="structural" type="aggregated" unit="YEN"
+                    retrofittedType="aggregated" retrofittedUnit="EUR"/>
+      </costTypes>
+      <deductible isAbsolute="false"/>
+      <insuranceLimit isAbsolute="false"/>
+    </conversions>
 
-             area type is one of: aggregated, per_asset
-             cost type is one of: aggregated, per_area, per_asset
+    <assets>
+      <asset id="asset_01" area="120" units="7" taxonomy="RC/DMRF-D/LR">
+          <location lon="9.15000" lat="45.16667" />
 
-             limit: (contents cost) insurance coverage limit
-             deductible: (contents cost) insurance deductible
-        -->
-        <exposureList gml:id="PAV01" areaType="per_asset" areaUnit="GBP" assetCategory="buildings" cocoType="per_area" cocoUnit="CHF" recoType="aggregated" recoUnit="EUR" stcoType="aggregated" stcoUnit="USD" nonStcoType="aggregated" nonStcoUnit="USD">
+          <costs>
+            <cost type="structural" value="150000" deductible=".1" insuranceLimit="0.8" retrofitted="109876"/>
+            <cost type="non_structural" value="25000" deductible=".09" insuranceLimit="0.82"/>
+            <cost type="contents" value="12.95" deductible=".5" insuranceLimit=".7"/>
+            <cost type="business_interruption" value="40" deductible=".5" insuranceLimit="0.8"/>
+          </costs>
 
-            <gml:description>Collection of existing building in downtown Pavia</gml:description>
+          <occupancies>
+            <occupancy occupants="100" period="day"/>
+            <occupancy occupants="50" period="night"/>
+            <occupancy occupants="20" period="transit"/>
+          </occupancies>
+        </asset>
 
-            <taxonomySource>Pavia taxonomy</taxonomySource>
+        <asset id="asset_02" area="119" units="7" taxonomy="RC/DMRF-D/HR">
+          <location lon="9.15333" lat="45.12200" />
 
-            <!-- assetDefinition is a gml:Feature -->
-            <assetDefinition gml:id="asset_01">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>9.15000 45.16667</gml:pos>
-                    </gml:Point>
-                </site>
+          <costs>
+            <cost type="structural" value="250000"/>
+            <cost type="structural" value="205432"/>
+            <cost type="non_structural" value="21000"/>
+            <cost type="contents" value="21.95"/>
+            <cost type="business_interruption" value="40"/>
+          </costs>
+  
+          <occupancies>
+            <occupancy occupants="12" period="day"/>
+            <occupancy occupants="50" period="night"/>
+            <occupancy occupants="20" period="transit"/>
+          </occupancies>
+        </asset>
 
-                <area>120</area>
-                <coco>12.95</coco>
-                <deductible>55</deductible>
-                <limit>999</limit>
-                <number>7</number>
-                <reco>109876</reco>
-                <stco>150000</stco>
-                <nonstco>25000</nonstco>
-                <taxonomy>RC/DMRF-D/LR</taxonomy>
-            </assetDefinition>
+        <asset id="asset_03" area="118" units="5" taxonomy="RC/DMRF-D/LR">
+          <location lon="9.14777" lat="45.17999" />
 
-            <assetDefinition gml:id="asset_02">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>9.15333 45.12200</gml:pos>
-                    </gml:Point>
-                </site>
+          <costs>
+            <cost type="structural" value="500000"/>
+            <cost type="structural" value="495432"/>
+            <cost type="contents" value="30.95"/>
+          </costs>
 
-                <area>119</area>
-                <coco>21.95</coco>
-                <deductible>66</deductible>
-                <limit>1999</limit>
-                <number>6</number>
-                <occupants description="day">12</occupants>
-                <occupants description="night">50</occupants>
-                <reco>205432</reco>
-                <stco>250000</stco>
-                <nonstco>210000</nonstco>
-                <taxonomy>RC/DMRF-D/HR</taxonomy>
-            </assetDefinition>
-
-            <assetDefinition gml:id="asset_03">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>9.14777 45.17999</gml:pos>
-                    </gml:Point>
-                </site>
-
-                <area>118</area>
-                <coco>30.95</coco>
-                <deductible>77</deductible>
-                <limit>2888</limit>
-                <number>5</number>
-                <occupants description="early morning">36</occupants>
-                <occupants description="late afternoon">5</occupants>
-                <reco>495432</reco>
-                <stco>500000</stco>
-                <taxonomy>RC/DMRF-D/LR</taxonomy>
-            </assetDefinition>
-
-        </exposureList>
-    </exposureModel>
+          <occupancies>
+            <occupancy occupants="36" period="early morning"/>
+            <occupancy occupants="5" period="late afternoon"/>
+          </occupancies>
+        </asset>
+      </assets>
+  </exposureModel>
 </nrml>

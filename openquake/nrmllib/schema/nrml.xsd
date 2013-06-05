@@ -72,7 +72,6 @@
             <xs:element ref="lossFraction" />
             <xs:element ref="lossMap" />
             <xs:element ref="rawSourceModel" />
-            <xs:element ref="riskResult" />
             <xs:element ref="rupture" />
             <xs:element ref="siteModel" />
             <xs:element ref="sourceModel" />
