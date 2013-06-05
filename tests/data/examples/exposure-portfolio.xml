@@ -1,84 +1,36 @@
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4">
-
-    <!-- exposureModel is a gml:Feature -->
-    <exposureModel gml:id="ep1">
-        <config/>
-
-        <!--
-             coco: contents type
-             reco: retrofitting type
-             stco: structural type
-
-             area type is one of: aggregated, per_asset
-             cost type is one of: aggregated, per_area, per_asset
-
-             limit: (contents cost) insurance coverage limit
-             deductible: (contents cost) insurance deductible
-        -->
-        <exposureList gml:id="PAV01" areaType="per_asset" areaUnit="GBP" assetCategory="buildings" cocoType="per_area" cocoUnit="CHF" recoType="aggregated" recoUnit="EUR" stcoType="aggregated" stcoUnit="USD">
-
-            <gml:description>Collection of existing building in downtown Pavia</gml:description>
-
-            <taxonomySource>Pavia taxonomy</taxonomySource>
-
-            <!-- assetDefinition is a gml:Feature -->
-            <assetDefinition gml:id="asset_01">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>9.15000 45.16667</gml:pos>
-                    </gml:Point>
-                </site>
-
-                <area>120</area>
-                <coco>12.95</coco>
-                <deductible>55</deductible>
-                <limit>999</limit>
-                <number>7</number>
-                <reco>109876</reco>
-                <stco>150000</stco>
-                <taxonomy>RC/DMRF-D/LR</taxonomy>
-            </assetDefinition>
-
-            <assetDefinition gml:id="asset_02">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>9.15333 45.12200</gml:pos>
-                    </gml:Point>
-                </site>
-
-                <area>119</area>
-                <coco>21.95</coco>
-                <deductible>66</deductible>
-                <limit>1999</limit>
-                <number>6</number>
-                <occupants description="day">12</occupants>
-                <occupants description="night">50</occupants>
-                <reco>205432</reco>
-                <stco>250000</stco>
-                <taxonomy>RC/DMRF-D/HR</taxonomy>
-            </assetDefinition>
-
-            <assetDefinition gml:id="asset_03">
-                <site>
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>9.14777 45.17999</gml:pos>
-                    </gml:Point>
-                </site>
-
-                <area>118</area>
-                <coco>30.95</coco>
-                <deductible>77</deductible>
-                <limit>2888</limit>
-                <number>5</number>
-                <occupants description="average">36</occupants>
-                <occupants description="transit">5</occupants>
-                <reco>495432</reco>
-                <stco>500000</stco>
-                <taxonomy>RC/DMRF-D/LR</taxonomy>
-            </assetDefinition>
-
-        </exposureList>
-    </exposureModel>
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep1" category="buildings" taxonomySource="Pavia taxonomy">
+    <description>Collection of existing building in downtown Pavia</description>
+    <conversions>
+      <area unit="GBP" type="per_asset"/>
+      <costTypes>
+        <costType name="contents" unit="CHF" type="per_area"/>
+        <costType name="structural" unit="USD" type="aggregated" retrofittedType="aggregated" retrofittedUnit="EUR"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="asset_01" taxonomy="RC/DMRF-D/LR" area="120" units="7">
+        <location lon="9.15000" lat="45.16667"/>
+        <costs>
+          <cost type="contents" value="12.95"/>
+          <cost type="structural" value="150000" retrofitted="109876" deductible="55" insuranceLimit="999"/>
+        </costs>
+      </asset>
+      <asset id="asset_02" taxonomy="RC/DMRF-D/HR" area="119" units="6">
+        <location lon="9.15333" lat="45.12200"/>
+        <costs>
+          <cost type="contents" value="21.95"/>
+          <cost type="structural" value="250000" retrofitted="205432" deductible="66" insuranceLimit="1999"/>
+        </costs>
+      </asset>
+      <asset id="asset_03" taxonomy="RC/DMRF-D/LR" area="118" units="5">
+        <location lon="9.14777" lat="45.17999"/>
+        <costs>
+          <cost type="contents" value="30.95"/>
+          <cost type="structural" value="500000" retrofitted="495432" deductible="77" insuranceLimit="2888"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
 </nrml>
