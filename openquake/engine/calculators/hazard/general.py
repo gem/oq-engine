@@ -604,13 +604,12 @@ class BaseHazardCalculator(base.Calculator):
         is one) and the imt (and levels) will be extracted from the
         vulnerability model (if there is one)
         """
-
-        queryset = self.hc.inputs.filter(input_type__in=[
-            'structural_vulnerability', 'non_structural_vulnerability',
-            'contents_vulnerability', 'occupancy_vulnerability'])
-
+        hc = self.hc
+        queryset = self.hc.inputs.filter(
+            input_type__in=[vf_type
+                            for vf_type, _desc
+                            in models.Input.VULNERABILITY_TYPE_CHOICES])
         if queryset.exists():
-            hc = self.hc
             hc.intensity_measure_types_and_levels = dict()
             hc.intensity_measure_types = list()
 
@@ -620,17 +619,30 @@ class BaseHazardCalculator(base.Calculator):
                 intensity_measure_types_and_levels = dict([
                     (record['IMT'], record['IML'])
                     for record in parsers.VulnerabilityModelParser(content)])
-                intensity_measure_types = list(set(
-                    record['IMT']
-                    for record in parsers.VulnerabilityModelParser(content)))
 
-                hc.intensity_measure_types_and_levels.update(
+                for imt, levels in intensity_measure_types_and_levels.items():
+                    if (imt in hc.intensity_measure_types_and_levels and
+                        (set(hc.intensity_measure_types_and_levels[imt]) -
+                         set(levels))):
+                        logs.LOG.warning("The same IMT %s is associated with "
+                                         "different levels" % imt)
+                    else:
+                        hc.intensity_measure_types_and_levels[imt] = levels
+
+                hc.intensity_measure_types.extend(
                     intensity_measure_types_and_levels)
-                hc.intensity_measure_types.extend(intensity_measure_types)
+
+            # remove possible duplicates
+            if hc.intensity_measure_types is not None:
+                hc.intensity_measure_types = list(set(
+                    hc.intensity_measure_types))
             hc.save()
 
         queryset = self.hc.inputs.filter(input_type='fragility')
         if queryset.exists():
+            hc.intensity_measure_types_and_levels = dict()
+            hc.intensity_measure_types = list()
+
             parser = iter(parsers.FragilityModelParser(
                 StringIO.StringIO(
                     queryset.all()[0].model_content.raw_content_ascii)))
@@ -647,9 +659,8 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types_and_levels = dict(
                 (iml['IMT'], iml['imls'])
                 for _taxonomy, iml, _params, _no_damage_limit in parser)
-            hc.intensity_measure_types = (
-                hc.intensity_measure_types_and_levels.keys())
-            hc.save()
+            hc.intensity_measure_types.extend(
+                hc.intensity_measure_types_and_levels)
 
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
