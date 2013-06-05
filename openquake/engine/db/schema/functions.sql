@@ -36,111 +36,6 @@ COMMENT ON FUNCTION refresh_last_update() IS
 'Refresh the ''last_update'' time stamp whenever a row is updated.';
 
 
-CREATE OR REPLACE FUNCTION pcheck_exposure_model()
-  RETURNS TRIGGER
-AS $$
-    NEW = TD["new"] # new data resulting from insert or update
-
-    def fmt(err):
-        return "%s (%s)" % (err, TD["table_name"])
-
-    def check_xor(a, b):
-        """Raise exception if only one of the items is defined."""
-        if not ((NEW[a] and NEW[b]) or (not NEW[a] and not NEW[b])):
-            raise Exception(fmt("%s (%s) and %s (%s) must both be either "
-                                "defined or undefined" %
-                                (a, NEW[a], b, NEW[b])))
-
-    if NEW["area_type"] is None:
-        violations = []
-        for key in ["coco_type", "reco_type", "stco_type"]:
-            if NEW.get(key) is not None and NEW[key] == "per_area":
-                violations.append((key, NEW[key]))
-        if violations:
-            raise Exception(fmt("area_type is mandatory for <%s>" %
-                                ", ".join("%s=%s" % v for v in violations)))
-
-    if NEW["area_unit"] is None:
-        violations = []
-        for key in ["coco_type", "reco_type", "stco_type"]:
-            if NEW.get(key) is not None and NEW[key] == "per_area":
-                violations.append((key, NEW[key]))
-        if violations:
-            raise Exception(fmt("area_unit is mandatory for <%s>" %
-                                ", ".join("%s=%s" % v for v in violations)))
-
-    check_xor("coco_unit", "coco_type")
-    check_xor("reco_unit", "reco_type")
-    check_xor("stco_unit", "stco_type")
-    if NEW["stco_type"] is None and NEW["category"] != "population":
-        raise Exception(fmt("structural cost type is mandatory for "
-                            "<category=%s>" % NEW["category"]))
-    return "OK"
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION pcheck_exposure_model() IS
-'Make sure the inserted or modified exposure model record is consistent.';
-
-
-CREATE OR REPLACE FUNCTION pcheck_exposure_data()
-  RETURNS TRIGGER
-AS $$
-    def fmt(err):
-        return "%s (%s)" % (err, TD["table_name"])
-
-    NEW = TD["new"] # new data resulting from insert or update
-
-    # get the associated exposure model record
-    q = ("SELECT * FROM riski.exposure_model WHERE id = %s" %
-         NEW["exposure_model_id"])
-    [emdl] = plpy.execute(q)
-
-    if NEW["stco"] is None and emdl["category"] != "population":
-        raise Exception(fmt("structural cost is mandatory for category <%s>" %
-                            emdl["category"]))
-
-    if NEW["number_of_units"] is None:
-        violations = []
-        if emdl["category"] == "population":
-            violations.append(("category", "population"))
-        for key in ["coco_type", "reco_type", "stco_type"]:
-            if emdl.get(key) is None or emdl[key] == "aggregated":
-                continue
-            if (emdl[key] == "per_asset" or (emdl[key] == "per_area" and
-                emdl["area_type"] == "per_asset")):
-                violations.append((key, emdl[key]))
-        if violations:
-            raise Exception(fmt("number_of_units is mandatory for <%s>" %
-                                ", ".join("%s=%s" % v for v in violations)))
-
-    if NEW["area"] is None:
-        violations = []
-        for key in ["coco_type", "reco_type", "stco_type"]:
-            if emdl.get(key) is not None and emdl[key] == "per_area":
-                violations.append((key, emdl[key]))
-        if violations:
-            raise Exception(fmt("area is mandatory for <%s>" %
-                                ", ".join("%s=%s" % v for v in violations)))
-    if NEW["coco"] is None and emdl["coco_type"] is not None:
-        raise Exception(fmt("contents cost is mandatory for <coco_type=%s>"
-                            % emdl["coco_type"]))
-    if NEW["reco"] is None and emdl["reco_type"] is not None:
-        raise Exception(fmt("retrofitting cost is mandatory for <reco_type=%s>"
-                            % emdl["reco_type"]))
-    if NEW["stco"] is None and emdl["stco_type"] is not None:
-        raise Exception(fmt("structural cost is mandatory for <stco_type=%s>"
-                            % emdl["stco_type"]))
-
-
-    return "OK"
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION pcheck_exposure_data() IS
-'Make sure the inserted or modified exposure data is consistent.';
-
-
 CREATE OR REPLACE FUNCTION uiapi.pcount_cnode_failures()
   RETURNS TRIGGER
 AS $$
@@ -174,14 +69,6 @@ CREATE AGGREGATE array_concat(anyarray)(sfunc=array_cat, stype=anyarray, initcon
 CREATE TRIGGER uiapi_cnode_stats_before_update_trig
 BEFORE UPDATE ON uiapi.cnode_stats
 FOR EACH ROW EXECUTE PROCEDURE uiapi.pcount_cnode_failures();
-
-CREATE TRIGGER riski_exposure_model_before_insert_update_trig
-BEFORE INSERT ON riski.exposure_model
-FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
-
-CREATE TRIGGER riski_exposure_data_before_insert_update_trig
-BEFORE INSERT ON riski.exposure_data
-FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
 
 CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 

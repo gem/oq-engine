@@ -80,11 +80,7 @@ class ExposureContainedInTestCase(unittest.TestCase):
         self.rc = self.job.risk_calculation
 
         common_fake_args = dict(
-            exposure_model=self.rc.exposure_model,
-            stco=1,
-            number_of_units=10,
-            reco=1,
-            taxonomy="test")
+            exposure_model=self.rc.exposure_model, taxonomy="test")
 
         asset = models.ExposureData(site=Point(0.5, 0.5),
                                     asset_ref="test1",

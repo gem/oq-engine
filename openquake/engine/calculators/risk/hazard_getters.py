@@ -227,8 +227,10 @@ class GroundMotionValuesGetter(HazardGetter):
 
     def __call__(self, monitor=None):
         """
-        :param monitor: an instance of :class:`openquake.engine.performance.EnginePerformanceMonitor`
-                        or None
+        :param monitor:
+           an instance of
+           :class:`openquake.engine.performance.EnginePerformanceMonitor`
+           or None
         :returns:
             A tuple with two elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is an
