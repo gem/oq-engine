@@ -69,24 +69,13 @@ def _export_common(output, loss_type):
     else:
         gsim_tree_path = None
 
-    model = output.oq_job.risk_calculation.exposure_model
-    if loss_type == "structural":
-        unit = model.stco_unit
-    elif loss_type == "non_structural":
-        unit = model.non_stco_unit
-    elif loss_type == "contents":
-        unit = model.coco_unit
-    elif loss_type == "occupancy":
-        unit = "occupants"
-    else:
-        raise RuntimeError("invalid loss type %s" % loss_type)
-
     return dict(investigation_time=metadata.investigation_time,
                 statistics=metadata.statistics,
                 quantile_value=metadata.quantile,
                 source_model_tree_path=source_model_tree_path,
                 gsim_tree_path=gsim_tree_path,
-                unit=unit)
+                unit=output.oq_job.risk_calculation.exposure_model.unit(
+                    loss_type))
 
 
 @core.makedirsdeco

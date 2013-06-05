@@ -87,7 +87,8 @@ def do_scenario(loss_type, unit, containers, params, profile):
             insured_loss_matrix = [
                 scientific.insured_losses(
                     loss_ratio_matrix[i], asset.value(loss_type),
-                    asset.deductible, asset.ins_limit)
+                    asset.deductible(loss_type),
+                    asset.insurance_limit(loss_type))
                 for i, asset in enumerate(assets)]
 
     with profile('saving risk outputs'):
@@ -157,8 +158,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         taxonomies = super(ScenarioRiskCalculator, self).get_taxonomies()
         if self.rc.insured_losses:
             queryset = self.rc.exposure_model.exposuredata_set.filter(
-                (db.models.Q(deductible__isnull=True) |
-                 db.models.Q(ins_limit__isnull=True)))
+                (db.models.Q(cost__deductible_absolute__isnull=True) |
+                 db.models.Q(cost__insurance_limit_absolute__isnull=True)))
             if queryset.exists():
                 logs.LOG.error(
                     "missing insured limits in exposure for assets %s" % (
