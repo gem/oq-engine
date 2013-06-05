@@ -102,7 +102,7 @@ def convert(filename, output_filename):
             safe_set(element, "id", get(asset_element, "id", gml=True))
             safe_set(element, "taxonomy", text(asset_element, "taxonomy"))
             safe_set(element, "area", text(asset_element, "area"))
-            safe_set(element, "units", text(asset_element, "number"))
+            safe_set(element, "number", text(asset_element, "number"))
 
             location = etree.SubElement(element, "location")
             lon, lat = find(asset_element, "pos", True).text.split()

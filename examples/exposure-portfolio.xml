@@ -24,7 +24,7 @@
     </conversions>
 
     <assets>
-      <asset id="asset_01" area="120" units="7" taxonomy="RC/DMRF-D/LR">
+      <asset id="asset_01" area="120" number="7" taxonomy="RC/DMRF-D/LR">
           <location lon="9.15000" lat="45.16667" />
 
           <costs>
@@ -41,7 +41,7 @@
           </occupancies>
         </asset>
 
-        <asset id="asset_02" area="119" units="7" taxonomy="RC/DMRF-D/HR">
+        <asset id="asset_02" area="119" number="7" taxonomy="RC/DMRF-D/HR">
           <location lon="9.15333" lat="45.12200" />
 
           <costs>
@@ -59,7 +59,7 @@
           </occupancies>
         </asset>
 
-        <asset id="asset_03" area="118" units="5" taxonomy="RC/DMRF-D/LR">
+        <asset id="asset_03" area="118" number="5" taxonomy="RC/DMRF-D/LR">
           <location lon="9.14777" lat="45.17999" />
 
           <costs>

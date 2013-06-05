@@ -66,7 +66,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
     <description>Buildings in Pavia</description>
 
     <assets>
-      <asset id="asset_01" area="120" units="7" taxonomy="RC/DMRF-D/LR">
+      <asset id="asset_01" area="120" number="7" taxonomy="RC/DMRF-D/LR">
         <location lon="9.15000" lat="45.16667"/>
 
         <costs>
@@ -77,7 +77,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
         </costs>
       </asset>
 
-      <asset id="asset_02" area="119" units="6" taxonomy="RC/DMRF-D/HR">
+      <asset id="asset_02" area="119" number="6" taxonomy="RC/DMRF-D/HR">
         <location lon="9.15333" lat="45.12200"/>
 
         <costs>
@@ -105,7 +105,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
                 "id": "asset_01",
                 "description": "Buildings in Pavia",
                 "exposureID": "ep1",
-                "units": 7.0,
+                "number": 7.0,
                 "taxonomy": "RC/DMRF-D/LR",
                 "taxonomySource": "Pavia buildings",
             }, [
@@ -127,7 +127,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
                     "id": "asset_02",
                     "description": "Buildings in Pavia",
                     "exposureID": "ep1",
-                    "units": 6.0,
+                    "number": 6.0,
                     "taxonomy": "RC/DMRF-D/HR",
                     "taxonomySource": "Pavia buildings",
                 }, [
