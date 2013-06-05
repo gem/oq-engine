@@ -63,7 +63,7 @@ class HazardGetter(object):
     :attr float weight:
         The weight (if applicable) to be given to the retrieved data
     """
-    def __init__(self, hazard_output, assets, max_distance, imt):
+    def __init__(self, hazard_output, assets, max_distance, imt, monitor=None):
         self.hazard_output = hazard_output
         hazard = hazard_output.output_container
         self.hazard_id = hazard.id
@@ -75,7 +75,7 @@ class HazardGetter(object):
             self.weight = hazard.lt_realization.weight
         else:
             self.weight = None
-
+        self.monitor = monitor or DummyMonitor()
         # FIXME(lp). It is better to directly store the convex hull
         # instead of the mesh. We are not doing it because
         # hazardlib.Polygon is not (yet) pickeable
@@ -140,9 +140,9 @@ class HazardCurveGetterPerAsset(HazardGetter):
         A cache of the computed hazard curve object on a per-location basis.
     """
 
-    def __init__(self, hazard, assets, max_distance, imt):
+    def __init__(self, hazard, assets, max_distance, imt, monitor=None):
         super(HazardCurveGetterPerAsset, self).__init__(
-            hazard, assets, max_distance, imt)
+            hazard, assets, max_distance, imt, monitor)
         self._cache = {}
 
     def get_data(self):
@@ -219,9 +219,9 @@ class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values.
     """
-    def __init__(self, hazard_output, assets, max_distance, imt):
+    def __init__(self, hazard_output, assets, max_distance, imt, monitor=None):
         super(GroundMotionValuesGetter, self).__init__(
-            hazard_output, assets, max_distance, imt)
+            hazard_output, assets, max_distance, imt, monitor)
         self.query_args = (self.imt_type, self.hazard_id)
 
         spectral_filters = ""
@@ -238,7 +238,7 @@ class GroundMotionValuesGetter(HazardGetter):
 
         self._cache = {}
 
-    def __call__(self, monitor=None):
+    def __call__(self):
         """
         :param monitor:
            an instance of
@@ -249,8 +249,7 @@ class GroundMotionValuesGetter(HazardGetter):
             :class:`openquake.engine.db.models.ExposureData`, the second is an
             array with the closest ground motion values for each asset.
         """
-        monitor = monitor or DummyMonitor()
-        with monitor.copy('extracting gmvs and ruptures'):
+        with self.monitor.copy('extracting gmvs and ruptures'):
             dm, asset_ids, rupture_ids = self.get_data()
 
         def gmvs(asset_id):
@@ -280,9 +279,11 @@ class GroundMotionValuesGetter(HazardGetter):
         cursor = models.getcursor('job_init')
         #print cursor.mogrify(self.get_gmvs_ruptures_query,
         #                     self.query_args + (site_id,))
-        cursor.execute(self.get_gmvs_ruptures_query,
-                       self.query_args + (site_id,))
-        data = cursor.fetchall()
+        with self.monitor.copy('aggregating gmvs, ruptures'):
+            cursor.execute(self.get_gmvs_ruptures_query,
+                           self.query_args + (site_id,))
+        with self.monitor.copy('fetching gmvs, ruptures'):
+            data = cursor.fetchall()
         if not data:
             gmvs, ruptures = [], []
         else:
@@ -314,8 +315,9 @@ class GroundMotionValuesGetter(HazardGetter):
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
                 self._assets_mesh.get_convex_hull().wkt)
-        cursor.execute(query, args)
-        assets_sites = dict(cursor)
+        with self.monitor.copy('associating asset_id->site_id'):
+            cursor.execute(query, args)
+            assets_sites = dict(cursor)
         if not assets_sites:
             return {}, [], []
         cursor.execute('select max(id) from hzrdr.ses_rupture')
@@ -323,11 +325,13 @@ class GroundMotionValuesGetter(HazardGetter):
         max_asset_id = max(assets_sites)
         dm = dok_matrix((max_asset_id + 1, max_rupture_id + 1), numpy.float32)
         rupture_ids = set()
+        asset_ids = set()
         for asset_id, site_id in assets_sites.iteritems():
             # the query may return spurious assets outside the considered block
             if asset_id in self.asset_dict:  # in block
                 for gmv, rup_id in self.get_by_site(site_id):
                     dm[asset_id, rup_id] = gmv
                     rupture_ids.add(rup_id)
+                asset_ids.add(asset_id)
         self._cache.clear()
-        return dm, sorted(assets_sites), sorted(rupture_ids)
+        return dm, sorted(asset_ids), sorted(rupture_ids)
