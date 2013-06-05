@@ -1780,7 +1780,7 @@ class GmfCollection(djm.Model):
         FROM (SELECT imt, sa_period, sa_damping, ses_id,
              unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
            FROM hzrdr.gmf_agg, hzrdi.hazard_site
-           WHERE site_id = hzrdi.hazard_site.id
+           WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
              AND gmf_collection_id=%d AND ses_id=%d) AS x
         GROUP BY imt, sa_period, sa_damping, rupture_id
         """ % (hc.id, self.id, ses.id)

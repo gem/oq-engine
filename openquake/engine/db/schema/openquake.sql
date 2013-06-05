@@ -662,7 +662,7 @@ CREATE TABLE hzrdr.gmf_agg (
             OR ((imt != 'SA') AND (sa_damping IS NULL))),
     gmvs float[] NOT NULL,
     rupture_ids int[],
-    site_id INTEGER NOT NULL, -- fk -> hazard_site
+    site_id INTEGER NOT NULL -- fk -> hazard_site
 ) TABLESPACE hzrdr_ts;
 
 
