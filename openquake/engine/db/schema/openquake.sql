@@ -138,11 +138,13 @@ CREATE TABLE uiapi.input (
     --      vulnerability file (vulnerability)
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('unknown', 'source', 'source_model_logic_tree', 'gsim_logic_tree',
+        CHECK(input_type IN ('unknown', 'source',
+                             'source_model_logic_tree', 'gsim_logic_tree',
                              'exposure', 'fragility', 'rupture_model',
                              'structural_vulnerability',
                              'contents_vulnerability',
-                             'non_structural_vulnerability',
+                             'nonstructural_vulnerability',
+                             'business_interruption_vulnerability',
                              'occupancy_vulnerability',
                              'structural_vulnerability_retrofitted',
                              'site_model')),
@@ -755,9 +757,7 @@ CREATE TABLE hzrdr.lt_realization (
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL,
     insured BOOLEAN NOT NULL DEFAULT false,
     -- poe is significant only for non-scenario calculations
@@ -790,9 +790,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_fraction (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL,
     variable VARCHAR NOT NULL,
     statistics VARCHAR CONSTRAINT loss_fraction_statistics
@@ -825,9 +823,7 @@ ALTER TABLE riskr.loss_fraction_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.aggregate_loss (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     insured BOOLEAN NOT NULL DEFAULT false,
     mean float NOT NULL,
     std_dev float NULL
@@ -841,9 +837,7 @@ CREATE TABLE riskr.event_loss (
     -- FK to uiapi.output.id. The corresponding row must have
     -- output_type == event_loss
     output_id INTEGER NOT NULL,
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
     aggregate_loss float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -853,9 +847,7 @@ CREATE TABLE riskr.event_loss (
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL,
     aggregate BOOLEAN NOT NULL DEFAULT false,
     insured BOOLEAN NOT NULL DEFAULT false,
@@ -911,9 +903,7 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_type VARCHAR NOT NULL CONSTRAINT loss_type
-       CHECK(loss_type IN ('structural', 'non_structural',
-                           'contents', 'occupancy')),
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL
 ) TABLESPACE riskr_ts;
 
@@ -972,8 +962,7 @@ CREATE TABLE riskr.dmg_dist_total (
 --      stco: structural cost
 CREATE TABLE riski.exposure_model (
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- Associates the risk exposure model with an input file
+    -- Associates the risk exposure model with an input record
     input_id INTEGER NOT NULL,
     name VARCHAR NOT NULL,
     description VARCHAR,
@@ -990,36 +979,29 @@ CREATE TABLE riski.exposure_model (
     -- area unit
     area_unit VARCHAR,
 
-    -- contents cost type
-    coco_type VARCHAR CONSTRAINT coco_type_value
-        CHECK(coco_type IS NULL OR coco_type = 'per_asset'
-              OR coco_type = 'per_area' OR coco_type = 'aggregated'),
-    -- contents cost unit
-    coco_unit VARCHAR,
+    deductible_absolute BOOLEAN DEFAULT TRUE,
+    insurance_limit_absolute BOOLEAN DEFAULT TRUE
 
-    -- retrofitting cost type
-    reco_type VARCHAR CONSTRAINT reco_type_value
-        CHECK(reco_type IS NULL OR reco_type = 'per_asset'
-              OR reco_type = 'per_area' OR reco_type = 'aggregated'),
-    -- retrofitting cost unit
-    reco_unit VARCHAR,
+) TABLESPACE riski_ts;
 
-    -- structural cost type
-    stco_type VARCHAR CONSTRAINT stco_type_value
-        CHECK(stco_type IS NULL OR stco_type = 'per_asset'
-              OR stco_type = 'per_area' OR stco_type = 'aggregated'),
-    -- structural cost unit
-    stco_unit VARCHAR,
 
-    -- non structural cost type
-    non_stco_type VARCHAR CONSTRAINT non_stco_type_value
-        CHECK(non_stco_type IS NULL OR non_stco_type = 'per_asset'
-              OR non_stco_type = 'per_area' OR non_stco_type = 'aggregated'),
-    -- non structural cost unit
-    non_stco_unit VARCHAR,
-
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
+-- Cost Conversion table
+CREATE TABLE riski.cost_type (
+    id SERIAL PRIMARY KEY,
+    exposure_model_id INTEGER NOT NULL,
+ 
+    name VARCHAR NOT NULL,
+    conversion VARCHAR NOT NULL CONSTRAINT conversion_value
+        CHECK(conversion = 'per_asset'
+              OR conversion = 'per_area'
+              OR conversion = 'aggregated'),
+    unit VARCHAR,
+    retrofitted_conversion VARCHAR CONSTRAINT retrofitted_conversion_value
+        CHECK(retrofitted_conversion IS NULL
+              OR retrofitted_conversion = 'per_asset'
+              OR retrofitted_conversion = 'per_area'
+              OR retrofitted_conversion = 'aggregated'),
+    retrofitted_unit VARCHAR
 ) TABLESPACE riski_ts;
 
 
@@ -1033,37 +1015,35 @@ CREATE TABLE riski.exposure_data (
     -- vulnerability function reference
     taxonomy VARCHAR NOT NULL,
 
-    -- structural cost
-    stco float CONSTRAINT stco_value CHECK(stco >= 0.0),
-    -- non structural cost
-    non_stco float CONSTRAINT non_stco_value CHECK(stco >= 0.0),
-    -- retrofitting cost
-    reco float CONSTRAINT reco_value CHECK(reco >= 0.0),
-    -- contents cost
-    coco float CONSTRAINT coco_value CHECK(coco >= 0.0),
-
     -- number of assets, people etc.
-    number_of_units float CONSTRAINT number_of_units_value
-        CHECK(number_of_units >= 0.0),
+    units float CONSTRAINT units_value CHECK(units >= 0.0),
     area float CONSTRAINT area_value CHECK(area >= 0.0),
 
-    -- insurance coverage limit
-    ins_limit float,
-    -- insurance deductible
-    deductible float,
-
     site GEOGRAPHY(point) NOT NULL,
-
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL,
     UNIQUE (exposure_model_id, asset_ref)
+) TABLESPACE riski_ts;
+
+
+CREATE TABLE riski.cost (
+    id SERIAL PRIMARY KEY,
+    exposure_data_id INTEGER NOT NULL,
+    cost_type_id INTEGER NOT NULL,
+    converted_cost float NOT NULL CONSTRAINT converted_cost_value
+         CHECK(converted_cost >= 0.0),
+    converted_retrofitted_cost float CONSTRAINT converted_retrofitted_cost_value
+         CHECK(converted_retrofitted_cost >= 0.0),
+    deductible_absolute float CONSTRAINT deductible_value
+         CHECK(deductible_absolute >= 0.0),
+    insurance_limit_absolute float CONSTRAINT insurance_limit_value
+         CHECK(insurance_limit_absolute >= 0.0),
+    UNIQUE (exposure_data_id, cost_type_id)
 ) TABLESPACE riski_ts;
 
 
 CREATE TABLE riski.occupancy (
     id SERIAL PRIMARY KEY,
     exposure_data_id INTEGER NOT NULL,
-    description VARCHAR NOT NULL,
+    period VARCHAR NOT NULL,
     occupants INTEGER NOT NULL
 ) TABLESPACE riski_ts;
 
@@ -1184,9 +1164,6 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE riski.exposure_model ADD CONSTRAINT riski_exposure_model_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE riski.exposure_model ADD CONSTRAINT riski_exposure_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
@@ -1376,6 +1353,18 @@ REFERENCES riski.exposure_model(id) ON DELETE CASCADE;
 ALTER TABLE riski.occupancy ADD CONSTRAINT
 riski_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
 REFERENCES riski.exposure_data(id) ON DELETE CASCADE;
+
+ALTER TABLE riski.cost_type ADD CONSTRAINT
+riski_cost_type_exposure_model_fk FOREIGN KEY (exposure_model_id)
+REFERENCES riski.exposure_model(id) ON DELETE CASCADE;
+
+ALTER TABLE riski.cost ADD CONSTRAINT
+riski_cost_exposure_data_fk FOREIGN KEY (exposure_data_id)
+REFERENCES riski.exposure_data(id) ON DELETE CASCADE;
+
+ALTER TABLE riski.cost ADD CONSTRAINT
+riski_cost_cost_type_fk FOREIGN KEY (cost_type_id)
+REFERENCES riski.cost_type(id) ON DELETE CASCADE;
 
 -- htemp.source_progress to hzrdr.lt_realization FK
 ALTER TABLE htemp.source_progress
