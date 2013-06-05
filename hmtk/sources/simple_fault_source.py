@@ -55,9 +55,12 @@ nrml.models.SimpleFaultSource
 import warnings
 import numpy as np
 from math import fabs
+from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
+import hmtk.sources.source_conversion_utils as conv
+
 
 class mtkSimpleFaultSource(object):
     '''
@@ -104,6 +107,7 @@ class mtkSimpleFaultSource(object):
         self.name = name 
         self.trt = trt
         self.geometry = geometry
+        self.fault_trace = None
         self.upper_depth = upper_depth
         self.lower_depth = lower_depth
         self.mag_scale_rel = mag_scale_rel
@@ -114,8 +118,6 @@ class mtkSimpleFaultSource(object):
         if dip:
             assert((dip > 0.) and (dip <= 90.))
         self.dip = dip
-        self.upper_depth = upper_depth
-        self.lower_depth = lower_depth
         self.catalogue = None
         
     def _check_seismogenic_depths(self, upper_depth, lower_depth):
@@ -181,12 +183,12 @@ class mtkSimpleFaultSource(object):
                 raise ValueError('Unrecognised or unsupported geometry '
                                  'definition')
             else:
-                fault_trace = Line([Point(row[0], row[1]) for row in 
+                self.fault_trace = Line([Point(row[0], row[1]) for row in 
                                       input_geometry])
         else:
-            fault_trace = input_geometry
+            self.fault_trace = input_geometry
         # Build fault surface
-        self.geometry = SimpleFaultSurface.from_fault_data(fault_trace, 
+        self.geometry = SimpleFaultSurface.from_fault_data(self.fault_trace, 
                                                            self.upper_depth, 
                                                            self.lower_depth, 
                                                            self.dip, 
@@ -239,3 +241,30 @@ class mtkSimpleFaultSource(object):
             warnings.warn('Source %s (%s) has fewer than 5 events' 
                 %(self.id, self.name))
 
+
+    def create_oqnrml_source(self, use_defaults=False):
+        '''
+        Turns source into instance of the :class: 
+        openquake.nrmllib.model.SimpleFaultSource
+        :param bool use_defaults:
+            If set to True, will use default values for rupture aspect ratio
+            and magnitude scaling relation. If False, will raise value error
+            if this information is missing
+        '''
+        if not isinstance(self.rake, float):
+            raise ValueError('Cannot render fault source - rake is missing!')
+        simple_geometry = models.SimpleFaultGeometry(
+            wkt=conv.simple_trace_to_wkt_linestring(self.fault_trace),
+            dip=self.dip,
+            upper_seismo_depth=self.upper_depth,
+            lower_seismo_depth=self.lower_depth)
+
+        return models.SimpleFaultSource(
+            self.id,
+            self.name,
+            self.trt,
+            simple_geometry, 
+            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults), 
+            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
+            conv.render_mfd(self.mfd),
+            self.rake)

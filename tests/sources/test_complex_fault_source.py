@@ -55,15 +55,17 @@ hmtk.sources.complex_fault_source.mtkComplexFaultSource
 import unittest
 import warnings
 import numpy as np
+from openquake.nrmllib import models
 from openquake.hazardlib.geo import point, line
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
 
-SOURCE_ATTRIBUTES = ['typology', 'mfd', 'name', 'geometry', 'rake', 
-                     'mag_scale_rel', 'upper_depth', 'catalogue', 
-                     'rupt_aspect_ratio', 'lower_depth', 'id', 'trt']
+SOURCE_ATTRIBUTES = ['fault_edges', 'mfd', 'name', 'geometry', 'rake', 
+                     'typology', 'upper_depth', 'catalogue', 
+                     'rupt_aspect_ratio', 'lower_depth', 'id', 'mag_scale_rel', 
+                     'trt']
                      
 class TestComplexFaultSource(unittest.TestCase):
     '''
@@ -200,6 +202,47 @@ class TestComplexFaultSource(unittest.TestCase):
             self.fault_source.select_catalogue(selector0, 40.0)
         self.assertEqual(ver.exception.message, 
                          'No events found in catalogue!')
-                         
+    
+    def test_create_oqnmrl_complex_fault_source(self):
+        '''
+        Tests the conversion of a point source to an instance of the :class:
+        oqnrmllib.models.AreaSource 
+        '''
+        # Define a complete source
+        complex_edges = [
+            line.Line([point.Point(10., 10., 0.), point.Point(11., 10., 0.)]),
+            line.Line([point.Point(10., 10., 20.), point.Point(11.5, 10., 21.)])
+            ]
+        self.fault_source = mtkComplexFaultSource('001', 
+            'A Fault Source', 
+            trt='Active Shallow Crust',
+            geometry = None,
+            mag_scale_rel=None,
+            rupt_aspect_ratio=1.0,
+            mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
+            rake=0.)
+        self.fault_source.create_geometry(complex_edges, 2.0)
+
+        expected_geometry=models.ComplexFaultGeometry(
+            top_edge_wkt='LINESTRING (10.0 10.0 0.0, 11.0 10.0 0.0)',
+            bottom_edge_wkt='LINESTRING (10.0 10.0 20.0, 11.5 10.0 21.0)')
+
+        expected_source = models.ComplexFaultSource(
+            '001',
+            'A Fault Source',
+            trt='Active Shallow Crust',
+            geometry=expected_geometry,
+            mag_scale_rel='WC1994',
+            rupt_aspect_ratio=1.0,
+            mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
+            rake=90.)
+
+        test_source = self.fault_source.create_oqnrml_source(use_defaults=True)
+        self.assertTrue(isinstance(test_source, models.ComplexFaultSource))
+        self.assertEqual(test_source.id, expected_source.id)
+        self.assertEqual(test_source.name, expected_source.name)
+        self.assertAlmostEqual(test_source.mfd.b_val, 
+                               expected_source.mfd.b_val)
+    
     def tearDown(self):
         warnings.resetwarnings()

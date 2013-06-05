@@ -54,6 +54,8 @@ the class nrml.models.PointSource
 import warnings
 import numpy as np
 from openquake.hazardlib.geo.point import Point
+from openquake.nrmllib import models
+import hmtk.sources.source_conversion_utils as conv
 
 class mtkPointSource(object):
     '''New class to describe the mtkPointsource object
@@ -269,3 +271,28 @@ class mtkPointSource(object):
             # the source!
             warnings.warn('Source %s (%s) has fewer than 5 events' 
                 %(self.id, self.name))
+
+
+    def create_oqnrml_source(self, use_defaults=False):
+        '''
+        Converts the source model into  an instance of the :class:
+        openquake.nrmllib.models.PointSource
+        :param bool use_defaults: 
+            If set to true, will use put in default values for magitude
+            scaling relation, rupture aspect ratio, nodal plane distribution 
+            or hypocentral depth distribution where missing. If set to False
+            then value errors will be raised when information is missing.
+        '''
+        point_geometry = models.PointGeometry(self.geometry.wkt2d,
+                                              self.upper_depth,
+                                              self.lower_depth)
+        return models.PointSource(
+            self.id, 
+            self.name, 
+            self.trt,
+            point_geometry,
+            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults),
+            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
+            conv.render_mfd(self.mfd),
+            conv.render_npd(self.nodal_plane_dist, use_defaults),
+            conv.render_hdd(self.hypo_depth_dist, use_defaults))
