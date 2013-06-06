@@ -168,12 +168,17 @@ def individual_outputs(loss_type, unit, params, profile):
 
     with profile('getting gmvs and ruptures'):
         assets, gmfs = unit.getter()
-        gmvs = []
-        ruptures = set()
-        for g, r in gmfs:
-            gmvs.append(g)
-            ruptures.union(r)
-
+    with profile('filling gmvs with zeros'):
+        rupture_ids = set()
+        gmv = {}
+        for i, (gs, rs) in enumerate(gmfs):
+            for g, r in zip(gs, rs):
+                gmv[i, r] = g
+                rupture_ids.add(r)
+        assert rupture_ids, 'No ruptures'
+        n = len(assets)
+        gmvs = [[gmv.get((i, r), 0) for r in rupture_ids] for i in range(n)]
+        del gmv
     with profile('computing losses, loss curves and maps'):
         loss_matrix, curves = unit.calc(gmvs)
 
@@ -182,12 +187,12 @@ def individual_outputs(loss_type, unit, params, profile):
                 for poe in params.conditional_loss_poes]
 
         for i, asset in enumerate(assets):
-            for j, rupture_id in enumerate(ruptures):
+            for j, rupture_id in enumerate(rupture_ids):
                 event_loss_table[rupture_id] += (
                     loss_matrix[i][j] * asset.value(loss_type))
 
     return UnitOutputs(
-        assets, loss_matrix, ruptures, curves, maps, event_loss_table)
+        assets, loss_matrix, rupture_ids, curves, maps, event_loss_table)
 
 
 def save_individual_outputs(
