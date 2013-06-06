@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import tempfile
 import numpy
 import StringIO
@@ -23,6 +24,7 @@ from tests.utils import helpers
 
 from openquake.engine import export
 from openquake.engine.db import models
+from openquake.engine.tools.restore_hazards import hazard_restore_local
 
 
 class BaseRiskQATestCase(qa_utils.BaseQATestCase):
@@ -125,6 +127,23 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
     Run an end-to-end calculation (by first running an hazard
     calculation, then running a risk calculation
     """
+
+    def run_hazard(self, cfg, exports=None):
+        """
+        During development of end2end qa tests it is handy to load
+        hazard data (when you are tuning the risk params). So, if it
+        is given an hazard dump in the environment variable
+        PRELOADED_HAZARD, then we will load it instead of running the
+        whole hazard calculation
+        """
+
+        hazard_dump = os.getenv('PRELOADED_HAZARD', False)
+
+        if hazard_dump:
+            hazard_restore_local(hazard_dump)
+        else:
+            super(End2EndRiskQATestCase, self).run_hazard(cfg, exports)
+
     def _run_test(self):
         result_dir = tempfile.mkdtemp()
 
@@ -187,4 +206,3 @@ class LogicTreeBasedTestCase(object):
         corresponds to the latest started hazard calculation.
         """
         return models.HazardCalculation.objects.all().order_by('-id')[0].id
-
