@@ -17,5 +17,58 @@
 Package :mod:`openquake.hazardlib.scalerel` contains base classes and
 implementations of magnitude-area and area-magnitude scaling relationships.
 """
+import os
+import inspect
+import importlib
+from collections import OrderedDict
+from openquake.hazardlib.scalerel.base import BaseMSR, BaseASR
+
+
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.scalerel.wc1994 import WC1994
+
+
+def _get_available_class(base_class):
+    '''
+    Return an ordered dictionary with the available classes in the
+    scalerel submodule with classes that derives from `base_class`,
+    keyed by class name.
+    '''
+    gsims = {}
+    for fname in os.listdir(os.path.dirname(__file__)):
+        if fname.endswith('.py'):
+            modname, _ext = os.path.splitext(fname)
+            mod = importlib.import_module(
+                'openquake.hazardlib.scalerel.' + modname)
+            for cls in mod.__dict__.itervalues():
+                if inspect.isclass(cls) and issubclass(cls, base_class) \
+                        and cls != base_class:
+                    gsims[cls.__name__] = cls
+    return OrderedDict((k, gsims[k]) for k in sorted(gsims))
+
+
+def get_available_magnitude_scalerel():
+    '''
+    Return an ordered dictionary with the available Magnitude ScaleRel
+    classes, keyed by class name.
+    '''
+    return _get_available_class(BaseMSR)
+
+
+def get_available_area_scalerel():
+    '''
+    Return an ordered dictionary with the available Magnitude ScaleRel
+    classes, keyed by class name.
+    '''
+    return _get_available_class(BaseASR)
+
+
+def get_available_scalerel():
+    '''
+    Return an ordered dictionary with the available ScaleRel classes,
+    keyed by class name.
+    '''
+    ret = get_available_area_scalerel()
+    ret.update(get_available_magnitude_scalerel())
+
+    return ret
