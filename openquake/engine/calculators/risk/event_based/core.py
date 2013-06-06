@@ -31,7 +31,6 @@ from openquake.risklib import api, scientific
 from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine import logs
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.base import signal_task_complete
 
@@ -82,36 +81,36 @@ def do_event_based(loss_type, units, containers, params, profile):
     """
     loss_curves = []
     event_loss_table = collections.Counter()
-
+    all_assets = []
     for unit in units:
         hid = unit.getter.hazard_output.id
-        outputs = individual_outputs(loss_type, unit, params, profile)
+        for site_id, assets in unit.getter:
+            all_assets.extend(assets)
+            outputs = individual_outputs(
+                loss_type, unit, site_id, assets, params, profile)
 
-        if not outputs.assets:
-            logs.LOG.info("Exit from task as no asset could be processed")
-            return collections.Counter()
+            if params.sites_disagg:
+                with profile('disaggregating results'):
+                    disagg_outputs = disaggregate(outputs, params)
+            else:
+                disagg_outputs = None
 
-        if params.sites_disagg:
-            with profile('disaggregating results'):
-                disagg_outputs = disaggregate(outputs, params)
-        else:
-            disagg_outputs = None
+            loss_curves.append(outputs.loss_curves)
+            event_loss_table += outputs.event_loss_table
 
-        loss_curves.append(outputs.loss_curves)
-        event_loss_table += outputs.event_loss_table
+            with profile('saving individual risk'):
+                save_individual_outputs(
+                    loss_type, containers, hid, outputs, disagg_outputs,
+                    params)
 
-        with profile('saving individual risk'):
-            save_individual_outputs(
-                loss_type, containers, hid, outputs, disagg_outputs, params)
-
-        if params.insured_losses:
-            insured_curves = list(
-                insured_losses(
-                    loss_type, unit, outputs.assets, outputs.loss_matrix))
-            containers.write(
-                outputs.assets, insured_curves,
-                output_type="loss_curve", insured=True, hazard_output_id=hid,
-                loss_type=loss_type)
+            if params.insured_losses:
+                insured_curves = list(
+                    insured_losses(
+                        loss_type, unit, outputs.assets, outputs.loss_matrix))
+                containers.write(
+                    outputs.assets, insured_curves,
+                    output_type="loss_curve", insured=True,
+                    hazard_output_id=hid, loss_type=loss_type)
 
     # compute mean and quantile outputs
     if len(units) < 2:
@@ -120,12 +119,12 @@ def do_event_based(loss_type, units, containers, params, profile):
     with profile('computing risk statistics'):
         weights = [unit.getter.weight for unit in units]
         stats = statistics(
-            outputs.assets, numpy.array(loss_curves).transpose(1, 0, 2, 3),
+            all_assets, numpy.array(loss_curves).transpose(1, 0, 2, 3),
             weights, params)
 
     with profile('saving risk statistics'):
         save_statistical_output(
-            loss_type, containers, outputs.assets, stats, params)
+            loss_type, containers, all_assets, stats, params)
 
     return event_loss_table
 
@@ -166,15 +165,15 @@ class UnitOutputs(object):
         self.event_loss_table = event_loss_table
 
 
-def individual_outputs(loss_type, unit, params, profile):
+def individual_outputs(loss_type, unit, site_id, assets, params, profile):
 
     event_loss_table = collections.Counter()
 
-    assets, (ground_motion_values, ruptures) = unit.getter(
-        profile('getting hazard'))
+    with profile('getting gmvs and ruptures'):
+        ground_motion_values, ruptures = unit.getter.get_gmvs_ruptures(site_id)
 
     with profile('computing losses, loss curves and maps'):
-        loss_matrix, curves = unit.calc(ground_motion_values)
+        loss_matrix, curves = unit.calc([ground_motion_values] * len(assets))
 
         maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
                  for losses, poes in curves]

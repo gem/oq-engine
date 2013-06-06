@@ -23,7 +23,6 @@ calculation.
 """
 
 import numpy
-from scipy.sparse import dok_matrix
 
 from openquake.engine import logs
 from openquake.hazardlib import geo
@@ -110,10 +109,10 @@ class HazardGetter(object):
             :class:`openquake.engine.db.models.ExposureData`, the second is an
             array with the corresponding hazard data.
         """
-        # data is a gmf or a set of hazard curves
-        asset_ids, data = self.get_data()
+        # data is a pair (gmvs, ruptures) or a set of hazard curves
+        assets, data = self.get_data()
 
-        missing_asset_ids = self.all_asset_ids - set(asset_ids)
+        missing_asset_ids = self.all_asset_ids - set(a.id for a in assets)
 
         for missing_asset_id in missing_asset_ids:
             # please don't remove this log: it was required by Vitor since
@@ -122,9 +121,7 @@ class HazardGetter(object):
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
 
-        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids], data)
-
-        return ret
+        return assets, data
 
 
 class HazardCurveGetterPerAsset(HazardGetter):
@@ -174,7 +171,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
         curves = []
         for asset_id, (hazard_curve, distance) in hazard_assets:
             if distance < self.max_distance * KILOMETERS_TO_METERS:
-                assets.append(asset_id)
+                assets.append(self.asset_dict[asset_id])
                 curves.append(hazard_curve)
 
         return assets, curves
@@ -216,122 +213,62 @@ class HazardCurveGetterPerAsset(HazardGetter):
 
 class GroundMotionValuesGetter(HazardGetter):
     """
-    Hazard getter for loading ground motion values.
+    Hazard getter for loading ground motion values. It is instantiated
+    with a set of assets all of the same taxonomy.
     """
     def __init__(self, hazard_output, assets, max_distance, imt):
         super(GroundMotionValuesGetter, self).__init__(
             hazard_output, assets, max_distance, imt)
-        self.query_args = (self.imt_type, self.hazard_id)
 
-        spectral_filters = ""
-        if self.imt_type == "SA":
-            spectral_filters = "AND sa_period = %s AND sa_damping = %s"
-            self.query_args += (self.sa_period, self.sa_damping)
-
-        self.get_gmvs_ruptures_query = """
-  SELECT array_concat(gmvs) AS gmvs, array_concat(rupture_ids) AS rupture_ids
-  FROM hzrdr.gmf_agg
-  WHERE imt = %s {}
-  AND gmf_collection_id = %s AND site_id = %s;
-  """.format(spectral_filters)  # this will fill in the {}
-
-        self._cache = {}
-
-    def __call__(self, monitor=None):
+    def __iter__(self):
         """
-        :param monitor:
-           an instance of
-           :class:`openquake.engine.performance.EnginePerformanceMonitor`
-           or None
-        :returns:
-            A tuple with two elements. The first is an array of instances of
-            :class:`openquake.engine.db.models.ExposureData`, the second is an
-            array with the closest ground motion values for each asset.
-        """
-        monitor = monitor or DummyMonitor()
-        with monitor.copy('extracting gmvs and ruptures'):
-            dm, asset_ids, rupture_ids = self.get_data(monitor)
-
-        def gmvs(asset_id):
-            "Extract the gmvs from the sparse matrix dm"
-            return [dm[asset_id, rup_id] for rup_id in rupture_ids]
-
-        missing_asset_ids = self.all_asset_ids - set(asset_ids)
-
-        for missing_asset_id in missing_asset_ids:
-            # please dont' remove this log: it was required by Vitor since
-            # this is a case that should NOT happen and must raise a warning
-            logs.LOG.warn(
-                "No hazard has been found for the asset %s within %s km" % (
-                    self.asset_dict[missing_asset_id], self.max_distance))
-
-        ret = ([self.asset_dict[asset_id] for asset_id in asset_ids],
-               (map(gmvs, asset_ids), rupture_ids))
-        return ret
-
-    def get_by_site(self, site_id, monitor):
-        """
-        :param site_id: a :class:`openquake.engine.db.models.HazardSite` id
-        """
-        if site_id in self._cache:
-            return self._cache[site_id]
-
-        cursor = models.getcursor('job_init')
-        #print cursor.mogrify(self.get_gmvs_ruptures_query,
-        #                     self.query_args + (site_id,))
-        with monitor.copy('aggregating gmvs, ruptures'):
-            cursor.execute(self.get_gmvs_ruptures_query,
-                           self.query_args + (site_id,))
-        with monitor.copy('fetching gmvs, ruptures'):
-            data = cursor.fetchall()
-        if not data:
-            gmvs, ruptures = [], []
-        else:
-            [(gmvs, ruptures)] = data
-        if not ruptures:  # for scenario calculators
-            ruptures = range(len(gmvs))
-        self._cache[site_id] = z = zip(gmvs, ruptures)
-        return z
-
-    def get_data(self, monitor):
-        """
-        Returns [asset_id...], [(gmvs, rupture_ids)...]
+        Iterator yielding site_id, assets.
         """
         cursor = models.getcursor('job_init')
-        # The ``distinct ON (exposure_data.id)`` combined by the
-        # ``ORDER BY ST_Distance`` does the job to select the closest
-        # gmvs
+        # NB: the ``distinct ON (exposure_data.id)`` combined by the
+        # ``ORDER BY ST_Distance`` does the job to select the closest site
         query = """
+SELECT site_id, array_agg(asset_id) AS asset_ids FROM (
   SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
   FROM riski.exposure_data AS exp
   JOIN hzrdi.hazard_site AS hsite
   ON ST_DWithin(exp.site, hsite.location, %s)
   WHERE hsite.hazard_calculation_id = %s
   AND taxonomy = %s AND exposure_model_id = %s AND exp.site && %s
-  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false);
+  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)) AS x
+GROUP BY site_id;
    """
         args = (self.max_distance * KILOMETERS_TO_METERS,
                 self.hazard_output.oq_job.hazard_calculation.id,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
                 self._assets_mesh.get_convex_hull().wkt)
-        with monitor.copy('associating asset_id->site_id'):
-            cursor.execute(query, args)
-            assets_sites = dict(cursor)
-        if not assets_sites:
-            return {}, [], []
-        cursor.execute('select max(id) from hzrdr.ses_rupture')
-        max_rupture_id = cursor.fetchone()[0]
-        max_asset_id = max(assets_sites)
-        dm = dok_matrix((max_asset_id + 1, max_rupture_id + 1), numpy.float32)
-        rupture_ids = set()
-        asset_ids = set()
-        for asset_id, site_id in assets_sites.iteritems():
-            # the query may return spurious assets outside the considered block
-            if asset_id in self.asset_dict:  # in block
-                for gmv, rup_id in self.get_by_site(site_id, monitor):
-                    dm[asset_id, rup_id] = gmv
-                    rupture_ids.add(rup_id)
-                asset_ids.add(asset_id)
-        self._cache.clear()
-        return dm, sorted(asset_ids), sorted(rupture_ids)
+        cursor.execute(query, args)
+        for site_id, asset_ids in cursor.fetchall():
+            assets = [self.asset_dict[i] for i in asset_ids
+                      if i in self.asset_dict]
+            if assets:
+                yield site_id, assets
+
+    def get_gmvs_ruptures(self, site_id):
+        """
+        :returns: gmvs and ruptures for the given site and IMT
+        """
+        gmvs = []
+        ruptures = []
+        for gmf in models.GmfAgg.objects.filter(
+                site=site_id, imt=self.imt, sa_period=self.sa_period,
+                sa_damping=self.sa_damping):
+            gmvs.extend(gmf.gmvs)
+            if gmf.rupture_ids:
+                ruptures.extend(gmf.rupture_ids)
+        return gmvs, ruptures
+
+    def get_data(self):
+        all_assets = []
+        all_gmvs_ruptures = []
+        for site_id, assets in self:
+            all_assets.extend(assets)
+            gmvs, ruptures = self.get_gmvs_ruptures(site_id)
+            all_gmvs_ruptures.extend([(gmvs, ruptures)] * len(assets))
+        return all_assets, all_gmvs_ruptures
