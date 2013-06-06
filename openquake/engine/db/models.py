@@ -2574,15 +2574,26 @@ class AssetManager(djm.GeoManager):
         args = (rc.exposure_model.id, taxonomy,
                 "SRID=4326; %s" % rc.region_constraint.wkt)
 
-        # if time_event is not specified we compute the number of
-        # occupants by averaging the occupancy data for each asset.
-        if rc.time_event is None:
-            occupants = "AVG(riski.occupancy.occupants)"
+        # if the exposure model is of type "population" we extract the
+        # occupants from the `number_of_units` field
+        if rc.exposure_model.category == "population":
+            occupants = "number_of_units"
             occupants_cond = "1 = 1"
+            occupancy_join = ""
         else:
-            occupants = "riski.occupancy.occupants"
-            occupants_cond = "riski.occupancy.period = %s"
-            args += (rc.time_event,)
+            # otherwise we will query the occupancy table
+            occupancy_join = "LEFT JOIN riski.occupancy"
+
+            # if time_event is not specified we compute the number of
+            # occupants by averaging the occupancy data for each asset.
+            if rc.time_event is None:
+                occupants = "AVG(riski.occupancy.occupants)"
+                occupants_cond = "1 = 1"
+            else:
+                args += (rc.time_event,)
+                occupants = "riski.occupancy.occupants"
+                occupants_cond = "riski.occupancy.period = %s"
+
         args += (size, offset)
 
         # For each cost type associated with the exposure model we
@@ -2621,7 +2632,7 @@ class AssetManager(djm.GeoManager):
                    {occupants} AS occupancy,
                    {costs}
             FROM riski.exposure_data
-            LEFT JOIN riski.occupancy
+            {occupancy_join}
             ON riski.exposure_data.id = riski.occupancy.exposure_data_id
             {costs_join}
             WHERE exposure_model_id = %s AND
@@ -2632,7 +2643,8 @@ class AssetManager(djm.GeoManager):
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
             """.format(occupants=occupants, occupants_cond=occupants_cond,
-                       costs=", ".join(costs), costs_join=costs_join)
+                       costs=", ".join(costs), costs_join=costs_join,
+                       occupancy_join=occupancy_join)
 
         return list(self.raw(query, args))
 
@@ -2668,7 +2680,7 @@ class ExposureData(djm.Model):
     taxonomy = djm.TextField()
     site = djm.PointField(geography=True)
 
-    units = djm.FloatField(
+    number_of_units = djm.FloatField(
         null=True, help_text="number of assets, people, etc.")
     area = djm.FloatField(null=True)
 
