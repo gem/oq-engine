@@ -80,8 +80,6 @@ def do_scenario_damage(unit, params, profile):
     with profile('getting hazard'):
         assets, gmfs = unit.getter()
         gmvs = [g for g, r in gmfs]
-        #for a, g in zip(assets, gmvs):
-        #    print a, g
 
     if not len(assets):
         logs.LOG.warn("Exit from task as no asset could be processed")
