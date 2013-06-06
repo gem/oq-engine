@@ -70,6 +70,30 @@ def hazard_restore(conn, tar):
         conn.commit()
     log.info('Restored %s', tar)
 
+
+def hazard_restore_with_params(tar, host, dbname, user, password, port):
+    conn = psycopg2.connect(
+        host=host, dbname=dbname, user=user, password=password, port=port)
+    hazard_restore(conn, tar)
+
+
+def hazard_restore_local(tar):
+    """
+    Use the current django settings to restore hazard
+    """
+    from django.conf import settings
+    default_cfg = settings.DATABASES['default']
+
+    hazard_restore_with_params(
+        tar,
+        default_cfg['HOST'],
+        default_cfg['NAME'],
+        default_cfg['USER'],
+        default_cfg['PASSWORD'],
+        # avoid passing an empty string to psycopg
+        default_cfg['PORT'] or None)
+
+
 if __name__ == '__main__':
     # not using the predefined Django connections here since
     # we may want to restore the tarfile into a remote db
@@ -81,8 +105,6 @@ if __name__ == '__main__':
     p.add_argument('password', nargs='?', default='')
     p.add_argument('port', nargs='?', default='5432')
     arg = p.parse_args()
-    conn = psycopg2.connect(
-        host=arg.host, dbname=arg.dbname,
-        user=arg.user, password=arg.password, port=arg.port)
     logging.basicConfig(level=logging.INFO)
-    hazard_restore(conn, arg.tarfile)
+    hazard_restore_with_params(arg.tarfile, arg.host, arg.dbname,
+                               arg.user, arg.password, arg.port)
