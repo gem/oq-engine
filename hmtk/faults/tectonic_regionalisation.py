@@ -58,7 +58,7 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 
 DEFAULT_SHEAR_MODULUS = [(30.0, 1.0)]
 DEFAULT_DLR = [(1.25E-5, 1.0)]
-DEFAULT_MSR = [(WC1994, 1.0)]
+DEFAULT_MSR = [(WC1994(), 1.0)]
 
 def _check_list_weights(parameter, name):
     '''

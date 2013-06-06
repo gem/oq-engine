@@ -71,7 +71,7 @@ Fault_Model:
       Aseismic: 0.0
       MFD_Model: 
           # Example of constructor for characteristic earthquake
-        - Model_Type: Characteristic
+        - Model_Name: Characteristic
           # Spacing (magnitude units) of the magnitude frequency distribution
           MFD_spacing: 0.1
           # Weight of the model
@@ -88,7 +88,7 @@ Fault_Model:
         - Model_Name: AndersonLucoArbitrary
           # Example constructor of the Anderson & Luco (1983) - Arbitrary Exponential 
           # Type - chooses between type 1 ('First'), type 2 ('Second') or type 3 ('Third')
-          Type: First
+          Model_Type: First
           MFD_spacing: 0.1
           Model_Weight: 0.1
           # Maximum Magnitude of the exponential distribution
