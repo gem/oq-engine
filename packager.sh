@@ -378,7 +378,7 @@ _pkgtest_innervm_run () {
             DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
         done
 
-        for demo_dir in \$(find ./risk -type d -depth 1); do
+        for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d); do
             cd $demo_dir
             DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard job_hazard.ini --exports xml
             calculation_id=\$(env DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
