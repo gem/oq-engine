@@ -83,16 +83,15 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
     taxonomy = 'RM'
 
     def test_call(self):
-        assets, (gmfs, _ruptures) = self.getter()
-        self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
-        numpy.testing.assert_allclose([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]],
-                                      gmfs)
+        for site_id, assets in self.getter:
+            gmvs, ruptures = self.getter.get_gmvs_ruptures(site_id)
+            self.assertEqual(len(gmvs), len(ruptures))
+            numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        assets, (gmfs, _) = self.getter()
-        self.assertEqual([], assets)
-        self.assertEqual(0, len(gmfs))
+        site_assets = list(self.getter)
+        self.assertEqual([], site_assets)
 
 
 class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
@@ -104,7 +103,6 @@ class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
     taxonomy = 'RM'
 
     def test_call(self):
-        assets, (values, _) = self.getter()
-        self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
-        numpy.testing.assert_allclose(
-            [[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], values)
+        for site_id, assets in self.getter:
+            gmvs, ruptures = self.getter.get_gmvs_ruptures(site_id)
+            numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
