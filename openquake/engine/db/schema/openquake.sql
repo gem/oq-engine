@@ -1017,7 +1017,7 @@ CREATE TABLE riski.exposure_data (
     taxonomy VARCHAR NOT NULL,
 
     -- number of assets, people etc.
-    units float CONSTRAINT units_value CHECK(units >= 0.0),
+    number_of_units float CONSTRAINT units_value CHECK(number_of_units >= 0.0),
     area float CONSTRAINT area_value CHECK(area >= 0.0),
 
     site GEOGRAPHY(point) NOT NULL,
