@@ -244,7 +244,11 @@ GROUP BY site_id;
                 self.assets[0].exposure_model_id,
                 self._assets_mesh.get_convex_hull().wkt)
         cursor.execute(query, args)
-        for site_id, asset_ids in cursor.fetchall():
+        sites_assets = cursor.fetchall()
+        if not sites_assets:
+            logs.LOG.warn('No close site found for %d assets of taxonomy %s',
+                          len(self.assets), self.assets[0].taxonomy)
+        for site_id, asset_ids in sites_assets:
             assets = [self.asset_dict[i] for i in asset_ids
                       if i in self.asset_dict]
             if assets:
@@ -257,11 +261,13 @@ GROUP BY site_id;
         gmvs = []
         ruptures = []
         for gmf in models.GmfAgg.objects.filter(
-                site=site_id, imt=self.imt, sa_period=self.sa_period,
+                site=site_id, imt=self.imt_type, sa_period=self.sa_period,
                 sa_damping=self.sa_damping):
             gmvs.extend(gmf.gmvs)
             if gmf.rupture_ids:
                 ruptures.extend(gmf.rupture_ids)
+        if not gmvs:
+            logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
         return gmvs, ruptures
 
     def get_data(self):

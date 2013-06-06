@@ -71,7 +71,6 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
         self.getter.max_distance = 0.00001  # 1 cm
         assets, values = self.getter()
         self.assertEqual([], assets)
-        #self.assertEqual(0, len(values))
 
 
 class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
