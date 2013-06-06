@@ -100,7 +100,7 @@ class ExposureDBWriter(object):
             exposure_model=self.model, asset_ref=values["id"],
             taxonomy=values.get("taxonomy"),
             area=values.get("area"),
-            units=values.get("units"),
+            number_of_units=values.get("number"),
             site="POINT(%s %s)" % (point[0], point[1]))
 
         for cost_type in self.conversions:
@@ -120,14 +120,14 @@ class ExposureDBWriter(object):
                 retrofitted = models.ExposureData.per_asset_value(
                     cost.retrofitted, cost_type.retrofitted_conversion,
                     asset.area, values.get("areaType"),
-                    asset.units, values["category"])
+                    asset.number_of_units, values["category"])
             else:
                 retrofitted = None
 
             converted_cost = models.ExposureData.per_asset_value(
                 cost.value, cost_type.conversion,
                 asset.area, values.get("areaType"),
-                asset.units, values["category"])
+                asset.number_of_units, values["category"])
             models.Cost.objects.create(
                 exposure_data=asset,
                 cost_type=cost_type,
