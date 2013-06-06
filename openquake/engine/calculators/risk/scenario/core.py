@@ -75,13 +75,18 @@ def do_scenario(loss_type, unit, containers, params, profile):
 
     with profile('getting hazard'):
         assets, gmfs = unit.getter()
+        gmvs = [g for g, r in gmfs]
 
     if not len(assets):
         logs.LOG.info("Exit from task as no asset could be processed")
-        return
+        return None, None
+
+    elif not sum(len(g) for g in gmvs):
+        logs.LOG.info("Exit from task as no GMF could be processed")
+        return None, None
 
     with profile('computing risk'):
-        loss_ratio_matrix = unit.calc([g[0] for g in gmfs])
+        loss_ratio_matrix = unit.calc(gmvs)
 
         if params.insured_losses:
             insured_loss_matrix = [
