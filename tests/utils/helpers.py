@@ -671,9 +671,9 @@ def get_risk_job(cfg, username=None, hazard_calculation_id=None,
     return job
 
 
-def create_gmfset(hazard_job, rlz=None):
+def create_gmf_coll(hazard_job, rlz=None):
     """
-    Returns the created GmfSet object.
+    Returns the created GmfCollection object.
     """
     hc = hazard_job.hazard_calculation
 
@@ -687,23 +687,18 @@ def create_gmfset(hazard_job, rlz=None):
             hazard_job, "Test Hazard output", "gmf"),
         lt_realization=rlz)
 
-    gmfset = models.GmfSet.objects.create(
-        gmf_collection=gmf_coll,
-        investigation_time=hc.investigation_time,
-        ses_ordinal=1)
-
-    return gmfset
+    return gmf_coll
 
 
 def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
     """
     Returns the created records.
     """
-    gmfset = create_gmfset(hazard_job, rlz)
+    gmf_coll = create_gmf_coll(hazard_job, rlz)
     ses_coll = ses_coll or models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test SES Collection", "ses"),
-        lt_realization=gmfset.gmf_collection.lt_realization)
+        lt_realization=gmf_coll.lt_realization)
     ruptures = get_ruptures(hazard_job, ses_coll, 3)
     records = []
     if points is None:
@@ -712,7 +707,7 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
                   (15.481, 38.25)]
     for site_id in hazard_job.hazard_calculation.save_sites(points):
         records.append(models.GmfAgg.objects.create(
-            gmf_collection=gmfset.gmf_collection,
+            gmf_collection=gmf_coll,
             ses=ruptures[0].ses,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
@@ -738,13 +733,12 @@ def create_gmf_from_csv(job, fname):
     job.status = 'post_processing'
     job.save()
 
-    gmf_set = create_gmfset(job)
-    gmf_coll = gmf_set.gmf_collection
+    gmf_coll = create_gmf_coll(job)
 
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             job, "Test SES Collection", "ses"),
-        lt_realization=gmf_set.gmf_collection.lt_realization)
+        lt_realization=gmf_coll.lt_realization)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
@@ -883,8 +877,8 @@ def get_ruptures(job, ses_collection, num):
     `job` and an instance of
     :class:`openquake.engine.db.models.HazardCalculation`. It also
     creates a father :class:`openquake.engine.db.models.SES`. Each
-    rupture has a magnitude ranging from 0 to 10, no geographic
-    information and result_grp_ordinal set to 1.
+    rupture has a magnitude ranging from 0 to 10 and no geographic
+    information.
 
     :param ses_collection: an instance of
     :class:`openquake.engine.db.models.SESCollection` to be associated
@@ -907,7 +901,6 @@ def get_ruptures(job, ses_collection, num):
             tectonic_region_type="test region type",
             is_from_fault_source=False,
             lons=[], lats=[], depths=[],
-            result_grp_ordinal=1,
             rupture_ordinal=0)
         for i in range(num)]
 
