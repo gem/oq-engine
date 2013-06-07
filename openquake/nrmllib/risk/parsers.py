@@ -136,8 +136,8 @@ class ExposureModelParser(object):
         site_attributes['taxonomy'] = element.get('taxonomy')
         if element.get('area') is not None:
             site_attributes['area'] = float(element.get('area'))
-        if element.get('units') is not None:
-            site_attributes['units'] = float(element.get('units'))
+        if element.get('number') is not None:
+            site_attributes['number'] = float(element.get('number'))
         site_attributes.update(self._current_meta)
         return site_attributes
 
