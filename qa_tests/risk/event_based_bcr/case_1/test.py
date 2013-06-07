@@ -30,7 +30,7 @@ from openquake.engine.db import models
 
 
 class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     check_exports = False
 
@@ -38,7 +38,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("event_based_hazard/job.ini"))
 
@@ -80,7 +80,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                     result_grp_ordinal=1,
                     location="POINT(%s)" % locations[i])
 
-        return gmf_set.gmf_collection.output.id
+        return job
 
     def actual_data(self, job):
         return [(result.average_annual_loss_original,

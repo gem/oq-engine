@@ -32,7 +32,7 @@ class ScenarioDamageRiskCase3TestCase(risk.BaseRiskQATestCase):
     unknown taxonomy are simply ignored.
     """
 
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     EXPECTED_DMG_DIST_PER_ASSET = '''<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -98,11 +98,11 @@ class ScenarioDamageRiskCase3TestCase(risk.BaseRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("scenario_hazard/job.ini"))
-        gmfcoll = helpers.populate_gmf_agg_from_csv(job, CSVFILE)
-        return gmfcoll.output.id
+        helpers.populate_gmf_agg_from_csv(job, CSVFILE)
+        return job
 
     def expected_outputs(self):
         return [self.EXPECTED_DMG_DIST_PER_ASSET,

@@ -29,9 +29,6 @@ class ScenarioRiskCase3TestCase(risk.End2EndRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
-        return models.Output.objects.latest('last_update').id
-
     def actual_data(self, job):
         maps = models.LossMapData.objects.filter(
             loss_map__output__oq_job=job).order_by('asset_ref', 'value')

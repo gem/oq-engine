@@ -36,6 +36,9 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
             if i % BLOCKSIZE == 0:
                 s.seek(0)
                 curs.copy_from(s, tablename)
+                curs.execute(
+                    "select setval(pg_get_serial_sequence('%s', 'id'), %d)" % (
+                        tablename, curs.lastrowid + 1))
                 s.close()
                 s = StringIO()
     finally:
