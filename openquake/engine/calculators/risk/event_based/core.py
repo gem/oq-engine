@@ -167,20 +167,10 @@ def individual_outputs(loss_type, unit, params, profile):
     event_loss_table = collections.Counter()
 
     with profile('getting gmvs and ruptures'):
-        assets, gmfs = unit.getter()
-    with profile('filling gmvs with zeros'):
-        rupture_ids = set()
-        gmv = {}
-        for i, (gs, rs) in enumerate(gmfs):
-            for g, r in zip(gs, rs):
-                gmv[i, r] = g
-                rupture_ids.add(r)
-        assert rupture_ids, 'No ruptures'
-        n = len(assets)
-        gmvs = [[gmv.get((i, r), 0) for r in rupture_ids] for i in range(n)]
-        del gmv
+        assets, gmfs, rupture_ids = unit.getter()
+
     with profile('computing losses, loss curves and maps'):
-        loss_matrix, curves = unit.calc(gmvs)
+        loss_matrix, curves = unit.calc(gmfs)
 
         maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
                  for losses, poes in curves]
