@@ -33,10 +33,6 @@ class EventBasedRiskCase3TestCase(risk.End2EndRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
-        return models.Output.objects.filter(output_type='gmf').latest(
-            'last_update').id
-
     def actual_data(self, job):
         loss_fraction = models.LossFraction.objects.get(
             variable='magnitude_distance',

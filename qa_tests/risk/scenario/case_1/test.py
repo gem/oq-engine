@@ -23,19 +23,18 @@ from openquake.engine.db import models
 
 
 class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     @attr('qa', 'risk', 'scenario')
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("scenario_hazard/job.ini"))
         fname = os.path.join(os.path.dirname(__file__), 'gmf_scenario.csv')
-        gmfcoll = helpers.populate_gmf_agg_from_csv(job, fname)
-        return gmfcoll.output.id
-
+        helpers.populate_gmf_agg_from_csv(job, fname)
+        return job
 
     def actual_data(self, job):
         maps = models.LossMapData.objects.filter(

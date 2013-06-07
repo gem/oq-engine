@@ -317,11 +317,12 @@ def save_statistical_output(loss_type, containers, assets, stats, params):
         assets, output_type="loss_curve",
         statistics="quantile", loss_type=loss_type)
 
-    for quantile, maps in zip(params.quantiles, stats.quantile_maps):
-        containers.write_all(
-            "poe", params.conditional_loss_poes, maps,
-            assets, output_type="loss_map",
-            statistics="quantile", quantile=quantile, loss_type=loss_type)
+    if params.quantiles:
+        for quantile, maps in zip(params.quantiles, stats.quantile_maps):
+            containers.write_all(
+                "poe", params.conditional_loss_poes, maps,
+                assets, output_type="loss_map",
+                statistics="quantile", quantile=quantile, loss_type=loss_type)
 
 
 class DisaggregationOutputs(object):

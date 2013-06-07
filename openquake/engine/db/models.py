@@ -86,6 +86,15 @@ MAX_SINT_32 = (2 ** 31) - 1
 LOSS_TYPES = ["structural", "nonstructural", "occupants", "contents"]
 
 
+#: relative tolerance to consider two risk outputs (almost) equal
+RISK_RTOL = 0.05
+
+
+def risk_almost_equal(o1, o2, key, rtol=RISK_RTOL):
+    return numpy.testing.assert_allclose(
+        numpy.array(key(o1)), numpy.array(key(o2)), rtol=rtol)
+
+
 def getcursor(route):
     """Return a cursor from a Django route"""
     return connections[route].cursor()
@@ -2127,6 +2136,18 @@ class LossFraction(djm.Model):
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
 
+    @property
+    def output_hash(self):
+        """
+        :returns:
+            a (db-sequence independent) tuple that identifies this output among
+            which the ones created in the same calculation
+        """
+        return (self.output.output_type,
+                self.output.hazard_metadata,
+                self.statistics, self.quantile,
+                self.variable, self.poe, self.loss_type)
+
     def display_value(self, value, rc):
         """
         Converts `value` in a form that is best suited to be
@@ -2275,6 +2296,16 @@ class LossFractionData(djm.Model):
     class Meta:
         db_table = 'riskr\".\"loss_fraction_data'
 
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash + (self.location, self.value)
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, lambda x: [x.absolute_loss])
+
 
 class LossMap(djm.Model):
     '''
@@ -2292,6 +2323,18 @@ class LossMap(djm.Model):
     class Meta:
         db_table = 'riskr\".\"loss_map'
 
+    @property
+    def output_hash(self):
+        """
+        :returns:
+            a (db-sequence independent) tuple that identifies this output among
+            which the ones created in the same calculation
+        """
+        return (self.output.output_type,
+                self.output.hazard_metadata,
+                self.statistics, self.quantile,
+                self.insured, self.poe, self.loss_type)
+
 
 class LossMapData(djm.Model):
     '''
@@ -2308,6 +2351,16 @@ class LossMapData(djm.Model):
     class Meta:
         db_table = 'riskr\".\"loss_map_data'
 
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash + (self.asset_ref,)
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, lambda x: [x.value, x.stddev])
+
 
 class AggregateLoss(djm.Model):
     output = djm.OneToOneField("Output", related_name="aggregate_loss")
@@ -2318,6 +2371,29 @@ class AggregateLoss(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss'
+
+    @property
+    def output_hash(self):
+        """
+        :returns:
+            a (db-sequence independent) tuple that identifies this output among
+            which the ones created in the same calculation
+        """
+        return (self.output.output_type,
+                self.output.hazard_metadata,
+                self.insured,
+                self.mean, self.std_dev,
+                self.loss_type)
+
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, lambda x: [x.mean, x.std_dev])
 
 
 class LossCurve(djm.Model):
@@ -2338,6 +2414,18 @@ class LossCurve(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
+
+    @property
+    def output_hash(self):
+        """
+        :returns:
+            a (db-sequence independent) tuple that identifies this output among
+            which the ones created in the same calculation
+        """
+        return (self.output.output_type,
+                self.output.hazard_metadata,
+                self.statistics, self.quantile,
+                self.aggregate, self.insured, self.loss_type)
 
 
 class LossCurveData(djm.Model):
@@ -2364,6 +2452,19 @@ class LossCurveData(djm.Model):
     def average_loss(self):
         return self.average_loss_ratio * self.asset_value
 
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash + (self.asset_ref,)
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data,
+                                 lambda x: [x.loss_ratios,
+                                       x.poes,
+                                       x.average_loss_ratio])
+
 
 class AggregateLossCurveData(djm.Model):
     '''
@@ -2377,6 +2478,16 @@ class AggregateLossCurveData(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss_curve_data'
+
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, lambda x: [x.poes, x.average_loss])
 
 
 class EventLoss(djm.Model):
@@ -2394,6 +2505,29 @@ class EventLoss(djm.Model):
     class Meta:
         db_table = 'riskr\".\"event_loss'
 
+    @property
+    def output_hash(self):
+        """
+        :returns:
+            a (db-sequence independent) tuple that identifies this output among
+            which the ones created in the same calculation
+        """
+        return (self.output.output_type,
+                self.output.hazard_metadata,
+                # FIXME(lp) this is not db-sequence independent
+                self.rupture.id,
+                self.aggregate_loss, self.loss_type)
+
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, lambda x: [x.aggregate_loss])
+
 
 class BCRDistribution(djm.Model):
     '''
@@ -2406,6 +2540,17 @@ class BCRDistribution(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
+
+    @property
+    def output_hash(self):
+        """
+        :returns:
+            a (db-sequence independent) tuple that identifies this output among
+            which the ones created in the same calculation
+        """
+        return (self.output.output_type,
+                self.output.hazard_metadata,
+                self.loss_type)
 
 
 class BCRDistributionData(djm.Model):
@@ -2422,6 +2567,18 @@ class BCRDistributionData(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution_data'
+
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash + (self.asset_ref,)
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, lambda x: [
+            x.average_annual_loss_original, x.average_loss_retrofitted,
+            x.bcr])
 
 
 class DmgState(djm.Model):
@@ -2448,6 +2605,31 @@ class DmgDistPerAsset(djm.Model):
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_asset'
 
+    @property
+    def output_hash(self):
+        """
+        :returns:
+            a (db-sequence independent) tuple that identifies this output among
+            which the ones created in the same calculation
+        """
+        return (self.output.output_type,
+                self.dmg_state.dmg_state, self.exposure_data.asset_ref)
+
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, lambda x: [x.mean, x.stddev])
+
+    @property
+    def output(self):
+        return self.dmg_state.rc_calculation.oqjob_set.all()[0].output_set.get(
+            output_type="dmg_dist_per_asset")
+
 
 class DmgDistPerTaxonomy(djm.Model):
     """Holds the actual data for damage distributions per taxonomy."""
@@ -2459,6 +2641,31 @@ class DmgDistPerTaxonomy(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_per_taxonomy'
+
+    @property
+    def output(self):
+        return self.dmg_state.rc_calculation.oqjob_set.all()[0].output_set.get(
+            output_type="dmg_dist_per_taxonomy")
+
+    @property
+    def output_hash(self):
+        """
+        :returns:
+            a (db-sequence independent) tuple that identifies this output among
+            which the ones created in the same calculation
+        """
+        return (self.output.output_type,
+                self.dmg_state.dmg_state, self.taxonomy)
+
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, lambda x: [x.mean, x.stddev])
 
 
 class DmgDistTotal(djm.Model):
@@ -2472,6 +2679,31 @@ class DmgDistTotal(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"dmg_dist_total'
+
+    @property
+    def output(self):
+        return self.dmg_state.rc_calculation.oqjob_set.all()[0].output_set.get(
+            output_type="dmg_dist_total")
+
+    @property
+    def output_hash(self):
+        """
+        :returns:
+            a (db-sequence independent) tuple that identifies this output among
+            which the ones created in the same calculation
+        """
+        return (self.output.output_type, self.dmg_state.dmg_state, )
+
+    @property
+    def data_hash(self):
+        """
+        A db-sequence independent tuple that identifies this output
+        """
+        return self.output.output_hash
+
+    def assertAlmostEqual(self, data):
+        return risk_almost_equal(self, data, lambda x: [x.mean, x.stddev])
+
 
 ## Tables in the 'riski' schema.
 

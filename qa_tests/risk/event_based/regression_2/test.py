@@ -27,19 +27,19 @@ from openquake.engine.db import models
 
 
 class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     @noseattr('qa', 'risk', 'event_based')
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("event_based_hazard/job.ini"))
-        gmf_coll = helpers.create_gmf_from_csv(job, os.path.join(
+        helpers.create_gmf_from_csv(job, os.path.join(
             os.path.dirname(__file__), 'gmf.csv'))
 
-        return gmf_coll.output.id
+        return job
 
     def actual_data(self, job):
         return ([curve.poes

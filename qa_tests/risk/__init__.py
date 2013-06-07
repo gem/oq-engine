@@ -24,24 +24,18 @@ from tests.utils import helpers
 
 from openquake.engine import export
 from openquake.engine.db import models
-from openquake.engine.tools.restore_hazards import hazard_restore_local
 
 
 class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     """
-    Base abstract class for risk QA tests. Derived class must define
-
-    0) a test method (properly annotated) that executes run_test
-    1) a cfg property holding the path to job.ini to execute
-    2) a method hazard_id() that creates a proper hazard input
-    3) a method actual_data that gets a list of
-       individual risk output (e.g. a
-       :class:`openquake.engine.db.models.LossCurveData`)
-    4) a method expected_data to assert against the actual_data
-    5) a method actual_outputs that gets a list of the created risk
-       `openquake.engine.db.models.Output`
-    6) a method expected_outputs to assert against the actual_outputs
+    Base abstract class for risk QA tests.
     """
+
+    #: holds the path to a job.ini. Derived classes must define it
+    risk_cfg = None
+
+    def test(self):
+        raise NotImplementedError
 
     def run_risk(self, cfg, hazard_id):
         """
@@ -62,19 +56,29 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
         return completed_job
 
+    def check_outputs(self, job):
+        expected_data = self.expected_data()
+        actual_data = self.actual_data(job)
+
+        for i, actual in enumerate(actual_data):
+            numpy.testing.assert_allclose(
+                expected_data[i], actual,
+                rtol=0.01, atol=0.0, err_msg="", verbose=True)
+
+    def get_hazard(self):
+        """
+        :returns: an hazard job
+        """
+        raise NotImplementedError
+
     def _run_test(self):
         result_dir = tempfile.mkdtemp()
 
         try:
-            expected_data = self.expected_data()
-            job = self.run_risk(self.cfg, self.hazard_id())
+            job = self.run_risk(
+                self.risk_cfg, self.hazard_id(self.get_hazard()))
 
-            actual_data = self.actual_data(job)
-
-            for i, actual in enumerate(actual_data):
-                numpy.testing.assert_allclose(
-                    expected_data[i], actual,
-                    rtol=0.01, atol=0.0, err_msg="", verbose=True)
+            self.check_outputs(job)
 
             if hasattr(self, 'expected_outputs'):
                 expected_outputs = self.expected_outputs()
@@ -109,17 +113,20 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
     def actual_data(self, _job):
         """
-        Derived QA tests can implement this in order to also check
+        Derived QA tests must implement this in order to also check
         data stored on the database
         """
         return []
 
     def expected_data(self):
         """
-        Derived QA tests can implement this in order to also check
+        Derived QA tests must implement this in order to also check
         data stored on the database
         """
         return []
+
+    def hazard_id(self, job):
+        raise job.output_set.latest('last_update').id
 
 
 class End2EndRiskQATestCase(BaseRiskQATestCase):
@@ -128,49 +135,15 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
     calculation, then running a risk calculation
     """
 
-    def run_hazard(self, cfg, exports=None):
-        """
-        During development of end2end qa tests it is handy to load
-        hazard data (when you are tuning the risk params). So, if it
-        is given an hazard dump in the environment variable
-        PRELOADED_HAZARD, then we will load it instead of running the
-        whole hazard calculation
-        """
+    def get_hazard(self):
+        hazard_calc_id = os.getenv('PRELOADED_HAZARD', False)
 
-        hazard_dump = os.getenv('PRELOADED_HAZARD', False)
-
-        if hazard_dump:
-            hazard_restore_local(hazard_dump)
+        if hazard_calc_id:
+            return models.HazardCalculation.objects.get(
+                pk=hazard_calc_id).oqjob_set.all()[0]
         else:
-            super(End2EndRiskQATestCase, self).run_hazard(cfg, exports)
-
-    def _run_test(self):
-        result_dir = tempfile.mkdtemp()
-
-        try:
-            expected_data = self.expected_data()
-            self.run_hazard(self.hazard_cfg)
-            job = self.run_risk(self.risk_cfg, self.hazard_id())
-
-            actual_data = self.actual_data(job)
-
-            for i, actual in enumerate(actual_data):
-                numpy.testing.assert_allclose(
-                    expected_data[i], actual,
-                    rtol=0.01, atol=0.0, err_msg="", verbose=True)
-
-            if hasattr(self, 'expected_outputs'):
-                expected_outputs = self.expected_outputs()
-                for i, output in enumerate(self.actual_xml_outputs(job)):
-                    [exported_file] = export.risk.export(output.id, result_dir)
-                    try:
-                        self.assert_xml_equal(
-                            StringIO.StringIO(expected_outputs[i]),
-                            exported_file)
-                    except:
-                        import pdb; pdb.set_trace()
-        finally:
-            shutil.rmtree(result_dir)
+            return super(End2EndRiskQATestCase, self).run_hazard(
+                self.hazard_cfg, False).id
 
 
 class LogicTreeBasedTestCase(object):
@@ -200,9 +173,35 @@ class LogicTreeBasedTestCase(object):
 
         return completed_job
 
-    def hazard_id(self):
+    def hazard_id(self, job):
         """
-        :returns: the greatest hazard calculation id (which
-        corresponds to the latest started hazard calculation.
+        :returns: the hazard calculation id for the given `job`
         """
-        return models.HazardCalculation.objects.all().order_by('-id')[0].id
+        return job.hazard_calculation.id
+
+
+class CompleteTestCase(object):
+    """
+    A class to be mixed-in with a RiskQATest. It redefines the
+    protocol in order to check every output (stored in the db) of a
+    calculation
+    """
+
+    def check_outputs(self, job):
+        for output in job.output_set.all():
+            container = output.output_container
+            expected_data = dict([(o.data_hash, o)
+                                  for o in self.expected_output_data()])
+
+            for item in container:
+                if not item.data_hash in expected_data:
+                    raise AssertionError("Unexpected output %s" % item)
+                expected_output = expected_data[item.data_hash]
+                expected_output.assertAlmostEqual(item)
+
+    def expected_output_data(self):
+        """
+        :returns:
+            an iterable over data objects (e.g. LossCurveData)
+        """
+        raise NotImplementedError
