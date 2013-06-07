@@ -2554,34 +2554,98 @@ class AssetManager(djm.GeoManager):
     """
     Asset manager
     """
+
     def get_asset_chunk(self, rc, taxonomy, offset, size):
         """
-        :returns the asset ids (ordered by location) contained in
-        `region_constraint`(embedded in the risk calculation `rc`) of
-        `taxonomy` associated with the
-        `openquake.engine.db.models.ExposureModel` associated with
-        `rc`.
+        :returns:
 
-        It also add an annotation to each ExposureData object to provide the
-        right occupants value for the risk calculation given in input
+           a list of instances of
+           :class:`openquake.engine.db.models.ExposureData` (ordered
+           by location) contained in `region_constraint`(embedded in
+           the risk calculation `rc`) of `taxonomy` associated with
+           the `openquake.engine.db.models.ExposureModel` associated
+           with `rc`.
+
+           It also add an annotation to each ExposureData object to provide the
+           occupants value for the risk calculation given in input and the cost
+           for each cost type considered in `rc`
         """
 
-        # default query arguments: the current exposure model, the
-        # given taxonomy and the asset region constraint
+        query, args = self._get_asset_chunk_query_args(
+            rc, taxonomy, offset, size)
+        return list(self.raw(query, args))
+
+    def _get_asset_chunk_query_args(self, rc, taxonomy, offset, size):
+        """
+        Build a parametric query string and the corresponding args for
+        #get_asset_chunk
+        """
         args = (rc.exposure_model.id, taxonomy,
                 "SRID=4326; %s" % rc.region_constraint.wkt)
 
-        # if time_event is not specified we compute the number of
-        # occupants by averaging the occupancy data for each asset.
-        if rc.time_event is None:
-            occupants = "AVG(riski.occupancy.occupants)"
-            occupants_cond = "1 = 1"
-        else:
-            occupants = "riski.occupancy.occupants"
-            occupants_cond = "riski.occupancy.period = %s"
-            args += (rc.time_event,)
-        args += (size, offset)
+        occupants_fields, occupants_cond, occupancy_join, occupants_args = (
+            self._get_occupants_query_helper(
+                rc.exposure_model.category, rc.time_event))
 
+        args += occupants_args + (size, offset)
+
+        cost_type_fields, cost_type_joins = self._get_cost_types_query_helper(
+            rc.exposure_model.costtype_set.all())
+
+        query = """
+            SELECT riski.exposure_data.*,
+                   {occupants} AS occupancy,
+                   {costs}
+            FROM riski.exposure_data
+            {occupancy_join}
+            ON riski.exposure_data.id = riski.occupancy.exposure_data_id
+            {costs_join}
+            WHERE exposure_model_id = %s AND
+                  taxonomy = %s AND
+                  ST_COVERS(ST_GeographyFromText(%s), site) AND
+                  {occupants_cond}
+            GROUP BY riski.exposure_data.id
+            ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
+            LIMIT %s OFFSET %s
+            """.format(occupants=occupants_fields,
+                       occupants_cond=occupants_cond,
+                       costs=cost_type_fields,
+                       costs_join=cost_type_joins,
+                       occupancy_join=occupancy_join)
+
+        return query, args
+
+    def _get_occupants_query_helper(self, category, time_event):
+        """
+        Support function for _get_asset_chunk_query_args
+        """
+        args = ()
+        # if the exposure model is of type "population" we extract the
+        # occupants from the `number_of_units` field
+        if category == "population":
+            occupants_field = "number_of_units"
+            occupants_cond = "1 = 1"
+            occupancy_join = ""
+        else:
+            # otherwise we will "left join" the occupancy table
+            occupancy_join = "LEFT JOIN riski.occupancy"
+            occupants_field = "AVG(riski.occupancy.occupants)"
+
+            # and the time_event is not specified we compute the
+            # number of occupants by averaging the occupancy data for
+            # each asset, otherwise we get the unique proper occupants
+            # value.
+            if time_event is None:
+                occupants_cond = "1 = 1"
+            else:
+                args += (time_event,)
+                occupants_cond = "riski.occupancy.period = %s"
+        return occupants_field, occupants_cond, occupancy_join, args
+
+    def _get_cost_types_query_helper(self, cost_types):
+        """
+        Support function for _get_asset_chunk_query_args
+        """
         # For each cost type associated with the exposure model we
         # join the `cost` table to the current queryset in order to
         # lookup for a cost value for each asset.
@@ -2592,46 +2656,28 @@ class AssetManager(djm.GeoManager):
         costs = []
         costs_join = ""
 
-        for cost_type in rc.exposure_model.costtype_set.all():
+        for cost_type in cost_types:
             # here the max value is irrelevant as we are sureto join
             # against one row
-            costs.append("max(%s.converted_cost) AS %s " % (cost_type.name,
-                                                            cost_type.name))
+            costs.append("max(%s.converted_cost) AS %s" % (cost_type.name,
+                                                           cost_type.name))
             costs.append(
-                "max(%s.converted_retrofitted_cost) AS retrofitted_%s " % (
+                "max(%s.converted_retrofitted_cost) AS retrofitted_%s" % (
                     cost_type.name, cost_type.name))
             costs.append(
-                "max(%s.deductible_absolute) AS deductible_%s " % (
+                "max(%s.deductible_absolute) AS deductible_%s" % (
                     cost_type.name, cost_type.name))
             costs.append(
-                "max(%s.insurance_limit_absolute) AS insurance_limit_%s " % (
+                "max(%s.insurance_limit_absolute) AS insurance_limit_%s" % (
                     cost_type.name, cost_type.name))
 
             costs_join += """
             LEFT JOIN riski.cost AS %(name)s
             ON %(name)s.cost_type_id = '%(id)s' AND
-            %(name)s.exposure_data_id = riski.exposure_data.id """ % dict(
+            %(name)s.exposure_data_id = riski.exposure_data.id""" % dict(
                 name=cost_type.name, id=cost_type.id)
 
-        query = """
-            SELECT riski.exposure_data.*,
-                   {occupants} AS occupancy,
-                   {costs}
-            FROM riski.exposure_data
-            LEFT JOIN riski.occupancy
-            ON riski.exposure_data.id = riski.occupancy.exposure_data_id
-            {costs_join}
-            WHERE exposure_model_id = %s AND
-                  taxonomy = %s AND
-                  ST_COVERS(ST_GeographyFromText(%s), site) AND
-                  {occupants_cond}
-            GROUP BY riski.exposure_data.id
-            ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
-            LIMIT %s OFFSET %s
-            """.format(occupants=occupants, occupants_cond=occupants_cond,
-                       costs=", ".join(costs), costs_join=costs_join)
-
-        return list(self.raw(query, args))
+        return ", ".join(costs), costs_join
 
     def taxonomies_contained_in(self, exposure_model_id, region_constraint):
         """
@@ -2665,7 +2711,7 @@ class ExposureData(djm.Model):
     taxonomy = djm.TextField()
     site = djm.PointField(geography=True)
 
-    units = djm.FloatField(
+    number_of_units = djm.FloatField(
         null=True, help_text="number of assets, people, etc.")
     area = djm.FloatField(null=True)
 

@@ -308,16 +308,16 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmfs(ses, gmf_dict, points_to_compute):
+def _save_gmfs(ses, gmf_dict, sites):
     """
     Helper method to save computed GMF data to the database.
     :param ses:
         A :class:`openquake.engine.db.models.SES` instance
     :param dict gmf_dict:
         The dict used to cache/buffer up GMF results during the calculation.
-    :param points_to_compute:
-        An :class:`openquake.hazardlib.geo.mesh.Mesh` object, representing all
-        of the points of interest for a calculation.
+    :param sites:
+        An :class:`openquake.hazardlib.site.SiteCollection` object,
+        representing the sites of interest for a calculation.
     """
     gmf_coll = models.GmfCollection.objects.get(
         lt_realization=ses.ses_collection.lt_realization)
@@ -338,7 +338,7 @@ def _save_gmfs(ses, gmf_dict, points_to_compute):
             sa_damping = imt.damping
         imt_name = imt.__class__.__name__
 
-        for all_gmvs, site in zip(gmfs, points_to_compute):
+        for all_gmvs, site in zip(gmfs, sites):
             # take only the nonzero ground motion values and the
             # corresponding rupture ids
             nonzero_gmvs_idxs = numpy.where(all_gmvs != 0)
