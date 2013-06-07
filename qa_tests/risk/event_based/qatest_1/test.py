@@ -33,5 +33,13 @@ class EventBaseQATestCase1(risk.CompleteTestCase,
     def test(self):
         self._run_test()
 
-    def expected_output_containers(self):
-        return []
+    def expected_output_data(self):
+        return {
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'nonstructural', u'a3'
+             ): models.LossCurveData()
+        }
