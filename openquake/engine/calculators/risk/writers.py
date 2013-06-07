@@ -158,7 +158,7 @@ def damage_distribution(assets, fraction_matrix, dmg_state_ids):
        :class:`openquake.engine.db.models.DmgState` ordered by `lsi`
     """
     for fractions, asset in zip(fraction_matrix, assets):
-        fractions *= asset.units
+        fractions *= asset.number_of_units
         means, stds = scientific.mean_std(fractions)
 
         for mean, std, dmg_state_id in zip(means, stds, dmg_state_ids):
