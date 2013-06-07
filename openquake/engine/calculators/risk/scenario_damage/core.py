@@ -78,19 +78,18 @@ scenario_damage.ignore_result = False
 
 def do_scenario_damage(unit, params, profile):
     with profile('getting hazard'):
-        assets, gmfs = unit.getter()
-        gmvs = [g for g, r in gmfs]
+        assets, gmfs, _ = unit.getter()
 
     if not len(assets):
         logs.LOG.warn("Exit from task as no asset could be processed")
         return None, None
 
-    elif not sum(len(g) for g in gmvs):
+    elif not sum(len(g) for g in gmfs):
         logs.LOG.warn("Exit from task as no GMF could be processed")
         return None, None
 
     with profile('computing risk'):
-        fraction_matrix = unit.calc(gmvs)
+        fraction_matrix = unit.calc(gmfs)
         aggfractions = sum(fraction_matrix[i] * asset.units
                            for i, asset in enumerate(assets))
 
