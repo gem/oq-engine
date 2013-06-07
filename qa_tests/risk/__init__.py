@@ -190,12 +190,13 @@ class CompleteTestCase(object):
     def check_outputs(self, job):
         for output in job.output_set.all():
             container = output.output_container
-            expected_data = dict([(o.data_hash, o)
-                                  for o in self.expected_output_data()])
+            expected_data = self.expected_output_data()
 
             for item in container:
                 if not item.data_hash in expected_data:
-                    raise AssertionError("Unexpected output %s" % item)
+                    raise AssertionError(
+                        "The output with hash %s is missing" % str(
+                            item.data_hash))
                 expected_output = expected_data[item.data_hash]
                 expected_output.assertAlmostEqual(item)
 

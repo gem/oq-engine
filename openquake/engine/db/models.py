@@ -2136,6 +2136,9 @@ class LossFraction(djm.Model):
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
 
+    def __iter__(self):
+        return iter(self.lossfractiondata_set.all())
+
     @property
     def output_hash(self):
         """
@@ -2301,7 +2304,7 @@ class LossFractionData(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash + (self.location, self.value)
+        return self.loss_fraction.output_hash + (self.location, self.value)
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(self, data, lambda x: [x.absolute_loss])
@@ -2322,6 +2325,9 @@ class LossMap(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"loss_map'
+
+    def __iter__(self):
+        return iter(self.lossmapdata_set.all())
 
     @property
     def output_hash(self):
@@ -2356,7 +2362,7 @@ class LossMapData(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash + (self.asset_ref,)
+        return self.loss_map.output_hash + (self.asset_ref,)
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(self, data, lambda x: [x.value, x.stddev])
@@ -2390,7 +2396,7 @@ class AggregateLoss(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash
+        return self.output_hash
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(self, data, lambda x: [x.mean, x.std_dev])
@@ -2414,6 +2420,12 @@ class LossCurve(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
+
+    def __iter__(self):
+        if self.aggregate:
+            return iter(self.aggregatelosscurvedata_set.all())
+        else:
+            return iter(self.losscurvedata_set.all())
 
     @property
     def output_hash(self):
@@ -2457,13 +2469,12 @@ class LossCurveData(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash + (self.asset_ref,)
+        return self.loss_curve.output_hash + (self.asset_ref,)
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data,
-                                 lambda x: [x.loss_ratios,
-                                       x.poes,
-                                       x.average_loss_ratio])
+        return risk_almost_equal(
+            self, data,
+            lambda x: [x.loss_ratios, x.poes, x.average_loss_ratio])
 
 
 class AggregateLossCurveData(djm.Model):
@@ -2484,10 +2495,11 @@ class AggregateLossCurveData(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash
+        return self.loss_curve.output_hash
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data, lambda x: [x.poes, x.average_loss])
+        return risk_almost_equal(self, data,
+                                 lambda x: [x.poes, x.average_loss])
 
 
 class EventLoss(djm.Model):
@@ -2523,7 +2535,7 @@ class EventLoss(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash
+        return self.output_hash
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(self, data, lambda x: [x.aggregate_loss])
@@ -2573,7 +2585,7 @@ class BCRDistributionData(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash + (self.asset_ref,)
+        return self.bcr_distribution.output_hash + (self.asset_ref,)
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(self, data, lambda x: [
@@ -2620,7 +2632,7 @@ class DmgDistPerAsset(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash
+        return self.output_hash
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(self, data, lambda x: [x.mean, x.stddev])
@@ -2662,7 +2674,7 @@ class DmgDistPerTaxonomy(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash
+        return self.output_hash
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(self, data, lambda x: [x.mean, x.stddev])
@@ -2699,7 +2711,7 @@ class DmgDistTotal(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output.output_hash
+        return self.output_hash
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(self, data, lambda x: [x.mean, x.stddev])
