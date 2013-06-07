@@ -130,32 +130,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         done = stats.pk_get(self.calc.job.id, "nhzrd_done")
         self.assertEqual(ltr1.completed_items + ltr2.completed_items, done)
 
-    def test_initialize_gmf_db_records(self):
-        hc = self.job.hazard_calculation
-
-        # Initialize sources as a setup for the test:
-        self.calc.initialize_sources()
-
-        self.calc.initialize_realizations(
-            rlz_callbacks=[self.calc.initialize_gmf_db_records])
-
-        outputs = models.Output.objects.filter(
-            oq_job=self.job, output_type='gmf')
-        self.assertEqual(2, len(outputs))
-
-        lt_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
-        self.assertEqual(2, len(lt_rlzs))
-
-        for rlz in lt_rlzs:
-            gmf_sets = models.GmfSet.objects.filter(
-                gmf_collection__lt_realization=rlz)
-            self.assertEqual(hc.ses_per_logic_tree_path, len(gmf_sets))
-
-            for gmf_set in gmf_sets:
-                # The only metadata in a GmfSet is investigation time.
-                self.assertEqual(
-                    hc.investigation_time, gmf_set.investigation_time)
-
     def test_initialize_pr_data_with_gmf(self):
         hc = self.job.hazard_calculation
 
@@ -163,7 +137,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_sources()
 
         self.calc.initialize_realizations(
-            rlz_callbacks=[self.calc.initialize_gmf_db_records])
+            rlz_callbacks=[self.calc.initialize_ses_db_records])
 
         ltr1, ltr2 = models.LtRealization.objects.filter(
             hazard_calculation=hc).order_by("id")
