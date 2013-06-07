@@ -161,6 +161,8 @@ def run_hazard_job(cfg, exports=None):
 def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
                  hazard_output_id=None):
     """
+    Given the path to a risk job config file and a hazard_calculation_id
+    or a output, run the job.
     """
     if exports is None:
         exports = []

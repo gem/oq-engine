@@ -330,8 +330,8 @@ class GroundMotionValuesGetter(HazardGetter):
                 assets_extent.wkt) + args
 
         cursor.execute(query, args)
+        # print cursor.mogrify(query, args)
         data = cursor.fetchall()
-
         assets, gmf_ids = [], []
         for asset_id, gmf_id in data:
             # the query may return spurious assets outside the considered block
