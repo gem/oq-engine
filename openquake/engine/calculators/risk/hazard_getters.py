@@ -22,12 +22,12 @@ A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
+import collections
 import numpy
 
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
-from openquake.engine.performance import DummyMonitor
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
@@ -91,14 +91,6 @@ class HazardGetter(object):
     def get_data(self):
         """
         Subclasses must implement this.
-
-        :returns:
-            An OrderedDict mapping ID of
-            :class:`openquake.engine.db.models.ExposureData` objects to
-            hazard_data (e.g. an array with the poes, or an array with the
-            ground motion values). Bear in mind that the returned data could
-            lack some assets being filtered out by the ``maximum_distance``
-            criteria.
         """
         raise NotImplementedError
 
@@ -109,8 +101,8 @@ class HazardGetter(object):
             :class:`openquake.engine.db.models.ExposureData`, the second is an
             array with the corresponding hazard data.
         """
-        # data is a pair (gmvs, ruptures) or a set of hazard curves
-        assets, data = self.get_data()
+        data = self.get_data()
+        assets = data[0]
 
         missing_asset_ids = self.all_asset_ids - set(a.id for a in assets)
 
@@ -121,7 +113,7 @@ class HazardGetter(object):
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
 
-        return assets, data
+        return data
 
 
 class HazardCurveGetterPerAsset(HazardGetter):
@@ -272,10 +264,25 @@ GROUP BY site_id;
         return gmvs, ruptures
 
     def get_data(self):
+        all_ruptures = set()
         all_assets = []
-        all_gmvs_ruptures = []
+        all_gmvs = []
+        dic = collections.OrderedDict()
         for site_id, assets in self:
+            n = len(assets)
             all_assets.extend(assets)
             gmvs, ruptures = self.get_gmvs_ruptures(site_id)
-            all_gmvs_ruptures.extend([(gmvs, ruptures)] * len(assets))
-        return all_assets, all_gmvs_ruptures
+            if ruptures:  # event based
+                dic[site_id] = dict(zip(ruptures, gmvs)), n
+                for r in ruptures:
+                    all_ruptures.add(r)
+            else:  # scenario
+                array = numpy.array(gmvs)
+                all_gmvs.extend([array] * n)
+        all_ruptures = sorted(all_ruptures)
+        # second pass for event based, filling with zeros
+        for site_id, (d, n) in dic.iteritems():
+            array = numpy.array([d.get(r, 0.) for r in all_ruptures])
+            d.clear()  # save memory
+            all_gmvs.extend([array] * n)
+        return all_assets, all_gmvs, all_ruptures
