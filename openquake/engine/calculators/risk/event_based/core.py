@@ -31,6 +31,7 @@ from openquake.risklib import api, scientific
 from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
+from openquake.engine import logs
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.base import signal_task_complete
 
@@ -83,8 +84,11 @@ def do_event_based(loss_type, units, containers, params, profile):
     event_loss_table = collections.Counter()
     for unit in units:
         hid = unit.getter.hazard_output.id
-
         outputs = individual_outputs(loss_type, unit, params, profile)
+
+        if not outputs.assets:
+            logs.LOG.info("Exit from task as no asset could be processed")
+            return collections.Counter()
 
         if params.sites_disagg:
             with profile('disaggregating results'):
