@@ -85,7 +85,7 @@ def do_scenario_damage(unit, params, profile):
 
     with profile('computing risk'):
         fraction_matrix = unit.calc(ground_motion_values)
-        aggfractions = sum(fraction_matrix[i] * asset.units
+        aggfractions = sum(fraction_matrix[i] * asset.number_of_units
                            for i, asset in enumerate(assets))
 
     with profile('saving damage per assets'):
