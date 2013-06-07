@@ -33,9 +33,6 @@ class ScenarioDamageRiskCase4TestCase(risk.End2EndRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
-        return models.Output.objects.latest('last_update').id
-
     def actual_data(self, job):
         per_asset = models.DmgDistPerAsset.objects.filter(
             dmg_state__risk_calculation=job.risk_calculation).order_by(
