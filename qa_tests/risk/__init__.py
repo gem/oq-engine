@@ -68,6 +68,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             job = self.run_risk(self.cfg, self.hazard_id())
 
             actual_data = self.actual_data(job)
+            assert actual_data, 'Got no actual data!'
 
             for i, actual in enumerate(actual_data):
                 numpy.testing.assert_allclose(
@@ -130,6 +131,7 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
             job = self.run_risk(self.risk_cfg, self.hazard_id())
 
             actual_data = self.actual_data(job)
+            assert actual_data, 'Got no actual data!'
 
             for i, actual in enumerate(actual_data):
                 numpy.testing.assert_allclose(
