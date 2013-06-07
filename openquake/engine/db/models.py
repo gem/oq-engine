@@ -2560,14 +2560,18 @@ class AssetManager(djm.GeoManager):
 
     def get_asset_chunk(self, rc, taxonomy, offset, size):
         """
-        :returns the asset ids (ordered by location) contained in
-        `region_constraint`(embedded in the risk calculation `rc`) of
-        `taxonomy` associated with the
-        `openquake.engine.db.models.ExposureModel` associated with
-        `rc`.
+        :returns:
 
-        It also add an annotation to each ExposureData object to provide the
-        right occupants value for the risk calculation given in input
+           a list of instances of
+           :class:`openquake.engine.db.models.ExposureData` (ordered
+           by location) contained in `region_constraint`(embedded in
+           the risk calculation `rc`) of `taxonomy` associated with
+           the `openquake.engine.db.models.ExposureModel` associated
+           with `rc`.
+
+           It also add an annotation to each ExposureData object to provide the
+           occupants value for the risk calculation given in input and the cost
+           for each cost type considered in `rc`
         """
 
         query, args = self._get_asset_chunk_query_args(
@@ -2579,8 +2583,6 @@ class AssetManager(djm.GeoManager):
         Build a parametric query string and the corresponding args for
         #get_asset_chunk
         """
-                # default query arguments: the current exposure model, the
-        # given taxonomy and the asset region constraint
         args = (rc.exposure_model.id, taxonomy,
                 "SRID=4326; %s" % rc.region_constraint.wkt)
 
@@ -2628,12 +2630,14 @@ class AssetManager(djm.GeoManager):
             occupants_cond = "1 = 1"
             occupancy_join = ""
         else:
-            # otherwise we will query the occupancy table
+            # otherwise we will "left join" the occupancy table
             occupancy_join = "LEFT JOIN riski.occupancy"
             occupants_field = "AVG(riski.occupancy.occupants)"
 
-            # if time_event is not specified we compute the number of
-            # occupants by averaging the occupancy data for each asset.
+            # and the time_event is not specified we compute the
+            # number of occupants by averaging the occupancy data for
+            # each asset, otherwise we get the unique proper occupants
+            # value.
             if time_event is None:
                 occupants_cond = "1 = 1"
             else:
