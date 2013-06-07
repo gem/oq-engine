@@ -281,7 +281,6 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         lons=lons,
         lats=lats,
         depths=depths,
-        result_grp_ordinal=1,
         rupture_ordinal=rupture_ordinal,
     ).id
 
@@ -300,7 +299,6 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
             lons=lons,
             lats=lats,
             depths=depths,
-            result_grp_ordinal=1,
             rupture_ordinal=rupture_ordinal,
         )
 
@@ -484,6 +482,16 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_realization=lt_rlz)
 
+        if self.job.hazard_calculation.ground_motion_fields:
+            output = models.Output.objects.create(
+                owner=self.job.owner,
+                oq_job=self.job,
+                display_name='gmf-rlz-%s' % lt_rlz.id,
+                output_type='gmf')
+
+            models.GmfCollection.objects.create(
+                output=output, lt_realization=lt_rlz)
+
         all_ses = []
         for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
             all_ses.append(
@@ -519,38 +527,20 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             ses_collection=clt_ses_coll,
             investigation_time=investigation_time)
 
-    def initialize_complete_lt_gmf_db_records(self):
-        """
-        Optional; if the user has requested to collect a `complete logic tree`
-        GMF set (containing all ground motion fields from all realizations),
-        initialize DB records for those results here.
-
-        Throughout the course of the calculation, computed GMFs will be copied
-        into this collection. See :func:`_save_gmf_nodes` for more info.
-        """
-        # `complete logic tree` GMF
-        clt_gmf_output = models.Output.objects.create(
-            owner=self.job.owner,
-            oq_job=self.job,
-            display_name='complete logic tree GMF',
-            output_type='complete_lt_gmf')
-
-        gmf_coll = models.GmfCollection.objects.create(
-            output=clt_gmf_output)
-
-        investigation_time = self._compute_investigation_time(self.hc)
-
-        # to remove
-        models.GmfSet.objects.create(
-            gmf_collection=gmf_coll,
-            investigation_time=investigation_time)
+        if self.job.hazard_calculation.ground_motion_fields:
+            # `complete logic tree` GMF
+            clt_gmf_output = models.Output.objects.create(
+                owner=self.job.owner,
+                oq_job=self.job,
+                display_name='complete logic tree GMF',
+                output_type='complete_lt_gmf')
+            models.GmfCollection.objects.create(output=clt_gmf_output)
 
     @staticmethod
     def _compute_investigation_time(haz_calc):
         """
-        Helper method for :meth:`initialize_complete_lt_ses_db_records` and
-        :meth:`initialize_complete_lt_gmf_db_records` to compute the
-        investigation time for a given set of results.
+        Helper method for :meth:`initialize_complete_lt_ses_db_records` to
+        compute the investigation time for a given set of results.
 
         :param haz_calc:
             :class:`openquake.engine.db.models.HazardCalculation` object for
@@ -574,31 +564,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                               * n_lt_realizations)
 
         return investigation_time
-
-    def initialize_gmf_db_records(self, lt_rlz):
-        """
-        Create :class:`~openquake.engine.db.models.Output`,
-        :class:`~openquake.engine.db.models.GmfCollection` and
-        :class:`~openquake.engine.db.models.GmfSet` "container" records for
-        a single realization.
-
-        GMFs for this realization will be associated to these containers.
-        """
-        output = models.Output.objects.create(
-            owner=self.job.owner,
-            oq_job=self.job,
-            display_name='gmf-rlz-%s' % lt_rlz.id,
-            output_type='gmf')
-
-        gmf_coll = models.GmfCollection.objects.create(
-            output=output, lt_realization=lt_rlz)
-
-        # to remove
-        for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
-            models.GmfSet.objects.create(
-                gmf_collection=gmf_coll,
-                investigation_time=self.hc.investigation_time,
-                ses_ordinal=i)
 
     def pre_execute(self):
         """
@@ -625,16 +590,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         # This defines for us the "work" that needs to be done when we reach
         # the `execute` phase.
         rlz_callbacks = [self.initialize_ses_db_records]
-        if self.job.hazard_calculation.ground_motion_fields:
-            rlz_callbacks.append(self.initialize_gmf_db_records)
 
         self.initialize_realizations(rlz_callbacks=rlz_callbacks)
 
         if self.job.hazard_calculation.complete_logic_tree_ses:
             self.initialize_complete_lt_ses_db_records()
-
-        if self.job.hazard_calculation.complete_logic_tree_gmf:
-            self.initialize_complete_lt_gmf_db_records()
 
         self.record_init_stats()
 

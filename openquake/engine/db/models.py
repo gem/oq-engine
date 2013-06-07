@@ -1633,16 +1633,6 @@ class SESRupture(djm.Model):
 
     # HazardLib Surface object. Stored as it is needed by risk disaggregation
     surface = fields.PickleField()
-
-    result_grp_ordinal = djm.IntegerField()
-    # NOTE(LB): The ordinal of a rupture within a given result group (indicated
-    # by ``result_grp_ordinal``). This rupture correspond to the indices of the
-    # ``gmvs`` field in Gmf. Thus, if you join SESRupture and Gmf records on
-    # the ``result_grp_ordinal``, you can extract ground motion values for a
-    # specific rupture.
-    # At the moment this functionality is not directly used, but in the future
-    # we will need to provide some way of tracing ground motion to the original
-    # rupture.
     rupture_ordinal = djm.IntegerField()
 
     class Meta:
@@ -1801,39 +1791,6 @@ class GmfCollection(djm.Model):
     __iter__ = get_gmfs_per_ses
 
 
-class GmfSet(djm.Model):
-    """
-    A set of ground motion fields for a given investigation time (in years).
-    """
-    gmf_collection = djm.ForeignKey('GmfCollection')
-    investigation_time = djm.FloatField()
-    # Keep track of the stochastic event set which this GMF set is associated
-    # with.
-    ses_ordinal = djm.IntegerField()
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_set'
-
-    @property
-    def stochastic_event_set_id(self):
-        """
-
-        :returns:
-            The ID of the stochastic event set which this ground motion field
-            set has been generated from.
-        """
-        if self.ses_ordinal is None:  # complete logic tree
-            job = self.gmf_collection.output.oq_job
-            return SES.objects.get(
-                ordinal=None,
-                ses_collection__output__oq_job=job).id
-        else:
-            rlz = self.gmf_collection.lt_realization
-            return SES.objects.get(
-                ses_collection__lt_realization=rlz,
-                ordinal=self.ses_ordinal).id
-
-
 class _GroundMotionField(object):
 
     def __init__(self, imt, sa_period, sa_damping, rupture_id, gmf_nodes):
@@ -1874,26 +1831,6 @@ class _GroundMotionFieldNode(object):
         "Return lon, lat and gmv of the node in a compact string form"
         return '<X=%9.5f, Y=%9.5f, GMV=%9.7f>' % (
             self.location.x, self.location.y, self.gmv)
-
-
-class Gmf(djm.Model):
-    """
-    Ground Motion Field: A collection of ground motion values and their
-    respective geographical locations.
-    """
-    gmf_set = djm.ForeignKey('GmfSet')
-    imt = djm.TextField(choices=IMT_CHOICES)
-    sa_period = djm.FloatField(null=True)
-    sa_damping = djm.FloatField(null=True)
-    location = djm.PointField(srid=DEFAULT_SRID)
-    gmvs = fields.FloatArrayField()
-    rupture_ids = fields.IntArrayField()
-    result_grp_ordinal = djm.IntegerField()
-
-    objects = djm.GeoManager()
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf'
 
 
 class GmfAgg(djm.Model):
