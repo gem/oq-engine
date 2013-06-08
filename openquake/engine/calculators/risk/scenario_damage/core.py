@@ -78,7 +78,7 @@ scenario_damage.ignore_result = False
 
 def do_scenario_damage(unit, params, profile):
     with profile('getting hazard'):
-        assets, gmfs, _ = unit.getter()
+        assets, gmfs = unit.getter()
 
     if not len(assets):
         logs.LOG.warn("Exit from task as no asset could be processed")
