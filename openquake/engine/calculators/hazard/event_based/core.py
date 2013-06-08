@@ -352,9 +352,7 @@ def _save_gmfs(ses, gmf_dict, sites):
                     site_id=site.id,
                     gmvs=gmvs,
                     rupture_ids=relevant_rupture_ids))
-
-    #with monitor.copy('bulk inserting into Gmf'):
-    #    inserter.flush()
+    inserter.flush()
 
 
 class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
@@ -426,13 +424,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
-
-        Yielded results are tuples of the form
-
-        (job_id, sources, ses_rlz_n, lt_rlz_id, gsims, task_seed)
-
-        (random_seed will be used to seed numpy for temporal occurence
-        sampling).
+        Yielded results are tuples of the form job_id, src_ids, ses, task_seed
+        (task_seed will be used to seed numpy for temporal occurence sampling).
         """
         hc = self.hc
         rnd = random.Random()

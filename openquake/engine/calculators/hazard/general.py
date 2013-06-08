@@ -710,6 +710,7 @@ class BaseHazardCalculator(base.Calculator):
             validate_site_model(site_model_data, points)
         else:
             points = self.hc.points_to_compute()
+
         sites = []
         coords = []
         for pt in points:
