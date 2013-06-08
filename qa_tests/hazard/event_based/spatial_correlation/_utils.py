@@ -65,7 +65,8 @@ def get_gmvs_for_location(location, job):
 
     [site] = models.HazardSite.objects.filter(
         hazard_calculation=job.hazard_calculation).extra(
-        where=["location::geometry ~= 'SRID=4326;%s'::geometry" % location])
+            where=["location::geometry ~= 'SRID=4326;%s'::geometry"
+                   % location])
     gmvs = []
     for gmf in models.GmfAgg.objects.filter(
             site=site, gmf_collection=output.gmf).order_by('ses'):
