@@ -212,7 +212,6 @@ def get_closest_site_model_data(input_model, point):
         return None
 
 
-
 def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
                 width_of_mfd_bin, area_source_discretization):
     """
