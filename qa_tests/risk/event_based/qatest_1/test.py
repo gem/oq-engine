@@ -41,5 +41,296 @@ class EventBaseQATestCase1(risk.CompleteTestCase,
                  statistics=u'mean', quantile=None,
                  sm_path=None, gsim_path=None),
              u'mean', None, False, False, u'nonstructural', u'a3'
-             ): models.LossCurveData()
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'nonstructural', u'a2'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'nonstructural', u'a1'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'nonstructural', u'a0'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'contents', u'a3'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'contents', u'a2'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'contents', u'a1'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'contents', u'a0'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'structural', u'a3'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'structural', u'a2'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'structural', u'a1'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve',
+             models.Output.HazardMetadata(
+                 investigation_time=50.0,
+                 statistics=u'mean', quantile=None,
+                 sm_path=None, gsim_path=None),
+             u'mean', None, False, False, u'structural', u'a0'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'nonstructural', u'a3'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'nonstructural', u'a2'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'nonstructural', u'a1'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'nonstructural', u'a0'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'contents', u'a3'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'contents', u'a2'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'contents', u'a1'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'contents', u'a0'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'structural', u'a3'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'structural', u'a2'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'structural', u'a1'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, False, False,
+                u'structural', u'a0'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'nonstructural', u'a3'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'nonstructural', u'a2'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'nonstructural', u'a1'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'nonstructural', u'a0'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'contents', u'a3'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'contents', u'a2'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'contents', u'a1'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'contents', u'a0'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'structural', u'a3'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'structural', u'a2'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'structural', u'a1'
+             ): self.DO_NOT_CHECK,
+            (u'loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, False, False,
+                u'structural', u'a0'
+             ): self.DO_NOT_CHECK,
+            (u'agg_loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, True, False,
+                u'nonstructural'
+             ): self.DO_NOT_CHECK,
+            (u'agg_loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, True, False,
+                u'structural'
+             ): self.DO_NOT_CHECK,
+            (u'agg_loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b1',)),
+                None, None, True, False,
+                u'contents'
+             ): self.DO_NOT_CHECK,
+            (u'agg_loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, True, False,
+                u'nonstructural'
+             ): self.DO_NOT_CHECK,
+            (u'agg_loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, True, False,
+                u'structural'
+             ): self.DO_NOT_CHECK,
+            (u'agg_loss_curve', models.Output.HazardMetadata(
+                investigation_time=50.0,
+                statistics=None, quantile=None,
+                sm_path=('b1',), gsim_path=('b2',)),
+                None, None, True, False,
+                u'contents'
+             ): self.DO_NOT_CHECK,
         }
+
+    def should_skip(self, output):
+        return (output.output_type == "event_loss" or
+                output.hazard_metadata.gsim_path = ('b2',))
