@@ -1290,6 +1290,9 @@ class Output(djm.Model):
             return self.gmf
         elif self.output_type == "complete_lt_ses":
             return self.ses
+        elif self.output_type == "event_loss":
+            # FIXME(lp). EventLoss should have a container
+            return self.event_loss.all()
 
         return getattr(self, self.output_type)
 
@@ -1308,8 +1311,8 @@ class Output(djm.Model):
         if self.output_type in hazard_output_types:
             if container.lt_realization_id is not None:
                 return self.LogicTreePath(
-                    container.lt_realization.gsim_lt_path,
-                    container.lt_realization.sm_lt_path)
+                    tuple(container.lt_realization.gsim_lt_path),
+                    tuple(container.lt_realization.sm_lt_path))
             else:
                 return self.LogicTreePath(None, None)
         elif self.output_type in risk_output_types:
@@ -2423,7 +2426,7 @@ class LossCurve(djm.Model):
 
     def __iter__(self):
         if self.aggregate:
-            return iter(self.aggregatelosscurvedata_set.all())
+            return iter([self.aggregatelosscurvedata])
         else:
             return iter(self.losscurvedata_set.all())
 
@@ -2524,11 +2527,9 @@ class EventLoss(djm.Model):
             a (db-sequence independent) tuple that identifies this output among
             which the ones created in the same calculation
         """
-        return (self.output.output_type,
-                self.output.hazard_metadata,
-                # FIXME(lp) this is not db-sequence independent
-                self.rupture.id,
-                self.aggregate_loss, self.loss_type)
+        # FIXME(lp) this is not db-sequence independent
+        return (self.output.output_type, self.output.hazard_metadata,
+                self.loss_type)
 
     @property
     def data_hash(self):
@@ -2538,7 +2539,8 @@ class EventLoss(djm.Model):
         return self.output_hash
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data, lambda x: [x.aggregate_loss])
+        return risk_almost_equal(
+            self, data, lambda x: [self.rupture.id, x.aggregate_loss])
 
 
 class BCRDistribution(djm.Model):
