@@ -75,8 +75,13 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         try:
-            job = self.run_risk(
-                self.risk_cfg, self.hazard_id(self.get_hazard()))
+            risk_calc = os.getenv('PRELOADED_RISK', False)
+            if not risk_calc:
+                job = self.run_risk(
+                    self.risk_cfg, self.hazard_id(self.get_hazard()))
+            else:
+                job = models.RiskCalculation.objects.get(
+                    pk=risk_calc).oqjob_set.all()[0]
 
             self.check_outputs(job)
 
@@ -184,11 +189,17 @@ class CompleteTestCase(object):
     """
     A class to be mixed-in with a RiskQATest. It redefines the
     protocol in order to check every output (stored in the db) of a
-    calculation
+    calculation apart the ones that satisfy #should_skip
     """
+
+    # a sentinal symbol to highlight the fact that we are not checking
+    # the value of an existing output
+    DO_NOT_CHECK = None
 
     def check_outputs(self, job):
         for output in job.output_set.all():
+            if self.should_skip(output):
+                continue
             container = output.output_container
             expected_data = self.expected_output_data()
 
@@ -198,7 +209,8 @@ class CompleteTestCase(object):
                         "The output with hash %s is missing" % str(
                             item.data_hash))
                 expected_output = expected_data[item.data_hash]
-                expected_output.assertAlmostEqual(item)
+                if expected_output is not self.DO_NOT_CHECK:
+                    expected_output.assertAlmostEqual(item)
 
     def expected_output_data(self):
         """
