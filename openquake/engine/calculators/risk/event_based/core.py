@@ -171,7 +171,7 @@ def individual_outputs(loss_type, unit, params, profile):
     event_loss_table = collections.Counter()
 
     with profile('getting gmvs and ruptures'):
-        assets, gmfs, rupture_ids = unit.getter()
+        assets, (gmfs, rupture_ids) = unit.getter()
 
     with profile('computing losses, loss curves and maps'):
         loss_matrix, curves = unit.calc(gmfs)

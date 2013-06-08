@@ -98,8 +98,8 @@ class HazardGetter(object):
         """
         :returns:
             A tuple with two elements. The first is an array of instances of
-            :class:`openquake.engine.db.models.ExposureData`, the second is an
-            array with the corresponding hazard data.
+            :class:`openquake.engine.db.models.ExposureData`, the second is
+            the corresponding hazard data.
         """
         data = self.get_data()
         assets = data[0]
@@ -279,10 +279,13 @@ GROUP BY site_id;
             else:  # scenario
                 array = numpy.array(gmvs)
                 all_gmvs.extend([array] * n)
-        all_ruptures = sorted(all_ruptures)
+        if all_assets and not all_ruptures:  # scenario
+            return all_assets, all_gmvs
+
         # second pass for event based, filling with zeros
+        all_ruptures = sorted(all_ruptures)
         for site_id, (d, n) in dic.iteritems():
             array = numpy.array([d.get(r, 0.) for r in all_ruptures])
             d.clear()  # save memory
             all_gmvs.extend([array] * n)
-        return all_assets, all_gmvs, all_ruptures
+        return all_assets, (all_gmvs, all_ruptures)
