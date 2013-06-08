@@ -101,8 +101,7 @@ def do_event_based(loss_type, units, containers, params, profile):
 
         with profile('saving individual risk'):
             save_individual_outputs(
-                loss_type, containers, hid, outputs, disagg_outputs,
-                params)
+                loss_type, containers, hid, outputs, disagg_outputs, params)
 
         if params.insured_losses:
             insured_curves = list(
@@ -171,10 +170,10 @@ def individual_outputs(loss_type, unit, params, profile):
     event_loss_table = collections.Counter()
 
     with profile('getting gmvs and ruptures'):
-        assets, (gmfs, rupture_ids) = unit.getter()
+        assets, (ground_motion_values, rupture_ids) = unit.getter()
 
     with profile('computing losses, loss curves and maps'):
-        loss_matrix, curves = unit.calc(gmfs)
+        loss_matrix, curves = unit.calc(ground_motion_values)
 
         maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
                  for losses, poes in curves]

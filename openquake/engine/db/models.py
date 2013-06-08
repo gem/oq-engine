@@ -546,8 +546,7 @@ class HazardCalculation(djm.Model):
     # The points of interest for a calculation.
     sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
     # this is initialized by initialize_site_model
-    site_collection = fields.PickleField(
-        null=True, blank=True, db_column='site_collection')
+    site_collection = fields.PickleField(null=True, blank=True)
 
     ########################
     # Logic Tree parameters:
@@ -867,9 +866,11 @@ class HazardCalculation(djm.Model):
         :returns: the ids of the inserted HazardSite instances
         """
         sites = [HazardSite(hazard_calculation=self,
-                          location='POINT(%s %s)' % coord)
+                            location='POINT(%s %s)' % coord)
                  for coord in coordinates]
         return writer.CacheInserter.saveall(sites)
+
+
 class RiskCalculation(djm.Model):
     '''
     Parameters needed to run a Risk job.
