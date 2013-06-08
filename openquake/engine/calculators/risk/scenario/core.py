@@ -74,7 +74,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
     """
 
     with profile('getting hazard'):
-        assets, gmfs, _ruptures = unit.getter()
+        assets, gmfs = unit.getter()
 
     if not len(assets):
         logs.LOG.info("Exit from task as no asset could be processed")

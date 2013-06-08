@@ -87,7 +87,7 @@ COMMENT ON TABLE riski.exposure_data IS 'Per-asset risk exposure data';
 COMMENT ON COLUMN riski.exposure_data.area IS 'asset area';
 COMMENT ON COLUMN riski.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
 COMMENT ON COLUMN riski.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
-COMMENT ON COLUMN riski.exposure_data.units IS 'number of assets, people etc.';
+COMMENT ON COLUMN riski.exposure_data.number_of_units IS 'number of assets, people etc.';
 COMMENT ON COLUMN riski.exposure_data.taxonomy IS 'A reference to the taxonomy that should be used for the asset at hand';
 
 
