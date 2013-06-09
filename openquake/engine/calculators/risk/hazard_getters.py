@@ -217,10 +217,13 @@ class GroundMotionValuesGetter(HazardGetter):
         Iterator yielding site_id, assets.
         """
         cursor = models.getcursor('job_init')
-        # NB: the ``distinct ON (exposure_data.id)`` combined by the
-        # ``ORDER BY ST_Distance`` does the job to select the closest site
+        # NB: the ``distinct ON (exposure_data.id)`` combined with the
+        # ``ORDER BY ST_Distance`` does the job to select the closest site.
+        # The other ORDER BY are there to help debugging, it is always
+        # nice to have numbers coming in a fixed order. They have an
+        # insignificant effect on the performance.
         query = """
-SELECT site_id, array_agg(asset_id) AS asset_ids FROM (
+SELECT site_id, array_agg(asset_id ORDER BY asset_id) AS asset_ids FROM (
   SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
   FROM riski.exposure_data AS exp
   JOIN hzrdi.hazard_site AS hsite
@@ -228,7 +231,7 @@ SELECT site_id, array_agg(asset_id) AS asset_ids FROM (
   WHERE hsite.hazard_calculation_id = %s
   AND taxonomy = %s AND exposure_model_id = %s AND exp.site && %s
   ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)) AS x
-GROUP BY site_id;
+GROUP BY site_id ORDER BY site_id;
    """
         args = (self.max_distance * KILOMETERS_TO_METERS,
                 self.hazard_output.oq_job.hazard_calculation.id,
