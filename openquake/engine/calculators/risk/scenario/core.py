@@ -80,10 +80,6 @@ def do_scenario(loss_type, unit, containers, params, profile):
         logs.LOG.info("Exit from task as no asset could be processed")
         return None, None
 
-    elif not sum(len(gmvs) for gmvs in ground_motion_values):
-        logs.LOG.info("Exit from task as no GMF could be processed")
-        return None, None
-
     with profile('computing risk'):
         loss_ratio_matrix = unit.calc(ground_motion_values)
 
