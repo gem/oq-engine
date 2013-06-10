@@ -332,5 +332,4 @@ class EventBaseQATestCase1(risk.CompleteTestCase,
         }
 
     def should_skip(self, output):
-        return (output.output_type == "event_loss" or
-                output.hazard_metadata.gsim_path = ('b2',))
+        return (output.output_type == "event_loss")
