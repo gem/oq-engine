@@ -246,6 +246,10 @@ GROUP BY site_id ORDER BY site_id;
         for site_id, asset_ids in sites_assets:
             assets = [self.asset_dict[i] for i in asset_ids
                       if i in self.asset_dict]
+            # notice the "if i in self.asset_dict": in principle, it should
+            # not be necessary; in practice, the query may returns spurious
+            # assets not in the initial set; this is why we are filtering
+            # the spurious assets; it is a mysterious behaviour of PostGIS
             if assets:
                 yield site_id, assets
 
@@ -267,32 +271,41 @@ GROUP BY site_id ORDER BY site_id;
         return gmvs, ruptures
 
     def get_data(self, monitor):
+        """
+        :returns: a list with all the assets and the hazard data.
+
+        For scenario computations the data is a numpy.array
+        with the GMVs; for event based computations the data is
+        a pair (GMVs, rupture_ids).
+        """
         all_ruptures = set()
         all_assets = []
         all_gmvs = []
-        dic = collections.OrderedDict()
+        site_gmv = collections.OrderedDict()
+        # dictionary site -> ({rupture_id: gmv}, n_assets)
+        # the ordering is there only to have repeatable runs
         with monitor.copy('associating assets->site'):
             site_assets = list(self)
         for site_id, assets in site_assets:
-            n = len(assets)
+            n_assets = len(assets)
             all_assets.extend(assets)
             with monitor.copy('getting gmvs and ruptures'):
                 gmvs, ruptures = self.get_gmvs_ruptures(site_id)
             if ruptures:  # event based
-                dic[site_id] = dict(zip(ruptures, gmvs)), n
+                site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
                 for r in ruptures:
                     all_ruptures.add(r)
             else:  # scenario
                 array = numpy.array(gmvs)
-                all_gmvs.extend([array] * n)
+                all_gmvs.extend([array] * n_assets)
         if all_assets and not all_ruptures:  # scenario
             return all_assets, all_gmvs
 
         # second pass for event based, filling with zeros
         with monitor.copy('filling gmvs with zeros'):
             all_ruptures = sorted(all_ruptures)
-            for site_id, (d, n) in dic.iteritems():
-                array = numpy.array([d.get(r, 0.) for r in all_ruptures])
-                d.clear()  # save memory
-                all_gmvs.extend([array] * n)
+            for site_id, (gmv, n_assets) in site_gmv.iteritems():
+                array = numpy.array([gmv.get(r, 0.) for r in all_ruptures])
+                gmv.clear()  # save memory
+                all_gmvs.extend([array] * n_assets)
         return all_assets, (all_gmvs, all_ruptures)
