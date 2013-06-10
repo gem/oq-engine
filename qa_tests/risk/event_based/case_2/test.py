@@ -42,7 +42,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
         return gmf_coll.output.id
 
     def actual_data(self, job):
-        data = ([curve.poes
+        return ([curve.poes
                 for curve in models.LossCurveData.objects.filter(
                     loss_curve__output__oq_job=job,
                     loss_curve__aggregate=False,
@@ -60,7 +60,6 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                 [[el.aggregate_loss
                  for el in models.EventLoss.objects.filter(
                 output__oq_job=job).order_by('-aggregate_loss')[0:10]]])
-        return data
 
     def expected_data(self):
 
