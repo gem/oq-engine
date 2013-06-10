@@ -902,8 +902,7 @@ def get_ruptures(job, ses_collection, num):
             rake=0,
             tectonic_region_type="test region type",
             is_from_fault_source=False,
-            lons=[], lats=[], depths=[],
-            rupture_ordinal=0)
+            lons=[], lats=[], depths=[])
         for i in range(num)]
 
 

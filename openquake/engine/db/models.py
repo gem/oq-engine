@@ -1634,7 +1634,6 @@ class SESRupture(djm.Model):
 
     # HazardLib Surface object. Stored as it is needed by risk disaggregation
     surface = fields.PickleField()
-    rupture_ordinal = djm.IntegerField()
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'

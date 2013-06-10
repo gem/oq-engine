@@ -133,10 +133,8 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
             return
 
     with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
-        rupture_ids = [
-            _save_ses_rupture(
-                ses, rupture, cmplt_lt_ses, i)
-            for i, rupture in enumerate(ruptures, 1)]
+        rupture_ids = [_save_ses_rupture(ses, rupture, cmplt_lt_ses)
+                       for rupture in ruptures]
 
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
@@ -194,8 +192,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids):
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
-                      rupture_ordinal):
+def _save_ses_rupture(ses, rupture, complete_logic_tree_ses):
     """
     Helper function for saving stochastic event set ruptures to the database.
 
@@ -208,8 +205,6 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         :class:`openquake.engine.db.models.SES` representing the `complete
         logic tree` stochastic event set.
         If not None, save a copy of the input `rupture` to this SES.
-    :param int rupture_ordinal:
-        The ordinal of a rupture with a given result group.
     """
     is_from_fault_source = (
         rupture.source_typology in (ComplexFaultSource, SimpleFaultSource)
@@ -280,8 +275,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
         is_multi_surface=is_multi_surface,
         lons=lons,
         lats=lats,
-        depths=depths,
-        rupture_ordinal=rupture_ordinal,
+        depths=depths
     ).id
 
     # FIXME(lp): do not save a copy. use the same approach used for
@@ -298,8 +292,7 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses,
             is_multi_surface=is_multi_surface,
             lons=lons,
             lats=lats,
-            depths=depths,
-            rupture_ordinal=rupture_ordinal,
+            depths=depths
         )
 
     return rupture_id
