@@ -870,6 +870,30 @@ class HazardCalculation(djm.Model):
                  for coord in coordinates]
         return writer.CacheInserter.saveall(sites)
 
+    def total_investigation_time(self):
+        """
+        Helper method to compute the total investigation time for a
+        complete set of stochastic event sets for all realizations.
+        """
+        if self.number_of_logic_tree_samples > 0:
+            # The calculation is set to do Monte-Carlo sampling of logic trees
+            # The number of logic tree realizations is specified explicitly in
+            # job configuration.
+            n_lt_realizations = self.number_of_logic_tree_samples
+        else:
+            # The calculation is set do end-branch enumeration of all logic
+            # tree paths
+            # We can get the number of logic tree realizations by counting
+            # initialized lt_realization records.
+            n_lt_realizations = LtRealization.objects.filter(
+                hazard_calculation=self).count()
+
+        investigation_time = (self.investigation_time
+                              * self.ses_per_logic_tree_path
+                              * n_lt_realizations)
+
+        return investigation_time
+
 
 class RiskCalculation(djm.Model):
     '''
