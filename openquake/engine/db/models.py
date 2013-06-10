@@ -32,6 +32,10 @@ import os
 import re
 from datetime import datetime
 
+if not os.getenv('DJANGO_SETTINGS_MODULE', False):
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
+
+
 import numpy
 
 from django.db import transaction, connections

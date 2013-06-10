@@ -131,7 +131,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         return []
 
     def hazard_id(self, job):
-        raise job.output_set.latest('last_update').id
+        return job.output_set.latest('last_update').id
 
 
 class End2EndRiskQATestCase(BaseRiskQATestCase):
