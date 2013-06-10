@@ -3,51 +3,53 @@
   <exposureModel id="ep" category="buildings">
     <description>Exposure Model for buildings located in Pavia</description>
     <conversions>
+      <area type="per_asset" unit="square meters" />
+
       <costTypes>
         <costType name="contents" unit="EUR" type="per_asset"/>
-        <costType name="structural" unit="EUR" type="per_asset"/>
-        <costType name="nonstructural" unit="EUR" type="per_asset"/>
+        <costType name="structural" unit="EUR" type="per_area"/>
+        <costType name="nonstructural" unit="EUR" type="aggregated"/>
       </costTypes>
     </conversions>
     <assets>
-      <asset id="a0" taxonomy="RM" number="3">
+      <asset id="a0" taxonomy="RM" number="3" area="10">
         <location lon="81.2985" lat="29.1098"/>
         <costs>
           <cost type="contents" value="250"/>
-          <cost type="structural" value="1000" deductible="250" insuranceLimit="1000"/>
-          <cost type="nonstructural" value="500"/>
+          <cost type="structural" value="100" deductible="25" insuranceLimit="100"/>
+          <cost type="nonstructural" value="1500"/>
         </costs>
       </asset>
-      <asset id="a1" taxonomy="RC" number="500">
+      <asset id="a1" taxonomy="RC" number="500" area="10">
         <location lon="83.082298" lat="27.9006"/>
         <costs>
           <cost type="contents" value="1"/>
-          <cost type="structural" value="4" deductible="500" insuranceLimit="1000"/>
-          <cost type="nonstructural" value="2"/>
+          <cost type="structural" value="0.4" deductible="0.1" insuranceLimit="0.2"/>
+          <cost type="nonstructural" value="1000"/>
         </costs>
       </asset>
-      <asset id="a2" taxonomy="W" number="1000">
+      <asset id="a2" taxonomy="W" number="1000" area="10">
         <location lon="85.747703" lat="27.9015"/>
         <costs>
           <cost type="contents" value="0.25"/>
-          <cost type="structural" value="1" deductible="200" insuranceLimit="800"/>
-          <cost type="nonstructural" value="0.5"/>
+          <cost type="structural" value="0.1" deductible="0.02" insuranceLimit="0.08"/>
+          <cost type="nonstructural" value="500"/>
         </costs>
       </asset>
-      <asset id="a3" taxonomy="RM" number="10">
+      <asset id="a3" taxonomy="RM" number="10" area="1">
         <location lon="85.747703" lat="27.9015"/>
         <costs>
           <cost type="contents" value="125"/>
           <cost type="structural" value="500" deductible="1000" insuranceLimit="3000"/>
-          <cost type="nonstructural" value="250"/>
+          <cost type="nonstructural" value="2500"/>
         </costs>
       </asset>
-      <asset id="a4" taxonomy="RM" number="10">
+      <asset id="a4" taxonomy="RM" number="10" area="100">
         <location lon="87.747703" lat="27.9015"/>
         <costs>
           <cost type="contents" value="125"/>
           <cost type="structural" value="500" deductible="1000" insuranceLimit="3000"/>
-          <cost type="nonstructural" value="250"/>
+          <cost type="nonstructural" value="2500"/>
         </costs>
       </asset>
     </assets>
