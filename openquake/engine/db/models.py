@@ -37,6 +37,7 @@ if not os.getenv('DJANGO_SETTINGS_MODULE', False):
 
 
 import numpy
+from scipy import interpolate
 
 from django.db import transaction, connections
 from django.contrib.gis.db import models as djm
@@ -91,12 +92,16 @@ LOSS_TYPES = ["structural", "nonstructural", "occupants", "contents"]
 
 
 #: relative tolerance to consider two risk outputs (almost) equal
-RISK_RTOL = 0.05
+RISK_RTOL = 0.5
 
 
-def risk_almost_equal(o1, o2, key, rtol=RISK_RTOL):
+#: absolute tolerance to consider two risk outputs (almost) equal
+RISK_ATOL = 0.01
+
+
+def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
     return numpy.testing.assert_allclose(
-        numpy.array(key(o1)), numpy.array(key(o2)), rtol=rtol)
+        numpy.array(key(o1)), numpy.array(key(o2)), rtol=rtol, atol=atol)
 
 
 def getcursor(route):
@@ -2479,9 +2484,10 @@ class LossCurveData(djm.Model):
         return self.loss_curve.output_hash + (self.asset_ref,)
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(
-            self, data,
-            lambda x: [x.loss_ratios, x.poes, x.average_loss_ratio])
+        poes = interpolate.interp1d(
+            self.losses, self.poes,
+            bounds_error=False, fill_value=0)(data.losses)
+        return risk_almost_equal(self.poes, poes)
 
 
 class AggregateLossCurveData(djm.Model):
