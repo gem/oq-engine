@@ -28,6 +28,7 @@ import numpy
 from openquake.engine import logs
 from openquake.hazardlib import geo
 from openquake.engine.db import models
+from openquake.engine.performance import DummyMonitor
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
@@ -81,7 +82,6 @@ class HazardGetter(object):
             geo.point.Point(asset.site.x, asset.site.y)
             for asset in self.assets])
         self.asset_dict = dict((asset.id, asset) for asset in self.assets)
-        self.all_asset_ids = set(self.asset_dict)
 
     def __repr__(self):
         return "<%s max_distance=%s assets=%s>" % (
@@ -94,17 +94,17 @@ class HazardGetter(object):
         """
         raise NotImplementedError
 
-    def __call__(self):
+    def __call__(self, monitor=None):
         """
+        :param monitor: a performance monitor or None
         :returns:
             A tuple with two elements. The first is an array of instances of
             :class:`openquake.engine.db.models.ExposureData`, the second is
             the corresponding hazard data.
         """
-        data = self.get_data()
-        assets = data[0]
-
-        missing_asset_ids = self.all_asset_ids - set(a.id for a in assets)
+        monitor = monitor or DummyMonitor()
+        assets, data = self.get_data(monitor)
+        missing_asset_ids = set(self.asset_dict) - set(a.id for a in assets)
 
         for missing_asset_id in missing_asset_ids:
             # please don't remove this log: it was required by Vitor since
@@ -113,7 +113,7 @@ class HazardGetter(object):
                 "No hazard has been found for the asset %s within %s km" % (
                     self.asset_dict[missing_asset_id], self.max_distance))
 
-        return data
+        return assets, data
 
 
 class HazardCurveGetterPerAsset(HazardGetter):
@@ -133,7 +133,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
             hazard, assets, max_distance, imt)
         self._cache = {}
 
-    def get_data(self):
+    def get_data(self, monitor):
         """
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :meth:`HazardGetter.get_data` interface.
@@ -266,15 +266,18 @@ GROUP BY site_id ORDER BY site_id;
             logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
         return gmvs, ruptures
 
-    def get_data(self):
+    def get_data(self, monitor):
         all_ruptures = set()
         all_assets = []
         all_gmvs = []
         dic = collections.OrderedDict()
-        for site_id, assets in self:
+        with monitor.copy('associating assets->site'):
+            site_assets = list(self)
+        for site_id, assets in site_assets:
             n = len(assets)
             all_assets.extend(assets)
-            gmvs, ruptures = self.get_gmvs_ruptures(site_id)
+            with monitor.copy('getting gmvs and ruptures'):
+                gmvs, ruptures = self.get_gmvs_ruptures(site_id)
             if ruptures:  # event based
                 dic[site_id] = dict(zip(ruptures, gmvs)), n
                 for r in ruptures:
@@ -286,9 +289,10 @@ GROUP BY site_id ORDER BY site_id;
             return all_assets, all_gmvs
 
         # second pass for event based, filling with zeros
-        all_ruptures = sorted(all_ruptures)
-        for site_id, (d, n) in dic.iteritems():
-            array = numpy.array([d.get(r, 0.) for r in all_ruptures])
-            d.clear()  # save memory
-            all_gmvs.extend([array] * n)
+        with monitor.copy('filling gmvs with zeros'):
+            all_ruptures = sorted(all_ruptures)
+            for site_id, (d, n) in dic.iteritems():
+                array = numpy.array([d.get(r, 0.) for r in all_ruptures])
+                d.clear()  # save memory
+                all_gmvs.extend([array] * n)
         return all_assets, (all_gmvs, all_ruptures)
