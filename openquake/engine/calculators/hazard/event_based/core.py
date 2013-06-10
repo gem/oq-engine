@@ -520,8 +520,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             ses_collection=clt_ses_coll,
             investigation_time=investigation_time)
 
-        if self.job.hazard_calculation.ground_motion_fields:
-            # `complete logic tree` GMF
+        if self.hc.complete_logic_tree_gmf:
             clt_gmf_output = models.Output.objects.create(
                 owner=self.job.owner,
                 oq_job=self.job,
