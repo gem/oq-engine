@@ -507,11 +507,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         clt_ses_coll = models.SESCollection.objects.create(
             output=clt_ses_output)
 
-        investigation_time = self._compute_investigation_time(self.hc)
-
         models.SES.objects.create(
             ses_collection=clt_ses_coll,
-            investigation_time=investigation_time)
+            investigation_time=self.hc.total_investigation_time())
 
         if self.hc.complete_logic_tree_gmf:
             clt_gmf_output = models.Output.objects.create(
@@ -520,35 +518,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 display_name='complete logic tree GMF',
                 output_type='complete_lt_gmf')
             models.GmfCollection.objects.create(output=clt_gmf_output)
-
-    @staticmethod
-    def _compute_investigation_time(haz_calc):
-        """
-        Helper method for :meth:`initialize_complete_lt_ses_db_records` to
-        compute the investigation time for a given set of results.
-
-        :param haz_calc:
-            :class:`openquake.engine.db.models.HazardCalculation` object for
-            the current job.
-        """
-        if haz_calc.number_of_logic_tree_samples > 0:
-            # The calculation is set to do Monte-Carlo sampling of logic trees
-            # The number of logic tree realizations is specified explicitly in
-            # job configuration.
-            n_lt_realizations = haz_calc.number_of_logic_tree_samples
-        else:
-            # The calculation is set do end-branch enumeration of all logic
-            # tree paths
-            # We can get the number of logic tree realizations by counting
-            # initialized lt_realization records.
-            n_lt_realizations = models.LtRealization.objects.filter(
-                hazard_calculation=haz_calc.id).count()
-
-        investigation_time = (haz_calc.investigation_time
-                              * haz_calc.ses_per_logic_tree_path
-                              * n_lt_realizations)
-
-        return investigation_time
 
     def pre_execute(self):
         """
