@@ -373,13 +373,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
              N * n * s
          b = ---------
-              100 * c
+              10 * c
 
         The divisions are intended rounded to the closest upper integer
         (ceil). The mechanism is intended to generate a number of tasks
-        close to 100 * c independently on the number of sources and SES.
+        close to 10 * c independently on the number of sources and SES.
         For instance, with c = 512, you should expect the engine to
-        generate at most 51200 tasks; they could be much less in case
+        generate at most 5120 tasks; they could be much less in case
         of few sources and few SES; the minimum number of tasks generated
         is::
 
@@ -388,10 +388,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         To have good concurrency the number of tasks must be bigger than
         the number of the cores (which is essentially c) but not too big,
         otherwise all the time would be wasted in passing arguments.
-        Generating 100 times more tasks than cores gives a nice progress
+        Generating 10 times more tasks than cores gives a nice progress
         percentage. There is no more motivation than that.
         """
-        preferred_num_tasks = self.concurrent_tasks() * 100
+        preferred_num_tasks = self.concurrent_tasks() * 10
         num_ses = self.hc.ses_per_logic_tree_path
 
         num_sources = []  # number of sources per realization
