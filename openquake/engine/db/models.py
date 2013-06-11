@@ -25,12 +25,14 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import operator
 import collections
 import itertools
 import operator
 import os
 import re
 from datetime import datetime
+
 
 if not os.getenv('DJANGO_SETTINGS_MODULE', False):
     os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
@@ -2319,7 +2321,8 @@ class LossFractionData(djm.Model):
         return self.loss_fraction.output_hash + (self.location, self.value)
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data, lambda x: [x.absolute_loss])
+        return risk_almost_equal(
+            self, data, operator.attrgetter('absolute_loss'))
 
 
 class LossMap(djm.Model):
@@ -2377,7 +2380,8 @@ class LossMapData(djm.Model):
         return self.loss_map.output_hash + (self.asset_ref,)
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data, lambda x: [x.value, x.stddev])
+        return risk_almost_equal(
+            self, data, operator.attrgetter('value', 'stddev'))
 
 
 class AggregateLoss(djm.Model):
@@ -2411,7 +2415,8 @@ class AggregateLoss(djm.Model):
         return self.output_hash
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data, lambda x: [x.mean, x.std_dev])
+        return risk_almost_equal(
+            self, data, lambda x: operator.attrgetter('mean', 'std_dev'))
 
 
 class LossCurve(djm.Model):
@@ -2511,8 +2516,8 @@ class AggregateLossCurveData(djm.Model):
         return self.loss_curve.output_hash
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data,
-                                 lambda x: [x.poes, x.average_loss])
+        return risk_almost_equal(
+            self, data, operator.attrgetter('poes', 'average_loss'))
 
 
 class EventLoss(djm.Model):
@@ -2550,7 +2555,7 @@ class EventLoss(djm.Model):
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(
-            self, data, lambda x: [self.rupture.id, x.aggregate_loss])
+            self, data, operator.attrgetter('rupture_id', 'aggregate_loss'))
 
 
 class BCRDistribution(djm.Model):
@@ -2600,9 +2605,11 @@ class BCRDistributionData(djm.Model):
         return self.bcr_distribution.output_hash + (self.asset_ref,)
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data, lambda x: [
-            x.average_annual_loss_original, x.average_loss_retrofitted,
-            x.bcr])
+        return risk_almost_equal(
+            self, data,
+            operator.attrgetter('average_annual_loss_original',
+                                'average_loss_retrofitted',
+                                'bcr'))
 
 
 class DmgState(djm.Model):
@@ -2647,7 +2654,8 @@ class DmgDistPerAsset(djm.Model):
         return self.output_hash
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data, lambda x: [x.mean, x.stddev])
+        return risk_almost_equal(
+            self, data, operator.attrgetter('mean', 'stddev'))
 
     @property
     def output(self):
@@ -2689,7 +2697,8 @@ class DmgDistPerTaxonomy(djm.Model):
         return self.output_hash
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data, lambda x: [x.mean, x.stddev])
+        return risk_almost_equal(
+            self, data, lambda x: operator.attrgetter('mean', 'stddev'))
 
 
 class DmgDistTotal(djm.Model):
@@ -2726,7 +2735,8 @@ class DmgDistTotal(djm.Model):
         return self.output_hash
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(self, data, lambda x: [x.mean, x.stddev])
+        return risk_almost_equal(
+            self, data, operator.attrgetter('mean', 'stddev'))
 
 
 ## Tables in the 'riski' schema.
