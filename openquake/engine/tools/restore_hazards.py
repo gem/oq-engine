@@ -36,9 +36,6 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
             if i % BLOCKSIZE == 0:
                 s.seek(0)
                 curs.copy_from(s, tablename)
-                curs.execute(
-                    "select setval(pg_get_serial_sequence('%s', 'id'), %d)" % (
-                        tablename, curs.lastrowid + 1))
                 s.close()
                 s = StringIO()
     finally:
@@ -74,7 +71,7 @@ def hazard_restore(conn, tar):
     log.info('Restored %s', tar)
 
 
-def hazard_restore_with_params(tar, host, dbname, user, password, port):
+def hazard_restore_remote(tar, host, dbname, user, password, port):
     conn = psycopg2.connect(
         host=host, dbname=dbname, user=user, password=password, port=port)
     hazard_restore(conn, tar)
@@ -87,7 +84,7 @@ def hazard_restore_local(tar):
     from django.conf import settings
     default_cfg = settings.DATABASES['default']
 
-    hazard_restore_with_params(
+    hazard_restore_remote(
         tar,
         default_cfg['HOST'],
         default_cfg['NAME'],
@@ -109,5 +106,5 @@ if __name__ == '__main__':
     p.add_argument('port', nargs='?', default='5432')
     arg = p.parse_args()
     logging.basicConfig(level=logging.INFO)
-    hazard_restore_with_params(arg.tarfile, arg.host, arg.dbname,
+    hazard_restore_remote(arg.tarfile, arg.host, arg.dbname,
                                arg.user, arg.password, arg.port)

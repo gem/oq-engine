@@ -294,9 +294,6 @@ class RiskCalculator(base.Calculator):
         stats.pk_set(self.job.id, "nrisk_total", total)
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
-        # update job_stats
-        while not models.JobStats.objects.filter(oq_job=self.job).exists():
-            pass
         job_stats = models.JobStats.objects.get(oq_job=self.job)
         job_stats.num_sites = total
         job_stats.num_tasks = self.expected_tasks(self.block_size())
