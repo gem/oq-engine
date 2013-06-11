@@ -38,7 +38,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def get_hazard(self):
+    def get_hazard_job(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("event_based_hazard/job.ini"))
 
