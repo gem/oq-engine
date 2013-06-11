@@ -65,7 +65,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                 expected_data[i], actual,
                 rtol=0.01, atol=0.0, err_msg="", verbose=True)
 
-    def get_hazard(self):
+    def get_hazard_job(self):
         """
         :returns: an hazard job
         """
@@ -78,7 +78,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             risk_calc = os.getenv('PRELOADED_RISK', False)
             if not risk_calc:
                 job = self.run_risk(
-                    self.risk_cfg, self.hazard_id(self.get_hazard()))
+                    self.risk_cfg, self.hazard_id(self.get_hazard_job()))
             else:
                 job = models.RiskCalculation.objects.get(
                     pk=risk_calc).oqjob_set.all()[0]
@@ -140,7 +140,7 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
     calculation, then running a risk calculation
     """
 
-    def get_hazard(self):
+    def get_hazard_job(self):
         hazard_calc_id = os.getenv('PRELOADED_HAZARD', False)
 
         if hazard_calc_id:
