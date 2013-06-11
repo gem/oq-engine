@@ -337,6 +337,9 @@ def run_calc(job, log_level, log_file, exports, job_type):
     # unavailable for others.
     close_connection()
 
+    # Create job stats, which implicitly records the start time for the job
+    JobStats.objects.create(oq_job=OqJob.objects.get(id=job_id))
+
     job_pid = os.fork()
 
     if not job_pid:
