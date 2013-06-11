@@ -209,7 +209,7 @@ class CompleteTestCase(object):
                         "The output with hash %s is missing" % str(
                             item.data_hash))
                 expected_output = expected_data[item.data_hash]
-                if expected_output is not self.DO_NOT_CHECK:
+                if expected_output is not None:
                     expected_output.assertAlmostEqual(item)
 
     def expected_output_data(self):
