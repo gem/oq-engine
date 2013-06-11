@@ -336,13 +336,26 @@ class EventBaseQATestCase1(risk.CompleteTestCase,
 ###
 ### Checking loss curves corresponding to the hazard with branch = b2
 ###
+
+###
+### Non Structural loss type
             (u'loss_curve', models.Output.HazardMetadata(
                 investigation_time=50.0,
                 statistics=None, quantile=None,
                 sm_path=('b1',), gsim_path=('b2',)),
                 None, None, False, False,
                 u'nonstructural', u'a3'
-             ): self.DO_NOT_CHECK,
+             ): models.LossCurveData(
+                 asset_value=2500,
+                 loss_ratios=(numpy.array(
+                     [0, 118.42, 236.84, 355.26, 473.68, 592.11, 710.53,
+                      828.95, 947.37, 1065.8, 1184.2, 1302.6, 1421.1,
+                      1539.5, 1657.9, 1776.3, 1894.7, 2013.2, 2131.6,
+                      2250]) / 2500),
+                 poes=[0.2212, 0.2212, 0.2212, 0.14101, 0.095163, 0.058235,
+                       0.037287, 0.025665, 0.02176, 0.017839, 0.013902,
+                       0.013902, 0.0099502, 0.0099502, 0.0099502, 0.005982,
+                       0.003992, 0.003992, 0.003992, 0]),
             (u'loss_curve', models.Output.HazardMetadata(
                 investigation_time=50.0,
                 statistics=None, quantile=None,
