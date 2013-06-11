@@ -136,8 +136,11 @@ class AssetManagerTestCase(unittest.TestCase):
         m.return_value = (
             "select id from riski.exposure_data where 1 = %s", (1,))
         try:
-            self.assertEqual([], self.manager.get_asset_chunk(
-                mock.Mock(), mock.Mock(), mock.Mock(), mock.Mock()))
+            self.assertEqual(
+                models.ExposureData.objects.count(),
+                len(
+                    self.manager.get_asset_chunk(
+                        mock.Mock(), mock.Mock(), mock.Mock(), mock.Mock())))
         finally:
             p.stop()
 
