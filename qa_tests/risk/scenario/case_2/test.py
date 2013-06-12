@@ -14,7 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
 
 from nose.plugins.attrib import attr
 
