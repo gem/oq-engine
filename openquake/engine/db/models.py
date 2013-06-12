@@ -2698,7 +2698,7 @@ class DmgDistPerTaxonomy(djm.Model):
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(
-            self, data, lambda x: operator.attrgetter('mean', 'stddev'))
+            self, data, operator.attrgetter('mean', 'stddev'))
 
 
 class DmgDistTotal(djm.Model):
