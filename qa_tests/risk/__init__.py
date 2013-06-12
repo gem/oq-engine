@@ -67,7 +67,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
     def get_hazard_job(self):
         """
-        :returns: an hazard job
+        :returns: a hazard job
         """
         raise NotImplementedError
 
@@ -136,7 +136,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
 class End2EndRiskQATestCase(BaseRiskQATestCase):
     """
-    Run an end-to-end calculation (by first running an hazard
+    Run an end-to-end calculation (by first running a hazard
     calculation, then running a risk calculation
     """
 
@@ -155,7 +155,7 @@ class LogicTreeBasedTestCase(object):
     """
     A class meant to mixed-in with a BaseRiskQATestCase or
     End2EndRiskQATestCase that runs a risk calculation by giving in
-    input an hazard calculation id
+    input a hazard calculation id
     """
 
     def run_risk(self, cfg, hazard_id):
@@ -192,8 +192,8 @@ class CompleteTestCase(object):
     calculation apart the ones that satisfy #should_skip
     """
 
-    # a sentinal symbol to highlight the fact that we are not checking
-    # the value of an existing output
+    # a sentinal variable to highlight the fact that we are not
+    # checking the value of an existing output
     DO_NOT_CHECK = None
 
     def check_outputs(self, job):
