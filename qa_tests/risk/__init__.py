@@ -148,7 +148,7 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
                 pk=hazard_calc_id).oqjob_set.all()[0]
         else:
             return super(End2EndRiskQATestCase, self).run_hazard(
-                self.hazard_cfg, False).id
+                self.hazard_cfg)
 
 
 class LogicTreeBasedTestCase(object):
