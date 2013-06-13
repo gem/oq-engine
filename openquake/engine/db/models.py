@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -28,7 +29,6 @@ Model representations of the OpenQuake DB tables.
 import operator
 import collections
 import itertools
-import operator
 import os
 import re
 from datetime import datetime
@@ -94,7 +94,7 @@ LOSS_TYPES = ["structural", "nonstructural", "occupants", "contents"]
 
 
 #: relative tolerance to consider two risk outputs (almost) equal
-RISK_RTOL = 0.08
+RISK_RTOL = 0.10
 
 
 #: absolute tolerance to consider two risk outputs (almost) equal
