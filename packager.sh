@@ -146,10 +146,12 @@ usage () {
     echo "       if -D is present a package with self-computed version is produced."
     echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
     echo
-    echo "    $0 pkgtest <branch-name>                    install oq-engine package and related dependencies into"
-    echo "                                                an ubuntu lxc environment and run package tests and demos"
-    echo "    $0 devtest <branch-name>                    put oq-engine and oq-* dependencies sources in a lxc,"
-    echo "                                                setup environment and run development tests"
+    echo "    $0 pkgtest <branch-name>                     install oq-engine package and related dependencies into"
+    echo "                                                 an ubuntu lxc environment and run package tests and demos"
+
+    echo "    $0 [-f <fixture-file>] devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
+    echo "                                                 setup environment and run development tests."
+    echo "                                                 Optionally, it loads fixtures data before running tests."
     echo
     exit $ret
 }
@@ -677,6 +679,7 @@ while [ $# -gt 0 ]; do
             ;;
         -F|--fixtures)
             FIXTURES=$2
+            shift  # consume argument
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
