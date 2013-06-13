@@ -4,6 +4,7 @@ import psycopg2
 import argparse
 import logging
 import io
+import sys
 
 BLOCKSIZE = 1000  # restore blocks of 1,000 lines each
 
@@ -27,10 +28,14 @@ class StringIO(io.StringIO):
         Bulk insert self into the database.
         """
         self.seek(0)
-        reserve_ids = "select nextval('%s_id_seq') "\
-            "from generate_series(1, %d)" % (tablename, self.nlines)
-        cursor.execute(reserve_ids)  # make sure the ids are available
+
+        # FIXME(lp). This code does not prevent a race condition on
+        # the sequence value
         cursor.copy_from(self, tablename)
+        reserve_ids = "select setval('%s_id_seq', max(id)) "\
+            "from %s" % (tablename, tablename)
+        cursor.execute(reserve_ids)
+
         self.truncate(0)
         self.seek(0)
         self.nlines = 0
@@ -117,16 +122,20 @@ def hazard_restore_local(tar):
 
 
 if __name__ == '__main__':
-    # not using the predefined Django connections here since
-    # we may want to restore the tarfile into a remote db
-    p = argparse.ArgumentParser()
-    p.add_argument('tarfile')
-    p.add_argument('host', nargs='?', default='localhost')
-    p.add_argument('dbname', nargs='?', default='openquake')
-    p.add_argument('user', nargs='?', default='oq_admin')
-    p.add_argument('password', nargs='?', default='')
-    p.add_argument('port', nargs='?', default='5432')
-    arg = p.parse_args()
-    logging.basicConfig(level=logging.INFO)
-    hazard_restore_remote(arg.tarfile, arg.host, arg.dbname,
-                               arg.user, arg.password, arg.port)
+    if len(sys.argv) > 1:
+        hazard_restore_local(sys.argv[1])
+    else:
+        # not using the predefined Django connections here since
+        # we may want to restore the tarfile into a remote db
+        p = argparse.ArgumentParser()
+        p.add_argument('tarfile')
+        p.add_argument('host', nargs='?', default='localhost')
+        p.add_argument('dbname', nargs='?', default='openquake')
+        p.add_argument('user', nargs='?', default='oq_admin')
+        p.add_argument('password', nargs='?', default='')
+        p.add_argument('port', nargs='?', default='5432')
+        arg = p.parse_args()
+        logging.basicConfig(level=logging.INFO)
+        hazard_restore_remote(
+            arg.tarfile, arg.host, arg.dbname,
+            arg.user, arg.password, arg.port)
