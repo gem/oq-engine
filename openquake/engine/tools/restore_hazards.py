@@ -108,6 +108,7 @@ def hazard_restore_local(tar):
     """
     Use the current django settings to restore hazard
     """
+    import openquake.engine.db.models
     from django.conf import settings
     default_cfg = settings.DATABASES['default']
 
