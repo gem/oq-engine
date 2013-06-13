@@ -75,13 +75,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         try:
-            risk_calc = os.getenv('PRELOADED_RISK', False)
-            if not risk_calc:
-                job = self.run_risk(
-                    self.risk_cfg, self.hazard_id(self.get_hazard_job()))
-            else:
-                job = models.RiskCalculation.objects.get(
-                    pk=risk_calc).oqjob_set.all()[0]
+            job = self.run_risk(
+                self.risk_cfg, self.hazard_id(self.get_hazard_job()))
 
             self.check_outputs(job)
 
@@ -141,14 +136,30 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
     """
 
     def get_hazard_job(self):
-        hazard_calc_id = os.getenv('PRELOADED_HAZARD', False)
+        return super(End2EndRiskQATestCase, self).run_hazard(
+            self.hazard_cfg)
 
-        if hazard_calc_id:
-            return models.HazardCalculation.objects.get(
-                pk=hazard_calc_id).oqjob_set.all()[0]
-        else:
-            return super(End2EndRiskQATestCase, self).run_hazard(
-                self.hazard_cfg)
+    def test(self):
+        raise NotImplementedError
+
+
+class FixtureBasedQATestCase(End2EndRiskQATestCase):
+    """
+    Run an End 2 End calculation by relying on some preloaded data
+    (fixtures) to be present
+    """
+
+    #: derived qa test must override this
+    hazard_calculation_fixture_id = None
+
+    def get_hazard_job(self):
+        hc = models.HazardCalculation.objects.get(
+            pk=self.hazard_calculation_fixture_id)
+
+        return hc.oqjob_set.all()[0]
+
+    def test(self):
+        raise NotImplementedError
 
 
 class LogicTreeBasedTestCase(object):
