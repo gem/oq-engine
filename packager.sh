@@ -253,7 +253,7 @@ _devtest_innervm_run () {
         scp "$FIXTURES" "${lxc_ip}:/tmp/fixtures.tar"
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                      cd oq-engine ;
-                     python openquake/engine/tools/restore_hazards /tmp/fixtures.tar
+                     python openquake/engine/tools/restore_hazards.py /tmp/fixtures.tar
         "
     fi
 
