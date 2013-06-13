@@ -24,6 +24,7 @@ from openquake.engine.db import models
 
 class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf_scenario"
 
     @attr('qa', 'risk', 'scenario')
     def test(self):

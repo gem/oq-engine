@@ -29,8 +29,9 @@ from openquake.engine.db import models
 # by an alternative reliable implemantation
 
 
-class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
+class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf"
 
     check_exports = False
 

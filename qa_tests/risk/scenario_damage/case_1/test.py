@@ -14,18 +14,16 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
 
-import numpy
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
 from tests.utils import helpers
-from openquake.engine.db import models
 
 
 class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf_scenario"
 
     EXPECTED_DMG_DIST_PER_ASSET = '''<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
