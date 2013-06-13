@@ -26,6 +26,7 @@ from openquake.engine.db import models
 # FIXME(lp). This is just a regression test
 class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf"
 
     @noseattr('qa', 'risk', 'event_based')
     def test(self):

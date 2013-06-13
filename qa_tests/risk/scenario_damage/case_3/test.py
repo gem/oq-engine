@@ -33,6 +33,7 @@ class ScenarioDamageRiskCase3TestCase(risk.BaseRiskQATestCase):
     """
 
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf_scenario"
 
     EXPECTED_DMG_DIST_PER_ASSET = '''<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
