@@ -23,6 +23,7 @@ from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
+from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.geo import Point, PlanarSurface, NodalPlane, Polygon
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
@@ -372,6 +373,24 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
                                     upper_seismogenic_depth=0,
                                     lower_seismogenic_depth=150)
         self.assertEqual(rupture.mag, 9.5)
+
+    def test_rupture_close_to_south_pole(self):
+        # data taken from real example and causing "surface's angles are not
+        # right" error
+        mfd = EvenlyDiscretizedMFD(
+            min_mag=5., bin_width=0.1, occurrence_rates=[2.180e-07]
+        )
+        nodal_plane_dist = PMF([(1., NodalPlane(135., 20., 90.))])
+        src = PointSource(source_id='1', name='pnt', tectonic_region_type='asc',
+                 mfd=mfd, rupture_mesh_spacing=1,
+                 magnitude_scaling_relationship=WC1994(),
+                 rupture_aspect_ratio=1.,
+                 upper_seismogenic_depth=0, lower_seismogenic_depth=26,
+                 location=Point(-165.125, -83.600),
+                 nodal_plane_distribution=nodal_plane_dist,
+                 hypocenter_distribution=PMF([(1., 9.)]))
+        ruptures = list(src.iter_ruptures(PoissonTOM(50.)))
+        self.assertEqual(len(ruptures), 1)
 
 
 class PointSourceMaxRupProjRadiusTestCase(unittest.TestCase):
