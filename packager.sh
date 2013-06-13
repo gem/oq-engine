@@ -247,6 +247,14 @@ _devtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
+    if [ ! -z "$FIXTURES" ]; then
+        scp "$FIXTURES" "${lxc_ip}:/tmp/fixtures.tar"
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
+                     cd oq-engine ;
+                     python openquake/engine/tools/restore_hazards /tmp/fixtures.tar
+        "
+    fi
+
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         # run tests
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
@@ -651,6 +659,9 @@ BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
 
+#: a path to a fixture file produced by the dump_hazards.py script
+FIXTURES=""
+
 trap sig_hand SIGINT SIGTERM
 #  args management
 while [ $# -gt 0 ]; do
@@ -663,6 +674,9 @@ while [ $# -gt 0 ]; do
                 echo
                 exit 1
             fi
+            ;;
+        -F|--fixtures)
+            FIXTURES=$2
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
