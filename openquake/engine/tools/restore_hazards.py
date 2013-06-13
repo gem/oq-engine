@@ -3,11 +3,37 @@ import tarfile
 import psycopg2
 import argparse
 import logging
-from cStringIO import StringIO
+import io
 
 BLOCKSIZE = 1000  # restore blocks of 1,000 lines each
 
 log = logging.getLogger()
+
+
+class StringIO(io.StringIO):
+    def __init__(self):
+        io.StringIO.__init__(self)
+        self.nlines = 0
+
+    def writeln(self, line):
+        """
+        Add a csv line to self
+        """
+        self.write(line.decode('utf8'))
+        self.nlines += 1
+
+    def insert(self, cursor, tablename):
+        """
+        Bulk insert self into the database.
+        """
+        self.seek(0)
+        reserve_ids = "select nextval('%s_id_seq') "\
+            "from generate_series(1, %d)" % (tablename, self.nlines)
+        cursor.execute(reserve_ids)  # make sure the ids are available
+        cursor.copy_from(self, tablename)
+        self.truncate(0)
+        self.seek(0)
+        self.nlines = 0
 
 
 def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
@@ -31,17 +57,13 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
         for i, line in enumerate(gzfile, 1):
             id_ = int(line.split('\t', 1)[0])
             if id_ not in ids:
-                s.write(line)
+                s.writeln(line)
                 imported += 1
-            if i % BLOCKSIZE == 0:
-                s.seek(0)
-                curs.copy_from(s, tablename)
-                s.close()
-                s = StringIO()
+            if i % blocksize == 0:
+                s.insert(curs, tablename)
     finally:
-        s.seek(0)
-        curs.copy_from(s, tablename)
-        s.close()
+        if s.nlines:
+            s.insert(curs, tablename)
     return imported
 
 
