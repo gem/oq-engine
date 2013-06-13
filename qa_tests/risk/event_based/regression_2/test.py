@@ -28,6 +28,7 @@ from openquake.engine.db import models
 
 class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf"
 
     @noseattr('qa', 'risk', 'event_based')
     def test(self):
