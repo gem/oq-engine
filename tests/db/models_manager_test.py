@@ -130,20 +130,6 @@ class AssetManagerTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = models.ExposureData.objects
 
-    def test_get_asset_chunk(self):
-        p = mock.patch(self.base + '_get_asset_chunk_query_args')
-        m = p.start()
-        m.return_value = (
-            "select id from riski.exposure_data where 1 = %s", (1,))
-        try:
-            self.assertEqual(
-                models.ExposureData.objects.count(),
-                len(
-                    self.manager.get_asset_chunk(
-                        mock.Mock(), mock.Mock(), mock.Mock(), mock.Mock())))
-        finally:
-            p.stop()
-
     def test_get_asset_chunk_query_args(self):
         rc = mock.Mock()
         rc.exposure_model.id = 0
