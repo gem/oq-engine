@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import tempfile
 import numpy
 import StringIO
@@ -33,6 +32,10 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
     #: holds the path to a job.ini. Derived classes must define it
     risk_cfg = None
+
+    #: QA test must override this params to feed the risk job with
+    #: the proper hazard output
+    output_type = "hazard_curve"
 
     def test(self):
         raise NotImplementedError
@@ -126,7 +129,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         return []
 
     def hazard_id(self, job):
-        return job.output_set.latest('last_update').id
+        return job.output_set.filter(
+            output_type=self.output_type).latest('last_update').id
 
 
 class End2EndRiskQATestCase(BaseRiskQATestCase):
