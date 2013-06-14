@@ -27,22 +27,22 @@ class TestCase(unittest.TestCase):
         blocksize = 2
 
         # restore ids=11, 12
-        imported = safe_restore(
+        imported_total = safe_restore(
             self.curs, self.TO_IMPORT_1, '_example', blocksize)
-        self.assertEqual(imported, 2)
+        self.assertEqual(imported_total, (2, 2))
 
         # try to restore ids already taken
-        imported = safe_restore(
+        imported_total = safe_restore(
             self.curs, self.TO_IMPORT_2, '_example', blocksize)
-        self.assertEqual(imported, 0)
+        self.assertEqual(imported_total, (0, 2))
         self.curs.execute("select currval('_example_id_seq')")
         currval = self.curs.fetchone()[0]
         self.assertEqual(currval, 12)
 
         # restore ids=14, 15, 16
-        imported = safe_restore(
+        imported_total = safe_restore(
             self.curs, self.TO_IMPORT_3, '_example', blocksize)
-        self.assertEqual(imported, 3)
+        self.assertEqual(imported_total, (3, 3))
         self.curs.execute("select currval('_example_id_seq')")
         currval = self.curs.fetchone()[0]
         self.assertEqual(currval, 16)
