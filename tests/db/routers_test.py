@@ -64,26 +64,6 @@ class OQRouterTestCase(unittest.TestCase):
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_eqcat_correct_read_db(self):
-        '''
-        For each model in the 'eqcat' schema, test for proper db routing
-        for read operations.
-        '''
-        classes = [oq.Catalog, oq.Magnitude, oq.Surface]
-        expected_db = 'eqcat_read'
-
-        self._db_for_read_helper(classes, expected_db)
-
-    def test_eqcat_correct_write_db(self):
-        '''
-        For each model in the 'eqcat' schema, test for proper db routing
-        for write operations.
-        '''
-        classes = [oq.Catalog, oq.Magnitude, oq.Surface]
-        expected_db = 'eqcat_write'
-
-        self._db_for_write_helper(classes, expected_db)
-
     def test_hzrdi_read_schema(self):
         '''
         For each model in the 'hzrdi' schema, test for proper db routing
@@ -109,8 +89,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for read operations.
         '''
-        classes = [oq.Input, oq.OqJob, oq.OqJobProfile,
-                   oq.Output, oq.ErrorMsg]
+        classes = [oq.Input, oq.OqJob, oq.Output, oq.ErrorMsg]
         expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
@@ -120,7 +99,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for write operations.
         '''
-        classes = [oq.Input, oq.OqJob, oq.OqJobProfile, oq.ErrorMsg]
+        classes = [oq.Input, oq.OqJob, oq.ErrorMsg]
         expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
@@ -132,7 +111,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [oq.HazardMap, oq.HazardCurve, oq.HazardCurveData,
-                   oq.GmfData]
+                   oq.GmfAgg]
         expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
@@ -143,7 +122,7 @@ class OQRouterTestCase(unittest.TestCase):
         for write operations.
         '''
         classes = [oq.HazardMap, oq.HazardCurve, oq.HazardCurveData,
-                   oq.GmfData]
+                   oq.GmfAgg]
 
         expected_db = 'reslt_writer'
 
@@ -173,19 +152,19 @@ class OQRouterTestCase(unittest.TestCase):
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_oqmif_correct_read_db(self):
+    def test_riski_correct_read_db(self):
         '''
-        For each model in the 'oqmif' schema, test for proper db routing
+        For each model in the 'riski' schema, test for proper db routing
         for read operations.
         '''
-        classes = [oq.ExposureModel, oq.ExposureData]
-        expected_db = 'reslt_writer'
+        classes = [oq.ExposureModel, oq.ExposureData, oq.Occupancy]
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
-    def test_oqmif_correct_write_db(self):
+    def test_riski_correct_write_db(self):
         '''
-        For each model in the 'oqmif' schema, test for proper db routing
+        For each model in the 'riski' schema, test for proper db routing
         for write operations.
         '''
         classes = [oq.ExposureModel, oq.ExposureData]

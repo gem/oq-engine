@@ -71,7 +71,7 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
         aaae(test_data.RLZ_1_POE_01_SA, rlz1.matrix)
         aaae(test_data.RLZ_2_POE_01_SA, rlz2.matrix)
 
-        # Lastly, we should an export of at least one of these results to
+        # Lastly, we should check an export of at least one of these results to
         # ensure that the disagg export/serialization is working properly.
         # The export isn't just a simple dump from the database; it requires
         # extraction of PMFs (Probability Mass Function) from a 6d matrix,
@@ -80,7 +80,6 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
         try:
             target_dir = tempfile.mkdtemp()
             [result_file] = haz_export.export(rlz1.output.id, target_dir)
-
             expected = StringIO.StringIO(test_data.EXPECTED_XML_DISAGG)
             self.assert_disagg_xml_almost_equal(expected, result_file)
             self.assertTrue(qa_utils.validates_against_xml_schema(result_file))

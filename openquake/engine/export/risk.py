@@ -53,7 +53,7 @@ def export(output_id, target_dir, file_format=None):
     return [fn(output, os.path.expanduser(target_dir))]
 
 
-def _export_common(output):
+def _export_common(output, loss_type):
     """
     Returns a dict containing the output metadata which are serialized
     by nrml writers before actually writing the `output` data.
@@ -69,23 +69,22 @@ def _export_common(output):
     else:
         gsim_tree_path = None
 
-    unit = output.oq_job.risk_calculation.exposure_model.stco_unit
-
     return dict(investigation_time=metadata.investigation_time,
                 statistics=metadata.statistics,
                 quantile_value=metadata.quantile,
                 source_model_tree_path=source_model_tree_path,
                 gsim_tree_path=gsim_tree_path,
-                unit=unit)
+                unit=output.oq_job.risk_calculation.exposure_model.unit(
+                    loss_type))
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_agg_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
     serializer
     """
-    args = _export_common(output)
+    args = _export_common(output, output.loss_curve.loss_type)
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.loss_curve.id})
     writers.AggregateLossCurveXMLWriter(**args).serialize(
@@ -94,13 +93,13 @@ def export_agg_loss_curve_xml(output, target_dir):
 export_agg_loss_curve = export_agg_loss_curve_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_loss_curve_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss curves
     serializer
     """
-    args = _export_common(output)
+    args = _export_common(output, output.loss_curve.loss_type)
     args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.loss_curve.id})
     args['insured'] = output.loss_curve.insured
@@ -113,14 +112,14 @@ def export_loss_curve_xml(output, target_dir):
 export_loss_curve = export_loss_curve_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_loss_map_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss map
     serializer
     """
     risk_calculation = output.oq_job.risk_calculation
-    args = _export_common(output)
+    args = _export_common(output, output.loss_map.loss_type)
     args.update(dict(
         path=os.path.join(
             target_dir,
@@ -134,14 +133,14 @@ def export_loss_map_xml(output, target_dir):
 export_loss_map = export_loss_map_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_loss_fraction_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml loss fractions
     serializer
     """
     risk_calculation = output.oq_job.risk_calculation
-    args = _export_common(output)
+    args = _export_common(output, output.loss_fraction.loss_type)
     hazard_metadata = models.Output.HazardMetadata(
         investigation_time=args['investigation_time'],
         statistics=args['statistics'],
@@ -165,14 +164,14 @@ def export_loss_fraction_xml(output, target_dir):
 export_loss_fraction = export_loss_fraction_xml
 
 
-@core.makedirs
+@core.makedirsdeco
 def export_bcr_distribution_xml(output, target_dir):
     """
     Export `output` to `target_dir` by using a nrml bcr distribution
     serializer
     """
     risk_calculation = output.oq_job.risk_calculation
-    args = _export_common(output)
+    args = _export_common(output, output.bcr_distribution.loss_type)
 
     args.update(
         dict(path=os.path.join(target_dir, BCR_FILENAME_FMT % {
@@ -191,7 +190,7 @@ export_bcr_distribution = export_bcr_distribution_xml
 
 def make_dmg_dist_export(damagecls, writercls, filename):
     # XXX: clearly this is not a good approach for large exposures
-    @core.makedirs
+    @core.makedirsdeco
     def export_dmg_dist(output, target_dir):
         """
         Export the damage distribution identified
@@ -253,13 +252,13 @@ def export_aggregate_loss_csv(output, target_dir):
     """
     filepath = os.path.join(target_dir,
                             AGGREGATE_LOSS_FILENAME_FMT % (
-                                output.aggregateloss.id))
+                                output.aggregate_loss.id))
 
     with open(filepath, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter='|')
         writer.writerow(['Mean', 'Standard Deviation'])
-        writer.writerow([output.aggregateloss.mean,
-                        output.aggregateloss.std_dev])
+        writer.writerow([output.aggregate_loss.mean,
+                        output.aggregate_loss.std_dev])
     return filepath
 
 export_aggregate_loss = export_aggregate_loss_csv

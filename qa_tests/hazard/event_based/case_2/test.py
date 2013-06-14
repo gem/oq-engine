@@ -19,7 +19,6 @@ import tempfile
 
 from nose.plugins.attrib import attr
 from openquake.engine.db import models
-from openquake.engine.export import hazard as hazard_export
 from qa_tests import _utils as qa_utils
 
 
@@ -37,7 +36,8 @@ class EventBasedHazardCase2TestCase(qa_utils.BaseQATestCase):
 
             # Test the poe values of the single curve:
             [actual_curve] = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_job=job.id)
+                hazard_curve__output__oq_job=job.id,
+                hazard_curve__imt__isnull=False)
 
             self.assert_equals_var_tolerance(
                 expected_curve_poes, actual_curve.poes

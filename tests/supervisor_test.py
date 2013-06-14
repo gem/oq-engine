@@ -15,8 +15,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
 import logging
+import unittest
+
 from datetime import datetime
 
 from openquake.engine import engine
@@ -25,22 +26,17 @@ from openquake.engine.db.models import JobStats
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import stats
 
+from tests.utils.helpers import DbTestCase
+from tests.utils.helpers import cleanup_loggers
+from tests.utils.helpers import get_data_path
+from tests.utils.helpers import get_hazard_job
 from tests.utils.helpers import patch
-from tests.utils.helpers import DbTestCase, cleanup_loggers
-
-
-CONFIG_FILE = "config.gem"
 
 
 class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
-    def setUp(self):
-        self.job = self.setup_classic_job(create_job_path=False)
 
-    def tearDown(self):
-        if self.job:
-            ErrorMsg.objects.using('admin')\
-                            .filter(oq_job=self.job.id).delete()
-            self.teardown_job(self.job, filesystem_only=True)
+    def setUp(self):
+        self.job = engine.prepare_job()
 
     def test_record_job_stop_time(self):
         """
@@ -96,11 +92,12 @@ record_job_stop_time')
         start_patch('openquake.engine.supervising.supervisor.terminate_job')
         start_patch('openquake.engine.supervising.supervisor.get_job_status')
         start_patch('openquake.engine.supervising.supervisor'
-               '.update_job_status_and_error_msg')
+                    '.update_job_status_and_error_msg')
 
         logging.root.setLevel(logging.CRITICAL)
 
-        self.job = engine.prepare_job()
+        cfg = get_data_path('end-to-end-hazard-risk/job_haz_classical.ini')
+        self.job = get_hazard_job(cfg)
 
     def tearDown(self):
         # Stop all the started patches
@@ -112,7 +109,7 @@ record_job_stop_time')
         # the job process is running
         self.is_pid_running.return_value = True
 
-        with patch('openquake.engine.supervising.' \
+        with patch('openquake.engine.supervising.'
                    'supervisor.SupervisorLogMessageConsumer.run') as run:
 
             def run_(mc):

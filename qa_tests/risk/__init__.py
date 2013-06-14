@@ -77,9 +77,17 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             if hasattr(self, 'expected_outputs'):
                 expected_outputs = self.expected_outputs()
                 for i, output in enumerate(self.actual_xml_outputs(job)):
-                    [exported_file] = export.risk.export(output.id, result_dir)
-                    if i >= len(expected_outputs):
-                        raise ValidationError("not enough outputs")
+                    try:
+                        [exported_file] = export.risk.export(
+                            output.id, result_dir)
+                    except:
+                        print "Error in exporting %s" % output
+                        raise
+
+                    msg = "not enough outputs (expected=%d, got=%s)" % (
+                        len(expected_outputs), self.actual_xml_outputs(job))
+                    assert i < len(expected_outputs), msg
+
                     self.assert_xml_equal(
                         StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
@@ -132,7 +140,11 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
                 expected_outputs = self.expected_outputs()
                 for i, output in enumerate(self.actual_xml_outputs(job)):
                     [exported_file] = export.risk.export(output.id, result_dir)
-                    self.assert_xml_equal(
-                        StringIO.StringIO(expected_outputs[i]), exported_file)
+                    try:
+                        self.assert_xml_equal(
+                            StringIO.StringIO(expected_outputs[i]),
+                            exported_file)
+                    except:
+                        import pdb; pdb.set_trace()
         finally:
             shutil.rmtree(result_dir)

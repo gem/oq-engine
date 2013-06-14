@@ -27,11 +27,11 @@ import logging
 import mock as mock_module
 import numpy
 import os
+import csv
 import random
 import redis
 import shutil
 import string
-import subprocess
 import sys
 import tempfile
 import textwrap
@@ -111,10 +111,6 @@ def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
 
-def get_output_path(file_name):
-    return os.path.join(OUTPUT_DIR, file_name)
-
-
 def demo_file(file_name):
     """
     Take a file name and return the full path to the file in the demos
@@ -124,15 +120,10 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
-def testdata_path(file_name):
-    """
-    Take a file name and return the full path to the file in the
-    tests/data/demos directory
-    """
-    return os.path.normpath(os.path.join(
-        os.path.dirname(__file__), "../data/demos", file_name))
-
-
+# this function is used in various tests to run a computation in-process;
+# task distribution is disabled by default to make it possible to debug and
+# profile the tests; notice however that in the QA tests (see
+# BaseQATestCase.run_hazard) the distribution is enabled
 def run_hazard_job(cfg, exports=None):
     """
     Given the path to job config file, run the job and assert that it was
@@ -154,13 +145,17 @@ def run_hazard_job(cfg, exports=None):
 
     models.JobStats.objects.create(oq_job=job)
 
-    calc_mode = job.hazard_calculation.calculation_mode
-    calc = get_calculator_class('hazard', calc_mode)(job)
-    completed_job = engine._do_run_calc(job, exports, calc, 'hazard')
-    job.is_running = False
-    job.save()
-
-    return completed_job
+    hc = job.hazard_calculation
+    calc = get_calculator_class('hazard', hc.calculation_mode)(job)
+    try:
+        logs.init_logs_amqp_send(
+            level='ERROR', calc_domain='hazard', calc_id=hc.id)
+        engine._do_run_calc(job, exports, calc, 'hazard')
+    finally:
+        job.is_running = False
+        job.calc = calc
+        job.save()
+    return job
 
 
 def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
@@ -182,53 +177,14 @@ def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
 
     models.JobStats.objects.create(oq_job=job)
 
-    calc_mode = job.risk_calculation.calculation_mode
-    calc = get_calculator_class('risk', calc_mode)(job)
+    rc = job.risk_calculation
+    calc = get_calculator_class('risk', rc.calculation_mode)(job)
+    logs.init_logs_amqp_send(level='ERROR', calc_domain='risk', calc_id=rc.id)
     completed_job = engine._do_run_calc(job, exports, calc, 'risk')
     job.is_running = False
     job.save()
 
     return completed_job
-
-
-def run_job_sp(job_type, config_file, hazard_id=None, params=None,
-               silence=False, log_level="error"):
-    """
-    Given a path to a config file, run an openquake hazard job as a separate
-    process using `subprocess`.
-
-    :param str job_type:
-        'risk' or 'hazard'
-    :param str config_file:
-        Path to the calculation config file
-    :param hazard_id:
-      ID of the hazard output used by the risk calculation; None when
-      performing a hazard computation
-    :param list params:
-        List of additional command line params to bin/openquake. Optional.
-    :param bool silence:
-        If `True`, silence all stdout messages.
-    :param str log_level:
-        Log Level (default to error) used by the engine for the job
-
-    :returns:
-        With the default input, return the return code of the subprocess.
-        for more details.
-    :raises:
-        If the return code of the subprocess call is not 0, a
-        :exception:`subprocess.CalledProcessError` is raised.
-    """
-    args = [RUNNER, "--run-%s=%s" % (job_type, config_file),
-            "--log-level=%s" % log_level]
-    if hazard_id:
-        args.append("--hazard-output-id=%d" % hazard_id)
-    if params:
-        args.extend(params)
-
-    # NB: stderr is never captured, so that errors are never silenced
-    print 'Running:', ' '.join(args)  # this is useful for debugging
-    return subprocess.check_call(args, stdout=open(os.devnull, 'wb')
-                                 if silence else None)
 
 
 def timeit(method):
@@ -335,24 +291,6 @@ def assertModelAlmostEqual(test_case, expected, actual):
         else:
             test_case.assertEqual(exp_val, act_val)
 
-
-def wait_for_celery_tasks(celery_results,
-                          max_wait_loops=MAX_WAIT_LOOPS,
-                          wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
-    """celery_results is a list of celery task result objects.
-    This function waits until all tasks have finished.
-    """
-
-    # if a celery task has not yet finished, wait for a second
-    # then check again
-    counter = 0
-    while (False in [result.ready() for result in celery_results]):
-        counter += 1
-
-        if counter > max_wait_loops:
-            raise RuntimeError("wait too long for celery worker threads")
-
-        time.sleep(wait_time)
 
 # preserve stdout/stderr (note: we want the nose-manipulated stdout/stderr,
 # otherwise we could just use __stdout__/__stderr__)
@@ -513,156 +451,6 @@ class DbTestCase(object):
         if filesystem_only:
             return
         [input.delete() for input in inputs]
-
-    @classmethod
-    def setup_job_profile(cls, job, save2db=True):
-        """Create a profile for the given job.
-
-        :param job: The :class:`openquake.engine.db.models.OqJob`
-            instance to use.
-        :param bool save2db: If `False` the job profile instance will be
-            returned but not saved to the database. Otherwise it is saved to
-            the database and returned then.
-        :returns: a :class:`openquake.engine.db.models.OqJobProfile` instance
-        """
-        oqjp = models.OqJobProfile()
-        oqjp.owner = job.owner
-        oqjp.calc_mode = "classical"
-        oqjp.job_type = ['hazard']
-        oqjp.region_grid_spacing = 0.01
-        oqjp.min_magnitude = 5.0
-        oqjp.investigation_time = 50.0
-        oqjp.component = "gmroti50"
-        oqjp.imt = "pga"
-        oqjp.truncation_type = "twosided"
-        oqjp.truncation_level = 3
-        oqjp.reference_vs30_value = 760
-        oqjp.imls = cls.IMLS
-        oqjp.poes = [0.01, 0.10]
-        oqjp.realizations = 1
-        oqjp.width_of_mfd_bin = 0.1
-        oqjp.treat_grid_source_as = 'pointsources'
-        oqjp.treat_area_source_as = 'pointsources'
-        oqjp.subduction_rupture_floating_type = 'Along strike and down dip'
-        oqjp.subduction_rupture_aspect_ratio = 1.5
-        oqjp.subduction_fault_surface_discretization = 0.5
-        oqjp.subduction_fault_rupture_offset = 10.0
-        oqjp.subduction_fault_magnitude_scaling_sigma = 0.0
-        oqjp.subduction_fault_magnitude_scaling_relationship = \
-            'W&C 1994 Mag-Length Rel.'
-        oqjp.standard_deviation_type = 'total'
-        oqjp.sadigh_site_type = 'Rock'
-        oqjp.rupture_floating_type = 'Along strike and down dip'
-        oqjp.rupture_aspect_ratio = 1.5
-        oqjp.reference_depth_to_2pt5km_per_sec_param = 5.0
-        oqjp.quantile_levels = [0.25, 0.50]
-        oqjp.maximum_distance = 200
-        oqjp.include_subductive_fault = True
-        oqjp.include_subduction_fault_source = True
-        oqjp.include_grid_sources = True
-        oqjp.include_fault_source = True
-        oqjp.include_area_sources = True
-        oqjp.fault_surface_discretization = 1.0
-        oqjp.fault_rupture_offset = 5.0
-        oqjp.fault_magnitude_scaling_sigma = 0.0
-        oqjp.fault_magnitude_scaling_relationship = 'W&C 1994 Mag-Length Rel.'
-        oqjp.compute_mean_hazard_curve = True
-        oqjp.area_source_magnitude_scaling_relationship = \
-            'W&C 1994 Mag-Length Rel.'
-        oqjp.area_source_discretization = 0.1
-        oqjp.treat_area_source_as = 'pointsources'
-        oqjp.subduction_rupture_floating_type = 'downdip'
-        oqjp.rupture_floating_type = 'downdip'
-        oqjp.sadigh_site_type = 'rock'
-        oqjp.region = (
-            "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
-        oqjp.source_model_lt_random_seed = 23
-        oqjp.gmpe_lt_random_seed = 5
-        if save2db:
-            oqjp.save()
-        return oqjp
-
-    @classmethod
-    def setup_classic_job(cls, create_job_path=True, inputs=None,
-                          omit_profile=False, user_name="openquake"):
-        """Create a classic job with associated upload and inputs.
-
-        :param bool create_job_path: if set the path for the job will be
-            created and captured in the job record
-        :param list inputs: a list of 2-tuples where the first and the second
-            element are the input type and path respectively
-        :param bool omit_profile: If `True` no job profile will be created.
-        :param str user_name: The name of the user that is running the job.
-        :returns: a :py:class:`db.models.OqJob` instance
-        """
-        job = engine.prepare_job(user_name)
-        if not omit_profile:
-            oqjp = cls.setup_job_profile(job)
-            models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
-
-        # Insert input model files
-        if inputs:
-            insert_inputs(job, inputs)
-
-        if create_job_path:
-            job.path = os.path.join(tempfile.mkdtemp(), str(job.id))
-            job.save()
-
-            os.mkdir(job.path)
-            os.chmod(job.path, 0777)
-
-        return job
-
-    @classmethod
-    def teardown_job(cls, job, filesystem_only=True):
-        """
-        Tear down the file system (and potentially db) artefacts for the
-        given job.
-
-        :param job: a :py:class:`db.models.OqJob` instance
-        :param bool filesystem_only: if set the oq_job/oq_param/
-            input database records will be left intact. This saves time and the
-            test db will be dropped/recreated prior to the next db test suite
-            run anyway.
-        """
-        DbTestCase.teardown_inputs(models.inputs4job(job.id),
-                                   filesystem_only=filesystem_only)
-        if filesystem_only:
-            return
-
-        job.delete()
-        try:
-            oqjp = models.profile4job(job.id)
-            oqjp.delete()
-        except ValueError:
-            # no job profile for this job
-            pass
-
-    def generate_output_path(self, job, output_type="hazard_map"):
-        """Return a random output path for the given job."""
-        path = touch(
-            dir=os.path.join(job.path, "computed_output"), suffix=".xml",
-            prefix="hzrd." if output_type == "hazard_map" else "loss.")
-        return path
-
-    def teardown_output(self, output, teardown_job=True, filesystem_only=True):
-        """
-        Tear down the file system (and potentially db) artefacts for the
-        given output.
-
-        :param output: the :py:class:`db.models.Output` instance
-            in question
-        :param bool teardown_job: the associated job and its related artefacts
-            shall be torn down as well.
-        :param bool filesystem_only: if set the various database records will
-            be left intact. This saves time and the test db will be
-            dropped/recreated prior to the next db test suite run anyway.
-        """
-        job = output.oq_job
-        if not filesystem_only:
-            output.delete()
-        if teardown_job:
-            self.teardown_job(job, filesystem_only=filesystem_only)
 
 
 class ConfigTestCase(object):
@@ -855,6 +643,9 @@ def get_hazard_job(cfg, username=None):
 def get_risk_job(cfg, username=None, hazard_calculation_id=None,
                  hazard_output_id=None):
     """
+    Given a path to a config file and a hazard_calculation_id
+    (or, alternatively, a hazard_output_id, create a
+    :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
     username = username if username is not None else default_user().user_name
 
@@ -877,6 +668,133 @@ def get_risk_job(cfg, username=None, hazard_calculation_id=None,
     job.risk_calculation = risk_calc
     job.save()
     return job
+
+
+def create_gmfset(hazard_job, rlz=None):
+    """
+    Returns the created GmfSet object.
+    """
+    hc = hazard_job.hazard_calculation
+
+    rlz = rlz or models.LtRealization.objects.create(
+        hazard_calculation=hc, ordinal=1, seed=1, weight=None,
+        sm_lt_path="test_sm", gsim_lt_path="test_gsim",
+        is_complete=False, total_items=1, completed_items=1)
+
+    gmf_coll = models.GmfCollection.objects.create(
+        output=models.Output.objects.create_output(
+            hazard_job, "Test Hazard output", "gmf"),
+        lt_realization=rlz)
+
+    gmfset = models.GmfSet.objects.create(
+        gmf_collection=gmf_coll,
+        investigation_time=hc.investigation_time,
+        ses_ordinal=1)
+
+    return gmfset
+
+
+def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
+    """
+    Returns the created records.
+    """
+    gmfset = create_gmfset(hazard_job, rlz)
+    ses_coll = ses_coll or models.SESCollection.objects.create(
+        output=models.Output.objects.create_output(
+            hazard_job, "Test SES Collection", "ses"),
+        lt_realization=gmfset.gmf_collection.lt_realization)
+    rupture_ids = get_rupture_ids(hazard_job, ses_coll, 3)
+    records = []
+    if points is None:
+        points = [(15.310, 38.225), (15.71, 37.225),
+                  (15.48, 38.091), (15.565, 38.17),
+                  (15.481, 38.25)]
+    for site_id in hazard_job.hazard_calculation.save_sites(points):
+        records.append(models.GmfAgg.objects.create(
+            gmf_collection=gmfset.gmf_collection,
+            imt="PGA",
+            gmvs=[0.1, 0.2, 0.3],
+            rupture_ids=rupture_ids,
+            site_id=site_id))
+
+    return records
+
+
+# NB: create_gmf_from_csv and populate_gmf_agg_from_csv
+# will be unified in the future
+def create_gmf_from_csv(job, fname):
+    """
+    Populate the gmf_agg table for an event_based calculation.
+    """
+    hc = job.hazard_calculation
+    hc.investigation_time = 50
+    hc.ses_per_logic_tree_path = 1
+    hc.save()
+
+    # tricks to fool the oqtask decorator
+    job.is_running = True
+    job.status = 'post_processing'
+    job.save()
+
+    gmf_set = create_gmfset(job)
+    gmf_coll = gmf_set.gmf_collection
+
+    ses_coll = models.SESCollection.objects.create(
+        output=models.Output.objects.create_output(
+            job, "Test SES Collection", "ses"),
+        lt_realization=gmf_set.gmf_collection.lt_realization)
+    with open(fname, 'rb') as csvfile:
+        gmfreader = csv.reader(csvfile, delimiter=',')
+        locations = gmfreader.next()
+
+        gmv_matrix = numpy.array(
+            [map(float, row) for row in gmfreader]).transpose()
+
+        rupture_ids = get_rupture_ids(job, ses_coll, len(gmv_matrix[0]))
+
+        for i, gmvs in enumerate(gmv_matrix):
+
+            point = tuple(map(float, locations[i].split()))
+            [site_id] = job.hazard_calculation.save_sites([point])
+            models.GmfAgg.objects.create(
+                gmf_collection=gmf_coll,
+                imt="PGA", gmvs=gmvs,
+                rupture_ids=map(str, rupture_ids),
+                site_id=site_id)
+
+    return gmf_coll
+
+
+def populate_gmf_agg_from_csv(job, fname):
+    """
+    Populate the gmf_agg table for a scenario calculation.
+    """
+    # tricks to fool the oqtask decorator
+    job.is_running = True
+    job.status = 'post_processing'
+    job.save()
+
+    gmf_coll = models.GmfCollection.objects.create(
+        output=models.Output.objects.create_output(
+            job, "Test Hazard output", "gmf_scenario"))
+
+    with open(fname, 'rb') as csvfile:
+        gmfreader = csv.reader(csvfile, delimiter=',')
+        locations = gmfreader.next()
+
+        gmv_matrix = numpy.array(
+            [map(float, row) for row in gmfreader]).transpose()
+
+        for i, gmvs in enumerate(gmv_matrix):
+            point = tuple(map(float, locations[i].split()))
+            [site_id] = job.hazard_calculation.save_sites([point])
+            models.GmfAgg.objects.create(
+                imt="PGA",
+                gmf_collection=gmf_coll,
+                gmvs=gmvs,
+                site_id=site_id)
+
+    return gmf_coll
 
 
 def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
@@ -903,6 +821,12 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         sm_lt_path="test_sm", gsim_lt_path="test_gsim",
         is_complete=False, total_items=1, completed_items=1)
     if output_type == "curve":
+        models.HazardCurve.objects.create(
+            lt_realization=rlz,
+            output=models.Output.objects.create_output(
+                hazard_job, "Test Hazard output", "hazard_curve_multi"),
+            investigation_time=hc.investigation_time)
+
         hazard_output = models.HazardCurve.objects.create(
             lt_realization=rlz,
             output=models.Output.objects.create_output(
@@ -918,37 +842,22 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 location="%s" % point)
 
     elif output_type == "gmf_scenario":
-        output = models.Output.objects.create_output(
-            hazard_job, "Test Hazard output", "gmf_scenario")
-        for point in ["POINT(15.48 38.0900001)", "POINT(15.565 38.17)",
-                      "POINT(15.481 38.25)"]:
-            hazard_output = models.GmfScenario.objects.create(
-                output=output,
+        hazard_output = models.GmfCollection.objects.create(
+            output=models.Output.objects.create_output(
+                hazard_job, "Test gmf scenario output", "gmf_scenario"))
+
+        site_ids = hazard_job.hazard_calculation.save_sites(
+            [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])
+        for site_id in site_ids:
+            models.GmfAgg.objects.create(
+                gmf_collection=hazard_output,
                 imt="PGA",
-                location=point,
+                site_id=site_id,
                 gmvs=[0.1, 0.2, 0.3])
 
     else:
-        rupture_ids = get_rupture_ids(hazard_job, hc, rlz, 3)
-        hazard_output = models.GmfCollection.objects.create(
-            output=models.Output.objects.create_output(
-                hazard_job, "Test Hazard output", "gmf"),
-            lt_realization=rlz)
-
-        gmf_set = models.GmfSet.objects.create(
-            gmf_collection=hazard_output,
-            investigation_time=hc.investigation_time,
-            ses_ordinal=1)
-
-        for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
-                      "POINT(15.48 38.091)", "POINT(15.565 38.17)",
-                      "POINT(15.481 38.25)"]:
-            models.Gmf.objects.create(
-                gmf_set=gmf_set,
-                imt="PGA", gmvs=[0.1, 0.2, 0.3],
-                rupture_ids=rupture_ids,
-                result_grp_ordinal=1,
-                location=point)
+        hazard_output = create_gmf_agg_records(
+            hazard_job, rlz)[0].gmf_collection
 
     hazard_job.status = "complete"
     hazard_job.save()
@@ -965,7 +874,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     return job, files
 
 
-def get_rupture_ids(job, hc, lt_realization, num):
+def get_rupture_ids(job, ses_collection, num):
     """
     :returns: a list of IDs of newly created ruptures associated with
     `job` and an instance of
@@ -974,18 +883,15 @@ def get_rupture_ids(job, hc, lt_realization, num):
     rupture has a magnitude ranging from 0 to 10, no geographic
     information and result_grp_ordinal set to 1.
 
-    :param lt_realization: an instance of
-    :class:`openquake.engine.db.models.LtRealization` to be associated
+    :param ses_collection: an instance of
+    :class:`openquake.engine.db.models.SESCollection` to be associated
     with the newly created SES object
 
     :param int num: the number of ruptures to create
     """
     ses = models.SES.objects.create(
-        ses_collection=models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection", "ses"),
-            lt_realization=lt_realization),
-        investigation_time=hc.investigation_time,
+        ses_collection=ses_collection,
+        investigation_time=job.hazard_calculation.investigation_time,
         ordinal=1)
 
     return [

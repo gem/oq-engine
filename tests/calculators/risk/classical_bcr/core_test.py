@@ -13,27 +13,27 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from tests.calculators.risk import general_test
+from tests.calculators.risk import base_test
 from tests.utils import helpers
-from tests.utils.helpers import demo_file
+from tests.utils.helpers import get_data_path
 
 from openquake.engine.db import models
 from openquake.engine.calculators.risk.classical_bcr import (
     core as classical_bcr)
 
 
-class ClassicalBCRRiskCalculatorTestCase(
-        general_test.BaseRiskCalculatorTestCase):
+class ClassicalBCRRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     """
     Integration test for the classical bcr risk calculator
     """
 
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
-            demo_file('classical_bcr/job.ini'),
-            demo_file('simple_fault_demo_hazard/job.ini'))
+            get_data_path('classical_bcr/job.ini'),
+            get_data_path('simple_fault_demo_hazard/job.ini'))
 
         self.calculator = classical_bcr.ClassicalBCRRiskCalculator(self.job)
+        models.JobStats.objects.create(oq_job=self.job)
 
     def shortDescription(self):
         """
@@ -42,10 +42,8 @@ class ClassicalBCRRiskCalculatorTestCase(
         return None
 
     def test_complete_workflow(self):
-        """
-        Test the complete risk classical calculation workflow and test
-        for the presence of the outputs
-        """
+        # Test the complete risk classical calculation workflow and test
+        # for the presence of the outputs
         self.calculator.pre_execute()
 
         self.job.is_running = True
@@ -61,25 +59,3 @@ class ClassicalBCRRiskCalculatorTestCase(
 
         self.assertEqual(3, models.BCRDistributionData.objects.filter(
             bcr_distribution__output__oq_job=self.job).count())
-
-    def test_hazard_id(self):
-        """
-        Test that the hazard output used by the calculator is a
-        `openquake.engine.db.models.HazardCurve` object
-        """
-        self.calculator.imt = 'PGA'
-        outputs = self.calculator.hazard_outputs(
-            self.calculator.rc.get_hazard_calculation())
-
-        self.assertEqual(
-            set(["hazard_curve"]), set([o.output_type for o in outputs]))
-
-    def test_create_outputs(self):
-        """
-        Test that the proper output containers are created
-        """
-
-        for hazard_output in self.hazard_outputs:
-            self.assertTrue(models.BCRDistribution.objects.filter(
-                hazard_output=hazard_output,
-                pk=self.calculator.create_outputs(hazard_output)[0]).exists())

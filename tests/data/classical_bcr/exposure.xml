@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="single_asset">
+    <description>Sample buildings</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="aggregated" retrofittedType="aggregated" retrofittedUnit="USD"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="VF">
+        <location lon="0.000" lat="0.0"/>
+        <costs>
+          <cost type="structural" value="2" retrofitted="0.1"/>
+        </costs>
+      </asset>
+      <asset id="a2" taxonomy="VF">
+        <location lon="-1.000" lat="1.0"/>
+        <costs>
+          <cost type="structural" value="3" retrofitted="0.2"/>
+        </costs>
+      </asset>
+      <asset id="a3" taxonomy="VF">
+        <location lon="-1.000" lat="1.0"/>
+        <costs>
+          <cost type="structural" value="3" retrofitted="0.2"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>

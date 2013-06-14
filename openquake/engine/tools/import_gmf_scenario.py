@@ -1,9 +1,31 @@
+import os
 import argparse
-from cStringIO import StringIO
 from openquake.nrmllib.hazard.parsers import GMFScenarioParser
-from openquake.engine.db.models import Output, OqUser
+from openquake.engine.db import models
+from openquake.engine import writer
 from openquake.engine.engine import get_current_user
-from django.db import connection
+
+
+def import_rows(hc, gmf_coll, rows):
+    """
+    Import a list of records into the gmf_agg and hazard_site tables.
+
+    :param hc: :class:`openquake.engine.db.models.HazardCalculation` instance
+    :param gmf_coll: :class:`openquake.engine.db.models.GmfCollection` instance
+    :param rows: a list of records (imt_type, sa_period, sa_damping, gmvs, wkt)
+    """
+    gmfs = []
+    site_id = {}  # dictionary wkt -> site id
+    for imt_type, sa_period, sa_damping, gmvs, wkt in rows:
+        if wkt not in site_id:  # create a new site
+            site_id[wkt] = models.HazardSite.objects.create(
+                hazard_calculation=hc, location=wkt).id
+        gmfs.append(
+            models.GmfAgg(
+                imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
+                gmvs=gmvs, site_id=site_id[wkt], gmf_collection=gmf_coll))
+    del site_id
+    writer.CacheInserter.saveall(gmfs)
 
 
 def import_gmf_scenario(fileobj, user=None):
@@ -13,36 +35,41 @@ def import_gmf_scenario(fileobj, user=None):
     Works both with XML files and tab-separated files with format
     (imt, gmvs, location).
     :returns: the generated :class:`openquake.engine.db.models.Output` object
+    and the generated :class:`openquake.engine.db.models.HazardCalculation`
+    object.
     """
     fname = fileobj.name
-    curs = connection.cursor().cursor.cursor  # DB API cursor
-    owner = OqUser.objects.get(user_name=user) if user else get_current_user()
-    out = Output.objects.create(
+
+    owner = models.OqUser.objects.get(user_name=user) \
+        if user else get_current_user()
+
+    hc = models.HazardCalculation.objects.create(
+        owner=owner,
+        base_path=os.path.dirname(fname),
+        description='Scenario importer, file %s' % os.path.basename(fname),
+        calculation_mode='scenario', maximum_distance=100)
+    # XXX: probably the maximum_distance should be entered by the user
+
+    out = models.Output.objects.create(
         owner=owner, display_name='Imported from %r' % fname,
         output_type='gmf_scenario')
-    output_id = str(out.id)
-    f = StringIO()
+
+    gmf_coll = models.GmfCollection.objects.create(output=out)
+
+    rows = []
     if fname.endswith('.xml'):
         # convert the XML into a tab-separated StringIO
         for imt, gmvs, loc in GMFScenarioParser(fileobj).parse():
+            imt_type, sa_period, sa_damping = models.parse_imt(imt)
+            sa_period = '\N' if sa_period is None else str(sa_period)
+            sa_damping = '\N' if sa_damping is None else str(sa_damping)
             gmvs = '{%s}' % str(gmvs)[1:-1]
-            print >> f, '\t'.join([output_id, imt, gmvs, loc])
+            rows.append([imt_type, sa_period, sa_damping, gmvs, loc])
     else:  # assume a tab-separated file
         for line in fileobj:
-            f.write('\t'.join([output_id, line]))
-    f.seek(0)  # rewind
-    ## import the file-like object with a COPY FROM
-    try:
-        curs.copy_expert(
-            'copy hzrdr.gmf_scenario (output_id, imt, gmvs, location) '
-            'from stdin', f)
-    except:
-        curs.connection.rollback()
-    else:
-        curs.connection.commit()
-    finally:
-        f.close()
-    return out
+            rows.append(line.split('\t'))
+    import_rows(hc, gmf_coll, rows)
+    return out, hc
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
