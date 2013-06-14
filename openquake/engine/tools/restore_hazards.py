@@ -11,34 +11,52 @@ BLOCKSIZE = 1000  # restore blocks of 1,000 lines each
 log = logging.getLogger()
 
 
-class StringIO(io.StringIO):
-    def __init__(self):
-        io.StringIO.__init__(self)
+class CSVInserter(object):
+    def __init__(self, curs, tablename, blocksize):
+        self.curs = curs
+        self.tablename = tablename
+        self.blocksize = blocksize
+        self.max_id = 0
+        self.io = io.StringIO()
         self.nlines = 0
 
-    def writeln(self, line):
+    def write(self, id_, line):
         """
-        Add a csv line to self
+        Add a csv line.
         """
-        self.write(line.decode('utf8'))
+        self.max_id = max(self.max_id, id_)
+        self.io.write('%d\t%s' % (id_, line.decode('utf8')))
         self.nlines += 1
+        if self.max_id % self.blocksize == 0:
+            self.insert()
 
-    def insert(self, cursor, tablename):
+    def insert(self):
         """
-        Bulk insert self into the database.
+        Bulk insert into the database in a single transaction
         """
-        self.seek(0)
+        self.io.seek(0)
+        conn = self.curs.connection
+        try:  # XXX: will this work in a concurrent situation?
+            # set the sequence id to the right value
+            self.curs.execute("select setval('%s_id_seq', %d) " % (
+                              self.tablename, self.max_id))
+            # bulk import; the two operations must go together
+            self.curs.copy_from(self.io, self.tablename)
+        except:
+            conn.rollback()
+            raise
+        else:
+            conn.commit()
+        self.io.truncate(0)
+        self.io.seek(0)
+        self.max_id = 0
 
-        # FIXME(lp). This code does not prevent a race condition on
-        # the sequence value
-        cursor.copy_from(self, tablename)
-        reserve_ids = "select setval('%s_id_seq', max(id)) "\
-            "from %s" % (tablename, tablename)
-        cursor.execute(reserve_ids)
+    def __enter__(self):
+        return self
 
-        self.truncate(0)
-        self.seek(0)
-        self.nlines = 0
+    def __exit__(self, etype, exc, tb):
+        if self.max_id:  # some remaining line
+            self.insert()
 
 
 def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
@@ -54,22 +72,18 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
     :param str tablename: full table name
     :param int blocksize: number of lines in a block
     """
+    # keep in memory the already taken ids
     curs.execute('select id from %s' % tablename)
     ids = set(r[0] for r in curs.fetchall())
-    s = StringIO()
-    imported = 0
-    try:
-        for i, line in enumerate(gzfile, 1):
-            id_ = int(line.split('\t', 1)[0])
+    with CSVInserter(curs, tablename, blocksize) as csvi:
+        total = 0
+        for line in gzfile:
+            total += 1
+            sid, rest = line.split('\t', 1)
+            id_ = int(sid)
             if id_ not in ids:
-                s.writeln(line)
-                imported += 1
-            if i % blocksize == 0:
-                s.insert(curs, tablename)
-    finally:
-        if s.nlines:
-            s.insert(curs, tablename)
-    return imported
+                csvi.write(id_, rest)
+    return csvi.nlines, total
 
 
 def hazard_restore(conn, tar):
@@ -81,20 +95,14 @@ def hazard_restore(conn, tar):
     """
     curs = conn.cursor()
     tf = tarfile.open(tar)
-    try:
-        for line in tf.extractfile('hazard_calculation/FILENAMES.txt'):
-            fname = line.rstrip()
-            tname = fname[:-7]  # strip .csv.gz
-            fileobj = tf.extractfile('hazard_calculation/%s' % fname)
-            with gzip.GzipFile(fname, fileobj=fileobj) as f:
-                log.info('Importing %s...', fname)
-                imported = safe_restore(curs, f, tname)
-                log.info('Imported %d new rows', imported)
-    except:
-        conn.rollback()
-        raise
-    else:
-        conn.commit()
+    for line in tf.extractfile('hazard_calculation/FILENAMES.txt'):
+        fname = line.rstrip()
+        tname = fname[:-7]  # strip .csv.gz
+        fileobj = tf.extractfile('hazard_calculation/%s' % fname)
+        with gzip.GzipFile(fname, fileobj=fileobj) as f:
+            log.info('Importing %s...', fname)
+            imported, total = safe_restore(curs, f, tname)
+            log.info('Imported %d/%d new rows', imported, total)
     log.info('Restored %s', tar)
 
 
@@ -108,7 +116,8 @@ def hazard_restore_local(tar):
     """
     Use the current django settings to restore hazard
     """
-    import openquake.engine.db.models
+    from openquake.engine.db.models import set_django_settings_module
+    set_django_settings_module()
     from django.conf import settings
     default_cfg = settings.DATABASES['default']
 

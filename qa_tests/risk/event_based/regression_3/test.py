@@ -29,6 +29,8 @@ class EventBasedRiskCase3TestCase(risk.End2EndRiskQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
 
+    output_type = "gmf"
+
     @noseattr('qa', 'risk', 'event_based', 'e2e')
     def test(self):
         self._run_test()
