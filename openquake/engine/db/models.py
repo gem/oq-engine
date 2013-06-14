@@ -34,8 +34,11 @@ import re
 from datetime import datetime
 
 
-if not os.getenv('DJANGO_SETTINGS_MODULE', False):
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
+def set_django_settings_module():
+    if not os.getenv('DJANGO_SETTINGS_MODULE', False):
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
+
+set_django_settings_module()
 
 
 import numpy
@@ -94,11 +97,11 @@ LOSS_TYPES = ["structural", "nonstructural", "occupants", "contents"]
 
 
 #: relative tolerance to consider two risk outputs (almost) equal
-RISK_RTOL = 0.10
+RISK_RTOL = 0.05
 
 
 #: absolute tolerance to consider two risk outputs (almost) equal
-RISK_ATOL = 0.05
+RISK_ATOL = 0.01
 
 
 def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
