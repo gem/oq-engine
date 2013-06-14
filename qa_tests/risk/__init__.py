@@ -14,6 +14,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import tempfile
+import warnings
+from unittest.case import SkipTest
 import numpy
 import StringIO
 import shutil
@@ -147,25 +149,6 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
         raise NotImplementedError
 
 
-class FixtureBasedQATestCase(End2EndRiskQATestCase):
-    """
-    Run an End 2 End calculation by relying on some preloaded data
-    (fixtures) to be present
-    """
-
-    #: derived qa test must override this
-    hazard_calculation_fixture_id = None
-
-    def get_hazard_job(self):
-        hc = models.HazardCalculation.objects.get(
-            pk=self.hazard_calculation_fixture_id)
-
-        return hc.oqjob_set.all()[0]
-
-    def test(self):
-        raise NotImplementedError
-
-
 class LogicTreeBasedTestCase(object):
     """
     A class meant to mixed-in with a BaseRiskQATestCase or
@@ -232,4 +215,31 @@ class CompleteTestCase(object):
         :returns:
             an iterable over data objects (e.g. LossCurveData)
         """
+        raise NotImplementedError
+
+
+class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
+    """
+    Run a risk calculation by relying on some preloaded data
+    (fixtures) to be present
+    """
+
+    #: derived qa test must override this
+    hazard_calculation_fixture_id = None
+
+    def _get_queryset(self):
+        return models.HazardCalculation.objects.filter(
+            description=self.hazard_calculation_fixture)
+
+    def get_hazard_job(self):
+        return self._get_queryset()[0].oqjob_set.all()[0]
+
+    def _run_test(self):
+        if not self._get_queryset().exists():
+            warnings.warn("fixture not present. skipping test")
+            raise SkipTest
+        else:
+            super(FixtureBasedQATestCase, self)._run_test()
+
+    def test(self):
         raise NotImplementedError
