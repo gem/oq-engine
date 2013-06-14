@@ -1,14 +1,20 @@
 /*
-  OpenQuake database schema definitions.
+  Copyright (c) 2010-2013, GEM Foundation.
 
-    Copyright (c) 2010-2012, GEM Foundation.
+  OpenQuake is free software: you can redistribute it and/or modify it
+  under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
-    OpenQuake database is made available under the Open Database License:
-    http://opendatacommons.org/licenses/odbl/1.0/. Any rights in individual
-    contents of the database are licensed under the Database Contents License:
-    http://opendatacommons.org/licenses/dbcl/1.0/
+  OpenQuake is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
+  You should have received a copy of the GNU Affero General Public License
+  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 
 -- Disable unnecessarily verbose output
 SET client_min_messages TO WARNING;
@@ -17,14 +23,13 @@ SET client_min_messages TO WARNING;
 -- Name space definitions go here
 ------------------------------------------------------------------------
 CREATE SCHEMA admin;
-CREATE SCHEMA eqcat;
 CREATE SCHEMA hzrdi;
 CREATE SCHEMA hzrdr;
-CREATE SCHEMA oqmif;
 CREATE SCHEMA riski;
 CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
 CREATE SCHEMA htemp;
+CREATE SCHEMA rtemp;
 
 
 
@@ -67,80 +72,6 @@ CREATE TABLE admin.revision_info (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
-
-
--- Earthquake catalog
-CREATE TABLE eqcat.catalog (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- This is *not* a foreign key.
-    eventid INTEGER NOT NULL,
-    agency VARCHAR NOT NULL,
-    identifier VARCHAR NOT NULL,
-    time timestamp without time zone NOT NULL,
-    -- error in seconds
-    time_error float NOT NULL,
-    -- depth in km
-    depth float NOT NULL,
-    -- error in km
-    depth_error float NOT NULL,
-    -- One of unknown, aftershock or foreshock
-    event_class VARCHAR,
-        CONSTRAINT event_class_value CHECK (
-            event_class is NULL
-            OR (event_class IN ('aftershock', 'foreshock'))),
-    magnitude_id INTEGER NOT NULL,
-    surface_id INTEGER NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE eqcat_ts;
-SELECT AddGeometryColumn('eqcat', 'catalog', 'point', 4326, 'POINT', 2);
-ALTER TABLE eqcat.catalog ALTER COLUMN point SET NOT NULL;
-
-
--- Earthquake event magnitudes
-CREATE TABLE eqcat.magnitude (
-    id SERIAL PRIMARY KEY,
-    mb_val float,
-    mb_val_error float,
-    ml_val float,
-    ml_val_error float,
-    ms_val float,
-    ms_val_error float,
-    mw_val float,
-    mw_val_error float,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE eqcat_ts;
-
-
--- Earthquake event surface (an ellipse with an angle)
-CREATE TABLE eqcat.surface (
-    id SERIAL PRIMARY KEY,
-    -- Semi-minor axis: The shortest radius of an ellipse.
-    semi_minor float NOT NULL,
-    -- Semi-major axis: The longest radius of an ellipse.
-    semi_major float NOT NULL,
-    strike float NOT NULL,
-        CONSTRAINT strike_value CHECK ((strike >= 0.0) AND (strike <= 360.0)),
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE eqcat_ts;
-
--- global catalog view, needed for Geonode integration
-CREATE VIEW eqcat.catalog_allfields AS
-SELECT
-    eqcat.catalog.*,
-    eqcat.surface.semi_minor, eqcat.surface.semi_major,
-    eqcat.surface.strike,
-    eqcat.magnitude.mb_val, eqcat.magnitude.mb_val_error,
-    eqcat.magnitude.ml_val, eqcat.magnitude.ml_val_error,
-    eqcat.magnitude.ms_val, eqcat.magnitude.ms_val_error,
-    eqcat.magnitude.mw_val, eqcat.magnitude.mw_val_error
-FROM eqcat.catalog, eqcat.magnitude, eqcat.surface
-WHERE
-    eqcat.catalog.magnitude_id = eqcat.magnitude.id
-    AND eqcat.catalog.surface_id = eqcat.surface.id;
 
 
 -- Site-specific parameters for hazard calculations.
@@ -207,9 +138,15 @@ CREATE TABLE uiapi.input (
     --      vulnerability file (vulnerability)
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('unknown', 'source', 'source_model_logic_tree', 'gsim_logic_tree',
+        CHECK(input_type IN ('unknown', 'source',
+                             'source_model_logic_tree', 'gsim_logic_tree',
                              'exposure', 'fragility', 'rupture_model',
-                             'vulnerability', 'vulnerability_retrofitted',
+                             'structural_vulnerability',
+                             'contents_vulnerability',
+                             'nonstructural_vulnerability',
+                             'business_interruption_vulnerability',
+                             'occupancy_vulnerability',
+                             'structural_vulnerability_retrofitted',
                              'site_model')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
@@ -261,8 +198,8 @@ CREATE TABLE uiapi.performance (
     task VARCHAR,
     operation VARCHAR NOT NULL,
     duration FLOAT,
-    pymemory INTEGER,
-    pgmemory INTEGER
+    pymemory BIGINT,
+    pgmemory BIGINT
 )  TABLESPACE uiapi_ts;
 
 
@@ -363,6 +300,7 @@ CREATE TABLE uiapi.hazard_calculation (
     poes float[],
     hazard_maps boolean DEFAULT false,
     uniform_hazard_spectra boolean DEFAULT false,
+    export_multi_curves boolean DEFAULT false,
     -- event-based:
     complete_logic_tree_ses BOOLEAN,
     complete_logic_tree_gmf BOOLEAN,
@@ -439,8 +377,10 @@ CREATE TABLE uiapi.risk_calculation (
 
     -- BCR (Benefit-Cost Ratio) parameters:
     interest_rate float,
-    asset_life_expectancy float
+    asset_life_expectancy float,
 
+    -- Scenario parameters:
+    time_event VARCHAR
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'region_constraint', 4326, 'POLYGON', 2);
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'sites_disagg', 4326, 'MULTIPOINT', 2);
@@ -455,533 +395,6 @@ CREATE TABLE uiapi.cnode_stats (
     previous_ts timestamp without time zone,
     failures INTEGER NOT NULL DEFAULT 0
 ) TABLESPACE uiapi_ts;
-
-
--- The parameters needed for an OpenQuake engine run
-CREATE TABLE uiapi.oq_job_profile (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    description VARCHAR NOT NULL DEFAULT '',
-    -- One of:
-    --      classical (Classical PSHA)
-    --      event_based (Probabilistic event based)
-    --      scenario (Scenario)
-    --      scenario_damage (Scenario Damage Assessment)
-    --      disaggregation (Hazard only)
-    --      uhs (Uniform Hazard Spectra; Hazard only)
-    --      classical_bcr (Benefit-cost ratio calc based on Classical PSHA)
-    --      event_based_bcr (BCR calc based on Probabilistic event-based)
-    -- Note: 'classical' and 'event_based' are both probabilistic methods
-    calc_mode VARCHAR NOT NULL CONSTRAINT calc_mode_value
-        CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
-                            'disaggregation', 'uhs', 'scenario_damage',
-                            'classical_bcr', 'event_based_bcr')),
-    -- Job type: hazard and/or risk.
-    job_type VARCHAR[] CONSTRAINT job_type_value
-        CHECK(((job_type IS NOT NULL)
-           -- The array_length() function is supposed to return an int,
-           -- but if you pass it zero-length array, is returns NULL instead of 0.
-           AND (array_length(job_type, 1) IS NOT NULL)
-            AND (job_type <@ ARRAY['hazard', 'risk']::VARCHAR[]))),
-    region_grid_spacing float,
-    min_magnitude float CONSTRAINT min_magnitude_set
-        CHECK(
-            ((calc_mode IN ('scenario', 'scenario_damage')) AND (min_magnitude IS NULL))
-            OR ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (min_magnitude IS NOT NULL))),
-    investigation_time float CONSTRAINT investigation_time_set
-        CHECK(
-            ((calc_mode IN ('scenario', 'scenario_damage')) AND (investigation_time IS NULL))
-            OR ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (investigation_time IS NOT NULL))),
-    -- One of:
-    --      average (Average horizontal)
-    --      gmroti50 (Average horizontal (GMRotI50))
-    component VARCHAR NOT NULL CONSTRAINT component_value
-        CHECK(component IN ('average', 'gmroti50')),
-    -- Intensity measure type, one of:
-    --      peak ground acceleration (pga)
-    --      spectral acceleration (sa)
-    --      peak ground velocity (pgv)
-    --      peak ground displacement (pgd)
-    --      Arias Intensity (ia)
-    --      relative significant duration (rsd)
-    --      Modified Mercalli Intensity
-    -- For UHS calculations, IMT should always be 'sa'.
-    imt VARCHAR,
-    period float,
-    damping float CONSTRAINT damping_is_set
-        CHECK(((imt = 'sa') AND (damping IS NOT NULL))
-              OR ((imt != 'sa') AND (damping IS NULL))),
-    truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
-        CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
-    truncation_level float NOT NULL DEFAULT 3.0,
-    -- Intensity measure levels
-    imls float[] CONSTRAINT imls_are_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (imls IS NOT NULL))
-            OR ((calc_mode IN ('scenario', 'scenario_damage')) AND (imls IS NULL))),
-    -- Probabilities of exceedence
-    poes float[] CONSTRAINT poes_are_set
-        CHECK(
-            ((calc_mode IN ('classical', 'disaggregation', 'uhs')) AND (poes IS NOT NULL))
-            OR ((calc_mode IN ('event_based', 'scenario', 'scenario_damage',
-                              'classical_bcr', 'event_based_bcr')) AND (poes IS NULL))),
-    -- Number of logic tree samples
-    realizations integer CONSTRAINT realizations_is_set
-        CHECK(
-            ((calc_mode IN ('scenario', 'scenario_damage')) AND (realizations IS NULL))
-            OR ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (realizations IS NOT NULL))),
-    -- Number of seismicity histories
-    histories integer CONSTRAINT histories_is_set
-        CHECK(
-            ((calc_mode IN ('event_based', 'event_based_bcr') AND (histories IS NOT NULL))
-            OR (calc_mode NOT IN ('event_based', 'event_based_bcr')) AND (histories IS NULL))),
-    -- ground motion correlation flag
-    gm_correlated boolean CONSTRAINT gm_correlated_is_set
-        CHECK(
-            ((calc_mode IN ('classical', 'disaggregation', 'uhs',
-                           'classical_bcr', 'event_based_bcr')) AND (gm_correlated IS NULL))
-            OR ((calc_mode IN ('event_based', 'scenario', 'scenario_damage', 'event_based_bcr')) AND (gm_correlated IS NOT NULL))),
-    gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
-        CHECK(
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (gmf_calculation_number IS NOT NULL)
-             AND (realizations > 0))
-            OR
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (gmf_calculation_number IS NULL))),
-    rupture_surface_discretization float
-        CONSTRAINT rupture_surface_discretization_is_set
-        CHECK(
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (rupture_surface_discretization IS NOT NULL)
-             AND (rupture_surface_discretization > 0))
-            OR
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (rupture_surface_discretization IS NULL))),
-    asset_correlation VARCHAR,
-    area_source_discretization float
-        CONSTRAINT area_source_discretization_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (area_source_discretization IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage')) AND (area_source_discretization IS NULL))),
-    area_source_magnitude_scaling_relationship VARCHAR
-        CONSTRAINT area_source_magnitude_scaling_relationship_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (area_source_magnitude_scaling_relationship IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (area_source_magnitude_scaling_relationship IS NULL))),
-    asset_life_expectancy float
-        CONSTRAINT asset_life_expectancy_is_set
-        CHECK (
-            ((calc_mode IN ('classical_bcr', 'event_based_bcr'))
-             AND asset_life_expectancy IS NOT NULL)
-            OR
-            ((calc_mode NOT IN ('classical_bcr', 'event_based_bcr'))
-             AND asset_life_expectancy IS NULL)),
-    compute_mean_hazard_curve boolean
-        CONSTRAINT compute_mean_hazard_curve_is_set
-        CHECK(
-            ((calc_mode IN ('classical', 'classical_bcr'))
-            AND
-            (
-                -- If the job is hazard+risk and classical,
-                -- make sure compute_mean_hazard_curve is TRUE.
-                ((ARRAY['hazard', 'risk']::VARCHAR[] <@ job_type) AND (compute_mean_hazard_curve = TRUE))
-                OR
-                -- If the job is just classical (and not hazard+risk),
-                -- just make sure compute_mean_hazard_curve is not null.
-                ((NOT ARRAY['hazard', 'risk']::VARCHAR[] <@ job_type) AND (compute_mean_hazard_curve IS NOT NULL))
-            ))
-            OR
-            ((calc_mode NOT IN ('classical', 'classical_bcr'))
-             AND (compute_mean_hazard_curve IS NULL))),
-    conditional_loss_poe float[],
-    fault_magnitude_scaling_relationship VARCHAR
-        CONSTRAINT fault_magnitude_scaling_relationship_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (fault_magnitude_scaling_relationship IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (fault_magnitude_scaling_relationship IS NULL))),
-    fault_magnitude_scaling_sigma float
-        CONSTRAINT fault_magnitude_scaling_sigma_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (fault_magnitude_scaling_sigma IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (fault_magnitude_scaling_sigma IS NULL))),
-    fault_rupture_offset float
-        CONSTRAINT fault_rupture_offset_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (fault_rupture_offset IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (fault_rupture_offset IS NULL))),
-    fault_surface_discretization float
-        CONSTRAINT fault_surface_discretization_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (fault_surface_discretization IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (fault_surface_discretization IS NULL))),
-    gmf_random_seed integer
-        CONSTRAINT gmf_random_seed_is_set
-        CHECK(
-            (calc_mode IN ('scenario', 'scenario_damage', 'event_based')
-             AND (gmf_random_seed IS NOT NULL))
-            OR
-            ((calc_mode NOT IN ('scenario', 'scenario_damage', 'event_based'))
-             AND (gmf_random_seed IS NULL))),
-    gmpe_lt_random_seed integer
-        CONSTRAINT gmpe_lt_random_seed_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (gmpe_lt_random_seed IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (gmpe_lt_random_seed IS NULL))),
-    gmpe_model_name VARCHAR,
-    grid_source_magnitude_scaling_relationship VARCHAR,
-    include_area_sources boolean
-        CONSTRAINT include_area_sources_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (include_area_sources IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (include_area_sources IS NULL))),
-    include_fault_source boolean
-        CONSTRAINT include_fault_source_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (include_fault_source IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (include_fault_source IS NULL))),
-    include_grid_sources boolean
-        CONSTRAINT include_grid_sources_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (include_grid_sources IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (include_grid_sources IS NULL))),
-    include_subduction_fault_source boolean
-        CONSTRAINT include_subduction_fault_source_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (include_subduction_fault_source IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (include_subduction_fault_source IS NULL))),
-    interest_rate float
-        CONSTRAINT interest_rate_is_set
-        CHECK (
-            ((calc_mode IN ('classical_bcr', 'event_based_bcr'))
-             AND interest_rate IS NOT NULL)
-            OR
-            ((calc_mode NOT IN ('classical_bcr', 'event_based_bcr'))
-             AND interest_rate IS NULL)),
-    -- Loss Ratio Exceedence Matrix steps per interval
-    -- Only used for Classical/Classical BCR Risk calculations.
-    lrem_steps_per_interval integer
-        CONSTRAINT lrem_steps_is_set
-        CHECK (
-            (calc_mode in ('classical', 'classical_bcr'))
-            AND
-            (
-                -- If this is a Classical or Classical BCR Risk calculation,
-                -- lrem_steps_per_interval needs to set.
-                ((ARRAY['risk']::VARCHAR[] <@ job_type)
-                 AND (lrem_steps_per_interval IS NOT NULL))
-                OR
-                -- If it's not a Risk calculation, it should be NULL.
-                ((NOT ARRAY['risk']::VARCHAR[] <@ job_type)
-                 AND (lrem_steps_per_interval IS NULL))
-            )
-            OR
-            (
-                (calc_mode NOT IN ('classical', 'classical_bcr'))
-                AND (lrem_steps_per_interval IS NULL)
-            )),
-    loss_curves_output_prefix VARCHAR,
-    -- Number of bins in the compute loss histogram.
-    -- For Event-Based Risk calculations only.
-    loss_histogram_bins INTEGER
-        CONSTRAINT loss_histogram_bins_is_set
-        CHECK (
-            (calc_mode in ('event_based', 'event_based_bcr'))
-            AND
-            (
-                ((ARRAY['risk']::VARCHAR[] <@ job_type)
-                 AND (loss_histogram_bins is NOT NULL)
-                 AND (loss_histogram_bins >= 1))
-                OR
-                ((NOT ARRAY['risk']::VARCHAR[] <@ job_type)
-                 AND (loss_histogram_bins IS NULL))
-            )
-            OR
-            (
-                (calc_mode NOT IN ('event_based', 'event_based_bcr')
-                 AND (loss_histogram_bins IS NULL))
-            )),
-    maximum_distance float
-        CONSTRAINT maximum_distance_is_set
-        CHECK(
-            ((calc_mode IN ('classical', 'disaggregation', 'uhs',
-                           'classical_bcr', 'event_based_bcr'))
-             AND (maximum_distance IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage', 'event_based'))
-             AND (maximum_distance IS NULL))),
-    quantile_levels float[]
-        CONSTRAINT quantile_levels_is_set
-        CHECK(
-            ((calc_mode = 'classical')
-             AND (quantile_levels IS NOT NULL))
-            OR
-            ((calc_mode != 'classical')
-             AND (quantile_levels IS NULL))),
-    rupture_aspect_ratio float
-        CONSTRAINT rupture_aspect_ratio_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (rupture_aspect_ratio IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (rupture_aspect_ratio IS NULL))),
-    -- Rupture floating type, one of:
-    --     Only along strike ( rupture full DDW) (alongstrike)
-    --     Along strike and down dip (downdip)
-    --     Along strike & centered down dip (centereddowndip)
-    rupture_floating_type VARCHAR
-        CONSTRAINT rupture_floating_type_is_set
-        CHECK(
-            ((calc_mode IN ('classical', 'event_based', 'disaggregation', 'uhs',
-                           'classical_bcr', 'event_based_bcr'))
-             AND (rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (rupture_floating_type IS NULL))),
-    -- Sadigh site type, one of:
-    --     Rock (rock)
-    --     Deep-Soil (deepsoil)
-    sadigh_site_type VARCHAR CONSTRAINT sadigh_site_type_value
-        CHECK(sadigh_site_type IS NULL
-              OR sadigh_site_type IN ('rock', 'deepsoil')),
-    source_model_lt_random_seed integer
-        CONSTRAINT source_model_lt_random_seed_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (source_model_lt_random_seed IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (source_model_lt_random_seed IS NULL))),
-    -- Standard deviation, one of:
-    --     Total (total)
-    --     Inter-Event (interevent)
-    --     Intra-Event (intraevent)
-    --     None (zero) (zero)
-    --     Total (Mag Dependent) (total_mag_dependent)
-    --     Total (PGA Dependent) (total_pga_dependent)
-    --     Intra-Event (Mag Dependent) (intraevent_mag_dependent)
-    standard_deviation_type VARCHAR
-        CONSTRAINT standard_deviation_type_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (standard_deviation_type IN ('total', 'interevent', 'intraevent', 'zero', 'total_mag_dependent', 'total_pga_dependent', 'intraevent_mag_dependent')))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (standard_deviation_type IS NULL))),
-    subduction_fault_magnitude_scaling_relationship VARCHAR
-        CONSTRAINT subduction_fault_magnitude_scaling_relationship_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (subduction_fault_magnitude_scaling_relationship IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (subduction_fault_magnitude_scaling_relationship IS NULL))),
-    subduction_fault_magnitude_scaling_sigma float
-        CONSTRAINT subduction_fault_magnitude_scaling_sigma_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (subduction_fault_magnitude_scaling_sigma IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (subduction_fault_magnitude_scaling_sigma IS NULL))),
-    subduction_fault_rupture_offset float
-        CONSTRAINT subduction_fault_rupture_offset_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (subduction_fault_rupture_offset IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (subduction_fault_rupture_offset IS NULL))),
-    subduction_fault_surface_discretization float
-        CONSTRAINT subduction_fault_surface_discretization_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (subduction_fault_surface_discretization IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (subduction_fault_surface_discretization IS NULL))),
-    subduction_rupture_aspect_ratio float
-        CONSTRAINT subduction_rupture_aspect_ratio_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (subduction_rupture_aspect_ratio IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (subduction_rupture_aspect_ratio IS NULL))),
-    -- Rupture floating type, one of:
-    --     Only along strike ( rupture full DDW) (alongstrike)
-    --     Along strike and down dip (downdip)
-    --     Along strike & centered down dip (centereddowndip)
-    subduction_rupture_floating_type VARCHAR
-        CONSTRAINT subduction_rupture_floating_type_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (subduction_rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (subduction_rupture_floating_type IS NULL))),
-    -- Source as, one of:
-    --     Point Sources (pointsources)
-    --     Line Sources (random or given strike) (linesources)
-    --     Cross Hair Line Sources (crosshairsources)
-    --     16 Spoked Line Sources (16spokedsources)
-    treat_area_source_as VARCHAR
-        CONSTRAINT treat_area_source_as_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (treat_area_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (treat_area_source_as IS NULL))),
-    treat_grid_source_as VARCHAR
-        CONSTRAINT treat_grid_source_as_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (treat_grid_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (treat_grid_source_as IS NULL))),
-    width_of_mfd_bin float
-        CONSTRAINT width_of_mfd_bin_is_set
-        CHECK(
-            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
-             AND (width_of_mfd_bin IS NOT NULL))
-            OR
-            ((calc_mode IN ('scenario', 'scenario_damage'))
-             AND (width_of_mfd_bin IS NULL))),
-    lat_bin_limits float[]
-        CONSTRAINT lat_bin_limits_valid
-        CHECK(
-            (((calc_mode = 'disaggregation')
-            AND (lat_bin_limits IS NOT NULL)
-            AND (-90 <= all(lat_bin_limits))
-            AND (90 >= all(lat_bin_limits))
-            OR
-            ((calc_mode != 'disaggregation')
-            AND (lat_bin_limits IS NULL))))),
-    lon_bin_limits float[]
-        CONSTRAINT lon_bin_limits_valid
-        CHECK(
-            (((calc_mode = 'disaggregation')
-            AND (lon_bin_limits IS NOT NULL)
-            AND (-180 <= all(lon_bin_limits))
-            AND (180 >= all(lon_bin_limits))
-            OR
-            ((calc_mode != 'disaggregation')
-            AND (lon_bin_limits IS NULL))))),
-    mag_bin_limits float[]
-        CONSTRAINT mag_bin_limits_is_set
-        CHECK(
-            ((calc_mode = 'disaggregation')
-            AND (mag_bin_limits IS NOT NULL))
-            OR
-            ((calc_mode != 'disaggregation')
-            AND (mag_bin_limits IS NULL))),
-    epsilon_bin_limits float[]
-        CONSTRAINT epsilon_bin_limits_is_set
-        CHECK(
-            ((calc_mode = 'disaggregation')
-            AND (epsilon_bin_limits IS NOT NULL))
-            OR
-            ((calc_mode != 'disaggregation')
-            AND (epsilon_bin_limits IS NULL))),
-    distance_bin_limits float[]
-        CONSTRAINT distance_bin_limits_is_set
-        CHECK(
-            ((calc_mode = 'disaggregation')
-            AND (distance_bin_limits IS NOT NULL))
-            OR
-            ((calc_mode != 'disaggregation')
-            AND (distance_bin_limits IS NULL))),
-    -- For disaggregation results, choose any (at least 1) of the following:
-    --      MagPMF (Magnitude Probability Mass Function)
-    --      DistPMF (Distance PMF)
-    --      TRTPMF (Tectonic Region Type PMF)
-    --      MagDistPMF (Magnitude-Distance PMF)
-    --      MagDistEpsPMF (Magnitude-Distance-Epsilon PMF)
-    --      LatLonPMF (Latitude-Longitude PMF)
-    --      LatLonMagPMF (Latitude-Longitude-Magnitude PMF)
-    --      LatLonMagEpsPMF (Latitude-Longitude-Magnitude-Epsilon PMF)
-    --      MagTRTPMF (Magnitude-Tectonic Region Type PMF)
-    --      LatLonTRTPMF (Latitude-Longitude-Tectonic Region Type PMF)
-    --      FullDisaggMatrix (The full disaggregation matrix; includes
-    --          Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
-    disagg_results VARCHAR[]
-        CONSTRAINT disagg_results_valid
-        CHECK(
-            (((calc_mode = 'disaggregation')
-            AND (disagg_results IS NOT NULL)
-            -- array_length() returns NULL instead 0 when the array length is 0;
-            -- I have no idea why.
-            AND (array_length(disagg_results, 1) IS NOT NULL)
-            AND (disagg_results <@ ARRAY['MagPMF', 'DistPMF', 'TRTPMF',
-                                         'MagDistPMF', 'MagDistEpsPMF',
-                                         'LatLonPMF', 'LatLonMagPMF',
-                                         'LatLonMagEpsPMF',
-                                         'MagTRTPMF', 'LatLonTRTPMF',
-                                         'FullDisaggMatrix']::VARCHAR[]))
-            OR
-            ((calc_mode != 'disaggregation')
-            AND (disagg_results IS NULL)))),
-    uhs_periods float[]
-        CONSTRAINT uhs_periods_is_set
-        CHECK(
-            -- If calc mode is UHS, uhs_periods must be not null and contain at least 1 element
-            ((calc_mode = 'uhs') AND (uhs_periods IS NOT NULL) AND (array_length(uhs_periods, 1) > 0))
-            OR
-            ((calc_mode != 'uhs') AND (uhs_periods IS NULL))),
-    reference_vs30_value float,
-    vs30_type VARCHAR DEFAULT 'measured' CONSTRAINT vs30_type_value
-        CHECK(vs30_type IN ('measured', 'inferred')),
-    depth_to_1pt_0km_per_sec float DEFAULT 100.0
-        CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
-        CHECK(depth_to_1pt_0km_per_sec > 0.0),
-    reference_depth_to_2pt5km_per_sec_param float,
-    -- timestamp
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'oq_job_profile', 'region', 4326, 'POLYGON', 2);
-SELECT AddGeometryColumn('uiapi', 'oq_job_profile', 'sites', 4326, 'MULTIPOINT', 2);
--- Params can either contain a site list ('sites') or
--- region + region_grid_spacing, but not both.
-ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT oq_job_profile_geometry CHECK(
-    ((region IS NOT NULL) AND (region_grid_spacing IS NOT NULL)
-        AND (sites IS NULL))
-    OR ((region IS NULL) AND (region_grid_spacing IS NULL)
-        AND (sites IS NOT NULL)));
 
 
 -- A single OpenQuake calculation engine output. The data may reside in a file
@@ -1009,6 +422,7 @@ CREATE TABLE uiapi.output (
             'gmf',
             'gmf_scenario',
             'hazard_curve',
+            'hazard_curve_multi',
             'hazard_map',
             'loss_curve',
             'loss_fraction',
@@ -1051,20 +465,8 @@ CREATE TABLE uiapi.src2ltsrc (
     hzrd_src_id INTEGER NOT NULL,
     -- foreign key to the input of type 'source_model_logic_tree'
     lt_src_id INTEGER NOT NULL,
-    -- Due to input file reuse, the original file name may deviate from
-    -- the current. We hence need to capture the latter.
     filename VARCHAR NOT NULL,
     UNIQUE (hzrd_src_id, lt_src_id)
-) TABLESPACE uiapi_ts;
-
-
--- Associate jobs and their profiles, a job may be associated with one profile
--- only.
-CREATE TABLE uiapi.job2profile (
-    id SERIAL PRIMARY KEY,
-    oq_job_id INTEGER NOT NULL,
-    oq_job_profile_id INTEGER NOT NULL,
-    UNIQUE (oq_job_id)
 ) TABLESPACE uiapi_ts;
 
 
@@ -1105,9 +507,10 @@ CREATE TABLE hzrdr.hazard_curve (
     output_id INTEGER NOT NULL,
     lt_realization_id INTEGER,  -- lt_realization FK, only required for non-statistical curves
     investigation_time float NOT NULL,
-    imt VARCHAR NOT NULL CONSTRAINT hazard_curve_imt
+    -- imt and imls might be null if hazard curve is the container for multiple hazard curve set
+    imt VARCHAR NULL CONSTRAINT hazard_curve_imt
         CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
-    imls float[] NOT NULL,
+    imls float[] NULL,
     statistics VARCHAR CONSTRAINT hazard_curve_statistics
         CHECK(statistics IS NULL OR
               statistics IN ('mean', 'quantile')),
@@ -1234,19 +637,33 @@ CREATE TABLE hzrdr.gmf (
 -- find the corresponding ground motion value in gmvs at the same
 -- index.
     rupture_ids int[],
-    result_grp_ordinal INTEGER NOT NULL,
-
-    location GEOGRAPHY(point) NOT NULL
+    result_grp_ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'gmf', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.gmf ALTER COLUMN location SET NOT NULL;
 
 
-CREATE TABLE hzrdr.gmf_scenario (
+CREATE TABLE hzrdr.gmf_agg (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,  -- FK to output.id
+    gmf_collection_id INTEGER NOT NULL REFERENCES hzrdr.gmf_collection(id)
+    ON DELETE CASCADE,
     imt VARCHAR NOT NULL,
+        --CONSTRAINT hazard_curve_imt
+        --CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
+    sa_period float,
+        -- CONSTRAINT gmf_sa_period
+        --CHECK(
+        --    ((imt = 'SA') AND (sa_period IS NOT NULL))
+        --    OR ((imt != 'SA') AND (sa_period IS NULL))),
+    sa_damping float,
+        --CONSTRAINT gmf_sa_damping
+        --CHECK(
+        --    ((imt = 'SA') AND (sa_damping IS NOT NULL))
+        --    OR ((imt != 'SA') AND (sa_damping IS NULL))),
     gmvs float[],
-    location GEOGRAPHY(point) NOT NULL,
-    UNIQUE (output_id, imt, location)
+    rupture_ids int[],
+    site_id INTEGER NOT NULL, -- fk -> hazard_site
+    UNIQUE (gmf_collection_id, imt, sa_period, sa_damping, site_id)
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1277,19 +694,6 @@ CREATE TABLE hzrdr.disagg_result (
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'disagg_result', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.disagg_result ALTER COLUMN location SET NOT NULL;
-
-
--- GMF data.
--- TODO: DEPRECATED; use gmf_collection, gmf_set, and gmf
-CREATE TABLE hzrdr.gmf_data (
-    id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,
-    -- Ground motion value
-    ground_motion float NOT NULL
-) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'gmf_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
-
 
 -- Uniform Hazard Spectra
 --
@@ -1354,6 +758,7 @@ CREATE TABLE hzrdr.lt_realization (
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL,
     insured BOOLEAN NOT NULL DEFAULT false,
     -- poe is significant only for non-scenario calculations
@@ -1386,6 +791,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_fraction (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL,
     variable VARCHAR NOT NULL,
     statistics VARCHAR CONSTRAINT loss_fraction_statistics
@@ -1418,6 +824,7 @@ ALTER TABLE riskr.loss_fraction_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.aggregate_loss (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    loss_type VARCHAR NOT NULL,
     insured BOOLEAN NOT NULL DEFAULT false,
     mean float NOT NULL,
     std_dev float NULL
@@ -1431,6 +838,7 @@ CREATE TABLE riskr.event_loss (
     -- FK to uiapi.output.id. The corresponding row must have
     -- output_type == event_loss
     output_id INTEGER NOT NULL,
+    loss_type VARCHAR NOT NULL,
     rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
     aggregate_loss float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -1440,6 +848,7 @@ CREATE TABLE riskr.event_loss (
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL,
     aggregate BOOLEAN NOT NULL DEFAULT false,
     insured BOOLEAN NOT NULL DEFAULT false,
@@ -1495,6 +904,7 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
 CREATE TABLE riskr.bcr_distribution (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    loss_type VARCHAR NOT NULL,
     hazard_output_id INTEGER NULL
 ) TABLESPACE riskr_ts;
 
@@ -1521,7 +931,7 @@ CREATE TABLE riskr.dmg_state (
 CREATE TABLE riskr.dmg_dist_per_asset (
     id SERIAL PRIMARY KEY,
     dmg_state_id INTEGER NOT NULL REFERENCES riskr.dmg_state,
-    exposure_data_id INTEGER NOT NULL,  -- FK to oqmif.exposure_data.id
+    exposure_data_id INTEGER NOT NULL,  -- FK to riski.exposure_data.id
     mean float NOT NULL,
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -1551,10 +961,9 @@ CREATE TABLE riskr.dmg_dist_total (
 --      coco: contents cost
 --      reco: retrofitting cost
 --      stco: structural cost
-CREATE TABLE oqmif.exposure_model (
+CREATE TABLE riski.exposure_model (
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- Associates the risk exposure model with an input file
+    -- Associates the risk exposure model with an input record
     input_id INTEGER NOT NULL,
     name VARCHAR NOT NULL,
     description VARCHAR,
@@ -1571,34 +980,34 @@ CREATE TABLE oqmif.exposure_model (
     -- area unit
     area_unit VARCHAR,
 
-    -- contents cost type
-    coco_type VARCHAR CONSTRAINT coco_type_value
-        CHECK(coco_type IS NULL OR coco_type = 'per_asset'
-              OR coco_type = 'per_area' OR coco_type = 'aggregated'),
-    -- contents cost unit
-    coco_unit VARCHAR,
+    deductible_absolute BOOLEAN DEFAULT TRUE,
+    insurance_limit_absolute BOOLEAN DEFAULT TRUE
 
-    -- retrofitting cost type
-    reco_type VARCHAR CONSTRAINT reco_type_value
-        CHECK(reco_type IS NULL OR reco_type = 'per_asset'
-              OR reco_type = 'per_area' OR reco_type = 'aggregated'),
-    -- retrofitting cost unit
-    reco_unit VARCHAR,
+) TABLESPACE riski_ts;
 
-    -- structural cost type
-    stco_type VARCHAR CONSTRAINT stco_type_value
-        CHECK(stco_type IS NULL OR stco_type = 'per_asset'
-              OR stco_type = 'per_area' OR stco_type = 'aggregated'),
-    -- structural cost unit
-    stco_unit VARCHAR,
 
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE oqmif_ts;
+-- Cost Conversion table
+CREATE TABLE riski.cost_type (
+    id SERIAL PRIMARY KEY,
+    exposure_model_id INTEGER NOT NULL,
+ 
+    name VARCHAR NOT NULL,
+    conversion VARCHAR NOT NULL CONSTRAINT conversion_value
+        CHECK(conversion = 'per_asset'
+              OR conversion = 'per_area'
+              OR conversion = 'aggregated'),
+    unit VARCHAR,
+    retrofitted_conversion VARCHAR CONSTRAINT retrofitted_conversion_value
+        CHECK(retrofitted_conversion IS NULL
+              OR retrofitted_conversion = 'per_asset'
+              OR retrofitted_conversion = 'per_area'
+              OR retrofitted_conversion = 'aggregated'),
+    retrofitted_unit VARCHAR
+) TABLESPACE riski_ts;
 
 
 -- Per-asset exposure data
-CREATE TABLE oqmif.exposure_data (
+CREATE TABLE riski.exposure_data (
     id SERIAL PRIMARY KEY,
     exposure_model_id INTEGER NOT NULL,
     -- the asset reference is unique within an exposure model.
@@ -1607,37 +1016,38 @@ CREATE TABLE oqmif.exposure_data (
     -- vulnerability function reference
     taxonomy VARCHAR NOT NULL,
 
-    -- structural cost
-    stco float CONSTRAINT stco_value CHECK(stco >= 0.0),
-    -- retrofitting cost
-    reco float CONSTRAINT reco_value CHECK(reco >= 0.0),
-    -- contents cost
-    coco float CONSTRAINT coco_value CHECK(coco >= 0.0),
-
     -- number of assets, people etc.
-    number_of_units float CONSTRAINT number_of_units_value
-        CHECK(number_of_units >= 0.0),
+    number_of_units float CONSTRAINT units_value CHECK(number_of_units >= 0.0),
     area float CONSTRAINT area_value CHECK(area >= 0.0),
 
-    -- insurance coverage limit
-    ins_limit float,
-    -- insurance deductible
-    deductible float,
-
     site GEOGRAPHY(point) NOT NULL,
-
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL,
     UNIQUE (exposure_model_id, asset_ref)
-) TABLESPACE oqmif_ts;
+) TABLESPACE riski_ts;
 
 
-CREATE TABLE oqmif.occupancy (
+CREATE TABLE riski.cost (
     id SERIAL PRIMARY KEY,
     exposure_data_id INTEGER NOT NULL,
-    description VARCHAR NOT NULL,
+    cost_type_id INTEGER NOT NULL,
+    converted_cost float NOT NULL CONSTRAINT converted_cost_value
+         CHECK(converted_cost >= 0.0),
+    converted_retrofitted_cost float CONSTRAINT converted_retrofitted_cost_value
+         CHECK(converted_retrofitted_cost >= 0.0),
+    deductible_absolute float CONSTRAINT deductible_value
+         CHECK(deductible_absolute >= 0.0),
+    insurance_limit_absolute float CONSTRAINT insurance_limit_value
+         CHECK(insurance_limit_absolute >= 0.0),
+    UNIQUE (exposure_data_id, cost_type_id)
+) TABLESPACE riski_ts;
+
+
+CREATE TABLE riski.occupancy (
+    id SERIAL PRIMARY KEY,
+    exposure_data_id INTEGER NOT NULL,
+    period VARCHAR NOT NULL,
     occupants INTEGER NOT NULL
-) TABLESPACE oqmif_ts;
+) TABLESPACE riski_ts;
+
 
 -- keep track of sources considered in a calculation, per logic tree realization
 CREATE TABLE htemp.source_progress (
@@ -1660,20 +1070,12 @@ CREATE TABLE htemp.hazard_curve_progress (
     result_matrix BYTEA NOT NULL
 ) TABLESPACE htemp_ts;
 
--- pre-computed calculation point of interest to site parameters table
-CREATE TABLE htemp.site_data (
+-- calculation points of interest with parameters extracted from site_model or hc
+CREATE TABLE hzrdi.hazard_site (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
-    -- All 6 fields will contain pickled numpy arrays with all of the locations
-    -- and site parameters for the sites of interest for a calculation.
-    lons BYTEA NOT NULL,
-    lats BYTEA NOT NULL,
-    vs30s BYTEA NOT NULL,
-    vs30_measured BYTEA NOT NULL,
-    z1pt0s BYTEA NOT NULL,
-    z2pt5s BYTEA NOT NULL
+    location GEOGRAPHY(point) NOT NULL
 ) TABLESPACE htemp_ts;
-
 
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
@@ -1689,15 +1091,6 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdi.parsed_rupture_model ADD CONSTRAINT hzrdi_parsed_rupture_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
-
-ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_magnitude_fk
-FOREIGN KEY (magnitude_id) REFERENCES eqcat.magnitude(id) ON DELETE RESTRICT;
-
-ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_surface_fk
-FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1734,9 +1127,6 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.input2rcalc ADD CONSTRAINT uiapi_input2rcalc_risk_calculation_fk
 FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE uiapi.performance ADD CONSTRAINT uiapi_performance_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
@@ -1761,13 +1151,6 @@ FOREIGN KEY (hzrd_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_ltsrc_fk
 FOREIGN KEY (lt_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.job2profile ADD CONSTRAINT
-uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES
-uiapi.oq_job_profile(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.job2profile ADD CONSTRAINT uiapi_job2profile_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
 ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -1783,10 +1166,7 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
-ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_input_fk
+ALTER TABLE riski.exposure_model ADD CONSTRAINT riski_exposure_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_map
@@ -1811,10 +1191,6 @@ ALTER TABLE hzrdr.hazard_curve_data
 ADD CONSTRAINT hzrdr_hazard_curve_data_hazard_curve_fk
 FOREIGN KEY (hazard_curve_id) REFERENCES hzrdr.hazard_curve(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.gmf_data
-ADD CONSTRAINT hzrdr_gmf_data_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
-
 -- gmf_collection -> output FK
 ALTER TABLE hzrdr.gmf_collection
 ADD CONSTRAINT hzrdr_gmf_collection_output_fk
@@ -1836,12 +1212,6 @@ ON DELETE CASCADE;
 ALTER TABLE hzrdr.gmf
 ADD CONSTRAINT hzrdr_gmf_gmf_set_fk
 FOREIGN KEY (gmf_set_id) REFERENCES hzrdr.gmf_set(id)
-ON DELETE CASCADE;
-
--- gmf_scenario -> output FK
-ALTER TABLE hzrdr.gmf_scenario
-ADD CONSTRAINT hzrdr_gmf_scenario_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id)
 ON DELETE CASCADE;
 
 -- disagg_result -> output FK
@@ -1974,16 +1344,28 @@ FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELET
 
 ALTER TABLE riskr.dmg_dist_per_asset
 ADD CONSTRAINT riskr_dmg_dist_per_asset_exposure_data_fk
-FOREIGN KEY (exposure_data_id) REFERENCES oqmif.exposure_data(id) ON DELETE RESTRICT;
+FOREIGN KEY (exposure_data_id) REFERENCES riski.exposure_data(id) ON DELETE RESTRICT;
 
 
-ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
-oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
-REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
+ALTER TABLE riski.exposure_data ADD CONSTRAINT
+riski_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
+REFERENCES riski.exposure_model(id) ON DELETE CASCADE;
 
-ALTER TABLE oqmif.occupancy ADD CONSTRAINT
-oqmif_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
-REFERENCES oqmif.exposure_data(id) ON DELETE CASCADE;
+ALTER TABLE riski.occupancy ADD CONSTRAINT
+riski_occupancy_exposure_data_fk FOREIGN KEY (exposure_data_id)
+REFERENCES riski.exposure_data(id) ON DELETE CASCADE;
+
+ALTER TABLE riski.cost_type ADD CONSTRAINT
+riski_cost_type_exposure_model_fk FOREIGN KEY (exposure_model_id)
+REFERENCES riski.exposure_model(id) ON DELETE CASCADE;
+
+ALTER TABLE riski.cost ADD CONSTRAINT
+riski_cost_exposure_data_fk FOREIGN KEY (exposure_data_id)
+REFERENCES riski.exposure_data(id) ON DELETE CASCADE;
+
+ALTER TABLE riski.cost ADD CONSTRAINT
+riski_cost_cost_type_fk FOREIGN KEY (cost_type_id)
+REFERENCES riski.cost_type(id) ON DELETE CASCADE;
 
 -- htemp.source_progress to hzrdr.lt_realization FK
 ALTER TABLE htemp.source_progress
@@ -2006,9 +1388,79 @@ FOREIGN KEY (lt_realization_id)
 REFERENCES hzrdr.lt_realization(id)
 ON DELETE CASCADE;
 
--- htemp.site_data to uiapi.hazard_calculation FK
-ALTER TABLE htemp.site_data
-ADD CONSTRAINT htemp_site_data_hazard_calculation_fk
+-- hzrdi.hazard_site to uiapi.hazard_calculation FK
+ALTER TABLE hzrdi.hazard_site
+ADD CONSTRAINT hzrdi_hazard_site_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
+
+-- hzrdr.gmf_agg to hzrdi.hazard_site FK
+ALTER TABLE hzrdr.gmf_agg
+ADD CONSTRAINT hzrdr_gmf_agg_hazard_site_fk
+FOREIGN KEY (site_id)
+REFERENCES hzrdi.hazard_site(id)
+ON DELETE CASCADE;
+
+
+-- this function is used in the performance_view, cannot go in functions.sql
+CREATE FUNCTION maxint(a INTEGER, b INTEGER) RETURNS INTEGER AS $$
+SELECT CASE WHEN $1 > $2 THEN $1 ELSE $2 END;
+$$ LANGUAGE SQL IMMUTABLE;
+
+---------------------- views ----------------------------
+-- convenience view to analyze the performance of the jobs;
+-- for instance the slowest operations can be extracted with
+-- SELECT DISTINCT ON (oq_job_id) * FROM uiapi.performance_view;
+CREATE VIEW uiapi.performance_view AS
+SELECT h.id AS calculation_id, description, 'hazard' AS job_type, p.* FROM (
+     SELECT oq_job_id, operation,
+     sum(duration) AS tot_duration,
+     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
+     max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
+     count(*) AS counts
+     FROM uiapi.performance
+     GROUP BY oq_job_id, operation) AS p
+INNER JOIN uiapi.oq_job AS o
+ON p.oq_job_id=o.id
+INNER JOIN uiapi.hazard_calculation AS h
+ON h.id=o.hazard_calculation_id
+UNION ALL
+SELECT r.id AS calculation_id, description, 'risk' AS job_type, p.* FROM (
+     SELECT oq_job_id, operation,
+     sum(duration) AS tot_duration,
+     sum(duration)/maxint(count(distinct task_id)::int, 1) AS duration,
+     max(pymemory)/1048576. AS pymemory, max(pgmemory)/1048576. AS pgmemory,
+     count(*) AS counts
+     FROM uiapi.performance
+     GROUP BY oq_job_id, operation) AS p
+INNER JOIN uiapi.oq_job AS o
+ON p.oq_job_id=o.id
+INNER JOIN uiapi.risk_calculation AS r
+ON r.id=o.risk_calculation_id;
+
+-- gmf_agg per job
+CREATE VIEW hzrdr.gmf_agg_job AS
+   SELECT c.oq_job_id, a.*
+   FROM hzrdr.gmf_agg AS a
+   INNER JOIN hzrdr.gmf_collection AS b
+   ON a.gmf_collection_id=b.id
+   INNER JOIN uiapi.output AS c
+   ON b.output_id=c.id
+   WHERE output_type='gmf';
+
+
+-- associations parent->children
+CREATE VIEW hzrdr.gmf_collection_family AS
+  SELECT j.id as oq_job_id, hazard_calculation_id,
+  c1.id AS parent_id, c2.id AS child_id
+  FROM uiapi.oq_job AS j
+  INNER JOIN uiapi.output AS o1
+  ON o1.oq_job_id=j.id
+  INNER JOIN uiapi.output AS o2
+  ON o2.oq_job_id=j.id
+  INNER JOIN hzrdr.gmf_collection AS c1
+  ON c1.output_id=o1.id
+  INNER JOIN hzrdr.gmf_collection AS c2
+  ON c2.output_id=o2.id
+  WHERE o1.output_type='complete_lt_gmf' AND o2.output_type='gmf';

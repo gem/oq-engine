@@ -16,19 +16,20 @@
 
 """Base code for calculator classes."""
 
+import math
+
 import kombu
 
 import openquake.engine
-
 from openquake.engine import logs
-from openquake.engine.utils import config
+from openquake.engine.utils import config, tasks, general
 
 # Routing key format string for communication between tasks and the control
 # node.
 ROUTING_KEY_FMT = 'oq.job.%(job_id)s.tasks'
 
 
-class CalculatorNext(object):
+class Calculator(object):
     """
     Base class for all calculators.
 
@@ -70,6 +71,34 @@ class CalculatorNext(object):
         Subclasses must implement this.
         """
         raise NotImplementedError()
+
+    def parallelize(self, task_func, task_arg_gen):
+        """
+        Given a callable and a task arg generator, apply the callable to
+        the arguments in parallel. To save memory the tasks are spawned in
+        blocks with maximum size defined by the method .concurrent_tasks().
+        It is possible to pass a function side_effect(ret) which takes the
+        return value of the callable and does something with it, such as
+        saving or printing it. The order is not preserved.
+
+        :param task_func: a `celery` task callable
+        :param task_args: an iterable over positional arguments
+
+        NB: if the environment variable OQ_NO_DISTRIBUTE is set the
+        tasks are run sequentially in the current process.
+        """
+        taskname = task_func.__name__
+        logs.LOG.progress('building arglist')
+        arglist = list(task_arg_gen)
+        total = len(arglist)
+        logs.LOG.progress('spawning %d tasks of kind %s', total, taskname)
+        ntasks = 0
+        for argblock in general.block_splitter(
+                arglist, self.concurrent_tasks()):
+            tasks.parallelize(task_func, argblock, lambda _: None)
+            ntasks += len(argblock)
+            percent = math.ceil(float(ntasks) / total * 100)
+            logs.LOG.progress('> %s %3d%% complete', taskname, percent)
 
     def get_task_complete_callback(self, task_arg_gen, block_size,
                                    concurrent_tasks):
@@ -162,6 +191,9 @@ class CalculatorNext(object):
         2. Wait for tasks to signal completion (via AMQP message) and enqueue a
         new task each time another completes. Once all of the job work is
         enqueued, we just wait until all of the tasks conclude.
+
+        It is possible to override this method to change the distribution
+        mechanism.
         """
         if openquake.engine.no_distribute():
             logs.LOG.warn('Calculation task distribution is disabled')

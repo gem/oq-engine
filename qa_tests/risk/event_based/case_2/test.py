@@ -14,8 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
-import numpy
 
 from nose.plugins.attrib import attr as noseattr
 
@@ -23,7 +21,6 @@ from qa_tests import risk
 from tests.utils import helpers
 
 from openquake.engine.db import models
-
 
 # FIXME(lp). This is a regression test. Data has not been validated
 # by an alternative reliable implemantation
@@ -38,54 +35,11 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
-            helpers.demo_file("event_based_hazard/job.ini"))
+            helpers.get_data_path("event_based_hazard/job.ini"))
+        gmf_coll = helpers.create_gmf_from_csv(job, os.path.join(
+            os.path.dirname(__file__), 'gmf.csv'))
 
-        job.hazard_calculation = models.HazardCalculation.objects.create(
-            owner=job.hazard_calculation.owner,
-            truncation_level=job.hazard_calculation.truncation_level,
-            maximum_distance=job.hazard_calculation.maximum_distance,
-            intensity_measure_types_and_levels=(
-                job.hazard_calculation.intensity_measure_types_and_levels),
-            calculation_mode="event_based",
-            investigation_time=50,
-            ses_per_logic_tree_path=1)
-        job.save()
-        hc = job.hazard_calculation
-
-        lt_realization = models.LtRealization.objects.create(
-            hazard_calculation=job.hazard_calculation,
-            ordinal=1, seed=1, weight=None,
-            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-            is_complete=False, total_items=1, completed_items=1)
-
-        gmf_set = models.GmfSet.objects.create(
-            gmf_collection=models.GmfCollection.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Test Hazard output", "gmf"),
-                lt_realization=lt_realization),
-            investigation_time=hc.investigation_time,
-            ses_ordinal=1)
-
-        with open(os.path.join(
-                os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
-            gmfreader = csv.reader(csvfile, delimiter=',')
-            locations = gmfreader.next()
-
-            gmv_matrix = numpy.array([[float(x) for x in row]
-                                      for row in gmfreader]).transpose()
-
-            rupture_ids = helpers.get_rupture_ids(
-                job, hc, lt_realization, len(gmv_matrix[0]))
-
-            for i, gmvs in enumerate(gmv_matrix):
-                models.Gmf.objects.create(
-                    gmf_set=gmf_set,
-                    imt="PGA", gmvs=gmvs,
-                    rupture_ids=map(str, rupture_ids),
-                    result_grp_ordinal=1,
-                    location="POINT(%s)" % locations[i])
-
-        return gmf_set.gmf_collection.output.id
+        return gmf_coll.output.id
 
     def actual_data(self, job):
         return ([curve.poes
@@ -93,7 +47,7 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                     loss_curve__output__oq_job=job,
                     loss_curve__aggregate=False,
                     loss_curve__insured=False).order_by('asset_ref')] +
-                [curve.losses
+                [curve.loss_ratios
                 for curve in models.LossCurveData.objects.filter(
                     loss_curve__output__oq_job=job,
                     loss_curve__aggregate=False,
@@ -109,30 +63,32 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
 
     def expected_data(self):
 
-        poes = [1., 0.875, 0.75, 0.625, 0.5, 0.375, 0.25, 0.125, 0.]
+        poes_1 = [1., 1., 0.98168436, 0.86466472, 0.86466472,
+                  0.63212056, 0.63212056, 0.63212056, 0.]
+        poes_2 = [1., 1., 1., 1., 0.99999774,
+                  0.99987659, 0.99908812, 0.98168436, 0.]
+        poes_3 = [1., 1., 1., 0.99987659, 0.99752125,
+                  0.98168436, 0.86466472, 0.63212056, 0.]
 
-        losses_1 = [34.15579868, 84.82030582, 119.13233149, 153.38822684,
-                    174.68457983, 195.98093282, 217.27728581, 238.57363879,
-                    259.86999178]
+        losses_1 = [0., 0.01103294, 0.02206588, 0.03309883, 0.04413177,
+                    0.05516471, 0.06619765, 0.07723059, 0.08826354]
 
-        losses_2 = [8.78869703, 30.33486712, 30.75305391, 30.79763445,
-                    30.86036245, 30.92309045, 30.98581845, 31.04854645,
-                    31.11127446]
+        losses_2 = [0., 0.00197485, 0.00394969, 0.00592454, 0.00789938,
+                    0.00987423, 0.01184907, 0.01382392, 0.01579877]
 
-        losses_3 = [11.40181027, 34.87185495, 39.18729942, 43.28641858,
-                    44.56166139, 45.83690419, 47.11214699, 48.3873898,
-                    49.6626326]
+        losses_3 = [0., 0.00627624, 0.01255247, 0.01882871, 0.02510495,
+                    0.03138118, 0.03765742, 0.04393365, 0.05020989]
 
-        expected_aggregate_losses = [55.31456352, 155.69843608, 193.2769676,
-                                     227.22660211, 246.96821847, 266.70983484,
-                                     286.4514512, 306.19306757, 325.93468394]
+        expected_aggregate_losses = [0., 41.41612985, 82.8322597, 124.24838954,
+                                     165.66451939, 207.08064924, 248.49677909,
+                                     289.91290894, 331.32903879]
 
-        expected_event_loss_table = [325.93468394, 226.10203138, 161.34708564,
-                                     114.59153235, 114.5070817, 107.55192352,
-                                     107.16635393, 104.94262851, 94.90879987,
-                                     93.52459622]
+        expected_event_loss_table = [331.32903879, 221.56606968, 163.03223466,
+                                     117.41787935, 115.83607453,  108.22215086,
+                                     106.1758451, 105.35853998, 97.05754656,
+                                     94.89922324]
 
-        return [poes, poes, poes, losses_1, losses_2, losses_3,
+        return [poes_1, poes_2, poes_3, losses_1, losses_2, losses_3,
                 expected_aggregate_losses, expected_event_loss_table]
 
     def actual_xml_outputs(self, job):

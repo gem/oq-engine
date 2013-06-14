@@ -92,7 +92,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
 
     def hazard_id(self):
         job = helpers.get_hazard_job(
-            helpers.demo_file("simple_fault_demo_hazard/job.ini"))
+            helpers.get_data_path("simple_fault_demo_hazard/job.ini"))
 
         hazard_curve = [
             (0.001, 0.0398612669790014),
@@ -120,12 +120,11 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
     def actual_data(self, job):
         return ([curve.loss_ratios
                 for curve in models.LossCurveData.objects.filter(
-                        loss_curve__output__oq_job=job).order_by(
-                            'asset_ref')] +
+                    loss_curve__output__oq_job=job).order_by('asset_ref')] +
                 [point.value
                  for point in models.LossMapData.objects.filter(
-                        loss_map__output__oq_job=job).order_by(
-                            'asset_ref', 'loss_map__poe')])
+                    loss_map__output__oq_job=job).order_by(
+                        'asset_ref', 'loss_map__poe')])
 
     def expected_data(self):
         return [[

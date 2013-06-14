@@ -163,6 +163,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
     def test_hazard_curves_to_hazard_map_logic_tree(self):
         lt_haz_curves = models.HazardCurve.objects.filter(
             output__oq_job=self.job,
+            imt__isnull=False,
             lt_realization__isnull=False)
 
         with mock.patch('%s.compute_hazard_maps' % MOCK_PREFIX) as compute:
@@ -183,6 +184,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
     def test_hazard_curves_to_hazard_map_mean(self):
         mean_haz_curves = models.HazardCurve.objects.filter(
             output__oq_job=self.job,
+            imt__isnull=False,
             statistics='mean')
 
         with mock.patch('%s.compute_hazard_maps' % MOCK_PREFIX) as compute:
@@ -205,6 +207,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
             for quantile in (0.1, 0.9):
                 quantile_haz_curves = models.HazardCurve.objects.filter(
                     output__oq_job=self.job,
+                    imt__isnull=False,
                     statistics='quantile',
                     quantile=quantile)
 
@@ -243,8 +246,8 @@ class Bug1086719TestCase(unittest.TestCase):
         cfg = helpers.get_data_path(
             'calculators/hazard/classical/haz_map_1rlz_no_stats.ini'
         )
-        retcode = helpers.run_job_sp('hazard', cfg, silence=True)
-        self.assertEqual(0, retcode)
+        job = helpers.run_hazard_job(cfg)
+        self.assertEqual(job.status, 'complete')
 
 
 class MeanCurveTestCase(unittest.TestCase):
