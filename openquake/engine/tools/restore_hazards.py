@@ -10,30 +10,52 @@ BLOCKSIZE = 1000  # restore blocks of 1,000 lines each
 log = logging.getLogger()
 
 
-class StringIO(io.StringIO):
-    def __init__(self):
-        io.StringIO.__init__(self)
+class CSVInserter(object):
+    def __init__(self, curs, tablename, blocksize):
+        self.curs = curs
+        self.tablename = tablename
+        self.blocksize = blocksize
+        self.max_id = 0
+        self.io = io.StringIO()
         self.nlines = 0
 
-    def writeln(self, line):
+    def write(self, id_, line):
         """
-        Add a csv line to self
+        Add a csv line.
         """
-        self.write(line.decode('utf8'))
+        self.max_id = max(self.max_id, id_)
+        self.io.write('%d\t%s' % (id_, line.decode('utf8')))
         self.nlines += 1
+        if self.max_id % self.blocksize == 0:
+            self.insert()
 
-    def insert(self, cursor, tablename):
+    def insert(self):
         """
-        Bulk insert self into the database.
+        Bulk insert into the database in a single transaction
         """
-        self.seek(0)
-        reserve_ids = "select nextval('%s_id_seq') "\
-            "from generate_series(1, %d)" % (tablename, self.nlines)
-        cursor.execute(reserve_ids)  # make sure the ids are available
-        cursor.copy_from(self, tablename)
-        self.truncate(0)
-        self.seek(0)
-        self.nlines = 0
+        self.io.seek(0)
+        conn = self.curs.connection
+        try:  # XXX: will this work in a concurrent situation?
+            # set the sequence id to the right value
+            self.curs.execute("select setval('%s_id_seq', %d) " % (
+                              self.tablename, self.max_id))
+            # bulk import; the two operations must go together
+            self.curs.copy_from(self.io, self.tablename)
+        except:
+            conn.rollback()
+            raise
+        else:
+            conn.commit()
+        self.io.truncate(0)
+        self.io.seek(0)
+        self.max_id = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        if self.max_id:  # some remaining line
+            self.insert()
 
 
 def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
@@ -49,22 +71,16 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
     :param str tablename: full table name
     :param int blocksize: number of lines in a block
     """
+    # keep in memory the already taken ids
     curs.execute('select id from %s' % tablename)
     ids = set(r[0] for r in curs.fetchall())
-    s = StringIO()
-    imported = 0
-    try:
-        for i, line in enumerate(gzfile, 1):
-            id_ = int(line.split('\t', 1)[0])
+    with CSVInserter(curs, tablename, blocksize) as csvi:
+        for line in gzfile:
+            sid, rest = line.split('\t', 1)
+            id_ = int(sid)
             if id_ not in ids:
-                s.writeln(line)
-                imported += 1
-            if i % blocksize == 0:
-                s.insert(curs, tablename)
-    finally:
-        if s.nlines:
-            s.insert(curs, tablename)
-    return imported
+                csvi.write(id_, rest)
+    return csvi.nlines
 
 
 def hazard_restore(conn, tar):
