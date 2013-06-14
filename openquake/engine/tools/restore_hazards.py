@@ -75,12 +75,14 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
     curs.execute('select id from %s' % tablename)
     ids = set(r[0] for r in curs.fetchall())
     with CSVInserter(curs, tablename, blocksize) as csvi:
+        total = 0
         for line in gzfile:
+            total += 1
             sid, rest = line.split('\t', 1)
             id_ = int(sid)
             if id_ not in ids:
                 csvi.write(id_, rest)
-    return csvi.nlines
+    return csvi.nlines, total
 
 
 def hazard_restore(conn, tar):
@@ -92,20 +94,14 @@ def hazard_restore(conn, tar):
     """
     curs = conn.cursor()
     tf = tarfile.open(tar)
-    try:
-        for line in tf.extractfile('hazard_calculation/FILENAMES.txt'):
-            fname = line.rstrip()
-            tname = fname[:-7]  # strip .csv.gz
-            fileobj = tf.extractfile('hazard_calculation/%s' % fname)
-            with gzip.GzipFile(fname, fileobj=fileobj) as f:
-                log.info('Importing %s...', fname)
-                imported = safe_restore(curs, f, tname)
-                log.info('Imported %d new rows', imported)
-    except:
-        conn.rollback()
-        raise
-    else:
-        conn.commit()
+    for line in tf.extractfile('hazard_calculation/FILENAMES.txt'):
+        fname = line.rstrip()
+        tname = fname[:-7]  # strip .csv.gz
+        fileobj = tf.extractfile('hazard_calculation/%s' % fname)
+        with gzip.GzipFile(fname, fileobj=fileobj) as f:
+            log.info('Importing %s...', fname)
+            imported, total = safe_restore(curs, f, tname)
+            log.info('Imported %d/%d new rows', imported, total)
     log.info('Restored %s', tar)
 
 if __name__ == '__main__':
