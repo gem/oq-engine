@@ -94,11 +94,11 @@ LOSS_TYPES = ["structural", "nonstructural", "occupants", "contents"]
 
 
 #: relative tolerance to consider two risk outputs (almost) equal
-RISK_RTOL = 0.15
+RISK_RTOL = 0.10
 
 
 #: absolute tolerance to consider two risk outputs (almost) equal
-RISK_ATOL = 0.01
+RISK_ATOL = 0.05
 
 
 def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
