@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Collection of existing building in the region of Messina, Italy
+            </description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="aggregated"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="RM">
+        <location lon="15.48" lat="38.09"/>
+        <costs>
+          <cost type="structural" value="3000" deductible="40" insuranceLimit="1250"/>
+        </costs>
+      </asset>
+      <asset id="a2" taxonomy="RC">
+        <location lon="15.56" lat="38.17"/>
+        <costs>
+          <cost type="structural" value="2000" deductible="15" insuranceLimit="500"/>
+        </costs>
+      </asset>
+      <asset id="a3" taxonomy="RM">
+        <location lon="15.48" lat="38.25"/>
+        <costs>
+          <cost type="structural" value="1000" deductible="13" insuranceLimit="40"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>

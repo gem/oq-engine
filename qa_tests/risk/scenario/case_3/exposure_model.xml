@@ -1,38 +1,31 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
-	<exposureModel gml:id="ep">
-		<exposureList gml:id="exp_mod_1" assetCategory="buildings" stcoType="per_asset" stcoUnit="USD">
-		<gml:description>Exposure model for buildings</gml:description>
-			<assetDefinition gml:id="a1">
-				<site>
-					<gml:Point srsName="epsg:4326">
-					<gml:pos>81.2985 29.1098</gml:pos>
-					</gml:Point>
-				</site>
-				<number>3</number>
-				<stco>1000</stco>
-				<taxonomy>RM</taxonomy>
-			</assetDefinition>
-			<assetDefinition gml:id="a2">
-				<site>
-					<gml:Point srsName="epsg:4326">
-					<gml:pos>83.082298 27.9006</gml:pos>
-					</gml:Point>
-				</site>
-				<number>500</number>
-				<stco>4</stco>
-				<taxonomy>RC</taxonomy>
-			</assetDefinition>
-			<assetDefinition gml:id="a3">
-				<site>
-					<gml:Point srsName="epsg:4326">
-					<gml:pos>85.747703 27.9015</gml:pos>
-					</gml:Point>
-				</site>
-				<number>1000</number>
-				<stco>1</stco>
-				<taxonomy>W</taxonomy>
-			</assetDefinition>
-		</exposureList>
-	</exposureModel>
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for buildings</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="USD" type="per_asset"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="RM" number="3">
+        <location lon="81.2985" lat="29.1098"/>
+        <costs>
+          <cost type="structural" value="1000"/>
+        </costs>
+      </asset>
+      <asset id="a2" taxonomy="RC" number="500">
+        <location lon="83.082298" lat="27.9006"/>
+        <costs>
+          <cost type="structural" value="4"/>
+        </costs>
+      </asset>
+      <asset id="a3" taxonomy="W" number="1000">
+        <location lon="85.747703" lat="27.9015"/>
+        <costs>
+          <cost type="structural" value="1"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
 </nrml>

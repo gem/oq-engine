@@ -35,14 +35,12 @@ from tests.utils import helpers
 
 LOG = logs.LOG
 
-TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
-
-SIMPLE_FAULT_SRC_MODEL_LT = helpers.demo_file(
+SIMPLE_FAULT_SRC_MODEL_LT = helpers.get_data_path(
     'simple_fault_demo_hazard/source_model_logic_tree.xml')
-SIMPLE_FAULT_GMPE_LT = helpers.demo_file(
+SIMPLE_FAULT_GMPE_LT = helpers.get_data_path(
     'simple_fault_demo_hazard/gmpe_logic_tree.xml')
 SIMPLE_FAULT_BASE_PATH = os.path.abspath(
-    helpers.demo_file('simple_fault_demo_hazard'))
+    helpers.get_data_path('simple_fault_demo_hazard'))
 
 
 def get_pattern(regexp):

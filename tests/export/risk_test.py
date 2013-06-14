@@ -42,8 +42,8 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.hazard_metadata.sm_path = None
         self.output_mock.hazard_metadata.gsim_path = None
         rc = self.output_mock.oq_job.risk_calculation
-        rc.exposure_model.stco_unit = "bucks"
         rc.exposure_model.category = "air"
+        rc.exposure_model.unit = mock.Mock(return_value="bucks")
         rc.interest_rate = 0.3
         rc.asset_life_expectancy = 10
 
@@ -54,6 +54,7 @@ class ExportTestCase(unittest.TestCase):
         writer = 'openquake.nrmllib.risk.writers.AggregateLossCurveXMLWriter'
 
         self.output_mock.loss_curve.id = 0
+        self.output_mock.loss_curve.loss_type = "structural"
         with mock.patch(writer) as m:
             ret = risk.export_agg_loss_curve(self.output_mock, "/tmp/")
 
@@ -72,6 +73,7 @@ class ExportTestCase(unittest.TestCase):
 
         self.output_mock.loss_curve.id = 0
         self.output_mock.loss_curve.insured = False
+        self.output_mock.loss_curve.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_loss_curve(self.output_mock, "/tmp/")
@@ -92,6 +94,7 @@ class ExportTestCase(unittest.TestCase):
 
         self.output_mock.loss_map.id = 0
         self.output_mock.loss_map.poe = 0.1
+        self.output_mock.loss_map.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_loss_map(self.output_mock, "/tmp/")
@@ -112,6 +115,7 @@ class ExportTestCase(unittest.TestCase):
         writer = 'openquake.nrmllib.risk.writers.BCRMapXMLWriter'
 
         self.output_mock.bcr_distribution.id = 0
+        self.output_mock.bcr_distribution.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_bcr_distribution(self.output_mock, "/tmp/")
@@ -130,9 +134,10 @@ class ExportTestCase(unittest.TestCase):
     def test_export_aggregate_loss(self):
         writer = 'csv.writer'
 
-        self.output_mock.aggregateloss.id = 0
-        self.output_mock.aggregateloss.mean = 1
-        self.output_mock.aggregateloss.std_dev = 2
+        self.output_mock.aggregate_loss.id = 0
+        self.output_mock.aggregate_loss.mean = 1
+        self.output_mock.aggregate_loss.std_dev = 2
+        self.output_mock.aggregate_loss.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_aggregate_loss(self.output_mock, "/tmp/")
@@ -148,10 +153,10 @@ class ClassicalExportTestCase(BaseExportTestCase):
         target_dir = tempfile.mkdtemp()
         try:
             haz_cfg = helpers.get_data_path(
-                'end-to-end-hazard-risk/job_haz.ini'
+                'end-to-end-hazard-risk/job_haz_classical.ini'
             )
             risk_cfg = helpers.get_data_path(
-                'end-to-end-hazard-risk/job_risk.ini'
+                'end-to-end-hazard-risk/job_risk_classical.ini'
             )
 
             haz_job = helpers.run_hazard_job(haz_cfg)
@@ -184,6 +189,11 @@ class ClassicalExportTestCase(BaseExportTestCase):
             # map + 2 quantile loss map
             self.assertEqual(19, loss_map_outputs.count())
 
+            # 19 loss fractions
+            loss_fraction_outputs = risk_outputs.filter(
+                output_type="loss_fraction")
+            self.assertEqual(19, loss_fraction_outputs.count())
+
             # Now try to export everything, just to do a "smoketest" of the
             # exporter code:
             loss_curve_files = []
@@ -195,6 +205,94 @@ class ClassicalExportTestCase(BaseExportTestCase):
                 loss_map_files.extend(risk.export(o.id, target_dir))
 
             self.assertEqual(19, len(loss_curve_files))
+            self.assertEqual(19, len(loss_map_files))
+
+            for f in loss_curve_files:
+                self._test_exported_file(f)
+            for f in loss_map_files:
+                self._test_exported_file(f)
+        finally:
+            shutil.rmtree(target_dir)
+
+
+class EventBasedExportTestCase(BaseExportTestCase):
+
+    @attr('slow')
+    def test_event_based_risk_export(self):
+        target_dir = tempfile.mkdtemp()
+        try:
+            haz_cfg = helpers.get_data_path(
+                'end-to-end-hazard-risk/job_haz_event_based.ini'
+            )
+            risk_cfg = helpers.get_data_path(
+                'end-to-end-hazard-risk/job_risk_event_based.ini'
+            )
+
+            haz_job = helpers.run_hazard_job(haz_cfg)
+            # Run the risk on all outputs produced by the haz calc:
+            risk_job = helpers.run_risk_job(
+                risk_cfg, hazard_calculation_id=haz_job.hazard_calculation.id
+            )
+
+            risk_outputs = models.Output.objects.filter(oq_job=risk_job)
+
+            agg_loss_curve_outputs = risk_outputs.filter(
+                output_type='agg_loss_curve')
+            loss_curve_outputs = risk_outputs.filter(output_type='loss_curve')
+            loss_map_outputs = risk_outputs.filter(output_type='loss_map')
+
+            # 16 logic tree realizations + 1 mean + 2 quantiles = 19
+            self.assertEqual(19, loss_curve_outputs.count())
+
+            self.assertEqual(16, agg_loss_curve_outputs.count())
+
+            # make sure the mean and quantile curve sets got created correctly
+            loss_curves = models.LossCurve.objects.filter(
+                output__oq_job=risk_job
+            )
+            # sanity check (16 aggregate loss curve + 19 loss curves)
+            self.assertEqual(35, loss_curves.count())
+            # mean
+            self.assertEqual(1, loss_curves.filter(statistics='mean').count())
+            # quantiles
+            self.assertEqual(
+                2, loss_curves.filter(statistics='quantile').count()
+            )
+
+            # 16 logic tree realizations = 16 loss map + 1 mean loss
+            # map + 2 quantile loss map
+            self.assertEqual(19, loss_map_outputs.count())
+
+            # 1 event loss table
+            event_loss_tables = risk_outputs.filter(output_type="event_loss")
+            self.assertEqual(1, event_loss_tables.count())
+
+            # 32 loss fractions
+            loss_fraction_outputs = risk_outputs.filter(
+                output_type="loss_fraction")
+            self.assertEqual(32, loss_fraction_outputs.count())
+
+            # Now try to export everything, just to do a "smoketest" of the
+            # exporter code:
+            loss_curve_files = []
+            for o in loss_curve_outputs:
+                loss_curve_files.extend(risk.export(o.id, target_dir))
+
+            agg_loss_curve_files = []
+            for o in agg_loss_curve_outputs:
+                agg_loss_curve_files.extend(risk.export(o.id, target_dir))
+
+            event_loss_table_files = []
+            for o in event_loss_tables:
+                event_loss_table_files.extend(risk.export(o.id, target_dir))
+
+            loss_map_files = []
+            for o in loss_map_outputs:
+                loss_map_files.extend(risk.export(o.id, target_dir))
+
+            self.assertEqual(19, len(loss_curve_files))
+            self.assertEqual(16, len(agg_loss_curve_files))
+            self.assertEqual(1, len(event_loss_table_files))
             self.assertEqual(19, len(loss_map_files))
 
             for f in loss_curve_files:

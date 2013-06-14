@@ -30,7 +30,6 @@ import numpy
 
 from django.db import transaction, connections
 from django.db.models import Sum
-from django.core.exceptions import ObjectDoesNotExist
 from shapely import geometry
 
 from openquake.hazardlib import correlation
@@ -56,7 +55,7 @@ from openquake.engine.input import source
 from openquake.engine.utils import config
 from openquake.engine.utils import stats
 from openquake.engine.utils.general import block_splitter
-
+from openquake.engine.performance import EnginePerformanceMonitor
 
 #: Maximum number of hazard curves to cache, for selects or inserts
 CURVE_CACHE_SIZE = 100000
@@ -80,31 +79,17 @@ def store_site_model(input_mdl, site_model_source):
     :param site_model_source:
         Filename or file-like object containing the site model XML data.
     :returns:
-        `list` of :class:`openquake.engine.db.models.SiteModel` objects. These
-        represent to newly-inserted `hzrdi.site_model` records.
+        `list` of ids of the newly-inserted `hzrdi.site_model` records.
     """
     parser = nrml_parsers.SiteModelParser(site_model_source)
-
-    sm_data = []
-
-    inserter = writer.BulkInserter(models.SiteModel)
-
-    for node in parser.parse():
-        sm = dict()
-        # sm = models.SiteModel()
-        sm['vs30'] = node.vs30
-        sm['vs30_type'] = node.vs30_type
-        sm['z1pt0'] = node.z1pt0
-        sm['z2pt5'] = node.z2pt5
-        sm['location'] = node.wkt
-        sm['input_id'] = input_mdl.id
-        # sm.save()
-        # sm_data.append(sm)
-        inserter.add_entry(**sm)
-
-    inserter.flush()
-
-    return sm_data
+    data = [models.SiteModel(vs30=node.vs30,
+                             vs30_type=node.vs30_type,
+                             z1pt0=node.z1pt0,
+                             z2pt5=node.z2pt5,
+                             location=node.wkt,
+                             input_id=input_mdl.id)
+            for node in parser.parse()]
+    return writer.CacheInserter.saveall(data)
 
 
 def validate_site_model(sm_nodes, mesh):
@@ -179,6 +164,7 @@ def get_site_model(hc_id):
     return site_model[0]
 
 
+## TODO: this could be implemented with a view, now that there is a site table
 def get_closest_site_model_data(input_model, point):
     """Get the closest available site model data from the database for a given
     site model :class:`~openquake.engine.db.models.Input` and
@@ -224,65 +210,6 @@ def get_closest_site_model_data(input_model, point):
         return site_model_data[0]
     else:
         return None
-
-
-def store_site_data(hc_id, site_model_inp, mesh):
-    """
-    Given a ``mesh`` of points (calculation points of interest) and a
-    site model (``site_model_inp``), get the closest site model data
-    for each points and store the mesh point location plus the site parameters
-    as a single record in the `htemp.site_data` table.
-
-    NOTE: This should only be necessary for calculations which specify a site
-    model. Otherwise, the same 4 reference site parameters are used for all
-    sites.
-
-    :param int hc_id:
-        ID of a :class:`~openquake.engine.db.models.HazardCalculation`.
-    :param site_model_inp:
-        An :class:`~openquake.engine.db.models.Input` with an
-        `input_type` == 'site_model'. This tells us which site model dataset to
-        query.
-    :param mesh:
-        Calculation points of interest, as a
-        :class:`openquake.hazardlib.geo.mesh.Mesh`.
-    :returns:
-        The :class:`openquake.engine.db.models.SiteData` object that was
-        created to store computation points of interest with associated site
-        parameters.
-    """
-    lons = []
-    lats = []
-    vs30s = []
-    vs30_types = []
-    z1pt0s = []
-    z2pt5s = []
-
-    for pt in mesh:
-        smd = get_closest_site_model_data(site_model_inp, pt)
-
-        lons.append(pt.longitude)
-        lats.append(pt.latitude)
-
-        vs30s.append(smd.vs30)
-        vs30_types.append(smd.vs30_type)
-        z1pt0s.append(smd.z1pt0)
-        z2pt5s.append(smd.z2pt5)
-
-    site_data = models.SiteData(hazard_calculation_id=hc_id)
-    site_data.lons = numpy.array(lons)
-    site_data.lats = numpy.array(lats)
-    site_data.vs30s = numpy.array(vs30s)
-    # We convert from strings to booleans here because this is what a hazardlib
-    # SiteCollection expects for the vs30 type. If we do the conversion here,
-    # we only do it once and we can directly consume the data on the worker
-    # side without having to convert inside each task.
-    site_data.vs30_measured = numpy.array(vs30_types) == 'measured'
-    site_data.z1pt0s = numpy.array(z1pt0s)
-    site_data.z2pt5s = numpy.array(z2pt5s)
-    site_data.save()
-
-    return site_data
 
 
 def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
@@ -410,24 +337,28 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-class BaseHazardCalculatorNext(base.CalculatorNext):
+# FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
+# the issue is the reset of the depts; we need QA tests for that
+class SiteCollection(openquake.hazardlib.site.SiteCollection):
+    def __init__(self, sites):
+        self.sites = sites
+        super(SiteCollection, self).__init__(sites)
+
+    def __iter__(self):
+        for site in self.sites:
+            yield site
+
+
+class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
 
     def __init__(self, *args, **kwargs):
-        super(BaseHazardCalculatorNext, self).__init__(*args, **kwargs)
+        super(BaseHazardCalculator, self).__init__(*args, **kwargs)
 
         self.progress.update(in_queue=0)
-
-    @property
-    def computation_mesh(self):
-        """
-        :class:`openquake.hazardlib.geo.mesh.Mesh` representing the points
-        of interest for the calculation.
-        """
-        return self.hc.points_to_compute()
 
     @property
     def hc(self):
@@ -444,6 +375,13 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         return int(config.get('hazard', 'block_size'))
 
+    def point_source_block_size(self):
+        """
+        Similar to :meth:`block_size`, except that this parameter applies
+        specifically to grouping of point sources.
+        """
+        return int(config.get('hazard', 'point_source_block_size'))
+
     def concurrent_tasks(self):
         """
         For hazard calculators, the number of tasks to be in queue
@@ -451,16 +389,92 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
-    def task_arg_gen(self, block_size):
+    def task_arg_gen(self, block_size, check_num_task=True):
         """
-        Generator function for creating the arguments for each task.
+        Loop through realizations and sources to generate a sequence of
+        task arg tuples. Each tuple of args applies to a single task.
 
-        Subclasses must implement this.
+        For this default implementation, yielded results are triples of
+        (job_id, realization_id, source_id_list).
+
+        Override this in subclasses as necessary.
 
         :param int block_size:
-            The number of work items per task (sources, sites, etc.).
+            The (max) number of work items for each each task. In this case,
+            sources.
         """
-        raise NotImplementedError
+        point_source_block_size = self.point_source_block_size()
+
+        realizations = self._get_realizations()
+
+        n = 0  # number of yielded arguments
+        for lt_rlz in realizations:
+            # separate point sources from all the other types, since
+            # we distribution point sources in different sized chunks
+            # point sources first
+            point_source_ids = self._get_point_source_ids(lt_rlz)
+
+            for block in block_splitter(point_source_ids,
+                                        point_source_block_size):
+                task_args = (self.job.id, block, lt_rlz.id)
+                yield task_args
+                n += 1
+            # now for area and fault sources
+            other_source_ids = self._get_source_ids(lt_rlz)
+
+            for block in block_splitter(other_source_ids, block_size):
+                task_args = (self.job.id, block, lt_rlz.id)
+                yield task_args
+                n += 1
+
+        # this sanity check should go into a unit test, and will likely
+        # go there in the future
+        if check_num_task:
+            num_tasks = models.JobStats.objects.get(
+                oq_job=self.job.id).num_tasks
+            assert num_tasks == n, 'Expected %d tasks, got %d' % (num_tasks, n)
+
+    def _get_realizations(self):
+        """
+        Get all of the logic tree realizations for this calculation.
+        """
+        return models.LtRealization.objects\
+            .filter(hazard_calculation=self.hc, is_complete=False)\
+            .order_by('id')
+
+    @staticmethod
+    def _get_point_source_ids(lt_rlz):
+        """
+        Get `parsed_source` IDs for all of the point sources for a given logic
+        tree realization. See also :meth:`_get_source_ids`.
+
+        :param lt_rlz:
+            A :class:`openquake.engine.db.models.LtRealization` instance.
+        """
+        return models.SourceProgress.objects\
+            .filter(is_complete=False, lt_realization=lt_rlz,
+                    parsed_source__source_type='point')\
+            .order_by('id')\
+            .values_list('parsed_source_id', flat=True)
+
+    @staticmethod
+    def _get_source_ids(lt_rlz):
+        """
+        Get `parsed_source` IDs for all sources for a given logic tree
+        realization, except for point sources. See
+        :meth:`_get_point_source_ids`.
+
+        :param lt_rlz:
+            A :class:`openquake.engine.db.models.LtRealization` instance.
+        """
+        return models.SourceProgress.objects\
+            .filter(is_complete=False, lt_realization=lt_rlz,
+                    parsed_source__source_type__in=['area',
+                                                    'complex',
+                                                    'simple',
+                                                    'characteristic'])\
+            .order_by('id')\
+            .values_list('parsed_source_id', flat=True)
 
     def finalize_hazard_curves(self):
         """
@@ -472,7 +486,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         is need to export the full hazard curve results).
         """
         im = self.hc.intensity_measure_types_and_levels
-        points = self.computation_mesh
+        points = self.hc.points_to_compute()
 
         # prepare site locations for the stored function call
         lons = '{%s}' % ', '.join(str(v) for v in points.lons)
@@ -482,6 +496,16 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             hazard_calculation=self.hc.id)
 
         for rlz in realizations:
+            # create a new `HazardCurve` 'container' record for each
+            # realization (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                    "hazard_curve_multi"),
+                lt_realization=rlz,
+                imt=None,
+                investigation_time=self.hc.investigation_time)
+
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
             for imt, imls in im.items():
@@ -547,37 +571,29 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         source_paths = logictree.read_logic_trees(
             self.hc.base_path, smlt.path, gsimlt.path)
 
-        src_inputs = []
         for src_path in source_paths:
             full_path = os.path.join(self.hc.base_path, src_path)
 
-            # Get or reuse the 'source' Input:
+            # Get the 'source' Input:
             inp = engine.get_input(full_path, 'source', self.hc.owner)
-            src_inputs.append(inp)
 
             # Associate the source input to the calculation:
             models.Input2hcalc.objects.get_or_create(
                 input=inp, hazard_calculation=self.hc)
 
-            # Associate the source input to the source model logic tree input:
-            try:
-                models.Src2ltsrc.objects.get(lt_src=smlt, filename=src_path)
-            except ObjectDoesNotExist:
-                # If it doesn't exist, this is a new input and we're not
-                # reusing an old one which is identical.
-                # Only in this case do we parse the sources and populate
-                # `hzrdi.parsed_source`.
-                models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
-                                                filename=src_path)
-                src_content = StringIO.StringIO(
-                    inp.model_content.raw_content_ascii)
-                sm_parser = nrml_parsers.SourceModelParser(src_content)
-                src_db_writer = source.SourceDBWriter(
-                    inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
-                    self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization
-                )
-                src_db_writer.serialize()
+            models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
+                                            filename=src_path)
+            src_content = StringIO.StringIO(
+                inp.model_content.raw_content_ascii)
+            sm_parser = nrml_parsers.SourceModelParser(src_content)
+
+            # Covert
+            src_db_writer = source.SourceDBWriter(
+                inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+                self.hc.width_of_mfd_bin,
+                self.hc.area_source_discretization
+            )
+            src_db_writer.serialize()
 
     def parse_risk_models(self):
         """
@@ -587,22 +603,45 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         is one) and the imt (and levels) will be extracted from the
         vulnerability model (if there is one)
         """
-
-        queryset = self.hc.inputs.filter(input_type='vulnerability')
+        hc = self.hc
+        queryset = self.hc.inputs.filter(
+            input_type__in=[vf_type
+                            for vf_type, _desc
+                            in models.Input.VULNERABILITY_TYPE_CHOICES])
         if queryset.exists():
-            content = StringIO.StringIO(
-                queryset.all()[0].model_content.raw_content_ascii)
-            hc = self.hc
-            hc.intensity_measure_types_and_levels = dict([
-                (record['IMT'], record['IML'])
-                for record in parsers.VulnerabilityModelParser(content)])
-            hc.intensity_measure_types = list(set([
-                record['IMT']
-                for record in parsers.VulnerabilityModelParser(content)]))
+            hc.intensity_measure_types_and_levels = dict()
+            hc.intensity_measure_types = list()
+
+            for input_type in queryset:
+                content = StringIO.StringIO(
+                    input_type.model_content.raw_content_ascii)
+                intensity_measure_types_and_levels = dict([
+                    (record['IMT'], record['IML'])
+                    for record in parsers.VulnerabilityModelParser(content)])
+
+                for imt, levels in intensity_measure_types_and_levels.items():
+                    if (imt in hc.intensity_measure_types_and_levels and
+                        (set(hc.intensity_measure_types_and_levels[imt]) -
+                         set(levels))):
+                        logs.LOG.warning("The same IMT %s is associated with "
+                                         "different levels" % imt)
+                    else:
+                        hc.intensity_measure_types_and_levels[imt] = levels
+
+                hc.intensity_measure_types.extend(
+                    intensity_measure_types_and_levels)
+
+            # remove possible duplicates
+            if hc.intensity_measure_types is not None:
+                hc.intensity_measure_types = list(set(
+                    hc.intensity_measure_types))
             hc.save()
 
         queryset = self.hc.inputs.filter(input_type='fragility')
         if queryset.exists():
+            hc.intensity_measure_types_and_levels = dict()
+            hc.intensity_measure_types = list()
+
             parser = iter(parsers.FragilityModelParser(
                 StringIO.StringIO(
                     queryset.all()[0].model_content.raw_content_ascii)))
@@ -611,17 +650,16 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             fragility_format, _limit_states = parser.next()
 
             if (fragility_format == "continuous" and
-                hc.calculation_mode != "scenario"):
+                    hc.calculation_mode != "scenario"):
                 raise NotImplementedError(
                     "Getting IMT and levels from "
                     "a continuous fragility model is not yet supported")
 
-            hc.intensity_measure_types_and_levels = dict([
+            hc.intensity_measure_types_and_levels = dict(
                 (iml['IMT'], iml['imls'])
-                for _taxonomy, iml, _params, _no_damage_limit in parser])
-            hc.intensity_measure_types = (
-                hc.intensity_measure_types_and_levels.keys())
-            hc.save()
+                for _taxonomy, iml, _params, _no_damage_limit in parser)
+            hc.intensity_measure_types.extend(
+                hc.intensity_measure_types_and_levels)
 
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
@@ -646,14 +684,15 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         calculation geometry. For each point, do distance queries on the site
         model and get the site parameters which are closest to the point of
         interest. This aggregation of points to the closest site parameters
-        is what we store in `htemp.site_data`. (Computing this once prior to
-        starting the calculation is optimal, since each task will need to
-        consider all sites.)
+        is what we store in the `site_collection` field.
+        If the computation does not specify a site model the same 4 reference
+        site parameters are used for all sites.
         """
         logs.LOG.progress("initializing site model")
 
         site_model_inp = get_site_model(self.hc.id)
-        if site_model_inp is not None:
+
+        if site_model_inp:
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
             site_model_content = site_model_inp.model_content.raw_content_ascii
@@ -662,15 +701,43 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             store_site_model(
                 site_model_inp, StringIO.StringIO(site_model_content))
 
-            mesh = self.computation_mesh
-
             # Get the site model records we stored:
             site_model_data = models.SiteModel.objects.filter(
                 input=site_model_inp)
 
-            validate_site_model(site_model_data, mesh)
+            points = self.hc.points_to_compute()
+            validate_site_model(site_model_data, points)
+        else:
+            points = self.hc.points_to_compute()
 
-            store_site_data(self.hc.id, site_model_inp, mesh)
+        sites = []
+        coords = []
+        for pt in points:
+            coords.append((pt.longitude, pt.latitude))
+
+            if site_model_inp:
+                smd = get_closest_site_model_data(site_model_inp, pt)
+                measured = smd.vs30_type == 'measured'
+                vs30 = smd.vs30
+                z1pt0 = smd.z1pt0
+                z2pt5 = smd.z2pt5
+            else:
+                vs30 = self.hc.reference_vs30_value
+                measured = self.hc.reference_vs30_type == 'measured'
+                z1pt0 = self.hc.reference_depth_to_1pt0km_per_sec
+                z2pt5 = self.hc.reference_depth_to_2pt5km_per_sec
+
+            sites.append(openquake.hazardlib.site.Site(
+                         pt, vs30, measured, z1pt0, z2pt5))
+
+        # store the sites
+        site_ids = self.hc.save_sites(coords)
+
+        # store the ids into the Site objects
+        for site, site_id in zip(sites, site_ids):
+            site.id = site_id
+        self.hc.site_collection = SiteCollection(sites)
+        self.hc.save()
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
@@ -884,7 +951,7 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             :class:`openquake.engine.db.models.LtRealization` object to
             associate with these inital hazard curve values.
         """
-        num_points = len(self.computation_mesh)
+        num_points = len(self.hc.points_to_compute())
 
         im_data = self.hc.intensity_measure_types_and_levels
         for imt, imls in im_data.items():
@@ -910,12 +977,17 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         if 'exports' in kwargs and 'xml' in kwargs['exports']:
             outputs = export_core.get_outputs(self.job.id)
 
-            for output in outputs:
-                exported_files.extend(hazard_export.export(
-                    output.id, self.job.hazard_calculation.export_dir))
+            if not self.hc.export_multi_curves:
+                outputs = outputs.exclude(output_type='hazard_curve_multi')
 
-            for exp_file in exported_files:
-                logs.LOG.debug('exported %s' % exp_file)
+            for output in outputs:
+                with EnginePerformanceMonitor(
+                        'exporting %s' % output.output_type, self.job.id):
+                    fname = hazard_export.export(
+                        output.id, self.job.hazard_calculation.export_dir)
+                    exported_files.extend(fname)
+                    logs.LOG.debug('exported %s' % fname)
+
         logs.LOG.debug('< done with exports')
 
         return exported_files
@@ -929,28 +1001,54 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
         the job has been fully initialized.
         """
         # Record num sites, num realizations, and num tasks.
-        num_sites = len(self.computation_mesh)
+        num_sites = len(self.hc.points_to_compute())
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc.id)
         num_rlzs = realizations.count()
 
-        # Compute the number of tasks.
-        block_size = int(config.get('hazard', 'block_size'))
-        num_tasks = 0
-        for lt_rlz in realizations:
-            # Each realization has the potential to choose a random source
-            # model, and thus there may be a variable number of tasks for each
-            # realization (depending on the number of the sources in the model
-            # which was chosen for the realization).
-            num_sources = models.SourceProgress.objects.filter(
-                lt_realization=lt_rlz).count()
-            num_tasks += math.ceil(float(num_sources) / block_size)
-
         [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
         job_stats.num_sites = num_sites
-        job_stats.num_tasks = num_tasks
+        job_stats.num_tasks = self.calc_num_tasks()
         job_stats.num_realizations = num_rlzs
         job_stats.save()
+
+    def calc_num_tasks(self):
+        """
+        The number of tasks is inferred from the number of sources
+        per realization by using the formula::
+
+                     N * n   N * n0
+         num_tasks = ----- + ------
+                       b       b0
+
+        where:
+
+          N is the number of realizations
+          n is the number of complex source
+          n0 is the number of point sources
+          b is the the block_size
+          b0 is the the point_source_block_size
+
+        The divisions are intended rounded to the closest upper integer
+        (ceil).
+        """
+        num_tasks = 0
+        block_size = self.block_size()
+        point_source_block_size = self.point_source_block_size()
+        total_sources = 0
+        for lt_rlz in self._get_realizations():
+            n = len(self._get_source_ids(lt_rlz))
+            n0 = len(self._get_point_source_ids(lt_rlz))
+            logs.LOG.debug('complex sources: %s, point sources: %d', n, n0)
+            total_sources += n + n0
+            ntasks = math.ceil(float(n) / block_size)
+            ntasks0 = math.ceil(float(n0) / point_source_block_size)
+            logs.LOG.debug(
+                'complex sources tasks: %s, point sources tasks: %d',
+                ntasks, ntasks0)
+            num_tasks += ntasks + ntasks0
+        logs.LOG.info('Total number of sources: %d', total_sources)
+        return int(num_tasks)
 
     def do_aggregate_post_proc(self):
         """
@@ -969,6 +1067,30 @@ class BaseHazardCalculatorNext(base.CalculatorNext):
             # The minimum number of sites should be 1.
             num_site_blocks_per_incr = 1
         slice_incr = num_site_blocks_per_incr * num_rlzs  # unit: num records
+
+        if self.hc.mean_hazard_curves:
+            # create a new `HazardCurve` 'container' record for mean
+            # curves (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "mean-curves-multi-imt",
+                    "hazard_curve_multi"),
+                statistics="mean",
+                imt=None,
+                investigation_time=self.hc.investigation_time)
+
+        if self.hc.quantile_hazard_curves:
+            for quantile in self.hc.quantile_hazard_curves:
+                # create a new `HazardCurve` 'container' record for quantile
+                # curves (virtual container for multiple imts)
+                models.HazardCurve.objects.create(
+                    output=models.Output.objects.create_output(
+                        self.job, 'quantile(%s)-curves' % quantile,
+                        "hazard_curve_multi"),
+                    statistics="quantile",
+                    imt=None,
+                    quantile=quantile,
+                    investigation_time=self.hc.investigation_time)
 
         for imt, imls in self.hc.intensity_measure_types_and_levels.items():
             im_type, sa_period, sa_damping = models.parse_imt(imt)

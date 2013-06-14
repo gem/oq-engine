@@ -18,6 +18,7 @@ This module contains functions and Django model forms for carrying out job
 profile validation.
 """
 import re
+import warnings
 
 from django.forms import ModelForm
 
@@ -30,16 +31,23 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims().keys()
 
 
 # used in bin/openquake
-def validate(job, job_type, files, exports):
+def validate(job, job_type, params, files, exports):
     """
     Validate a job of type 'hazard' or 'risk' by instantiating its
     form class with the given files and exports.
 
-    :param job: an instance of :class:`openquake.engine.db.models.OqJob`
-    :param str job_type: "hazard" or "risk"
-    :param dict files: {fname: :class:`openquake.engine.db.models.Input` obj}
-    :param exports: a list of export types
-    :returns: an error message if the form is invalid, None otherwise.
+    :param job:
+        an instance of :class:`openquake.engine.db.models.OqJob`
+    :param str job_type:
+        "hazard" or "risk"
+    :param dict params:
+        The raw dictionary of parameters parsed from the config file.
+    :param dict files:
+        {fname: :class:`openquake.engine.db.models.Input` obj}
+    :param exports:
+        a list of export types
+    :returns:
+        an error message if the form is invalid, None otherwise.
     """
     calculation = getattr(job, '%s_calculation' % job_type)
     calc_mode = calculation.calculation_mode
@@ -50,6 +58,26 @@ def validate(job, job_type, files, exports):
     except KeyError:
         return 'Could not find form class for "%s"' % calc_mode
     form = form_class(instance=calculation, files=files, exports=exports)
+
+    # Check for superfluous params and raise warnings:
+    params_copy = params.copy()
+    # There are a couple of parameters we can ignore.
+    # `calculation_mode` is supplied in every config file, but is validated in
+    # a special way; therefore, we don't declare it on the forms.
+    # The `base_path` is extracted from the directory containing the config
+    # file; it's not a real param.
+    # `hazard_output_id` and `hazard_calculation_id` are supplied via command
+    # line args.
+    for p in ('calculation_mode', 'base_path', 'hazard_output_id',
+              'hazard_calculation_id'):
+        if p in params_copy:
+            params_copy.pop(p)
+
+    for param in set(params_copy.keys()).difference(set(form._meta.fields)):
+        msg = "Unknown parameter '%s' for calculation mode '%s'. Ignoring."
+        msg %= (param, calc_mode)
+        warnings.warn(msg, RuntimeWarning)
+
     if not form.is_valid():
         return 'Job configuration is not valid. Errors: %s' % dict(form.errors)
 
@@ -108,6 +136,15 @@ class BaseOQModelForm(ModelForm):
         if "exports" in kwargs:
             del kwargs['exports']
         super(BaseOQModelForm, self).__init__(*args, **kwargs)
+
+    def has_vulnerability(self):
+        """
+        :returns: True if a vulnerability file has been given
+        """
+        return [itype
+                for itype, _desc in models.Input.INPUT_TYPE_CHOICES
+                if (itype.endswith('vulnerability') and
+                    "%s_file" % itype in self.files)]
 
     def _add_error(self, field_name, error_msg):
         """
@@ -191,7 +228,6 @@ class BaseHazardModelForm(BaseOQModelForm):
         'reference_vs30_type',
         'reference_depth_to_2pt5km_per_sec',
         'reference_depth_to_1pt0km_per_sec',
-        'intensity_measure_types',
         'export_dir',
     )
 
@@ -267,7 +303,7 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'region_grid_spacing',
             'sites',
             'random_seed',
-            'intensity_measure_types',
+            'intensity_measure_types_and_levels',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
             'width_of_mfd_bin',
@@ -285,17 +321,20 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'export_dir',
             'hazard_maps',
             'uniform_hazard_spectra',
+            'export_multi_curves',
         )
 
     def is_valid(self):
         super_valid = super(ClassicalHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' not in self.files:
-            valid, errs = intensity_measure_types_and_levels_is_valid(
-                self.instance)
-            all_valid &= valid
-            self._add_error('intensity_measure_types_and_levels', errs)
+        if self.has_vulnerability():
+            if self.instance.intensity_measure_types_and_levels is not None:
+                msg = (
+                    '`intensity_measure_types_and_levels` is ignored when a '
+                    '`vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
 
         return all_valid
 
@@ -312,10 +351,11 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'region',
             'region_grid_spacing',
             'sites',
-            'intensity_measure_types',
             'random_seed',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
+            'intensity_measure_types',
+            'intensity_measure_types_and_levels',
             'width_of_mfd_bin',
             'area_source_discretization',
             'reference_vs30_value',
@@ -337,6 +377,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'poes',
             'export_dir',
             'hazard_maps',
+            'export_multi_curves',
         )
 
     def is_valid(self):
@@ -356,43 +397,59 @@ class EventBasedHazardForm(BaseHazardModelForm):
             self._add_error('complete_logic_tree_gmf', msg)
             all_valid = False
 
-        # For the case where the user has requested to post-process GMFs into
-        # hazard curves:
-        if hc.hazard_curves_from_gmfs:
-            # 1) We need to make sure `intensity_measure_types_and_levels` is
-            #    defined (and valid)
-            if hc.intensity_measure_types_and_levels is None:
-                # Not defined
-                msg = '`%s` requires `%s`'
-                msg %= ('hazard_curve_from_gmfs',
-                        'intensity_measure_types_and_levels')
-
-                self._add_error('intensity_measure_types_and_levels', msg)
-                all_valid = False
-            elif 'vulnerability_file' not in self.files:
-                # Defined, but is it valid?
-                valid, errs = intensity_measure_types_and_levels_is_valid(hc)
-                all_valid &= valid
-                self._add_error('hazard_curves_from_gmfs', errs)
-
-                # 2) The IMT keys in `intensity_measure_types_and_levels` need
-                #    to be a subset of `intensity_measure_types`.
-                imts = set(hc.intensity_measure_types_and_levels.keys())
-
-                all_imts = set(hc.intensity_measure_types)
-
-                if not imts.issubset(all_imts):
-                    msg = 'Unknown IMT(s) [%s] in `%s`'
-                    msg %= (', '.join(sorted(imts - all_imts)),
-                            'intensity_measure_types')
+        # If a vulnerability model is defined, show warnings if the user also
+        # specified `intensity_measure_types_and_levels` or
+        # `intensity_measure_types`:
+        if self.has_vulnerability():
+            if (self.instance.intensity_measure_types_and_levels
+                    is not None):
+                msg = (
+                    '`intensity_measure_types_and_levels` is ignored when '
+                    'a `vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
+            if (self.instance.intensity_measure_types is not None):
+                msg = (
+                    '`intensity_measure_types` is ignored when '
+                    'a `vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
+        else:
+            if hc.hazard_curves_from_gmfs:
+                # The vulnerability model can define the IMTs/IMLs;
+                # if there isn't one, we need to check that
+                # `intensity_measure_types_and_levels` and
+                # `intensity_measure_types` are both defined and valid.
+                if hc.intensity_measure_types_and_levels is None:
+                    # Not defined
+                    msg = '`%s` requires `%s`'
+                    msg %= ('hazard_curves_from_gmfs',
+                            'intensity_measure_types_and_levels')
 
                     self._add_error('intensity_measure_types_and_levels', msg)
                     all_valid = False
-        elif 'vulnerability_file' not in self.files:
-            valid, errs = intensity_measure_types_is_valid(
-                self.instance)
-            all_valid &= valid
-            self._add_error('intensity_measure_types', errs)
+                else:
+                    # IMTs/IMLs is defined
+                    # The IMT keys in `intensity_measure_types_and_levels` need
+                    # to be a subset of `intensity_measure_types`.
+                    imts = set(hc.intensity_measure_types_and_levels.keys())
+
+                    all_imts = set(hc.intensity_measure_types)
+
+                    if not imts.issubset(all_imts):
+                        msg = 'Unknown IMT(s) [%s] in `%s`'
+                        msg %= (', '.join(sorted(imts - all_imts)),
+                                'intensity_measure_types')
+
+                        self._add_error('intensity_measure_types_and_levels',
+                                        msg)
+                        all_valid = False
+
+                if not hc.ground_motion_fields:
+                    msg = ('`hazard_curves_from_gmfs` requires '
+                           '`ground_motion_fields` to be `true`')
+                    self._add_error('hazard_curves_from_gmfs', msg)
+                    all_valid = False
 
         return all_valid
 
@@ -410,7 +467,7 @@ class DisaggHazardForm(BaseHazardModelForm):
             'region_grid_spacing',
             'sites',
             'random_seed',
-            'intensity_measure_types',
+            'intensity_measure_types_and_levels',
             'number_of_logic_tree_samples',
             'rupture_mesh_spacing',
             'width_of_mfd_bin',
@@ -434,11 +491,13 @@ class DisaggHazardForm(BaseHazardModelForm):
         super_valid = super(DisaggHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' not in self.files:
-            valid, errs = intensity_measure_types_and_levels_is_valid(
-                self.instance)
-            all_valid &= valid
-            self._add_error('intensity_measure_types_and_levels', errs)
+        if self.has_vulnerability():
+            if self.instance.intensity_measure_types_and_levels is not None:
+                msg = (
+                    '`intensity_measure_types_and_levels` is ignored when a '
+                    '`vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
 
         return all_valid
 
@@ -474,11 +533,13 @@ class ScenarioHazardForm(BaseHazardModelForm):
         super_valid = super(ScenarioHazardForm, self).is_valid()
         all_valid = super_valid
 
-        if 'vulnerability_file' not in self.files:
-            valid, errs = intensity_measure_types_is_valid(
-                self.instance)
-            all_valid &= valid
-            self._add_error('intensity_measure_types', errs)
+        if self.has_vulnerability():
+            if self.instance.intensity_measure_types is not None:
+                msg = (
+                    '`intensity_measure_types` is ignored when a '
+                    '`vulnerability_file` is specified'
+                )
+                warnings.warn(msg)
 
         return all_valid
 
@@ -497,7 +558,8 @@ class ClassicalRiskForm(BaseOQModelForm):
             'conditional_loss_poes',
             'mean_loss_curves',
             'quantile_loss_curves',
-            'poes_disagg'
+            'poes_disagg',
+            'export_dir',
         )
 
 
@@ -505,6 +567,7 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
     calc_mode = 'classical_bcr'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'no_progress_timeout',
@@ -513,6 +576,7 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
             'lrem_steps_per_interval',
             'interest_rate',
             'asset_life_expectancy',
+            'export_dir',
         )
 
 
@@ -520,6 +584,7 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
     calc_mode = 'event_based_bcr'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'no_progress_timeout',
@@ -530,6 +595,7 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
             'asset_correlation',
             'interest_rate',
             'asset_life_expectancy',
+            'export_dir',
         )
 
 
@@ -537,12 +603,14 @@ class EventBasedRiskForm(BaseOQModelForm):
     calc_mode = 'event_based'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
             'loss_curve_resolution',
+            'conditional_loss_poes',
             'insured_losses',
             'master_seed',
             'asset_correlation',
@@ -552,15 +620,16 @@ class EventBasedRiskForm(BaseOQModelForm):
             'mag_bin_width',
             'distance_bin_width',
             'coordinate_bin_width',
+            'export_dir',
         )
 
     def is_valid(self):
         super_valid = super(EventBasedRiskForm, self).is_valid()
         rc = self.instance          # RiskCalculation instance
 
-        if rc.sites_disagg and not [rc.mag_bin_width and
-                                    rc.coordinate_bin_width and
-                                    rc.distance_bin_width]:
+        if rc.sites_disagg and not (rc.mag_bin_width
+                                    and rc.coordinate_bin_width
+                                    and rc.distance_bin_width):
             self._add_error('sites_disagg', "disaggregation requires "
                             "mag_bin_width, coordinate_bin_width, "
                             "distance_bin_width")
@@ -573,10 +642,12 @@ class ScenarioDamageRiskForm(BaseOQModelForm):
     calc_mode = 'scenario_damage'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'region_constraint',
             'maximum_distance',
+            'export_dir',
         )
 
 
@@ -584,6 +655,7 @@ class ScenarioRiskForm(BaseOQModelForm):
     calc_mode = 'scenario'
 
     class Meta:
+        model = models.RiskCalculation
         fields = (
             'description',
             'no_progress_timeout',
@@ -591,9 +663,23 @@ class ScenarioRiskForm(BaseOQModelForm):
             'maximum_distance',
             'master_seed',
             'asset_correlation',
-            'insured_losses'
+            'insured_losses',
+            'time_event',
+            'export_dir',
         )
 
+    def is_valid(self):
+        super_valid = super(ScenarioRiskForm, self).is_valid()
+        rc = self.instance          # RiskCalculation instance
+
+        if 'occupancy_vulnerability_file' in self.files:
+            if not rc.time_event:
+                self._add_error('time_event', "Scenario Risk requires "
+                                "time_event when an occupancy vulnerability "
+                                "model is given")
+
+                return False
+        return super_valid
 
 # Silencing 'Missing docstring' and 'Invalid name' for all of the validation
 # functions (the latter because some of the function names are very long).
@@ -627,12 +713,12 @@ def region_is_valid(mdl):
     for ring in mdl.region.coords:
         lons = [lon for lon, _ in ring]
         lats = [lat for _, lat in ring]
-        if not all([-180 <= x <= 180 for x in lons]):
-            valid = False
-            errors.append('Longitude values must in the range [-180, 180]')
-        if not all([-90 <= x <= 90 for x in lats]):
-            valid = False
-            errors.append('Latitude values must be in the range [-90, 90]')
+
+        errors.extend(_lons_lats_are_valid(lons, lats))
+
+    if errors:
+        valid = False
+
     return valid, errors
 
 
@@ -654,12 +740,10 @@ def sites_is_valid(mdl):
 
     lons = [pt.x for pt in mdl.sites]
     lats = [pt.y for pt in mdl.sites]
-    if not all([-180 <= x <= 180 for x in lons]):
+
+    errors.extend(_lons_lats_are_valid(lons, lats))
+    if errors:
         valid = False
-        errors.append('Longitude values must in the range [-180, 180]')
-    if not all([-90 <= x <= 90 for x in lats]):
-        valid = False
-        errors.append('Latitude values must be in the range [-90, 90]')
 
     return valid, errors
 
@@ -673,14 +757,29 @@ def sites_disagg_is_valid(mdl):
 
     lons = [pt.x for pt in mdl.sites_disagg]
     lats = [pt.y for pt in mdl.sites_disagg]
-    if not all([-180 <= x <= 180 for x in lons]):
+
+    errors.extend(_lons_lats_are_valid(lons, lats))
+    if errors:
         valid = False
-        errors.append('Longitude values must in the range [-180, 180]')
-    if not all([-90 <= x <= 90 for x in lats]):
-        valid = False
-        errors.append('Latitude values must be in the range [-90, 90]')
 
     return valid, errors
+
+
+def _lons_lats_are_valid(lons, lats):
+    """
+    Helper function for validating lons/lats.
+
+    :returns:
+        A list of error messages, or an empty list.
+    """
+    errors = []
+
+    if not all([-180 <= x <= 180 for x in lons]):
+        errors.append('Longitude values must in the range [-180, 180]')
+    if not all([-90 <= x <= 90 for x in lats]):
+        errors.append('Latitude values must be in the range [-90, 90]')
+
+    return errors
 
 
 def random_seed_is_valid(mdl):
@@ -796,6 +895,9 @@ def intensity_measure_types_and_levels_is_valid(mdl):
     valid = True
     errors = []
 
+    if im is None:
+        return valid, errors
+
     for im_type, imls in im.iteritems():
         # validate IMT:
         valid_imt, imt_errors = _validate_imt(im_type)
@@ -823,6 +925,9 @@ def intensity_measure_types_and_levels_is_valid(mdl):
 
 def intensity_measure_types_is_valid(mdl):
     imts = mdl.intensity_measure_types
+
+    if imts is None:
+        return True, []
 
     if isinstance(imts, str):
         imts = [imts]
@@ -890,10 +995,10 @@ def mean_loss_curves_is_valid(_mdl):
 
 
 def quantile_loss_curves_is_valid(mdl):
-    qhc = mdl.quantile_loss_curves
+    qlc = mdl.quantile_loss_curves
 
-    if qhc is not None:
-        if not all([0.0 <= x <= 1.0 for x in qhc]):
+    if qlc is not None:
+        if not all([0.0 <= x <= 1.0 for x in qlc]):
             return False, ['Quantile loss curve values must in the range '
                            '[0, 1]']
     return True, []
@@ -1038,8 +1143,8 @@ def taxonomies_from_model_is_valid(_mdl):
 
 def interest_rate_is_valid(mdl):
     if mdl.is_bcr:
-        if mdl.interest_rate is None or mdl.interest_rate <= 0:
-            return False, ['Interest Rate must be > 0']
+        if mdl.interest_rate is None:
+            return False, "Interest Rate is mandatory for BCR analysis"
     return True, []
 
 
@@ -1053,7 +1158,7 @@ def loss_curve_resolution_is_valid(mdl):
     if mdl.calculation_mode == 'event_based':
         if (mdl.loss_curve_resolution is not None and
                 mdl.loss_curve_resolution < 1):
-            return False, ['Loss Curve Resolution must be > 1.']
+            return False, ['Loss Curve Resolution must be >= 1']
     return True, []
 
 
@@ -1067,6 +1172,10 @@ def asset_correlation_is_valid(_mdl):
 
 
 def master_seed_is_valid(_mdl):
+    return True, []
+
+
+def export_multi_curves_is_valid(_mdl):
     return True, []
 
 
@@ -1105,4 +1214,9 @@ def hazard_maps_is_valid(mdl):
 def uniform_hazard_spectra_is_valid(mdl):
     if mdl.uniform_hazard_spectra and mdl.poes is None:
         return False, ['`poes` are required to compute UHS']
+    return True, []
+
+
+def time_event_is_valid(_mdl):
+    # Any string is allowed, or `None`.
     return True, []

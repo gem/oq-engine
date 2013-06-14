@@ -1,14 +1,20 @@
 /*
-  Indexes for the OpenQuake database.
+  Copyright (c) 2010-2013, GEM Foundation.
 
-    Copyright (c) 2010-2012, GEM Foundation.
+  OpenQuake is free software: you can redistribute it and/or modify it
+  under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
-    OpenQuake database is made available under the Open Database License:
-    http://opendatacommons.org/licenses/odbl/1.0/. Any rights in individual
-    contents of the database are licensed under the Database Contents License:
-    http://opendatacommons.org/licenses/dbcl/1.0/
+  OpenQuake is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
+  You should have received a copy of the GNU Affero General Public License
+  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 */
+
 
 -- admin.oq_user
 CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name);
@@ -16,21 +22,23 @@ CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name)
 -- admin.revision_info
 CREATE UNIQUE INDEX admin_revision_info_artefact_uniq_idx ON admin.revision_info(artefact);
 
--- eqcat.catalog
-CREATE INDEX eqcat_catalog_agency_idx on eqcat.catalog(agency);
-CREATE INDEX eqcat_catalog_time_idx on eqcat.catalog(time);
-CREATE INDEX eqcat_catalog_depth_idx on eqcat.catalog(depth);
-CREATE INDEX eqcat_catalog_point_idx ON eqcat.catalog USING gist(point);
+-- hzrdi.hazard_site
+CREATE INDEX hzrdi_hazard_site_id_hazard_calculation_idx
+ON hzrdi.hazard_site(id, hazard_calculation_id);
+CREATE UNIQUE INDEX hzrdi_hazard_site_location_hazard_calculation_uniq_idx
+ON hzrdi.hazard_site(location, hazard_calculation_id);
 
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);
 
+-- indexes for the uiapi.performance table
+CREATE INDEX uiapi_performance_oq_job_id_idx ON uiapi.performance(oq_job_id);
+CREATE INDEX uiapi_performance_operation_idx ON uiapi.performance(operation);
+
 -- index for the 'owner_id' foreign key
-CREATE INDEX eqcat_catalog_owner_id_idx on eqcat.catalog(owner_id);
 CREATE INDEX uiapi_input_owner_id_idx on uiapi.input(owner_id);
 
 CREATE INDEX uiapi_oq_job_owner_id_idx on uiapi.oq_job(owner_id);
-CREATE INDEX uiapi_oq_job_profile_owner_id_idx on uiapi.oq_job_profile(owner_id);
 CREATE INDEX uiapi_oq_job_status_running on uiapi.oq_job(status) WHERE status = 'running';
 CREATE INDEX uiapi_output_owner_id_idx on uiapi.output(owner_id);
 
@@ -64,9 +72,8 @@ CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(
 -- lt_realization
 CREATE INDEX hzrdr_lt_realization_hazard_calculation_id_idx on hzrdr.lt_realization(hazard_calculation_id);
 
--- gmf_scenario
-CREATE INDEX hzrdr_gmf_scenario_output_id_idx on hzrdr.gmf_scenario(output_id);
-CREATE INDEX hzrdr_gmf_scenario_imt_idx on hzrdr.gmf_scenario(imt);
+-- gmf_agg
+CREATE INDEX hzrdr_gmf_agg_idx on hzrdr.gmf_agg(site_id);
 
 -- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
@@ -83,17 +90,15 @@ CREATE INDEX riskr_bcr_distribution_data_bcr_distribution_id_idx on riskr.bcr_di
 CREATE INDEX riskr_dmg_state_rc_id_idx on riskr.dmg_state(risk_calculation_id);
 CREATE INDEX riskr_dmg_state_lsi_idx on riskr.dmg_state(lsi);
 
--- oqmif indexes
-CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site);
-CREATE INDEX oqmif_exposure_data_taxonomy_idx ON oqmif.exposure_data(taxonomy);
-CREATE INDEX oqmif_exposure_data_exposure_model_id_idx on oqmif.exposure_data(exposure_model_id);
-CREATE INDEX oqmif_exposure_data_site_stx_idx ON oqmif.exposure_data(ST_X(geometry(site)));
-CREATE INDEX oqmif_exposure_data_site_sty_idx ON oqmif.exposure_data(ST_Y(geometry(site)));
-
+-- riski indexes
+CREATE INDEX riski_exposure_data_site_idx ON riski.exposure_data USING gist(site);
+CREATE INDEX riski_exposure_data_taxonomy_idx ON riski.exposure_data(taxonomy);
+CREATE INDEX riski_exposure_data_exposure_model_id_idx on riski.exposure_data(exposure_model_id);
+CREATE INDEX riski_exposure_data_site_stx_idx ON riski.exposure_data(ST_X(geometry(site)));
+CREATE INDEX riski_exposure_data_site_sty_idx ON riski.exposure_data(ST_Y(geometry(site)));
+CREATE INDEX riski_cost_type_name_idx ON riski.cost_type(name);
 
 -- uiapi indexes
-CREATE INDEX uiapi_job2profile_oq_job_profile_id_idx on uiapi.job2profile(oq_job_profile_id);
-CREATE INDEX uiapi_job2profile_job_id_idx on uiapi.job2profile(oq_job_id);
 CREATE INDEX uiapi_input_model_content_id_idx on uiapi.input(model_content_id);
 
 -- htemp indexes

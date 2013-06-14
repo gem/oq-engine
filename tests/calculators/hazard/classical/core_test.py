@@ -39,7 +39,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         models.JobStats.objects.create(oq_job=self.job)
 
     def _setup_a_new_calculator(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         calc = core.ClassicalHazardCalculator(job)
         return job, calc
@@ -51,26 +51,23 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
                      '.ClassicalHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))
-        init_sm_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_site_model'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
         record_stats_patch = helpers.patch(
             '%s.%s' % (base_path, 'record_init_stats'))
         init_pr_data_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_pr_data'))
-        patches = (init_src_patch, init_sm_patch, init_rlz_patch,
+        patches = (init_src_patch, init_rlz_patch,
                    record_stats_patch, init_pr_data_patch)
 
         mocks = [p.start() for p in patches]
 
-        # we don't expect the site collection to be loaded yet:
-        self.assertIsNone(self.calc.hc._site_collection)
+        self.assertIsNone(self.calc.hc.site_collection)
 
         self.calc.pre_execute()
 
         # make sure the site_collection is loaded:
-        self.assertIsNotNone(self.calc.hc._site_collection)
+        self.assertIsNotNone(self.calc.hc.site_collection)
 
         for i, m in enumerate(mocks):
             self.assertEqual(1, m.call_count)
@@ -102,7 +99,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     @attr('slow')
     def test_initialize_site_model(self):
         # we need a slightly different config file for this test
-        cfg = helpers.demo_file(
+        cfg = helpers.get_data_path(
             'simple_fault_demo_hazard/job_with_site_model.ini')
         self.job = helpers.get_hazard_job(cfg)
         self.calc = core.ClassicalHazardCalculator(self.job)
@@ -121,17 +118,12 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         num_pts_to_compute = len(
             self.job.hazard_calculation.points_to_compute())
 
-        [site_data] = models.SiteData.objects.filter(
-            hazard_calculation=self.job.hazard_calculation.id)
+        hazard_site = models.HazardSite.objects.filter(
+            hazard_calculation=self.job.hazard_calculation)
 
-        # The site model is good. Now test that `site_data` was computed.
-        # For now, just test the lengths of the site data collections:
-        self.assertEqual(num_pts_to_compute, len(site_data.lons))
-        self.assertEqual(num_pts_to_compute, len(site_data.lats))
-        self.assertEqual(num_pts_to_compute, len(site_data.vs30s))
-        self.assertEqual(num_pts_to_compute, len(site_data.vs30_measured))
-        self.assertEqual(num_pts_to_compute, len(site_data.z1pt0s))
-        self.assertEqual(num_pts_to_compute, len(site_data.z2pt5s))
+        # The site model is good. Now test that `hazard_site` was computed.
+        # For now, just test the length.
+        self.assertEqual(num_pts_to_compute, len(hazard_site))
 
     def test_initialize_site_model_no_site_model(self):
         patch_path = 'openquake.engine.calculators.hazard.general.\
@@ -286,6 +278,14 @@ store_site_model'
             [sa_curves] = models.HazardCurve.objects.filter(
                 lt_realization=rlz.id, imt='SA', sa_period=0.025)
 
+            # check that the multi-hazard-curve outputs have been
+            # created for this realization
+
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization=rlz.id, imt=None, statistics=None).count())
+
             # In this calculation, we have 120 sites of interest.
             # We should have exactly that many curves per realization
             # per IMT.
@@ -300,6 +300,49 @@ store_site_model'
         self.job.status = 'post_processing'
         self.job.save()
         self.calc.post_process()
+
+        # Test for the correct number of mean/quantile curves
+        self.assertEqual(
+            1,
+            models.HazardCurve.objects.filter(
+                output__oq_job=self.job,
+                lt_realization__isnull=True, statistics="mean",
+                imt="PGA").count())
+        self.assertEqual(
+            1,
+            models.HazardCurve.objects.filter(
+                output__oq_job=self.job,
+                lt_realization__isnull=True, statistics="mean",
+                imt="SA", sa_period=0.025).count())
+        self.assertEqual(
+            1,
+            models.HazardCurve.objects.filter(
+                output__oq_job=self.job,
+                lt_realization__isnull=True, statistics="mean",
+                imt=None).count())
+
+        for quantile in hc.quantile_hazard_curves:
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization__isnull=True, statistics="quantile",
+                    output__oq_job=self.job,
+                    quantile=quantile,
+                    imt="PGA").count())
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization__isnull=True, statistics="quantile",
+                    output__oq_job=self.job,
+                    quantile=quantile,
+                    imt="SA", sa_period=0.025).count())
+            self.assertEqual(
+                1,
+                models.HazardCurve.objects.filter(
+                    lt_realization__isnull=True, statistics="quantile",
+                    output__oq_job=self.job,
+                    quantile=quantile,
+                    imt=None).count())
 
         # Test for the correct number of maps.
         # The expected count is:
@@ -334,9 +377,6 @@ store_site_model'
         sp = models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=hc.id)
         self.assertEqual(0, len(sp))
-
-        sd = models.SiteData.objects.filter(hazard_calculation=hc.id)
-        self.assertEqual(0, len(sd))
 
     def test_hazard_curves_task(self):
         # Test the `hazard_curves` task, but execute it as a normal function
