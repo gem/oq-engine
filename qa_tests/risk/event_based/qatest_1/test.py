@@ -24,13 +24,11 @@ from qa_tests import risk
 from openquake.engine.db import models
 
 
-class EventBaseQATestCase1(risk.CompleteTestCase,
-                           risk.LogicTreeBasedTestCase,
-                           risk.FixtureBasedQATestCase):
+class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
 
-    hazard_calculation_fixture_id = 11
+    hazard_calculation_fixture = "PEB QA test with 500 ses"
 
     @noseattr('qa', 'risk', 'event_based', 'e2e')
     def test(self):
