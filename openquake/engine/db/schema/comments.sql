@@ -1,24 +1,25 @@
 /*
-  Documentation for the OpenQuake database schema.
-  Please keep these alphabetical by table.
+  Copyright (c) 2010-2013, GEM Foundation.
 
-    Copyright (c) 2010-2012, GEM Foundation.
+  OpenQuake is free software: you can redistribute it and/or modify it
+  under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
 
-    OpenQuake database is made available under the Open Database License:
-    http://opendatacommons.org/licenses/odbl/1.0/. Any rights in individual
-    contents of the database are licensed under the Database Contents License:
-    http://opendatacommons.org/licenses/dbcl/1.0/
+  OpenQuake is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
+  You should have received a copy of the GNU Affero General Public License
+  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 */
-
 
 
 -- schemas ------------------------------------------------------
 COMMENT ON SCHEMA admin IS 'Administrative data';
-COMMENT ON SCHEMA eqcat IS 'Earthquake catalog';
 COMMENT ON SCHEMA hzrdi IS 'Hazard input model';
 COMMENT ON SCHEMA hzrdr IS 'Hazard result data';
-COMMENT ON SCHEMA oqmif IS 'OpenQuake tables for interfacing with external parties';
 COMMENT ON SCHEMA riski IS 'Risk input model';
 COMMENT ON SCHEMA riskr IS 'Risk result data';
 COMMENT ON SCHEMA uiapi IS 'Data required by the API presented to the various OpenQuake UIs';
@@ -38,27 +39,6 @@ COMMENT ON COLUMN admin.revision_info.artefact IS 'The name of the database arte
 COMMENT ON COLUMN admin.revision_info.revision IS 'The revision information for the associated database artefact.';
 COMMENT ON COLUMN admin.revision_info.step IS 'A simple counter that will be used to facilitate schema upgrades and/or data migration.';
 COMMENT ON COLUMN admin.revision_info.last_update IS 'The date/time when the revision information was last updated. Please note: this time stamp is not refreshed automatically. It is expected that schema/data migration scripts will modify this as appropriate.';
-
-
-
--- eqcat schema tables ------------------------------------------
-COMMENT ON TABLE eqcat.catalog IS 'Table with earthquake catalog data, the magnitude(s) and the event surface is kept in separate tables.';
-COMMENT ON COLUMN eqcat.catalog.depth IS 'Earthquake depth (in km)';
-COMMENT ON COLUMN eqcat.catalog.event_class IS 'Either unknown (NULL) or one of: ''aftershock'', ''foreshock''.';
-COMMENT ON COLUMN eqcat.catalog.magnitude_id IS 'Foreign key to the row with the magnitude data.';
-COMMENT ON COLUMN eqcat.catalog.surface_id IS 'Foreign key to the row with the earthquake surface data.';
-COMMENT ON COLUMN eqcat.catalog.time IS 'Earthquake date and time';
-
-
-COMMENT ON TABLE eqcat.magnitude IS 'Table with earthquake magnitudes in different units of measurement. At least one magnitude value must be set.';
-
-
-COMMENT ON TABLE eqcat.surface IS 'Table with earthquake surface data, basically an ellipse and a strike angle.';
-COMMENT ON COLUMN eqcat.surface.semi_minor IS 'Semi-minor axis: The shortest radius of an ellipse.';
-COMMENT ON COLUMN eqcat.surface.semi_major IS 'Semi-major axis: The longest radius of an ellipse.';
-
-COMMENT ON VIEW eqcat.catalog_allfields IS 'A global catalog view, needed for geonode integration';
-
 
 
 -- hzrdi schema tables ------------------------------------------
@@ -96,11 +76,6 @@ COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.'
 
 COMMENT ON COLUMN hzrdr.gmf.rupture_ids IS 'a vector of ids to the hzrdr.ses_rupture table. for each id you can find the corresponding ground motion value in gmvs at the same index';
 
-COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';
-COMMENT ON COLUMN hzrdr.gmf_data.ground_motion IS 'Ground motion for a specific site';
-COMMENT ON COLUMN hzrdr.gmf_data.location IS 'Site coordinates';
-
-
 COMMENT ON TABLE hzrdr.hazard_map IS 'A complete hazard map, for a given IMT and PoE';
 COMMENT ON COLUMN hzrdr.hazard_map.poe IS 'Probability of exceedence';
 COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
@@ -109,43 +84,31 @@ COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
 COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile level for quantile statistical data.';
 
 
--- oqmif schema tables ------------------------------------------
-COMMENT ON TABLE oqmif.exposure_data IS 'Per-asset risk exposure data';
-COMMENT ON COLUMN oqmif.exposure_data.area IS 'asset area';
-COMMENT ON COLUMN oqmif.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
-COMMENT ON COLUMN oqmif.exposure_data.deductible IS 'insurance deductible';
-COMMENT ON COLUMN oqmif.exposure_data.coco IS 'contents cost';
-COMMENT ON COLUMN oqmif.exposure_data.ins_limit IS 'insurance coverage limit';
-COMMENT ON COLUMN oqmif.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
-COMMENT ON COLUMN oqmif.exposure_data.last_update IS 'Date/time of the last change of the exposure data for the asset at hand';
-COMMENT ON COLUMN oqmif.exposure_data.number_of_units IS 'number of assets, people etc.';
-COMMENT ON COLUMN oqmif.exposure_data.reco IS 'retrofitting cost';
-COMMENT ON COLUMN oqmif.exposure_data.stco IS 'structural cost';
-COMMENT ON COLUMN oqmif.exposure_data.taxonomy IS 'A reference to the taxonomy that should be used for the asset at hand';
+-- riski schema tables ------------------------------------------
+COMMENT ON TABLE riski.exposure_data IS 'Per-asset risk exposure data';
+COMMENT ON COLUMN riski.exposure_data.area IS 'asset area';
+COMMENT ON COLUMN riski.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
+COMMENT ON COLUMN riski.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
+COMMENT ON COLUMN riski.exposure_data.number_of_units IS 'number of assets, people etc.';
+COMMENT ON COLUMN riski.exposure_data.taxonomy IS 'A reference to the taxonomy that should be used for the asset at hand';
 
 
-COMMENT ON TABLE oqmif.exposure_model IS 'A risk exposure model';
-COMMENT ON COLUMN oqmif.exposure_model.area_type IS 'area type. one of: aggregated or per_asset';
-COMMENT ON COLUMN oqmif.exposure_model.area_unit IS 'area unit of measure e.g. sqm';
-COMMENT ON COLUMN oqmif.exposure_model.category IS 'The risk category modelled';
-COMMENT ON COLUMN oqmif.exposure_model.coco_type IS 'contents cost type, one of: aggregated, per_area or per_asset';
-COMMENT ON COLUMN oqmif.exposure_model.coco_unit IS 'unit of measure for the contents type';
-COMMENT ON COLUMN oqmif.exposure_model.description IS 'An optional description of the risk exposure model at hand';
-COMMENT ON COLUMN oqmif.exposure_model.input_id IS 'The foreign key to the associated input model file';
-COMMENT ON COLUMN oqmif.exposure_model.last_update IS 'Date/time of the last change of the model at hand';
-COMMENT ON COLUMN oqmif.exposure_model.name IS 'The exposure model name';
-COMMENT ON COLUMN oqmif.exposure_model.owner_id IS 'The foreign key to the user who owns the exposure model in question';
-COMMENT ON COLUMN oqmif.exposure_model.reco_type IS 'retrofitting cost type, one of: aggregated, per_area or per_asset';
-COMMENT ON COLUMN oqmif.exposure_model.reco_unit IS 'unit of measure for the retrofitting type';
-COMMENT ON COLUMN oqmif.exposure_model.stco_type IS 'structural cost type, one of: aggregated, per_area or per_asset';
-COMMENT ON COLUMN oqmif.exposure_model.stco_unit IS 'unit of measure for the structural type';
-COMMENT ON COLUMN oqmif.exposure_model.taxonomy_source IS 'the taxonomy system used to classify the assets';
+COMMENT ON TABLE riski.exposure_model IS 'A risk exposure model';
+COMMENT ON COLUMN riski.exposure_model.area_type IS 'area type. one of: aggregated or per_asset';
+COMMENT ON COLUMN riski.exposure_model.area_unit IS 'area unit of measure e.g. sqm';
+COMMENT ON COLUMN riski.exposure_model.category IS 'The risk category modelled';
+COMMENT ON COLUMN riski.exposure_model.description IS 'An optional description of the risk exposure model at hand';
+COMMENT ON COLUMN riski.exposure_model.input_id IS 'The foreign key to the associated input model file';
+
+COMMENT ON COLUMN riski.exposure_model.name IS 'The exposure model name';
+
+COMMENT ON COLUMN riski.exposure_model.taxonomy_source IS 'the taxonomy system used to classify the assets';
 
 
-COMMENT ON TABLE oqmif.occupancy IS 'Occupancy for a given exposure data set';
-COMMENT ON COLUMN oqmif.occupancy.exposure_data_id IS 'Foreign key to the exposure data set to which the occupancy data applies.';
-COMMENT ON COLUMN oqmif.occupancy.description IS 'describes the occupancy data e.g. day, night etc.';
-COMMENT ON COLUMN oqmif.occupancy.occupants IS 'number of occupants';
+COMMENT ON TABLE riski.occupancy IS 'Occupancy for a given exposure data set';
+COMMENT ON COLUMN riski.occupancy.exposure_data_id IS 'Foreign key to the exposure data set to which the occupancy data applies.';
+COMMENT ON COLUMN riski.occupancy.period IS 'describes the occupancy data e.g. day, night etc.';
+COMMENT ON COLUMN riski.occupancy.occupants IS 'number of occupants';
 
 -- riskr schema tables ------------------------------------------
 COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
@@ -207,8 +170,6 @@ COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
 COMMENT ON TABLE uiapi.input2job IS 'Associate inputs and jobs';
 
-COMMENT ON TABLE uiapi.job2profile IS 'Associate jobs with their profiles';
-
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
 COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
@@ -224,26 +185,6 @@ COMMENT ON COLUMN uiapi.performance.pgmemory IS 'Memory occupation in Postgres (
 COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
 COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
 COMMENT ON COLUMN uiapi.job_stats.num_realizations IS 'The number of logic tree samples in the calculation';
-
-
-COMMENT ON TABLE uiapi.oq_job_profile IS 'Holds the parameters needed to invoke the OpenQuake engine.';
-COMMENT ON COLUMN uiapi.oq_job_profile.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
-COMMENT ON COLUMN uiapi.oq_job_profile.histories IS 'Number of seismicity histories';
-COMMENT ON COLUMN uiapi.oq_job_profile.imls IS 'Intensity measure levels';
-COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
-    - peak ground acceleration (pga)
-    - spectral acceleration (sa)
-    - peak ground velocity (pgv)
-    - peak ground displacement (pgd)
-    - Arias Intensity (ia)
-    - relative significant duration (rsd)
-    - Modified Mercalli Intensity';
-COMMENT ON COLUMN uiapi.oq_job_profile.job_type IS '"hazard" and/or "risk"';
-COMMENT ON COLUMN uiapi.oq_job_profile.lrem_steps_per_interval IS 'Loss Ration Exceedence Matrix steps per interval. Only used for Classical/Classical BCR Risk calculations.';
-COMMENT ON COLUMN uiapi.oq_job_profile.poes IS 'Probabilities of exceedence';
-COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the job. (Smaller grid spacing means more sites and thus more calculations.)';
-COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
-COMMENT ON COLUMN uiapi.oq_job_profile.sites IS 'Sites of interest for the calculation (MultiPoint)';
 
 
 COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';

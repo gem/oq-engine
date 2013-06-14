@@ -19,8 +19,9 @@ import unittest
 
 import openquake.hazardlib
 
+from collections import namedtuple
+
 from openquake.hazardlib import geo as hazardlib_geo
-from nose.plugins.attrib import attr
 
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
@@ -53,7 +54,7 @@ class StoreSiteModelTestCase(unittest.TestCase):
                  z1pt0=104.0, z2pt5=5.4),
         ]
 
-        ret_val = general.store_site_model(inp, site_model)
+        ids = general.store_site_model(inp, site_model)
 
         actual_site_model = models.SiteModel.objects.filter(
             input=inp.id).order_by('id')
@@ -70,9 +71,8 @@ class StoreSiteModelTestCase(unittest.TestCase):
 
         # last, check that the `store_site_model` function returns all of the
         # newly-inserted records
-        # an `equals` check just compares the ids
-        for i, val in enumerate(ret_val):
-            self.assertEqual(val, actual_site_model[i])
+        for i, id in enumerate(ids):
+            self.assertEqual(id, actual_site_model[i].id)
 
 
 class ValidateSiteModelTestCase(unittest.TestCase):
@@ -359,32 +359,6 @@ class ImtsToHazardlibTestCase(unittest.TestCase):
             self.assertEqual(exp_imls, act_imls)
 
 
-class Bug1098154TestCase(unittest.TestCase):
-    """
-    A test to directly address
-    https://bugs.launchpad.net/openquake/+bug/1098154. See the bug description
-    for more info.
-    """
-
-    @attr('slow')
-    def test(self):
-        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-
-        retcode = helpers.run_job_sp('hazard', cfg, silence=True)
-        self.assertEqual(0, retcode)
-        job = models.OqJob.objects.latest('id')
-        job_stats = models.JobStats.objects.get(oq_job=job)
-        self.assertEqual(236, job_stats.num_tasks)
-
-        # As the bug description explains, run the same job a second time and
-        # check the task count. It should not grow.
-        retcode = helpers.run_job_sp('hazard', cfg, silence=True)
-        self.assertEqual(0, retcode)
-        job = models.OqJob.objects.latest('id')
-        job_stats = models.JobStats.objects.get(oq_job=job)
-        self.assertEqual(236, job_stats.num_tasks)
-
-
 class ParseRiskModelsTestCase(unittest.TestCase):
     def test(self):
         # check that if risk models are provided, then the ``points to
@@ -437,3 +411,86 @@ class ParseRiskModelsTestCase(unittest.TestCase):
             patches[i].stop()
 
         return job
+
+
+class TaskArgGenTestCase(unittest.TestCase):
+    """
+    Tests for the default implementation of the hazard calc task arg generator.
+
+    The default implementation splits the calculation into blocks of sources.
+    """
+
+    Job = namedtuple('Job', 'id')
+    Rlz = namedtuple('Realization', 'id')
+
+    def test_task_arg_gen(self):
+        # Test the logic of `BaseHazardCalculator.task_arg_gen`.
+        job = self.Job(1776)
+
+        base_path = (
+            'openquake.engine.calculators.hazard.general.BaseHazardCalculator'
+        )
+        calc = general.BaseHazardCalculator(job)
+
+        # Set up mocks:
+        # point_source_block_size
+        pt_src_block_size_patch = helpers.patch(
+            '%s.%s' % (base_path, 'point_source_block_size')
+        )
+        pt_src_block_size_mock = pt_src_block_size_patch.start()
+        pt_src_block_size_mock.return_value = 5
+
+        # _get_realizations
+        get_rlz_patch = helpers.patch(
+            '%s.%s' % (base_path, '_get_realizations')
+        )
+        get_rlz_mock = get_rlz_patch.start()
+        get_rlz_mock.return_value = [self.Rlz(5), self.Rlz(6)]
+
+        # _get_point_source_ids
+        get_pt_patch = helpers.patch(
+            '%s.%s' % (base_path, '_get_point_source_ids')
+        )
+        get_pt_mock = get_pt_patch.start()
+        get_pt_mock.return_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+        # _get_source_ids
+        get_src_patch = helpers.patch('%s.%s' % (base_path, '_get_source_ids'))
+        get_src_mock = get_src_patch.start()
+        get_src_mock.return_value = [100, 101, 102, 103, 104]
+
+        expected = [
+            (1776, [1, 2, 3, 4, 5], 5),
+            (1776, [6, 7, 8, 9, 10], 5),
+            (1776, [11], 5),
+            (1776, [100, 101], 5),
+            (1776, [102, 103], 5),
+            (1776, [104], 5),
+            (1776, [1, 2, 3, 4, 5], 6),
+            (1776, [6, 7, 8, 9, 10], 6),
+            (1776, [11], 6),
+            (1776, [100, 101], 6),
+            (1776, [102, 103], 6),
+            (1776, [104], 6),
+        ]
+
+        try:
+            actual = list(calc.task_arg_gen(
+                          block_size=2, check_num_task=False))
+            self.assertEqual(expected, actual)
+        finally:
+            self.assertEqual(1, pt_src_block_size_mock.call_count)
+            pt_src_block_size_mock.stop()
+            pt_src_block_size_patch.stop()
+
+            self.assertEqual(1, get_rlz_mock.call_count)
+            get_rlz_mock.stop()
+            get_rlz_patch.stop()
+
+            self.assertEqual(2, get_pt_mock.call_count)
+            get_pt_mock.stop()
+            get_pt_patch.stop()
+
+            self.assertEqual(2, get_src_mock.call_count)
+            get_src_mock.stop()
+            get_src_patch.stop()
