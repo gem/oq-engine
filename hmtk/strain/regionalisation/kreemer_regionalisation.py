@@ -50,11 +50,12 @@ Modules: hmtk.strain.regionalisation.kreemer_regionalisation implements the
 class KreemerRegionalisation, which assigns a strain model to a tectonic 
 region according to the classification of Kreemer, Holt and Haines (2003)
 '''
-
+import os
 import numpy as np
 from linecache import getlines
 
-KREEMER_GLOBAL_0506 = 'kreemer_polygons_area.txt'
+KREEMER_GLOBAL_0506 = os.path.join(os.path.dirname(__file__),
+                                   'kreemer_polygons_area.txt')
 
 def _build_kreemer_cell(data, loc):
     '''
@@ -108,7 +109,7 @@ class KreemerRegionalisation(object):
         '''
         self.strain = strain_model
         self.strain.data['region'] = np.array(['IPL' for value in range(0,
-            self.strain.get_number_observations())])
+            self.strain.get_number_observations())], dtype='|S13')
         self.strain.data['area'] = np.array([np.nan for value in range(0, 
             self.strain.get_number_observations())])
 

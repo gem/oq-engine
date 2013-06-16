@@ -258,7 +258,8 @@ class TestmtkActiveFault(unittest.TestCase):
         # Should take default values
         self.assertListEqual(self.fault.shear_modulus, [(30., 1.0)])
         self.assertListEqual(self.fault.disp_length_ratio, [(1.25E-5, 1.0)])
-        self.assertListEqual(self.fault.msr, [(WC1994, 1.0)])
+        self.assertTrue(isinstance(self.fault.msr[0][0], WC1994))
+        self.assertAlmostEqual(self.fault.msr[0][1], 1.0)
 
 
     def test_get_tectonic_regionalisation_missing_case(self):
@@ -293,7 +294,7 @@ class TestmtkActiveFault(unittest.TestCase):
                        'Minimum_Magnitude': 5.0,
                        'Model_Name': 'AndersonLucoArbitrary',
                        'Model_Weight': 1.0, 
-                       'Type': 'First',
+                       'Model_Type': 'First',
                        'b_value': [0.8, 0.05]}
         self.fault.generate_config_set(good_config)
         self.assertTrue(isinstance(self.fault.config, list))
@@ -313,7 +314,7 @@ class TestmtkActiveFault(unittest.TestCase):
                        'Minimum_Magnitude': 5.0,
                         'Model_Name': 'AndersonLucoArbitrary',
                         'Model_Weight': 0.7, 
-                        'Type': 'First',
+                        'Model_Type': 'First',
                         'b_value': [0.8, 0.05]},
                        {'MFD_spacing': 0.1, 
                         'Maximum_Magnitude': None,
@@ -502,7 +503,7 @@ class TestmtkActiveFault(unittest.TestCase):
                        'Minimum_Magnitude': 5.0,
                         'Model_Name': 'AndersonLucoArbitrary',
                         'Model_Weight': 0.7, 
-                        'Type': 'First',
+                        'Model_Type': 'First',
                         'b_value': [0.8, 0.05]},
                        {'MFD_spacing': 0.1, 
                         'Maximum_Magnitude': None,
@@ -549,7 +550,7 @@ class TestmtkActiveFault(unittest.TestCase):
                        'Minimum_Magnitude': 5.0,
                         'Model_Name': 'AndersonLucoArbitrary',
                         'Model_Weight': 0.7, 
-                        'Type': 'First',
+                        'Model_Type': 'First',
                         'b_value': [0.8, 0.05]},
                        {'MFD_spacing': 0.1, 
                         'Maximum_Magnitude': None,

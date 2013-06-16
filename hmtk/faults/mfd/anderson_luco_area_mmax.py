@@ -214,7 +214,7 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
                (If not defined and the MSR has a sigma term then this will be
                taken from sigma)
         '''
-        self.mfd_type = mfd_conf['Type']
+        self.mfd_type = mfd_conf['Model_Type']
         self.mfd_model = 'Anderson & Luco (Mmax) ' + self.mfd_type
         self.mfd_weight = mfd_conf['Model_Weight']
         self.bin_width = mfd_conf['MFD_spacing']

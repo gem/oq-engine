@@ -111,13 +111,22 @@ class TestTectonicRegion(unittest.TestCase):
         '''
         Tests correct instanstiation with default values
         '''
-        expected_dict = {'id': '001',
-                         'region_name': 'Test 0',
-                         'shear_modulus': [(30., 1.0)],
-                         'disp_length_ratio': [(1.25E-5, 1.0)],
-                         'scaling_rel': [(WC1994, 1.0)]}
+#        expected_dict = {'id': '001',
+#                         'region_name': 'Test 0',
+#                         'shear_modulus': [(30., 1.0)],
+#                         'disp_length_ratio': [(1.25E-5, 1.0)],
+#                         'scaling_rel': [(WC1994, 1.0)]}
         self.tect_reg = TectonicRegion('001', 'Test 0')
-        self.assertDictEqual(expected_dict, self.tect_reg.__dict__)
+        self.assertEqual(self.tect_reg.id, '001')
+        self.assertEqual(self.tect_reg.region_name, 'Test 0')
+        self.assertAlmostEqual(self.tect_reg.shear_modulus[0][0], 30.0)
+        self.assertAlmostEqual(self.tect_reg.shear_modulus[0][1], 1.0)
+        self.assertAlmostEqual(self.tect_reg.disp_length_ratio[0][0], 
+                               1.25E-5)
+        self.assertAlmostEqual(self.tect_reg.disp_length_ratio[0][1], 1.0)
+        self.assertTrue(isinstance(self.tect_reg.scaling_rel[0][0], WC1994))
+        self.assertAlmostEqual(self.tect_reg.scaling_rel[0][1], 1.0)
+
 
     def test_input_values(self):
         '''
@@ -165,19 +174,19 @@ class TestTectonicRegionalisation(unittest.TestCase):
         '''
         Tests the population of the tectonic regions with default values
         '''
-        region_dict = [{'Code': 001, 'Name': 'Active Shallow'}]
+        region_dict = [{'Code': '001', 'Name': 'Active Shallow'}]
         expected_key_list = ['Active Shallow']
-        expected_regions = [{'id': 001, 
-                             'region_name': 'Active Shallow',
-                             'shear_modulus': [(30., 1.0)],
-                             'disp_length_ratio': [(1.25E-5, 1.0)],
-                             'scaling_rel': [(WC1994, 1.0)]}]
         self.tect_reg = TectonicRegionalisation()
         self.tect_reg.populate_regions(region_dict)
-        for ival, test_reg in enumerate(self.tect_reg.regionalisation):
-            self.assertDictEqual(expected_regions[ival], 
-                                 test_reg.__dict__)
-        #self.assertListEqual(expected_regions, self.tect_reg.regionalisation)
+        trg = self.tect_reg.regionalisation[0]
+        self.assertEqual(trg.id, '001')
+        self.assertEqual(trg.region_name, 'Active Shallow')
+        self.assertAlmostEqual(trg.shear_modulus[0][0], 30.0)
+        self.assertAlmostEqual(trg.shear_modulus[0][1], 1.0)
+        self.assertAlmostEqual(trg.disp_length_ratio[0][0], 1.25E-5)
+        self.assertAlmostEqual(trg.disp_length_ratio[0][1], 1.0)
+        self.assertTrue(isinstance(trg.scaling_rel[0][0], WC1994))
+        self.assertAlmostEqual(trg.scaling_rel[0][1], 1.0)
         self.assertListEqual(expected_key_list, self.tect_reg.key_list)
         self.assertEqual(1, self.tect_reg.get_number_regions())
 

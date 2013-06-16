@@ -92,6 +92,7 @@ class mtkActiveFaultModel(object):
         '''
         return len(self.faults)
 
+
     def build_fault_model(self, collapse=False, rendered_msr=WC1994(), 
         mfd_config=None):
         '''
@@ -112,17 +113,15 @@ class mtkActiveFaultModel(object):
         self.source_model = mtkSourceModel(self.id, self.name)
         for fault in self.faults:
             fault.generate_recurrence_models(collapse, 
-                                             rendered_msr, 
-                                             mfd_config)
+                                             config=mfd_config,
+                                             rendered_msr=rendered_msr)
             src_model, src_weight = fault.generate_fault_source_model()
             for iloc, model in enumerate(src_model):
                
                 new_model = deepcopy(model)
-                new_model.id = model.id + '_%g' % (iloc + 1)
-                print new_model.mfd.occurrence_rates, src_weight[iloc]
+                new_model.id = str(model.id) + '_%g' % (iloc + 1)
                 new_model.mfd.occurrence_rates = \
                     (np.array(new_model.mfd.occurrence_rates) * 
                      src_weight[iloc]).tolist()
-                print new_model.mfd.occurrence_rates
                 self.source_model.sources.append(new_model)
 

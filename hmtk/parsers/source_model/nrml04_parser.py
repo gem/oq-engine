@@ -13,6 +13,7 @@ from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
+from openquake.hazardlib.scalerel import get_available_scalerel
 from hmtk.sources.source_model import mtkSourceModel
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.sources.area_source import mtkAreaSource
@@ -20,6 +21,7 @@ from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.parsers.source_model.base import BaseSourceModelParser
 
+SCALE_REL_MAP = get_available_scalerel()
 
 TGR_MAP = {'aValue': 'a_val',
            'bValue': 'b_val',
@@ -185,9 +187,13 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
         if src_elem.get('tectonicRegion'):
             model.trt = src_elem.get('tectonicRegion')
         
-        msr_elem = _xpath(src_elem, './nrml:magScaleRel')[0].text
+        msr_elem = (_xpath(src_elem, './nrml:magScaleRel')[0].text).strip()
         if msr_elem:
-            model.mag_scale_rel = msr_elem.strip()
+            if msr_elem in SCALE_REL_MAP.keys():
+                model.mag_scale_rel = msr_elem
+            else:
+                raise ValueError('Magnitude Scaling Relation not currently '
+                                 'supported!')
         
         rup_asp = _xpath(src_elem, './nrml:ruptAspectRatio')[0].text
         if rup_asp:

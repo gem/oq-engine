@@ -169,7 +169,7 @@ class TestAndersonLucoArbitrary(unittest.TestCase):
     '''
     def setUp(self):
         self.model = AndersonLucoArbitrary()
-        self.config = {'Type': 'First',
+        self.config = {'Model_Type': 'First',
                       'MFD_spacing': 0.1,
                       'Model_Weight': 1.0,
                       'Minimum_Magnitude': 5.0,
@@ -234,7 +234,7 @@ class TestAndersonLucoArbitrary(unittest.TestCase):
         for iloc, model_type in enumerate(['First', 'Second', 'Third']):
             self.model = AndersonLucoArbitrary()
         
-            self.config = {'Type': model_type,
+            self.config = {'Model_Type': model_type,
                           'MFD_spacing': 0.1,
                           'Model_Weight': 1.0,
                           'Minimum_Magnitude': 5.0,
@@ -250,7 +250,7 @@ class TestAndersonLucoArbitrary(unittest.TestCase):
             # Test case when b-value greater than d-value (raises warning!)
             self.model = AndersonLucoArbitrary()
         
-            self.config = {'Type': model_type,
+            self.config = {'Model_Type': model_type,
                           'MFD_spacing': 0.1,
                           'Model_Weight': 1.0,
                           'Minimum_Magnitude': 5.0,
