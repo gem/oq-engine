@@ -67,4 +67,31 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             list(gen_loss_curves(branches.items(), costs)) +
             list(gen_loss_curves([("b1", branches["b1"])], ["fatalities"])))
 
-        return dict(loss_curves)
+        data = self._csv("aggregates")
+
+        aggregate_loss_curves = [
+            ((u'agg_loss_curve', branch, None,
+              None, True, False, "structural"),
+             models.AggregateLossCurveData(
+                 losses=data[i * 2, 2:],
+                 poes=data[i * 2 + 1, 2:]))
+            for i, branch in enumerate(branches.values())]
+
+        # we check only the first 10 values of the event loss table
+        data = self._csv('event_loss_table')[1:, 0:2]
+        data = sorted(data, key=lambda v: -v[1])[0:10]
+        event_loss_table_b1 = [
+            ((u'event_loss', branches["b1"], "structural", i),
+             models.EventLossData(rupture_id=i, aggregate_loss=j))
+            for i, j in data]
+
+        data = self._csv('event_loss_table')[1:, 3:5]
+        data = sorted(data, key=lambda v: -v[1])[0:10]
+
+        event_loss_table_b2 = [
+            ((u'event_loss', branches["b2"], "structural", i),
+             models.EventLossData(rupture_id=i, aggregate_loss=j))
+            for i, j in data]
+
+        return (loss_curves + aggregate_loss_curves +
+                event_loss_table_b1 + event_loss_table_b2)

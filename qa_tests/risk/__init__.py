@@ -195,8 +195,10 @@ class CompleteTestCase(object):
         outputs = []
 
         for output in job.output_set.all():
-            for item in output.output_container:
+            for item in list(output.output_container)[0:10]:
                 outputs.append((item.data_hash, item))
+
+        outputs = dict(outputs)
 
         for data_hash, expected_output in self.expected_output_data():
             if not data_hash in outputs:
