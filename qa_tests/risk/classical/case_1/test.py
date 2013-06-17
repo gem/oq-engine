@@ -75,7 +75,8 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
     EXPECTED_LOSS_MAP_0_05_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="50.0" poE="0.05" statistics="mean" lossCategory="single_asset" unit="USD">
+  <lossMap investigationTime="50.0" poE="0.05" statistics="mean"
+           lossCategory="single_asset" unit="USD">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
@@ -105,7 +106,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
             (0.60, 0.000757544444296432), (0.70, 0.000272824002045979),
             (0.80, 0.00), (0.9, 0.00), (1.0, 0.00)]
 
-        hd = models.HazardCurveData.objects.create(
+        models.HazardCurveData.objects.create(
             hazard_curve=models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job, "Test Hazard curve", "hazard_curve"),

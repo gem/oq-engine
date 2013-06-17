@@ -1110,14 +1110,6 @@ class RiskCalculation(djm.Model):
             input_type="exposure")
         return exposure_input.exposuremodel
 
-    def will_compute_loss_curve_statistics(self):
-        """
-        Return true if this risk calculation will compute mean and/or
-        quantile loss curves
-        """
-        return ((self.mean_loss_curves or self.quantile_loss_curves) and
-                self.calculation_mode in ['classical', 'event_based'])
-
 
 def _prep_geometry(kwargs):
     """

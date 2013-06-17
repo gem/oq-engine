@@ -15,8 +15,6 @@
 
 import os
 
-import itertools
-
 from nose.plugins.attrib import attr as noseattr
 
 from qa_tests import risk

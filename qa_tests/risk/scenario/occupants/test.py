@@ -26,6 +26,8 @@ class EventBaseQATestCase1(risk.LogicTreeBasedTestCase,
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
 
+    output_type = "gmf_scenario"
+
     @noseattr('qa', 'risk', 'scenario', 'e2e')
     def test(self):
         self._run_test()
