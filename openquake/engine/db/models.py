@@ -2516,8 +2516,14 @@ class AggregateLossCurveData(djm.Model):
         return self.loss_curve.output_hash
 
     def assertAlmostEqual(self, data):
-        return risk_almost_equal(
-            self, data, operator.attrgetter('poes', 'average_loss'))
+        if self.losses[self.losses > 0].any():
+            poes = interpolate.interp1d(
+                self.losses, self.poes,
+                bounds_error=False, fill_value=0)(data.losses)
+        else:
+            poes = numpy.zeros(len(data.poes))
+
+        return risk_almost_equal(self.poes, poes)
 
 
 class EventLoss(djm.Model):
@@ -2536,7 +2542,7 @@ class EventLoss(djm.Model):
         db_table = 'riskr\".\"event_loss'
 
     def __iter__(self):
-        return iter(self.eventlossdata_set.all())
+        return iter(self.eventlossdata_set.all().order_by('-aggregate_loss'))
 
     @property
     def output_hash(self):
@@ -2560,12 +2566,11 @@ class EventLossData(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.event_loss.output_hash + (
-            self.rupture_id, self.aggregate_loss)
+        return self.event_loss.output_hash + (self.rupture_id,)
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(
-            self, data, operator.attrgetter('rupture_id', 'aggregate_loss'))
+            self, data, operator.attrgetter('aggregate_loss'))
 
     class Meta:
         db_table = 'riskr\".\"event_loss_data'
