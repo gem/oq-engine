@@ -261,7 +261,7 @@ _devtest_innervm_run () {
         # run tests
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine ;
-                 nosetests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
+                 nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
                  nosetests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
