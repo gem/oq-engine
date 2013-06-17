@@ -97,7 +97,7 @@ LOSS_TYPES = ["structural", "nonstructural", "fatalities", "contents"]
 
 
 #: relative tolerance to consider two risk outputs (almost) equal
-RISK_RTOL = 0.05
+RISK_RTOL = 0.08
 
 
 #: absolute tolerance to consider two risk outputs (almost) equal
