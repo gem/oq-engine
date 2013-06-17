@@ -31,7 +31,7 @@ from openquake.risklib import api, scientific
 from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine import logs
+from openquake.engine import logs, writer
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.base import signal_task_complete
 
@@ -455,7 +455,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             "Event Loss Table. type=%s, hazard=%s" % (
                                 loss_type, hazard_output.id),
                             "event_loss"),
+                        loss_type=loss_type,
                         hazard_output=hazard_output)
+                    inserter = writer.CacheInserter(
+                        models.EventLossData, 10000)
 
                     ruptures = models.SESRupture.objects.filter(
                         ses__ses_collection__lt_realization=
@@ -465,11 +468,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             using='reslt_writer'):
                         for rupture in ruptures:
                             if rupture.id in event_loss_table:
-                                models.EventLossData.objects.create(
-                                    event_loss=event_loss,
-                                    rupture=rupture,
-                                    aggregate_loss=event_loss_table[
-                                        rupture.id])
+                                inserter.add(
+                                    models.EventLossData(
+                                        event_loss_id=event_loss.id,
+                                        rupture_id=rupture.id,
+                                        aggregate_loss=event_loss_table[
+                                            rupture.id]))
+                    inserter.flush()
 
                     aggregate_losses = [
                         event_loss_table[rupture.id]
