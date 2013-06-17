@@ -61,8 +61,9 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                 loss_map__output__oq_job=job).order_by(
                     'asset_ref', 'loss_map__poe')]] +
                 [[el.aggregate_loss
-                 for el in models.EventLoss.objects.filter(
-                output__oq_job=job).order_by('-aggregate_loss')[0:10]]])
+                 for el in models.EventLossData.objects.filter(
+                event_loss__output__oq_job=job).order_by(
+                    '-aggregate_loss')[0:10]]])
 
     def expected_data(self):
         # FIXME(lp). Event Loss Table data do not come from a reliable
