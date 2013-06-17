@@ -248,7 +248,9 @@ class GroundMotionValuesGetter(HazardGetter):
             # please dont' remove this log: it was required by Vitor since
             # this is a case that should NOT happen and must raise a warning
             logs.LOG.warn(
-                "No hazard has been found for the asset %s within %s km" % (
+                "No hazard with imt %s has been found for "
+                "the asset %s within %s km" % (
+                    self.imt,
                     self.asset_dict[missing_asset_id], self.max_distance))
 
         distinct_gmf_ids = tuple(set(gmf_ids))
