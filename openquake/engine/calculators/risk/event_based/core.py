@@ -104,7 +104,7 @@ def do_event_based(loss_type, units, containers, params, profile):
             save_individual_outputs(
                 loss_type, containers, hid, outputs, disagg_outputs, params)
 
-        if params.insured_losses:
+        if params.insured_losses and loss_type != "fatalities":
             insured_curves = list(
                 insured_losses(
                     loss_type, unit, outputs.assets, outputs.loss_matrix))
@@ -290,9 +290,12 @@ def statistics(assets, curve_matrix, weights, params):
 
     if (len(quantile_curves) and len(quantile_curves[0])):
         quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
-        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
     else:
         quantile_curves = None
+
+    if (len(quantile_maps) and len(quantile_maps[0])):
+        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
+    else:
         quantile_maps = None
 
     return StatisticalOutputs(
@@ -445,9 +448,29 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             time_span, tses = self.hazard_times()
             for loss_type, event_loss_table in self.event_loss_tables.items():
                 for hazard_output in self.rc.hazard_outputs():
+
+                    event_loss = models.EventLoss.objects.create(
+                        output=models.Output.objects.create_output(
+                            self.job,
+                            "Event Loss Table. type=%s, hazard=%s" % (
+                                loss_type, hazard_output.id),
+                            "event_loss"),
+                        hazard_output=hazard_output)
+
                     ruptures = models.SESRupture.objects.filter(
                         ses__ses_collection__lt_realization=
                         hazard_output.gmf.lt_realization)
+
+                    with db.transaction.commit_on_success(
+                            using='reslt_writer'):
+                        for rupture in ruptures:
+                            if rupture.id in event_loss_table:
+                                models.EventLossData.objects.create(
+                                    event_loss=event_loss,
+                                    rupture=rupture,
+                                    aggregate_loss=event_loss_table[
+                                        rupture.id])
+
                     aggregate_losses = [
                         event_loss_table[rupture.id]
                         for rupture in ruptures
@@ -476,17 +499,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             poes=aggregate_loss_poes,
                             average_loss=scientific.average_loss(
                                 aggregate_loss_losses, aggregate_loss_poes))
-
-                event_loss_table_output = models.Output.objects.create_output(
-                    self.job, "Event Loss Table", "event_loss")
-
-                with db.transaction.commit_on_success(using='reslt_writer'):
-                    for rupture_id, aggregate_loss in event_loss_table.items():
-                        models.EventLoss.objects.create(
-                            output=event_loss_table_output,
-                            rupture_id=rupture_id,
-                            loss_type=loss_type,
-                            aggregate_loss=aggregate_loss)
 
     def calculation_units(self, loss_type, assets):
         """
@@ -548,16 +560,17 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             hazard_output)
 
         for loss_type in base.loss_types(self.risk_models):
-            name = "insured loss curves. type=%s hazard %s" % (
-                loss_type, hazard_output),
-            if self.rc.insured_losses:
-                outputs.set(
-                    models.LossCurve.objects.create(
-                        insured=True,
-                        loss_type=loss_type,
-                        hazard_output=hazard_output,
-                        output=models.Output.objects.create_output(
-                            self.job, name, "loss_curve")))
+            if loss_type != "fatalities":
+                if self.rc.insured_losses:
+                    name = "insured loss curves. type=%s hazard %s" % (
+                        loss_type, hazard_output),
+                    outputs.set(
+                        models.LossCurve.objects.create(
+                            insured=True,
+                            loss_type=loss_type,
+                            hazard_output=hazard_output,
+                            output=models.Output.objects.create_output(
+                                self.job, name, "loss_curve")))
 
             if self.rc.sites_disagg:
                 name = ("loss fractions. type=%s variable=magnitude_distance "

@@ -93,7 +93,7 @@ MAX_SINT_32 = (2 ** 31) - 1
 
 
 #: Kind of supported type of loss outputs
-LOSS_TYPES = ["structural", "nonstructural", "occupants", "contents"]
+LOSS_TYPES = ["structural", "nonstructural", "fatalities", "contents"]
 
 
 #: relative tolerance to consider two risk outputs (almost) equal
@@ -964,10 +964,6 @@ class RiskCalculation(djm.Model):
     ####################################################
     # For calculators that output statistical results
     ####################################################
-    mean_loss_curves = fields.OqNullBooleanField(
-        help_text='Compute mean loss curves, maps, etc.',
-        null=True,
-        blank=True)
     quantile_loss_curves = fields.FloatArrayField(
         help_text='List of quantiles for computing quantile outputs',
         null=True,
@@ -1304,9 +1300,6 @@ class Output(djm.Model):
             return self.gmf
         elif self.output_type == "complete_lt_ses":
             return self.ses
-        elif self.output_type == "event_loss":
-            # FIXME(lp). EventLoss should have a container
-            return self.event_loss.all()
 
         return getattr(self, self.output_type)
 
@@ -2334,7 +2327,7 @@ class LossMap(djm.Model):
     '''
 
     output = djm.OneToOneField("Output", related_name="loss_map")
-    hazard_output = djm.OneToOneField("Output", related_name="risk_loss_map")
+    hazard_output = djm.ForeignKey("Output", related_name="risk_loss_maps")
     insured = djm.BooleanField(default=False)
     poe = djm.FloatField(null=True)
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
@@ -2428,7 +2421,7 @@ class LossCurve(djm.Model):
     '''
 
     output = djm.OneToOneField("Output", related_name="loss_curve")
-    hazard_output = djm.OneToOneField("Output", related_name="risk_loss_curve")
+    hazard_output = djm.ForeignKey("Output", related_name="risk_loss_curves")
     aggregate = djm.BooleanField(default=False)
     insured = djm.BooleanField(default=False)
 
@@ -2492,9 +2485,13 @@ class LossCurveData(djm.Model):
         return self.loss_curve.output_hash + (self.asset_ref,)
 
     def assertAlmostEqual(self, data):
-        poes = interpolate.interp1d(
-            self.losses, self.poes,
-            bounds_error=False, fill_value=0)(data.losses)
+        if self.losses[self.losses > 0].any():
+            poes = interpolate.interp1d(
+                self.losses, self.poes,
+                bounds_error=False, fill_value=0)(data.losses)
+        else:
+            poes = numpy.zeros(len(data.poes))
+
         return risk_almost_equal(self.poes, poes)
 
 
@@ -2530,13 +2527,16 @@ class EventLoss(djm.Model):
 
     #: Foreign key to an :class:`openquake.engine.db.models.Output`
     #: object with output_type == event_loss
-    output = djm.ForeignKey('Output', related_name="event_loss")
-    rupture = djm.ForeignKey('SESRupture')
-    aggregate_loss = djm.FloatField()
+    output = djm.OneToOneField('Output', related_name="event_loss")
+    hazard_output = djm.ForeignKey(
+        "Output", related_name="risk_event_loss_tables")
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
         db_table = 'riskr\".\"event_loss'
+
+    def __iter__(self):
+        return iter(self.eventlossdata_set.all())
 
     @property
     def output_hash(self):
@@ -2549,16 +2549,26 @@ class EventLoss(djm.Model):
         return (self.output.output_type, self.output.hazard_metadata,
                 self.loss_type)
 
+
+class EventLossData(djm.Model):
+    event_loss = djm.ForeignKey(EventLoss)
+    rupture = djm.ForeignKey('SESRupture')
+    aggregate_loss = djm.FloatField()
+
     @property
     def data_hash(self):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.output_hash
+        return self.event_loss.output_hash + (
+            self.rupture_id, self.aggregate_loss)
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(
             self, data, operator.attrgetter('rupture_id', 'aggregate_loss'))
+
+    class Meta:
+        db_table = 'riskr\".\"event_loss_data'
 
 
 class BCRDistribution(djm.Model):
@@ -2567,7 +2577,8 @@ class BCRDistribution(djm.Model):
     '''
 
     output = djm.OneToOneField("Output", related_name="bcr_distribution")
-    hazard_output = djm.OneToOneField("Output")
+    hazard_output = djm.ForeignKey(
+        "Output", related_name="risk_bcr_distribution")
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     class Meta:
@@ -2780,8 +2791,24 @@ class ExposureModel(djm.Model):
         return ExposureData.objects.taxonomies_contained_in(
             self.id, region_constraint)
 
-    def unit(self, cost_type):
-        return self.costtype_set.get(name=cost_type).unit
+    def unit(self, loss_type):
+        if loss_type == "fatalities":
+            return "people"
+        else:
+            return self.costtype_set.get(name=loss_type).unit
+
+    def missing_occupants(self):
+        """
+        :returns:
+            True if the exposure model does not include information about
+            occupants for any of the assets
+        """
+        if self.category == "population":
+            return self.exposuredata_set.filter(
+                number_of_units__isnull=True).exists()
+        else:
+            return self.exposuredata_set.filter(
+                occupancy__isnull=True).exists()
 
 
 class CostType(djm.Model):
@@ -2855,8 +2882,8 @@ class AssetManager(djm.GeoManager):
         args = (rc.exposure_model.id, taxonomy,
                 "SRID=4326; %s" % rc.region_constraint.wkt)
 
-        occupants_fields, occupants_cond, occupancy_join, occupants_args = (
-            self._get_occupants_query_helper(
+        people_field, occupants_cond, occupancy_join, occupants_args = (
+            self._get_people_query_helper(
                 rc.exposure_model.category, rc.time_event))
 
         args += occupants_args + (size, offset)
@@ -2866,7 +2893,7 @@ class AssetManager(djm.GeoManager):
 
         query = """
             SELECT riski.exposure_data.*,
-                   {occupants} AS occupancy,
+                   {people_field} AS people,
                    {costs}
             FROM riski.exposure_data
             {occupancy_join}
@@ -2879,7 +2906,7 @@ class AssetManager(djm.GeoManager):
             GROUP BY riski.exposure_data.id
             ORDER BY ST_X(geometry(site)), ST_Y(geometry(site))
             LIMIT %s OFFSET %s
-            """.format(occupants=occupants_fields,
+            """.format(people_field=people_field,
                        occupants_cond=occupants_cond,
                        costs=cost_type_fields,
                        costs_join=cost_type_joins,
@@ -2887,13 +2914,13 @@ class AssetManager(djm.GeoManager):
 
         return query, args
 
-    def _get_occupants_query_helper(self, category, time_event):
+    def _get_people_query_helper(self, category, time_event):
         """
         Support function for _get_asset_chunk_query_args
         """
         args = ()
         # if the exposure model is of type "population" we extract the
-        # occupants from the `number_of_units` field
+        # data from the `number_of_units` field
         if category == "population":
             occupants_field = "number_of_units"
             occupants_cond = "1 = 1"
@@ -2901,7 +2928,7 @@ class AssetManager(djm.GeoManager):
         else:
             # otherwise we will "left join" the occupancy table
             occupancy_join = "LEFT JOIN riski.occupancy"
-            occupants_field = "AVG(riski.occupancy.occupants)"
+            occupants_field = "AVG(riski.occupancy.occupants::float)"
 
             # and the time_event is not specified we compute the
             # number of occupants by averaging the occupancy data for
@@ -3044,6 +3071,9 @@ class ExposureData(djm.Model):
         each loss type, we rely on the fact that an annotation on the
         asset named `loss_type` is present.
         """
+        if loss_type == "fatalities":
+            return getattr(self, "people")
+
         return getattr(self, loss_type)
 
     def retrofitted(self, loss_type):

@@ -148,7 +148,7 @@ class AssetManagerTestCase(unittest.TestCase):
                 rc, "taxonomy", 0, 1)
             self.assertEqual("""
             SELECT riski.exposure_data.*,
-                   occupants_fields AS occupancy,
+                   occupants_fields AS occupants,
                    cost_type_fields
             FROM riski.exposure_data
             occupancy_join
@@ -190,7 +190,7 @@ class AssetManagerTestCase(unittest.TestCase):
     def test_get_occupants_query_helper_buildings_no_event(self):
         field, cond, join, args = self.manager._get_occupants_query_helper(
             "buildings", None)
-        self.assertEqual("AVG(riski.occupancy.occupants)", field)
+        self.assertEqual("AVG(riski.occupancy.occupants::float)", field)
         self.assertEqual("1 = 1", cond)
         self.assertEqual("LEFT JOIN riski.occupancy", join)
         self.assertEqual(args, ())
@@ -198,7 +198,7 @@ class AssetManagerTestCase(unittest.TestCase):
     def test_get_occupants_query_helper_buildings_time_event(self):
         field, cond, join, args = self.manager._get_occupants_query_helper(
             "buildings", "day")
-        self.assertEqual("AVG(riski.occupancy.occupants)", field)
+        self.assertEqual("AVG(riski.occupancy.occupants::float)", field)
         self.assertEqual("riski.occupancy.period = %s", cond)
         self.assertEqual("LEFT JOIN riski.occupancy", join)
         self.assertEqual(args, ("day",))

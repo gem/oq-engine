@@ -19,6 +19,11 @@
           <cost type="structural" value="100" deductible="25" insuranceLimit="100"/>
           <cost type="nonstructural" value="1500"/>
         </costs>
+
+        <occupancies>
+          <occupancy period="day" occupants="5"/>
+          <occupancy period="night" occupants="15"/>
+        </occupancies>
       </asset>
       <asset id="a1" taxonomy="RC" number="500" area="10">
         <location lon="83.082298" lat="27.9006"/>
@@ -27,6 +32,10 @@
           <cost type="structural" value="0.4" deductible="0.1" insuranceLimit="0.2"/>
           <cost type="nonstructural" value="1000"/>
         </costs>
+        <occupancies>
+          <occupancy period="day" occupants="10"/>
+          <occupancy period="night" occupants="30"/>
+        </occupancies>
       </asset>
       <asset id="a2" taxonomy="W" number="1000" area="10">
         <location lon="85.747703" lat="27.9015"/>
@@ -35,6 +44,10 @@
           <cost type="structural" value="0.1" deductible="0.02" insuranceLimit="0.08"/>
           <cost type="nonstructural" value="500"/>
         </costs>
+        <occupancies>
+          <occupancy period="day" occupants="60"/>
+          <occupancy period="night" occupants="0"/>
+        </occupancies>
       </asset>
       <asset id="a3" taxonomy="RM" number="10" area="1">
         <location lon="85.747703" lat="27.9015"/>
@@ -43,6 +56,10 @@
           <cost type="structural" value="500" deductible="1000" insuranceLimit="3000"/>
           <cost type="nonstructural" value="2500"/>
         </costs>
+        <occupancies>
+          <occupancy period="day" occupants="0"/>
+          <occupancy period="night" occupants="0"/>
+        </occupancies>
       </asset>
       <asset id="a4" taxonomy="RM" number="10" area="100">
         <location lon="87.747703" lat="27.9015"/>
@@ -51,6 +68,10 @@
           <cost type="structural" value="500" deductible="1000" insuranceLimit="3000"/>
           <cost type="nonstructural" value="2500"/>
         </costs>
+        <occupancies>
+          <occupancy period="day" occupants="50"/>
+          <occupancy period="night" occupants="50"/>
+        </occupancies>
       </asset>
     </assets>
   </exposureModel>
