@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import tempfile
+import os
 import warnings
 from unittest.case import SkipTest
 import numpy
@@ -190,25 +191,28 @@ class CompleteTestCase(object):
     calculation apart the ones that satisfy #should_skip
     """
 
-    # a sentinal variable to highlight the fact that we are not
-    # checking the value of an existing output
-    DO_NOT_CHECK = None
-
     def check_outputs(self, job):
-        for output in job.output_set.all():
-            if self.should_skip(output):
-                continue
-            container = output.output_container
-            expected_data = self.expected_output_data()
+        outputs = []
 
-            for item in container:
-                if not item.data_hash in expected_data:
-                    raise AssertionError(
-                        "The output with hash %s is missing" % str(
-                            item.data_hash))
-                expected_output = expected_data[item.data_hash]
-                if expected_output is not None:
-                    expected_output.assertAlmostEqual(item)
+        for output in job.output_set.all():
+            for item in output.output_container:
+                outputs.append((item.data_hash, item))
+
+        for data_hash, expected_output in self.expected_output_data():
+            if not data_hash in outputs:
+                raise AssertionError(
+                    "The output with hash %s is missing" % str(data_hash))
+            actual_output = outputs[data_hash]
+            try:
+                expected_output.assertAlmostEqual(actual_output)
+            except AssertionError:
+                print "Problems with output %s" % str(data_hash)
+                raise
+
+    def _csv(self, filename, *slicer):
+        path = os.path.join(
+            os.path.dirname(self.risk_cfg), "expected", filename + ".csv")
+        return numpy.genfromtxt(path, delimiter=",")[slicer]
 
     def expected_output_data(self):
         """

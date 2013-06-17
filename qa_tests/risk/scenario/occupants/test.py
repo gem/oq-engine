@@ -26,7 +26,7 @@ class EventBaseQATestCase1(risk.LogicTreeBasedTestCase,
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
 
-    @noseattr('qa', 'risk', 'event_based', 'e2e')
+    @noseattr('qa', 'risk', 'scenario', 'e2e')
     def test(self):
         self._run_test()
 
@@ -45,9 +45,9 @@ class EventBaseQATestCase1(risk.LogicTreeBasedTestCase,
                     (latest_aggregated.mean, latest_aggregated.std_dev)]
 
     def expected_data(self):
-        return [(0.41379023,  0.14925769),
+        return [(0.40754604, 0.14661467),
                 (1.27516318,  0.91571143),
-                (1.30371272,  0.83134345)] + [(2.99266613,  1.0018423)]
+                (1.4329613, 0.92721498)] + [(3.11983577,  1.10750248)]
 
 # For NIGHT:
 
