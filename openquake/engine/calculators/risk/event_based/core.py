@@ -82,7 +82,6 @@ def do_event_based(loss_type, units, containers, params, profile):
     """
     loss_curves = []
     event_loss_table = collections.Counter()
-
     for unit in units:
         hid = unit.getter.hazard_output.id
         outputs = individual_outputs(loss_type, unit, params, profile)
@@ -110,8 +109,8 @@ def do_event_based(loss_type, units, containers, params, profile):
                     loss_type, unit, outputs.assets, outputs.loss_matrix))
             containers.write(
                 outputs.assets, insured_curves,
-                output_type="loss_curve", insured=True, hazard_output_id=hid,
-                loss_type=loss_type)
+                output_type="loss_curve", insured=True,
+                hazard_output_id=hid, loss_type=loss_type)
 
     # compute mean and quantile outputs
     if len(units) < 2:
@@ -170,8 +169,8 @@ def individual_outputs(loss_type, unit, params, profile):
 
     event_loss_table = collections.Counter()
 
-    assets, (ground_motion_values, ruptures) = unit.getter(
-        profile('getting hazard'))
+    p = profile('getting gmvs and ruptures')
+    assets, (ground_motion_values, rupture_ids) = unit.getter(p)
 
     with profile('computing losses, loss curves and maps'):
         loss_matrix, curves = unit.calc(ground_motion_values)
@@ -181,12 +180,12 @@ def individual_outputs(loss_type, unit, params, profile):
                 for poe in params.conditional_loss_poes]
 
         for i, asset in enumerate(assets):
-            for j, rupture_id in enumerate(ruptures):
+            for j, rupture_id in enumerate(rupture_ids):
                 event_loss_table[rupture_id] += (
                     loss_matrix[i][j] * asset.value(loss_type))
 
     return UnitOutputs(
-        assets, loss_matrix, ruptures, curves, maps, event_loss_table)
+        assets, loss_matrix, rupture_ids, curves, maps, event_loss_table)
 
 
 def save_individual_outputs(
@@ -337,7 +336,7 @@ class DisaggregationOutputs(object):
 
 def disaggregate(outputs, params):
     """
-Compute disaggregation outputs given the individual `outputs` and `params`
+    Compute disaggregation outputs given the individual `outputs` and `params`
 
     :param outputs:
       an instance of :class:`UnitOutputs`
@@ -345,7 +344,7 @@ Compute disaggregation outputs given the individual `outputs` and `params`
       an instance of :class:`..base.CalcParams`
     :returns:
       an instance of :class:`DisaggregationOutputs`
-"""
+    """
     def disaggregate_site(site, loss_ratios, ruptures, params):
         for fraction, rupture_id in zip(loss_ratios, ruptures):
 
@@ -517,6 +516,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         risk_model = self.risk_models[taxonomy][loss_type]
 
         time_span, tses = self.hazard_times()
+
         return [base.CalculationUnit(
             api.ProbabilisticEventBased(
                 risk_model.vulnerability_function,
