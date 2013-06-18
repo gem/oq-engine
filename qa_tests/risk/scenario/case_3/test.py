@@ -25,12 +25,11 @@ class ScenarioRiskCase3TestCase(risk.End2EndRiskQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
 
+    output_type = "gmf_scenario"
+
     @attr('qa', 'risk', 'scenario', 'e2e')
     def test(self):
         self._run_test()
-
-    def hazard_id(self):
-        return models.Output.objects.latest('last_update').id
 
     def actual_data(self, job):
         maps = models.LossMapData.objects.filter(

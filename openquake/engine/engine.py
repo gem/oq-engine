@@ -331,6 +331,10 @@ def run_calc(job, log_level, log_file, exports, job_type):
     """
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
     calc = get_calculator_class(job_type, calc_mode)(job)
+
+    # Create job stats, which implicitly records the start time for the job
+    models.JobStats.objects.create(oq_job=job)
+
     # Closing all db connections to make sure they're not shared between
     # supervisor and job executor processes.
     # Otherwise, if one of them closes the connection it immediately becomes
