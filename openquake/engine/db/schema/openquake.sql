@@ -145,7 +145,7 @@ CREATE TABLE uiapi.input (
                              'contents_vulnerability',
                              'nonstructural_vulnerability',
                              'business_interruption_vulnerability',
-                             'occupancy_vulnerability',
+                             'occupants_vulnerability',
                              'structural_vulnerability_retrofitted',
                              'site_model')),
     -- Number of bytes in file
@@ -346,7 +346,6 @@ CREATE TABLE uiapi.risk_calculation (
     hazard_output_id INTEGER NULL,  -- FK to uiapi.output
     hazard_calculation_id INTEGER NULL,  -- FK to uiapi.hazard_calculation
 
-    mean_loss_curves boolean DEFAULT false,
     quantile_loss_curves float[],
     conditional_loss_poes float[],
 
@@ -838,7 +837,16 @@ CREATE TABLE riskr.event_loss (
     -- FK to uiapi.output.id. The corresponding row must have
     -- output_type == event_loss
     output_id INTEGER NOT NULL,
-    loss_type VARCHAR NOT NULL,
+    hazard_output_id INTEGER NULL,
+    loss_type VARCHAR NOT NULL
+) TABLESPACE riskr_ts;
+
+
+-- Event Loss table.
+CREATE TABLE riskr.event_loss_data (
+    id SERIAL PRIMARY KEY,
+
+    event_loss_id INTEGER NOT NULL,
     rupture_id INTEGER NOT NULL, -- FK to hzrdr.ses_rupture.id
     aggregate_loss float NOT NULL
 ) TABLESPACE riskr_ts;
@@ -1332,8 +1340,16 @@ ADD CONSTRAINT riskr_event_loss_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.event_loss
-ADD CONSTRAINT riskr_evet_loss_sesrupture_fk
+ADD CONSTRAINT riskr_event_loss_hazard_output_fk
+FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss_data
+ADD CONSTRAINT riskr_event_loss_data_sesrupture_fk
 FOREIGN KEY (rupture_id) REFERENCES hzrdr.ses_rupture(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.event_loss_data
+ADD CONSTRAINT riskr_event_loss_data_event_loss_fk
+FOREIGN KEY (event_loss_id) REFERENCES riskr.event_loss(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk

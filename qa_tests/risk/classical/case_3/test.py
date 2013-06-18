@@ -571,9 +571,6 @@ class ClassicalRiskCase3TestCase(risk.End2EndRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
-        return models.Output.objects.latest('last_update').id
-
     def actual_xml_outputs(self, job):
         return models.Output.objects.filter(
             oq_job=job, output_type="loss_fraction").order_by('id')

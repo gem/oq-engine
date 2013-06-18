@@ -146,10 +146,12 @@ usage () {
     echo "       if -D is present a package with self-computed version is produced."
     echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
     echo
-    echo "    $0 pkgtest <branch-name>                    install oq-engine package and related dependencies into"
-    echo "                                                an ubuntu lxc environment and run package tests and demos"
-    echo "    $0 devtest <branch-name>                    put oq-engine and oq-* dependencies sources in a lxc,"
-    echo "                                                setup environment and run development tests"
+    echo "    $0 pkgtest <branch-name>                     install oq-engine package and related dependencies into"
+    echo "                                                 an ubuntu lxc environment and run package tests and demos"
+
+    echo "    $0 [-f <fixture-file>] devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
+    echo "                                                 setup environment and run development tests."
+    echo "                                                 Optionally, it loads fixtures data before running tests."
     echo
     exit $ret
 }
@@ -247,24 +249,32 @@ _devtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
+    if [ ! -z "$FIXTURES" ]; then
+        scp "$FIXTURES" "${lxc_ip}:/tmp/fixtures.tar"
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
+                     cd oq-engine ;
+                     python openquake/engine/tools/restore_hazards.py /tmp/fixtures.tar
+        "
+    fi
+
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         # run tests
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine ;
-                 ./run_tests -a '!qa' -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x
+                 nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
-                 ./run_tests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
-                 ./run_tests  -a 'qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
-                 ./run_tests  -a 'qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
-                 ./run_tests  -a 'qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
+                 nosetests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
+                 nosetests  -a 'qa,hazard,event_based' -v --with-xunit --xunit-file=xunit-qa-hazard-event-based.xml
+                 nosetests  -a 'qa,hazard,disagg' -v --with-xunit --xunit-file=xunit-qa-hazard-disagg.xml
+                 nosetests  -a 'qa,hazard,scenario' -v --with-xunit --xunit-file=xunit-qa-hazard-scenario.xml
 
-                 ./run_tests  -a 'qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
-                 ./run_tests  -a 'qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
-                 ./run_tests  -a 'qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
-                 ./run_tests  -a 'qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
-                 ./run_tests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
-                 ./run_tests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
+                 nosetests  -a 'qa,risk,classical' -v --with-xunit --xunit-file=xunit-qa-risk-classical.xml
+                 nosetests  -a 'qa,risk,event_based' -v --with-xunit --xunit-file=xunit-qa-risk-event-based.xml
+                 nosetests  -a 'qa,risk,classical_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-classical-bcr.xml
+                 nosetests  -a 'qa,risk,event_based_bcr' -v --with-xunit --xunit-file=xunit-qa-risk-event-based-bcr.xml
+                 nosetests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
+                 nosetests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
 
                  python-coverage xml --include=\"openquake/*\" 
                 "
@@ -375,14 +385,14 @@ _pkgtest_innervm_run () {
         # run all of the hazard demos
         ssh $lxc_ip "cd demos
         for ini in \$(find ./hazard -name job.ini); do
-            DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard  \$ini --exports xml
+            openquake --run-hazard  \$ini --exports xml
         done
 
         for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d); do
             cd $demo_dir
-            DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-hazard job_hazard.ini
-            calculation_id=\$(env DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
-            DJANGO_SETTINGS_MODULE=openquake.engine.settings openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id
+            openquake --run-hazard job_hazard.ini
+            calculation_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
+            openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id
             cd ../..
         done"
     fi
@@ -651,6 +661,9 @@ BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
 
+#: a path to a fixture file produced by the dump_hazards.py script
+FIXTURES=""
+
 trap sig_hand SIGINT SIGTERM
 #  args management
 while [ $# -gt 0 ]; do
@@ -663,6 +676,10 @@ while [ $# -gt 0 ]; do
                 echo
                 exit 1
             fi
+            ;;
+        -F|--fixtures)
+            FIXTURES=$2
+            shift  # consume argument
             ;;
         -B|--binaries)
             BUILD_BINARIES=1

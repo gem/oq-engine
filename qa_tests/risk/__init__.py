@@ -14,6 +14,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import tempfile
+import os
+import warnings
+from unittest.case import SkipTest
 import numpy
 import StringIO
 import shutil
@@ -27,19 +30,18 @@ from openquake.engine.db import models
 
 class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     """
-    Base abstract class for risk QA tests. Derived class must define
-
-    0) a test method (properly annotated) that executes run_test
-    1) a cfg property holding the path to job.ini to execute
-    2) a method hazard_id() that creates a proper hazard input
-    3) a method actual_data that gets a list of
-       individual risk output (e.g. a
-       :class:`openquake.engine.db.models.LossCurveData`)
-    4) a method expected_data to assert against the actual_data
-    5) a method actual_outputs that gets a list of the created risk
-       `openquake.engine.db.models.Output`
-    6) a method expected_outputs to assert against the actual_outputs
+    Base abstract class for risk QA tests.
     """
+
+    #: holds the path to a job.ini. Derived classes must define it
+    risk_cfg = None
+
+    #: QA test must override this params to feed the risk job with
+    #: the proper hazard output
+    output_type = "hazard_curve"
+
+    def test(self):
+        raise NotImplementedError
 
     def run_risk(self, cfg, hazard_id):
         """
@@ -60,19 +62,29 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
         return completed_job
 
+    def check_outputs(self, job):
+        expected_data = self.expected_data()
+        actual_data = self.actual_data(job)
+
+        for i, actual in enumerate(actual_data):
+            numpy.testing.assert_allclose(
+                expected_data[i], actual,
+                rtol=0.01, atol=0.0, err_msg="", verbose=True)
+
+    def get_hazard_job(self):
+        """
+        :returns: a hazard job
+        """
+        raise NotImplementedError
+
     def _run_test(self):
         result_dir = tempfile.mkdtemp()
 
         try:
-            expected_data = self.expected_data()
-            job = self.run_risk(self.cfg, self.hazard_id())
+            job = self.run_risk(
+                self.risk_cfg, self.hazard_id(self.get_hazard_job()))
 
-            actual_data = self.actual_data(job)
-
-            for i, actual in enumerate(actual_data):
-                numpy.testing.assert_allclose(
-                    expected_data[i], actual,
-                    rtol=0.01, atol=0.0, err_msg="", verbose=True)
+            self.check_outputs(job)
 
             if hasattr(self, 'expected_outputs'):
                 expected_outputs = self.expected_outputs()
@@ -107,44 +119,133 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
     def actual_data(self, _job):
         """
-        Derived QA tests can implement this in order to also check
+        Derived QA tests must implement this in order to also check
         data stored on the database
         """
         return []
 
     def expected_data(self):
         """
-        Derived QA tests can implement this in order to also check
+        Derived QA tests must implement this in order to also check
         data stored on the database
         """
         return []
 
+    def hazard_id(self, job):
+        return job.output_set.filter(
+            output_type=self.output_type).latest('last_update').id
+
 
 class End2EndRiskQATestCase(BaseRiskQATestCase):
+    """
+    Run an end-to-end calculation (by first running a hazard
+    calculation, then running a risk calculation
+    """
+
+    def get_hazard_job(self):
+        return super(End2EndRiskQATestCase, self).run_hazard(
+            self.hazard_cfg)
+
+    def test(self):
+        raise NotImplementedError
+
+
+class LogicTreeBasedTestCase(object):
+    """
+    A class meant to mixed-in with a BaseRiskQATestCase or
+    End2EndRiskQATestCase that runs a risk calculation by giving in
+    input a hazard calculation id
+    """
+
+    def run_risk(self, cfg, hazard_id):
+        """
+        Given the path to job config file, run the job and assert that it was
+        successful. If this assertion passes, return the completed job.
+
+        :param str cfg:
+            Path to a job config file.
+        :param int hazard_id:
+            ID of the hazard calculation used by the risk calculation
+        :returns:
+            The completed :class:`~openquake.engine.db.models.OqJob`.
+        :raises:
+            :exc:`AssertionError` if the job was not successfully run.
+        """
+        completed_job = helpers.run_risk_job(
+            cfg, hazard_calculation_id=hazard_id)
+        self.assertEqual('complete', completed_job.status)
+
+        return completed_job
+
+    def hazard_id(self, job):
+        """
+        :returns: the hazard calculation id for the given `job`
+        """
+        return job.hazard_calculation.id
+
+
+class CompleteTestCase(object):
+    """
+    A class to be mixed-in with a RiskQATest. It redefines the
+    protocol in order to check every output (stored in the db) of a
+    calculation apart the ones that satisfy #should_skip
+    """
+
+    def check_outputs(self, job):
+        outputs = []
+
+        for output in job.output_set.all():
+            for item in list(output.output_container)[0:10]:
+                outputs.append((item.data_hash, item))
+
+        outputs = dict(outputs)
+
+        for data_hash, expected_output in self.expected_output_data():
+            if not data_hash in outputs:
+                raise AssertionError(
+                    "The output with hash %s is missing" % str(data_hash))
+            actual_output = outputs[data_hash]
+            try:
+                expected_output.assertAlmostEqual(actual_output)
+            except AssertionError:
+                print "Problems with output %s" % str(data_hash)
+                raise
+
+    def _csv(self, filename, *slicer):
+        path = os.path.join(
+            os.path.dirname(self.risk_cfg), "expected", filename + ".csv")
+        return numpy.genfromtxt(path, delimiter=",")[slicer]
+
+    def expected_output_data(self):
+        """
+        :returns:
+            an iterable over data objects (e.g. LossCurveData)
+        """
+        raise NotImplementedError
+
+
+class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
+    """
+    Run a risk calculation by relying on some preloaded data
+    (fixtures) to be present
+    """
+
+    #: derived qa test must override this
+    hazard_calculation_fixture_id = None
+
+    def _get_queryset(self):
+        return models.HazardCalculation.objects.filter(
+            description=self.hazard_calculation_fixture)
+
+    def get_hazard_job(self):
+        return self._get_queryset()[0].oqjob_set.all()[0]
+
     def _run_test(self):
-        result_dir = tempfile.mkdtemp()
+        if not self._get_queryset().exists():
+            warnings.warn("fixture not present. skipping test")
+            raise SkipTest
+        else:
+            super(FixtureBasedQATestCase, self)._run_test()
 
-        try:
-            expected_data = self.expected_data()
-            self.run_hazard(self.hazard_cfg)
-            job = self.run_risk(self.risk_cfg, self.hazard_id())
-
-            actual_data = self.actual_data(job)
-
-            for i, actual in enumerate(actual_data):
-                numpy.testing.assert_allclose(
-                    expected_data[i], actual,
-                    rtol=0.01, atol=0.0, err_msg="", verbose=True)
-
-            if hasattr(self, 'expected_outputs'):
-                expected_outputs = self.expected_outputs()
-                for i, output in enumerate(self.actual_xml_outputs(job)):
-                    [exported_file] = export.risk.export(output.id, result_dir)
-                    try:
-                        self.assert_xml_equal(
-                            StringIO.StringIO(expected_outputs[i]),
-                            exported_file)
-                    except:
-                        import pdb; pdb.set_trace()
-        finally:
-            shutil.rmtree(result_dir)
+    def test(self):
+        raise NotImplementedError

@@ -277,8 +277,9 @@ def export_event_loss_csv(output, target_dir):
         writer = csv.writer(csvfile, delimiter='|')
         writer.writerow(['Rupture', 'Magnitude', 'Aggregate Loss'])
 
-        for event_loss in models.EventLoss.objects.filter(
-                output=output).select_related().order_by('-aggregate_loss'):
+        for event_loss in models.EventLossData.objects.filter(
+                event_loss__output=output).select_related().order_by(
+                    '-aggregate_loss'):
             writer.writerow(["%7d" % event_loss.rupture.id,
                              "%.07f" % event_loss.rupture.magnitude,
                              "%.07f" % event_loss.aggregate_loss])
