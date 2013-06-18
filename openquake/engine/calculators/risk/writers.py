@@ -281,6 +281,8 @@ class OutputDict(dict):
         :param list items: a list of positional arguments to be passed
         to `write`
         """
+        if not len(values) or not len(items):
+            return
         for value, item in itertools.izip(values, items):
             kwargs = {arg: value}
             kwargs.update(initial_kwargs)
