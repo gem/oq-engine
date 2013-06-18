@@ -59,8 +59,9 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                     loss_curve__aggregate=True,
                     loss_curve__insured=False)] +
                 [[el.aggregate_loss
-                 for el in models.EventLoss.objects.filter(
-                output__oq_job=job).order_by('-aggregate_loss')[0:10]]])
+                 for el in models.EventLossData.objects.filter(
+                event_loss__output__oq_job=job).order_by(
+                    '-aggregate_loss')[0:10]]])
 
     def expected_data(self):
 
