@@ -3,11 +3,60 @@ import tarfile
 import psycopg2
 import argparse
 import logging
-from cStringIO import StringIO
+import io
+import sys
 
 BLOCKSIZE = 1000  # restore blocks of 1,000 lines each
 
 log = logging.getLogger()
+
+
+class CSVInserter(object):
+    def __init__(self, curs, tablename, blocksize):
+        self.curs = curs
+        self.tablename = tablename
+        self.blocksize = blocksize
+        self.max_id = 0
+        self.io = io.StringIO()
+        self.nlines = 0
+
+    def write(self, id_, line):
+        """
+        Add a csv line.
+        """
+        self.max_id = max(self.max_id, id_)
+        self.io.write('%d\t%s' % (id_, line.decode('utf8')))
+        self.nlines += 1
+        if self.max_id % self.blocksize == 0:
+            self.insert()
+
+    def insert(self):
+        """
+        Bulk insert into the database in a single transaction
+        """
+        self.io.seek(0)
+        conn = self.curs.connection
+        try:  # XXX: will this work in a concurrent situation?
+            # set the sequence id to the right value
+            self.curs.execute("select setval('%s_id_seq', %d) " % (
+                              self.tablename, self.max_id))
+            # bulk import; the two operations must go together
+            self.curs.copy_from(self.io, self.tablename)
+        except:
+            conn.rollback()
+            raise
+        else:
+            conn.commit()
+        self.io.truncate(0)
+        self.io.seek(0)
+        self.max_id = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        if self.max_id:  # some remaining line
+            self.insert()
 
 
 def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
@@ -23,26 +72,18 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
     :param str tablename: full table name
     :param int blocksize: number of lines in a block
     """
+    # keep in memory the already taken ids
     curs.execute('select id from %s' % tablename)
     ids = set(r[0] for r in curs.fetchall())
-    s = StringIO()
-    imported = 0
-    try:
-        for i, line in enumerate(gzfile, 1):
-            id_ = int(line.split('\t', 1)[0])
+    with CSVInserter(curs, tablename, blocksize) as csvi:
+        total = 0
+        for line in gzfile:
+            total += 1
+            sid, rest = line.split('\t', 1)
+            id_ = int(sid)
             if id_ not in ids:
-                s.write(line)
-                imported += 1
-            if i % BLOCKSIZE == 0:
-                s.seek(0)
-                curs.copy_from(s, tablename)
-                s.close()
-                s = StringIO()
-    finally:
-        s.seek(0)
-        curs.copy_from(s, tablename)
-        s.close()
-    return imported
+                csvi.write(id_, rest)
+    return csvi.nlines, total
 
 
 def hazard_restore(conn, tar):
@@ -54,35 +95,57 @@ def hazard_restore(conn, tar):
     """
     curs = conn.cursor()
     tf = tarfile.open(tar)
-    try:
-        for line in tf.extractfile('hazard_calculation/FILENAMES.txt'):
-            fname = line.rstrip()
-            tname = fname[:-7]  # strip .csv.gz
-            fileobj = tf.extractfile('hazard_calculation/%s' % fname)
-            with gzip.GzipFile(fname, fileobj=fileobj) as f:
-                log.info('Importing %s...', fname)
-                imported = safe_restore(curs, f, tname)
-                log.info('Imported %d new rows', imported)
-    except:
-        conn.rollback()
-        raise
-    else:
-        conn.commit()
+    for line in tf.extractfile('hazard_calculation/FILENAMES.txt'):
+        fname = line.rstrip()
+        tname = fname[:-7]  # strip .csv.gz
+        fileobj = tf.extractfile('hazard_calculation/%s' % fname)
+        with gzip.GzipFile(fname, fileobj=fileobj) as f:
+            log.info('Importing %s...', fname)
+            imported, total = safe_restore(curs, f, tname)
+            log.info('Imported %d/%d new rows', imported, total)
     log.info('Restored %s', tar)
 
-if __name__ == '__main__':
-    # not using the predefined Django connections here since
-    # we may want to restore the tarfile into a remote db
-    p = argparse.ArgumentParser()
-    p.add_argument('tarfile')
-    p.add_argument('host', nargs='?', default='localhost')
-    p.add_argument('dbname', nargs='?', default='openquake')
-    p.add_argument('user', nargs='?', default='oq_admin')
-    p.add_argument('password', nargs='?', default='')
-    p.add_argument('port', nargs='?', default='5432')
-    arg = p.parse_args()
+
+def hazard_restore_remote(tar, host, dbname, user, password, port):
     conn = psycopg2.connect(
-        host=arg.host, dbname=arg.dbname,
-        user=arg.user, password=arg.password, port=arg.port)
-    logging.basicConfig(level=logging.INFO)
-    hazard_restore(conn, arg.tarfile)
+        host=host, dbname=dbname, user=user, password=password, port=port)
+    hazard_restore(conn, tar)
+
+
+def hazard_restore_local(tar):
+    """
+    Use the current django settings to restore hazard
+    """
+    from openquake.engine.db.models import set_django_settings_module
+    set_django_settings_module()
+    from django.conf import settings
+    default_cfg = settings.DATABASES['default']
+
+    hazard_restore_remote(
+        tar,
+        default_cfg['HOST'],
+        default_cfg['NAME'],
+        default_cfg['USER'],
+        default_cfg['PASSWORD'],
+        # avoid passing an empty string to psycopg
+        default_cfg['PORT'] or None)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        hazard_restore_local(sys.argv[1])
+    else:
+        # not using the predefined Django connections here since
+        # we may want to restore the tarfile into a remote db
+        p = argparse.ArgumentParser()
+        p.add_argument('tarfile')
+        p.add_argument('host', nargs='?', default='localhost')
+        p.add_argument('dbname', nargs='?', default='openquake')
+        p.add_argument('user', nargs='?', default='oq_admin')
+        p.add_argument('password', nargs='?', default='')
+        p.add_argument('port', nargs='?', default='5432')
+        arg = p.parse_args()
+        logging.basicConfig(level=logging.INFO)
+        hazard_restore_remote(
+            arg.tarfile, arg.host, arg.dbname,
+            arg.user, arg.password, arg.port)

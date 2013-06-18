@@ -113,6 +113,7 @@ GRANT SELECT,INSERT,UPDATE ON riskr.dmg_dist_per_asset        TO oq_reslt_writer
 GRANT SELECT,INSERT,UPDATE ON riskr.dmg_dist_per_taxonomy     TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON riskr.dmg_dist_total            TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON riskr.event_loss                TO oq_reslt_writer;
+GRANT SELECT,INSERT,UPDATE ON riskr.event_loss_data           TO oq_reslt_writer;
 
 -- uiapi schema
 GRANT SELECT,INSERT,UPDATE ON uiapi.input              TO oq_job_init;
