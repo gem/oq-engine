@@ -135,7 +135,7 @@ class AssetManagerTestCase(unittest.TestCase):
         rc.exposure_model.id = 0
         rc.region_constraint.wkt = "REGION CONSTRAINT"
 
-        p1 = mock.patch(self.base + '_get_occupants_query_helper')
+        p1 = mock.patch(self.base + '_get_people_query_helper')
         m1 = p1.start()
         m1.return_value = ("occupants_fields", "occupants_cond",
                            "occupancy_join", ("occ_arg1", "occ_arg2"))
@@ -148,7 +148,7 @@ class AssetManagerTestCase(unittest.TestCase):
                 rc, "taxonomy", 0, 1)
             self.assertEqual("""
             SELECT riski.exposure_data.*,
-                   occupants_fields AS occupancy,
+                   occupants_fields AS people,
                    cost_type_fields
             FROM riski.exposure_data
             occupancy_join
@@ -171,34 +171,34 @@ class AssetManagerTestCase(unittest.TestCase):
             p1.stop()
             p2.stop()
 
-    def test_get_occupants_query_helper_population_no_event(self):
-        field, cond, join, args = self.manager._get_occupants_query_helper(
+    def test_get_people_query_helper_population_no_event(self):
+        field, cond, join, args = self.manager._get_people_query_helper(
             "population", None)
         self.assertEqual("number_of_units", field)
         self.assertEqual("1 = 1", cond)
         self.assertEqual("", join)
         self.assertEqual(args, ())
 
-    def test_get_occupants_query_helper_population_time_event(self):
-        field, cond, join, args = self.manager._get_occupants_query_helper(
+    def test_get_people_query_helper_population_time_event(self):
+        field, cond, join, args = self.manager._get_people_query_helper(
             "population", "day")
         self.assertEqual("number_of_units", field)
         self.assertEqual("1 = 1", cond)
         self.assertEqual("", join)
         self.assertEqual(args, ())
 
-    def test_get_occupants_query_helper_buildings_no_event(self):
-        field, cond, join, args = self.manager._get_occupants_query_helper(
+    def test_get_people_query_helper_buildings_no_event(self):
+        field, cond, join, args = self.manager._get_people_query_helper(
             "buildings", None)
-        self.assertEqual("AVG(riski.occupancy.occupants)", field)
+        self.assertEqual("AVG(riski.occupancy.occupants::float)", field)
         self.assertEqual("1 = 1", cond)
         self.assertEqual("LEFT JOIN riski.occupancy", join)
         self.assertEqual(args, ())
 
-    def test_get_occupants_query_helper_buildings_time_event(self):
-        field, cond, join, args = self.manager._get_occupants_query_helper(
+    def test_get_people_query_helper_buildings_time_event(self):
+        field, cond, join, args = self.manager._get_people_query_helper(
             "buildings", "day")
-        self.assertEqual("AVG(riski.occupancy.occupants)", field)
+        self.assertEqual("AVG(riski.occupancy.occupants::float)", field)
         self.assertEqual("riski.occupancy.period = %s", cond)
         self.assertEqual("LEFT JOIN riski.occupancy", join)
         self.assertEqual(args, ("day",))
