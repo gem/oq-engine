@@ -21,8 +21,8 @@ from nose.plugins.attrib import attr as noseattr
 from qa_tests import risk
 
 
-class EventBaseQATestCase1(risk.LogicTreeBasedTestCase,
-                           risk.End2EndRiskQATestCase):
+class ScenarioOccupantsQATestCase1(risk.LogicTreeBasedTestCase,
+                                   risk.End2EndRiskQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
 
@@ -34,11 +34,11 @@ class EventBaseQATestCase1(risk.LogicTreeBasedTestCase,
 
     def actual_data(self, job):
         latest_loss_map = job.output_set.filter(
-            output_type="loss_map", loss_map__loss_type="occupants").latest(
+            output_type="loss_map", loss_map__loss_type="fatalities").latest(
                 'last_update').loss_map
         latest_aggregated = job.output_set.filter(
             output_type="aggregate_loss",
-            aggregate_loss__loss_type="occupants").latest(
+            aggregate_loss__loss_type="fatalities").latest(
                 'last_update').aggregate_loss
 
         return [(d.value, d.std_dev)
