@@ -24,7 +24,7 @@ from openquake.engine.db import models
 
 
 class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     EXPECTED_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -60,7 +60,7 @@ class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard_job(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("simple_fault_demo_hazard/job.ini"))
 
@@ -75,7 +75,7 @@ class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
             (0.60, 0.000757544444296432), (0.70, 0.000272824002045979),
             (0.80, 0.00), (0.9, 0.00), (1.0, 0.00)]
 
-        hd = models.HazardCurveData.objects.create(
+        models.HazardCurveData.objects.create(
             hazard_curve=models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job, "Test Hazard curve", "hazard_curve"),
@@ -85,7 +85,7 @@ class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
             poes=[hz[1] for hz in hazard_curve],
             location="POINT(1 1)")
 
-        return hd.hazard_curve.output.id
+        return job
 
     def actual_data(self, job):
         return ([curve.loss_ratios

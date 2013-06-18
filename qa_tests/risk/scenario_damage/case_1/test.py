@@ -14,18 +14,16 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
 
-import numpy
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
 from tests.utils import helpers
-from openquake.engine.db import models
 
 
 class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf_scenario"
 
     EXPECTED_DMG_DIST_PER_ASSET = '''<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -129,12 +127,12 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard_job(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("scenario_hazard/job.ini"))
         fname = os.path.join(os.path.dirname(__file__), 'gmf_scenario.csv')
-        gmfcoll = helpers.populate_gmf_agg_from_csv(job, fname)
-        return gmfcoll.output.id
+        helpers.populate_gmf_agg_from_csv(job, fname)
+        return job
 
     def expected_outputs(self):
         return [self.EXPECTED_DMG_DIST_PER_ASSET,

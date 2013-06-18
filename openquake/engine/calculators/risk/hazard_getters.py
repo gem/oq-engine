@@ -110,8 +110,11 @@ class HazardGetter(object):
             # please don't remove this log: it was required by Vitor since
             # this is a case that should NOT happen and must raise a warning
             logs.LOG.warn(
-                "No hazard has been found for the asset %s within %s km" % (
-                    self.asset_dict[missing_asset_id], self.max_distance))
+                "No hazard with imt %s has been found for "
+                "the asset %s within %s km" % (
+                    self.imt,
+                    self.asset_dict[missing_asset_id],
+                    self.max_distance))
 
         return assets, data
 
@@ -216,6 +219,8 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         Iterator yielding site_id, assets.
         """
+                "the asset %s within %s km" % (
+                    self.imt,
         cursor = models.getcursor('job_init')
         # NB: the ``distinct ON (exposure_data.id)`` combined with the
         # ``ORDER BY ST_Distance`` does the job to select the closest site.

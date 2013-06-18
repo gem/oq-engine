@@ -25,19 +25,20 @@ from openquake.engine.db import models
 
 # FIXME(lp). This is just a regression test
 class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf"
 
     @noseattr('qa', 'risk', 'event_based')
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard_job(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("event_based_hazard/job.ini"))
-        gmf_coll = helpers.create_gmf_from_csv(job, os.path.join(
+        helpers.create_gmf_from_csv(job, os.path.join(
             os.path.dirname(__file__), 'gmf.csv'))
 
-        return gmf_coll.output.id
+        return job
 
     def actual_data(self, job):
         return ([curve.average_loss_ratio
@@ -60,8 +61,9 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                 loss_map__output__oq_job=job).order_by(
                     'asset_ref', 'loss_map__poe')]] +
                 [[el.aggregate_loss
-                 for el in models.EventLoss.objects.filter(
-                output__oq_job=job).order_by('-aggregate_loss')[0:10]]])
+                 for el in models.EventLossData.objects.filter(
+                event_loss__output__oq_job=job).order_by(
+                    '-aggregate_loss')[0:10]]])
 
     def expected_data(self):
         # FIXME(lp). Event Loss Table data do not come from a reliable

@@ -29,13 +29,11 @@ class EventBasedRiskCase3TestCase(risk.End2EndRiskQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
 
+    output_type = "gmf"
+
     @noseattr('qa', 'risk', 'event_based', 'e2e')
     def test(self):
         self._run_test()
-
-    def hazard_id(self):
-        return models.Output.objects.filter(output_type='gmf').latest(
-            'last_update').id
 
     def actual_data(self, job):
         loss_fraction = models.LossFraction.objects.get(

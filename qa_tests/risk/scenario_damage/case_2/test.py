@@ -21,7 +21,7 @@ from qa_tests.risk.scenario_damage.case_1 import test
 
 
 class ScenarioDamageRiskCase2TestCase(test.ScenarioDamageRiskCase1TestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
 
     EXPECTED_DMG_DIST_PER_ASSET = '''<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
