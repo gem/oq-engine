@@ -219,8 +219,6 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         Iterator yielding site_id, assets.
         """
-                "the asset %s within %s km" % (
-                    self.imt,
         cursor = models.getcursor('job_init')
         # NB: the ``distinct ON (exposure_data.id)`` combined with the
         # ``ORDER BY ST_Distance`` does the job to select the closest site.
