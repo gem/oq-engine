@@ -636,6 +636,10 @@ class BaseHazardCalculator(base.Calculator):
                 hc.intensity_measure_types = list(set(
                     hc.intensity_measure_types))
             hc.save()
+            logs.LOG.info("Got IMT and levels "
+                          "from vulnerability models: %s - %s" % (
+                              hc.intensity_measure_types_and_levels,
+                              hc.intensity_measure_types))
 
         queryset = self.hc.inputs.filter(input_type='fragility')
         if queryset.exists():

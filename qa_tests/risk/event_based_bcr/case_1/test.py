@@ -29,8 +29,9 @@ from openquake.engine.db import models
 # by an alternative reliable implemantation
 
 
-class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf"
 
     check_exports = False
 
@@ -38,7 +39,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard_job(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("event_based_hazard/job.ini"))
 
@@ -56,7 +57,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
         gmf_coll = helpers.create_gmf_from_csv(
             job, os.path.join(os.path.dirname(__file__), 'gmf.csv'))
 
-        return gmf_coll.output.id
+        return job
 
     def actual_data(self, job):
         data = [(result.average_annual_loss_original,
