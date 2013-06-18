@@ -385,7 +385,4 @@ def supervise(pid, job_id, timeout=1, log_file=None):
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
 
-    # Create job stats, which implicitly records the start time for the job
-    JobStats.objects.create(oq_job=OqJob.objects.get(id=job_id))
-
     supervisor.run()

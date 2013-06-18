@@ -263,9 +263,9 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # map + 2 quantile loss map
             self.assertEqual(19, loss_map_outputs.count())
 
-            # 1 event loss table
+            # 16 event loss table (1 per rlz)
             event_loss_tables = risk_outputs.filter(output_type="event_loss")
-            self.assertEqual(1, event_loss_tables.count())
+            self.assertEqual(16, event_loss_tables.count())
 
             # 32 loss fractions
             loss_fraction_outputs = risk_outputs.filter(
@@ -292,7 +292,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             self.assertEqual(19, len(loss_curve_files))
             self.assertEqual(16, len(agg_loss_curve_files))
-            self.assertEqual(1, len(event_loss_table_files))
+            self.assertEqual(16, len(event_loss_table_files))
             self.assertEqual(19, len(loss_map_files))
 
             for f in loss_curve_files:
