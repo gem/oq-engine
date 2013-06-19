@@ -569,8 +569,7 @@ class HazardCalculation(djm.Model):
     # The points of interest for a calculation.
     sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
     # this is initialized by initialize_site_model
-    site_collection = fields.PickleField(
-        null=True, blank=True, db_column='site_collection')
+    site_collection = fields.PickleField(null=True, blank=True)
 
     ########################
     # Logic Tree parameters:
@@ -886,14 +885,37 @@ class HazardCalculation(djm.Model):
     def save_sites(self, coordinates):
         """
         Save all the gives sites on the hzrdi.hazard_site table.
-
         :param coordinates: a sequence of (lon, lat) pairs
         :returns: the ids of the inserted HazardSite instances
         """
         sites = [HazardSite(hazard_calculation=self,
-                          location='POINT(%s %s)' % coord)
+                            location='POINT(%s %s)' % coord)
                  for coord in coordinates]
         return writer.CacheInserter.saveall(sites)
+
+    def total_investigation_time(self):
+        """
+        Helper method to compute the total investigation time for a
+        complete set of stochastic event sets for all realizations.
+        """
+        if self.number_of_logic_tree_samples > 0:
+            # The calculation is set to do Monte-Carlo sampling of logic trees
+            # The number of logic tree realizations is specified explicitly in
+            # job configuration.
+            n_lt_realizations = self.number_of_logic_tree_samples
+        else:
+            # The calculation is set do end-branch enumeration of all logic
+            # tree paths
+            # We can get the number of logic tree realizations by counting
+            # initialized lt_realization records.
+            n_lt_realizations = LtRealization.objects.filter(
+                hazard_calculation=self).count()
+
+        investigation_time = (self.investigation_time
+                              * self.ses_per_logic_tree_path
+                              * n_lt_realizations)
+
+        return investigation_time
 
 
 class RiskCalculation(djm.Model):
@@ -943,7 +965,7 @@ class RiskCalculation(djm.Model):
     maximum_distance = djm.FloatField(
         null=True, blank=True, default=DEFAULT_MAXIMUM_DISTANCE)
     # the hazard output (it can point to an HazardCurve or to a
-    # GmfCollection) used by the risk calculation
+    # Gmf) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
 
     # the HazardCalculation object used by the risk calculation when
@@ -1648,17 +1670,6 @@ class SESRupture(djm.Model):
     # HazardLib Surface object. Stored as it is needed by risk disaggregation
     surface = fields.PickleField()
 
-    result_grp_ordinal = djm.IntegerField()
-    # NOTE(LB): The ordinal of a rupture within a given result group (indicated
-    # by ``result_grp_ordinal``). This rupture correspond to the indices of the
-    # ``gmvs`` field in Gmf. Thus, if you join SESRupture and Gmf records on
-    # the ``result_grp_ordinal``, you can extract ground motion values for a
-    # specific rupture.
-    # At the moment this functionality is not directly used, but in the future
-    # we will need to provide some way of tracing ground motion to the original
-    # rupture.
-    rupture_ordinal = djm.IntegerField()
-
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
 
@@ -1735,7 +1746,7 @@ class _Point(object):
         self.y = y
 
 
-class GmfCollection(djm.Model):
+class Gmf(djm.Model):
     """
     A collection of ground motion field (GMF) sets for a given logic tree
     realization.
@@ -1747,17 +1758,17 @@ class GmfCollection(djm.Model):
     lt_realization = djm.ForeignKey('LtRealization', null=True)
 
     class Meta:
-        db_table = 'hzrdr\".\"gmf_collection'
+        db_table = 'hzrdr\".\"gmf'
 
-    # NB: uses the helper view gmf_collection_family
+    # NB: uses the helper view gmf_family
     def get_children(self):
         """
-        Get the children of a given gmf_collection, if any.
+        Get the children of a given gmf, if any.
         :returns:
-          A list of :class:`openquake.engine.db.models.GmfCollection` instances
+          A list of :class:`openquake.engine.db.models.Gmf` instances
         """
         curs = getcursor('job_init')
-        curs.execute('select child_id from hzrdr.gmf_collection_family '
+        curs.execute('select child_id from hzrdr.gmf_family '
                      'where parent_id=%s', (self.id,))
         return [self.__class__.objects.get(pk=r[0]) for r in curs]
 
@@ -1788,16 +1799,15 @@ class GmfCollection(djm.Model):
         for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
             query = """
         SELECT imt, sa_period, sa_damping, rupture_id,
-        array_agg(gmv), array_agg(ST_X(location::geometry)),
-        array_agg(ST_Y(location::geometry)) FROM (
-           SELECT imt, sa_period, sa_damping,
-           unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           FROM hzrdr.gmf_agg, hzrdi.hazard_site
-           WHERE site_id = hzrdi.hazard_site.id
-           AND hazard_calculation_id=%d AND gmf_collection_id=%d) AS x,
-           hzrdr.ses_rupture as y
-        where x.rupture_id=y.id AND ses_id=%d
-        group by imt, sa_period, sa_damping, rupture_id
+               array_agg(gmv) AS gmvs,
+               array_agg(ST_X(location::geometry)) AS xs,
+               array_agg(ST_Y(location::geometry)) AS ys
+        FROM (SELECT imt, sa_period, sa_damping, ses_id,
+             unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
+           FROM hzrdr.gmf_data, hzrdi.hazard_site
+           WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
+             AND gmf_id=%d AND ses_id=%d) AS x
+        GROUP BY imt, sa_period, sa_damping, rupture_id
         """ % (hc.id, self.id, ses.id)
             if orderby:  # may be used in tests to get reproducible results
                 query += 'order by imt, sa_period, sa_damping, rupture_id;'
@@ -1814,39 +1824,6 @@ class GmfCollection(djm.Model):
             yield _GmfsPerSES(gmfs, ses.investigation_time, ses.id)
 
     __iter__ = get_gmfs_per_ses
-
-
-class GmfSet(djm.Model):
-    """
-    A set of ground motion fields for a given investigation time (in years).
-    """
-    gmf_collection = djm.ForeignKey('GmfCollection')
-    investigation_time = djm.FloatField()
-    # Keep track of the stochastic event set which this GMF set is associated
-    # with.
-    ses_ordinal = djm.IntegerField()
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf_set'
-
-    @property
-    def stochastic_event_set_id(self):
-        """
-
-        :returns:
-            The ID of the stochastic event set which this ground motion field
-            set has been generated from.
-        """
-        if self.ses_ordinal is None:  # complete logic tree
-            job = self.gmf_collection.output.oq_job
-            return SES.objects.get(
-                ordinal=None,
-                ses_collection__output__oq_job=job).id
-        else:
-            rlz = self.gmf_collection.lt_realization
-            return SES.objects.get(
-                ses_collection__lt_realization=rlz,
-                ordinal=self.ses_ordinal).id
 
 
 class _GroundMotionField(object):
@@ -1891,32 +1868,13 @@ class _GroundMotionFieldNode(object):
             self.location.x, self.location.y, self.gmv)
 
 
-class Gmf(djm.Model):
-    """
-    Ground Motion Field: A collection of ground motion values and their
-    respective geographical locations.
-    """
-    gmf_set = djm.ForeignKey('GmfSet')
-    imt = djm.TextField(choices=IMT_CHOICES)
-    sa_period = djm.FloatField(null=True)
-    sa_damping = djm.FloatField(null=True)
-    location = djm.PointField(srid=DEFAULT_SRID)
-    gmvs = fields.FloatArrayField()
-    rupture_ids = fields.IntArrayField()
-    result_grp_ordinal = djm.IntegerField()
-
-    objects = djm.GeoManager()
-
-    class Meta:
-        db_table = 'hzrdr\".\"gmf'
-
-
 class GmfAgg(djm.Model):
     """
     Ground Motion Field: A collection of ground motion values and their
     respective geographical locations.
     """
-    gmf_collection = djm.ForeignKey('GmfCollection')
+    gmf = djm.ForeignKey('Gmf')
+    ses = djm.ForeignKey('SES', null=True)
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
@@ -1926,7 +1884,7 @@ class GmfAgg(djm.Model):
     objects = djm.GeoManager()
 
     class Meta:
-        db_table = 'hzrdr\".\"gmf_agg'
+        db_table = 'hzrdr\".\"gmf_data'
 
 
 def get_gmvs_per_site(output, imt=None, sort=sorted):
@@ -1954,7 +1912,7 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
         for gmf in GmfAgg.objects.filter(
-                gmf_collection=coll, imt=imt,
+                gmf=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping).\
                 order_by('site'):
             yield sort(gmf.gmvs)
@@ -1984,7 +1942,7 @@ def get_gmfs_scenario(output, imt=None):
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
         for gmf in GmfAgg.objects.filter(
-                gmf_collection=coll, imt=imt,
+                gmf=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
                 nodes[i].append(_GroundMotionFieldNode(gmv, gmf.site.location))

@@ -78,7 +78,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
 
     if not len(assets):
         logs.LOG.info("Exit from task as no asset could be processed")
-        return
+        return None, None
 
     with profile('computing risk'):
         loss_ratio_matrix = unit.calc(ground_motion_values)
