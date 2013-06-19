@@ -149,9 +149,8 @@ usage () {
     echo "    $0 pkgtest <branch-name>                     install oq-engine package and related dependencies into"
     echo "                                                 an ubuntu lxc environment and run package tests and demos"
 
-    echo "    $0 [-f <fixture-file>] devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
+    echo "    $0 devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
     echo "                                                 setup environment and run development tests."
-    echo "                                                 Optionally, it loads fixtures data before running tests."
     echo
     exit $ret
 }
@@ -240,7 +239,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
 
-    ssh $lxc_ip "sudo su postgres -c \"cd oq-engine ; bin/create_oq_schema --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema\""
+    ssh $lxc_ip "sudo su postgres -c \"cd oq-engine ; bin/create_oq_schema --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema --load-fixtures=\\\$(pwd)/qatests/risk/fixtures.tar\""
 
     for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer; do
         ssh $lxc_ip "sudo su postgres -c \"psql -c \\\"ALTER ROLE $dbu WITH PASSWORD 'openquake'\\\"\""
@@ -248,14 +247,6 @@ _devtest_innervm_run () {
 
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
-
-    if [ ! -z "$FIXTURES" ]; then
-        scp "$FIXTURES" "${lxc_ip}:/tmp/fixtures.tar"
-        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
-                     cd oq-engine ;
-                     python openquake/engine/tools/restore_hazards.py /tmp/fixtures.tar
-        "
-    fi
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         # run tests
@@ -661,9 +652,6 @@ BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
 
-#: a path to a fixture file produced by the dump_hazards.py script
-FIXTURES=""
-
 trap sig_hand SIGINT SIGTERM
 #  args management
 while [ $# -gt 0 ]; do
@@ -676,10 +664,6 @@ while [ $# -gt 0 ]; do
                 echo
                 exit 1
             fi
-            ;;
-        -F|--fixtures)
-            FIXTURES=$2
-            shift  # consume argument
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
