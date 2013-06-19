@@ -2,7 +2,9 @@
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
 # set -x
 set -e
-GEM_DEB_PACKAGE="python-oq-risklib"
+GEM_GIT_REPO="git://github.com/gem"
+GEM_GIT_PACKAGE="oq-risklib"
+GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
     GEM_DEB_REPO="$HOME/gem_ubuntu_repo"
@@ -12,12 +14,60 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
 GEM_ALWAYS_YES=false
 
+if [ "$GEM_EPHEM_CMD" = "" ]; then
+    GEM_EPHEM_CMD="lxc-start-ephemeral"
+fi
+GEM_EPHEM_NAME="ubuntu-lxc-eph"
+
 NL="
 "
 TB="	"
 
 #
 #  functions
+sig_hand () {
+    trap ERR
+    echo "signal trapped"
+    if [ "$lxc_name" != "" ]; then
+        set +e
+        echo "Destroying [$lxc_name] lxc"
+        upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
+        if [ -f "${upper}.dsk" ]; then
+            loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
+        fi
+        sudo lxc-stop -n $lxc_name
+        sudo umount /var/lib/lxc/$lxc_name/rootfs
+        sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
+        echo "$upper" | grep -q '^/tmp/'
+        if [ $? -eq 0 ]; then
+            sudo umount "$upper"
+            sudo rm -r "$upper"
+            if [ "$loop_dev" != "" ]; then
+                sudo losetup -d "$loop_dev"
+                if [ -f "${upper}.dsk" ]; then
+                    sudo rm -f "${upper}.dsk"
+                fi
+            fi
+        fi
+        sudo lxc-destroy -n $lxc_name
+    fi
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
+}
+
+#
+#  repo_id_get - retry git repo from local git remote command
+repo_id_get () {
+    repo_id="$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+
+    echo "$repo_id"
+}
+
+#
+#  mksafedir <dname> - try to create a directory and rise an alert if it already exists
+#      <dname>    name of the directory to create
+#
 mksafedir () {
     local dname
 
@@ -43,43 +93,158 @@ usage () {
     echo "       if -R is present update the local repository to the new current package"
     echo "       if -D is present a package with self-computed version is produced."
     echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
-    echo "    $0 pkgtest <last-ip-digit>                  run tests into an ubuntu lxc environment"
+    echo "    $0 pkgtest <branch-name>                    run packaging tests into an ubuntu lxc environment"
+    echo "    $0 devtest <branch-name>                    run development tests into an ubuntu lxc environment"
     echo
     exit $ret
 }
 
-_pkgtest_innervm_run () {
-    local haddr="$1"
+_wait_ssh () {
+    local lxc_ip="$1"
+
+    for i in $(seq 1 20); do
+        if ssh $lxc_ip "echo begin"; then
+            break
+        fi
+        sleep 2
+    done
+    if [ $i -eq 20 ]; then
+        return 1
+    fi
+}
+
+_devtest_innervm_run () {
+    local i lxc_ip="$1"
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
-    ssh $haddr "sudo apt-get update"
-    ssh $haddr "sudo apt-get -y upgrade"
-    gpg -a --export | ssh $haddr "sudo apt-key add -"
-    # install package to manage repository properly
-    ssh $haddr "sudo apt-get install -y python-software-properties"
+    ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get upgrade -y"
 
-    # create a remote "local repo" where place $GEM_DEB_PACKAGE package
-    ssh $haddr mkdir -p repo/${GEM_DEB_PACKAGE}
-    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
-        build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
-        build-deb/Packages* build-deb/Sources*  build-deb/Release* $haddr:repo/${GEM_DEB_PACKAGE}
-    ssh $haddr "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
-    ssh $haddr "sudo apt-get update"
+    pkgs_list="$(deps_list debian/control)"
+    ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
-    # packaging related tests (install, remove, purge, install, reinstall)
-    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
-    ssh $haddr "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
+    # TODO: version check
+    git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
+
+    ssh $lxc_ip "cd $GEM_GIT_PACKAGE ; nosetests -v --with-doctest --with-coverage --cover-package=openquake.risklib --with-xunit"
+    scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
 
     trap ERR
 
     return
 }
 
+_pkgtest_innervm_run () {
+    local lxc_ip="$1"
+
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
+
+    ssh $lxc_ip "sudo apt-get update"
+    ssh $lxc_ip "sudo apt-get -y upgrade"
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
+    # install package to manage repository properly
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+
+    # create a remote "local repo" where place $GEM_DEB_PACKAGE package
+    ssh $lxc_ip mkdir -p repo/${GEM_DEB_PACKAGE}
+    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+        build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+        build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
+    ssh $lxc_ip "sudo apt-get update"
+
+    # packaging related tests (install, remove, purge, install, reinstall)
+    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
+
+    trap ERR
+
+    return
+}
+
+deps_list() {
+    local oldifs out_list i filename="$1"
+
+    oldifs="$IFS"
+    IFS=','
+    out_list=""
+    for i in $(cat "$filename" | grep "^\(Build-\)\?Depends:" | sed 's/^\(Build-\)\?Depends: //g') ; do
+        item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
+        pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
+        pkg_vers="$(echo "${item} " | cut -d ' ' -f 2)"
+        echo "[$pkg_name][$pkg_vers]" >&2
+        if echo "$pkg_name" | grep -q "^\${" ; then
+            continue
+        fi
+        if [ "$out_list" == "" ]; then
+            out_list="$pkg_name"
+        else
+            out_list="$out_list $pkg_name"
+        fi
+    done
+    IFS="$oldifs"
+
+    echo "$out_list"
+
+    return 0
+}
+
+_lxc_name_and_ip_get()
+{
+    local filename="$1" i e
+
+    i=-1
+    e=-1
+    for i in $(seq 1 40); do
+        sleep 2
+        if grep -q "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log 2>&1 ; then
+            lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" /tmp/packager.eph.$$.log | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
+            for e in $(seq 1 40); do
+                sleep 2
+                if grep -q "$lxc_name" /var/lib/misc/dnsmasq.leases ; then
+                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq.leases | cut -d ' ' -f 3)"
+                    break
+                fi
+            done
+            break
+        fi
+    done
+    if [ $i -eq 40 -o $e -eq 40 ]; then
+        return 1
+    fi
+    echo "SUCCESSFULY RUNNED $lxc_name ($lxc_ip)"
+
+    return 0
+}
+
+devtest_run () {
+    sudo echo
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+
+    _wait_ssh $lxc_ip
+
+    set +e
+    _devtest_innervm_run $lxc_ip
+    inner_ret=$?
+    sudo lxc-shutdown -n $lxc_name -w -t 10
+    set -e
+
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
+
+    # if [ $inner_ret -ne 0 ]; then
+    return $inner_ret
+    # fi
+}
+
+
 pkgtest_run () {
-    local i e le_addr="$1" haddr
+    local i e branch_id="$1"
 
     #
     #  run build of package
@@ -118,55 +283,36 @@ EOF
     gpg --armor --detach-sign --output Release.gpg Release
     cd -
 
-    #
-    #  check if an istance with the same address already exists
-    export haddr="10.0.3.$le_addr"
-    running_machines="$(sudo lxc-list | sed -n '/RUNNING/,/FROZEN/p' | egrep -v '^RUNNING$|^FROZEN$|^ *$' | sed 's/^ *//g')"
-    for running_machine in $running_machines ; do
-        if sudo grep -q "[^#]*address[ 	]\+$haddr[ 	]*$" /var/lib/lxc/${running_machine}/rootfs/etc/network/interfaces >/dev/null 2>&1; then
-            echo -n "The $haddr machine seems to be already configured ... "
-            set +e
-            sudo lxc-shutdown -n $running_machine -w -t 10
-            set -e
-            echo "turned off"
-        fi
-    done
+    sudo echo
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
 
-    #
-    #  run the VM and get the VM name
-    sudo lxc-start-ephemeral-gem -i $le_addr -d -o ubuntu-lxc >${haddr}.lxc.log 2>&1
+    _wait_ssh $lxc_ip
 
-    # waiting VM startup
-    for i in $(seq 1 60); do
-        if grep -q "is running" ${haddr}.lxc.log 2>/dev/null; then
-            machine_name="$(grep "is running" ${haddr}.lxc.log | sed 's/ is running.*//g')"
-            echo "MACHINE NAME: [$machine_name]"
-            for e in $(seq 1 60); do
-                sleep 1
-                if lxc-ps -n "${machine_name}" | grep sshd; then
-                    sleep 1
-                    break
-                fi
-            done
-            break
-        fi
-        sleep 1
-    done
-    if [ $i -eq 60 -o $e -eq 60 ]; then
-        echo "VM not responding"
-        return 2
-    fi
     set +e
-    _pkgtest_innervm_run $haddr
+    _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
-    sudo lxc-shutdown -n $machine_name -w -t 10
+    sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
+
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
 
     if [ $inner_ret -ne 0 ]; then
         return $inner_ret
     fi
 
     if [ $BUILD_REPOSITORY -eq 1 -a -d "${GEM_DEB_REPO}" ]; then
+        if [ "$branch_id" != "" ]; then
+            repo_id="$(repo_id_get)"
+            if [ "git://$repo_id" != "$GEM_GIT_REPO" -o "$branch_id" != "master" ]; then
+                CUSTOM_SERIE="devel/$(echo "$repo_id" | sed "s@/@__@g;s/\./-/g")__${branch_id}"
+                if [ "$CUSTOM_SERIE" != "" ]; then
+                    GEM_DEB_SERIE="$CUSTOM_SERIE"
+                fi
+            fi
+        fi
         mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
         repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
         cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
@@ -176,6 +322,7 @@ EOF
             rm -rf "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
         fi
         mv "${repo_tmpdir}" "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
+        echo "The package is saved here: ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}"
     fi
 
     # TODO
@@ -192,6 +339,8 @@ BUILD_REPOSITORY=0
 BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
+
+trap sig_hand SIGINT SIGTERM
 #  args management
 while [ $# -gt 0 ]; do
     case $1 in
@@ -215,6 +364,11 @@ while [ $# -gt 0 ]; do
             ;;
         -h|--help)
             usage 0
+            break
+            ;;
+        devtest)
+            devtest_run $2
+            exit $?
             break
             ;;
         pkgtest)
@@ -330,6 +484,8 @@ if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
     read a
 fi
 
+# the following unexecuted block of code is a flag to identify where and how modifications can
+# be performed from sources to package
 if [ 0 -eq 1 ]; then
     sed -i "s/^\([ 	]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__init__.py
 

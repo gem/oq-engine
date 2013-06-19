@@ -22,6 +22,7 @@ A minimal engine using the risklib calculators
 from __future__ import print_function
 import sys
 import traceback
+import operator
 import logging
 from openquake.concurrent import futures
 from openquake.risklite import calculators, readers
@@ -70,7 +71,7 @@ def getname(func):
 
 
 class FakeFuture(object):
-    "A replacement for a real :class:openquake.concurrent.futures.Future object"
+    "A replacement for a :class:openquake.concurrent.futures.Future object"
     def __init__(self, thunk):
         self.thunk = thunk
 
@@ -89,13 +90,13 @@ class BaseRunner(object):
     runs everything in the current process; should be used to debug
     issues in the parallel runner (the advantage is that the pdb works).
     """
-    def __init__(self, executor=FakeExecutor(), chunksize=None,
-                 agg=lambda acc, res: acc + res, seed=None):
+    def __init__(self, seed, executor=FakeExecutor(), chunksize=None,
+                 agg=operator.add):
         self.executor = executor
         self.chunksize = chunksize
         self.poolsize = executor._max_workers
         self.agg = agg
-        self.seed = [] if seed is None else seed
+        self.seed = seed
 
     def futures(self, func, chunks, args, kw):
         "Returns the operations to perform (iterator over futures)"
@@ -110,24 +111,45 @@ class BaseRunner(object):
         "Hook invoked every time a future has been processed"
         log.info('Processed chunk %d, progress=%0.3f>', fut.chunkno, progress)
 
-    def run(self, func, sequence, *args, **kw):
+    def run_in_order(self, func, sequence, *args, **kw):
         """
         Apply ``func`` to the arguments (the first beeing a sequence)
-        and collect the results. See the documentation in doc/risklite.rst
+        and collect the results. Preserve the order.
+        See the documentation in doc/risklite.rst for the details.
         """
         nelements = len(sequence)
         chunksize = self.chunksize or (nelements // self.poolsize + 1)
         chunks = list(chop(sequence, chunksize))
         nchunks = len(chunks)
-        acc = [None] * nchunks  # chunk accumulator
+        reslist = [None] * nchunks  # chunk accumulator
         for i, fut in enumerate(self.futures(func, chunks, args, kw)):
             res, exc, tb = fut.result()
             if exc is not None:
                 err = 'in chunk %s: %s' % (fut.chunkno, exc)
                 raise res, err, tb
-            acc[fut.chunkno] = res
+            reslist[fut.chunkno] = res
             self.processed_future(fut, progress=float(i + 1) / nchunks)
-        return reduce(self.agg, acc, self.seed)
+        return reduce(self.agg, reslist, self.seed)
+
+    def run(self, func, sequence, *args, **kw):
+        """
+        Apply ``func`` to the arguments (the first beeing a sequence)
+        and collect the results. Do not preserve the order.
+        See the documentation in doc/risklite.rst for the details.
+        """
+        nelements = len(sequence)
+        chunksize = self.chunksize or (nelements // self.poolsize + 1)
+        chunks = list(chop(sequence, chunksize))
+        nchunks = len(chunks)
+        acc = self.seed
+        for i, fut in enumerate(self.futures(func, chunks, args, kw)):
+            res, exc, tb = fut.result()
+            if exc is not None:
+                err = 'in chunk %s: %s' % (fut.chunkno, exc)
+                raise res, err, tb
+            acc = self.agg(acc, res)
+            self.processed_future(fut, progress=float(i + 1) / nchunks)
+        return acc
 
     def __repr__(self):
         return '<%s(%s(%d))>' % (

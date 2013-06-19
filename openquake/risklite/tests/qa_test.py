@@ -12,8 +12,8 @@ class EngineTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.seq_runner = BaseRunner()
-        cls.par_runner = Runner(ProcessPoolExecutor())
+        cls.seq_runner = BaseRunner([])
+        cls.par_runner = Runner([], ProcessPoolExecutor())
 
     @attr('slow')
     def test_scenario_damage_seq(self):

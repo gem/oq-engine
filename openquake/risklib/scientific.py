@@ -27,7 +27,7 @@ import bisect
 import numpy
 from scipy import interpolate, stats
 
-from openquake.risklib import curve, utils
+from openquake.risklib import utils
 
 ###
 ### Constants & Defaults
@@ -50,7 +50,7 @@ class VulnerabilityFunction(object):
             must be arranged in ascending order with no duplicates
 
         :param list mean_loss_ratios: Mean Loss ratio values, equal in
-        length to imls, where 0.0 <= value <= 1.0.
+        length to imls, where value >= 0.
 
         :param list covs: Coefficients of Variation. Equal in length
         to mean loss ratios. All values must be >= 0.0.
@@ -426,11 +426,10 @@ class LogNormalDistribution(Distribution):
                              "before you can use it")
         epsilons = self.epsilons[self.epsilon_idx]
         self.epsilon_idx += 1
-        variance = (means * covs) ** 2
-        sigma = numpy.sqrt(numpy.log((variance / means ** 2.0) + 1.0))
-        mu = numpy.log(means ** 2.0 / numpy.sqrt(variance + means ** 2.0))
+        sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
 
-        return numpy.exp(mu + (epsilons[0:len(sigma)] * sigma))
+        return (means / numpy.sqrt(1 + covs ** 2) *
+                numpy.exp(epsilons[0:len(sigma)] * sigma))
 
     def survival(self, loss_ratio, mean, stddev):
 
@@ -445,6 +444,7 @@ class LogNormalDistribution(Distribution):
                 return 1
 
         variance = stddev ** 2.0
+
         sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
         mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
         return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
@@ -494,31 +494,18 @@ def event_based(loss_values, tses, time_span,
     :param curve_resolution: The number of points the output curve is
     defined by
     """
-    sorted_loss_values = numpy.sort(loss_values)[::-1]
+    reference_losses = numpy.linspace(0, max(loss_values), curve_resolution)
 
-    # We compute the rates of exceedances by iterating over loss
-    # values and counting the number of distinct loss values less than
-    # the current loss. This is a workaround for a rounding error, ask Luigi
-    # for the details
-    times = [index
-             for index, (previous_val, val) in
-             enumerate(utils.pairwise(sorted_loss_values))
-             if not numpy.allclose([val], [previous_val])]
+    # TODO(lp) we can optimize more here instead of run a complete
+    # double-looping. E.g. sort loss_values, binary search in it, etc.
+    times = numpy.array(
+        [numpy.where(loss_values > loss)[0].size for loss in reference_losses])
 
-    # if there are less than 2 distinct loss values, we will keep the
-    # endpoints
-    if len(times) < 2:
-        times = [0, len(sorted_loss_values) - 1]
-
-    sorted_loss_values = sorted_loss_values[times]
     rates_of_exceedance = numpy.array(times) / float(tses)
 
     poes = 1 - numpy.exp(-rates_of_exceedance * time_span)
-    reference_poes = numpy.linspace(poes.min(), poes.max(), curve_resolution)
 
-    losses = interpolate.interp1d(poes, sorted_loss_values)(reference_poes)
-
-    return losses[::-1], reference_poes[::-1]
+    return reference_losses, poes
 
 
 ##
@@ -570,7 +557,7 @@ def classical(vulnerability_function, hazard_curve_values, steps=10):
 
 
 def _loss_ratio_exceedance_matrix_per_poos(
-        vuln_function, lrem, hazard_curve_values):
+        vuln_function, lrem, hazard_curves):
     """Compute the LREM * PoOs (Probability of Occurence) matrix.
 
     :param vuln_function: the vulnerability function used
@@ -585,10 +572,20 @@ def _loss_ratio_exceedance_matrix_per_poos(
     """
     lrem = numpy.array(lrem)
     lrem_po = numpy.empty(lrem.shape)
-    imls = vuln_function.mean_imls()
+    imls = numpy.array(vuln_function.mean_imls())
 
-    # compute the PoOs (Probability of Occurence) from the PoEs
-    pos = curve.Curve(hazard_curve_values).ordinate_diffs(imls)
+    hazard_imls, hazard_poes = zip(*hazard_curves)
+
+    # saturate imls to hazard imls
+    min_val, max_val = hazard_imls[0], hazard_imls[-1]
+    numpy.putmask(imls, imls < min_val, min_val)
+    numpy.putmask(imls, imls > max_val, max_val)
+
+    # interpolate the hazard curve
+    poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
+
+    # compute the poos
+    pos = pairwise_diff(poes)
     for idx, po in enumerate(pos):
         lrem_po[:, idx] = lrem[:, idx] * po  # column * po
     return lrem_po
@@ -636,14 +633,11 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
         if interval_index == len(poes):  # poes are all nan
             return float('nan')
         elif interval_index == 1:  # boundary case
-            x1, x2 = poes[-3:-1]
-            y1, y2 = loss_ratios[-3:-1]
+            x1, x2 = poes[-2:]
+            y1, y2 = loss_ratios[-2:]
         else:
             x1, x2 = poes[-interval_index-1:-interval_index + 1]
             y1, y2 = loss_ratios[-interval_index-1:-interval_index + 1]
-
-        if x1 == x2:
-            return y2
 
         return (y2 - y1) / (x2 - x1) * (probability - x1) + y1
 

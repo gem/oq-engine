@@ -324,11 +324,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             expected_loss_ratios,
             self.vulnerability_function1(GMF))
 
-    def test_constant(self):
-        expected = [10] * 100
+    def test_zero_curve(self):
+        expected = [0.] * 100
         losses, poes = scientific.event_based(expected, 50, 50, 11)
 
-        numpy.testing.assert_allclose([10] * 11, losses)
-        numpy.testing.assert_allclose(
-            numpy.arange(1.0, -0.1, -0.1), poes,
-            atol=1E-10)
+        numpy.testing.assert_allclose([0.] * 11, losses)
+        numpy.testing.assert_allclose([0.] * 11, poes, atol=1E-10)
