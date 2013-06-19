@@ -143,10 +143,10 @@ class CacheInserterTestCase(unittest.TestCase):
     def test_insert_gmf(self):
         cache = CacheInserter(GmfAgg, 10)
         gmf1 = GmfAgg(
-            gmf_collection_id=1, imt='PGA', gmvs=[], rupture_ids=[],
+            gmf_id=1, imt='PGA', gmvs=[], rupture_ids=[],
             site_id=1)
         gmf2 = GmfAgg(
-            gmf_collection_id=1, imt='PGA', gmvs=[], rupture_ids=[],
+            gmf_id=1, imt='PGA', gmvs=[], rupture_ids=[],
             site_id=2)
         cache.add(gmf1)
         cache.add(gmf2)
@@ -155,8 +155,8 @@ class CacheInserterTestCase(unittest.TestCase):
         self.assertEqual(
             connection.data,
             '1\t\\N\tPGA\t\\N\t\\N\t{}\t{}\t1\n1\t\\N\tPGA\t\\N\t\\N\t{}\t{}\t2\n')
-        self.assertEqual(connection.table, '"hzrdr"."gmf_agg"')
+        self.assertEqual(connection.table, '"hzrdr"."gmf_data"')
         self.assertEqual(
             connection.columns,
-            ['gmf_collection_id', 'ses_id', 'imt', 'sa_period', 'sa_damping',
+            ['gmf_id', 'ses_id', 'imt', 'sa_period', 'sa_damping',
              'gmvs', 'rupture_ids', 'site_id'])
