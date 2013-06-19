@@ -122,6 +122,7 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
         for i, site in enumerate(sites):
             inserter.add(models.GmfAgg(
                 gmf_collection_id=gmfcoll_id,
+                ses_id=None,
                 imt=imt_name,
                 sa_period=sa_period,
                 sa_damping=sa_damping,
