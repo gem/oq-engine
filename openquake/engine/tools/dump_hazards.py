@@ -192,19 +192,19 @@ class HazardDumper(object):
                   to stdout with (format '{}')""".format(ids, self.format),
             self.outdir, 'hzrdr.hazard_curve_data.csv', 'w')
 
-    def gmf_collection(self, output):
-        """Dump gmf_collection, gmf_data"""
+    def gmf(self, output):
+        """Dump gmf, gmf_data"""
         self.curs.copy(
-            """copy (select * from hzrdr.gmf_collection
+            """copy (select * from hzrdr.gmf
                   where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
-            self.outdir, 'hzrdr.gmf_collection.csv', 'w')
+            self.outdir, 'hzrdr.gmf.csv', 'w')
 
-        coll_ids = self.curs.tuplestr('select id from hzrdr.gmf_collection '
+        coll_ids = self.curs.tuplestr('select id from hzrdr.gmf '
                                       'where output_id in %s' % output)
         self.curs.copy(
             """copy (select * from hzrdr.gmf_data
-                  where gmf_collection_id in %s)
+                  where gmf_id in %s)
                   to stdout with (format '%s')""" % (coll_ids, self.format),
             self.outdir, 'hzrdr.gmf_data.csv', 'w')
 
@@ -263,7 +263,7 @@ class HazardDumper(object):
             if output_type == 'hazard_curve':
                 self.hazard_curve(ids)
             elif output_type in ('gmf', 'gmf_scenario'):
-                self.gmf_collection(ids)
+                self.gmf(ids)
             elif output_type == 'ses':
                 self.ses(ids)
 
