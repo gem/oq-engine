@@ -121,7 +121,7 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
 
         for i, site in enumerate(sites):
             inserter.add(models.GmfAgg(
-                gmf_collection_id=gmfcoll_id,
+                gmf_id=gmfcoll_id,
                 ses_id=None,
                 imt=imt_name,
                 sa_period=sa_period,
@@ -191,7 +191,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             display_name="gmf_scenario",
             output_type="gmf_scenario")
 
-        # create an associated gmf_collection record
+        # create an associated gmf record
         self.gmfcoll = models.GmfCollection.objects.create(output=output)
 
     def task_arg_gen(self, block_size):

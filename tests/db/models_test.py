@@ -361,7 +361,7 @@ class GmfsPerSesTestCase(unittest.TestCase):
                   (15.4, 38.09), (15.56, 38.1), (15.2, 38.2)]
         gmf_data2 = helpers.create_gmf_data_records(
             job, rlz2, ses_coll2, points)[0]
-        cls.gmf_coll1 = gmf_data1.gmf_collection
+        cls.gmf_coll1 = gmf_data1.gmf
         cls.parent_coll = models.GmfCollection.objects.create(
             output=models.Output.objects.create_output(
                 job, "Test Hazard output", "complete_lt_gmf"))
