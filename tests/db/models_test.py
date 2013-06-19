@@ -362,7 +362,7 @@ class GmfsPerSesTestCase(unittest.TestCase):
         gmf_data2 = helpers.create_gmf_data_records(
             job, rlz2, ses_coll2, points)[0]
         cls.gmf_coll1 = gmf_data1.gmf
-        cls.parent_coll = models.GmfCollection.objects.create(
+        cls.parent_coll = models.Gmf.objects.create(
             output=models.Output.objects.create_output(
                 job, "Test Hazard output", "complete_lt_gmf"))
         cls.ruptures1 = tuple(gmf_data1.rupture_ids)

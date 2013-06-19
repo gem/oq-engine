@@ -965,7 +965,7 @@ class RiskCalculation(djm.Model):
     maximum_distance = djm.FloatField(
         null=True, blank=True, default=DEFAULT_MAXIMUM_DISTANCE)
     # the hazard output (it can point to an HazardCurve or to a
-    # GmfCollection) used by the risk calculation
+    # Gmf) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
 
     # the HazardCalculation object used by the risk calculation when
@@ -1746,7 +1746,7 @@ class _Point(object):
         self.y = y
 
 
-class GmfCollection(djm.Model):
+class Gmf(djm.Model):
     """
     A collection of ground motion field (GMF) sets for a given logic tree
     realization.
@@ -1765,7 +1765,7 @@ class GmfCollection(djm.Model):
         """
         Get the children of a given gmf, if any.
         :returns:
-          A list of :class:`openquake.engine.db.models.GmfCollection` instances
+          A list of :class:`openquake.engine.db.models.Gmf` instances
         """
         curs = getcursor('job_init')
         curs.execute('select child_id from hzrdr.gmf_family '
@@ -1873,7 +1873,7 @@ class GmfAgg(djm.Model):
     Ground Motion Field: A collection of ground motion values and their
     respective geographical locations.
     """
-    gmf = djm.ForeignKey('GmfCollection')
+    gmf = djm.ForeignKey('Gmf')
     ses = djm.ForeignKey('SES', null=True)
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
