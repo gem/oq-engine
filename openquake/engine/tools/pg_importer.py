@@ -25,9 +25,9 @@ Every Django table has an autoincremental field as primary key and
 so every table in the openquake database has this structure.
 That means that bulk imports are especially difficult when
 you have foreign keys. An example make the issue immediately
-clear: consider the tables `uiapi.output` and ``hzrdr.gmf_collection``,
+clear: consider the tables `uiapi.output` and ``hzrdr.gmf``,
 which are related by a foreign key. We want to import output records
-and gmf_collection records from CSV files generated from the COPY TO
+and gmf records from CSV files generated from the COPY TO
 command. The typical use case is for damping data from a db are importing it
 into a different database. The same problem is also found when
 populating a test database from CSV files.
@@ -42,15 +42,15 @@ The output.csv file will have the form
 assuming the ids starts for 1001 in the original database. In the
 target database such ids could be taken and the problem is to
 avoid id conflicts, i.e. primary key violations. The problem is
-non-trivial since the ids are used in the gmf_collection.csv file.
+non-trivial since the ids are used in the gmf.csv file.
 which will have the form
 
 2001<tab>1001<tab>...
 2002<tab>1002<tab>...
 2003<tab>1002<tab>...
 
-assuming the ids in gmf_collection in the original database starts
-from 2001. We want to keep the relation between gmf_collection.id
+assuming the ids in gmf in the original database starts
+from 2001. We want to keep the relation between gmf.id
 and output.id; in the target database the numbering may differ
 but the associations must stay the same.
 
@@ -62,7 +62,7 @@ $out1<tab>some<tab>thing<tab>...
 $out2<tab>some<tab>thing<tab>...
 $out3<tab>some<tab>thing<tab>...
 
-$ cat gmf_collection.csv
+$ cat gmf.csv
 $coll1<tab>$out1<tab>...
 $coll2<tab>$out2<tab>...
 $coll3<tab>$out3<tab>...
@@ -77,7 +77,7 @@ $out1 -> 10001
 $out2 -> 10002
 $out3 -> 10003
 
-if the maximum id in the gmf_collection table is 20000, it will replace
+if the maximum id in the gmf table is 20000, it will replace
 
 $coll1 -> 20001
 $coll2 -> 20002
