@@ -55,10 +55,23 @@ class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
 
     def test_cleanup_after_job(self):
         with patch('openquake.engine.kvs.cache_gc') as cache_gc:
-            supervisor.cleanup_after_job(self.job.id)
+            with patch('openquake.engine.supervising.supervisor.'
+                       '_get_task_ids') as gti:
+                with patch('celery.task.control.revoke') as revoke:
+                    gti.return_value = ['task-id-1', 'task-id-2']
 
-            self.assertEqual(1, cache_gc.call_count)
-            self.assertEqual(((self.job.id, ), {}), cache_gc.call_args)
+                    supervisor.cleanup_after_job(self.job.id)
+
+                    self.assertEqual(1, cache_gc.call_count)
+                    self.assertEqual(((self.job.id, ), {}), cache_gc.call_args)
+
+                    self.assertEqual(1, gti.call_count)
+                    self.assertEqual(((self.job.id, ), {}), gti.call_args)
+
+                    self.assertEqual(2, revoke.call_count)
+                    exp_revoke_args = [(('task-id-1',), {'terminate': True}),
+                                       (('task-id-2',), {'terminate': True})]
+                    self.assertEqual(exp_revoke_args, revoke.call_args_list)
 
     def test_update_job_status_and_error_msg(self):
         error_msg = 'a test message'
