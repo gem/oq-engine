@@ -337,7 +337,7 @@ def _save_gmfs(ses, gmf_dict, sites):
             relevant_rupture_ids = rupture_ids[nonzero_gmvs_idxs].tolist()
             if gmvs:
                 inserter.add(models.GmfAgg(
-                    gmf_collection=gmf_coll,
+                    gmf=gmf_coll,
                     ses_id=ses.id,
                     imt=imt_name,
                     sa_period=sa_period,

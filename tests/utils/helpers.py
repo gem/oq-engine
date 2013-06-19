@@ -709,7 +709,7 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
                   (15.481, 38.25)]
     for site_id in hazard_job.hazard_calculation.save_sites(points):
         records.append(models.GmfAgg.objects.create(
-            gmf_collection=gmf_coll,
+            gmf=gmf_coll,
             ses=ruptures[0].ses,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
@@ -755,7 +755,7 @@ def create_gmf_from_csv(job, fname):
             point = tuple(map(float, locations[i].split()))
             [site_id] = job.hazard_calculation.save_sites([point])
             models.GmfAgg.objects.create(
-                gmf_collection=gmf_coll,
+                gmf=gmf_coll,
                 ses=ruptures[0].ses,
                 imt="PGA", gmvs=gmvs,
                 rupture_ids=[r.id for r in ruptures],
@@ -789,7 +789,7 @@ def populate_gmf_data_from_csv(job, fname):
             [site_id] = job.hazard_calculation.save_sites([point])
             models.GmfAgg.objects.create(
                 imt="PGA",
-                gmf_collection=gmf_coll,
+                gmf=gmf_coll,
                 gmvs=gmvs,
                 site_id=site_id)
 
@@ -849,14 +849,14 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])
         for site_id in site_ids:
             models.GmfAgg.objects.create(
-                gmf_collection=hazard_output,
+                gmf=hazard_output,
                 imt="PGA",
                 site_id=site_id,
                 gmvs=[0.1, 0.2, 0.3])
 
     else:
         hazard_output = create_gmf_data_records(
-            hazard_job, rlz)[0].gmf_collection
+            hazard_job, rlz)[0].gmf
 
     hazard_job.status = "complete"
     hazard_job.save()
