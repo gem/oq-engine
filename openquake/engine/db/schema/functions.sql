@@ -209,11 +209,11 @@ CREATE AGGREGATE moment_sum(moment)(
 
 -- typical usage is a SELECT * FROM hzrdr.gmf_stats WHERE output_id=2;
 CREATE VIEW hzrdr.gmf_stats AS
-SELECT output_id, gmf_collection_id, imt, sa_period, sa_damping,
+SELECT output_id, gmf_id, imt, sa_period, sa_damping,
       (stats).n, (stats).avg, (stats).std FROM (
-  SELECT output_id, b.id as gmf_collection_id, imt, sa_period, sa_damping,
+  SELECT output_id, b.id as gmf_id, imt, sa_period, sa_damping,
   stats_from_moment(moment_sum(moment_from_array(gmvs))) AS stats
-  FROM hzrdr.gmf_agg as a
-  INNER JOIN hzrdr.gmf_collection AS b
-  ON a.gmf_collection_id=b.id
+  FROM hzrdr.gmf_data as a
+  INNER JOIN hzrdr.gmf AS b
+  ON a.gmf_id=b.id
   GROUP BY output_id, b.id, imt, sa_period, sa_damping) AS x;
