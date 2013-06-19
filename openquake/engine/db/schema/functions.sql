@@ -179,3 +179,41 @@ spectral acceleration (SA), the period is encoded in the name, like so:
 `lons` and `lats` represent the sites of interest for a given calculation.
 The ordering is EXTREMELY important, because the indices of each location
 correspond to a position in the `htemp.hazard_curve_progress.result_matrix`.';
+
+
+----- statistical helpers
+
+CREATE TYPE moment AS (
+  n bigint,
+  sum double precision,
+  sum2 double precision);
+
+CREATE FUNCTION moment_from_array(double precision[])
+RETURNS moment AS $$
+SELECT sum(1), sum(v), sum(v * v) FROM unnest($1) AS v
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION stats_from_moment(moment)
+RETURNS TABLE(n BIGINT, avg DOUBLE PRECISION, std DOUBLE PRECISION) AS $$
+SELECT $1.n, $1.sum / $1.n,
+       sqrt(($1.sum2 - $1.sum ^ 2 / $1.n) / ($1.n - 1))
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION moment_add(moment, moment)
+RETURNS moment AS $$
+SELECT $1.n + $2.n, $1.sum + $2.sum, $1.sum2 + $2.sum2
+$$ LANGUAGE sql;
+
+CREATE AGGREGATE moment_sum(moment)(
+   sfunc=moment_add, stype=moment, initcond='(0,0,0)');
+
+-- typical usage is a SELECT * FROM hzrdr.gmf_stats WHERE output_id=2;
+CREATE VIEW hzrdr.gmf_stats AS
+SELECT output_id, gmf_id, imt, sa_period, sa_damping,
+      (stats).n, (stats).avg, (stats).std FROM (
+  SELECT output_id, b.id as gmf_id, imt, sa_period, sa_damping,
+  stats_from_moment(moment_sum(moment_from_array(gmvs))) AS stats
+  FROM hzrdr.gmf_data as a
+  INNER JOIN hzrdr.gmf AS b
+  ON a.gmf_id=b.id
+  GROUP BY output_id, b.id, imt, sa_period, sa_damping) AS x;
