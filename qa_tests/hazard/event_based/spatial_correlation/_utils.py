@@ -69,6 +69,6 @@ def get_gmvs_for_location(location, job):
                    % location])
     gmvs = []
     for gmf in models.GmfAgg.objects.filter(
-            site=site, gmf_collection=output.gmf).order_by('ses'):
+            site=site, gmf=output.gmf).order_by('ses'):
         gmvs.extend(gmf.gmvs)
     return gmvs

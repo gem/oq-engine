@@ -675,7 +675,7 @@ def get_risk_job(cfg, username=None, hazard_calculation_id=None,
 
 def create_gmf_coll(hazard_job, rlz=None):
     """
-    Returns the created GmfCollection object.
+    Returns the created Gmf object.
     """
     hc = hazard_job.hazard_calculation
 
@@ -684,7 +684,7 @@ def create_gmf_coll(hazard_job, rlz=None):
         sm_lt_path="test_sm", gsim_lt_path="test_gsim",
         is_complete=False, total_items=1, completed_items=1)
 
-    gmf_coll = models.GmfCollection.objects.create(
+    gmf_coll = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test Hazard output", "gmf"),
         lt_realization=rlz)
@@ -692,7 +692,7 @@ def create_gmf_coll(hazard_job, rlz=None):
     return gmf_coll
 
 
-def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
+def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     """
     Returns the created records.
     """
@@ -709,7 +709,7 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
                   (15.481, 38.25)]
     for site_id in hazard_job.hazard_calculation.save_sites(points):
         records.append(models.GmfAgg.objects.create(
-            gmf_collection=gmf_coll,
+            gmf=gmf_coll,
             ses=ruptures[0].ses,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
@@ -719,11 +719,11 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
     return records
 
 
-# NB: create_gmf_from_csv and populate_gmf_agg_from_csv
+# NB: create_gmf_from_csv and populate_gmf_data_from_csv
 # will be unified in the future
 def create_gmf_from_csv(job, fname):
     """
-    Populate the gmf_agg table for an event_based calculation.
+    Populate the gmf_data table for an event_based calculation.
     """
     hc = job.hazard_calculation
     hc.investigation_time = 50
@@ -755,7 +755,7 @@ def create_gmf_from_csv(job, fname):
             point = tuple(map(float, locations[i].split()))
             [site_id] = job.hazard_calculation.save_sites([point])
             models.GmfAgg.objects.create(
-                gmf_collection=gmf_coll,
+                gmf=gmf_coll,
                 ses=ruptures[0].ses,
                 imt="PGA", gmvs=gmvs,
                 rupture_ids=[r.id for r in ruptures],
@@ -764,16 +764,16 @@ def create_gmf_from_csv(job, fname):
     return gmf_coll
 
 
-def populate_gmf_agg_from_csv(job, fname):
+def populate_gmf_data_from_csv(job, fname):
     """
-    Populate the gmf_agg table for a scenario calculation.
+    Populate the gmf_data table for a scenario calculation.
     """
     # tricks to fool the oqtask decorator
     job.is_running = True
     job.status = 'post_processing'
     job.save()
 
-    gmf_coll = models.GmfCollection.objects.create(
+    gmf_coll = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
             job, "Test Hazard output", "gmf_scenario"))
 
@@ -789,7 +789,7 @@ def populate_gmf_agg_from_csv(job, fname):
             [site_id] = job.hazard_calculation.save_sites([point])
             models.GmfAgg.objects.create(
                 imt="PGA",
-                gmf_collection=gmf_coll,
+                gmf=gmf_coll,
                 gmvs=gmvs,
                 site_id=site_id)
 
@@ -841,7 +841,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 location="%s" % point)
 
     elif output_type == "gmf_scenario":
-        hazard_output = models.GmfCollection.objects.create(
+        hazard_output = models.Gmf.objects.create(
             output=models.Output.objects.create_output(
                 hazard_job, "Test gmf scenario output", "gmf_scenario"))
 
@@ -849,14 +849,14 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])
         for site_id in site_ids:
             models.GmfAgg.objects.create(
-                gmf_collection=hazard_output,
+                gmf=hazard_output,
                 imt="PGA",
                 site_id=site_id,
                 gmvs=[0.1, 0.2, 0.3])
 
     else:
-        hazard_output = create_gmf_agg_records(
-            hazard_job, rlz)[0].gmf_collection
+        hazard_output = create_gmf_data_records(
+            hazard_job, rlz)[0].gmf
 
     hazard_job.status = "complete"
     hazard_job.save()

@@ -269,7 +269,7 @@ def export_gmf(output, target_dir):
         A list of exported file names (including the absolute path to each
         file).
     """
-    gmf_coll = models.GmfCollection.objects.get(output=output.id)
+    gmf_coll = models.Gmf.objects.get(output=output.id)
     lt_rlz = gmf_coll.lt_realization
     haz_calc = output.oq_job.hazard_calculation
 
