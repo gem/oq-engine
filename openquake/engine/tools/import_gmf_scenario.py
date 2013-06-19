@@ -11,7 +11,7 @@ def import_rows(hc, gmf_coll, rows):
     Import a list of records into the gmf_data and hazard_site tables.
 
     :param hc: :class:`openquake.engine.db.models.HazardCalculation` instance
-    :param gmf_coll: :class:`openquake.engine.db.models.GmfCollection` instance
+    :param gmf_coll: :class:`openquake.engine.db.models.Gmf` instance
     :param rows: a list of records (imt_type, sa_period, sa_damping, gmvs, wkt)
     """
     gmfs = []
@@ -54,7 +54,7 @@ def import_gmf_scenario(fileobj, user=None):
         owner=owner, display_name='Imported from %r' % fname,
         output_type='gmf_scenario')
 
-    gmf_coll = models.GmfCollection.objects.create(output=out)
+    gmf_coll = models.Gmf.objects.create(output=out)
 
     rows = []
     if fname.endswith('.xml'):
