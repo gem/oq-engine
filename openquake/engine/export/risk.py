@@ -274,7 +274,7 @@ def export_event_loss_csv(output, target_dir):
                                 output.id))
 
     with open(filepath, 'wb') as csvfile:
-        writer = csv.writer(csvfile, delimiter='|')
+        writer = csv.writer(csvfile)
         writer.writerow(['Rupture', 'Magnitude', 'Aggregate Loss'])
 
         for event_loss in models.EventLoss.objects.filter(
