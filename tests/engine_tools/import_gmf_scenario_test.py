@@ -22,9 +22,9 @@ class ImportGMFScenarioTestCase(unittest.TestCase):
     # test that a tab-separated file can be imported
     def test_import_gmf_scenario_csv(self):
         test_data = StringIO(unicode('''\
-SA	0.025	\N	{0.2}	POINT(0.0 0.0)
-SA	0.025	\N	{1.4}	POINT(1.0 0.0)
-SA	0.025	\N	{0.6}	POINT(0.0 1.0)
+SA	0.025	5.0	{0.2}	POINT(0.0 0.0)
+SA	0.025	5.0	{1.4}	POINT(1.0 0.0)
+SA	0.025	5.0	{0.6}	POINT(0.0 1.0)
 PGA	\N	\N	{0.2,0.3}	POINT(0.0 0.0)
 PGA	\N	\N	{1.4,1.5}	POINT(1.0 0.0)
 PGA	\N	\N	{0.6,0.7}	POINT(0.0 1.0)

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
+import os
 import shutil
 import tempfile
 import unittest
@@ -356,8 +356,12 @@ class EventBasedExportTestCase(BaseExportTestCase):
         try:
             cfg = helpers.get_data_path('event_based_hazard/job.ini')
 
-            # run the calculation to create something to export
-            helpers.run_hazard_job(cfg)
+            # run the calculation in process to create something to export
+            os.environ['OQ_NO_DISTRIBUTE'] = '1'
+            try:
+                helpers.run_hazard_job(cfg)
+            finally:
+                del os.environ['OQ_NO_DISTRIBUTE']
 
             job = models.OqJob.objects.latest('id')
             self.assertEqual(job.status, 'complete')
@@ -457,9 +461,12 @@ class ScenarioExportTestCase(BaseExportTestCase):
         try:
             cfg = helpers.get_data_path('scenario_hazard/job.ini')
 
-            # run the calculation to create something to export
-            helpers.run_hazard_job(cfg)
-
+            # run the calculation in process to create something to export
+            os.environ['OQ_NO_DISTRIBUTE'] = '1'
+            try:
+                helpers.run_hazard_job(cfg)
+            finally:
+                del os.environ['OQ_NO_DISTRIBUTE']
             job = models.OqJob.objects.latest('id')
             self.assertEqual(job.status, 'complete')
 
@@ -494,7 +501,12 @@ class DisaggExportTestCase(BaseExportTestCase):
         try:
             cfg = helpers.get_data_path('disaggregation/job.ini')
 
-            helpers.run_hazard_job(cfg)
+            # run the calculation in process to create something to export
+            os.environ['OQ_NO_DISTRIBUTE'] = '1'
+            try:
+                helpers.run_hazard_job(cfg)
+            finally:
+                del os.environ['OQ_NO_DISTRIBUTE']
 
             job = models.OqJob.objects.latest('id')
             self.assertEqual(job.status, 'complete')

@@ -154,9 +154,9 @@ class CacheInserterTestCase(unittest.TestCase):
         connection = writer.connections['reslt_writer']
         self.assertEqual(
             connection.data,
-            '1\tPGA\t\\N\t\\N\t{}\t{}\t1\n1\tPGA\t\\N\t\\N\t{}\t{}\t2\n')
+            '1\t\\N\tPGA\t\\N\t\\N\t{}\t{}\t1\n1\t\\N\tPGA\t\\N\t\\N\t{}\t{}\t2\n')
         self.assertEqual(connection.table, '"hzrdr"."gmf_agg"')
         self.assertEqual(
             connection.columns,
-            ['gmf_collection_id', 'imt', 'sa_period', 'sa_damping',
+            ['gmf_collection_id', 'ses_id', 'imt', 'sa_period', 'sa_damping',
              'gmvs', 'rupture_ids', 'site_id'])
