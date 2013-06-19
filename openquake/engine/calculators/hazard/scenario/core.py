@@ -67,7 +67,7 @@ def compute_gmfs(job_id, sites, rupture_id, gmfcoll_id, realizations):
         The parsed rupture model from which we will generate
         ground motion fields.
     :param gmfcoll_id:
-        the id of a :class:`openquake.engine.db.models.GmfCollection` record
+        the id of a :class:`openquake.engine.db.models.Gmf` record
     :param realizations:
         Number of realizations to create.
     """
@@ -96,7 +96,7 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
     Helper method to save computed GMF data to the database.
 
     :param int gmfcoll_id:
-        the id of a :class:`openquake.engine.db.models.GmfCollection` record
+        the id of a :class:`openquake.engine.db.models.Gmf` record
     :param dict gmf_dict:
         The GMF results during the calculation
     :param sites:
@@ -192,7 +192,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             output_type="gmf_scenario")
 
         # create an associated gmf record
-        self.gmfcoll = models.GmfCollection.objects.create(output=output)
+        self.gmfcoll = models.Gmf.objects.create(output=output)
 
     def task_arg_gen(self, block_size):
         """

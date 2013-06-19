@@ -675,7 +675,7 @@ def get_risk_job(cfg, username=None, hazard_calculation_id=None,
 
 def create_gmf_coll(hazard_job, rlz=None):
     """
-    Returns the created GmfCollection object.
+    Returns the created Gmf object.
     """
     hc = hazard_job.hazard_calculation
 
@@ -684,7 +684,7 @@ def create_gmf_coll(hazard_job, rlz=None):
         sm_lt_path="test_sm", gsim_lt_path="test_gsim",
         is_complete=False, total_items=1, completed_items=1)
 
-    gmf_coll = models.GmfCollection.objects.create(
+    gmf_coll = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test Hazard output", "gmf"),
         lt_realization=rlz)
@@ -773,7 +773,7 @@ def populate_gmf_data_from_csv(job, fname):
     job.status = 'post_processing'
     job.save()
 
-    gmf_coll = models.GmfCollection.objects.create(
+    gmf_coll = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
             job, "Test Hazard output", "gmf_scenario"))
 
@@ -841,7 +841,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 location="%s" % point)
 
     elif output_type == "gmf_scenario":
-        hazard_output = models.GmfCollection.objects.create(
+        hazard_output = models.Gmf.objects.create(
             output=models.Output.objects.create_output(
                 hazard_job, "Test gmf scenario output", "gmf_scenario"))
 
