@@ -1804,7 +1804,7 @@ class GmfCollection(djm.Model):
                array_agg(ST_Y(location::geometry)) AS ys
         FROM (SELECT imt, sa_period, sa_damping, ses_id,
              unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           FROM hzrdr.gmf_agg, hzrdi.hazard_site
+           FROM hzrdr.gmf_data, hzrdi.hazard_site
            WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
              AND gmf_collection_id=%d AND ses_id=%d) AS x
         GROUP BY imt, sa_period, sa_damping, rupture_id
@@ -1884,7 +1884,7 @@ class GmfAgg(djm.Model):
     objects = djm.GeoManager()
 
     class Meta:
-        db_table = 'hzrdr\".\"gmf_agg'
+        db_table = 'hzrdr\".\"gmf_data'
 
 
 def get_gmvs_per_site(output, imt=None, sort=sorted):

@@ -193,7 +193,7 @@ class HazardDumper(object):
             self.outdir, 'hzrdr.hazard_curve_data.csv', 'w')
 
     def gmf_collection(self, output):
-        """Dump gmf_collection, gmf_agg"""
+        """Dump gmf_collection, gmf_data"""
         self.curs.copy(
             """copy (select * from hzrdr.gmf_collection
                   where output_id in %s)
@@ -203,10 +203,10 @@ class HazardDumper(object):
         coll_ids = self.curs.tuplestr('select id from hzrdr.gmf_collection '
                                       'where output_id in %s' % output)
         self.curs.copy(
-            """copy (select * from hzrdr.gmf_agg
+            """copy (select * from hzrdr.gmf_data
                   where gmf_collection_id in %s)
                   to stdout with (format '%s')""" % (coll_ids, self.format),
-            self.outdir, 'hzrdr.gmf_agg.csv', 'w')
+            self.outdir, 'hzrdr.gmf_data.csv', 'w')
 
     def ses(self, output):
         """Dump ses_collection, ses, ses_rupture"""
