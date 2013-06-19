@@ -264,13 +264,12 @@ class SESRuptureTestCase(unittest.TestCase):
             ses=ses, magnitude=5, strike=0, dip=0, rake=0,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=True, lons=self.mesh_lons,
-            lats=self.mesh_lats, depths=self.mesh_depths, result_grp_ordinal=1,
-            rupture_ordinal=1)
+            lats=self.mesh_lats, depths=self.mesh_depths)
         self.source_rupture = models.SESRupture.objects.create(
             ses=ses, magnitude=5, strike=0, dip=0, rake=0,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=False, lons=self.ps_lons, lats=self.ps_lats,
-            depths=self.ps_depths, result_grp_ordinal=1, rupture_ordinal=2)
+            depths=self.ps_depths)
 
     def test_fault_rupture(self):
         # Test loading a fault rupture from the DB, just to illustrate a use
@@ -357,17 +356,17 @@ class GmfsPerSesTestCase(unittest.TestCase):
             output=models.Output.objects.create_output(
                 job, "Test SES Collection 2", "ses"),
             lt_realization=rlz2)
-        gmf_agg1 = helpers.create_gmf_agg_records(job, rlz1, ses_coll1)[0]
+        gmf_data1 = helpers.create_gmf_data_records(job, rlz1, ses_coll1)[0]
         points = [(15.3, 38.22), (15.7, 37.22),
                   (15.4, 38.09), (15.56, 38.1), (15.2, 38.2)]
-        gmf_agg2 = helpers.create_gmf_agg_records(
+        gmf_data2 = helpers.create_gmf_data_records(
             job, rlz2, ses_coll2, points)[0]
-        cls.gmf_coll1 = gmf_agg1.gmf_collection
-        cls.parent_coll = models.GmfCollection.objects.create(
+        cls.gmf_coll1 = gmf_data1.gmf
+        cls.parent_coll = models.Gmf.objects.create(
             output=models.Output.objects.create_output(
                 job, "Test Hazard output", "complete_lt_gmf"))
-        cls.ruptures1 = tuple(gmf_agg1.rupture_ids)
-        cls.ruptures2 = tuple(gmf_agg2.rupture_ids)
+        cls.ruptures1 = tuple(gmf_data1.rupture_ids)
+        cls.ruptures2 = tuple(gmf_data2.rupture_ids)
         cls.investigation_time = job.hazard_calculation.investigation_time
 
     def test_branch_lt(self):
