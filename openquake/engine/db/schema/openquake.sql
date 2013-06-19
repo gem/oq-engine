@@ -590,7 +590,7 @@ CREATE TABLE hzrdr.ses_rupture (
 ) TABLESPACE hzrdr_ts;
 
 
-CREATE TABLE hzrdr.gmf_collection (
+CREATE TABLE hzrdr.gmf (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,  -- FK to output.id
     -- FK to lt_realization.id
@@ -599,7 +599,7 @@ CREATE TABLE hzrdr.gmf_collection (
 
 CREATE TABLE hzrdr.gmf_data (
     id SERIAL PRIMARY KEY,
-    gmf_collection_id INTEGER NOT NULL, -- fk -> gmf_collection
+    gmf_id INTEGER NOT NULL, -- fk -> gmf
     ses_id INTEGER, -- fk -> ses
     imt VARCHAR NOT NULL,
         CONSTRAINT hazard_curve_imt
@@ -1153,14 +1153,14 @@ ALTER TABLE hzrdr.hazard_curve_data
 ADD CONSTRAINT hzrdr_hazard_curve_data_hazard_curve_fk
 FOREIGN KEY (hazard_curve_id) REFERENCES hzrdr.hazard_curve(id) ON DELETE CASCADE;
 
--- gmf_collection -> output FK
-ALTER TABLE hzrdr.gmf_collection
-ADD CONSTRAINT hzrdr_gmf_collection_output_fk
+-- gmf -> output FK
+ALTER TABLE hzrdr.gmf
+ADD CONSTRAINT hzrdr_gmf_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
--- gmf_collection -> lt_realization FK
-ALTER TABLE hzrdr.gmf_collection
-ADD CONSTRAINT hzrdr_gmf_collection_lt_realization_fk
+-- gmf -> lt_realization FK
+ALTER TABLE hzrdr.gmf
+ADD CONSTRAINT hzrdr_gmf_lt_realization_fk
 FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
 ON DELETE CASCADE;
 
@@ -1361,9 +1361,9 @@ REFERENCES hzrdi.hazard_site(id)
 ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.gmf_data
-ADD CONSTRAINT hzrdr_gmf_data_gmf_collection_fk
-FOREIGN KEY (gmf_collection_id)
-REFERENCES hzrdr.gmf_collection(id)
+ADD CONSTRAINT hzrdr_gmf_data_gmf_fk
+FOREIGN KEY (gmf_id)
+REFERENCES hzrdr.gmf(id)
 ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.gmf_data
@@ -1413,15 +1413,15 @@ ON r.id=o.risk_calculation_id;
 CREATE VIEW hzrdr.gmf_data_job AS
    SELECT c.oq_job_id, a.*
    FROM hzrdr.gmf_data AS a
-   INNER JOIN hzrdr.gmf_collection AS b
-   ON a.gmf_collection_id=b.id
+   INNER JOIN hzrdr.gmf AS b
+   ON a.gmf_id=b.id
    INNER JOIN uiapi.output AS c
    ON b.output_id=c.id
    WHERE output_type='gmf';
 
 
 -- associations parent->children
-CREATE VIEW hzrdr.gmf_collection_family AS
+CREATE VIEW hzrdr.gmf_family AS
   SELECT j.id as oq_job_id, hazard_calculation_id,
   c1.id AS parent_id, c2.id AS child_id
   FROM uiapi.oq_job AS j
@@ -1429,8 +1429,8 @@ CREATE VIEW hzrdr.gmf_collection_family AS
   ON o1.oq_job_id=j.id
   INNER JOIN uiapi.output AS o2
   ON o2.oq_job_id=j.id
-  INNER JOIN hzrdr.gmf_collection AS c1
+  INNER JOIN hzrdr.gmf AS c1
   ON c1.output_id=o1.id
-  INNER JOIN hzrdr.gmf_collection AS c2
+  INNER JOIN hzrdr.gmf AS c2
   ON c2.output_id=o2.id
   WHERE o1.output_type='complete_lt_gmf' AND o2.output_type='gmf';
