@@ -27,6 +27,7 @@ supervise() will:
    - update status of the job record in the database
 """
 
+import celery.task.control
 import logging
 import os
 import signal
@@ -43,7 +44,10 @@ try:
 except ImportError:
     setproctitle = lambda title: None  # pylint: disable=C0103
 
-from openquake.engine.db.models import OqJob, ErrorMsg, JobStats
+from openquake.engine.db.models import ErrorMsg
+from openquake.engine.db.models import JobStats
+from openquake.engine.db.models import OqJob
+from openquake.engine.db.models import Performance
 from openquake.engine import supervising
 from openquake.engine import kvs
 from openquake.engine import logs
@@ -105,6 +109,20 @@ def cleanup_after_job(job_id):
     logging.debug('Cleaning up after job %s', job_id)
 
     kvs.cache_gc(job_id)
+
+    # Using the celery API, terminate and revoke and terminate any running
+    # tasks associated with the current job.
+    task_ids = _get_task_ids(job_id)
+    for tid in task_ids:
+        celery.task.control.revoke(tid, terminate=True)
+
+
+def _get_task_ids(job_id):
+    """
+    Get all Celery task IDs for a given ``job_id``.
+    """
+    return Performance.objects.filter(oq_job=job_id)\
+                              .values_list('task_id', flat=True)
 
 
 def get_job_status(job_id):
