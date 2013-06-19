@@ -8,7 +8,7 @@ from openquake.engine.engine import get_current_user
 
 def import_rows(hc, gmf_coll, rows):
     """
-    Import a list of records into the gmf_agg and hazard_site tables.
+    Import a list of records into the gmf_data and hazard_site tables.
 
     :param hc: :class:`openquake.engine.db.models.HazardCalculation` instance
     :param gmf_coll: :class:`openquake.engine.db.models.GmfCollection` instance
