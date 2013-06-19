@@ -597,7 +597,7 @@ CREATE TABLE hzrdr.gmf_collection (
     lt_realization_id INTEGER
 ) TABLESPACE hzrdr_ts;
 
-CREATE TABLE hzrdr.gmf_agg (
+CREATE TABLE hzrdr.gmf_data (
     id SERIAL PRIMARY KEY,
     gmf_collection_id INTEGER NOT NULL, -- fk -> gmf_collection
     ses_id INTEGER, -- fk -> ses
@@ -1353,21 +1353,21 @@ FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
 
--- hzrdr.gmf_agg to hzrdi.hazard_site FK
-ALTER TABLE hzrdr.gmf_agg
-ADD CONSTRAINT hzrdr_gmf_agg_hazard_site_fk
+-- hzrdr.gmf_data to hzrdi.hazard_site FK
+ALTER TABLE hzrdr.gmf_data
+ADD CONSTRAINT hzrdr_gmf_data_hazard_site_fk
 FOREIGN KEY (site_id)
 REFERENCES hzrdi.hazard_site(id)
 ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.gmf_agg
-ADD CONSTRAINT hzrdr_gmf_agg_gmf_collection_fk
+ALTER TABLE hzrdr.gmf_data
+ADD CONSTRAINT hzrdr_gmf_data_gmf_collection_fk
 FOREIGN KEY (gmf_collection_id)
 REFERENCES hzrdr.gmf_collection(id)
 ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.gmf_agg
-ADD CONSTRAINT hzrdr_gmf_agg_ses_fk
+ALTER TABLE hzrdr.gmf_data
+ADD CONSTRAINT hzrdr_gmf_data_ses_fk
 FOREIGN KEY (ses_id)
 REFERENCES hzrdr.ses(id)
 ON DELETE CASCADE;
@@ -1409,10 +1409,10 @@ ON p.oq_job_id=o.id
 INNER JOIN uiapi.risk_calculation AS r
 ON r.id=o.risk_calculation_id;
 
--- gmf_agg per job
-CREATE VIEW hzrdr.gmf_agg_job AS
+-- gmf_data per job
+CREATE VIEW hzrdr.gmf_data_job AS
    SELECT c.oq_job_id, a.*
-   FROM hzrdr.gmf_agg AS a
+   FROM hzrdr.gmf_data AS a
    INNER JOIN hzrdr.gmf_collection AS b
    ON a.gmf_collection_id=b.id
    INNER JOIN uiapi.output AS c

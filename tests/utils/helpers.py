@@ -692,7 +692,7 @@ def create_gmf_coll(hazard_job, rlz=None):
     return gmf_coll
 
 
-def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
+def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     """
     Returns the created records.
     """
@@ -719,11 +719,11 @@ def create_gmf_agg_records(hazard_job, rlz=None, ses_coll=None, points=None):
     return records
 
 
-# NB: create_gmf_from_csv and populate_gmf_agg_from_csv
+# NB: create_gmf_from_csv and populate_gmf_data_from_csv
 # will be unified in the future
 def create_gmf_from_csv(job, fname):
     """
-    Populate the gmf_agg table for an event_based calculation.
+    Populate the gmf_data table for an event_based calculation.
     """
     hc = job.hazard_calculation
     hc.investigation_time = 50
@@ -764,9 +764,9 @@ def create_gmf_from_csv(job, fname):
     return gmf_coll
 
 
-def populate_gmf_agg_from_csv(job, fname):
+def populate_gmf_data_from_csv(job, fname):
     """
-    Populate the gmf_agg table for a scenario calculation.
+    Populate the gmf_data table for a scenario calculation.
     """
     # tricks to fool the oqtask decorator
     job.is_running = True
@@ -855,7 +855,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 gmvs=[0.1, 0.2, 0.3])
 
     else:
-        hazard_output = create_gmf_agg_records(
+        hazard_output = create_gmf_data_records(
             hazard_job, rlz)[0].gmf_collection
 
     hazard_job.status = "complete"
