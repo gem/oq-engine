@@ -131,7 +131,7 @@ class ScenarioDamageRiskCase1TestCase(risk.BaseRiskQATestCase):
         job = helpers.get_hazard_job(
             helpers.get_data_path("scenario_hazard/job.ini"))
         fname = os.path.join(os.path.dirname(__file__), 'gmf_scenario.csv')
-        helpers.populate_gmf_agg_from_csv(job, fname)
+        helpers.populate_gmf_data_from_csv(job, fname)
         return job
 
     def expected_outputs(self):
