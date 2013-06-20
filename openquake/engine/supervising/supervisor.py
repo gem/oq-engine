@@ -113,16 +113,20 @@ def cleanup_after_job(job_id):
     # Using the celery API, terminate and revoke and terminate any running
     # tasks associated with the current job.
     task_ids = _get_task_ids(job_id)
+    if not task_ids:  # this is normal when OQ_NO_DISTRIBUTE=1
+        logs.LOG.debug('No task to revoke')
     for tid in task_ids:
         celery.task.control.revoke(tid, terminate=True)
+        logs.LOG.debug('Revoked task %s', tid)
 
 
 def _get_task_ids(job_id):
     """
     Get all Celery task IDs for a given ``job_id``.
     """
-    return Performance.objects.filter(oq_job=job_id)\
-                              .values_list('task_id', flat=True)
+    return Performance.objects.filter(
+        oq_job=job_id, operation='logging setup', task_id__isnull=False)\
+        .values_list('task_id', flat=True)
 
 
 def get_job_status(job_id):
