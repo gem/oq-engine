@@ -239,11 +239,11 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
 
-    ssh $lxc_ip "sudo su postgres -c \"export PYTHONPATH=\\\"\\\$PWD/oq-engine:\\\$PWD/oq-nrmllib:\\\$PWD/oq-hazardlib:\\\$PWD/oq-risklib\\\" ; cd oq-engine ; bin/create_oq_schema --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema --load-fixtures=\\\$(pwd)/qa_tests/risk/fixtures.tar\""
-
     for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer; do
         ssh $lxc_ip "sudo su postgres -c \"psql -c \\\"ALTER ROLE $dbu WITH PASSWORD 'openquake'\\\"\""
     done
+
+    ssh $lxc_ip "sudo su postgres -c \"export PYTHONPATH=\\\"\\\$PWD/oq-engine:\\\$PWD/oq-nrmllib:\\\$PWD/oq-hazardlib:\\\$PWD/oq-risklib\\\" ; cd oq-engine ; bin/create_oq_schema --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema --load-fixtures=\\\$(pwd)/qa_tests/risk/fixtures.tar\""
 
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
