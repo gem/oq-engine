@@ -19,6 +19,7 @@
 
 """Utility functions related to splitting work into tasks."""
 
+from datetime import datetime
 from functools import wraps
 
 from celery.task.sets import TaskSet
@@ -114,6 +115,7 @@ def oqtask(task_func):
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
+        start_time = datetime.now()
         # job_id is always assumed to be the first argument passed to
         # the task, or a keyword argument
         # this is the only required argument
@@ -125,7 +127,6 @@ def oqtask(task_func):
             job = models.OqJob.objects.get(id=job_id)
             calculation = job.calculation
 
-            # Setup task logging, via AMQP ...
             if isinstance(calculation, models.HazardCalculation):
                 logs.init_logs_amqp_send(level=job.log_level,
                                          calc_domain='hazard',
@@ -134,6 +135,17 @@ def oqtask(task_func):
                 logs.init_logs_amqp_send(level=job.log_level,
                                          calc_domain='risk',
                                          calc_id=calculation.id)
+            # store a line in the performance table right at the beginning,
+            # so that the task_id is known
+            models.Performance.objects.create(
+                oq_job_id=job_id,
+                task_id=tsk.request.id,
+                task=tsk.__name__,
+                operation='logging setup',
+                start_time=start_time,
+                duration=(datetime.now() - start_time).total_seconds(),
+                pymemory=None,
+                pgmemory=None)
 
             # Tasks can be used in either the `execute` or `post-process` phase
             if job.is_running is False:
@@ -154,4 +166,5 @@ def oqtask(task_func):
         finally:
             CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
-    return task(wrapped, ignore_result=True, queue=celery_queue)
+    tsk = task(wrapped, ignore_result=True, queue=celery_queue)
+    return tsk
