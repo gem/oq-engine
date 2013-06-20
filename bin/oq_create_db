@@ -262,7 +262,7 @@ if [ -r $security_file ]; then
 fi
 
 # Loading test fixtures if present
-if [ -r $fixtures ]; then
+if [ -r "$fixtures" ]; then
     echo ".. Loading test fixtures"
     python -c "from openquake.engine.tools.restore_hazards import hazard_restore_local; hazard_restore_local('$fixtures')"
 fi
