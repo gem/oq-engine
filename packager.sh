@@ -375,7 +375,7 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # run all of the hazard demos
+        # run all of the hazard and risk demos
         ssh $lxc_ip "cd demos
         for ini in \$(find ./hazard -name job.ini); do
             openquake --run-hazard  \$ini --exports xml
@@ -383,10 +383,11 @@ _pkgtest_innervm_run () {
 
         for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d); do
             cd $demo_dir
+            echo \"Running demo in $demo_dir\"
             openquake --run-hazard job_hazard.ini
             calculation_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
             openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id
-            cd ../..
+            cd ../../
         done"
     fi
 
