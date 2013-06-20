@@ -149,9 +149,8 @@ usage () {
     echo "    $0 pkgtest <branch-name>                     install oq-engine package and related dependencies into"
     echo "                                                 an ubuntu lxc environment and run package tests and demos"
 
-    echo "    $0 [-f <fixture-file>] devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
+    echo "    $0 devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
     echo "                                                 setup environment and run development tests."
-    echo "                                                 Optionally, it loads fixtures data before running tests."
     echo
     exit $ret
 }
@@ -246,16 +245,10 @@ _devtest_innervm_run () {
         ssh $lxc_ip "sudo su postgres -c \"psql -c \\\"ALTER ROLE $dbu WITH PASSWORD 'openquake'\\\"\""
     done
 
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; python -c \"from openquake.engine.tools.restore_hazards import hazard_restore_local; hazard_restore_local('qa_tests/risk/fixtures.tar')\""
+
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
-
-    if [ ! -z "$FIXTURES" ]; then
-        scp "$FIXTURES" "${lxc_ip}:/tmp/fixtures.tar"
-        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
-                     cd oq-engine ;
-                     python openquake/engine/tools/restore_hazards.py /tmp/fixtures.tar
-        "
-    fi
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         # run tests
@@ -382,7 +375,7 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # run all of the hazard demos
+        # run all of the hazard and risk demos
         ssh $lxc_ip "cd demos
         for ini in \$(find ./hazard -name job.ini); do
             openquake --run-hazard  \$ini --exports xml
@@ -390,10 +383,11 @@ _pkgtest_innervm_run () {
 
         for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d); do
             cd $demo_dir
+            echo \"Running demo in $demo_dir\"
             openquake --run-hazard job_hazard.ini
             calculation_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
             openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id
-            cd ../..
+            cd ../../
         done"
     fi
 
@@ -661,9 +655,6 @@ BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
 
-#: a path to a fixture file produced by the dump_hazards.py script
-FIXTURES=""
-
 trap sig_hand SIGINT SIGTERM
 #  args management
 while [ $# -gt 0 ]; do
@@ -676,10 +667,6 @@ while [ $# -gt 0 ]; do
                 echo
                 exit 1
             fi
-            ;;
-        -F|--fixtures)
-            FIXTURES=$2
-            shift  # consume argument
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
