@@ -135,8 +135,11 @@ def oqtask(task_func):
                 logs.init_logs_amqp_send(level=job.log_level,
                                          calc_domain='risk',
                                          calc_id=calculation.id)
+
             # store a line in the performance table right at the beginning,
-            # so that the task_id is known
+            # it is not important to know how much time it takes to setup
+            # the logging, it is important to save the task ids soon, so that
+            # the revoke functionality implemented in supervisor.py can work
             models.Performance.objects.create(
                 oq_job_id=job_id,
                 task_id=tsk.request.id,
