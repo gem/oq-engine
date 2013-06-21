@@ -2798,7 +2798,7 @@ class Occupancy(djm.Model):
 
     exposure_data = djm.ForeignKey("ExposureData")
     period = djm.TextField()
-    occupants = djm.IntegerField()
+    occupants = djm.FloatField()
 
     class Meta:
         db_table = 'riski\".\"occupancy'
