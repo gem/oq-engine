@@ -632,18 +632,18 @@ class HazardCurveParser(object):
         return models.HazardCurveModel(data_iter=hc_iter, **header)
 
     def _parse(self, tree):
-        header = {}
+        header = OrderedDict()
         for event, element in tree:
             if element.tag == self._CURVES_TAG and event == 'start':
                 a = element.attrib
-                header['investigation_time'] = a['investigationTime']
-                header['imt'] = a['IMT']
-                header['sa_period'] = a.get('saPeriod')
-                header['sa_damping'] = a.get('saDamping')
                 header['statistics'] = a.get('statistics')
                 header['quantile_value'] = a.get('quantileValue')
                 header['smlt_path'] = a.get('sourceModelTreePath')
                 header['gsimlt_path'] = a.get('gsimTreePath')
+                header['imt'] = a['IMT']
+                header['investigation_time'] = a['investigationTime']
+                header['sa_period'] = a.get('saPeriod')
+                header['sa_damping'] = a.get('saDamping')
                 header['imls'] = map(float, element[0].text.split())
                 yield header
             elif element.tag == self._CURVE_TAG and event == 'end':
