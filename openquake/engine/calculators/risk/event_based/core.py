@@ -18,6 +18,7 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import functools
 import random
 import collections
 import numpy
@@ -26,7 +27,7 @@ from scipy import interpolate
 from django import db
 
 from openquake.hazardlib.geo import mesh
-from openquake.risklib import api, scientific
+from openquake.risklib import scientific
 
 from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.db import models
@@ -173,7 +174,8 @@ def individual_outputs(loss_type, unit, params, profile):
     assets, (ground_motion_values, rupture_ids) = unit.getter(p)
 
     with profile('computing losses, loss curves and maps'):
-        loss_matrix, curves = unit.calc(ground_motion_values)
+        loss_matrix = unit.calc[0](ground_motion_values)
+        curves = map(unit.calc[1], loss_matrix)
 
         maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
                  for losses, poes in curves]
@@ -222,14 +224,12 @@ def save_individual_outputs(
 
 def insured_losses(loss_type, unit, assets, loss_ratio_matrix):
     for asset, losses in zip(assets, loss_ratio_matrix):
-        asset_insured_losses, poes = scientific.event_based(
+        asset_insured_losses, poes = unit.calc[1](
             scientific.insured_losses(
                 losses,
                 asset.value(loss_type),
                 asset.deductible(loss_type),
-                asset.insurance_limit(loss_type)),
-            tses=unit.calc.tses,
-            time_span=unit.calc.time_span)
+                asset.insurance_limit(loss_type)))
         # FIXME(lp). Insured losses are still computed as absolute
         # values.
         yield asset_insured_losses / asset.value(loss_type), poes
@@ -518,13 +518,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         time_span, tses = self.hazard_times()
 
         return [base.CalculationUnit(
-            api.ProbabilisticEventBased(
+            (functools.partial(
+                scientific.vulnerability_function_applier,
                 risk_model.vulnerability_function,
-                curve_resolution=self.rc.loss_curve_resolution,
-                time_span=time_span,
-                tses=tses,
                 seed=self.rnd.randint(0, models.MAX_SINT_32),
                 correlation=self.rc.asset_correlation),
+             functools.partial(
+                 scientific.event_based,
+                 curve_resolution=self.rc.loss_curve_resolution,
+                 time_span=time_span, tses=tses)),
             hazard_getters.GroundMotionValuesGetter(
                 ho,
                 assets,
