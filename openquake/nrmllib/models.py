@@ -19,6 +19,7 @@ serializers.
 """
 
 from collections import OrderedDict
+from collections import namedtuple
 
 
 class SourceModel(object):
@@ -557,3 +558,7 @@ class HazardCurveModel(object):
 
     def __iter__(self):
         return self._data_iter
+
+
+HazardCurveData = namedtuple('HazardCurveData', 'location poes')
+Location = namedtuple('Location', 'x y')
