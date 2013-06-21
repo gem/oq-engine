@@ -14,8 +14,10 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import decimal
 import StringIO
+import decimal
+import os
+import tempfile
 import unittest
 
 from lxml import etree
@@ -24,6 +26,7 @@ from openquake.nrmllib import models
 
 from tests import _utils
 from openquake.nrmllib.hazard import parsers
+from openquake.nrmllib.hazard import writers
 
 
 class SourceModelParserTestCase(unittest.TestCase):
@@ -576,3 +579,22 @@ class HazardCurveParserTestCase(unittest.TestCase):
                     'statistics': model.statistics}] + list(model)
             equal, err = _utils.deep_eq(expected, got)
             self.assertTrue(equal, err)
+
+    def test_chain_parse_serialize(self):
+        # Chain a parser together to with a serializer and test that the
+        # produced XML is unchanged.
+        for example in ('hazard-curves-mean.xml', 'hazard-curves-pga.xml',
+                        'hazard-curves-quantile.xml', 'hazard-curves-sa.xml'):
+            infile = os.path.join('tests/data', example)
+            hcp = parsers.HazardCurveParser(infile)
+            parsed_model = hcp.parse()
+            _, outfile = tempfile.mkstemp()
+            try:
+                hcw = writers.HazardCurveXMLWriter(
+                    outfile, **parsed_model.__dict__
+                )
+                hcw.serialize(parsed_model)
+
+                _utils.assert_xml_equal(infile, outfile)
+            finally:
+                os.unlink(outfile)
