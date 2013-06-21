@@ -641,7 +641,7 @@ class HazardCurveParser(object):
                 header['sa_period'] = a.get('saPeriod')
                 header['sa_damping'] = a.get('saDamping')
                 header['statistics'] = a.get('statistics')
-                header['quantile'] = a.get('quantileValue')
+                header['quantile_value'] = a.get('quantileValue')
                 header['imls'] = map(float, element[0].text.split())
                 yield header
             elif element.tag == self._CURVE_TAG and event == 'end':
