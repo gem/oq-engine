@@ -258,6 +258,17 @@ VulnerabilityFunction`
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
 
 
+def vulnerability_function_applier(
+        vulnerability_function, ground_motion_values,
+        seed=None, correlation=0):
+    vulnerability_function.init_distribution(
+        len(ground_motion_values),
+        len(ground_motion_values[0]),
+        seed,
+        correlation)
+    return map(vulnerability_function, ground_motion_values)
+
+
 class FragilityFunctionContinuous(object):
     # FIXME (lp). Should be re-factored with LogNormalDistribution
     def __init__(self, mean, stddev):

@@ -17,6 +17,7 @@
 # <http://www.gnu.org/licenses/>.
 
 
+import functools
 import collections
 import itertools
 import functools
@@ -65,3 +66,14 @@ class memoized(object):
     def __get__(self, obj, objtype):
         """Support instance methods."""
         return functools.partial(self.__call__, obj)
+
+
+def _composed(f, g, *args, **kwargs):
+    return f(g(*args, **kwargs))
+
+
+def compose(*a):
+    try:
+        return functools.partial(_composed, a[0], compose(*a[1:]))
+    except IndexError:
+        return a[0]
