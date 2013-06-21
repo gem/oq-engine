@@ -17,8 +17,8 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import functools
 from openquake.risklib import scientific, utils
-from openquake.risklib.api import Classical
 
 from openquake.engine.calculators.base import signal_task_complete
 from openquake.engine.calculators.risk import base, hazard_getters, writers
@@ -75,9 +75,9 @@ def do_classical_bcr(loss_type, units, containers, params, profile):
             _, hazard_curves_retrofitted = unit_retro.getter()
 
         with profile('computing bcr'):
-            original_loss_curves = unit_orig.calc(hazard_curves)
-            retrofitted_loss_curves = unit_retro.calc(
-                hazard_curves_retrofitted)
+            original_loss_curves = map(unit_orig.calc, hazard_curves)
+            retrofitted_loss_curves = map(unit_retro.calc,
+                                          hazard_curves_retrofitted)
 
             eal_original = [
                 scientific.average_loss(losses, poes)
@@ -127,18 +127,18 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         for ho in self.rc.hazard_outputs():
             units.extend([
                 base.CalculationUnit(
-                    Classical(
-                        model_orig.vulnerability_function,
-                        steps=self.rc.lrem_steps_per_interval),
+                    functools.partial(scientific.classical,
+                                      model_orig.vulnerability_function,
+                                      steps=self.rc.lrem_steps_per_interval),
                     hazard_getters.HazardCurveGetterPerAsset(
                         ho,
                         assets,
                         self.rc.best_maximum_distance,
                         model_orig.imt)),
                 base.CalculationUnit(
-                    Classical(
-                        model_retro.vulnerability_function,
-                        steps=self.rc.lrem_steps_per_interval),
+                    functools.partial(scientific.classical,
+                                      model_retro.vulnerability_function,
+                                      steps=self.rc.lrem_steps_per_interval),
                     hazard_getters.HazardCurveGetterPerAsset(
                         ho,
                         assets,
