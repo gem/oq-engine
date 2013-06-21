@@ -529,7 +529,7 @@ class Point(object):
 class HazardCurveModel(object):
     """
     Simple container for hazard curve objects. The accepted arguments
-    are investigation_time, imt, imls, statistics, quantile, sa_period,
+    are investigation_time, imt, imls, statistics, quantile_value, sa_period,
     sa_damping and optionally an iterable returning pairs with the form
     (poes_array, location).
     """
@@ -538,17 +538,21 @@ class HazardCurveModel(object):
                  imt,
                  imls,
                  statistics,
-                 quantile,
+                 quantile_value,
                  sa_period,
                  sa_damping,
+                 smlt_path,
+                 gsimlt_path,
                  data_iter=()):
         self.investigation_time = investigation_time
         self.imt = imt
         self.imls = imls
-        self.quantile = quantile
+        self.quantile_value = quantile_value
         self.statistics = statistics
         self.sa_damping = sa_damping
         self.sa_period = sa_period
+        self.smlt_path = smlt_path
+        self.gsimlt_path = gsimlt_path
         self._data_iter = data_iter
 
     def __iter__(self):
