@@ -17,7 +17,8 @@
 Core functionality for the Event Based BCR Risk calculator.
 """
 
-from openquake.risklib import api, scientific, utils
+import functools
+from openquake.risklib import scientific, utils
 
 from openquake.engine.calculators.base import signal_task_complete
 from openquake.engine.calculators.risk import base, hazard_getters, writers
@@ -81,8 +82,8 @@ def do_event_based_bcr(loss_type, units, containers, params, profile):
             _, (gmvs_retro, _) = unit_retro.getter()
 
         with profile('computing bcr'):
-            _, original_loss_curves = unit_orig.calc(gmvs)
-            _, retrofitted_loss_curves = unit_retro.calc(gmvs_retro)
+            original_loss_curves = unit_orig.calc(gmvs)
+            retrofitted_loss_curves = unit_retro.calc(gmvs_retro)
 
             eal_original = [
                 scientific.average_loss(losses, poes)
@@ -137,26 +138,34 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         for ho in self.rc.hazard_outputs():
             units.extend([
                 base.CalculationUnit(
-                    api.ProbabilisticEventBased(
-                        model_orig.vulnerability_function,
-                        curve_resolution=self.rc.loss_curve_resolution,
-                        time_span=time_span,
-                        tses=tses,
-                        seed=self.rnd.randint(0, models.MAX_SINT_32),
-                        correlation=self.rc.asset_correlation),
+                    utils.compose(
+                        functools.partial(
+                            scientific.event_based,
+                            curve_resolution=self.rc.loss_curve_resolution,
+                            time_span=time_span,
+                            tses=tses),
+                        functools.partial(
+                            scientific.vulnerability_function_applier,
+                            model_orig.vulnerability_function,
+                            seed=self.rnd.randint(0, models.MAX_SINT_32),
+                            correlation=self.rc.asset_correlation)),
                     hazard_getters.GroundMotionValuesGetter(
                         ho,
                         assets,
                         self.rc.best_maximum_distance,
                         model_orig.imt)),
                 base.CalculationUnit(
-                    api.ProbabilisticEventBased(
-                        model_retro.vulnerability_function,
-                        curve_resolution=self.rc.loss_curve_resolution,
-                        time_span=time_span,
-                        tses=tses,
-                        seed=self.rnd.randint(0, models.MAX_SINT_32),
-                        correlation=self.rc.asset_correlation),
+                    utils.compose(
+                        functools.partial(
+                            scientific.event_based,
+                            curve_resolution=self.rc.loss_curve_resolution,
+                            time_span=time_span,
+                            tses=tses),
+                        functools.partial(
+                            scientific.vulnerability_function_applier,
+                            model_retro.vulnerability_function,
+                            seed=self.rnd.randint(0, models.MAX_SINT_32),
+                            correlation=self.rc.asset_correlation)),
                     hazard_getters.GroundMotionValuesGetter(
                         ho,
                         assets,

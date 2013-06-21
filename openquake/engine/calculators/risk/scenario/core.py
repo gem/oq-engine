@@ -18,11 +18,12 @@
 Core functionality for the scenario risk calculator.
 """
 import random
+import functools
 import itertools
 import numpy
 from django import db
 
-from openquake.risklib import api, scientific
+from openquake.risklib import scientific
 
 from openquake.engine import logs
 from openquake.engine.calculators.base import signal_task_complete
@@ -227,7 +228,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         model = self.risk_models[taxonomy][loss_type]
 
         return [base.CalculationUnit(
-            api.Scenario(
+            functools.partial(
+                scientific.vulnerability_function_applier,
                 model.vulnerability_function,
                 seed=self.rnd.randint(0, models.MAX_SINT_32),
                 correlation=self.rc.asset_correlation),
