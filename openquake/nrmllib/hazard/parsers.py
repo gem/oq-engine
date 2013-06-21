@@ -648,6 +648,7 @@ class HazardCurveParser(object):
                 yield header
             elif element.tag == self._CURVE_TAG and event == 'end':
                 point, poes = element
-                location = 'POINT(%s)' % ' '.join(point[0].text.split())
+                x, y = [float(v) for v in point[0].text.split()]
+                location = models.Location(x, y)
                 poes_array = map(float, poes.text.split())
-                yield poes_array, location
+                yield models.HazardCurveData(location, poes_array)
