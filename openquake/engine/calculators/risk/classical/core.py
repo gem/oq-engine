@@ -17,9 +17,9 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import functools
 import numpy
-from openquake.risklib.api import Classical
-from openquake.risklib.scientific import conditional_loss_ratio
+from openquake.risklib import scientific
 
 from django.db import transaction
 
@@ -138,12 +138,12 @@ def individual_outputs(units, conditional_loss_poes, poes_disagg, profile):
             assets, hazard_curves = unit.getter()
 
         with profile('computing individual risk'):
-            curves = unit.calc(hazard_curves)
+            curves = map(unit.calc, hazard_curves)
             loss_curve_matrix.append(curves)
-            loss_maps.append([[conditional_loss_ratio(losses, poes, poe)
+            loss_maps.append([[scientific.conditional_loss_ratio(losses, poes, poe)
                                for losses, poes in curves]
                               for poe in conditional_loss_poes])
-            fractions.append([[conditional_loss_ratio(losses, poes, poe)
+            fractions.append([[scientific.conditional_loss_ratio(losses, poes, poe)
                               for losses, poes in curves]
                              for poe in poes_disagg])
     return AssetsIndividualOutputs(
@@ -245,11 +245,11 @@ def statistics(outputs, weights, params):
 
         # compute also mean and quantile loss fractions
         mean_fractions = [
-            conditional_loss_ratio(mean_curve[0], mean_curve[1], poe)
+            scientific.conditional_loss_ratio(mean_curve[0], mean_curve[1], poe)
             for poe in params.poes_disagg]
 
         quantile_fractions = [[
-            conditional_loss_ratio(quantile_curve[0], quantile_curve[1], poe)
+            scientific.conditional_loss_ratio(quantile_curve[0], quantile_curve[1], poe)
             for poe in params.poes_disagg]
             for quantile_curve in quantile_curves]
 
@@ -332,8 +332,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         model = self.risk_models[taxonomy][loss_type]
 
         return [base.CalculationUnit(
-            Classical(
-                vulnerability_function=model.vulnerability_function,
+            functools.partial(
+                scientific.classical,
+                model.vulnerability_function,
                 steps=self.rc.lrem_steps_per_interval),
             hazard_getters.HazardCurveGetterPerAsset(
                 ho,

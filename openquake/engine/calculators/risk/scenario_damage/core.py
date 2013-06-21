@@ -22,13 +22,14 @@ Core functionality for the scenario_damage risk calculator.
 
 import StringIO
 import collections
+import functools
 
 import numpy
 
 from django import db
 
 from openquake.nrmllib.risk import parsers
-from openquake.risklib import api, scientific
+from openquake.risklib import scientific
 
 from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -145,7 +146,9 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         model = self.risk_models[taxonomy]['damage']
 
         ret = [base.CalculationUnit(
-            api.ScenarioDamage(model.fragility_functions),
+            functools.partial(
+                scientific.scenario_damage,
+                model.fragility_functions),
             hazard_getters.GroundMotionValuesGetter(
                 ho,
                 assets,
