@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves statistics="mean" IMT="PGD" investigationTime="50.0">
+    <IMLs>0.005 0.007 0.0137</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>-122.5 37.5</gml:pos>
+      </gml:Point>
+      <poEs>0.98728 0.98266 0.94957</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>-123.5 37.5</gml:pos>
+      </gml:Point>
+      <poEs>0.098728 0.098266 0.094957</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>
