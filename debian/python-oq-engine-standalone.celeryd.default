@@ -5,7 +5,7 @@ CELERYD_NODES="openquake"
 #CELERYD_NODES="w1 w2 w3"
 
 # Where to chdir at start.
-CELERYD_CHDIR="/usr/local/openquake/oq-engine"
+CELERYD_CHDIR="/usr/openquake/engine"
 
 # Extra arguments to celeryd
 CELERYD_OPTS="--purge --concurrency=16 --maxtasksperchild=1"
