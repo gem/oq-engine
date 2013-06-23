@@ -45,9 +45,6 @@ if [ $celeryvhost_count -eq 0 ]; then
     rabbitmqctl set_permissions -p celeryvhost celeryuser ".*" ".*" ".*"
 fi
 
-if [ $(cat /etc/group | grep ^openquake: | wc -l) -eq 0 ]; then
-    addgroup --system openquake
-fi
 chown -R root.openquake $SDIR
 
 #

@@ -24,6 +24,9 @@ set -e
 GEM_DEB_PACKAGE="python-oq-engine-common"
 PG_CONF="/etc/postgresql/9.1/main/postgresql.conf"
 
+if [ $(cat /etc/group | grep ^openquake: | wc -l) -eq 0 ]; then
+    addgroup --system openquake
+fi
 
 HDIR=/usr/openquake/engine
 IDIR=/usr/share/pyshared/openquake/engine
