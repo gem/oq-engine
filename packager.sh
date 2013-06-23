@@ -107,7 +107,7 @@ dep2var () {
 #
 #  repo_id_get - retry git repo from local git remote command
 repo_id_get () {
-    repo_id="$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+    repo_id="$(git remote -vv | grep '^origin	' | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
 
     echo "$repo_id"
 }
@@ -313,7 +313,7 @@ _pkgtest_innervm_run () {
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh $lxc_ip mkdir -p repo/${GEM_DEB_PACKAGE}
-    scp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+    scp build-deb/${GEM_DEB_PACKAGE}-*_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
         build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
         build-deb/Packages* build-deb/Sources*  build-deb/Release* $lxc_ip:repo/${GEM_DEB_PACKAGE}
     ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
@@ -352,10 +352,10 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
-    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
-    ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}"
-    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}"
-    ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}"
+    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-standalone"
+    ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}-standalone"
+    ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-standalone"
+    ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-standalone"
 
     # configure the machine to run tests
     ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
@@ -416,6 +416,11 @@ deps_list() {
         if echo "$pkg_name" | grep -q "^\${" ; then
             continue
         fi
+
+        if echo "$pkg_name" | grep -q "^python-oq-engine-" ; then
+            continue
+        fi
+
         skip=0
         for d in $(echo "$GEM_GIT_DEPS" | sed 's/ /,/g'); do
             if [ "$pkg_name" = "python-${d}" ]; then
@@ -555,7 +560,7 @@ pkgtest_run () {
     #
     #  run build of package
     if [ -d build-deb ]; then
-        if [ ! -f build-deb/${GEM_DEB_PACKAGE}_*.deb ]; then
+        if [ ! -f build-deb/${GEM_DEB_PACKAGE}-*_*.deb ]; then
             echo "'build-deb' directory already exists but .deb file package was not found"
             return 1
 
@@ -623,7 +628,7 @@ EOF
         fi
         mkdir -p "${GEM_DEB_REPO}/${GEM_DEB_SERIE}"
         repo_tmpdir="$(mktemp -d "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}.XXXXXX")"
-        cp build-deb/${GEM_DEB_PACKAGE}_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+        cp build-deb/${GEM_DEB_PACKAGE}-*_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
             build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
             build-deb/Packages* build-deb/Sources* build-deb/Release* "${repo_tmpdir}"
         if [ "${GEM_DEB_REPO}/${GEM_DEB_SERIE}/${GEM_DEB_PACKAGE}" ]; then
