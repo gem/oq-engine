@@ -23,6 +23,7 @@ set -e
 
 GEM_DEB_PACKAGE="python-oq-engine-standalone"
 PG_CONF="/etc/postgresql/9.1/main/postgresql.conf"
+SDIR=/etc/openquake
 IDIR=/usr/share/pyshared/openquake/engine
 
 if ps ax | grep -v grep | grep -q -w '/usr/bin/python -m celery.bin.celeryd'; then
