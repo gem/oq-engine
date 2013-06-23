@@ -127,6 +127,18 @@ else
     echo ""
 fi
 
+# if celeryd default file exists then extract user and group and create them if not already exists
+if [ -f /etc/default/celeryd ]; then
+    . /etc/default/celeryd
+
+    if [ $(cat /etc/passwd | grep "^$CELERYD_USER:" | wc -l) -eq 0 ]; then
+        adduser --system "$CELERYD_USER"
+    fi
+    if [ $(cat /etc/group | grep "^$CELERYD_GROUP:" | wc -l) -eq 0 ]; then
+        addgroup --system "$CELERYD_GROUP"
+    fi
+fi
+
 # Start celeryd
 /etc/init.d/celeryd start
 
