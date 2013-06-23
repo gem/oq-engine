@@ -59,7 +59,12 @@ sig_hand () {
 #
 #  repo_id_get - retry git repo from local git remote command
 repo_id_get () {
-    repo_id="$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+    repo_line="$(git remote -vv | grep "^origin[ ${TB}]" | grep '(fetch)$')"
+    if echo "$repo_line" | grep -q '[0-9a-z_-\.]\+@[a-z0-9_-\.]\+:'; then
+        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+[^ ${TB}@]\+@//g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g;s@:@/@g")"
+    else
+        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+    fi
 
     echo "$repo_id"
 }
