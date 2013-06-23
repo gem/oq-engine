@@ -107,7 +107,12 @@ dep2var () {
 #
 #  repo_id_get - retry git repo from local git remote command
 repo_id_get () {
-    repo_id="$(git remote -vv | grep '^origin	' | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+    repo_line="$(git remote -vv | grep "^origin[ ${TB}]" | grep '(fetch)$')"
+    if echo "$repo_line" | grep -q '[0-9a-z_-\.]\+@[a-z0-9_-\.]\+:'; then
+        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+[^ ${TB}@]\+@//g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g;s@:@/@g")"
+    else
+        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+    fi
 
     echo "$repo_id"
 }
@@ -352,9 +357,17 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
+    echo "PKGTEST: INSTALL standalone"
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-standalone"
+    echo "PKGTEST: REMOVE standalone"
+    ssh $lxc_ip "sudo service celeryd stop"
+    sleep 5
     ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}-standalone"
+    echo "PKGTEST: INSTALL AGAIN standalone"
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-standalone"
+    echo "PKGTEST: REINSTALL standalone"
+    ssh $lxc_ip "sudo service celeryd stop"
+    sleep 5
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-standalone"
 
     # configure the machine to run tests
@@ -365,11 +378,8 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
     ssh $lxc_ip "oq_create_db --yes --db-user=\$USER --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
 
-    # run celeryd daemon
-    ssh $lxc_ip "cd /usr/openquake/engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
-
     # copy demos file to $HOME
-    ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
+    ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}-common/examples/demos ."
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard demos
