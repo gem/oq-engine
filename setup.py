@@ -34,7 +34,7 @@ from setuptools import setup, find_packages, Extension
 import numpy
 
 
-version = "0.10.0"
+version = "0.11.0"
 url = "http://github.com/gem/oq-hazardlib"
 
 geoutils_speedups = Extension('openquake.hazardlib.geo._utils_speedups',

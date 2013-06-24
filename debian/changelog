@@ -1,3 +1,32 @@
+python-oq-hazardlib (0.11.0-0) precise; urgency=low
+
+  * refactor algorithm for calculating planar surface coordinates (LP: #1190569)
+  * Akkar et al2013
+  * Add an .id attribute to Site objects (LP: #1184603)
+  * Utils to get available Area/Magnitude Scaling relationships (LP: #1180421)
+  * Added source and ruptures filtering to stochastic_event_set_poissonian
+    (LP: #1178571)
+  * Calculators report source_id on failure (LP: #1174207)
+  * fixed bug in creation of complex fault surface crossing IDL (LP: #1176066)
+  * fixed bug in get_orthographic_projection (LP: #1175545)
+  * removed unneeded loop over sources in disaggregation calculator
+    (LP: #1174692)
+  * included amplification factor in Si&Midorikawa 1999 GMPE
+  * Si and Midorikawa 1999
+  * Add `type` attr to MFD and source classes (LP: #1045711)
+  * Restrict ComplexFaultSourceSurface to not pathological cases (LP: #1154024)
+  * Rename CharacteristicSource to CharacteristicFaultSource
+  * Characteristic source
+  * Multi Surface
+  * Fix for an obscure `cascading union` use case in RectangularMesh
+    (LP: #1133447)
+  * Rect mesh enclosing poly bug
+  * fixed unstable behaviour of method geodetic.intervals_between
+  * Correction to the disaggregation equation (LP: #1116262)
+  * fixed bug in calculation of faulting style correction term
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 24 Jun 2013 16:01:28 +0200
+
 python-oq-hazardlib (0.10.0-0) precise; urgency=low
 
   * Rename of the package and namespace refactoring
