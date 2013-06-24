@@ -10,10 +10,10 @@ Package: python-oq-engine-common
 Architecture: all
 Conflicts: python-noq, python-oq, python-oq-engine
 Depends: ${shlibs:Depends}, ${misc:Depends}, python (>=2.6), debconf, python-celery, python-gdal, python-geohash, python-lxml, python-numpy, python-paramiko, python-redis, python-scipy, python-shapely, python-psycopg2, python-django, python-setuptools, python-psutil, python-oq-hazardlib (>=0.10), python-oq-nrmllib (>=0.4.4), python-oq-risklib (>=0.2.0)
-Description: computes seismic hazard and risk
- based on the hazard library (hazardlib) developed by the GEM foundation.
- This an alpha release presently only facilitating classical and event-based
- seismic hazard calculations.
+Description: computes seismic hazard and physical risk
+ based on the hazard and risk libraries (python-oq-hazardlib,
+ python-oq-risklib) developed by the GEM foundation.
+ This is the first official feature complete release of the engine.
 
 Package: python-oq-engine-standalone
 Architecture: all

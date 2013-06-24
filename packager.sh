@@ -614,6 +614,10 @@ EOF
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
+
+     echo "inner_ret=$inner_ret"
+     exit 123
+
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
 
@@ -654,6 +658,8 @@ EOF
 #
 #  MAIN
 #
+# echo "xx$(repo_id_get)yy"
+# exit 123
 BUILD_BINARIES=0
 BUILD_REPOSITORY=0
 BUILD_DEVEL=0
