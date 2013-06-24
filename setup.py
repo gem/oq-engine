@@ -25,7 +25,7 @@ import os
 from setuptools import setup, find_packages
 
 
-version = "0.2.0"
+version = "0.3.0"
 url = "http://github.com/gem/oq-risklib"
 cd = os.path.dirname(os.path.join(__file__))
 
