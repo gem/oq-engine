@@ -112,7 +112,7 @@
                        type="xs:string"
                        use="required"/>
          <xs:attribute name="occupants"
-                       type="PositiveIntegerType"
+                       type="PositiveDoubleType"
                        use="required"/>
      </xs:complexType>
 
