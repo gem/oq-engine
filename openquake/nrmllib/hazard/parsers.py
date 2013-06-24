@@ -632,20 +632,23 @@ class HazardCurveParser(object):
         return models.HazardCurveModel(data_iter=hc_iter, **header)
 
     def _parse(self, tree):
-        header = {}
+        header = OrderedDict()
         for event, element in tree:
             if element.tag == self._CURVES_TAG and event == 'start':
                 a = element.attrib
-                header['investigation_time'] = a['investigationTime']
+                header['statistics'] = a.get('statistics')
+                header['quantile_value'] = a.get('quantileValue')
+                header['smlt_path'] = a.get('sourceModelTreePath')
+                header['gsimlt_path'] = a.get('gsimTreePath')
                 header['imt'] = a['IMT']
+                header['investigation_time'] = a['investigationTime']
                 header['sa_period'] = a.get('saPeriod')
                 header['sa_damping'] = a.get('saDamping')
-                header['statistics'] = a.get('statistics')
-                header['quantile'] = a.get('quantileValue')
                 header['imls'] = map(float, element[0].text.split())
                 yield header
             elif element.tag == self._CURVE_TAG and event == 'end':
                 point, poes = element
-                location = 'POINT(%s)' % ' '.join(point[0].text.split())
+                x, y = [float(v) for v in point[0].text.split()]
+                location = models.Location(x, y)
                 poes_array = map(float, poes.text.split())
-                yield poes_array, location
+                yield models.HazardCurveData(location, poes_array)

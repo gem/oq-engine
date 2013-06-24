@@ -14,8 +14,10 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import decimal
 import StringIO
+import decimal
+import os
+import tempfile
 import unittest
 
 from lxml import etree
@@ -24,6 +26,7 @@ from openquake.nrmllib import models
 
 from tests import _utils
 from openquake.nrmllib.hazard import parsers
+from openquake.nrmllib.hazard import writers
 
 
 class SourceModelParserTestCase(unittest.TestCase):
@@ -509,50 +512,57 @@ class GMFScenarioParserTestCase(unittest.TestCase):
 
 
 class HazardCurveParserTestCase(unittest.TestCase):
+    EXPECTED_CURVE_1 = models.HazardCurveData(
+        models.Location(-122.5, 37.5), [9.8728e-01, 9.8266e-01, 9.4957e-01]
+    )
+    EXPECTED_CURVE_2 = models.HazardCurveData(
+        models.Location(-123.5, 37.5), [9.8728e-02, 9.8266e-02, 9.4957e-02]
+    )
+
     EXPECTED = {
         'examples/hazard-curves-pga.xml': [
             {'imls': [0.005, 0.007, 0.0137],
              'imt': 'PGA',
              'investigation_time': '50.0',
-             'quantile': None,
+             'quantile_value': None,
              'sa_damping': None,
              'sa_period': None,
              'statistics': None},
-            ([9.8728e-01, 9.8266e-01, 9.4957e-01], 'POINT(-122.5000 37.5000)'),
-            ([9.8728e-02, 9.8266e-02, 9.4957e-02], 'POINT(-123.5000 37.5000)')
+             EXPECTED_CURVE_1,
+             EXPECTED_CURVE_2,
         ],
         'examples/hazard-curves-sa.xml': [
             {'imls': [0.005, 0.007, 0.0137],
              'imt': 'SA',
              'investigation_time': '50.0',
-             'quantile': None,
+             'quantile_value': None,
              'sa_damping': '5.0',
              'sa_period': '0.025',
              'statistics': None},
-            ([9.8728e-01, 9.8266e-01, 9.4957e-01], 'POINT(-122.5000 37.5000)'),
-            ([9.8728e-02, 9.8266e-02, 9.4957e-02], 'POINT(-123.5000 37.5000)')
+             EXPECTED_CURVE_1,
+             EXPECTED_CURVE_2,
         ],
         'examples/hazard-curves-quantile.xml': [
             {'imls': [0.005, 0.007, 0.0137],
              'imt': 'PGD',
              'investigation_time': '50.0',
-             'quantile': '0.6',
+             'quantile_value': '0.6',
              'sa_damping': None,
              'sa_period': None,
              'statistics': 'quantile'},
-            ([9.8728e-01, 9.8266e-01, 9.4957e-01], 'POINT(-122.5000 37.5000)'),
-            ([9.8728e-02, 9.8266e-02, 9.4957e-02], 'POINT(-123.5000 37.5000)')
+             EXPECTED_CURVE_1,
+             EXPECTED_CURVE_2,
         ],
         'examples/hazard-curves-mean.xml': [
             {'imls': [0.005, 0.007, 0.0137],
              'imt': 'PGD',
              'investigation_time': '50.0',
-             'quantile': None,
+             'quantile_value': None,
              'sa_damping': None,
              'sa_period': None,
              'statistics': 'mean'},
-            ([9.8728e-01, 9.8266e-01, 9.4957e-01], 'POINT(-122.5000 37.5000)'),
-            ([9.8728e-02, 9.8266e-02, 9.4957e-02], 'POINT(-123.5000 37.5000)')
+             EXPECTED_CURVE_1,
+             EXPECTED_CURVE_2,
         ],
     }
 
@@ -563,8 +573,28 @@ class HazardCurveParserTestCase(unittest.TestCase):
             got = [{'imls': model.imls,
                     'imt': model.imt,
                     'investigation_time': model.investigation_time,
-                    'quantile': model.quantile,
+                    'quantile_value': model.quantile_value,
                     'sa_damping': model.sa_damping,
                     'sa_period': model.sa_period,
                     'statistics': model.statistics}] + list(model)
-            self.assertEqual(got, expected)
+            equal, err = _utils.deep_eq(expected, got)
+            self.assertTrue(equal, err)
+
+    def test_chain_parse_serialize(self):
+        # Chain a parser together to with a serializer and test that the
+        # produced XML is unchanged.
+        for example in ('hazard-curves-mean.xml', 'hazard-curves-pga.xml',
+                        'hazard-curves-quantile.xml', 'hazard-curves-sa.xml'):
+            infile = os.path.join('tests/data', example)
+            hcp = parsers.HazardCurveParser(infile)
+            parsed_model = hcp.parse()
+            _, outfile = tempfile.mkstemp()
+            try:
+                hcw = writers.HazardCurveXMLWriter(
+                    outfile, **parsed_model.__dict__
+                )
+                hcw.serialize(parsed_model)
+
+                _utils.assert_xml_equal(infile, outfile)
+            finally:
+                os.unlink(outfile)
