@@ -20,7 +20,7 @@ NRML base path
 import os
 from lxml import etree
 
-__version__ = "0.4.4"
+__version__ = "0.4.5"
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'

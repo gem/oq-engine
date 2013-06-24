@@ -1,3 +1,38 @@
+python-oq-nrmllib (0.4.5-0) precise; urgency=low
+
+  * Expsorure schema: rename the attribute Units to Number (LP: #1187786)
+  * Exposure schema update (LP: #1184997, #1184996, #1184981)
+  * lxc sandbox - improved CI with sandboxed source tests (LP: #1177319)
+  * Add a HazardCurveParser (LP: #1175452)
+  * Added non-structural cost attributes and elements (LP: #1174233)
+  * Source model XML writer (LP: #1096867)
+  * Remove upper bound limit for loss ratio in the vulnerability model and
+    loss curve schema (LP: #1171737)
+  * Hazard curve in multiple IMTs (LP: #1166107)
+  * Importing GMF in XML format: step 1, parsing (LP: #1160398)
+  * SES multi surface rupture support (LP: #1144225, #1144207)
+  * NRML schema for loss fractions (LP: #1159684)
+  * Fragility model with Structure-Dependent intensity measure type
+    (LP: #1154549)
+  * UHS schema and XML writer (LP: #1154108)
+  * Added averageLoss to loss curves (LP: #1152237)
+  * Schema and parser support for a new source type: characteristic source
+    (LP: #1144207)
+  * write mean/stddev in scenario case
+  * Continuous Fragility Model fix (LP: #1122832)
+  * Link between Rupture / Stochastic Event Set and Ground motion field outputs
+    (LP: #1119553)
+  * Added FragilityModelParser and related tests, for use in the ScenarioDamage
+    calculator (LP: #1100235)
+  * Fix the collapse map writer (LP: #1100371)
+  * Ported the old writers for the ScenarioDamage calculator into nrml
+    (LP: #1100371)
+  * Added the noDamageLimit attribute to the fragility model XML (LP: #1100235)
+  * Updated the format of the ScenarioDamage output files (LP: #1100371)
+  * Update the fragility model to nrml 0.4
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 24 Jun 2013 13:14:53 +0200
+
 python-oq-nrmllib (0.4.4-0) precise; urgency=low
 
   * Rename of the package and namespace refactoring

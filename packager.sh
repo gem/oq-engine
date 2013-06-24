@@ -1,6 +1,6 @@
 #!/bin/bash
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-set -x
+# set -x
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-nrmllib"
