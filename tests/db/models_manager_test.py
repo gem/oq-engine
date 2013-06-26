@@ -190,7 +190,7 @@ class AssetManagerTestCase(unittest.TestCase):
     def test_get_people_query_helper_buildings_no_event(self):
         field, cond, join, args = self.manager._get_people_query_helper(
             "buildings", None)
-        self.assertEqual("AVG(riski.occupancy.occupants::float)", field)
+        self.assertEqual("AVG(riski.occupancy.occupants)", field)
         self.assertEqual("1 = 1", cond)
         self.assertEqual("LEFT JOIN riski.occupancy", join)
         self.assertEqual(args, ())
@@ -198,7 +198,7 @@ class AssetManagerTestCase(unittest.TestCase):
     def test_get_people_query_helper_buildings_time_event(self):
         field, cond, join, args = self.manager._get_people_query_helper(
             "buildings", "day")
-        self.assertEqual("AVG(riski.occupancy.occupants::float)", field)
+        self.assertEqual("AVG(riski.occupancy.occupants)", field)
         self.assertEqual("riski.occupancy.period = %s", cond)
         self.assertEqual("LEFT JOIN riski.occupancy", join)
         self.assertEqual(args, ("day",))
