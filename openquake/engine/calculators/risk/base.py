@@ -612,12 +612,11 @@ RiskModel = collections.namedtuple(
     'imt vulnerability_function fragility_functions')
 
 
-#: A calculation unit holds a risklib calculator (e.g. an instance of
-#: :class:`openquake.risklib.api.Classical`), a getter that
+#: A calculation unit holds a set of callable, a getter that
 #: retrieves the data to work on, and the type of losses we are considering
 CalculationUnit = collections.namedtuple(
     'CalculationUnit',
-    'calc getter')
+    'loss_type calcs getter')
 
 
 #: Calculator parameters are used to compute derived outputs like loss
@@ -731,3 +730,7 @@ def required_imts(risk_models):
 
 def loss_types(risk_models):
     return set(sum([d.keys() for d in risk_models.values()], []))
+
+
+def do_nothing(*_args):
+    return None
