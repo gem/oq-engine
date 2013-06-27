@@ -146,6 +146,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         model = self.risk_models[taxonomy]['damage']
 
         ret = [base.CalculationUnit(
+            loss_type,
             functools.partial(
                 scientific.scenario_damage,
                 model.fragility_functions),

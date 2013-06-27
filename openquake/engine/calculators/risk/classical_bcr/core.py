@@ -17,8 +17,8 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-import functools
-from openquake.risklib import scientific, utils
+
+from openquake.risklib import calculators, scientific, utils
 
 from openquake.engine.calculators.base import signal_task_complete
 from openquake.engine.calculators.risk import base, hazard_getters, writers
@@ -61,23 +61,24 @@ def classical_bcr(job_id, units, containers, params):
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
         for loss_type in units:
-            do_classical_bcr(
-                loss_type, units[loss_type], containers, params, profile)
+            do_classical_bcr(units[loss_type], containers, params, profile)
     num_items = base.get_num_items(units)
     signal_task_complete(job_id=job_id, num_items=num_items)
 classical_bcr.ignore_result = False
 
 
-def do_classical_bcr(loss_type, units, containers, params, profile):
+def do_classical_bcr(units, containers, params, profile):
     for unit_orig, unit_retro in utils.pairwise(units):
+        loss_type = unit_orig.loss_type
+
         with profile('getting hazard'):
             assets, hazard_curves = unit_orig.getter()
             _, hazard_curves_retrofitted = unit_retro.getter()
 
         with profile('computing bcr'):
-            original_loss_curves = map(unit_orig.calc, hazard_curves)
-            retrofitted_loss_curves = map(unit_retro.calc,
-                                          hazard_curves_retrofitted)
+            original_loss_curves = unit_orig.calcs['curves'](hazard_curves)
+            retrofitted_loss_curves = unit_retro.calcs['curves'](
+                hazard_curves_retrofitted)
 
             eal_original = [
                 scientific.average_loss(losses, poes)
@@ -127,18 +128,20 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         for ho in self.rc.hazard_outputs():
             units.extend([
                 base.CalculationUnit(
-                    functools.partial(scientific.classical,
-                                      model_orig.vulnerability_function,
-                                      steps=self.rc.lrem_steps_per_interval),
+                    loss_type,
+                    dict(curves=calculators.ClassicalLossCurve(
+                        model_orig.vulnerability_function,
+                        self.rc.lrem_steps_per_interval)),
                     hazard_getters.HazardCurveGetterPerAsset(
                         ho,
                         assets,
                         self.rc.best_maximum_distance,
                         model_orig.imt)),
                 base.CalculationUnit(
-                    functools.partial(scientific.classical,
-                                      model_retro.vulnerability_function,
-                                      steps=self.rc.lrem_steps_per_interval),
+                    loss_type,
+                    dict(curves=calculators.ClassicalLossCurve(
+                        model_retro.vulnerability_function,
+                        self.rc.lrem_steps_per_interval)),
                     hazard_getters.HazardCurveGetterPerAsset(
                         ho,
                         assets,
