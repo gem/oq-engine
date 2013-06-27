@@ -126,9 +126,7 @@ def oqtask(task_func):
 
             # it is important to save the task ids soon, so that
             # the revoke functionality implemented in supervisor.py can work
-            with EnginePerformanceMonitor(
-                    'storing task id', job_id, tsk, flush=True):
-                pass
+            EnginePerformanceMonitor.store_task_id(job_id, tsk)
 
             with EnginePerformanceMonitor(
                     'loading calculation object', job_id, tsk, flush=True):
