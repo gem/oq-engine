@@ -19,7 +19,6 @@
 
 """Utility functions related to splitting work into tasks."""
 
-from datetime import datetime
 from functools import wraps
 
 from celery.task.sets import TaskSet
@@ -29,6 +28,7 @@ from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 def _map_reduce(task_func, task_args, agg, acc):
@@ -115,18 +115,24 @@ def oqtask(task_func):
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        start_time = datetime.now()
         # job_id is always assumed to be the first argument passed to
         # the task, or a keyword argument
         # this is the only required argument
         job_id = kwargs.get('job_id') or args[0]
 
-        # Set up logging via amqp.
-        try:
-            # check if the job is still running
+        with EnginePerformanceMonitor(
+                'totals per task', job_id, tsk, flush=True):
             job = models.OqJob.objects.get(id=job_id)
-            calculation = job.calculation
 
+            # it is important to save the task ids soon, so that
+            # the revoke functionality implemented in supervisor.py can work
+            EnginePerformanceMonitor.store_task_id(job_id, tsk)
+
+            with EnginePerformanceMonitor(
+                    'loading calculation object', job_id, tsk, flush=True):
+                calculation = job.calculation
+
+            # Set up logging via amqp.
             if isinstance(calculation, models.HazardCalculation):
                 logs.init_logs_amqp_send(level=job.log_level,
                                          calc_domain='hazard',
@@ -136,38 +142,25 @@ def oqtask(task_func):
                                          calc_domain='risk',
                                          calc_id=calculation.id)
 
-            # store a line in the performance table right at the beginning,
-            # it is not important to know how much time it takes to setup
-            # the logging, it is important to save the task ids soon, so that
-            # the revoke functionality implemented in supervisor.py can work
-            models.Performance.objects.create(
-                oq_job_id=job_id,
-                task_id=tsk.request.id,
-                task=tsk.__name__,
-                operation='logging setup',
-                start_time=start_time,
-                duration=(datetime.now() - start_time).total_seconds(),
-                pymemory=None,
-                pgmemory=None)
-
-            # Tasks can be used in either the `execute` or `post-process` phase
-            if job.is_running is False:
-                raise JobCompletedError('Job %d is not running' % job_id)
-            elif job.status not in ('executing', 'post_processing'):
-                raise JobCompletedError(
-                    'The status of job %d is %s, should be executing or '
-                    'post_processing' % (job_id, job.status))
-            # else continue with task execution
-            res = task_func(*args, **kwargs)
-        # TODO: should we do something different with the JobCompletedError?
-        except Exception, err:
-            logs.LOG.critical('Error occurred in task: %s', err)
-            logs.LOG.exception(err)
-            raise
-        else:
-            return res
-        finally:
-            CacheInserter.flushall()
+            try:
+                # Tasks can be used in the `execute` or `post-process` phase
+                if job.is_running is False:
+                    raise JobCompletedError('Job %d was killed' % job_id)
+                elif job.status not in ('executing', 'post_processing'):
+                    raise JobCompletedError(
+                        'The status of job %d is %s, should be executing or '
+                        'post_processing' % (job_id, job.status))
+                # else continue with task execution
+                res = task_func(*args, **kwargs)
+            # TODO: should we do something different with JobCompletedError?
+            except Exception, err:
+                logs.LOG.critical('Error occurred in task: %s', err)
+                logs.LOG.exception(err)
+                raise
+            else:
+                return res
+            finally:
+                CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, ignore_result=True, queue=celery_queue)
     return tsk
