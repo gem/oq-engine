@@ -2798,7 +2798,7 @@ class Occupancy(djm.Model):
 
     exposure_data = djm.ForeignKey("ExposureData")
     period = djm.TextField()
-    occupants = djm.IntegerField()
+    occupants = djm.FloatField()
 
     class Meta:
         db_table = 'riski\".\"occupancy'
@@ -2883,7 +2883,7 @@ class AssetManager(djm.GeoManager):
         else:
             # otherwise we will "left join" the occupancy table
             occupancy_join = "LEFT JOIN riski.occupancy"
-            occupants_field = "AVG(riski.occupancy.occupants::float)"
+            occupants_field = "AVG(riski.occupancy.occupants)"
 
             # and the time_event is not specified we compute the
             # number of occupants by averaging the occupancy data for
