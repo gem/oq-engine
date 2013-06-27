@@ -402,7 +402,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             logs.LOG.info('Found %d sources for realization %d',
                           n, lt_rlz.id)
         total_sources = sum(num_sources)
-        logs.LOG.info('Total number of sources: %d', total_sources)
+
+        if len(num_sources) > 1:
+            logs.LOG.info('Total number of sources: %d', total_sources)
 
         self.preferred_block_size = int(
             math.ceil(float(total_sources * num_ses) / preferred_num_tasks))
@@ -528,7 +530,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.)
         """
-
         # Parse risk models.
         self.parse_risk_models()
 
