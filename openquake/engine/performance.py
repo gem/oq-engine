@@ -102,6 +102,11 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     pgpid = None
     pypid = None
 
+    @classmethod
+    def store_task_id(cls, job_id, task):
+        with cls('storing task id', job_id, task, flush=True):
+            pass
+
     def __init__(self, operation, job_id, task=None, tracing=False,
                  profile_pymem=True, profile_pgmem=False, flush=False):
         self.operation = operation
