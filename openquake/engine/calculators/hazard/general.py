@@ -360,6 +360,10 @@ class BaseHazardCalculator(base.Calculator):
 
         self.progress.update(in_queue=0)
 
+    def monitor(self, operation):
+        return EnginePerformanceMonitor(
+            operation, self.job.id, tracing=True, flush=True)
+
     @property
     def hc(self):
         """
@@ -564,36 +568,37 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
 
-        [smlt] = models.inputs4hcalc(
-            self.hc.id, input_type='source_model_logic_tree')
-        [gsimlt] = models.inputs4hcalc(
-            self.hc.id, input_type='gsim_logic_tree')
-        source_paths = logictree.read_logic_trees(
-            self.hc.base_path, smlt.path, gsimlt.path)
+        with self.monitor("initializing sources"):
+            [smlt] = models.inputs4hcalc(
+                self.hc.id, input_type='source_model_logic_tree')
+            [gsimlt] = models.inputs4hcalc(
+                self.hc.id, input_type='gsim_logic_tree')
+            source_paths = logictree.read_logic_trees(
+                self.hc.base_path, smlt.path, gsimlt.path)
 
-        for src_path in source_paths:
-            full_path = os.path.join(self.hc.base_path, src_path)
+            for src_path in source_paths:
+                full_path = os.path.join(self.hc.base_path, src_path)
 
-            # Get the 'source' Input:
-            inp = engine.get_input(full_path, 'source', self.hc.owner)
+                # Get the 'source' Input:
+                inp = engine.get_input(full_path, 'source', self.hc.owner)
 
-            # Associate the source input to the calculation:
-            models.Input2hcalc.objects.get_or_create(
-                input=inp, hazard_calculation=self.hc)
+                # Associate the source input to the calculation:
+                models.Input2hcalc.objects.get_or_create(
+                    input=inp, hazard_calculation=self.hc)
 
-            models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
-                                            filename=src_path)
-            src_content = StringIO.StringIO(
-                inp.model_content.raw_content_ascii)
-            sm_parser = nrml_parsers.SourceModelParser(src_content)
+                models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
+                                                filename=src_path)
+                src_content = StringIO.StringIO(
+                    inp.model_content.raw_content_ascii)
+                sm_parser = nrml_parsers.SourceModelParser(src_content)
 
-            # Covert
-            src_db_writer = source.SourceDBWriter(
-                inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
-                self.hc.width_of_mfd_bin,
-                self.hc.area_source_discretization
-            )
-            src_db_writer.serialize()
+                # Covert
+                src_db_writer = source.SourceDBWriter(
+                    inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+                    self.hc.width_of_mfd_bin,
+                    self.hc.area_source_discretization
+                )
+                src_db_writer.serialize()
 
     def parse_risk_models(self):
         """
@@ -603,77 +608,83 @@ class BaseHazardCalculator(base.Calculator):
         is one) and the imt (and levels) will be extracted from the
         vulnerability model (if there is one)
         """
-        hc = self.hc
-        queryset = self.hc.inputs.filter(
-            input_type__in=[vf_type
-                            for vf_type, _desc
-                            in models.Input.VULNERABILITY_TYPE_CHOICES])
-        if queryset.exists():
-            hc.intensity_measure_types_and_levels = dict()
-            hc.intensity_measure_types = list()
+        logs.LOG.progress("parsing risk models")
 
-            for input_type in queryset:
-                content = StringIO.StringIO(
-                    input_type.model_content.raw_content_ascii)
-                intensity_measure_types_and_levels = dict([
-                    (record['IMT'], record['IML'])
-                    for record in parsers.VulnerabilityModelParser(content)])
-
-                for imt, levels in intensity_measure_types_and_levels.items():
-                    if (imt in hc.intensity_measure_types_and_levels and
-                        (set(hc.intensity_measure_types_and_levels[imt]) -
-                         set(levels))):
-                        logs.LOG.warning("The same IMT %s is associated with "
-                                         "different levels" % imt)
-                    else:
-                        hc.intensity_measure_types_and_levels[imt] = levels
-
-                hc.intensity_measure_types.extend(
-                    intensity_measure_types_and_levels)
-
-            # remove possible duplicates
-            if hc.intensity_measure_types is not None:
-                hc.intensity_measure_types = list(set(
-                    hc.intensity_measure_types))
-            hc.save()
-            logs.LOG.info("Got IMT and levels "
-                          "from vulnerability models: %s - %s" % (
-                              hc.intensity_measure_types_and_levels,
-                              hc.intensity_measure_types))
-
-        queryset = self.hc.inputs.filter(input_type='fragility')
-        if queryset.exists():
-            hc.intensity_measure_types_and_levels = dict()
-            hc.intensity_measure_types = list()
-
-            parser = iter(parsers.FragilityModelParser(
-                StringIO.StringIO(
-                    queryset.all()[0].model_content.raw_content_ascii)))
+        with self.monitor("parsing risk models"):
             hc = self.hc
+            queryset = self.hc.inputs.filter(
+                input_type__in=[vf_type
+                                for vf_type, _desc
+                                in models.Input.VULNERABILITY_TYPE_CHOICES])
+            if queryset.exists():
+                hc.intensity_measure_types_and_levels = dict()
+                hc.intensity_measure_types = list()
 
-            fragility_format, _limit_states = parser.next()
+                for input_type in queryset:
+                    content = StringIO.StringIO(
+                        input_type.model_content.raw_content_ascii)
+                    intensity_measure_types_and_levels = dict(
+                        (record['IMT'], record['IML']) for record in
+                        parsers.VulnerabilityModelParser(content)
+                    )
 
-            if (fragility_format == "continuous" and
-                    hc.calculation_mode != "scenario"):
-                raise NotImplementedError(
-                    "Getting IMT and levels from "
-                    "a continuous fragility model is not yet supported")
+                    for imt, levels in \
+                            intensity_measure_types_and_levels.items():
+                        if (imt in hc.intensity_measure_types_and_levels and
+                            (set(hc.intensity_measure_types_and_levels[imt]) -
+                             set(levels))):
+                            logs.LOG.warning(
+                                "The same IMT %s is associated with "
+                                "different levels" % imt)
+                        else:
+                            hc.intensity_measure_types_and_levels[imt] = levels
 
-            hc.intensity_measure_types_and_levels = dict(
-                (iml['IMT'], iml['imls'])
-                for _taxonomy, iml, _params, _no_damage_limit in parser)
-            hc.intensity_measure_types.extend(
-                hc.intensity_measure_types_and_levels)
+                    hc.intensity_measure_types.extend(
+                        intensity_measure_types_and_levels)
 
-        queryset = self.hc.inputs.filter(input_type='exposure')
-        if queryset.exists():
-            exposure_model_input = queryset.all()[0]
-            content = StringIO.StringIO(
-                exposure_model_input.model_content.raw_content_ascii)
-            with logs.tracing('storing exposure'):
-                exposure.ExposureDBWriter(
-                    exposure_model_input).serialize(
-                        parsers.ExposureModelParser(content))
+                # remove possible duplicates
+                if hc.intensity_measure_types is not None:
+                    hc.intensity_measure_types = list(set(
+                        hc.intensity_measure_types))
+                hc.save()
+                logs.LOG.info("Got IMT and levels "
+                              "from vulnerability models: %s - %s" % (
+                                  hc.intensity_measure_types_and_levels,
+                                  hc.intensity_measure_types))
+
+            queryset = self.hc.inputs.filter(input_type='fragility')
+            if queryset.exists():
+                hc.intensity_measure_types_and_levels = dict()
+                hc.intensity_measure_types = list()
+
+                parser = iter(parsers.FragilityModelParser(
+                    StringIO.StringIO(
+                        queryset.all()[0].model_content.raw_content_ascii)))
+                hc = self.hc
+
+                fragility_format, _limit_states = parser.next()
+
+                if (fragility_format == "continuous" and
+                        hc.calculation_mode != "scenario"):
+                    raise NotImplementedError(
+                        "Getting IMT and levels from "
+                        "a continuous fragility model is not yet supported")
+
+                hc.intensity_measure_types_and_levels = dict(
+                    (iml['IMT'], iml['imls'])
+                    for _taxonomy, iml, _params, _no_damage_limit in parser)
+                hc.intensity_measure_types.extend(
+                    hc.intensity_measure_types_and_levels)
+
+            queryset = self.hc.inputs.filter(input_type='exposure')
+            if queryset.exists():
+                exposure_model_input = queryset.all()[0]
+                content = StringIO.StringIO(
+                    exposure_model_input.model_content.raw_content_ascii)
+                with logs.tracing('storing exposure'):
+                    exposure.ExposureDBWriter(
+                        exposure_model_input).serialize(
+                            parsers.ExposureModelParser(content))
 
     def initialize_site_model(self):
         """
@@ -694,54 +705,56 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing site model")
 
-        site_model_inp = get_site_model(self.hc.id)
-
-        if site_model_inp:
-            # Explicit cast to `str` here because the XML parser doesn't like
-            # unicode. (More specifically, lxml doesn't like unicode.)
-            site_model_content = site_model_inp.model_content.raw_content_ascii
-
-            # Store `site_model` records:
-            store_site_model(
-                site_model_inp, StringIO.StringIO(site_model_content))
-
-            # Get the site model records we stored:
-            site_model_data = models.SiteModel.objects.filter(
-                input=site_model_inp)
-
-            points = self.hc.points_to_compute()
-            validate_site_model(site_model_data, points)
-        else:
-            points = self.hc.points_to_compute()
-
-        sites = []
-        coords = []
-        for pt in points:
-            coords.append((pt.longitude, pt.latitude))
+        with self.monitor("initializing site model"):
+            site_model_inp = get_site_model(self.hc.id)
 
             if site_model_inp:
-                smd = get_closest_site_model_data(site_model_inp, pt)
-                measured = smd.vs30_type == 'measured'
-                vs30 = smd.vs30
-                z1pt0 = smd.z1pt0
-                z2pt5 = smd.z2pt5
+                # explicit cast to `str` because the XML parser doesn't like
+                # unicode. (More specifically, lxml doesn't like unicode.)
+                site_model_content = site_model_inp.model_content.\
+                    raw_content_ascii
+
+                # Store `site_model` records:
+                store_site_model(
+                    site_model_inp, StringIO.StringIO(site_model_content))
+
+                # Get the site model records we stored:
+                site_model_data = models.SiteModel.objects.filter(
+                    input=site_model_inp)
+
+                points = self.hc.points_to_compute()
+                validate_site_model(site_model_data, points)
             else:
-                vs30 = self.hc.reference_vs30_value
-                measured = self.hc.reference_vs30_type == 'measured'
-                z1pt0 = self.hc.reference_depth_to_1pt0km_per_sec
-                z2pt5 = self.hc.reference_depth_to_2pt5km_per_sec
+                points = self.hc.points_to_compute()
 
-            sites.append(openquake.hazardlib.site.Site(
-                         pt, vs30, measured, z1pt0, z2pt5))
+            sites = []
+            coords = []
+            for pt in points:
+                coords.append((pt.longitude, pt.latitude))
 
-        # store the sites
-        site_ids = self.hc.save_sites(coords)
+                if site_model_inp:
+                    smd = get_closest_site_model_data(site_model_inp, pt)
+                    measured = smd.vs30_type == 'measured'
+                    vs30 = smd.vs30
+                    z1pt0 = smd.z1pt0
+                    z2pt5 = smd.z2pt5
+                else:
+                    vs30 = self.hc.reference_vs30_value
+                    measured = self.hc.reference_vs30_type == 'measured'
+                    z1pt0 = self.hc.reference_depth_to_1pt0km_per_sec
+                    z2pt5 = self.hc.reference_depth_to_2pt5km_per_sec
 
-        # store the ids into the Site objects
-        for site, site_id in zip(sites, site_ids):
-            site.id = site_id
-        self.hc.site_collection = SiteCollection(sites)
-        self.hc.save()
+                sites.append(openquake.hazardlib.site.Site(
+                             pt, vs30, measured, z1pt0, z2pt5))
+
+            # store the sites
+            site_ids = self.hc.save_sites(coords)
+
+            # store the ids into the Site objects
+            for site, site_id in zip(sites, site_ids):
+                site.id = site_id
+            self.hc.site_collection = SiteCollection(sites)
+            self.hc.save()
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
@@ -985,8 +998,7 @@ class BaseHazardCalculator(base.Calculator):
                 outputs = outputs.exclude(output_type='hazard_curve_multi')
 
             for output in outputs:
-                with EnginePerformanceMonitor(
-                        'exporting %s' % output.output_type, self.job.id):
+                with self.monitor('exporting %s' % output.output_type):
                     fname = hazard_export.export(
                         output.id, self.job.hazard_calculation.export_dir)
                     exported_files.extend(fname)

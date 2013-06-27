@@ -952,7 +952,7 @@ CREATE TABLE riski.exposure_model (
 CREATE TABLE riski.cost_type (
     id SERIAL PRIMARY KEY,
     exposure_model_id INTEGER NOT NULL,
- 
+
     name VARCHAR NOT NULL,
     conversion VARCHAR NOT NULL CONSTRAINT conversion_value
         CHECK(conversion = 'per_asset'
@@ -1007,7 +1007,7 @@ CREATE TABLE riski.occupancy (
     id SERIAL PRIMARY KEY,
     exposure_data_id INTEGER NOT NULL,
     period VARCHAR NOT NULL,
-    occupants INTEGER NOT NULL
+    occupants float NOT NULL
 ) TABLESPACE riski_ts;
 
 

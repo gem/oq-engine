@@ -102,8 +102,13 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     pgpid = None
     pypid = None
 
+    @classmethod
+    def store_task_id(cls, job_id, task):
+        with cls('storing task id', job_id, task, flush=True):
+            pass
+
     def __init__(self, operation, job_id, task=None, tracing=False,
-                 profile_pymem=True, profile_pgmem=False):
+                 profile_pymem=True, profile_pgmem=False, flush=False):
         self.operation = operation
         self.job_id = job_id
         if task:
@@ -115,6 +120,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         self.tracing = tracing
         self.profile_pymem = profile_pymem
         self.profile_pgmem = profile_pgmem
+        self.flush = flush
         if self.profile_pymem and self.pypid is None:
             self.__class__.pypid = os.getpid()
         if self.profile_pgmem and self.pgpid is None:
@@ -167,6 +173,8 @@ class EnginePerformanceMonitor(PerformanceMonitor):
                 pymemory=pymemory,
                 pgmemory=pgmemory)
             self.cache.add(perf)
+            if self.flush:
+                self.cache.flush()
 
     def __enter__(self):
         super(EnginePerformanceMonitor, self).__enter__()

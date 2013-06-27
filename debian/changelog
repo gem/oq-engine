@@ -1,3 +1,240 @@
+python-oq-engine (1.0.0-1) precise; urgency=low
+
+  * 'occupants' is now a float
+  * Hazard curve import tool: updated NRML hazard curve parser
+  * Made sure that the task_ids are stored in the performance table soon enough
+    (LP: #1180271)
+  * Added fixtures for risk tests
+  * Some support to compute avg and std for the GMFs (LP: #1192413)
+  * Renamed the GMF tables (LP: #1192512)
+  * Kill running celery tasks on job failure (LP: #1180271)
+  * Removed 'patches' folder
+  * Event loss csv: fix delimiting character (LP: #1192179)
+  * Fixed restore_hazards_test.py (LP: #1189772)
+  * Fix restore hazards (LP: #1189772)
+  * Fix risk/classical/case_3 (LP: #1190569)
+  * Fix get_asset_chunk unit test
+  * Added dumping of ses_collection/ses/ses_rupture (LP: #1189750)
+  * Fixed the issue with sequences in restore_hazards.py (LP: #1189772)
+  * Risk Probabilistic Event Based Calculator - QA Test
+  * Fix the GMF export and tables (LP: #1169078,#1187413)
+  * Some work to fix qa_tests/risk/event_based_bcr (LP: #1188497)
+  * Run risk demos to test the package (LP: #1188117)
+  * Update risk demos
+  * renamed units -> number_of_units. Support for asset_category == "population"
+    (LP: #1188104)
+  * Fixed the z1pt0<->z2pt5 inversion problem (LP: #1186490)
+  * Removed the special case for gmf_scenario
+  * Exposure DB schema update (LP: #1185488)
+  * Fix the site_data table to store one site per row; change gmf_agg to point
+    to site_data (LP: #1184603)
+  * Fix export of Benefit Cost Ratio calculator outputs. (LP: #1181182)
+  * Inserted the GMFs with the CacheInserter instead of the BulkInserter
+    (LP: #1184624)
+  * Added better instrumentation to the hazard getters
+  * Make the engine smart enough to infer the right block size (LP: #1183329)
+  * New risk demos (LP: #1180698,#1181182)
+  * Time event validation fix (LP: #1181235)
+  * Unicode list cast fix
+  * Implement distribution by SES in the event based hazard calculator
+    (LP: #1040141)
+  * Remove gmf scenario (LP: #1170628)
+  * Purge gmf table (LP: #1170632)
+  * Parallelize the queries of kind "insert into gmf agg" by using the standard
+    mechanism (LP: #1178054)
+  * Skipped hazard/event_based/case_4/test.py (LP: #1181908)
+  * Remove the dependency from the gmf/gmf_set tables in the XML export
+    procedure (LP: #1169078)
+  * Saved memory in the hazard getters by returning only the distinct GMFs
+    (LP: #1175941)
+  * Fixed the case of no gmfcollections and cleaned up the post processing
+    mechanism (LP: #1176887)
+  * Filter the ruptures according to the maximum_distance criterium
+    (LP: #1178571)
+  * New hazard demos (LP: #1168756)
+  * Parallelize insert into gmf_agg table (LP: #1178054)
+  * Removed some verbose logs in debug mode (LP: #1170938)
+  * lxc sandbox - improved CI with sandboxed source tests (LP: #1177319)
+  * Report "calculation", not the job (LP: #1178583)
+  * Fix performance_monitor_test.py on Mac OS X (LP: #1177403)
+  * Remove config.gem files from demos
+  * Vulnerability functions for contents, occupants and non-structural damage
+    (LP: #1174231)
+  * Improved the memory profiling (LP: #1175941)
+  * Cleanup of the hazard getters and small improvements to help the performance
+    analysis of risk calculators (LP: #1175941)
+  * Add a facility to import hazard_curves from XML files (LP: #1175452)
+  * Refactoring of risk calculators (LP: #1175702)
+  * Added references to RiskCalculation model
+  * --config-file option (LP: #1174316)
+  * Update calls to risklib to the latest interface (LP: #1174301)
+  * Event-Based Hazard: Better hazard curve / GMF validation (LP: #1167302)
+  * Improved hazard doc
+  * CONTRIBUTORS.txt
+  * DB cleanup
+  * --optimize-source-model pre-processing option (LP: #1096867)
+  * Relax validation rules on interest rate for benefit-cost ratio analysis
+    (LP: #1172324)
+  * Support non-unique taxonomy -> IMT association across different
+    vulnerability files (LP: #1171782)
+  * Point source block size (LP: #1096867)
+  * Use "hazard curve multi imt" also when all the realizations are considered
+    (LP: #1171389)
+  * Fix aggregate loss curve computation (LP: #1171361)
+  * Add instrumentation via the EnginePerformanceMonitor to all the calculators
+    (LP: #1171060)
+  * Replaced run_job_sp with run_hazard_job (LP: #1153512)
+  * Cleanup input reuse
+  * Simplify hazard getter query
+  * Add a forgotten constrain ON DELETE CASCADE on the table gmf_agg
+    (LP: #1170637)
+  * Mean loss curve computation updated (LP: #1168454,#1169886,#1170630)
+  * Changed the generation of hazard_curves to use the gmf_agg table
+    (LP: #1169703)
+  * Add geospatial index on gmf_agg
+  * Fix hazard map and UHS export filenames (include PoE) (LP: #1169988)
+  * Lower the parameter ses_per_logic_tree_path in the event_based QA tests to
+    make them much faster (LP: #1169883)
+  * Fix Event based mean loss curve computation (LP: #1168454)
+  * An attempt to solve the memory occupation issue for the event_based risk
+    calculator (LP: #1169577)
+  * Update event based mean/quantile loss curve computation (LP: #1168454)
+  * Fix disagg export file name (LP: #1163276)
+  * Include 'investigation_time' in exported UHS XML (LP: #1169106)
+  * Raise warnings when invalid/unknown/unnecessary params are specified
+    (LP: #1164324)
+  * Fix characteristic fault rupture serialization (LP: #1169069)
+  * Fixed a bug in event_based/core_test.py due to the version of mock used
+    (LP: #1167310)
+  * Make sure the generated XML are valid according to NRML (LP: #1169106)
+  * Fix the tests of the event_based depending on random number details
+    (LP: #1167310)
+  * Scenario risk is using "default" connection on a cluster (LP: #1167969)
+  * Add a mechanism to populate the db from CSV files, without the need to run
+    a fake calculation (LP: #1167310,#1167693)
+  * Source model NRML to hazardlib conversion now throws useful error messages
+    (LP: #1154512)
+  * Organization of hazard exports (LP: #1163276)
+  * Some trivial optimizations in Risk Event Based calculator
+  * Do not use 'default' user on raw cursors. (LP: #1167776)
+  * Removed a bunch of old test fixtures
+  * release updated
+  * hazard curves in multiple imts (LP: #1160427)
+  * Critical fix to disaggregation interpolation (LP: #1167245)
+  * Fix setup.py version number
+  * Fix char source logic tree validation (LP: #1166756)
+  * Update version to 1.0
+  * Reflect latest interface changes in risklib (LP: #1166252)
+  * Event base performance (LP: #1168233)
+  * Fix a "reproducibility" issue when getting hazard sites from exposure
+    (LP: #1163818)
+  * Disaggregation in event based risk calculator (LP: #1160993)
+  * Read 'sites' from 'sites_csv' (LP: #1097618)
+  * add debconf tool to manage postgresql.conf file modification
+  * Issue 1160993 (LP: #1160993,#1160845)
+  * Importing GMF from XML: step 2 (LP: #1160398)
+  * Disaggregation of losses by taxonomy (LP: #1160845)
+  * Vulnerability model validation (LP: #1157072)
+  * Big docs cleanup
+  * Mean and quantile Loss map support (LP: #1159865)
+  * Event-Based Hazard: Save multi-surface ruptures (LP: #1144225)
+  * Fix loss curve export (LP: #1157072)
+  * Fix an incorrect parameter in event-based hazard QA tests, cases 2 and 4
+  * end-to-end qa tests for Scenario Risk and Scenario Damage
+  * Trivial fix for setup.py
+  * New E2E regression tests
+  * Updated QA tests due to change in risklib
+  * Engine cleanup
+  * Characteristic source logic tree support (LP: #1144225)
+  * Added a script to dump the hazard outputs needed for the risk (LP: #1156998)
+  * Remove complete logic tree flags when redundant (LP: #1155904)
+  * Do not read risk inputs from fylesystem but from ModelContent
+  * Remove --force-inputs feature (LP: #1154552)
+  * UHS Export (LP: #1082312)
+  * UHS post-processing (LP: #1082312)
+  * Fragility model using structure dependent IMT (LP: #1154549)
+  * Correct bin/openquake help string for --log-level
+  * Hazard post-processing code cleanup (LP: #1082312)
+  * Allow Event-Based hazard post-processing to run without celery
+  * More event-based hazard QA tests (LP: #1088864)
+  * Real errors are masked in the qa_test since the real computation runs in a
+    subprocess (LP: #1153512)
+  * Minor simplification of the hazard_getter query
+  * Correlation model qa tests (LP: #1097646)
+  * Vulnerability model using structure dependent intensity measure types
+    (LP: #1149270)
+  * Fix a broken scenario hazard export test
+  * Support for Characteristic Fault Sources (LP: #1144225)
+  * Added a missing KILOMETERS_TO_METERS conversion in the hazard_getters
+  * Average Losses (LP: #1152237)
+  * Improved the error message for unavailable gsims
+  * Companion changes to https://github.com/gem/oq-risklib/pull/38
+  * Fix 1144741 (LP: #1144741)
+  * Fix 1144388 (LP: #1144388)
+  * Fixed ordering bug in the XML export of gmf_scenario (LP: #1152172)
+  * Don't save hazard curves to the DB which are all zeros (LP: #1096926)
+  * Add hazard nose attribute to the hazard QA test
+  * Avoid fully qualified name in the XML <uncertaintyModel> tag (LP: #1116398)
+  * Fix Scenario Risk calculator
+  * New CLI functionality: delete old calculations (LP: #1117052)
+  * DB security cleanup (LP: #1117052)
+  * Event-Based Hazard Spatial Correlation QA tests (LP: #1099467)
+  * Correct OQ engine version in db script
+  * Preloaded exposure (LP: #1132902)
+  * 1132708 and 1132731 (LP: #1132731)
+  * Stabilize classical hazard QA test case 11
+  * DB schema bootstrap script now runs silently by default
+  * Fix aggregate loss export test
+  * Fix a broken disagg/core test
+  * Easy hazard getters optimization (LP: #1132708)
+  * Fix progress risk
+  * Event loss tables (LP: #1132699)
+  * Fix the memory occupation issue for the scenario_risk calculator
+    (LP: #1132018,#1132017)
+  * Performance monitor to measure times and memory occupation of bottleneck
+    code (LP: #1132017)
+  * Scenario insured losses
+  * Version fix (already present fix in master, add a test to verify it)
+  * Classical Hazard QA test, SA IMT case (LP: #1073591)
+  * Optimize hazard curve insertion (LP: #1100332)
+  * updates due to the latest risklib api changes
+  * Fixed the bug introduced by change the location field from Geometry to
+    Geography
+  * "openquake --version broked" fix
+  * Fixed bug in the distribution of the realizations logic
+  * Simplified the hazard getters so that they are pickleable without effort
+  * Update to disaggregation equation (LP: #1116262)
+  * Scenario Aggregated Loss
+  * Risk maximum distance (LP: #1095582)
+  * Add timestamps to calculation summary output (LP: #1129271)
+  * More efficient hazard curve update transactions. (LP: #1121825)
+  * Scenario risk tests
+  * Added parameter taxonomies_from_fragility_model (LP: #1122817)
+  * Add a check for missing taxonomies in the scenario_damage calculator
+    (LP: #1122817)
+  * Add '_update_progress' for clearer profiling (LP: #1121825)
+  * Removed many global dictionaries and adopted a convention-over-configuration
+    approach
+  * Generation of ground motion fields only within a certain distance from the
+    rupture (LP: #1121940)
+  * Link between Rupture / Stochastic Event Set and Ground motion field outputs
+    (LP: #1119553)
+  * Fixed the qa_test for scenario_damage
+  * Fix HazardCalculation.get_imts()
+  * Donot save absolute losses (LP: #1096881)
+  * Scenario hazard: fix a reference to the site collection
+  * Fixes scenario hazard correlation
+  * Scenario risk
+  * Changed DmgState to have a foreign key to OqJob, not to Output; also removed
+    the CollapseMap special treatment (LP: #1100371)
+  * Drop upload table
+  * Remove several global dictionaries from the engine
+  * Mean and quantile Loss curve computation (LP: #1101270)
+  * Cache the SiteCollection to avoid redundant recreation (LP: #1096915)
+  * Scenario hazard correlation model (LP: #1097646)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 24 Jun 2013 17:39:07 +0200
+
 python-oq-engine (0.9.1-1) precise; urgency=low
 
   * upstream release
