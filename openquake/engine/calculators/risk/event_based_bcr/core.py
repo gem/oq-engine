@@ -138,6 +138,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         for ho in self.rc.hazard_outputs():
             units.extend([
                 base.CalculationUnit(
+                    loss_type,
                     utils.compose(
                         functools.partial(
                             scientific.event_based,
@@ -155,6 +156,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
                         self.rc.best_maximum_distance,
                         model_orig.imt)),
                 base.CalculationUnit(
+                    loss_type,
                     utils.compose(
                         functools.partial(
                             scientific.event_based,

@@ -248,6 +248,18 @@ class OutputDict(dict):
         return self[OutputKey(output_type, loss_type, hazard_output_id, poe,
                               quantile, statistics, variable, insured)]
 
+    def prepare(self, **kwargs):
+        self.kwargs = kwargs
+        return self
+
+    def __init__(self, *args, **kwargs):
+        super(OutputDict, self).__init__(*args, **kwargs)
+        self.kwargs = dict()
+
+    def default(self):
+        self.kwargs = dict()
+        return self
+
     def write(self, *args, **kwargs):
         """
         1) Get the ID associated with the `OutputKey` instance built with
@@ -256,11 +268,11 @@ class OutputDict(dict):
         function name given by the `output_type` argument.
         3) Call such function with the given positional arguments.
         """
+
+        kwargs.update(self.kwargs)
         output_id = self.get(**kwargs)
-        writer = globals().get(kwargs['output_type'])
-        loss_type = kwargs['loss_type']
-        del kwargs['loss_type']
-        writer(loss_type, output_id, *args)
+        globals().get(kwargs['output_type'])(
+            kwargs.pop('loss_type'), output_id, *args)
 
     def write_all(self, arg, values, items,
                   *initial_args, **initial_kwargs):
