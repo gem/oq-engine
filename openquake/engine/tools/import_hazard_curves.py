@@ -45,15 +45,18 @@ def import_hazard_curves(fileobj, user=None):
         investigation_time=hazcurve.investigation_time,
         imt=hazcurve.imt,
         imls=hazcurve.imls,
-        quantile=hazcurve.quantile,
+        quantile=hazcurve.quantile_value,
         statistics=hazcurve.statistics,
         sa_damping=hazcurve.sa_damping,
         sa_period=hazcurve.sa_period,
         output=out)
     hazard_curve_id = str(haz_curve.id)
-    for poes, loc in hazcurve:
+    for node in hazcurve:
+        loc = node.location
+        poes = node.poes
         poes = '{%s}' % str(poes)[1:-1]
-        print >> f, '\t'.join([hazard_curve_id, poes, 'SRID=4326;' + loc])
+        print >> f, '\t'.join([hazard_curve_id, poes,
+                               'SRID=4326;POINT(%s %s)' % (loc.x, loc.y)])
     f.reset()
     ## import the file-like object with a COPY FROM
     try:
