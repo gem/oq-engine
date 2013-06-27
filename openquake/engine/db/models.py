@@ -3043,14 +3043,16 @@ class ExposureData(djm.Model):
         Extract the deductible limit of the asset for the given
         `loss_type`. See the method `value` for details.
         """
-        return getattr(self, "deductible_%s" % loss_type)
+        return (getattr(self, "deductible_%s" % loss_type) /
+                getattr(self, loss_type))
 
     def insurance_limit(self, loss_type):
         """
         Extract the insurance limit of the asset for the given
         `loss_type`. See the method `value` for details.
         """
-        return getattr(self, "insurance_limit_%s" % loss_type)
+        return (getattr(self, "insurance_limit_%s" % loss_type) /
+                getattr(self, loss_type))
 
 
 def make_absolute(limit, value, is_absolute=None):

@@ -228,6 +228,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         model = self.risk_models[taxonomy][loss_type]
 
         return [base.CalculationUnit(
+            loss_type,
             functools.partial(
                 scientific.vulnerability_function_applier,
                 model.vulnerability_function,
