@@ -103,8 +103,8 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
         An :class:`openquake.engine.calculators.hazard.general.SiteCollection`
         object
     """
-    inserter = writer.CacheInserter(models.GmfAgg, 100)
-    # NB: GmfAgg may contain large arrays and the cache may become large
+    inserter = writer.CacheInserter(models.GmfData, 100)
+    # NB: GmfData may contain large arrays and the cache may become large
 
     for imt, gmfs_ in gmf_dict.iteritems():
         # ``gmfs`` comes in as a numpy.matrix
@@ -120,7 +120,7 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
         imt_name = imt.__class__.__name__
 
         for i, site in enumerate(sites):
-            inserter.add(models.GmfAgg(
+            inserter.add(models.GmfData(
                 gmf_id=gmfcoll_id,
                 ses_id=None,
                 imt=imt_name,

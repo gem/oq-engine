@@ -21,7 +21,7 @@ import unittest
 
 from openquake.engine import writer
 
-from openquake.engine.db.models import GmfAgg
+from openquake.engine.db.models import GmfData
 from openquake.engine.writer import CacheInserter
 
 
@@ -57,11 +57,11 @@ class CacheInserterTestCase(unittest.TestCase):
 
     # this test is probably too strict and testing implementation details
     def test_insert_gmf(self):
-        cache = CacheInserter(GmfAgg, 10)
-        gmf1 = GmfAgg(
+        cache = CacheInserter(GmfData, 10)
+        gmf1 = GmfData(
             gmf_id=1, imt='PGA', gmvs=[], rupture_ids=[],
             site_id=1)
-        gmf2 = GmfAgg(
+        gmf2 = GmfData(
             gmf_id=1, imt='PGA', gmvs=[], rupture_ids=[],
             site_id=2)
         cache.add(gmf1)
