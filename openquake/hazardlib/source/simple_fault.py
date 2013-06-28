@@ -53,7 +53,7 @@ class SimpleFaultSource(SeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
-    slots = SeismicSource.slots + '''rupture_mesh_spacing
+    __slots__ = SeismicSource.__slots__ + '''rupture_mesh_spacing
     magnitude_scaling_relationship rupture_aspect_ratio
     upper_seismogenic_depth lower_seismogenic_depth
     fault_trace dip rake'''.split()

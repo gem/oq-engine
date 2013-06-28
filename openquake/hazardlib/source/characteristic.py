@@ -51,7 +51,9 @@ class CharacteristicFaultSource(SeismicSource):
     magnitude scaling relationship, and aspect ratio, therefore the constructor
     set these parameters to ``None``.
     """
-    slots = SeismicSource.slots + 'surface rake'.split()
+    __slots__ = SeismicSource.__slots__ + (
+        'rupture_mesh_spacing magnitude_scaling_relationship '
+        'rupture_aspect_ratio surface rake').split()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, surface, rake):

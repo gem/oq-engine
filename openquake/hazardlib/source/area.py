@@ -38,7 +38,7 @@ class AreaSource(PointSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
-    slots = PointSource.slots + 'polygon area_discretization'.split()
+    __slots__ = PointSource.__slots__ + 'polygon area_discretization'.split()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,

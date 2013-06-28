@@ -38,7 +38,7 @@ class NodalPlane(object):
     :raises ValueError:
         If any of parameters exceeds the definition range.
     """
-    slots = ['strike', 'dip', 'rake']  # TODO: check with __slots__
+    __slots__ = ['strike', 'dip', 'rake']
 
     def __init__(self, strike, dip, rake):
         self.check_dip(dip)

@@ -26,7 +26,7 @@ def with_slots(cls):
     the methods __eq__, __ne__, assert_equal, __getstate__ and __setstate__
     """
     def _compare(self, other):
-        for slot in self.__class__.slots:
+        for slot in self.__class__.__slots__:
             attr = operator.attrgetter(slot)
             source = attr(self)
             target = attr(other)
@@ -50,17 +50,17 @@ def with_slots(cls):
 
     def __getstate__(self):
         return dict((slot, getattr(self, slot))
-                    for slot in self.__class__.slots)
+                    for slot in self.__class__.__slots__)
 
     def __setstate__(self, state):
-        for slot in self.__class__.slots:
+        for slot in self.__class__.__slots__:
             try:
                 setattr(self, slot, state[slot])
             except:
                 print slot, '**********************'
                 raise
 
-    cls.slots  # raise an AttributeError for missing slots
+    cls.__slots__  # raise an AttributeError for missing slots
     cls.__eq__ = __eq__
     cls.__ne__ = __ne__
     cls.assert_equal = assert_equal

@@ -19,8 +19,10 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 import numpy
 
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class Site(object):
     """
     Site object represents a geographical location defined by its position
@@ -66,78 +68,6 @@ class Site(object):
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
         self.id = id
-
-    def __getstate__(self):
-        """
-        Implemented to provide information for pickling.
-
-        :returns:
-            A `dict` with all of the site attributes:
-
-            * location
-            * vs30
-            * vs30measured (`True`/`False`)
-            * z1pt0
-            * z2pt5
-            * id
-        """
-        return dict(
-            location=self.location,
-            vs30=self.vs30,
-            vs30measured=self.vs30measured,
-            z1pt0=self.z1pt0,
-            z2pt5=self.z2pt5,
-            id=self.id,
-        )
-
-    def __setstate__(self, state):
-        """
-        Set state when creating a :class:`Site` from pickled data.
-        """
-        self.location = state['location']
-        self.vs30 = state['vs30']
-        self.vs30measured = state['vs30measured']
-        self.z1pt0 = state['z1pt0']
-        self.z2pt5 = state['z2pt5']
-        self.id = state['id']
-
-    def __eq__(self, other):
-        """
-        >>> import openquake.hazardlib
-        >>> point1 = openquake.hazardlib.geo.point.Point(1, 2, 3)
-        >>> point2 = openquake.hazardlib.geo.point.Point(1, 2, 3)
-        >>> site1 = Site(point2, 760.0, True, 100.0, 5.0)
-        >>> site2 = Site(point1, 760.0, True, 100.000000000001, 5.0)
-        >>> site1 == site2
-        True
-        >>> site4 = Site(point1, 760.0, True, 100.00000000001, 5.0)
-        >>> site1 == site4
-        False
-        >>> point3 = openquake.hazardlib.geo.point.Point(1, 2, 4)
-        >>> site3 = Site(point3, 760.0, True, 100.0, 5.0)
-        >>> site1 != site3
-        True
-        >>> site1 == None
-        False
-        """
-        if other is None:
-            return False
-
-        other_state = other.__getstate__()
-
-        for key, value in self.__getstate__().iteritems():
-            ovalue = other_state.get(key)
-
-            if isinstance(value, (int, long, float, complex)):
-                if not numpy.allclose(value, ovalue, rtol=0, atol=1e-12):
-                    return False
-            else:
-                if not value == ovalue:
-                    return False
-        return True
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     def __str__(self):
         """

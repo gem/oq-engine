@@ -47,7 +47,7 @@ class ComplexFaultSource(SeismicSource):
         fails or if rake value is invalid.
     """
 
-    slots = SeismicSource.slots + '''rupture_mesh_spacing
+    __slots__ = SeismicSource.__slots__ + '''rupture_mesh_spacing
     magnitude_scaling_relationship rupture_aspect_ratio
     edges rake'''.split()
 

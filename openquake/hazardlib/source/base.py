@@ -60,11 +60,11 @@ class SeismicSource(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    slots = 'source_id name tectonic_region_type mfd'.split()
+    __slots__ = 'source_id name tectonic_region_type mfd'.split()
 
-    def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, rupture_mesh_spacing,
-                 magnitude_scaling_relationship, rupture_aspect_ratio):
+    def __init__(self, source_id, name, tectonic_region_type, mfd,
+                 rupture_mesh_spacing, magnitude_scaling_relationship,
+                 rupture_aspect_ratio):
 
         if rupture_mesh_spacing is not None and not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')

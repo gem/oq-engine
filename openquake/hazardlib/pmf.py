@@ -42,7 +42,7 @@ class PMF(object):
         If probabilities do not sum up to 1 or there is zero or negative
         probability.
     """
-    slots = ['data']  # TODO: measure the memory occupation with __slots__
+    __slots__ = ['data']
 
     def __init__(self, data):
         if not data or (sum(prob for (prob, value) in data) != 1.0):

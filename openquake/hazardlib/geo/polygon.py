@@ -43,7 +43,7 @@ class Polygon(object):
         If ``points`` contains less than three unique points or if polygon
         perimeter intersects itself.
     """
-    slots = 'lons lats _bbox _projection _polygon2d'.split()
+    __slots__ = 'lons lats _bbox _projection _polygon2d'.split()
 
     def __init__(self, points):
         points = utils.clean_points(points)

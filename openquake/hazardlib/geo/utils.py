@@ -129,8 +129,8 @@ def get_spherical_bounding_box(lons, lats):
 
 @with_slots
 class OrthographicProjection(object):
-    slots = ('west east north south lambda0 phi0 '
-             'cos_phi0 sin_phi0 sin_pi_over_4').split()
+    __slots__ = ('west east north south lambda0 phi0 '
+                 'cos_phi0 sin_phi0 sin_pi_over_4').split()
 
     def __init__(self, west, east, north, south):
         self.west = west

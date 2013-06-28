@@ -58,7 +58,7 @@ class PointSource(SeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
-    slots = SeismicSource.slots + '''rupture_mesh_spacing
+    __slots__ = SeismicSource.__slots__ + '''rupture_mesh_spacing
     magnitude_scaling_relationship rupture_aspect_ratio
     upper_seismogenic_depth lower_seismogenic_depth
     location nodal_plane_distribution hypocenter_distribution
