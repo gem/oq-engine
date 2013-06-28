@@ -171,7 +171,8 @@ class CacheInserter(object):
         Append an object to the list of objects to save. If the list exceeds
         the max_cache_size, flush it on the database.
         """
-        assert isinstance(obj, self.table)
+        assert isinstance(obj, self.table), 'Expected instance of %s, got %r' \
+            % (self.table.__name__, obj)
         line = self.to_line(obj)
         self.stringio.write(line + '\n')
         self.nlines += 1
