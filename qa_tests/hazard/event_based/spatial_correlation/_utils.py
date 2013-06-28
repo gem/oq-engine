@@ -68,7 +68,7 @@ def get_gmvs_for_location(location, job):
             where=["location::geometry ~= 'SRID=4326;%s'::geometry"
                    % location])
     gmvs = []
-    for gmf in models.GmfAgg.objects.filter(
+    for gmf in models.GmfData.objects.filter(
             site=site, gmf=output.gmf).order_by('ses'):
         gmvs.extend(gmf.gmvs)
     return gmvs
