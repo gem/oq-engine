@@ -22,7 +22,7 @@ from openquake.hazardlib.geo import Point, Polygon, Mesh
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 
-from tests import can_pickle
+from tests import assert_pickleable
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
@@ -52,7 +52,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
                                   points[0], points[1], points[3], points[2]),
             rake = self.RAKE
         )
-        can_pickle(source)
+        assert_pickleable(source)
         return source
 
 

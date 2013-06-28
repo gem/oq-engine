@@ -25,7 +25,7 @@ from openquake.hazardlib.scalerel import PeerMSR, WC1994
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
 
-from tests import assert_angles_equal, can_pickle
+from tests import assert_angles_equal, assert_pickleable
 from tests.geo.surface._utils import assert_mesh_is
 from tests.source import _simple_fault_test_data as test_data
 
@@ -55,7 +55,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
             upper_seismogenic_depth, lower_seismogenic_depth,
             fault_trace, dip, rake
         )
-        can_pickle(sfs)
+        assert_pickleable(sfs)
         return sfs
 
     def _test_ruptures(self, expected_ruptures, source):

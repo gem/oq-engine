@@ -26,7 +26,7 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
     testcase.assertAlmostEqual(angle1, angle2, delta=delta)
 
 
-def can_pickle(obj):
+def assert_pickleable(obj):
     cPickle.loads(cPickle.dumps(obj)).assert_equal(obj)
 
 

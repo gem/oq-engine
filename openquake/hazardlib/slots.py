@@ -54,11 +54,7 @@ def with_slots(cls):
 
     def __setstate__(self, state):
         for slot in self.__class__.__slots__:
-            try:
-                setattr(self, slot, state[slot])
-            except:
-                print slot, '**********************'
-                raise
+            setattr(self, slot, state[slot])
 
     cls.__slots__  # raise an AttributeError for missing slots
     cls.__eq__ = __eq__

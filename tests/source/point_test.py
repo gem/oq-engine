@@ -30,6 +30,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.site import Site, SiteCollection
 
 from tests.geo.surface import _planar_test_data as planar_surface_test_data
+from tests import assert_pickleable
 
 
 def make_point_source(**kwargs):
@@ -49,7 +50,9 @@ def make_point_source(**kwargs):
     }
     default_arguments.update(kwargs)
     kwargs = default_arguments
-    return PointSource(**kwargs)
+    ps = PointSource(**kwargs)
+    assert_pickleable(ps)
+    return ps
 
 
 class PointSourceCreationTestCase(unittest.TestCase):

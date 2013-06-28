@@ -25,7 +25,7 @@ from openquake.hazardlib.scalerel.peer import PeerMSR
 
 from tests.source import simple_fault_test
 from tests.source import _complex_fault_test_data as test_data
-from tests import can_pickle
+from tests import assert_pickleable
 
 
 class ComplexFaultSourceSimpleGeometryIterRupturesTestCase(
@@ -50,7 +50,7 @@ class ComplexFaultSourceSimpleGeometryIterRupturesTestCase(
             source.magnitude_scaling_relationship, source.rupture_aspect_ratio,
             [top_edge, bottom_edge], source.rake
         )
-        can_pickle(cfs)
+        assert_pickleable(cfs)
         return cfs
 
 
@@ -69,7 +69,7 @@ class ComplexFaultSourceIterRupturesTestCase(
             magnitude_scaling_relationship, rupture_aspect_ratio,
             edges, rake
         )
-        can_pickle(cfs)
+        assert_pickleable(cfs)
         return cfs
 
     def test_1(self):
