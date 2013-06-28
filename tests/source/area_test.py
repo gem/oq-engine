@@ -26,6 +26,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.area import AreaSource
 
 from tests.source.base_test import SeismicSourceFilterSitesTestCase
+from tests import can_pickle
 
 
 def make_area_source(polygon, discretization, **kwargs):
@@ -55,6 +56,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
         source = make_area_source(polygon, discretization, **kwargs)
         for key in kwargs:
             self.assertIs(getattr(source, key), kwargs[key])
+        can_pickle(source)
         return source
 
     def test_implied_point_sources(self):

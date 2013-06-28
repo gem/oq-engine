@@ -23,8 +23,10 @@ from openquake.hazardlib.source.base import SeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class SimpleFaultSource(SeismicSource):
     """
     Simple fault source typology represents seismicity occurring on a fault
@@ -51,6 +53,11 @@ class SimpleFaultSource(SeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
+    slots = SeismicSource.slots + '''rupture_mesh_spacing
+    magnitude_scaling_relationship rupture_aspect_ratio
+    upper_seismogenic_depth lower_seismogenic_depth
+    fault_trace dip rake'''.split()
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,

@@ -22,13 +22,14 @@ import shapely.geometry
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
-
+from openquake.hazardlib.slots import with_slots
 
 #: Polygon upsampling step for long edges, in kilometers.
 #: See :func:`get_resampled_coordinates`.
 UPSAMPLING_STEP_KM = 100
 
 
+@with_slots
 class Polygon(object):
     """
     Polygon objects represent an area on the Earth surface.
@@ -42,6 +43,7 @@ class Polygon(object):
         If ``points`` contains less than three unique points or if polygon
         perimeter intersects itself.
     """
+    slots = 'lons lats _bbox _projection _polygon2d'.split()
 
     def __init__(self, points):
         points = utils.clean_points(points)
@@ -86,7 +88,7 @@ class Polygon(object):
         :param proj:
             Projection object created
             by
-            :func:`~openquake.hazardlib.geo._utils.get_orthographic_projection`
+            :func:`~openquake.hazardlib.geo.utils.get_orthographic_projection`
             that was used to project ``polygon2d``. That projection
             will be used for projecting it back to get spherical
             coordinates from Cartesian ones.

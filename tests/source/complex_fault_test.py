@@ -25,6 +25,7 @@ from openquake.hazardlib.scalerel.peer import PeerMSR
 
 from tests.source import simple_fault_test
 from tests.source import _complex_fault_test_data as test_data
+from tests import can_pickle
 
 
 class ComplexFaultSourceSimpleGeometryIterRupturesTestCase(
@@ -43,12 +44,15 @@ class ComplexFaultSourceSimpleGeometryIterRupturesTestCase(
         top_edge = Line(list(mesh[0:1]))
         bottom_edge = Line(list(mesh[-1:]))
 
-        return ComplexFaultSource(
+        cfs = ComplexFaultSource(
             source.source_id, source.name, source.tectonic_region_type,
             source.mfd, source.rupture_mesh_spacing,
             source.magnitude_scaling_relationship, source.rupture_aspect_ratio,
             [top_edge, bottom_edge], source.rake
         )
+        can_pickle(cfs)
+        return cfs
+
 
 class ComplexFaultSourceIterRupturesTestCase(
         simple_fault_test._BaseFaultSourceTestCase):
@@ -60,11 +64,13 @@ class ComplexFaultSourceIterRupturesTestCase(
         rupture_aspect_ratio = aspect_ratio
         edges = [Line([Point(*coords) for coords in edge])
                  for edge in edges]
-        return ComplexFaultSource(
+        cfs = ComplexFaultSource(
             source_id, name, trt, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
             edges, rake
         )
+        can_pickle(cfs)
+        return cfs
 
     def test_1(self):
         # Complex fault source equivalent to Simple fault source defined

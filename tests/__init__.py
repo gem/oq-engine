@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import functools
+import cPickle
 
 from openquake.hazardlib import speedups
 
@@ -23,6 +24,10 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
     if abs(angle1 - angle2) > 180:
         angle1, angle2 = 360 - max((angle1, angle2)), min((angle1, angle2))
     testcase.assertAlmostEqual(angle1, angle2, delta=delta)
+
+
+def can_pickle(obj):
+    cPickle.loads(cPickle.dumps(obj)).assert_equal(obj)
 
 
 class SpeedupsTestCase(unittest.TestCase):

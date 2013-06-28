@@ -23,8 +23,10 @@ from openquake.hazardlib.source.base import SeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class ComplexFaultSource(SeismicSource):
     """
     Complex fault source typology represents seismicity occurring on a fault
@@ -44,9 +46,14 @@ class ComplexFaultSource(SeismicSource):
         If :meth:`~openquake.hazardlib.geo.surface.complex_fault.ComplexFaultSurface.check_fault_data`
         fails or if rake value is invalid.
     """
-    def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, rupture_mesh_spacing,
-                 magnitude_scaling_relationship, rupture_aspect_ratio,
+
+    slots = SeismicSource.slots + '''rupture_mesh_spacing
+    magnitude_scaling_relationship rupture_aspect_ratio
+    edges rake'''.split()
+
+    def __init__(self, source_id, name, tectonic_region_type, mfd,
+                 rupture_mesh_spacing, magnitude_scaling_relationship,
+                 rupture_aspect_ratio,
                  # complex fault specific parameters
                  edges, rake):
         super(ComplexFaultSource, self).__init__(

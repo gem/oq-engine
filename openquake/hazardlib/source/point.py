@@ -22,8 +22,10 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import SeismicSource
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class PointSource(SeismicSource):
     """
     Point source typology represents seismicity on a single geographical
@@ -56,6 +58,12 @@ class PointSource(SeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
+    slots = SeismicSource.slots + '''rupture_mesh_spacing
+    magnitude_scaling_relationship rupture_aspect_ratio
+    upper_seismogenic_depth lower_seismogenic_depth
+    location nodal_plane_distribution hypocenter_distribution
+    '''.split()
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,

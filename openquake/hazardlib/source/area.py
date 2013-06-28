@@ -19,8 +19,10 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class AreaSource(PointSource):
     """
     Area source represents uniform seismicity occurring over a geographical
@@ -36,6 +38,8 @@ class AreaSource(PointSource):
     Other parameters (except ``location``) are the same as for
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
+    slots = PointSource.slots + 'polygon area_discretization'.split()
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,

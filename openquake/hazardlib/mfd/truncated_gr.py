@@ -20,8 +20,10 @@ Gutenberg-Richter MFD.
 import math
 
 from openquake.hazardlib.mfd.base import BaseMFD
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class TruncatedGRMFD(BaseMFD):
     """
     Truncated Gutenberg-Richter MFD is defined in a functional form.
@@ -62,6 +64,8 @@ class TruncatedGRMFD(BaseMFD):
                          'set_max_mag',
                          'increment_b',
                          'set_ab'))
+
+    slots = 'min_mag max_mag bin_width a_val b_val'.split()
 
     def __init__(self, min_mag, max_mag, bin_width, a_val, b_val):
         self.min_mag = min_mag

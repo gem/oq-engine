@@ -22,6 +22,8 @@ from openquake.hazardlib.geo import Point, Polygon, Mesh
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 
+from tests import can_pickle
+
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
     SOURCE_ID = NAME = 'test-source'
@@ -40,18 +42,19 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
 
     def _make_source(self):
         points = [Point(lon, lat, depth) for lon, lat, depth in
-            zip(self.CORNER_LONS, self.CORNER_LATS, self.CORNER_DEPTHS)]
+                  zip(self.CORNER_LONS, self.CORNER_LATS, self.CORNER_DEPTHS)]
         source = CharacteristicFaultSource(
             source_id=self.SOURCE_ID,
             name=self.NAME,
             tectonic_region_type=self.TRT,
             mfd=EvenlyDiscretizedMFD(self.MIN_MAG, self.BIN_WIDTH, self.RATES),
             surface=PlanarSurface(self.MESH_SPACING, self.STRIKE, self.DIP,
-                points[0], points[1], points[3], points[2]),
-            rake =self.RAKE
+                                  points[0], points[1], points[3], points[2]),
+            rake = self.RAKE
         )
-
+        can_pickle(source)
         return source
+
 
 class CharacteristicFaultSourceGetRuptureEnclosingPolygon(
         _BaseFaultSourceTestCase):
