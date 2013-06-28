@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2012-2013, GEM Foundation.
 #
 # OpenQuake Risklib is free software: you can redistribute it and/or
 # modify it under the terms of the GNU Affero General Public License
@@ -71,14 +71,11 @@ class VulnerabilityFunction(object):
                 raise ValueError(msg)
 
         self.distribution_name = distribution_name
-        (self.max_iml, self.min_iml, self.resolution,
-         self.stddevs, self._mlr_i1d, self._covs_i1d,
-         self.distribution) = itertools.repeat(None, 7)
+        (self.resolution, self.stddevs, self._mlr_i1d, self._covs_i1d,
+         self.distribution) = itertools.repeat(None, 5)
         self.init()
 
     def init(self):
-        self.max_iml = self.imls[-1]
-        self.min_iml = self.imls[0]
         self.resolution = len(self.imls)
         self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
@@ -154,11 +151,11 @@ class VulnerabilityFunction(object):
         [0.0049, 0.006, 0.027], the clipped imls are
         [0.005,  0.006, 0.0269].
         """
-        clipped_up = numpy.min(
-            [imls, numpy.ones(len(imls)) * self.max_iml], axis=0)
-        clipped = numpy.max(
-            [clipped_up, numpy.ones(len(imls)) * self.min_iml], axis=0)
-        return self._covs_i1d(clipped)
+        return self._covs_i1d(
+            numpy.piecewise(
+                imls,
+                [imls > self.imls[-1], imls < self.imls[0]],
+                [self.imls[-1], self.imls[0], lambda x: x]))
 
     def __getstate__(self):
         return (self.imls, self.mean_loss_ratios,
@@ -197,13 +194,15 @@ class VulnerabilityFunction(object):
         ret = numpy.zeros(len(imls))
 
         # imls are clipped to max(iml)
-        imls = numpy.min([numpy.ones(len(imls)) * self.max_iml,
-                          imls], axis=0)
+        imls = numpy.piecewise(
+            imls,
+            [imls > self.imls[-1]],
+            [self.imls[-1], lambda x: x])
 
         # for imls such that iml > min(iml) we get a mean loss ratio
         # by interpolation and sample the distribution
 
-        idxs = numpy.where(imls >= self.min_iml)[0]
+        idxs = numpy.where(imls >= self.imls[0])[0]
         imls = numpy.array(imls)[idxs]
         means = self._mlr_i1d(imls)
 
@@ -260,13 +259,13 @@ VulnerabilityFunction`
 
 def vulnerability_function_applier(
         vulnerability_function, ground_motion_values,
-        seed=None, correlation=0):
+        seed=None, asset_correlation=0):
     vulnerability_function.init_distribution(
         len(ground_motion_values),
         len(ground_motion_values[0]),
         seed,
-        correlation)
-    return map(vulnerability_function, ground_motion_values)
+        asset_correlation)
+    return utils.numpy_map(vulnerability_function, ground_motion_values)
 
 
 class FragilityFunctionContinuous(object):
@@ -481,9 +480,6 @@ class BetaDistribution(Distribution):
     def _beta(mean, stddev):
         return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
 
-###
-### Calculators
-###
 
 ##
 ## Event Based
@@ -530,13 +526,14 @@ def scenario_damage(fragility_functions, gmvs):
     motion values. Returns an NxM matrix where N is the number of
     realizations and M is the numbers of damage states.
     """
-    return numpy.array([
+    return utils.numpy_map(
+        lambda gmv:
         numpy.array(
             list(pairwise_diff(
                 [1] +
                 [ff(gmv) for ff in fragility_functions] +
-                [0])))
-        for gmv in gmvs])
+                [0]))),
+        gmvs)
 
 
 ##
@@ -657,7 +654,7 @@ def conditional_loss_ratio(loss_ratios, poes, probability):
 ## Insured Losses
 ##
 
-def insured_losses(loss_ratios, asset_value, deductible, insured_limit):
+def insured_losses(losses, deductible, insured_limit):
     """
     Compute insured losses for the given asset and losses
 
@@ -665,7 +662,6 @@ def insured_losses(loss_ratios, asset_value, deductible, insured_limit):
     :param array loss_ratios: an array of loss ratios
     """
 
-    losses = loss_ratios * asset_value
     return numpy.where(
         losses < insured_limit,
         numpy.where(losses < deductible, numpy.zeros(losses.shape), losses),
