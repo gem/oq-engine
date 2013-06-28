@@ -844,9 +844,8 @@ class HazardCalculation(djm.Model):
                     'asset_ref')
 
                 # the points here must be sorted
-                lons, lats = zip(
-                    *sorted(set([(asset.site.x, asset.site.y)
-                                 for asset in assets])))
+                lons, lats = zip(*sorted(set((asset.site.x, asset.site.y)
+                                             for asset in assets)))
                 # Cache the mesh:
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
