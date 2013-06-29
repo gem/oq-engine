@@ -13,8 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
@@ -23,7 +21,6 @@ from openquake.engine.db import models
 
 
 class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
-    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
     output_type = "gmf_scenario"
 
     @attr('qa', 'risk', 'scenario')

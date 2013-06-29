@@ -18,12 +18,11 @@
 Core functionality for the scenario risk calculator.
 """
 import random
-import functools
 import itertools
 import numpy
 from django import db
 
-from openquake.risklib import scientific
+from openquake.risklib import utils, calculators
 
 from openquake.engine import logs
 from openquake.engine.calculators.base import signal_task_complete
@@ -61,7 +60,12 @@ def scenario(job_id, units, containers, params):
             # in scenario calculation we have only ONE calculation unit
             unit = units[loss_type][0]
             agg[loss_type], insured[loss_type] = do_scenario(
-                loss_type, unit, containers, params, profile)
+                loss_type, unit,
+                containers.prepare(
+                    loss_type=loss_type,
+                    hazard_output_id=unit.getter.hazard_output.id,
+                    output_type="loss_map"),
+                params, profile)
     num_items = base.get_num_items(units)
     signal_task_complete(
         job_id=job_id, num_items=num_items,
@@ -82,43 +86,42 @@ def do_scenario(loss_type, unit, containers, params, profile):
         return None, None
 
     with profile('computing risk'):
-        loss_ratio_matrix = unit.calc(ground_motion_values)
+        values = numpy.array([a.value(loss_type) for a in assets])
+        loss_ratio_matrix = unit.calcs["losses"](ground_motion_values)
 
         if params.insured_losses:
-            insured_loss_matrix = [
-                scientific.insured_losses(
-                    loss_ratio_matrix[i], asset.value(loss_type),
-                    asset.deductible(loss_type),
-                    asset.insurance_limit(loss_type))
-                for i, asset in enumerate(assets)]
+            deductibles = utils.numpy_map(
+                lambda a: a.deductible(loss_type), assets)
+            limits = utils.numpy_map(
+                lambda a: a.insurance_limit(loss_type), assets)
+            insured_loss_ratio_matrix = unit.calcs["insured_losses"](
+                loss_ratio_matrix,
+                deductibles,
+                limits)
 
     with profile('saving risk outputs'):
         containers.write(
             assets,
-            [losses.mean() for losses in loss_ratio_matrix],
-            [losses.std(ddof=1) for losses in loss_ratio_matrix],
-            output_type="loss_map",
-            loss_type=loss_type,
-            hazard_output_id=unit.getter.hazard_output.id,
+            loss_ratio_matrix.mean(axis=1),
+            loss_ratio_matrix.std(ddof=1, axis=1),
             insured=False)
 
         if params.insured_losses:
+            insured_loss_matrix = (insured_loss_ratio_matrix.transpose() *
+                                   values)
             containers.write(
                 assets,
-                [losses.mean() for losses in insured_loss_matrix],
-                [losses.std(ddof=1) for losses in insured_loss_matrix],
+                insured_loss_matrix.mean(axis=0),
+                insured_loss_matrix.std(ddof=1, axis=0),
                 itertools.cycle([True]),
-                output_type="loss_map",
-                loss_type=loss_type,
-                hazard_output_id=unit.getter.hazard_output.id,
                 insured=True)
 
-    aggregate_losses = sum(loss_ratio_matrix[i] * asset.value(loss_type)
-                           for i, asset in enumerate(assets))
+    aggregate_losses = numpy.sum(
+        loss_ratio_matrix.transpose() * values, axis=1)
 
     if params.insured_losses:
         insured_losses = (
-            numpy.array(insured_loss_matrix).transpose().sum(axis=1))
+            numpy.array(insured_loss_matrix).sum(axis=1))
     else:
         insured_losses = "Not computed"
 
@@ -229,17 +232,23 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
         return [base.CalculationUnit(
             loss_type,
-            functools.partial(
-                scientific.vulnerability_function_applier,
+            dict(losses=calculators.ProbabilisticLoss(
                 model.vulnerability_function,
                 seed=self.rnd.randint(0, models.MAX_SINT_32),
-                correlation=self.rc.asset_correlation),
+                asset_correlation=self.rc.asset_correlation),
+                insured_losses=self.make_insured_losses_fn()),
             hazard_getters.GroundMotionValuesGetter(
                 ho,
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
-                for ho in self.rc.hazard_outputs()]
+              for ho in self.rc.hazard_outputs()]
+
+    def make_insured_losses_fn(self):
+        if not self.rc.insured_losses:
+            return base.do_nothing
+        else:
+            return calculators.InsuredLoss()
 
     @property
     def calculator_parameters(self):

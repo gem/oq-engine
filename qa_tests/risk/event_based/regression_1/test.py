@@ -13,8 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from nose.plugins.attrib import attr as noseattr
 
 from qa_tests import risk
@@ -25,7 +23,6 @@ from openquake.engine.db import models
 
 # FIXME(lp). This is just a regression test
 class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
-    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
     output_type = "gmf"
 
     @noseattr('qa', 'risk', 'event_based')
