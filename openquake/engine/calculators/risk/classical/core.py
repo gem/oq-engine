@@ -174,6 +174,9 @@ def save_individual_outputs(containers, outs, params):
 class StatisticalOutputs(object):
     """The statistical outputs computed by the classical calculator.
 
+    :attr assets:
+      a list of N assets the outputs refer to
+
     :attr list mean_curves:
        Holds N mean loss curves. A loss curve is a 2-ple losses/poes
     :attr list mean_maps:
@@ -192,8 +195,9 @@ class StatisticalOutputs(object):
        Holds Q lists, where each of them has F lists. Each of the latter
        holds N quantile loss fraction value
        """
-    def __init__(self, mean_curves, mean_maps, mean_fractions,
+    def __init__(self, assets, mean_curves, mean_maps, mean_fractions,
                  quantile_curves, quantile_maps, quantile_fractions):
+        self.assets = assets
         self.mean_curves = mean_curves
         self.mean_maps = mean_maps
         self.mean_fractions = mean_fractions
@@ -257,6 +261,7 @@ def statistics(outputs, params):
     quantile_fractions = numpy.array(quantile_fractions).transpose(2, 1, 0)
 
     return StatisticalOutputs(
+        outputs.assets,
         mean_curve, mean_maps,
         mean_fractions, quantile_curves, quantile_maps, quantile_fractions)
 

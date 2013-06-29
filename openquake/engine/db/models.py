@@ -412,8 +412,8 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     owner = djm.ForeignKey('OqUser')
-    hazard_calculation = djm.ForeignKey('HazardCalculation', null=True)
-    risk_calculation = djm.ForeignKey('RiskCalculation', null=True)
+    hazard_calculation = djm.OneToOneField('HazardCalculation', null=True)
+    risk_calculation = djm.OneToOneField('RiskCalculation', null=True)
     LOG_LEVEL_CHOICES = (
         (u'debug', u'Debug'),
         (u'info', u'Info'),
@@ -1088,9 +1088,8 @@ class RiskCalculation(djm.Model):
         if self.hazard_output:
             return [self.hazard_output]
         elif self.hazard_calculation:
-            return self.hazard_calculation.oqjob_set.filter(
-                status="complete").latest(
-                    'last_update').output_set.filter(**filters).order_by('id')
+            return self.hazard_calculation.oqjob.output_set.filter(
+                **filters).order_by('id')
         else:
             raise RuntimeError("Neither hazard calculation "
                                "neither a hazard output has been provided")
@@ -2246,8 +2245,21 @@ class LossFraction(djm.Model):
 
             node[1] = collections.OrderedDict(
                 sorted([(k, v) for k, v in node[1].items()],
-                       key=lambda kv: kv[1][0]))
+                       key=lambda kv: kv[0]))
             yield node
+
+    def to_array(self):
+        """
+        :returns: the loss fractions as numpy array
+
+        :NOTE:  (not memory efficient)
+        """
+        def to_tuple():
+            for (lon, lat), data in self.iteritems():
+                for taxonomy, (absolute_loss, fraction) in data.items():
+                    yield lon, lat, taxonomy, absolute_loss, fraction
+
+        return numpy.array(list(to_tuple()), dtype='f4, f4, S3, f4, f4')
 
 
 class LossFractionData(djm.Model):
@@ -2264,7 +2276,9 @@ class LossFractionData(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.loss_fraction.output_hash + (self.location, self.value)
+        return (self.loss_fraction.output_hash +
+                ("%.5f" % self.location.x, "%.5f" % self.location.y,
+                 self.value))
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(
@@ -2628,7 +2642,7 @@ class DmgDistPerAsset(djm.Model):
 
     @property
     def output(self):
-        return self.dmg_state.rc_calculation.oqjob_set.all()[0].output_set.get(
+        return self.dmg_state.rc_calculation.oqjob.output_set.get(
             output_type="dmg_dist_per_asset")
 
 
@@ -2645,7 +2659,7 @@ class DmgDistPerTaxonomy(djm.Model):
 
     @property
     def output(self):
-        return self.dmg_state.rc_calculation.oqjob_set.all()[0].output_set.get(
+        return self.dmg_state.rc_calculation.oqjob.output_set.get(
             output_type="dmg_dist_per_taxonomy")
 
     @property
@@ -2684,7 +2698,7 @@ class DmgDistTotal(djm.Model):
 
     @property
     def output(self):
-        return self.dmg_state.rc_calculation.oqjob_set.all()[0].output_set.get(
+        return self.dmg_state.rc_calculation.oqjob.output_set.get(
             output_type="dmg_dist_total")
 
     @property

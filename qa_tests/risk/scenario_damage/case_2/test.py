@@ -13,16 +13,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from nose.plugins.attrib import attr
 
 from qa_tests.risk.scenario_damage.case_1 import test
 
 
 class ScenarioDamageRiskCase2TestCase(test.ScenarioDamageRiskCase1TestCase):
-    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-
     EXPECTED_DMG_DIST_PER_ASSET = '''<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
