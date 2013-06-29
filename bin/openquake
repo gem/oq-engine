@@ -367,9 +367,9 @@ def _print_calcs_summary(calcs):
                 '%Y-%m-%d %H:%M:%S %Z'
             )
 
-        print '%s | %s | %s | %s' % (
-            calc.id, status, last_update, calc.description
-        )
+            print '%s | %s | %s | %s' % (
+                calc.id, status, last_update, calc.description
+            )
 
 def list_imported_outputs():
     """
