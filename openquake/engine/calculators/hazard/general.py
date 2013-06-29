@@ -91,126 +91,6 @@ def store_site_model(input_mdl, site_model_source):
     return writer.CacheInserter.saveall(data)
 
 
-def validate_site_model(sm_nodes, mesh):
-    """Given the geometry for a site model and the geometry of interest for the
-    calculation (``mesh``, make sure the geometry of interest lies completely
-    inside of the convex hull formed by the site model locations.
-
-    If a point of interest lies directly on top of a vertex or edge of the site
-    model area (a polygon), it is considered "inside"
-
-    :param sm_nodes:
-        Sequence of :class:`~openquake.engine.db.models.SiteModel` objects.
-    :param mesh:
-        A :class:`openquake.hazardlib.geo.mesh.Mesh` which represents the
-        calculation points of interest.
-
-    :raises:
-        :exc:`RuntimeError` if the area of interest (given as a mesh) is not
-        entirely contained by the site model.
-    """
-    sm_mp = geometry.MultiPoint(
-        [(n.location.x, n.location.y) for n in sm_nodes]
-    )
-
-    sm_ch = sm_mp.convex_hull
-    # Enlarging the area if the site model nodes
-    # create a straight line with zero area.
-    if sm_ch.area == 0:
-        sm_ch = sm_ch.buffer(DILATION_ONE_METER)
-
-    sm_poly = hazardlib_geo.Polygon(
-        [hazardlib_geo.Point(*x) for x in sm_ch.exterior.coords]
-    )
-
-    # "Intersects" is the correct operation (not "contains"), since we're just
-    # checking a collection of points (mesh). "Contains" would tell us if the
-    # points are inside the polygon, but would return `False` if a point was
-    # directly on top of a polygon edge or vertex. We want these points to be
-    # included.
-    intersects = sm_poly.intersects(mesh)
-
-    if not intersects.all():
-        raise RuntimeError(
-            ['Sites of interest are outside of the site model coverage area.'
-             ' This configuration is invalid.']
-        )
-
-
-def get_site_model(hc_id):
-    """Get the site model :class:`~openquake.engine.db.models.Input` record
-    for the given job id.
-
-    :param int hc_id:
-        The id of a :class:`~openquake.engine.db.models.HazardCalculation`.
-
-    :returns:
-        The site model :class:`~openquake.engine.db.models.Input` record for
-        this job.
-    :raises:
-        :exc:`RuntimeError` if the job has more than 1 site model.
-    """
-    site_model = models.inputs4hcalc(hc_id, input_type='site_model')
-
-    if len(site_model) == 0:
-        return None
-    elif len(site_model) > 1:
-        # Multiple site models for 1 job are not allowed.
-        raise RuntimeError("Only 1 site model per job is allowed, found %s."
-                           % len(site_model))
-
-    # There's only one site model.
-    return site_model[0]
-
-
-## TODO: this could be implemented with a view, now that there is a site table
-def get_closest_site_model_data(input_model, point):
-    """Get the closest available site model data from the database for a given
-    site model :class:`~openquake.engine.db.models.Input` and
-    :class:`openquake.hazardlib.geo.point.Point`.
-
-    :param input_model:
-        :class:`openquake.engine.db.models.Input` with `input_type` of
-        'site_model'.
-    :param site:
-        :class:`openquake.hazardlib.geo.point.Point` instance.
-
-    :returns:
-        The closest :class:`openquake.engine.db.models.SiteModel` for the given
-        ``input_model`` and ``point`` of interest.
-
-        This function uses the PostGIS `ST_Distance_Sphere
-        <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
-        function to calculate distance.
-
-        If there is no site model data, return `None`.
-    """
-    query = """
-    SELECT
-        hzrdi.site_model.*,
-        min(ST_Distance_Sphere(location, %s))
-            AS min_distance
-    FROM hzrdi.site_model
-    WHERE input_id = %s
-    GROUP BY id
-    ORDER BY min_distance
-    LIMIT 1;"""
-
-    raw_query_set = models.SiteModel.objects.raw(
-        query, ['SRID=4326; %s' % point.wkt2d, input_model.id]
-    )
-
-    site_model_data = list(raw_query_set)
-
-    assert len(site_model_data) <= 1, (
-        "This query should return at most 1 record.")
-
-    if len(site_model_data) == 1:
-        return site_model_data[0]
-    else:
-        return None
-
-
 def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
                 width_of_mfd_bin, area_source_discretization):
     """
@@ -336,16 +216,50 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-# FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
-# the issue is the reset of the depts; we need QA tests for that
-class SiteCollection(openquake.hazardlib.site.SiteCollection):
-    def __init__(self, sites):
-        self.sites = sites
-        super(SiteCollection, self).__init__(sites)
+def validate_site_model(sm_nodes, mesh):
+    """Given the geometry for a site model and the geometry of interest for the
+    calculation (``mesh``, make sure the geometry of interest lies completely
+    inside of the convex hull formed by the site model locations.
 
-    def __iter__(self):
-        for site in self.sites:
-            yield site
+    If a point of interest lies directly on top of a vertex or edge of the site
+    model area (a polygon), it is considered "inside"
+
+    :param sm_nodes:
+        Sequence of :class:`~openquake.engine.db.models.SiteModel` objects.
+    :param mesh:
+        A :class:`openquake.hazardlib.geo.mesh.Mesh` which represents the
+        calculation points of interest.
+
+    :raises:
+        :exc:`RuntimeError` if the area of interest (given as a mesh) is not
+        entirely contained by the site model.
+    """
+    sm_mp = geometry.MultiPoint(
+        [(n.location.x, n.location.y) for n in sm_nodes]
+    )
+
+    sm_ch = sm_mp.convex_hull
+    # Enlarging the area if the site model nodes
+    # create a straight line with zero area.
+    if sm_ch.area == 0:
+        sm_ch = sm_ch.buffer(DILATION_ONE_METER)
+
+    sm_poly = hazardlib_geo.Polygon(
+        [hazardlib_geo.Point(*x) for x in sm_ch.exterior.coords]
+    )
+
+    # "Intersects" is the correct operation (not "contains"), since we're just
+    # checking a collection of points (mesh). "Contains" would tell us if the
+    # points are inside the polygon, but would return `False` if a point was
+    # directly on top of a polygon edge or vertex. We want these points to be
+    # included.
+    intersects = sm_poly.intersects(mesh)
+
+    if not intersects.all():
+        raise RuntimeError(
+            ['Sites of interest are outside of the site model coverage area.'
+             ' This configuration is invalid.']
+        )
 
 
 class BaseHazardCalculator(base.Calculator):
@@ -694,19 +608,9 @@ class BaseHazardCalculator(base.Calculator):
         completely envelops the calculation geometry. (If this requirement is
         not satisfied, an exception will be raised. See
         :func:`openquake.engine.calculators.hazard.general.validate_site_model`.)
-
-        Then, take all of the points/locations of interest defined by the
-        calculation geometry. For each point, do distance queries on the site
-        model and get the site parameters which are closest to the point of
-        interest. This aggregation of points to the closest site parameters
-        is what we store in the `site_collection` field.
-        If the computation does not specify a site model the same 4 reference
-        site parameters are used for all sites.
         """
         logs.LOG.progress("initializing site model")
-
-        site_model_inp = get_site_model(self.hc.id)
-
+        site_model_inp = models.get_site_model(self.hc.id)
         if site_model_inp:
             # explicit cast to `str` because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
@@ -721,39 +625,9 @@ class BaseHazardCalculator(base.Calculator):
             site_model_data = models.SiteModel.objects.filter(
                 input=site_model_inp)
 
-            points = self.hc.points_to_compute()
-            validate_site_model(site_model_data, points)
+            validate_site_model(site_model_data, self.hc.points_to_compute(save_sites=True))
         else:
-            points = self.hc.points_to_compute()
-
-        sites = []
-        coords = []
-        for pt in points:
-            coords.append((pt.longitude, pt.latitude))
-
-            if site_model_inp:
-                smd = get_closest_site_model_data(site_model_inp, pt)
-                measured = smd.vs30_type == 'measured'
-                vs30 = smd.vs30
-                z1pt0 = smd.z1pt0
-                z2pt5 = smd.z2pt5
-            else:
-                vs30 = self.hc.reference_vs30_value
-                measured = self.hc.reference_vs30_type == 'measured'
-                z1pt0 = self.hc.reference_depth_to_1pt0km_per_sec
-                z2pt5 = self.hc.reference_depth_to_2pt5km_per_sec
-
-            sites.append(openquake.hazardlib.site.Site(
-                         pt, vs30, measured, z1pt0, z2pt5))
-
-        # store the sites
-        site_ids = self.hc.save_sites(coords)
-
-        # store the ids into the Site objects
-        for site, site_id in zip(sites, site_ids):
-            site.id = site_id
-        self.hc.site_collection = SiteCollection(sites)
-        self.hc.save()
+            self.hc.points_to_compute(save_sites=True)
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
