@@ -13,8 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from nose.plugins.attrib import attr as noseattr
 
 from qa_tests import risk
@@ -23,9 +21,6 @@ from openquake.engine.db import models
 
 
 class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
-    hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
-    risk_cfg = os.path.join(os.path.dirname(__file__), 'job_risk.ini')
-
     hazard_calculation_fixture = "PEB QA test 1"
 
     @noseattr('qa', 'risk', 'event_based', 'e2e')

@@ -26,7 +26,7 @@ from scipy import interpolate
 from django import db
 
 from openquake.hazardlib.geo import mesh
-from openquake.risklib import calculators, scientific
+from openquake.risklib import calculators, scientific, utils
 
 from openquake.engine.calculators.risk import base, hazard_getters
 from openquake.engine.db import models
@@ -66,8 +66,7 @@ def event_based(job_id, units, containers, params):
     with db.transaction.commit_on_success(using='reslt_writer'):
         for loss_type in units:
             event_loss_tables[loss_type] = do_event_based(
-                loss_type, units[loss_type],
-                containers.prepare(loss_type=loss_type), params, profile)
+                loss_type, units[loss_type], containers, params, profile)
     num_items = base.get_num_items(units)
     signal_task_complete(job_id=job_id,
                          num_items=num_items,
@@ -90,7 +89,8 @@ def do_event_based(loss_type, units, containers, params, profile):
         with profile(
                 'computing losses, curves, maps, insured curves, event table'):
             outputs = individual_outputs(
-                unit, assets, ground_motion_values, rupture_ids)
+                unit, assets, ground_motion_values, rupture_ids,
+                params.insured_losses and loss_type != "fatalities")
 
         if not assets:
             logs.LOG.info("Exit from task as no asset could be processed")
@@ -124,7 +124,7 @@ def do_event_based(loss_type, units, containers, params, profile):
 
     with profile('saving risk statistics'):
         save_statistical_output(
-            loss_type, containers, assets, stats, params)
+            containers.prepare(loss_type=loss_type), stats, params)
 
     return event_loss_table
 
@@ -135,6 +135,10 @@ class UnitOutputs(object):
 
     :attr assets:
       a list of N assets the outputs refer to
+
+    :attr loss_matrix:
+      an array of losses with dimension N x R
+      (where R is the number of ruptures)
 
     :attr loss_curves:
       a list of N loss curves (where a loss curve is a 2-tuple losses/poes)
@@ -152,9 +156,11 @@ class UnitOutputs(object):
     :attr float weight:
       the weight associated with this output
     """
-    def __init__(self, assets, loss_curves, insured_curves, loss_maps,
+    def __init__(self, assets, loss_matrix,
+                 loss_curves, insured_curves, loss_maps,
                  event_loss_table, weight):
         self.assets = assets
+        self.loss_matrix = loss_matrix
         self.loss_curves = loss_curves
         self.insured_curves = insured_curves
         self.loss_maps = loss_maps
@@ -162,21 +168,27 @@ class UnitOutputs(object):
         self.weight = weight
 
 
-def individual_outputs(unit, assets, ground_motion_values, rupture_ids):
+def individual_outputs(
+        unit, assets, ground_motion_values, rupture_ids, insured_loss_curves):
 
     loss_matrix = unit.calcs["losses"](ground_motion_values)
     curves = unit.calcs["curves"](loss_matrix)
+
+    values = utils.numpy_map(lambda a: a.value(unit.loss_type), assets)
     maps = unit.calcs["maps"](curves)
-    values = map(lambda a: a.value(unit.loss_type), assets)
+
     event_loss_table = unit.calcs["event_loss_table"](
         loss_matrix.transpose() * values, rupture_ids)
 
-    deductibles = map(lambda a: a.deductible(unit.loss_type), assets)
-    limits = map(lambda a: a.insurance_limit(unit.loss_type), assets)
-    insured_curves = unit.calcs["insured_curves"](
-        loss_matrix, deductibles, limits)
+    if insured_loss_curves:
+        deductibles = map(lambda a: a.deductible(unit.loss_type), assets)
+        limits = map(lambda a: a.insurance_limit(unit.loss_type), assets)
+        insured_curves = unit.calcs["insured_curves"](
+            loss_matrix, deductibles, limits)
+    else:
+        insured_curves = None
 
-    return UnitOutputs(assets, curves, insured_curves, maps,
+    return UnitOutputs(assets, loss_matrix, curves, insured_curves, maps,
                        event_loss_table, unit.getter.weight)
 
 
@@ -275,27 +287,26 @@ def statistics(assets, curve_matrix, weights, params):
         assets, mean_curves, mean_maps, quantile_curves, quantile_maps)
 
 
-def save_statistical_output(loss_type, containers, assets, stats, params):
+def save_statistical_output(containers, stats, params):
     # mean curves and maps
     containers.write(
-        assets, stats.mean_curves,
+        stats.assets, stats.mean_curves,
         output_type="loss_curve", statistics="mean")
 
     containers.write_all(
         "poe", params.conditional_loss_poes, stats.mean_maps,
-        assets, output_type="loss_map", statistics="mean")
+        stats.assets, output_type="loss_map", statistics="mean")
 
     # quantile curves and maps
     containers.write_all(
         "quantile", params.quantiles, stats.quantile_curves,
-        assets, output_type="loss_curve",
-        statistics="quantile")
+        stats.assets, output_type="loss_curve", statistics="quantile")
 
     if params.quantiles:
         for quantile, maps in zip(params.quantiles, stats.quantile_maps):
             containers.write_all(
                 "poe", params.conditional_loss_poes, maps,
-                assets, output_type="loss_map",
+                stats.assets, output_type="loss_map",
                 statistics="quantile", quantile=quantile)
 
 
@@ -430,23 +441,20 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             "event_loss"),
                         loss_type=loss_type,
                         hazard_output=hazard_output)
-                    inserter = writer.CacheInserter(
-                        models.EventLossData, 10000)
+                    inserter = writer.CacheInserter(models.EventLossData, 9999)
 
                     ruptures = models.SESRupture.objects.filter(
                         ses__ses_collection__lt_realization=
                         hazard_output.gmf.lt_realization)
 
-                    with db.transaction.commit_on_success(
-                            using='reslt_writer'):
-                        for rupture in ruptures:
-                            if rupture.id in event_loss_table:
-                                inserter.add(
-                                    models.EventLossData(
-                                        event_loss_id=event_loss.id,
-                                        rupture_id=rupture.id,
-                                        aggregate_loss=event_loss_table[
-                                            rupture.id]))
+                    for rupture in ruptures:
+                        if rupture.id in event_loss_table:
+                            inserter.add(
+                                models.EventLossData(
+                                    event_loss_id=event_loss.id,
+                                    rupture_id=rupture.id,
+                                    aggregate_loss=event_loss_table[
+                                        rupture.id]))
                     inserter.flush()
 
                     aggregate_losses = [
@@ -493,7 +501,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         return [base.CalculationUnit(
             loss_type,
-            dict(losses=calculators.EventBasedLoss(
+            dict(losses=calculators.ProbabilisticLoss(
                 risk_model.vulnerability_function,
                 self.rnd.randint(0, models.MAX_SINT_32),
                 self.rc.asset_correlation),
@@ -514,7 +522,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             return base.do_nothing
         else:
             time_span, tses = self.hazard_times()
-            return calculators.InsuredLoss(
+            return calculators.InsuredLossCurve(
                 calculators.EventBasedLossCurve(
                     time_span, tses, self.rc.loss_curve_resolution))
 

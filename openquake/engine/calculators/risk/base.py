@@ -192,6 +192,9 @@ class RiskCalculator(base.Calculator):
 
                 calculation_units = self.get_calculation_units(assets)
 
+                if not sum(calculation_units.values(), []):
+                    raise RuntimeError("No assets")
+
                 num_tasks += 1
                 yield [self.job.id,
                        calculation_units,
