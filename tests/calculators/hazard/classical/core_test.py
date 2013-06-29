@@ -62,8 +62,6 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         mocks = [p.start() for p in patches]
 
-        self.assertIsNone(self.calc.hc.site_collection)
-
         self.calc.pre_execute()
 
         # make sure the site_collection is loaded:
