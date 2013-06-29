@@ -19,8 +19,8 @@ from qa_tests import risk
 from openquake.engine.db import models
 
 
-class ScenarioRiskCase3TestCase(risk.End2EndRiskQATestCase):
-    output_type = "gmf_scenario"
+class ScenarioRiskCase3TestCase(risk.FixtureBasedQATestCase):
+    hazard_calculation_fixture = 'Scenario QA Test 3'
 
     @attr('qa', 'risk', 'scenario', 'e2e')
     def test(self):
