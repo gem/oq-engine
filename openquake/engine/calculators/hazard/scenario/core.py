@@ -100,7 +100,7 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
     :param dict gmf_dict:
         The GMF results during the calculation
     :param sites:
-        An :class:`openquake.engine.calculators.hazard.general.SiteCollection`
+        An :class:`openquake.engine.models.SiteCollection`
         object
     """
     inserter = writer.CacheInserter(models.GmfData, 100)
@@ -215,6 +215,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
         for sites in block_splitter(self.hc.site_collection, BLOCK_SIZE):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
-            yield (self.job.id, haz_general.SiteCollection(sites),
+            yield (self.job.id, models.SiteCollection(sites),
                    rupture_id, self.gmfcoll.id, task_seed,
                    self.hc.number_of_ground_motion_fields)
