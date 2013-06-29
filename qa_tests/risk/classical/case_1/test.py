@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 
 from nose.plugins.attrib import attr as noseattr
 
@@ -24,8 +23,6 @@ from openquake.engine.db import models
 
 
 class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
-    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-
     EXPECTED_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">

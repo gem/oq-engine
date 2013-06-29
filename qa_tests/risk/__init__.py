@@ -15,6 +15,7 @@
 
 import tempfile
 import os
+import sys
 import warnings
 from unittest.case import SkipTest
 import numpy
@@ -26,6 +27,7 @@ from tests.utils import helpers
 
 from openquake.engine import export
 from openquake.engine.db import models
+from openquake.engine.tools.restore_hazards import hazard_restore_local
 
 
 class BaseRiskQATestCase(qa_utils.BaseQATestCase):
@@ -33,8 +35,10 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     Base abstract class for risk QA tests.
     """
 
-    #: holds the path to a job.ini. Derived classes must define it
-    risk_cfg = None
+    def _test_path(self, relative_path):
+        return os.path.join(os.path.dirname(
+            sys.modules[self.__class__.__module__].__file__),
+            relative_path)
 
     #: QA test must override this params to feed the risk job with
     #: the proper hazard output
@@ -65,7 +69,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     def check_outputs(self, job):
         expected_data = self.expected_data()
         actual_data = self.actual_data(job)
-            # assert actual_data, 'Got no actual data!'
+
+        assert actual_data, 'Got no actual data!'
 
         for i, actual in enumerate(actual_data):
             numpy.testing.assert_allclose(
@@ -83,7 +88,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
         try:
             job = self.run_risk(
-                self.risk_cfg, self.hazard_id(self.get_hazard_job()))
+                self._test_path('job_risk.ini'),
+                self.hazard_id(self.get_hazard_job()))
 
             self.check_outputs(job)
 
@@ -137,25 +143,10 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             output_type=self.output_type).latest('last_update').id
 
 
-class End2EndRiskQATestCase(BaseRiskQATestCase):
-    """
-    Run an end-to-end calculation (by first running a hazard
-    calculation, then running a risk calculation
-    """
-
-    def get_hazard_job(self):
-        return super(End2EndRiskQATestCase, self).run_hazard(
-            self.hazard_cfg)
-
-    def test(self):
-        raise NotImplementedError
-
-
 class LogicTreeBasedTestCase(object):
     """
-    A class meant to mixed-in with a BaseRiskQATestCase or
-    End2EndRiskQATestCase that runs a risk calculation by giving in
-    input a hazard calculation id
+    A class meant to mixed-in with a BaseRiskQATestCase
+    that runs a risk calculation by giving in input a hazard calculation id
     """
 
     def run_risk(self, cfg, hazard_id):
@@ -192,11 +183,13 @@ class CompleteTestCase(object):
     calculation apart the ones that satisfy #should_skip
     """
 
+    items_per_output = 10
+
     def check_outputs(self, job):
         outputs = []
 
         for output in job.output_set.all():
-            for item in list(output.output_container)[0:10]:
+            for item in list(output.output_container)[0:self.items_per_output]:
                 outputs.append((item.data_hash, item))
 
         outputs = dict(outputs)
@@ -212,10 +205,10 @@ class CompleteTestCase(object):
                 print "Problems with output %s" % str(data_hash)
                 raise
 
-    def _csv(self, filename, *slicer):
-        path = os.path.join(
-            os.path.dirname(self.risk_cfg), "expected", filename + ".csv")
-        return numpy.genfromtxt(path, delimiter=",")[slicer]
+    def _csv(self, filename, *slicer, **kwargs):
+        dtype = kwargs.get('dtype', float)
+        path = self._test_path("expected/%s.csv" % filename)
+        return numpy.genfromtxt(path, dtype, delimiter=",")[slicer]
 
     def expected_output_data(self):
         """
@@ -232,21 +225,19 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
     """
 
     #: derived qa test must override this
-    hazard_calculation_fixture_id = None
+    hazard_calculation_fixture = None
 
     def _get_queryset(self):
         return models.HazardCalculation.objects.filter(
             description=self.hazard_calculation_fixture)
 
     def get_hazard_job(self):
-        return self._get_queryset()[0].oqjob_set.all()[0]
-
-    def _run_test(self):
+        hazard_restore_local(self._test_path("fixtures.tar"))
         if not self._get_queryset().exists():
             warnings.warn("fixture not present. skipping test")
             raise SkipTest
         else:
-            super(FixtureBasedQATestCase, self)._run_test()
+            return self._get_queryset()[0].oqjob
 
     def test(self):
         raise NotImplementedError

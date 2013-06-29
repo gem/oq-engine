@@ -22,14 +22,13 @@ Core functionality for the scenario_damage risk calculator.
 
 import StringIO
 import collections
-import functools
 
 import numpy
 
 from django import db
 
 from openquake.nrmllib.risk import parsers
-from openquake.risklib import scientific
+from openquake.risklib import scientific, calculators
 
 from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -86,7 +85,7 @@ def do_scenario_damage(unit, params, profile):
         return None, None
 
     with profile('computing risk'):
-        fraction_matrix = unit.calc(ground_motion_values)
+        fraction_matrix = unit.calcs(ground_motion_values)
         aggfractions = sum(fraction_matrix[i] * asset.number_of_units
                            for i, asset in enumerate(assets))
 
@@ -145,20 +144,18 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         taxonomy = assets[0].taxonomy
         model = self.risk_models[taxonomy]['damage']
 
+        # no loss types support at the moment. Use the sentinel key
+        # "damage" instead of a loss type for consistency with other
+        # methods
         ret = [base.CalculationUnit(
-            loss_type,
-            functools.partial(
-                scientific.scenario_damage,
-                model.fragility_functions),
+            "damage",
+            calculators.Damage(model.fragility_functions),
             hazard_getters.GroundMotionValuesGetter(
                 ho,
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
                for ho in self.rc.hazard_outputs()]
-        # no loss types support at the moment. Use the sentinel key
-        # "damage" instead of a loss type for consistency with other
-        # methods
         return dict(damage=ret)
 
     def task_completed_hook(self, message):
