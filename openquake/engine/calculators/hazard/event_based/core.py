@@ -123,11 +123,15 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     src_filter = filters.source_site_distance_filter(hc.maximum_distance)
     rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
 
+    with EnginePerformanceMonitor(
+            'reading site collection', job_id, ses_and_gmfs):
+        site_collection = hc.site_collection
+
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
         ruptures = list(stochastic.stochastic_event_set_poissonian(
-                        source_iter, hc.investigation_time, hc.site_collection,
+                        source_iter, hc.investigation_time, site_collection,
                         src_filter, rup_filter))
         if not ruptures:
             return
@@ -143,7 +147,7 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
                 hc, gsims, ruptures, rupture_ids)
 
         with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
-            _save_gmfs(ses, gmf_cache, hc.site_collection)
+            _save_gmfs(ses, gmf_cache, site_collection)
 
 ses_and_gmfs.ignore_result = False  # essential
 
@@ -565,7 +569,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         If requested, perform additional processing of GMFs to produce hazard
         curves.
         """
-
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
                                           self.job.id):
