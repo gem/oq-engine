@@ -588,7 +588,7 @@ class BaseHazardCalculator(base.Calculator):
                 for _taxonomy, iml, _params, _no_damage_limit in parser)
             hc.intensity_measure_types.extend(
                 hc.intensity_measure_types_and_levels)
-
+            hc.save()
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
             exposure_model_input = queryset.all()[0]
