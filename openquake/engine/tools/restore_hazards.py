@@ -40,7 +40,7 @@ class CSVInserter(object):
             self.curs.copy_from(self.io, self.tablename)
 
             self.curs.execute(
-                "select setval('%s_id_seq', (select max(id) + 1 from %s))" % (
+                "select setval('%s_id_seq', (select max(id) from %s))" % (
                     self.tablename, self.tablename))
         except:
             conn.rollback()
