@@ -23,7 +23,7 @@ from openquake.engine.db import models
 class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     hazard_calculation_fixture = "PEB QA test 1"
 
-    @noseattr('qa', 'risk', 'event_based', 'e2e')
+    @noseattr('qa', 'risk', 'event_based')
     def test(self):
         self._run_test()
 

@@ -18,11 +18,11 @@ from nose.plugins.attrib import attr as noseattr
 from qa_tests import risk
 
 
-class ScenarioOccupantsQATestCase1(risk.LogicTreeBasedTestCase,
-                                   risk.End2EndRiskQATestCase):
+class ScenarioOccupantsQATestCase1(risk.FixtureBasedQATestCase):
     output_type = "gmf_scenario"
+    hazard_calculation_fixture = 'Scenario QA Test for occupants'
 
-    @noseattr('qa', 'risk', 'scenario', 'e2e')
+    @noseattr('qa', 'risk', 'scenario')
     def test(self):
         self._run_test()
 
