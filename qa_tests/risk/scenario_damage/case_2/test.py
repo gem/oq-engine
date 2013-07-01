@@ -15,10 +15,13 @@
 
 from nose.plugins.attrib import attr
 
-from qa_tests.risk.scenario_damage.case_1 import test
+from tests.utils import helpers
+from qa_tests import risk
 
 
-class ScenarioDamageRiskCase2TestCase(test.ScenarioDamageRiskCase1TestCase):
+class ScenarioDamageRiskCase2TestCase(risk.BaseRiskQATestCase):
+    output_type = "gmf_scenario"
+
     EXPECTED_DMG_DIST_PER_ASSET = '''<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -120,6 +123,13 @@ class ScenarioDamageRiskCase2TestCase(test.ScenarioDamageRiskCase1TestCase):
     @attr('qa', 'risk', 'scenario_damage')
     def test(self):
         self._run_test()
+
+    def get_hazard_job(self):
+        job = helpers.get_hazard_job(
+            helpers.get_data_path("scenario_hazard/job.ini"))
+        fname = self._test_path('../case_1/gmf_scenario.csv')
+        helpers.populate_gmf_data_from_csv(job, fname)
+        return job
 
     def expected_outputs(self):
         return [self.EXPECTED_DMG_DIST_PER_ASSET,

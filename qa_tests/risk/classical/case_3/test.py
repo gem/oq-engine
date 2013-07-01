@@ -25,7 +25,7 @@ class ClassicalRiskCase3TestCase(
         risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     hazard_calculation_fixture = "Classical PSHA - Loss fractions QA test"
 
-    @attr('qa', 'risk', 'classical', 'e2e')
+    @attr('qa', 'risk', 'classical')
     def test(self):
         self._run_test()
 
