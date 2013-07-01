@@ -23,10 +23,11 @@ from openquake.engine.db import models
 # logic in the SR calculator. Data has not been validated
 
 
-class ScenarioDamageRiskCase4TestCase(risk.End2EndRiskQATestCase):
+class ScenarioDamageRiskCase4TestCase(risk.FixtureBasedQATestCase):
     output_type = 'gmf_scenario'
+    hazard_calculation_fixture = 'Scenario Damage QA Test 4'
 
-    @attr('qa', 'risk', 'scenario_damage', 'e2e')
+    @attr('qa', 'risk', 'scenario_damage')
     def test(self):
         self._run_test()
 

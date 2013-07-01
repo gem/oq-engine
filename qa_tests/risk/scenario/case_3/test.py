@@ -22,7 +22,7 @@ from openquake.engine.db import models
 class ScenarioRiskCase3TestCase(risk.FixtureBasedQATestCase):
     hazard_calculation_fixture = 'Scenario QA Test 3'
 
-    @attr('qa', 'risk', 'scenario', 'e2e')
+    @attr('qa', 'risk', 'scenario')
     def test(self):
         self._run_test()
 
