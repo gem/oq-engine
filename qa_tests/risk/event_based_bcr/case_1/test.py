@@ -49,8 +49,7 @@ class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
             ses_per_logic_tree_path=1)
         job.save()
 
-        helpers.create_gmf_from_csv(
-            job, os.path.join(os.path.dirname(__file__), 'gmf.csv'))
+        helpers.create_gmf_from_csv(job, self._test_path('gmf.csv'))
 
         return job
 
