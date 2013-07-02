@@ -77,7 +77,7 @@ config.abort_if_no_config_available()
 try:
     import celeryconfig
 except ImportError:
-    sys.path.append('/usr/openquake/engine')
+    sys.path.append('/etc/openquake')
 
 try:
     import oqpath

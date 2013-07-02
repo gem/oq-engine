@@ -1,2 +1,2 @@
 usr/lib/python2.7/dist-packages/openquake/engine/openquake.cfg etc/openquake
-usr/lib/python2.7/dist-packages/openquake/engine/celeryconfig.py usr/openquake/engine
+usr/lib/python2.7/dist-packages/openquake/engine/celeryconfig.py etc/openquake
