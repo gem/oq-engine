@@ -120,7 +120,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         super(EventBasedBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
 
-    def calculation_units(self, loss_type, assets):
+    def calculation_unit(self, loss_type, assets):
         """
         :returns:
           a list of instances of `..base.CalculationUnit` for the given
@@ -134,11 +134,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
         time_span, tses = self.hazard_times()
 
-        units = []
-
-        for ho in self.rc.hazard_outputs():
-            units.extend([
-                base.CalculationUnit(
+        return [base.CalculationUnit(
                     loss_type,
                     dict(
                         losses=calculators.ProbabilisticLoss(
@@ -148,7 +144,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
                         curves=calculators.EventBasedLossCurve(
                             time_span, tses, self.rc.loss_curve_resolution)),
                     hazard_getters.GroundMotionValuesGetter(
-                        ho,
+                        self.rc.hazard_outputs(),
                         assets,
                         self.rc.best_maximum_distance,
                         model_orig.imt)),
@@ -162,11 +158,10 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
                         curves=calculators.EventBasedLossCurve(
                             time_span, tses, self.rc.loss_curve_resolution)),
                     hazard_getters.GroundMotionValuesGetter(
-                        ho,
+                        self.rc.hazard_outputs(),
                         assets,
                         self.rc.best_maximum_distance,
-                        model_retro.imt))])
-        return units
+                        model_retro.imt))]
 
     def get_taxonomies(self):
         """
