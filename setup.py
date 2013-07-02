@@ -10,8 +10,6 @@ compute seismic hazard and seismic risk of earthquakes on a global scale.
 Please note: the /usr/bin/openquake script requires a celeryconfig.py
 file in the PYTHONPATH.  Please make sure this is the case and that your
 celeryconfig.py file works with your python-celery setup.
-
-Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it as needed.
 """
 
 PY_MODULES = ['openquake.engine.bin.cache_gc', 'openquake.engine.bin.oqscript']

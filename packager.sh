@@ -362,13 +362,18 @@ _pkgtest_innervm_run () {
     # packaging related tests (install, remove, purge, install, reinstall)
     echo "PKGTEST: INSTALL standalone"
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-standalone"
+
     echo "PKGTEST: REMOVE standalone"
+    sleep 5
     ssh $lxc_ip "sudo service celeryd stop"
     sleep 5
     ssh $lxc_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}-standalone"
+
     echo "PKGTEST: INSTALL AGAIN standalone"
     ssh $lxc_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-standalone"
+
     echo "PKGTEST: REINSTALL standalone"
+    sleep 5
     ssh $lxc_ip "sudo service celeryd stop"
     sleep 5
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-standalone"
@@ -624,9 +629,6 @@ EOF
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
-
-     echo "inner_ret=$inner_ret"
-     exit 123
 
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
