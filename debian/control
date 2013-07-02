@@ -21,6 +21,21 @@ Conflicts: python-oq-engine-master, python-oq-engine-worker
 Depends: python-oq-engine-common, rabbitmq-server, redis-server, postgresql-9.1, postgresql-client, postgresql-9.1-postgis, postgresql-plpython-9.1
 Description: standalone configuration for python-oq-engine application.
  based on the hazard library (hazardlib) developed by the GEM foundation.
- This an alpha release presently only facilitating classical and event-based
- seismic hazard calculations.
+ This is the first official feature complete release of the engine.
+
+Package: python-oq-engine-master
+Architecture: all
+Conflicts: python-oq-engine-standalone, python-oq-engine-worker
+Depends: python-oq-engine-common, rabbitmq-server, redis-server, postgresql-9.1, postgresql-client, postgresql-9.1-postgis, postgresql-plpython-9.1
+Description: master configuration for python-oq-engine application.
+ based on the hazard library (hazardlib) developed by the GEM foundation.
+ This is the first official feature complete release of the engine.
+
+Package: python-oq-engine-worker
+Architecture: all
+Conflicts: python-oq-engine-master, python-oq-engine-standalone
+Depends: python-oq-engine-common
+Description: worker configuration for python-oq-engine application.
+ based on the hazard library (hazardlib) developed by the GEM foundation.
+ This is the first official feature complete release of the engine.
 
