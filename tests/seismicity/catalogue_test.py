@@ -86,6 +86,8 @@ class CatalogueTestCase(unittest.TestCase):
         cat.load_from_array(['year','magnitude'], self.data_array)
         self.assertTrue(np.allclose(cat.data['magnitude'],self.data_array[:,1]))
         self.assertTrue(np.allclose(cat.data['year'],self.data_array[:,0]))
+        self.assertTrue(np.allclose(cat.data['eventID'], 
+                                    np.array(range(0, 7), dtype=int)))
         
     def test_load_to_array(self):
         """

@@ -133,7 +133,11 @@ class Catalogue(object):
             A list of keys explaining the content of the columns in the array
         :type list:
         """
-        for i,key in enumerate(keys):
+        if not 'eventID' in keys:
+            self.data['eventID'] = np.array(range(0, np.shape(data_array)[0]),
+                                            dtype=int)
+
+        for i, key in enumerate(keys):
             self.data[key] = data_array[:, i]
     
     def catalogue_mt_filter(self, mt_table, flag=None):

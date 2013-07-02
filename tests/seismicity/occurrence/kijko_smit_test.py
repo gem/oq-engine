@@ -55,7 +55,7 @@ seismicity occurrence parameters.
 import unittest
 import numpy as np
 
-from hmtk.seismicity.occurrence.kijko_smith import KijkoSmit
+from hmtk.seismicity.occurrence.kijko_smit import KijkoSmit
 
 class KijkoSmitTest(unittest.TestCase):
     
@@ -103,6 +103,7 @@ class KijkoSmitTest(unittest.TestCase):
         """
         bval, sigma_b, aval, sigma_a = self.ks_ml.calculate(self.catalogue, 
                 self.config, self.compl)
+        print bval, sigma_b
         self.assertAlmostEqual(self.bval, bval, 1)
 
     def test_kijko_smith_set_reference_magnitude(self):

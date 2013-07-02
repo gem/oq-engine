@@ -66,15 +66,30 @@ class KijkoSmit(SeismicityOccurrence):
         b_est = np.zeros(number_intervals, dtype=float)
         neq = np.zeros(number_intervals, dtype=float)
         nyr = np.zeros(number_intervals, dtype=float)
-        while ival < number_intervals:
+
+        for ival in range(0, number_intervals):
             id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
             m_c = np.min(cmag[id0])
-            # Find events later than cut-off year, and with magnitude
-            # greater than or equal to the corresponding completeness magnitude.
-            # m_c - mag_eq_tolerance is required to correct floating point
-            # differences.
-            id1 = np.logical_and(catalogue['year'] >= ctime[ival],
-                catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
+            if ival == number_intervals - 1:
+                id1 = np.logical_and(catalogue['year'] >= ctime[ival],
+                    catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
+            else:
+                id1 = np.logical_and(catalogue['year'] >= ctime[ival],
+                                     catalogue['year'] < ctime[ival + 1])
+                id1 = np.logical_and(id1, 
+                    catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
+
+                
+            
+#        while ival < number_intervals:
+#            id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
+#            m_c = np.min(cmag[id0])
+#            # Find events later than cut-off year, and with magnitude
+#            # greater than or equal to the corresponding completeness magnitude.
+#            # m_c - mag_eq_tolerance is required to correct floating point
+#            # differences.
+#            id1 = np.logical_and(catalogue['year'] >= ctime[ival],
+#                catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
             nyr[ival] = np.float(np.max(catalogue['year'][id1]) -
                                  np.min(catalogue['year'][id1]) + 1)
             neq[ival] = np.sum(id1)
@@ -110,7 +125,8 @@ class KijkoSmit(SeismicityOccurrence):
             raise ValueError('Parameter vector not same shape as weights')
         else:
             average_value = np.zeros(np.shape(parameters)[0], dtype=float)
-            average_value = 1. / np.sum(weight / parameters)
+            id0 = np.logical_not(np.isnan(parameters))
+            average_value = 1. / np.sum(weight[id0] / parameters[id0])
         return average_value
 
     def _calculate_a_value(self, bval, nvalue, nyr, cmag, ref_mag):

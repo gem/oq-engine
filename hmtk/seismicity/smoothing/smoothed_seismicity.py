@@ -51,9 +51,12 @@ import csv
 import abc
 from math import fabs, log, floor
 import numpy as np
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.polygon import Polygon
 from hmtk.seismicity.utils import haversine
 from hmtk.seismicity.smoothing import utils
-
+from hmtk.seismicity.smoothing.kernels.isotropic_gaussian import \
+    IsotropicGaussian
 
 def _get_adjustment(mag, year, mmin, completeness_year, t_f, mag_inc=0.1):
     '''
@@ -95,6 +98,18 @@ def _get_adjustment(mag, year, mmin, completeness_year, t_f, mag_inc=0.1):
     else:
         return False
 
+
+def get_catalogue_bounding_polygon(catalogue):
+    '''
+    Returns a polygon containing the bounding box of the catalogue 
+    '''
+    upper_lon = np.max(catalogue.data['longitude'])
+    upper_lat = np.max(catalogue.data['latitude'])
+    lower_lon = np.min(catalogue.data['longitude'])
+    lower_lat = np.min(catalogue.data['latitude'])
+
+    return Polygon([Point(lower_lon, upper_lat), Point(upper_lon, upper_lat),
+                    Point(upper_lon, lower_lat), Point(lower_lon, lower_lat)])
 
 class SmoothedSeismicity(object):
     '''
@@ -147,20 +162,27 @@ class SmoothedSeismicity(object):
         else:
             self.beta = None
         self.data = None
-        self.grid_limits = {'xmin': grid_limits[0],
-                            'xmax': grid_limits[1],
-                            'xspc': grid_limits[2],
-                            'ymin': grid_limits[3],
-                            'ymax': grid_limits[4],
-                            'yspc': grid_limits[5],
-                            'zmin': grid_limits[6],
-                            'zmax': grid_limits[7],
-                            'zspc': grid_limits[8]}
 
-        assert self.grid_limits['xmax'] >= self.grid_limits['xmin']
-        assert self.grid_limits['xspc'] > 0.0
-        assert self.grid_limits['ymax'] >= self.grid_limits['ymin']
-        assert self.grid_limits['yspc'] > 0.0
+        if isinstance(grid_limits, list) and len(grid_limits) == 9:
+            self.grid_limits = {'xmin': grid_limits[0],
+                                'xmax': grid_limits[1],
+                                'xspc': grid_limits[2],
+                                'ymin': grid_limits[3],
+                                'ymax': grid_limits[4],
+                                'yspc': grid_limits[5],
+                                'zmin': grid_limits[6],
+                                'zmax': grid_limits[7],
+                                'zspc': grid_limits[8]}
+
+            assert self.grid_limits['xmax'] >= self.grid_limits['xmin']
+            assert self.grid_limits['xspc'] > 0.0
+            assert self.grid_limits['ymax'] >= self.grid_limits['ymin']
+            assert self.grid_limits['yspc'] > 0.0
+        elif isinstance(grid_limits, float):
+            # Only the spacing (in degrees) is entered
+            self.grid_limits = grid_limits
+        else:
+            self.grid_limits = None
         self.kernel = None
 
 
@@ -209,6 +231,11 @@ class SmoothedSeismicity(object):
         else:
             self.kernel = IsotropicGaussian()
         
+
+        # If no grid limits are specified then take from catalogue
+        if not isinstance(self.grid_limits, dict):
+            self.get_grid_from_catalogue(config)
+
         completeness_table, mag_inc = utils.get_even_magnitude_completeness(
             completeness_table,
             self.catalogue)
@@ -409,6 +436,26 @@ class SmoothedSeismicity(object):
             data_grid =  np.vstack([data_grid, temp_grid])
         self.data = data_grid
             
+    def get_grid_from_catalogue(self, config):
+        '''
+        Defines the grid on the basis of the catalogue
+        '''
+        # Get catalogue bounding box
+        cat_bbox = get_catalogue_bounding_polygon(self.catalogue)
+        # Dilate polygon by bandwidth * length_limit
+        cat_bbox = cat_bbox.dilate(config['BandWidth'] * 
+                                   config['Length_Limit'])
+        # Define Grid spacing
+        self.grid_limits = {'xmin': np.min(cat_bbox.lons),
+                            'xmax': np.max(cat_bbox.lons),
+                            'xspc': self.grid_limits,
+                            'ymin': np.min(cat_bbox.lats),
+                            'ymax': np.max(cat_bbox.lats),
+                            'yspc': self.grid_limits}
+        if self.use_3d:
+            self.grid_limits['zmin'] = 0.
+            self.grid_limits['zmax'] = np.max(self.catalogue['depth']) + 1E-5
+            self.grid_limits['zspc'] = np.max(self.catalogue['depth'])
 
     def write_to_csv(self, filename):
         '''
@@ -418,15 +465,18 @@ class SmoothedSeismicity(object):
         '''
         fid = open(filename, 'wt')
         # Create header list
-        header_info = ['long', 'lat', 'depth', 'raw_count', 'smoothed', 
-                       'b-value']
+        header_info = ['Longitude', 'Latitude', 'Depth', 'Observed Count', 
+                       'Smoothed Rate', 'b-value']
         writer = csv.DictWriter(fid, fieldnames=header_info)
         headers = dict((name0, name0) for name0 in header_info)
         # Write to file
         writer.writerow(headers)
         for row in self.data:
-            row_dict = {'long': row[0], 'lat': row[1], 'depth': row[2],
-                        'raw_count': row[3], 'smoothed': row[4], 
-                        'b-value': self.bval}
+            row_dict = {'Longitude': '%.5f' % row[0], 
+                        'Latitude': '%.5f' % row[1], 
+                        'Depth': '%.3f' % row[2],
+                        'Observed Count': '%.5e' % row[3], 
+                        'Smoothed Rate': '%.5e' % row[4], 
+                        'b-value': '%.4f' % self.bval}
             writer.writerow(row_dict)
         fid.close()

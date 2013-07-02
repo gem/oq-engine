@@ -50,7 +50,8 @@
 import os
 import unittest
 import numpy as np
-
+from hmtk.seismicity.occurrence.aki_maximum_likelihood import \
+    AkiMaxLikelihood
 import hmtk.seismicity.occurrence.utils as rec_utils
 
 class RecurrenceTableTestCase(unittest.TestCase):
@@ -143,3 +144,40 @@ class RecurrenceTableTestCase(unittest.TestCase):
         cmag, ctime, ref_mag, dmag = rec_utils.input_checks(catalogue, 
                 config, fake_completeness_table)
         self.assertEqual(0.1, dmag)
+
+class TestSyntheticCatalogues(unittest.TestCase):
+    '''
+    Tests the synthetic catalogue functions
+    '''
+    def setUp(self):
+        '''
+        '''
+        self.occur = AkiMaxLikelihood()
+
+    def test_generate_magnitudes(self):
+        '''
+        Tests the hmtk.seismicity.occurence.utils function 
+        generate_trunc_gr_magnitudes
+        '''
+        bvals = []
+        # Generate set of synthetic catalogues
+        for i in range(0, 100):
+            mags = rec_utils.generate_trunc_gr_magnitudes(1.0, 4.0, 8.0, 1000)
+            bvals.append(self.occur.calculate({'magnitude': mags, 
+                'year': np.zeros(len(mags), dtype=int)})[0])
+        bvals = np.array(bvals)
+        self.assertAlmostEqual(np.mean(bvals), 1.0, 1)
+
+    def test_generate_synthetic_catalogues(self):
+        '''
+        Tests the hmtk.seismicity.occurence.utils function 
+        generate_synthetic_magnitudes
+        '''
+        bvals = []
+        # Generate set of synthetic catalogues
+        for i in range(0, 100):
+            cat1 = rec_utils.generate_synthetic_magnitudes(4.5, 1.0, 4.0, 8.0,
+                                                           1000)
+            bvals.append(self.occur.calculate(cat1)[0])
+        bvals = np.array(bvals)
+        self.assertAlmostEqual(np.mean(bvals), 1.0, 1)
