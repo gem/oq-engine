@@ -248,17 +248,15 @@ class OutputDict(dict):
         return self[OutputKey(output_type, loss_type, hazard_output_id, poe,
                               quantile, statistics, variable, insured)]
 
-    def prepare(self, **kwargs):
-        self.kwargs = kwargs
-        return self
+    def with_args(self, **kwargs):
+        clone = self.__class__(self)
+        clone.kwargs = self.kwargs
+        clone.kwargs.update(kwargs)
+        return clone
 
     def __init__(self, *args, **kwargs):
         super(OutputDict, self).__init__(*args, **kwargs)
         self.kwargs = dict()
-
-    def default(self):
-        self.kwargs = dict()
-        return self
 
     def write(self, *args, **kwargs):
         """

@@ -147,15 +147,14 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         # no loss types support at the moment. Use the sentinel key
         # "damage" instead of a loss type for consistency with other
         # methods
-        ret = [base.CalculationUnit(
+        ret = base.CalculationUnit(
             "damage",
             calculators.Damage(model.fragility_functions),
             hazard_getters.GroundMotionValuesGetter(
-                ho,
+                self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
-               for ho in self.rc.hazard_outputs()]
         return dict(damage=ret)
 
     def task_completed_hook(self, message):
