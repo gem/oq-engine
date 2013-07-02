@@ -219,7 +219,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         mean=numpy.mean(insured_losses),
                         std_dev=numpy.std(insured_losses, ddof=1))
 
-    def calculation_units(self, loss_type, assets):
+    def calculation_unit(self, loss_type, assets):
         """
         :returns:
           a list of instances of `..base.CalculationUnit` for the given
@@ -230,7 +230,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         taxonomy = assets[0].taxonomy
         model = self.risk_models[taxonomy][loss_type]
 
-        return [base.CalculationUnit(
+        return base.CalculationUnit(
             loss_type,
             dict(losses=calculators.ProbabilisticLoss(
                 model.vulnerability_function,
@@ -238,11 +238,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 asset_correlation=self.rc.asset_correlation),
                 insured_losses=self.make_insured_losses_fn()),
             hazard_getters.GroundMotionValuesGetter(
-                ho,
+                self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
-              for ho in self.rc.hazard_outputs()]
 
     def make_insured_losses_fn(self):
         if not self.rc.insured_losses:
