@@ -96,3 +96,58 @@ class LossMap(object):
 
         return [[single_map(curve, poe) for curve in curves]
                 for poe in self.poes]
+
+
+def asset_statistics(
+        losses, curves_poes, quantiles, weights, poes, post_processing):
+    """
+    Compute output statistics (mean/quantile loss curves and maps)
+    for a single asset
+
+    :param losses:
+       the losses on which the loss curves are defined
+    :param curves_poes:
+       a numpy matrix with the poes of the different curves
+    :param list quantiles:
+       an iterable over the quantile levels to be considered for
+       quantile outputs
+    :param list weights:
+       the weights associated with each realization. If all the elements are
+       `None`, implicit weights are taken into account
+    :param list poes:
+       the poe taken into account for computing loss maps
+    :param post_processing:
+       a module providing #weighted_quantile_curve, #quantile_curve,
+       #mean_curve
+
+    :returns:
+       a tuple with
+       1) mean loss curve
+       2) a list of quantile curves
+       3) mean loss map
+       4) a list of quantile loss maps
+    """
+    montecarlo = weights[0] is not None
+
+    quantile_curves = []
+    for quantile in quantiles:
+        if montecarlo:
+            q_curve = post_processing.weighted_quantile_curve(
+                curves_poes, weights, quantile)
+        else:
+            q_curve = post_processing.quantile_curve(curves_poes, quantile)
+
+        quantile_curves.append((losses, q_curve))
+
+    # then mean loss curve
+    mean_curve_poes = post_processing.mean_curve(curves_poes, weights)
+    mean_curve = (losses, mean_curve_poes)
+
+    mean_map = [scientific.conditional_loss_ratio(losses, mean_curve_poes, poe)
+                for poe in poes]
+
+    quantile_maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
+                      for losses, poes in quantile_curves]
+                     for poe in poes]
+
+    return (mean_curve, quantile_curves, mean_map, quantile_maps)
