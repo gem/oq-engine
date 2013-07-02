@@ -81,7 +81,7 @@ def do_classical(loss_type, units, containers, params, profile):
         units, params.conditional_loss_poes, params.poes_disagg, profile)
 
     with profile('saving individual risk'):
-        hids = [unit.getter.hazard_output_id for unit in units]
+        hids = [unit.getter.hazard_output.id for unit in units]
         save_individual_outputs(loss_type, containers, hids, outputs, params)
 
     if len(units) < 2:  # skip statistics if we are working on a single unit

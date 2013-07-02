@@ -556,9 +556,9 @@ class ClassicalRiskForm(BaseOQModelForm):
             'maximum_distance',
             'lrem_steps_per_interval',
             'conditional_loss_poes',
-            'mean_loss_curves',
             'quantile_loss_curves',
-            'poes_disagg'
+            'poes_disagg',
+            'export_dir',
         )
 
 
@@ -575,6 +575,7 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
             'lrem_steps_per_interval',
             'interest_rate',
             'asset_life_expectancy',
+            'export_dir',
         )
 
 
@@ -593,6 +594,7 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
             'asset_correlation',
             'interest_rate',
             'asset_life_expectancy',
+            'export_dir',
         )
 
 
@@ -611,12 +613,12 @@ class EventBasedRiskForm(BaseOQModelForm):
             'insured_losses',
             'master_seed',
             'asset_correlation',
-            'mean_loss_curves',
             'quantile_loss_curves',
             'sites_disagg',
             'mag_bin_width',
             'distance_bin_width',
             'coordinate_bin_width',
+            'export_dir',
         )
 
     def is_valid(self):
@@ -643,6 +645,7 @@ class ScenarioDamageRiskForm(BaseOQModelForm):
             'description',
             'region_constraint',
             'maximum_distance',
+            'export_dir',
         )
 
 
@@ -659,7 +662,8 @@ class ScenarioRiskForm(BaseOQModelForm):
             'master_seed',
             'asset_correlation',
             'insured_losses',
-            'time_event'
+            'time_event',
+            'export_dir',
         )
 
     def is_valid(self):
@@ -981,10 +985,6 @@ def quantile_hazard_curves_is_valid(mdl):
         if not all([0.0 <= x <= 1.0 for x in qhc]):
             return False, ['Quantile hazard curve values must in the range '
                            '[0, 1]']
-    return True, []
-
-
-def mean_loss_curves_is_valid(_mdl):
     return True, []
 
 

@@ -36,111 +36,6 @@ COMMENT ON FUNCTION refresh_last_update() IS
 'Refresh the ''last_update'' time stamp whenever a row is updated.';
 
 
-CREATE OR REPLACE FUNCTION pcheck_exposure_model()
-  RETURNS TRIGGER
-AS $$
-    NEW = TD["new"] # new data resulting from insert or update
-
-    def fmt(err):
-        return "%s (%s)" % (err, TD["table_name"])
-
-    def check_xor(a, b):
-        """Raise exception if only one of the items is defined."""
-        if not ((NEW[a] and NEW[b]) or (not NEW[a] and not NEW[b])):
-            raise Exception(fmt("%s (%s) and %s (%s) must both be either "
-                                "defined or undefined" %
-                                (a, NEW[a], b, NEW[b])))
-
-    if NEW["area_type"] is None:
-        violations = []
-        for key in ["coco_type", "reco_type", "stco_type"]:
-            if NEW.get(key) is not None and NEW[key] == "per_area":
-                violations.append((key, NEW[key]))
-        if violations:
-            raise Exception(fmt("area_type is mandatory for <%s>" %
-                                ", ".join("%s=%s" % v for v in violations)))
-
-    if NEW["area_unit"] is None:
-        violations = []
-        for key in ["coco_type", "reco_type", "stco_type"]:
-            if NEW.get(key) is not None and NEW[key] == "per_area":
-                violations.append((key, NEW[key]))
-        if violations:
-            raise Exception(fmt("area_unit is mandatory for <%s>" %
-                                ", ".join("%s=%s" % v for v in violations)))
-
-    check_xor("coco_unit", "coco_type")
-    check_xor("reco_unit", "reco_type")
-    check_xor("stco_unit", "stco_type")
-    if NEW["stco_type"] is None and NEW["category"] != "population":
-        raise Exception(fmt("structural cost type is mandatory for "
-                            "<category=%s>" % NEW["category"]))
-    return "OK"
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION pcheck_exposure_model() IS
-'Make sure the inserted or modified exposure model record is consistent.';
-
-
-CREATE OR REPLACE FUNCTION pcheck_exposure_data()
-  RETURNS TRIGGER
-AS $$
-    def fmt(err):
-        return "%s (%s)" % (err, TD["table_name"])
-
-    NEW = TD["new"] # new data resulting from insert or update
-
-    # get the associated exposure model record
-    q = ("SELECT * FROM riski.exposure_model WHERE id = %s" %
-         NEW["exposure_model_id"])
-    [emdl] = plpy.execute(q)
-
-    if NEW["stco"] is None and emdl["category"] != "population":
-        raise Exception(fmt("structural cost is mandatory for category <%s>" %
-                            emdl["category"]))
-
-    if NEW["number_of_units"] is None:
-        violations = []
-        if emdl["category"] == "population":
-            violations.append(("category", "population"))
-        for key in ["coco_type", "reco_type", "stco_type"]:
-            if emdl.get(key) is None or emdl[key] == "aggregated":
-                continue
-            if (emdl[key] == "per_asset" or (emdl[key] == "per_area" and
-                emdl["area_type"] == "per_asset")):
-                violations.append((key, emdl[key]))
-        if violations:
-            raise Exception(fmt("number_of_units is mandatory for <%s>" %
-                                ", ".join("%s=%s" % v for v in violations)))
-
-    if NEW["area"] is None:
-        violations = []
-        for key in ["coco_type", "reco_type", "stco_type"]:
-            if emdl.get(key) is not None and emdl[key] == "per_area":
-                violations.append((key, emdl[key]))
-        if violations:
-            raise Exception(fmt("area is mandatory for <%s>" %
-                                ", ".join("%s=%s" % v for v in violations)))
-    if NEW["coco"] is None and emdl["coco_type"] is not None:
-        raise Exception(fmt("contents cost is mandatory for <coco_type=%s>"
-                            % emdl["coco_type"]))
-    if NEW["reco"] is None and emdl["reco_type"] is not None:
-        raise Exception(fmt("retrofitting cost is mandatory for <reco_type=%s>"
-                            % emdl["reco_type"]))
-    if NEW["stco"] is None and emdl["stco_type"] is not None:
-        raise Exception(fmt("structural cost is mandatory for <stco_type=%s>"
-                            % emdl["stco_type"]))
-
-
-    return "OK"
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION pcheck_exposure_data() IS
-'Make sure the inserted or modified exposure data is consistent.';
-
-
 CREATE OR REPLACE FUNCTION uiapi.pcount_cnode_failures()
   RETURNS TRIGGER
 AS $$
@@ -174,14 +69,6 @@ CREATE AGGREGATE array_concat(anyarray)(sfunc=array_cat, stype=anyarray, initcon
 CREATE TRIGGER uiapi_cnode_stats_before_update_trig
 BEFORE UPDATE ON uiapi.cnode_stats
 FOR EACH ROW EXECUTE PROCEDURE uiapi.pcount_cnode_failures();
-
-CREATE TRIGGER riski_exposure_model_before_insert_update_trig
-BEFORE INSERT ON riski.exposure_model
-FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
-
-CREATE TRIGGER riski_exposure_data_before_insert_update_trig
-BEFORE INSERT ON riski.exposure_data
-FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
 
 CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
@@ -292,3 +179,41 @@ spectral acceleration (SA), the period is encoded in the name, like so:
 `lons` and `lats` represent the sites of interest for a given calculation.
 The ordering is EXTREMELY important, because the indices of each location
 correspond to a position in the `htemp.hazard_curve_progress.result_matrix`.';
+
+
+----- statistical helpers
+
+CREATE TYPE moment AS (
+  n bigint,
+  sum double precision,
+  sum2 double precision);
+
+CREATE FUNCTION moment_from_array(double precision[])
+RETURNS moment AS $$
+SELECT sum(1), sum(v), sum(v * v) FROM unnest($1) AS v
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION stats_from_moment(moment)
+RETURNS TABLE(n BIGINT, avg DOUBLE PRECISION, std DOUBLE PRECISION) AS $$
+SELECT $1.n, $1.sum / $1.n,
+       sqrt(($1.sum2 - $1.sum ^ 2 / $1.n) / ($1.n - 1))
+$$ LANGUAGE sql;
+
+CREATE OR REPLACE FUNCTION moment_add(moment, moment)
+RETURNS moment AS $$
+SELECT $1.n + $2.n, $1.sum + $2.sum, $1.sum2 + $2.sum2
+$$ LANGUAGE sql;
+
+CREATE AGGREGATE moment_sum(moment)(
+   sfunc=moment_add, stype=moment, initcond='(0,0,0)');
+
+-- typical usage is a SELECT * FROM hzrdr.gmf_stats WHERE output_id=2;
+CREATE VIEW hzrdr.gmf_stats AS
+SELECT output_id, gmf_id, imt, sa_period, sa_damping,
+      (stats).n, (stats).avg, (stats).std FROM (
+  SELECT output_id, b.id as gmf_id, imt, sa_period, sa_damping,
+  stats_from_moment(moment_sum(moment_from_array(gmvs))) AS stats
+  FROM hzrdr.gmf_data as a
+  INNER JOIN hzrdr.gmf AS b
+  ON a.gmf_id=b.id
+  GROUP BY output_id, b.id, imt, sa_period, sa_damping) AS x;

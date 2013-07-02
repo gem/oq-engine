@@ -71,6 +71,7 @@ def do_event_based_bcr(loss_type, units, containers, params, profile):
     See `event_based_bcr` for docstring
     """
     for unit_orig, unit_retro in utils.pairwise(units):
+
         with profile('getting hazard'):
             assets, (gmvs, _) = unit_orig.getter()
             if len(assets) == 0:
@@ -95,7 +96,7 @@ def do_event_based_bcr(loss_type, units, containers, params, profile):
                 scientific.bcr(
                     eal_original[i], eal_retrofitted[i],
                     params.interest_rate, params.asset_life_expectancy,
-                    asset.value(loss_type), asset.retrofitting_cost)
+                    asset.value(loss_type), asset.retrofitted(loss_type))
                 for i, asset in enumerate(assets)]
 
         with profile('writing results'):
@@ -103,7 +104,7 @@ def do_event_based_bcr(loss_type, units, containers, params, profile):
                 assets, zip(eal_original, eal_retrofitted, bcr_results),
                 output_type="bcr_distribution",
                 loss_type=loss_type,
-                hazard_output_id=unit_orig.getter.hazard_output_id)
+                hazard_output_id=unit_orig.getter.hazard_output.id)
 
 
 class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
@@ -173,7 +174,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         taxonomies = super(EventBasedBCRRiskCalculator, self).get_taxonomies()
 
         if (self.rc.exposure_model.exposuredata_set.filter(
-                reco__isnull=True)).exists():
+                cost__converted_retrofitted_cost__isnull=True)).exists():
             raise ValueError("Some assets do not have retrofitted costs")
 
         return taxonomies

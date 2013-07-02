@@ -14,9 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
 
-import numpy
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
@@ -25,40 +23,19 @@ from openquake.engine.db import models
 
 
 class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf_scenario"
 
     @attr('qa', 'risk', 'scenario')
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard_job(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("scenario_hazard/job.ini"))
-        hc = job.hazard_calculation
-        job.hazard_calculation = models.HazardCalculation.objects.create(
-            owner=hc.owner, truncation_level=hc.truncation_level,
-            maximum_distance=hc.maximum_distance,
-            intensity_measure_types=["PGA"],
-            calculation_mode="scenario")
-        job.status = "complete"
-        job.save()
-
-        output = models.Output.objects.create_output(
-            job, "Test Hazard output", "gmf_scenario")
-
         fname = os.path.join(os.path.dirname(__file__), 'gmf_scenario.csv')
-        with open(fname, 'rb') as csvfile:
-            gmfreader = csv.reader(csvfile, delimiter=',')
-            locations = gmfreader.next()
-
-            arr = numpy.array([[float(x) for x in row] for row in gmfreader])
-            for i, gmvs in enumerate(arr):
-                models.GmfScenario.objects.create(
-                    output=output,
-                    imt="PGA",
-                    gmvs=gmvs,
-                    location="POINT(%s)" % locations[i])
-        return output.id
+        helpers.populate_gmf_data_from_csv(job, fname)
+        return job
 
     def actual_data(self, job):
         maps = models.LossMapData.objects.filter(

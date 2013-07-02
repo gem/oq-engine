@@ -22,7 +22,6 @@ import openquake.hazardlib
 from collections import namedtuple
 
 from openquake.hazardlib import geo as hazardlib_geo
-from nose.plugins.attrib import attr
 
 from openquake.engine import engine
 from openquake.engine.calculators.hazard import general
@@ -55,7 +54,7 @@ class StoreSiteModelTestCase(unittest.TestCase):
                  z1pt0=104.0, z2pt5=5.4),
         ]
 
-        ret_val = general.store_site_model(inp, site_model)
+        ids = general.store_site_model(inp, site_model)
 
         actual_site_model = models.SiteModel.objects.filter(
             input=inp.id).order_by('id')
@@ -72,9 +71,8 @@ class StoreSiteModelTestCase(unittest.TestCase):
 
         # last, check that the `store_site_model` function returns all of the
         # newly-inserted records
-        # an `equals` check just compares the ids
-        for i, val in enumerate(ret_val):
-            self.assertEqual(val, actual_site_model[i])
+        for i, id in enumerate(ids):
+            self.assertEqual(id, actual_site_model[i].id)
 
 
 class ValidateSiteModelTestCase(unittest.TestCase):
@@ -477,7 +475,8 @@ class TaskArgGenTestCase(unittest.TestCase):
         ]
 
         try:
-            actual = list(calc.task_arg_gen(block_size=2))
+            actual = list(calc.task_arg_gen(
+                          block_size=2, check_num_task=False))
             self.assertEqual(expected, actual)
         finally:
             self.assertEqual(1, pt_src_block_size_mock.call_count)

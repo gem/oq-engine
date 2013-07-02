@@ -78,7 +78,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
 
     if not len(assets):
         logs.LOG.info("Exit from task as no asset could be processed")
-        return
+        return None, None
 
     with profile('computing risk'):
         loss_ratio_matrix = unit.calc(ground_motion_values)
@@ -87,7 +87,8 @@ def do_scenario(loss_type, unit, containers, params, profile):
             insured_loss_matrix = [
                 scientific.insured_losses(
                     loss_ratio_matrix[i], asset.value(loss_type),
-                    asset.deductible, asset.ins_limit)
+                    asset.deductible(loss_type),
+                    asset.insurance_limit(loss_type))
                 for i, asset in enumerate(assets)]
 
     with profile('saving risk outputs'):
@@ -97,7 +98,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
             [losses.std(ddof=1) for losses in loss_ratio_matrix],
             output_type="loss_map",
             loss_type=loss_type,
-            hazard_output_id=unit.getter.hazard_output_id,
+            hazard_output_id=unit.getter.hazard_output.id,
             insured=False)
 
         if params.insured_losses:
@@ -108,7 +109,7 @@ def do_scenario(loss_type, unit, containers, params, profile):
                 itertools.cycle([True]),
                 output_type="loss_map",
                 loss_type=loss_type,
-                hazard_output_id=unit.getter.hazard_output_id,
+                hazard_output_id=unit.getter.hazard_output.id,
                 insured=True)
 
     aggregate_losses = sum(loss_ratio_matrix[i] * asset.value(loss_type)
@@ -157,8 +158,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         taxonomies = super(ScenarioRiskCalculator, self).get_taxonomies()
         if self.rc.insured_losses:
             queryset = self.rc.exposure_model.exposuredata_set.filter(
-                (db.models.Q(deductible__isnull=True) |
-                 db.models.Q(ins_limit__isnull=True)))
+                (db.models.Q(cost__deductible_absolute__isnull=True) |
+                 db.models.Q(cost__insurance_limit_absolute__isnull=True)))
             if queryset.exists():
                 logs.LOG.error(
                     "missing insured limits in exposure for assets %s" % (
@@ -230,7 +231,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 model.vulnerability_function,
                 seed=self.rnd.randint(0, models.MAX_SINT_32),
                 correlation=self.rc.asset_correlation),
-            hazard_getters.GroundMotionScenarioGetter(
+            hazard_getters.GroundMotionValuesGetter(
                 ho,
                 assets,
                 self.rc.best_maximum_distance,

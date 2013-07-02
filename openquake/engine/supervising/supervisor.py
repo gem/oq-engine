@@ -27,6 +27,7 @@ supervise() will:
    - update status of the job record in the database
 """
 
+import celery.task.control
 import logging
 import os
 import signal
@@ -43,7 +44,10 @@ try:
 except ImportError:
     setproctitle = lambda title: None  # pylint: disable=C0103
 
-from openquake.engine.db.models import OqJob, ErrorMsg, JobStats
+from openquake.engine.db.models import ErrorMsg
+from openquake.engine.db.models import JobStats
+from openquake.engine.db.models import OqJob
+from openquake.engine.db.models import Performance
 from openquake.engine import supervising
 from openquake.engine import kvs
 from openquake.engine import logs
@@ -105,6 +109,24 @@ def cleanup_after_job(job_id):
     logging.debug('Cleaning up after job %s', job_id)
 
     kvs.cache_gc(job_id)
+
+    # Using the celery API, terminate and revoke and terminate any running
+    # tasks associated with the current job.
+    task_ids = _get_task_ids(job_id)
+    if not task_ids:  # this is normal when OQ_NO_DISTRIBUTE=1
+        logs.LOG.debug('No task to revoke')
+    for tid in task_ids:
+        celery.task.control.revoke(tid, terminate=True)
+        logs.LOG.debug('Revoked task %s', tid)
+
+
+def _get_task_ids(job_id):
+    """
+    Get all Celery task IDs for a given ``job_id``.
+    """
+    return Performance.objects.filter(
+        oq_job=job_id, operation='storing task id', task_id__isnull=False)\
+        .values_list('task_id', flat=True)
 
 
 def get_job_status(job_id):
@@ -384,8 +406,5 @@ def supervise(pid, job_id, timeout=1, log_file=None):
         )
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
-
-    # Create job stats, which implicitly records the start time for the job
-    JobStats.objects.create(oq_job=OqJob.objects.get(id=job_id))
 
     supervisor.run()

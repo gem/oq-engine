@@ -68,11 +68,11 @@ GRANT SELECT,INSERT,UPDATE ON admin.oq_user      TO oq_admin;
 GRANT SELECT,INSERT,UPDATE ON admin.organization TO oq_admin;
 
 -- htemp schema
-GRANT SELECT,INSERT,DELETE        ON htemp.site_data             TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.source_progress       TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.hazard_curve_progress TO oq_reslt_writer;
 
 -- hzrdi schema
+GRANT SELECT,INSERT ON hzrdi.hazard_site            TO oq_job_init;
 GRANT SELECT,INSERT ON hzrdi.parsed_source        TO oq_job_init;
 GRANT SELECT,INSERT ON hzrdi.parsed_rupture_model TO oq_job_init;
 GRANT SELECT,INSERT ON hzrdi.site_model           TO oq_job_init;
@@ -80,12 +80,10 @@ GRANT SELECT,INSERT ON hzrdi.site_model           TO oq_job_init;
 -- hzrdr schema
 GRANT SELECT,INSERT        ON hzrdr.hazard_curve      TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON hzrdr.hazard_curve_data TO oq_reslt_writer;
-GRANT SELECT,INSERT,UPDATE ON hzrdr.gmf_data          TO oq_reslt_writer;
-GRANT SELECT,INSERT        ON hzrdr.gmf_collection    TO oq_reslt_writer;
-GRANT SELECT,INSERT        ON hzrdr.gmf_set           TO oq_reslt_writer;
-GRANT SELECT,INSERT        ON hzrdr.gmf               TO oq_reslt_writer;
-GRANT SELECT,INSERT        ON hzrdr.gmf_scenario      TO oq_reslt_writer;
-GRANT SELECT,INSERT        ON hzrdr.gmf_agg           TO oq_reslt_writer;
+
+
+GRANT SELECT,INSERT        ON hzrdr.gmf    TO oq_reslt_writer;
+GRANT SELECT,INSERT        ON hzrdr.gmf_data           TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.disagg_result     TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON hzrdr.hazard_map        TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.uhs               TO oq_reslt_writer;
@@ -96,9 +94,8 @@ GRANT SELECT,INSERT        ON hzrdr.ses               TO oq_reslt_writer;
 GRANT SELECT,INSERT        ON hzrdr.ses_rupture       TO oq_reslt_writer;
 
 -- riski schema
-GRANT SELECT,INSERT        ON riski.exposure_data    TO oq_job_init;
-GRANT SELECT,INSERT        ON riski.exposure_model   TO oq_job_init;
-GRANT SELECT,INSERT,UPDATE ON riski.occupancy        TO oq_job_init;
+GRANT SELECT,INSERT ON ALL TABLES IN SCHEMA riski   TO oq_job_init;
+GRANT UPDATE        ON riski.occupancy        TO oq_job_init;
 
 -- riskr schema
 GRANT SELECT,INSERT,UPDATE ON riskr.loss_curve                TO oq_reslt_writer;
@@ -116,6 +113,7 @@ GRANT SELECT,INSERT,UPDATE ON riskr.dmg_dist_per_asset        TO oq_reslt_writer
 GRANT SELECT,INSERT,UPDATE ON riskr.dmg_dist_per_taxonomy     TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON riskr.dmg_dist_total            TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON riskr.event_loss                TO oq_reslt_writer;
+GRANT SELECT,INSERT,UPDATE ON riskr.event_loss_data           TO oq_reslt_writer;
 
 -- uiapi schema
 GRANT SELECT,INSERT,UPDATE ON uiapi.input              TO oq_job_init;
@@ -140,4 +138,4 @@ GRANT SELECT,INSERT        ON uiapi.performance        TO oq_job_init;
 
 
 -- helper views
-GRANT SELECT               ON hzrdr.gmf_collection_family TO oq_job_init;
+GRANT SELECT               ON hzrdr.gmf_family TO oq_job_init;

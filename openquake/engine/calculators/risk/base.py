@@ -294,8 +294,7 @@ class RiskCalculator(base.Calculator):
         stats.pk_set(self.job.id, "nrisk_total", total)
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
-        # update job_stats
-        job_stats = models.JobStats.objects.get(oq_job=self.job.id)
+        job_stats = models.JobStats.objects.get(oq_job=self.job)
         job_stats.num_sites = total
         job_stats.num_tasks = self.expected_tasks(self.block_size())
         job_stats.save()
@@ -303,7 +302,7 @@ class RiskCalculator(base.Calculator):
     def get_risk_models(self, retrofitted=False):
         """
         Parse vulnerability models for each loss type in
-        `openquake.engine.db.modelsLOSS_TYPES`,
+        `openquake.engine.db.models.LOSS_TYPES`,
         then set the `risk_models` attribute.
 
         :param bool retrofitted:
@@ -318,32 +317,26 @@ class RiskCalculator(base.Calculator):
         risk_models = collections.defaultdict(dict)
 
         for loss_type in models.LOSS_TYPES:
-            vfs = self.get_vulnerability_model(loss_type, retrofitted)
+            if loss_type == "fatalities":
+                cost_type = "occupants"
+            else:
+                cost_type = loss_type
+
+            vfs = self.get_vulnerability_model(cost_type, retrofitted)
             for taxonomy, model in vfs.items():
                 risk_models[taxonomy][loss_type] = model
 
             if vfs:
-                field_kwarg = dict(
-                    structural=dict(stco__isnull=True),
-                    non_structural=dict(nonstco__isnull=True),
-                    contents=dict(coco__isnull=True),
-                    occupancy=dict(occupany__isnull=True))[loss_type]
-                if self.rc.exposure_model.exposuredata_set.filter(
-                        **field_kwarg).exists():
-                    raise ValueError("Invalid exposure model "
-                                     "for type %s. Some assets don't match "
-                                     "with filter %s" % (
-                                         loss_type, field_kwarg))
-                fields = dict(
-                    structural=["stco_type", "stco_unit"],
-                    non_structural=["non_stco_type", "non_stco_unit"],
-                    contents=["coco_type", "coco_unit"])
-                if loss_type in fields:
-                    if any([not getattr(self.rc.exposure_model, field, False)
-                            for field in fields[loss_type]]):
-                        raise ValueError("Invalid exposure model "
-                                         "for type %s. %s are required" % (
-                                             loss_type, fields[loss_type]))
+                if loss_type != "fatalities":
+                    if not self.rc.exposure_model.exposuredata_set.filter(
+                            cost__cost_type__name=cost_type).exists():
+                        raise ValueError(
+                            "Invalid exposure "
+                            "for computing loss type %s. " % loss_type)
+                else:
+                    if self.rc.exposure_model.missing_occupants():
+                        raise ValueError("Invalid exposure "
+                                         "for computing occupancy losses.")
 
         if not risk_models:
             raise ValueError(
@@ -370,8 +363,8 @@ class RiskCalculator(base.Calculator):
         if missing:
             raise ValueError(
                 "There is no hazard output for: %s. "
-                "The available IMTs are: %s."
-                % (", ".join(missing), ", ".join(imts)))
+                "The available IMTs are: %s." % (", ".join(missing),
+                                                 ", ".join(imts)))
 
     def check_taxonomies(self, taxonomies):
         """
@@ -395,15 +388,14 @@ class RiskCalculator(base.Calculator):
                 # all taxonomies in the exposure must be covered
                 raise RuntimeError(msg)
 
-    def get_vulnerability_model(self, loss_type, retrofitted=False):
+    def get_vulnerability_model(self, cost_type, retrofitted=False):
         """
         Load and parse the vulnerability model input associated with this
         calculation.
 
-        :param str loss_type:
-            any value in `openquake.engine.db.models.LOSS_TYPES`. The kind
-            of vulnerability function we are going to get
-
+        :param str cost_type:
+            any value that has a corresponding CostType instance in the
+            current calculation
         :param bool retrofitted:
             `True` if the retrofitted model is going to be parsed
 
@@ -416,7 +408,7 @@ class RiskCalculator(base.Calculator):
         else:
             input_type = "vulnerability"
 
-        input_type = "%s_%s" % (loss_type, input_type)
+        input_type = "%s_%s" % (cost_type, input_type)
 
         queryset = self.rc.inputs.filter(input_type=input_type)
         if not queryset.exists():

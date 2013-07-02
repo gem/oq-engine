@@ -29,8 +29,9 @@ from openquake.engine.db import models
 # by an alternative reliable implemantation
 
 
-class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
-    cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
+    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
+    output_type = "gmf"
 
     check_exports = False
 
@@ -38,7 +39,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
     def test(self):
         self._run_test()
 
-    def hazard_id(self):
+    def get_hazard_job(self):
         job = helpers.get_hazard_job(
             helpers.get_data_path("event_based_hazard/job.ini"))
 
@@ -52,42 +53,19 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
             investigation_time=50,
             ses_per_logic_tree_path=1)
         job.save()
-        hc = job.hazard_calculation
 
-        gmf_set = models.GmfSet.objects.create(
-            gmf_collection=models.GmfCollection.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Test Hazard output", "gmf"),
-                lt_realization=models.LtRealization.objects.create(
-                    hazard_calculation=job.hazard_calculation,
-                    ordinal=1, seed=1, weight=None,
-                    sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-                    is_complete=False, total_items=1, completed_items=1)),
-            investigation_time=hc.investigation_time,
-            ses_ordinal=1)
+        gmf_coll = helpers.create_gmf_from_csv(
+            job, os.path.join(os.path.dirname(__file__), 'gmf.csv'))
 
-        with open(os.path.join(
-                os.path.dirname(__file__), 'gmf.csv'), 'rb') as csvfile:
-            gmfreader = csv.reader(csvfile, delimiter=',')
-            locations = gmfreader.next()
-
-            for i, gmvs in enumerate(
-                    numpy.array([[float(x) * 10 for x in row]
-                                 for row in gmfreader]).transpose()):
-                models.Gmf.objects.create(
-                    gmf_set=gmf_set,
-                    imt="PGA", gmvs=gmvs,
-                    result_grp_ordinal=1,
-                    location="POINT(%s)" % locations[i])
-
-        return gmf_set.gmf_collection.output.id
+        return job
 
     def actual_data(self, job):
-        return [(result.average_annual_loss_original,
+        data = [(result.average_annual_loss_original,
                  result.average_annual_loss_retrofitted, result.bcr)
                 for result in models.BCRDistributionData.objects.filter(
                     bcr_distribution__output__oq_job=job).order_by(
                         'asset_ref')]
+        return data
 
     def expected_data(self):
         return [[1.37096021, 0.95967214, 71.12525504],

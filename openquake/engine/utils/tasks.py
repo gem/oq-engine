@@ -27,6 +27,7 @@ from celery.task import task
 from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
+from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
@@ -119,13 +120,19 @@ def oqtask(task_func):
         # this is the only required argument
         job_id = kwargs.get('job_id') or args[0]
 
-        # Set up logging via amqp.
-        try:
-            # check if the job is still running
+        with EnginePerformanceMonitor(
+                'totals per task', job_id, tsk, flush=True):
             job = models.OqJob.objects.get(id=job_id)
-            calculation = job.calculation
 
-            # Setup task logging, via AMQP ...
+            # it is important to save the task ids soon, so that
+            # the revoke functionality implemented in supervisor.py can work
+            EnginePerformanceMonitor.store_task_id(job_id, tsk)
+
+            with EnginePerformanceMonitor(
+                    'loading calculation object', job_id, tsk, flush=True):
+                calculation = job.calculation
+
+            # Set up logging via amqp.
             if isinstance(calculation, models.HazardCalculation):
                 logs.init_logs_amqp_send(level=job.log_level,
                                          calc_domain='hazard',
@@ -135,23 +142,25 @@ def oqtask(task_func):
                                          calc_domain='risk',
                                          calc_id=calculation.id)
 
-            # Tasks can be used in either the `execute` or `post-process` phase
-            if job.is_running is False:
-                raise JobCompletedError('Job %d is not running' % job_id)
-            elif job.status not in ('executing', 'post_processing'):
-                raise JobCompletedError(
-                    'The status of job %d is %s, should be executing or '
-                    'post_processing' % (job_id, job.status))
-            # else continue with task execution
-            res = task_func(*args, **kwargs)
-        # TODO: should we do something different with the JobCompletedError?
-        except Exception, err:
-            logs.LOG.critical('Error occurred in task: %s' % str(err))
-            logs.LOG.exception(err)
-            raise
-        else:
-            return res
-        finally:
-            EnginePerformanceMonitor.cache.flush()  # flush performance data
+            try:
+                # Tasks can be used in the `execute` or `post-process` phase
+                if job.is_running is False:
+                    raise JobCompletedError('Job %d was killed' % job_id)
+                elif job.status not in ('executing', 'post_processing'):
+                    raise JobCompletedError(
+                        'The status of job %d is %s, should be executing or '
+                        'post_processing' % (job_id, job.status))
+                # else continue with task execution
+                res = task_func(*args, **kwargs)
+            # TODO: should we do something different with JobCompletedError?
+            except Exception, err:
+                logs.LOG.critical('Error occurred in task: %s', err)
+                logs.LOG.exception(err)
+                raise
+            else:
+                return res
+            finally:
+                CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
-    return task(wrapped, ignore_result=True, queue=celery_queue)
+    tsk = task(wrapped, ignore_result=True, queue=celery_queue)
+    return tsk

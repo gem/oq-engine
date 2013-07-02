@@ -34,7 +34,7 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import monitor, get_calculator_class
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.writer import CacheInserter
 
 
 INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
@@ -256,7 +256,7 @@ def create_hazard_calculation(owner, params, files):
         params["export_dir"] = os.path.abspath(params["export_dir"])
 
     haz_calc_fields = models.HazardCalculation._meta.get_all_field_names()
-    for param in set(params.keys()) - set(haz_calc_fields):
+    for param in set(params) - set(haz_calc_fields):
         msg = "Unknown parameter '%s'. Ignoring."
         msg %= param
         warnings.warn(msg, RuntimeWarning)
@@ -331,6 +331,10 @@ def run_calc(job, log_level, log_file, exports, job_type):
     """
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
     calc = get_calculator_class(job_type, calc_mode)(job)
+
+    # Create job stats, which implicitly records the start time for the job
+    models.JobStats.objects.create(oq_job=job)
+
     # Closing all db connections to make sure they're not shared between
     # supervisor and job executor processes.
     # Otherwise, if one of them closes the connection it immediately becomes
@@ -439,7 +443,7 @@ def _do_run_calc(job, exports, calc, job_type):
     _switch_to_job_phase(job, job_type, "clean_up")
     calc.clean_up()
 
-    EnginePerformanceMonitor.cache.flush()  # save performance info
+    CacheInserter.flushall()  # flush caches into the db
 
     _switch_to_job_phase(job, job_type, "complete")
     logs.LOG.debug("*> complete")

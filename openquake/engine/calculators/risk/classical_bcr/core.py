@@ -91,7 +91,7 @@ def do_classical_bcr(loss_type, units, containers, params, profile):
                 scientific.bcr(
                     eal_original[i], eal_retrofitted[i],
                     params.interest_rate, params.asset_life_expectancy,
-                    asset.value(loss_type), asset.retrofitting_cost)
+                    asset.value(loss_type), asset.retrofitted(loss_type))
                 for i, asset in enumerate(assets)]
 
         with logs.tracing('writing results'):
@@ -99,7 +99,7 @@ def do_classical_bcr(loss_type, units, containers, params, profile):
                 assets, zip(eal_original, eal_retrofitted, bcr_results),
                 output_type="bcr_distribution",
                 loss_type=loss_type,
-                hazard_output_id=unit_orig.getter.hazard_output_id)
+                hazard_output_id=unit_orig.getter.hazard_output.id)
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
@@ -145,21 +145,6 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
                         self.rc.best_maximum_distance,
                         model_retro.imt))])
         return units
-
-    def get_taxonomies(self):
-        """
-        Override the default get_taxonomies to provide more detailed
-        validation of the exposure.
-
-        Check that the reco value is present in the exposure
-        """
-        taxonomies = super(ClassicalBCRRiskCalculator, self).get_taxonomies()
-
-        if (self.rc.exposure_model.exposuredata_set.filter(
-                reco__isnull=True)).exists():
-            raise ValueError("Some assets do not have retrofitted costs")
-
-        return taxonomies
 
     @property
     def calculator_parameters(self):

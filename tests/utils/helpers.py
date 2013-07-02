@@ -27,6 +27,7 @@ import logging
 import mock as mock_module
 import numpy
 import os
+import csv
 import random
 import redis
 import shutil
@@ -43,6 +44,7 @@ from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config, get_calculator_class
+
 
 CD = os.path.dirname(__file__)  # current directory
 
@@ -160,6 +162,8 @@ def run_hazard_job(cfg, exports=None):
 def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
                  hazard_output_id=None):
     """
+    Given the path to a risk job config file and a hazard_calculation_id
+    or a output, run the job.
     """
     if exports is None:
         exports = []
@@ -642,6 +646,9 @@ def get_hazard_job(cfg, username=None):
 def get_risk_job(cfg, username=None, hazard_calculation_id=None,
                  hazard_output_id=None):
     """
+    Given a path to a config file and a hazard_calculation_id
+    (or, alternatively, a hazard_output_id, create a
+    :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
     username = username if username is not None else default_user().user_name
 
@@ -666,42 +673,127 @@ def get_risk_job(cfg, username=None, hazard_calculation_id=None,
     return job
 
 
-def create_gmf_agg_records(hazard_job, rlz=None):
+def create_gmf_coll(hazard_job, rlz=None):
     """
-    Returns the created records.
+    Returns the created Gmf object.
     """
     hc = hazard_job.hazard_calculation
 
     rlz = rlz or models.LtRealization.objects.create(
-        hazard_calculation=hazard_job.hazard_calculation,
-        ordinal=1, seed=1, weight=None,
+        hazard_calculation=hc, ordinal=1, seed=1, weight=None,
         sm_lt_path="test_sm", gsim_lt_path="test_gsim",
         is_complete=False, total_items=1, completed_items=1)
 
-    rupture_ids = get_rupture_ids(hazard_job, hc, rlz, 3)
-
-    gmf_coll = models.GmfCollection.objects.create(
+    gmf_coll = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test Hazard output", "gmf"),
         lt_realization=rlz)
 
-    models.GmfSet.objects.create(
-        gmf_collection=gmf_coll,
-        investigation_time=hc.investigation_time,
-        ses_ordinal=1)
+    return gmf_coll
 
+
+def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
+    """
+    Returns the created records.
+    """
+    gmf_coll = create_gmf_coll(hazard_job, rlz)
+    ses_coll = ses_coll or models.SESCollection.objects.create(
+        output=models.Output.objects.create_output(
+            hazard_job, "Test SES Collection", "ses"),
+        lt_realization=gmf_coll.lt_realization)
+    ruptures = get_ruptures(hazard_job, ses_coll, 3)
     records = []
-    for point in ["POINT(15.310 38.225)", "POINT(15.71 37.225)",
-                  "POINT(15.48 38.091)", "POINT(15.565 38.17)",
-                  "POINT(15.481 38.25)"]:
+    if points is None:
+        points = [(15.310, 38.225), (15.71, 37.225),
+                  (15.48, 38.091), (15.565, 38.17),
+                  (15.481, 38.25)]
+    for site_id in hazard_job.hazard_calculation.save_sites(points):
         records.append(models.GmfAgg.objects.create(
-            gmf_collection=gmf_coll,
+            gmf=gmf_coll,
+            ses=ruptures[0].ses,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
-            rupture_ids=rupture_ids,
-            location=point))
+            rupture_ids=[r.id for r in ruptures],
+            site_id=site_id))
 
     return records
+
+
+# NB: create_gmf_from_csv and populate_gmf_data_from_csv
+# will be unified in the future
+def create_gmf_from_csv(job, fname):
+    """
+    Populate the gmf_data table for an event_based calculation.
+    """
+    hc = job.hazard_calculation
+    hc.investigation_time = 50
+    hc.ses_per_logic_tree_path = 1
+    hc.save()
+
+    # tricks to fool the oqtask decorator
+    job.is_running = True
+    job.status = 'post_processing'
+    job.save()
+
+    gmf_coll = create_gmf_coll(job)
+
+    ses_coll = models.SESCollection.objects.create(
+        output=models.Output.objects.create_output(
+            job, "Test SES Collection", "ses"),
+        lt_realization=gmf_coll.lt_realization)
+    with open(fname, 'rb') as csvfile:
+        gmfreader = csv.reader(csvfile, delimiter=',')
+        locations = gmfreader.next()
+
+        gmv_matrix = numpy.array(
+            [map(float, row) for row in gmfreader]).transpose()
+
+        ruptures = get_ruptures(job, ses_coll, len(gmv_matrix[0]))
+
+        for i, gmvs in enumerate(gmv_matrix):
+
+            point = tuple(map(float, locations[i].split()))
+            [site_id] = job.hazard_calculation.save_sites([point])
+            models.GmfAgg.objects.create(
+                gmf=gmf_coll,
+                ses=ruptures[0].ses,
+                imt="PGA", gmvs=gmvs,
+                rupture_ids=[r.id for r in ruptures],
+                site_id=site_id)
+
+    return gmf_coll
+
+
+def populate_gmf_data_from_csv(job, fname):
+    """
+    Populate the gmf_data table for a scenario calculation.
+    """
+    # tricks to fool the oqtask decorator
+    job.is_running = True
+    job.status = 'post_processing'
+    job.save()
+
+    gmf_coll = models.Gmf.objects.create(
+        output=models.Output.objects.create_output(
+            job, "Test Hazard output", "gmf_scenario"))
+
+    with open(fname, 'rb') as csvfile:
+        gmfreader = csv.reader(csvfile, delimiter=',')
+        locations = gmfreader.next()
+
+        gmv_matrix = numpy.array(
+            [map(float, row) for row in gmfreader]).transpose()
+
+        for i, gmvs in enumerate(gmv_matrix):
+            point = tuple(map(float, locations[i].split()))
+            [site_id] = job.hazard_calculation.save_sites([point])
+            models.GmfAgg.objects.create(
+                imt="PGA",
+                gmf=gmf_coll,
+                gmvs=gmvs,
+                site_id=site_id)
+
+    return gmf_coll
 
 
 def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
@@ -749,19 +841,22 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 location="%s" % point)
 
     elif output_type == "gmf_scenario":
-        output = models.Output.objects.create_output(
-            hazard_job, "Test Hazard output", "gmf_scenario")
-        for point in ["POINT(15.48 38.0900001)", "POINT(15.565 38.17)",
-                      "POINT(15.481 38.25)"]:
-            hazard_output = models.GmfScenario.objects.create(
-                output=output,
+        hazard_output = models.Gmf.objects.create(
+            output=models.Output.objects.create_output(
+                hazard_job, "Test gmf scenario output", "gmf_scenario"))
+
+        site_ids = hazard_job.hazard_calculation.save_sites(
+            [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])
+        for site_id in site_ids:
+            models.GmfAgg.objects.create(
+                gmf=hazard_output,
                 imt="PGA",
-                location=point,
+                site_id=site_id,
                 gmvs=[0.1, 0.2, 0.3])
 
     else:
-        hazard_output = create_gmf_agg_records(
-            hazard_job, rlz)[0].gmf_collection
+        hazard_output = create_gmf_data_records(
+            hazard_job, rlz)[0].gmf
 
     hazard_job.status = "complete"
     hazard_job.save()
@@ -778,27 +873,24 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     return job, files
 
 
-def get_rupture_ids(job, hc, lt_realization, num):
+def get_ruptures(job, ses_collection, num):
     """
-    :returns: a list of IDs of newly created ruptures associated with
+    :returns: a list of newly created ruptures associated with
     `job` and an instance of
     :class:`openquake.engine.db.models.HazardCalculation`. It also
     creates a father :class:`openquake.engine.db.models.SES`. Each
-    rupture has a magnitude ranging from 0 to 10, no geographic
-    information and result_grp_ordinal set to 1.
+    rupture has a magnitude ranging from 0 to 10 and no geographic
+    information.
 
-    :param lt_realization: an instance of
-    :class:`openquake.engine.db.models.LtRealization` to be associated
+    :param ses_collection: an instance of
+    :class:`openquake.engine.db.models.SESCollection` to be associated
     with the newly created SES object
 
     :param int num: the number of ruptures to create
     """
     ses = models.SES.objects.create(
-        ses_collection=models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection", "ses"),
-            lt_realization=lt_realization),
-        investigation_time=hc.investigation_time,
+        ses_collection=ses_collection,
+        investigation_time=job.hazard_calculation.investigation_time,
         ordinal=1)
 
     return [
@@ -810,9 +902,7 @@ def get_rupture_ids(job, hc, lt_realization, num):
             rake=0,
             tectonic_region_type="test region type",
             is_from_fault_source=False,
-            lons=[], lats=[], depths=[],
-            result_grp_ordinal=1,
-            rupture_ordinal=0).id
+            lons=[], lats=[], depths=[])
         for i in range(num)]
 
 

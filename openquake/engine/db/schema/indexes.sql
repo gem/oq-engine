@@ -22,6 +22,10 @@ CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name)
 -- admin.revision_info
 CREATE UNIQUE INDEX admin_revision_info_artefact_uniq_idx ON admin.revision_info(artefact);
 
+-- hzrdi.hazard_site
+CREATE UNIQUE INDEX hzrdi_hazard_site_location_hazard_calculation_uniq_idx
+ON hzrdi.hazard_site(location, hazard_calculation_id);
+
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);
 
@@ -42,18 +46,11 @@ CREATE INDEX hzrdr_hazard_map_output_id_idx on hzrdr.hazard_map(output_id);
 -- hazard curve
 CREATE INDEX hzrdr_hazard_curve_output_id_idx on hzrdr.hazard_curve(output_id);
 CREATE INDEX hzrdr_hazard_curve_data_hazard_curve_id_idx on hzrdr.hazard_curve_data(hazard_curve_id);
+
 -- gmf
-CREATE INDEX hzrdr_gmf_result_grp_ordinal_idx on hzrdr.gmf(result_grp_ordinal);
-CREATE INDEX hzrdr_gmf_imt_idx on hzrdr.gmf(imt);
-CREATE INDEX hzrdr_gmf_sa_period_idx on hzrdr.gmf(sa_period);
-CREATE INDEX hzrdr_gmf_sa_damping_idx on hzrdr.gmf(sa_damping);
+CREATE INDEX hzrdr_gmf_output_id_idx on hzrdr.gmf(output_id);
+CREATE INDEX hzrdr_gmf_lt_realization_idx on hzrdr.gmf(lt_realization_id);
 
-
-CREATE INDEX hzrdr_gmf_collection_output_id_idx on hzrdr.gmf_collection(output_id);
-CREATE INDEX hzrdr_gmf_collection_lt_realization_idx on hzrdr.gmf_collection(lt_realization_id);
-CREATE INDEX hzrdr_gmf_set_gmf_collection_idx on hzrdr.gmf_set(gmf_collection_id);
-CREATE INDEX hzrdr_gmf_gmf_set_idx on hzrdr.gmf(gmf_set_id);
-CREATE INDEX hzrdr_gmf_location_idx on hzrdr.gmf using gist(location);
 -- uhs
 CREATE INDEX hzrdr_uhs_output_id_idx on hzrdr.uhs(output_id);
 CREATE INDEX hzrdr_uhs_data_uhs_id_idx on hzrdr.uhs_data(uhs_id);
@@ -66,12 +63,12 @@ CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(
 -- lt_realization
 CREATE INDEX hzrdr_lt_realization_hazard_calculation_id_idx on hzrdr.lt_realization(hazard_calculation_id);
 
--- gmf_agg
-CREATE INDEX hzrdr_gmf_agg_idx on hzrdr.gmf_agg using gist(location);
-
--- gmf_scenario
-CREATE INDEX hzrdr_gmf_scenario_output_id_idx on hzrdr.gmf_scenario(output_id);
-CREATE INDEX hzrdr_gmf_scenario_imt_idx on hzrdr.gmf_scenario(imt);
+-- gmf_data
+CREATE INDEX hzrdr_gmf_data_idx on hzrdr.gmf_data(site_id);
+CREATE INDEX hzrdr_gmf_imt_idx on hzrdr.gmf_data(imt);
+CREATE INDEX hzrdr_gmf_sa_period_idx on hzrdr.gmf_data(sa_period);
+CREATE INDEX hzrdr_gmf_sa_damping_idx on hzrdr.gmf_data(sa_damping);
+CREATE INDEX hzrdr_gmf_ses_idx on hzrdr.gmf_data(ses_id);
 
 -- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
@@ -94,7 +91,7 @@ CREATE INDEX riski_exposure_data_taxonomy_idx ON riski.exposure_data(taxonomy);
 CREATE INDEX riski_exposure_data_exposure_model_id_idx on riski.exposure_data(exposure_model_id);
 CREATE INDEX riski_exposure_data_site_stx_idx ON riski.exposure_data(ST_X(geometry(site)));
 CREATE INDEX riski_exposure_data_site_sty_idx ON riski.exposure_data(ST_Y(geometry(site)));
-
+CREATE INDEX riski_cost_type_name_idx ON riski.cost_type(name);
 
 -- uiapi indexes
 CREATE INDEX uiapi_input_model_content_id_idx on uiapi.input(model_content_id);

@@ -196,7 +196,7 @@ def export_hazard_curve(output, target_dir):
 
 @core.makedirsdeco
 def export_hazard_curve_multi(output, target_dir):
-    hcs = output.hazardcurve
+    hcs = output.hazard_curve
 
     data = [_curve_data(hc) for hc in hcs]
 
@@ -227,7 +227,8 @@ def _curve_metadata(output, target_dir):
         gsimlt_path = None
 
     haz_calc = output.oq_job.hazard_calculation
-    path = _get_result_export_path(haz_calc.id, target_dir, output.hazardcurve)
+    path = _get_result_export_path(
+        haz_calc.id, target_dir, output.hazard_curve)
 
     return {
         'quantile_value': hc.quantile,
@@ -268,7 +269,7 @@ def export_gmf(output, target_dir):
         A list of exported file names (including the absolute path to each
         file).
     """
-    gmf_coll = models.GmfCollection.objects.get(output=output.id)
+    gmf_coll = models.Gmf.objects.get(output=output.id)
     lt_rlz = gmf_coll.lt_realization
     haz_calc = output.oq_job.hazard_calculation
 
@@ -279,8 +280,7 @@ def export_gmf(output, target_dir):
         sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
         gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
-    path = _get_result_export_path(haz_calc.id, target_dir,
-                                   output.gmfcollection)
+    path = _get_result_export_path(haz_calc.id, target_dir, output.gmf)
 
     writer = writers.EventBasedGMFXMLWriter(
         path, sm_lt_path, gsim_lt_path)
@@ -345,7 +345,7 @@ def export_ses(output, target_dir):
         gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
     path = _get_result_export_path(haz_calc.id, target_dir,
-                                   output.sescollection)
+                                   output.ses)
 
     writer = writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
     writer.serialize(ses_coll)
@@ -384,7 +384,7 @@ def export_hazard_map(output, target_dir):
         smlt_path = None
         gsimlt_path = None
 
-    path = _get_result_export_path(haz_calc.id, target_dir, output.hazardmap)
+    path = _get_result_export_path(haz_calc.id, target_dir, output.hazard_map)
 
     metadata = {
         'quantile_value': hazard_map.quantile,
@@ -464,7 +464,7 @@ def export_disagg_matrix(output, target_dir):
     haz_calc = output.oq_job.hazard_calculation
 
     path = _get_result_export_path(haz_calc.id, target_dir,
-                                   output.disaggresult)
+                                   output.disagg_matrix)
 
     pmf_map = OrderedDict([
         (('Mag', ), disagg.mag_pmf),
@@ -522,7 +522,7 @@ def export_uh_spectra(output, target_dir):
     uhs = models.UHS.objects.get(output=output)
     haz_calc = output.oq_job.hazard_calculation
 
-    path = _get_result_export_path(haz_calc.id, target_dir, output.uhs)
+    path = _get_result_export_path(haz_calc.id, target_dir, output.uh_spectra)
 
     if uhs.lt_realization is not None:
         lt_rlz = uhs.lt_realization

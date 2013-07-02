@@ -69,24 +69,13 @@ def _export_common(output, loss_type):
     else:
         gsim_tree_path = None
 
-    model = output.oq_job.risk_calculation.exposure_model
-    if loss_type == "structural":
-        unit = model.stco_unit
-    elif loss_type == "non_structural":
-        unit = model.non_stco_unit
-    elif loss_type == "contents":
-        unit = model.coco_unit
-    elif loss_type == "occupancy":
-        unit = "occupants"
-    else:
-        raise RuntimeError("invalid loss type %s" % loss_type)
-
     return dict(investigation_time=metadata.investigation_time,
                 statistics=metadata.statistics,
                 quantile_value=metadata.quantile,
                 source_model_tree_path=source_model_tree_path,
                 gsim_tree_path=gsim_tree_path,
-                unit=unit)
+                unit=output.oq_job.risk_calculation.exposure_model.unit(
+                    loss_type))
 
 
 @core.makedirsdeco
@@ -263,13 +252,13 @@ def export_aggregate_loss_csv(output, target_dir):
     """
     filepath = os.path.join(target_dir,
                             AGGREGATE_LOSS_FILENAME_FMT % (
-                                output.aggregateloss.id))
+                                output.aggregate_loss.id))
 
     with open(filepath, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter='|')
         writer.writerow(['Mean', 'Standard Deviation'])
-        writer.writerow([output.aggregateloss.mean,
-                        output.aggregateloss.std_dev])
+        writer.writerow([output.aggregate_loss.mean,
+                        output.aggregate_loss.std_dev])
     return filepath
 
 export_aggregate_loss = export_aggregate_loss_csv
@@ -285,11 +274,12 @@ def export_event_loss_csv(output, target_dir):
                                 output.id))
 
     with open(filepath, 'wb') as csvfile:
-        writer = csv.writer(csvfile, delimiter='|')
+        writer = csv.writer(csvfile)
         writer.writerow(['Rupture', 'Magnitude', 'Aggregate Loss'])
 
-        for event_loss in models.EventLoss.objects.filter(
-                output=output).select_related().order_by('-aggregate_loss'):
+        for event_loss in models.EventLossData.objects.filter(
+                event_loss__output=output).select_related().order_by(
+                    '-aggregate_loss'):
             writer.writerow(["%7d" % event_loss.rupture.id,
                              "%.07f" % event_loss.rupture.magnitude,
                              "%.07f" % event_loss.aggregate_loss])

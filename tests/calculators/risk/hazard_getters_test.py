@@ -69,9 +69,8 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        assets, values = self.getter()
-        self.assertEqual([], assets)
-        self.assertEqual(0, len(values))
+        data = self.getter()
+        self.assertEqual([], data[0])  # no assets
 
 
 class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
@@ -84,15 +83,13 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
     def test_call(self):
         assets, (gmfs, ruptures) = self.getter()
-        self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
-        numpy.testing.assert_allclose([[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]],
-                                      gmfs)
+        for gmvs in gmfs:
+            numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        assets, (gmfs, ruptures) = self.getter()
+        assets = self.getter()[0]
         self.assertEqual([], assets)
-        self.assertEqual(0, len(gmfs))
 
 
 class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
@@ -100,11 +97,10 @@ class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
     hazard_demo = get_data_path('scenario_hazard/job.ini')
     risk_demo = get_data_path('scenario_risk/job.ini')
     hazard_output_type = 'gmf_scenario'
-    getter_class = hazard_getters.GroundMotionScenarioGetter
+    getter_class = hazard_getters.GroundMotionValuesGetter
     taxonomy = 'RM'
 
     def test_call(self):
-        assets, values = self.getter()
-        self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
-        numpy.testing.assert_allclose(
-            [[0.1, 0.2, 0.3], [0.1, 0.2, 0.3]], values)
+        assets, gmfs = self.getter()
+        for gmvs in gmfs:
+            numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)

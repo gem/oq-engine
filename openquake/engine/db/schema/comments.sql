@@ -74,13 +74,6 @@ COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard 
 COMMENT ON COLUMN hzrdr.hazard_curve_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
 COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.';
 
-COMMENT ON COLUMN hzrdr.gmf.rupture_ids IS 'a vector of ids to the hzrdr.ses_rupture table. for each id you can find the corresponding ground motion value in gmvs at the same index';
-
-COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';
-COMMENT ON COLUMN hzrdr.gmf_data.ground_motion IS 'Ground motion for a specific site';
-COMMENT ON COLUMN hzrdr.gmf_data.location IS 'Site coordinates';
-
-
 COMMENT ON TABLE hzrdr.hazard_map IS 'A complete hazard map, for a given IMT and PoE';
 COMMENT ON COLUMN hzrdr.hazard_map.poe IS 'Probability of exceedence';
 COMMENT ON COLUMN hzrdr.hazard_map.statistics IS 'Statistic type, one of:
@@ -93,14 +86,8 @@ COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile level for quantile 
 COMMENT ON TABLE riski.exposure_data IS 'Per-asset risk exposure data';
 COMMENT ON COLUMN riski.exposure_data.area IS 'asset area';
 COMMENT ON COLUMN riski.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
-COMMENT ON COLUMN riski.exposure_data.deductible IS 'insurance deductible';
-COMMENT ON COLUMN riski.exposure_data.coco IS 'contents cost';
-COMMENT ON COLUMN riski.exposure_data.ins_limit IS 'insurance coverage limit';
 COMMENT ON COLUMN riski.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
-COMMENT ON COLUMN riski.exposure_data.last_update IS 'Date/time of the last change of the exposure data for the asset at hand';
 COMMENT ON COLUMN riski.exposure_data.number_of_units IS 'number of assets, people etc.';
-COMMENT ON COLUMN riski.exposure_data.reco IS 'retrofitting cost';
-COMMENT ON COLUMN riski.exposure_data.stco IS 'structural cost';
 COMMENT ON COLUMN riski.exposure_data.taxonomy IS 'A reference to the taxonomy that should be used for the asset at hand';
 
 
@@ -108,23 +95,17 @@ COMMENT ON TABLE riski.exposure_model IS 'A risk exposure model';
 COMMENT ON COLUMN riski.exposure_model.area_type IS 'area type. one of: aggregated or per_asset';
 COMMENT ON COLUMN riski.exposure_model.area_unit IS 'area unit of measure e.g. sqm';
 COMMENT ON COLUMN riski.exposure_model.category IS 'The risk category modelled';
-COMMENT ON COLUMN riski.exposure_model.coco_type IS 'contents cost type, one of: aggregated, per_area or per_asset';
-COMMENT ON COLUMN riski.exposure_model.coco_unit IS 'unit of measure for the contents type';
 COMMENT ON COLUMN riski.exposure_model.description IS 'An optional description of the risk exposure model at hand';
 COMMENT ON COLUMN riski.exposure_model.input_id IS 'The foreign key to the associated input model file';
-COMMENT ON COLUMN riski.exposure_model.last_update IS 'Date/time of the last change of the model at hand';
+
 COMMENT ON COLUMN riski.exposure_model.name IS 'The exposure model name';
-COMMENT ON COLUMN riski.exposure_model.owner_id IS 'The foreign key to the user who owns the exposure model in question';
-COMMENT ON COLUMN riski.exposure_model.reco_type IS 'retrofitting cost type, one of: aggregated, per_area or per_asset';
-COMMENT ON COLUMN riski.exposure_model.reco_unit IS 'unit of measure for the retrofitting type';
-COMMENT ON COLUMN riski.exposure_model.stco_type IS 'structural cost type, one of: aggregated, per_area or per_asset';
-COMMENT ON COLUMN riski.exposure_model.stco_unit IS 'unit of measure for the structural type';
+
 COMMENT ON COLUMN riski.exposure_model.taxonomy_source IS 'the taxonomy system used to classify the assets';
 
 
 COMMENT ON TABLE riski.occupancy IS 'Occupancy for a given exposure data set';
 COMMENT ON COLUMN riski.occupancy.exposure_data_id IS 'Foreign key to the exposure data set to which the occupancy data applies.';
-COMMENT ON COLUMN riski.occupancy.description IS 'describes the occupancy data e.g. day, night etc.';
+COMMENT ON COLUMN riski.occupancy.period IS 'describes the occupancy data e.g. day, night etc.';
 COMMENT ON COLUMN riski.occupancy.occupants IS 'number of occupants';
 
 -- riskr schema tables ------------------------------------------

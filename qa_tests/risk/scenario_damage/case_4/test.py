@@ -29,12 +29,11 @@ class ScenarioDamageRiskCase4TestCase(risk.End2EndRiskQATestCase):
     hazard_cfg = os.path.join(os.path.dirname(__file__), 'job_haz.ini')
     risk_cfg = os.path.join(os.path.dirname(__file__), 'job_damage.ini')
 
+    output_type = 'gmf_scenario'
+
     @attr('qa', 'risk', 'scenario_damage', 'e2e')
     def test(self):
         self._run_test()
-
-    def hazard_id(self):
-        return models.Output.objects.latest('last_update').id
 
     def actual_data(self, job):
         per_asset = models.DmgDistPerAsset.objects.filter(
@@ -47,15 +46,15 @@ class ScenarioDamageRiskCase4TestCase(risk.End2EndRiskQATestCase):
                 [[total.mean, total.stddev] for total in totals]]
 
     def expected_data(self):
-        return [[[2799.26279971, 306.41197996],
-                 [191.56511947, 277.20434751],
-                 [9.17208082, 37.90451501],
-                 [161.567248004, 261.144050148],
-                 [428.700628134, 290.748630861],
-                 [409.732123862, 378.117407054],
-                 [612.243296942, 686.028439527],
-                 [791.579191092, 530.835496],
-                 [596.177511966, 704.389085655]],
-                [[3573.07334466, 788.370392374],
-                 [1411.84493869, 670.785311947],
-                 [1015.08171665, 801.413598684]]]
+        return [[[2831.39440276538, 272.496770998072],
+                 [161.947302372973, 249.774966981951],
+                 [6.65829486164962, 29.46078616569],
+                 [160.845510534195, 260.559970809904],
+                 [428.273449106381, 290.835857759211],
+                 [410.881040359423, 378.302327897718],
+                 [516.766483950188, 646.868485847065],
+                 [777.664421126009, 535.83594187711],
+                 [705.569094923804, 743.547507821238]],
+                [[3509.00639724976, 741.459174207617],
+                 [1367.88517260537, 666.080418405019],
+                 [1123.10843014487, 836.390985994778]]]

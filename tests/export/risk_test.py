@@ -42,8 +42,8 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.hazard_metadata.sm_path = None
         self.output_mock.hazard_metadata.gsim_path = None
         rc = self.output_mock.oq_job.risk_calculation
-        rc.exposure_model.stco_unit = "bucks"
         rc.exposure_model.category = "air"
+        rc.exposure_model.unit = mock.Mock(return_value="bucks")
         rc.interest_rate = 0.3
         rc.asset_life_expectancy = 10
 
@@ -134,10 +134,10 @@ class ExportTestCase(unittest.TestCase):
     def test_export_aggregate_loss(self):
         writer = 'csv.writer'
 
-        self.output_mock.aggregateloss.id = 0
-        self.output_mock.aggregateloss.mean = 1
-        self.output_mock.aggregateloss.std_dev = 2
-        self.output_mock.aggregateloss.loss_type = "structural"
+        self.output_mock.aggregate_loss.id = 0
+        self.output_mock.aggregate_loss.mean = 1
+        self.output_mock.aggregate_loss.std_dev = 2
+        self.output_mock.aggregate_loss.loss_type = "structural"
 
         with mock.patch(writer) as m:
             ret = risk.export_aggregate_loss(self.output_mock, "/tmp/")
@@ -263,9 +263,9 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # map + 2 quantile loss map
             self.assertEqual(19, loss_map_outputs.count())
 
-            # 1 event loss table
+            # 16 event loss table (1 per rlz)
             event_loss_tables = risk_outputs.filter(output_type="event_loss")
-            self.assertEqual(1, event_loss_tables.count())
+            self.assertEqual(16, event_loss_tables.count())
 
             # 32 loss fractions
             loss_fraction_outputs = risk_outputs.filter(
@@ -292,7 +292,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             self.assertEqual(19, len(loss_curve_files))
             self.assertEqual(16, len(agg_loss_curve_files))
-            self.assertEqual(1, len(event_loss_table_files))
+            self.assertEqual(16, len(event_loss_table_files))
             self.assertEqual(19, len(loss_map_files))
 
             for f in loss_curve_files:
