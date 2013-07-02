@@ -126,6 +126,9 @@ case "$1" in
     ;;
 
     status)
+        if [ -n "$CELERYD_CHDIR" ]; then
+            cd "$CELERYD_CHDIR"
+        fi
         $CELERYCTL status
     ;;
 
