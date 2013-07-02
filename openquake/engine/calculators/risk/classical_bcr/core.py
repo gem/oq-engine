@@ -42,9 +42,8 @@ def classical_bcr(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
-    :param dict units:
-      A dict of :class:`..base.CalculationUnit` instances keyed by
-      loss type string
+    :param list units:
+      A list of :class:`openquake.risklib.workflows.CalculationUnit`
     :param containers:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
@@ -60,14 +59,16 @@ def classical_bcr(job_id, units, containers, params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
-        for loss_type in units:
-            do_classical_bcr(units[loss_type], containers, params, profile)
+        for unit in units:
+            do_classical_bcr(
+                unit,
+                containers.with_args(unit.loss_type), params, profile)
     num_items = base.get_num_items(units)
     signal_task_complete(job_id=job_id, num_items=num_items)
 classical_bcr.ignore_result = False
 
 
-def do_classical_bcr(units, containers, params, profile):
+def do_classical_bcr(unit, containers, params, profile):
     for unit_orig, unit_retro in utils.pairwise(units):
         loss_type = unit_orig.loss_type
 
@@ -118,36 +119,32 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         super(ClassicalBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
 
-    def calculation_units(self, loss_type, assets):
-        units = []
-
+    def calculation_unit(self, loss_type, assets):
         taxonomy = assets[0].taxonomy
         model_orig = self.risk_models[taxonomy][loss_type]
         model_retro = self.risk_models_retrofitted[taxonomy][loss_type]
 
-        for ho in self.rc.hazard_outputs():
-            units.extend([
-                base.CalculationUnit(
-                    loss_type,
-                    dict(curves=calculators.ClassicalLossCurve(
-                        model_orig.vulnerability_function,
-                        self.rc.lrem_steps_per_interval)),
-                    hazard_getters.HazardCurveGetterPerAsset(
-                        ho,
-                        assets,
-                        self.rc.best_maximum_distance,
-                        model_orig.imt)),
-                base.CalculationUnit(
-                    loss_type,
-                    dict(curves=calculators.ClassicalLossCurve(
-                        model_retro.vulnerability_function,
-                        self.rc.lrem_steps_per_interval)),
-                    hazard_getters.HazardCurveGetterPerAsset(
-                        ho,
-                        assets,
-                        self.rc.best_maximum_distance,
-                        model_retro.imt))])
-        return units
+        return [
+            base.CalculationUnit(
+                loss_type,
+                dict(curves=calculators.ClassicalLossCurve(
+                    model_orig.vulnerability_function,
+                    self.rc.lrem_steps_per_interval)),
+                hazard_getters.HazardCurveGetterPerAsset(
+                    self.rc.hazard_outputs(),
+                    assets,
+                    self.rc.best_maximum_distance,
+                    model_orig.imt)),
+            base.CalculationUnit(
+                loss_type,
+                dict(curves=calculators.ClassicalLossCurve(
+                    model_retro.vulnerability_function,
+                    self.rc.lrem_steps_per_interval)),
+                hazard_getters.HazardCurveGetterPerAsset(
+                    self.rc.hazard_outputs(),
+                    assets,
+                    self.rc.best_maximum_distance,
+                    model_retro.imt))]
 
     @property
     def calculator_parameters(self):

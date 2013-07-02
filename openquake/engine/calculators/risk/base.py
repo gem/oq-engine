@@ -26,9 +26,9 @@ from openquake.risklib import scientific
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine import logs, export
-from openquake.engine.utils import config, stats
+from openquake.engine.utils import config, stats, tasks
 from openquake.engine.db import models
-from openquake.engine.calculators import base, post_processing
+from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import writers
 from openquake.engine.input.exposure import ExposureDBWriter
 
@@ -190,10 +190,9 @@ class RiskCalculator(base.Calculator):
                     assets = models.ExposureData.objects.get_asset_chunk(
                         self.rc, taxonomy, offset, block_size)
 
-                calculation_units = self.get_calculation_units(assets)
-
-                if not sum(calculation_units.values(), []):
-                    raise RuntimeError("No assets")
+                calculation_units = [
+                    self.calculation_unit(loss_type, assets)
+                    for loss_type in loss_types(self.risk_models)]
 
                 num_tasks += 1
                 yield [self.job.id,
@@ -207,16 +206,6 @@ class RiskCalculator(base.Calculator):
         if num_tasks != expected_tasks:
             raise RuntimeError('Expected %d tasks, generated %d!' % (
                                expected_tasks, num_tasks))
-
-    def get_calculation_units(self, assets):
-        """
-        :returns: the calculation units to be considered. Default
-        behavior is to returns a dict keyed by loss types. Calculators
-        that do not support multiple loss types must override this
-        method.
-        """
-        return dict([(loss_type, self.calculation_units(loss_type, assets))
-                     for loss_type in loss_types(self.risk_models)])
 
     def export(self, *args, **kwargs):
         """
@@ -587,25 +576,24 @@ class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
 def get_num_items(units):
     """
     :param units:
-        a not empty dictionary of not empty lists of
+        a not empty lists of
         :class:`openquake.engine.calculators.risk.base.CalculationUnit`
         instances
     """
-    # FIXME(lp). Navigating in an opaque structure is a code smell.
-    # We need to refactor the data structure used by celery tasks.
+    # Get the getter (an instance of `..hazard_getters.HazardGetter`)
+    # from the first unit. A getter keeps a reference to the list of
+    # assets we want to consider
+    return len(units[0].getter.assets)
 
-    # let's get the first one
-    first_list_of_units = units.values()[0]
 
-    # get the first item in the list. Then, get the getter from it
-    # (an instance of `..hazard_getters.HazardGetter`.
-    first_getter = first_list_of_units[0].getter
+def risk_task(task):
+    def fn(job_id, units, *args):
+        task(job_id, units, *args)
+        num_items = get_num_items(units)
+        base.signal_task_complete(job_id=job_id, num_items=num_items)
+    fn.ignore_result = False
 
-    # A getter keeps a reference to the list of assets we want to
-    # consider
-    num_items = len(first_getter.assets)
-
-    return num_items
+    return tasks.oqtask(count_progress_risk('r')(fn))
 
 
 #: Hold both a Vulnerability function or a fragility function set and
@@ -613,13 +601,6 @@ def get_num_items(units):
 RiskModel = collections.namedtuple(
     'RiskModel',
     'imt vulnerability_function fragility_functions')
-
-
-#: A calculation unit holds a set of callable, a getter that
-#: retrieves the data to work on, and the type of losses we are considering
-CalculationUnit = collections.namedtuple(
-    'CalculationUnit',
-    'loss_type calcs getter')
 
 
 #: Calculator parameters are used to compute derived outputs like loss
@@ -667,56 +648,6 @@ def make_calc_params(conditional_loss_poes=None,
                       distance_bin_width,
                       coordinate_bin_width,
                       damage_state_ids)
-
-
-def asset_statistics(losses, curves_poes, quantiles, weights, poes):
-    """
-    Compute output statistics (mean/quantile loss curves and maps)
-    for a single asset
-
-    :param losses:
-       the losses on which the loss curves are defined
-    :param curves_poes:
-       a numpy matrix suitable to be used with
-       :func:`openquake.engine.calculators.post_processing`
-    :param list quantiles:
-       an iterable over the quantile levels to be considered for
-       quantile outputs
-    :param list weights:
-       the weights associated with each realization. If all the elements are
-       `None`, implicit weights are taken into account
-    :param list poes:
-       the poe taken into account for computing loss maps
-
-    :returns:
-       a tuple with
-       1) mean loss curve
-       2) a list of quantile curves
-    """
-    montecarlo = weights[0] is not None
-
-    quantile_curves = []
-    for quantile in quantiles:
-        if montecarlo:
-            q_curve = post_processing.weighted_quantile_curve(
-                curves_poes, weights, quantile)
-        else:
-            q_curve = post_processing.quantile_curve(curves_poes, quantile)
-
-        quantile_curves.append((losses, q_curve))
-
-    # then mean loss curve
-    mean_curve_poes = post_processing.mean_curve(curves_poes, weights)
-    mean_curve = (losses, mean_curve_poes)
-
-    mean_map = [scientific.conditional_loss_ratio(losses, mean_curve_poes, poe)
-                for poe in poes]
-
-    quantile_maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
-                      for losses, poes in quantile_curves]
-                     for poe in poes]
-
-    return (mean_curve, quantile_curves, mean_map, quantile_maps)
 
 
 def required_imts(risk_models):
