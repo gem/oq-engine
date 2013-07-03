@@ -28,7 +28,7 @@ import numpy
 from django import db
 
 from openquake.nrmllib.risk import parsers
-from openquake.risklib import scientific, calculators
+from openquake.risklib import scientific, calculators, workflows
 
 from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -46,9 +46,7 @@ def scenario_damage(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
-    :param dict units:
-      A dict with a single item keyed by the string "damage", a list of
-      :class:`..base.CalculationUnit` to be run
+    :param list units:
     :param containers:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
@@ -61,7 +59,7 @@ def scenario_damage(job_id, units, containers, params):
             name, job_id, scenario_damage, tracing=True)
 
     # in scenario damage calculation we have only ONE calculation unit
-    unit = units['damage'][0]
+    unit = units[0]
 
     # and NO containes
     assert len(containers) == 0
@@ -78,14 +76,14 @@ scenario_damage.ignore_result = False
 
 def do_scenario_damage(unit, params, profile):
     with profile('getting hazard'):
-        assets, ground_motion_values = unit.getter()
+        _hid, assets, ground_motion_values = unit.getter().next()
 
     if not len(assets):
         logs.LOG.warn("Exit from task as no asset could be processed")
         return None, None
 
     with profile('computing risk'):
-        fraction_matrix = unit.calcs(ground_motion_values)
+        fraction_matrix = unit.workflow(ground_motion_values)
         aggfractions = sum(fraction_matrix[i] * asset.number_of_units
                            for i, asset in enumerate(assets))
 
@@ -136,26 +134,26 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
         super(ScenarioDamageRiskCalculator, self).validate_hazard()
 
-    def get_calculation_units(self, assets):
+    def calculation_unit(self, loss_type, assets):
         """
         :returns:
           a list of :class:`..base.CalculationUnit` instances
         """
         taxonomy = assets[0].taxonomy
-        model = self.risk_models[taxonomy]['damage']
+        model = self.risk_models[taxonomy][loss_type]
 
         # no loss types support at the moment. Use the sentinel key
         # "damage" instead of a loss type for consistency with other
         # methods
-        ret = base.CalculationUnit(
-            "damage",
+        ret = workflows.CalculationUnit(
+            loss_type,
             calculators.Damage(model.fragility_functions),
             hazard_getters.GroundMotionValuesGetter(
                 self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
-        return dict(damage=ret)
+        return ret
 
     def task_completed_hook(self, message):
         """
