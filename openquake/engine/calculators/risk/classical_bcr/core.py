@@ -22,7 +22,6 @@ from openquake.risklib import workflows
 
 from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.calculators.risk.classical import core as classical
-from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 from django.db import transaction
@@ -68,7 +67,7 @@ def do_classical_bcr(unit, containers, profile):
             unit.getter(profile('getting hazard')),
             profile('computing bcr')):
 
-        with logs.tracing('writing results'):
+        with profile('writing results'):
             containers.write(
                 unit.workflow.assets,
                 outputs,
