@@ -667,6 +667,3 @@ def required_imts(risk_models):
 def loss_types(risk_models):
     return set(sum([d.keys() for d in risk_models.values()], []))
 
-
-def do_nothing(*_args):
-    return None

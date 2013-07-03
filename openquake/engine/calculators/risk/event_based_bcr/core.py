@@ -140,16 +140,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
         return taxonomies
 
-    @property
-    def calculator_parameters(self):
-        """
-        Specific calculator parameters returned as list suitable to be
-        passed in task_arg_gen.
-        """
-        return base.make_calc_params(
-            asset_life_expectancy=self.rc.asset_life_expectancy,
-            interest_rate=self.rc.interest_rate)
-
     def post_process(self):
         """
         No need to compute the aggregate loss curve in the BCR calculator.
