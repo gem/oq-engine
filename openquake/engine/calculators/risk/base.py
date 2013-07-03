@@ -17,6 +17,7 @@
 
 """Base RiskCalculator class."""
 
+from functools import wraps
 import collections
 import StringIO
 
@@ -587,6 +588,7 @@ def get_num_items(units):
 
 
 def risk_task(task):
+    @wraps(task)
     def fn(job_id, units, *args):
         task(job_id, units, *args)
         num_items = get_num_items(units)
