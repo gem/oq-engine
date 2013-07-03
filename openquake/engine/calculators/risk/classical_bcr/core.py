@@ -115,15 +115,6 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
                     self.rc.best_maximum_distance,
                     model_retro.imt)))
 
-    @property
-    def calculator_parameters(self):
-        """
-        Specific calculator parameters returned as list suitable to be
-        passed in task_arg_gen
-        """
-
-        return base.make_calc_params()
-
     def create_outputs(self, hazard_output):
         """
         Create BCR Distribution output container, i.e. a
