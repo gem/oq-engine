@@ -246,7 +246,9 @@ _devtest_innervm_run () {
     done
 
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; 
-                 for i in `find qa_tests/risk/ -iname fixtures.tar`; do python openquake/engine/tools/restore_hazards.py \$i; done"
+                 for i in `find qa_tests/risk/ -iname fixtures.tar`; do
+                   python openquake/engine/tools/restore_hazards.py \$i
+                 done"
 
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
