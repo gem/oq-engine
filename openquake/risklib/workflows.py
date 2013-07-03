@@ -1,3 +1,4 @@
+from openquake.engine.job.validation import asset_life_expectancy_is_valid
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2013, GEM Foundation.
@@ -16,12 +17,13 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
+import itertools
 import collections
 import contextlib
 import numpy
 from scipy import interpolate
 
-from openquake.risklib import calculators, utils
+from openquake.risklib import calculators, utils, scientific
 
 
 #: A calculation unit a risklib.workflow, a getter that
@@ -314,6 +316,96 @@ class ProbabilisticEventBased(object):
             self.assets, mean_curves, mean_maps,
             quantile_curves, quantile_maps)
 
+
+class ClassicalBCR(object):
+    def __init__(self,
+                 vulnerability_function_orig,
+                 vulnerability_function_retro,
+                 lrem_steps_per_interval,
+                 interest_rate, asset_life_expectancy):
+        self.assets = None
+        self.interest_rate = interest_rate
+        self.asset_life_expectancy = asset_life_expectancy
+        self.curves_orig = calculators.ClassicalLossCurve(
+            vulnerability_function_orig,
+            lrem_steps_per_interval)
+        self.curves_retro = calculators.ClassicalLossCurve(
+            vulnerability_function_retro,
+            lrem_steps_per_interval)
+
+    def __call__(self, loss_type, data, monitor=None):
+        monitor = monitor or dummy_monitor
+        for hid, assets, orig, retro in data:
+            self.assets = assets
+            with monitor:
+                original_loss_curves = self.curves_orig(orig)
+                retrofitted_loss_curves = self.curves_retro(retro)
+
+                eal_original = [
+                    scientific.average_loss(losses, poes)
+                    for losses, poes in original_loss_curves]
+
+                eal_retrofitted = [
+                    scientific.average_loss(losses, poes)
+                    for losses, poes in retrofitted_loss_curves]
+
+                bcr_results = [
+                    scientific.bcr(
+                        eal_original[i], eal_retrofitted[i],
+                        self.interest_rate, self.asset_life_expectancy,
+                        asset.value(loss_type), asset.retrofitted(loss_type))
+                    for i, asset in enumerate(assets)]
+
+            yield hid, zip(eal_original, eal_retrofitted, bcr_results)
+
+
+class ProbabilisticEventBasedBCR(object):
+    def __init__(self,
+                 vulnerability_function_orig,
+                 seed_orig,
+                 vulnerability_function_retro,
+                 seed_retro,
+                 asset_correlation,
+                 time_span, tses, loss_curve_resolution,
+                 interest_rate, asset_life_expectancy):
+        self.assets = None
+        self.interest_rate = interest_rate
+        self.asset_life_expectancy = asset_life_expectancy
+        self.losses_orig = calculators.ProbabilisticLoss(
+            vulnerability_function_orig,
+            seed_orig,
+            asset_correlation)
+        self.losses_retro = calculators.ProbabilisticLoss(
+            vulnerability_function_retro,
+            seed_retro,
+            asset_correlation)
+        self.curves = calculators.EventBasedLossCurve(
+            time_span, tses, loss_curve_resolution)
+
+    def __call__(self, loss_type, data, monitor=None):
+        monitor = monitor or dummy_monitor
+        for hid, assets, (orig, _), (retro, __) in data:
+            self.assets = assets
+            with monitor:
+                original_loss_curves = self.curves(self.losses_orig(orig))
+                retrofitted_loss_curves = self.curves(self.losses_retro(retro))
+
+                eal_original = [
+                    scientific.average_loss(losses, poes)
+                    for losses, poes in original_loss_curves]
+
+                eal_retrofitted = [
+                    scientific.average_loss(losses, poes)
+                    for losses, poes in retrofitted_loss_curves]
+
+                bcr_results = [
+                    scientific.bcr(
+                        eal_original[i], eal_retrofitted[i],
+                        self.interest_rate, self.asset_life_expectancy,
+                        asset.value(loss_type), asset.retrofitted(loss_type))
+                    for i, asset in enumerate(assets)]
+
+            yield hid, zip(eal_original, eal_retrofitted, bcr_results)
 
 
 @contextlib.contextmanager
