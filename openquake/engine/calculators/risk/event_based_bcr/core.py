@@ -17,21 +17,17 @@
 Core functionality for the Event Based BCR Risk calculator.
 """
 
-from openquake.risklib import scientific, utils, calculators
+from openquake.risklib import workflows
 
-from openquake.engine.calculators.base import signal_task_complete
 from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.calculators.risk.event_based import core as event_based
-from openquake.engine.utils import tasks
-from openquake.engine import logs
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.db import models
 from django.db import transaction
 
 
-@tasks.oqtask
-@base.count_progress_risk('r')
-def event_based_bcr(job_id, units, containers, params):
+@base.risk_task
+def event_based_bcr(job_id, units, containers, _params):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -41,9 +37,8 @@ def event_based_bcr(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
-    :param dict units:
-      A dict of :class:`..base.CalculationUnit` instances keyed by
-      loss type string
+    :param list units:
+      A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
     :param containers:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
@@ -58,55 +53,28 @@ def event_based_bcr(job_id, units, containers, params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
-        for loss_type in units:
+        for unit in units:
             do_event_based_bcr(
-                loss_type, units[loss_type], containers, params, profile)
-    num_items = base.get_num_items(units)
-    signal_task_complete(job_id=job_id, num_items=num_items)
-event_based_bcr.ignore_result = False
+                unit,
+                containers.with_args(loss_type=unit.loss_type),
+                profile)
 
 
-def do_event_based_bcr(loss_type, units, containers, params, profile):
+def do_event_based_bcr(unit, containers, profile):
     """
     See `event_based_bcr` for docstring
     """
-    for unit_orig, unit_retro in utils.pairwise(units):
-
-        with profile('getting hazard'):
-            assets, (gmvs, _) = unit_orig.getter()
-            if len(assets) == 0:
-                logs.LOG.info("Exit from task as no asset could be processed")
-                return
-
-            _, (gmvs_retro, _) = unit_retro.getter()
-
-        with profile('computing bcr'):
-            loss_ratios = unit_orig.calcs["losses"](gmvs)
-            original_loss_curves = unit_orig.calcs["curves"](loss_ratios)
-            loss_ratios = unit_retro.calcs["losses"](gmvs_retro)
-            retrofitted_loss_curves = unit_retro.calcs["curves"](loss_ratios)
-
-            eal_original = [
-                scientific.average_loss(losses, poes)
-                for losses, poes in original_loss_curves]
-
-            eal_retrofitted = [
-                scientific.average_loss(losses, poes)
-                for losses, poes in retrofitted_loss_curves]
-
-            bcr_results = [
-                scientific.bcr(
-                    eal_original[i], eal_retrofitted[i],
-                    params.interest_rate, params.asset_life_expectancy,
-                    asset.value(loss_type), asset.retrofitted(loss_type))
-                for i, asset in enumerate(assets)]
+    for hazard_output_id, outputs in unit.workflow(
+            unit.loss_type,
+            unit.getter(profile('getting hazard')),
+            profile('computing bcr')):
 
         with profile('writing results'):
             containers.write(
-                assets, zip(eal_original, eal_retrofitted, bcr_results),
+                unit.workflow.assets,
+                outputs,
                 output_type="bcr_distribution",
-                loss_type=loss_type,
-                hazard_output_id=unit_orig.getter.hazard_output.id)
+                hazard_output_id=hazard_output_id)
 
 
 class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
@@ -134,34 +102,28 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
         time_span, tses = self.hazard_times()
 
-        return [base.CalculationUnit(
-                    loss_type,
-                    dict(
-                        losses=calculators.ProbabilisticLoss(
-                            model_orig.vulnerability_function,
-                            self.rnd.randint(0, models.MAX_SINT_32),
-                            self.rc.asset_correlation),
-                        curves=calculators.EventBasedLossCurve(
-                            time_span, tses, self.rc.loss_curve_resolution)),
-                    hazard_getters.GroundMotionValuesGetter(
-                        self.rc.hazard_outputs(),
-                        assets,
-                        self.rc.best_maximum_distance,
-                        model_orig.imt)),
-                base.CalculationUnit(
-                    loss_type,
-                    dict(
-                        losses=calculators.ProbabilisticLoss(
-                            model_retro.vulnerability_function,
-                            self.rnd.randint(0, models.MAX_SINT_32),
-                            self.rc.asset_correlation),
-                        curves=calculators.EventBasedLossCurve(
-                            time_span, tses, self.rc.loss_curve_resolution)),
-                    hazard_getters.GroundMotionValuesGetter(
-                        self.rc.hazard_outputs(),
-                        assets,
-                        self.rc.best_maximum_distance,
-                        model_retro.imt))]
+        return workflows.CalculationUnit(
+            loss_type,
+            workflows.ProbabilisticEventBasedBCR(
+                model_orig.vulnerability_function,
+                self.rnd.randint(0, models.MAX_SINT_32),
+                model_retro.vulnerability_function,
+                self.rnd.randint(0, models.MAX_SINT_32),
+                self.rc.asset_correlation,
+                time_span, tses, self.rc.loss_curve_resolution,
+                self.rc.interest_rate,
+                self.rc.asset_life_expectancy),
+            hazard_getters.BCRGetter(
+                hazard_getters.GroundMotionValuesGetter(
+                    self.rc.hazard_outputs(),
+                    assets,
+                    self.rc.best_maximum_distance,
+                    model_orig.imt),
+                hazard_getters.GroundMotionValuesGetter(
+                    self.rc.hazard_outputs(),
+                    assets,
+                    self.rc.best_maximum_distance,
+                    model_retro.imt)))
 
     def get_taxonomies(self):
         """
