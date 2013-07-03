@@ -1,4 +1,3 @@
-from openquake.engine.job.validation import asset_life_expectancy_is_valid
 # -*- coding: utf-8 -*-
 
 # Copyright (c) 2013, GEM Foundation.
@@ -17,7 +16,6 @@ from openquake.engine.job.validation import asset_life_expectancy_is_valid
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import itertools
 import collections
 import contextlib
 import numpy
@@ -406,6 +404,49 @@ class ProbabilisticEventBasedBCR(object):
                     for i, asset in enumerate(assets)]
 
             yield hid, zip(eal_original, eal_retrofitted, bcr_results)
+
+
+class Scenario(object):
+    def __init__(self,
+                 vulnerability_function,
+                 seed, asset_correlation,
+                 insured_losses):
+        self.losses = calculators.ProbabilisticLoss(
+            vulnerability_function, seed, asset_correlation)
+        if insured_losses:
+            self.insured_losses = calculators.InsuredLoss()
+        else:
+            self.insured_losses = False
+
+    def __call__(self, loss_type, data, monitor=None):
+        hid, assets, gmvs = data.next()
+        values = numpy.array([a.value(loss_type) for a in assets])
+
+        with monitor or dummy_monitor:
+            loss_ratio_matrix = self.losses(gmvs)
+            aggregate_losses = numpy.sum(
+                loss_ratio_matrix.transpose() * values, axis=1)
+
+            if self.insured_losses and loss_type != "fatalities":
+                deductibles = utils.numpy_map(
+                    lambda a: a.deductible(loss_type), assets)
+                limits = utils.numpy_map(
+                    lambda a: a.insurance_limit(loss_type), assets)
+                insured_loss_ratio_matrix = self.insured_losses(
+                    loss_ratio_matrix,
+                    deductibles,
+                    limits)
+
+                insured_loss_matrix = (
+                    insured_loss_ratio_matrix.transpose() * values)
+
+                insured_losses = numpy.array(insured_loss_matrix).sum(axis=1)
+            else:
+                insured_loss_matrix = None
+                insured_losses = None
+
+        return (hid, assets, loss_ratio_matrix, aggregate_losses,
+                insured_loss_matrix, insured_losses)
 
 
 @contextlib.contextmanager
