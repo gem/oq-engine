@@ -309,3 +309,22 @@ GROUP BY site_id ORDER BY site_id;
                 gmv.clear()  # save memory
                 all_gmvs.extend([array] * n_assets)
         return all_assets, (all_gmvs, all_ruptures)
+
+
+class BCRGetter(object):
+    def __init__(self, getter_orig, getter_retro):
+        self.assets = getter_orig.assets
+        self.getter_orig = getter_orig
+        self.getter_retro = getter_retro
+
+    def __call__(self, monitor):
+        orig_gen = self.getter_orig(monitor)
+        retro_gen = self.getter_retro(monitor)
+
+        try:
+            while 1:
+                hid, assets, orig = orig_gen.next()
+                _hid, _assets, retro = retro_gen.next()
+                yield hid, assets, orig, retro
+        except StopIteration:
+            pass
