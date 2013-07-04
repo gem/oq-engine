@@ -126,47 +126,66 @@ class Classical(object):
                 yield hid, self.Output(assets, curves, loss_maps, fractions)
 
         if len(loss_curves) > 1:
-            self._loss_curves = numpy.array(
-                self._loss_curves).transpose(1, 0, 2, 3)
+            self._loss_curves = numpy.array(loss_curves).transpose(1, 0, 2, 3)
 
     def statistics(self, weights, quantiles, post_processing):
         if self._loss_curves is None:
             return
 
         ret = []
+
+        # for each asset get all the loss curves and compute per asset
+        # statistics
         for loss_ratio_curves in self._loss_curves:
             # get the loss ratios only from the first curve
             loss_ratios, _poes = loss_ratio_curves[0]
             curves_poes = [poes for _losses, poes in loss_ratio_curves]
 
-            mean_curve, quantile_curves, mean_maps, quantile_maps = (
+            _mean_curve, _quantile_curves, _mean_maps, _quantile_maps = (
                 calculators.asset_statistics(
                     loss_ratios, curves_poes,
                     quantiles, weights, self.maps.poes, post_processing))
 
             # compute also mean and quantile loss fractions
-            mean_fractions = self.maps([mean_curve])
-            quantile_fractions = [
-                self.fractions([(losses, poes)])
-                for losses, poes in quantile_curves]
+            _mean_fractions = [
+                scientific.conditional_loss_ratio(
+                    _mean_curve[0], _mean_curve[1], poe)
+                for poe in self.fractions.poes]
 
-            ret.append((mean_curve, mean_maps, mean_fractions,
-                        quantile_curves, quantile_maps, quantile_fractions))
+            # for each quantile build F loss maps
+            _quantile_fractions = [
+                [scientific.conditional_loss_ratio(losses, poes, poe)
+                 for losses, poes in _quantile_curves]
+                for poe in self.fractions.poes]
 
-        (mean_curve, mean_maps, mean_fractions,
+            ret.append((_mean_curve, _mean_maps, _mean_fractions,
+                        _quantile_curves, _quantile_maps, _quantile_fractions))
+
+        # zip all the per-asset statistics to have per-type statistics
+        (mean_curves, mean_maps, mean_fractions,
          quantile_curves, quantile_maps, quantile_fractions) = zip(*ret)
-        # now all the lists keep N items
 
-        # transpose maps and fractions to have P/F/Q items of N-sized lists
+        # transpose maps and fractions in order to end up with P x N
+        # matrix of loss map values, where P is the number of poes and
+        # N is the number of assets
         mean_maps = numpy.array(mean_maps).transpose()
         mean_fractions = numpy.array(mean_fractions).transpose()
+
+        # swap the first and the second dimension of quantile curves
+        # to end up with a matrix with Q x N Loss curves where a Q is
+        # the number of quantiles
         quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
+
+        # swap the first and the third dimension of quantile maps to
+        # end up with a matrix of Q x P x N loss map values
         quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
-        quantile_fractions = numpy.array(quantile_fractions).transpose(2, 1, 0)
+
+        quantile_fractions = numpy.array(quantile_fractions).transpose(
+            2, 1, 0)
 
         return self.StatisticalOutput(
             self._assets,
-            mean_curve, mean_maps,
+            mean_curves, mean_maps,
             mean_fractions, quantile_curves, quantile_maps, quantile_fractions)
 
 
