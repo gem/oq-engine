@@ -217,7 +217,8 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # build oq-hazardlib speedups and put in the right place
-    ssh $lxc_ip "cd oq-hazardlib
+    ssh $lxc_ip "set -e
+                 cd oq-hazardlib
                  python ./setup.py build
                  for i in \$(find build/ -name *.so); do
                      o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
@@ -229,7 +230,7 @@ _devtest_innervm_run () {
 
     # configure the machine to run tests
     ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
-    ssh $lxc_ip "
+    ssh $lxc_ip "set -e
         for dbu in oq_reslt_writer oq_job_superv oq_job_init oq_admin; do
             sudo sed -i \"1ilocal   openquake   \$dbu                   md5\" /etc/postgresql/9.1/main/pg_hba.conf
         done"
@@ -251,7 +252,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
-        # run tests
+        # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine ;
                  nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x tests/
@@ -376,7 +377,7 @@ _pkgtest_innervm_run () {
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
-        ssh $lxc_ip "cd demos
+        ssh $lxc_ip "set -e ; cd demos
         for ini in \$(find ./hazard -name job.ini); do
             openquake --run-hazard  \$ini --exports xml
         done
