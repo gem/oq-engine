@@ -31,6 +31,17 @@ from openquake.risklib import scientific, utils
 
 
 def ClassicalLossCurve(vulnerability_function, steps):
+    """
+    :param vulnerability_function:
+       a :class:`openquake.risklib.scientific.VulnerabilityFunction`
+       instance used to compute loss curves by using the Classical PSHA-based
+       algorithm
+    :param int steps:
+       the number of steps used in the Classical PSHA-based algorithm
+    :returns:
+       a function that can be applied to a set of hazard curves.
+       See :func:`openquake.risklib.scientific.classical` for more details
+    """
     return functools.partial(
         utils.numpy_map,
         functools.partial(
@@ -40,6 +51,18 @@ def ClassicalLossCurve(vulnerability_function, steps):
 
 
 def EventBasedLossCurve(time_span, tses, curve_resolution):
+    """
+    :param int time_span:
+       The investigation time considered by the event based algorithm
+    :param int tses:
+       The time of the stochastic event set considered
+    :param int curve_resolution:
+       The resolution (number of values) the loss curve will be built on
+    :returns:
+       a function that can be applied to a set of loss values.
+       See :func:`openquake.risklib.scientific.event_based` for more details
+    """
+
     return functools.partial(
         utils.numpy_map,
         functools.partial(
@@ -49,7 +72,7 @@ def EventBasedLossCurve(time_span, tses, curve_resolution):
 
 
 def ProbabilisticLoss(
-        vulnerability_function, seed, asset_correlation):
+        vulnerability_function, seed=None, asset_correlation=0):
     return functools.partial(
         scientific.vulnerability_function_applier,
         vulnerability_function,

@@ -39,7 +39,7 @@ class EventBasedTestCase(unittest.TestCase):
                             [1., 2., 3., 4., 5.]])
 
         loss_matrix = scientific.vulnerability_function_applier(
-            vf, gmvs, seed=1, correlation=0)
+            vf, gmvs, seed=1, asset_correlation=0)
         losses, poes = scientific.event_based(
             loss_matrix[0], 120, 30, curve_resolution=4)
 
@@ -56,7 +56,7 @@ class EventBasedTestCase(unittest.TestCase):
         gmvs = numpy.array([[10., 20., 30., 40., 50.],
                            [1., 2., 3., 4., 5.]])
         loss_matrix = scientific.vulnerability_function_applier(
-            vf, gmvs, seed=1, correlation=0.5)
+            vf, gmvs, seed=1, asset_correlation=0.5)
 
         losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
         first_curve_integral = scientific.average_loss(losses, poes)
@@ -74,7 +74,7 @@ class EventBasedTestCase(unittest.TestCase):
                 [1., 2., 3., 4., 5.]]
 
         loss_matrix = scientific.vulnerability_function_applier(
-            vf, gmvs, seed=1, correlation=1)
+            vf, gmvs, seed=1, asset_correlation=1)
         losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
 
         first_curve_integral = scientific.average_loss(losses, poes)
@@ -140,10 +140,10 @@ class EventBasedTestCase(unittest.TestCase):
             scientific.average_loss(*scientific.event_based(
                 scientific.insured_losses(
                     loss_ratios,
-                    values[i], deductibles[i], insured_limits[i]),
+                    deductibles[i] / values[i], insured_limits[i] / values[i]),
                 50, 50, 20))
             for i, loss_ratios in enumerate(loss_ratios)]
 
         numpy.testing.assert_allclose(
-            [207.86489132,   38.07815797],
+            [207.86489132 / 3000,   38.07815797 / 1000],
             insured_average_losses)

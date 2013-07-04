@@ -43,7 +43,7 @@ DEFAULT_CURVE_RESOLUTION = 50
 
 class VulnerabilityFunction(object):
     # FIXME (lp). Provide description
-    def __init__(self, imls, mean_loss_ratios, covs, distribution_name):
+    def __init__(self, imls, mean_loss_ratios, covs=None, distribution="LN"):
         """
         :param list imls: Intensity Measure Levels for the
             vulnerability function. All values must be >= 0.0, values
@@ -59,10 +59,14 @@ class VulnerabilityFunction(object):
             related to this function.
         """
         self._check_vulnerability_data(
-            imls, mean_loss_ratios, covs, distribution_name)
+            imls, mean_loss_ratios, covs, distribution)
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
-        self.covs = numpy.array(covs)
+
+        if covs is not None:
+            self.covs = numpy.array(covs)
+        else:
+            self.covs = numpy.zeros(self.imls.shape)
 
         for lr, cov in itertools.izip(self.mean_loss_ratios, self.covs):
             if lr == 0.0 and cov > 0.0:
@@ -70,13 +74,15 @@ class VulnerabilityFunction(object):
                        "corresponding coeff. of varation > 0.0")
                 raise ValueError(msg)
 
-        self.distribution_name = distribution_name
-        (self.resolution, self.stddevs, self._mlr_i1d, self._covs_i1d,
-         self.distribution) = itertools.repeat(None, 5)
+        self.distribution_name = distribution
+
+        # to be set in #init
+        (self.stddevs, self._mlr_i1d, self._covs_i1d,
+         self.distribution) = None, None, None, None
+
         self.init()
 
     def init(self):
-        self.resolution = len(self.imls)
         self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
@@ -171,10 +177,10 @@ class VulnerabilityFunction(object):
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
         assert imls == sorted(set(imls))
         assert all(x >= 0.0 for x in imls)
-        assert len(covs) == len(imls)
+        assert covs is None or len(covs) == len(imls)
         assert len(loss_ratios) == len(imls)
         assert all(x >= 0.0 for x in loss_ratios)
-        assert all(x >= 0.0 for x in covs)
+        assert covs is None or all(x >= 0.0 for x in covs)
         assert distribution in ["LN", "BT"]
 
     def __call__(self, imls):
@@ -217,11 +223,6 @@ class VulnerabilityFunction(object):
     def loss_ratio_exceedance_matrix(self, steps):
         """Compute the LREM (Loss Ratio Exceedance Matrix).
 
-        :param vuln_function:
-            The vulnerability function used to compute the LREM.
-        :type vuln_function:
-            :class:`openquake.risklib.vulnerability_function.\
-            VulnerabilityFunction`
         :param int steps:
             Number of steps between loss ratios.
         """
@@ -234,9 +235,8 @@ class VulnerabilityFunction(object):
         lrem = numpy.empty((loss_ratios.size, self.imls.size), float)
 
         for row, loss_ratio in enumerate(loss_ratios):
-            for col in range(self.resolution):
-                mean_loss_ratio = self.mean_loss_ratios[col]
-                stddev = self.stddevs[col]
+            for col, (mean_loss_ratio, stddev) in enumerate(
+                    itertools.izip(self.mean_loss_ratios, self.stddevs)):
                 lrem[row][col] = self.distribution.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return loss_ratios, lrem
@@ -368,22 +368,21 @@ class Distribution(object):
         """
         pass
 
-    def sample(self, means, covs=None, stddevs=None):
+    def sample(self, means, covs, stddevs):
         """
         :returns: sample a set of losses
         :param means: an array of mean losses
         :param covs: an array of covariances
         :param stddevs: an array of stddevs
         """
-        pass
+        raise NotImplementedError
 
     def survival(self, loss_ratio, mean, stddev):
         """
         Return the survival function of the distribution with `mean`
         and `stddev` applied to `loss_ratio`
         """
-
-        pass
+        raise NotImplementedError
 
 
 class DegenerateDistribution(Distribution):
@@ -391,14 +390,12 @@ class DegenerateDistribution(Distribution):
     The degenerate distribution. E.g. a distribution with a delta
     corresponding to the mean.
     """
-    def init(self, *args):
-        pass
-
-    def sample(self, means, *_):
+    def sample(self, means, _covs, _stddev):
         return means
 
-    def survival(self, *_):
-        return 0
+    def survival(self, loss_ratio, mean, _stddev):
+        return numpy.piecewise(
+            loss_ratio, [loss_ratio > mean or not mean], [0, 1])
 
 
 @DISTRIBUTIONS.add('LN')
@@ -430,7 +427,7 @@ class LogNormalDistribution(Distribution):
             means_vector, covariance_matrix, samples).transpose()
         self.epsilon_idx = 0
 
-    def sample(self, means, covs, _):
+    def sample(self, means, covs, _stddevs):
         if self.epsilons is None:
             raise ValueError("A LogNormalDistribution must be initialized "
                              "before you can use it")
@@ -448,10 +445,8 @@ class LogNormalDistribution(Distribution):
         # approaches to a step function, otherwise (`mean` == 0) we
         # returns 0
         if stddev == 0:
-            if loss_ratio > mean or mean == 0:
-                return 0
-            elif loss_ratio <= mean:
-                return 1
+            return numpy.piecewise(
+                loss_ratio, [loss_ratio > mean or not mean], [0, 1])
 
         variance = stddev ** 2.0
 
@@ -462,7 +457,7 @@ class LogNormalDistribution(Distribution):
 
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(Distribution):
-    def sample(self, means, _, stddevs):
+    def sample(self, means, _covs, stddevs):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
         return numpy.random.beta(alpha, beta, size=None)
@@ -553,7 +548,6 @@ def classical(vulnerability_function, hazard_curve_values, steps=10):
         Number of steps between loss ratios.
     """
     vf = vulnerability_function.strictly_increasing()
-
     loss_ratios, lrem = vf.loss_ratio_exceedance_matrix(steps)
 
     lrem_po = _loss_ratio_exceedance_matrix_per_poos(
