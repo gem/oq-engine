@@ -59,7 +59,15 @@ sig_hand () {
 #
 #  repo_id_get - retry git repo from local git remote command
 repo_id_get () {
-    repo_line="$(git remote -vv | grep "^origin[ ${TB}]" | grep '(fetch)$')"
+    local repo_name repo_line
+
+    if ! repo_name="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)"; then
+        echo "no remote repository associated with the current branch, exit 1"
+        exit 1
+    fi
+    repo_name="$(echo "$repo_name" | sed 's@/.*@@g')"
+
+    repo_line="$(git remote -vv | grep "^${repo_name}[ ${TB}].*(fetch)\$")"
     if echo "$repo_line" | grep -q '[0-9a-z_-\.]\+@[a-z0-9_-\.]\+:'; then
         repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+[^ ${TB}@]\+@//g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g;s@:@/@g")"
     else
@@ -68,7 +76,6 @@ repo_id_get () {
 
     echo "$repo_id"
 }
-
 
 #
 #  mksafedir <dname> - try to create a directory and rise an alert if it already exists
