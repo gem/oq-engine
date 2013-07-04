@@ -92,14 +92,14 @@ def do_event_based(unit, containers, params, profile):
 
         if params.sites_disagg:
             with profile('disaggregating results'):
-                disagg_outputs = disaggregate(outputs, params)
+                rupture_ids = unit.workflow.event_loss_table.keys()
+                disagg_outputs = disaggregate(outputs, rupture_ids, params)
         else:
             disagg_outputs = None
 
         with profile('saving individual risk'):
             save_individual_outputs(
-                containers.with_args(
-                    hazard_output_id=hazard_output_id),
+                containers.with_args(hazard_output_id=hazard_output_id),
                 outputs, disagg_outputs, params)
 
     with profile('computing risk statistics'):
@@ -174,19 +174,22 @@ class DisaggregationOutputs(object):
         self.fractions = fractions
 
 
-def disaggregate(outputs, params):
+def disaggregate(outputs, rupture_ids, params):
     """
     Compute disaggregation outputs given the individual `outputs` and `params`
 
     :param outputs:
-      an instance of :class:`UnitOutputs`
+      an instance of
+      :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
     :param params:
       an instance of :class:`..base.CalcParams`
+    :param list rupture_ids:
+      a list of :class:`openquake.engine.db.models.SESRupture` IDs
     :returns:
       an instance of :class:`DisaggregationOutputs`
     """
-    def disaggregate_site(site, loss_ratios, ruptures, params):
-        for fraction, rupture_id in zip(loss_ratios, ruptures):
+    def disaggregate_site(site, loss_ratios):
+        for fraction, rupture_id in zip(loss_ratios, rupture_ids):
 
             rupture = models.SESRupture.objects.get(pk=rupture_id)
             s = rupture.surface
@@ -204,11 +207,10 @@ def disaggregate(outputs, params):
 
     assets_disagg = []
     disagg_matrix = []
-    ruptures = outputs.event_loss_table.keys()
+
     for asset, losses in zip(outputs.assets, outputs.loss_matrix):
         if asset.site in params.sites_disagg:
-            disagg_matrix.extend(list(
-                disaggregate_site(asset.site, losses, ruptures, params)))
+            disagg_matrix.extend(list(disaggregate_site(asset.site, losses)))
             assets_disagg.append(asset)
     if assets_disagg:
         magnitudes, coordinates, fractions = zip(*disagg_matrix)
