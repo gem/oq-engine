@@ -22,7 +22,7 @@ import numpy
 
 def with_slots(cls):
     """
-    Decorator for a class with __slots__ to a class. It automatically defines
+    Decorator for a class with __slots__. It automatically defines
     the methods __eq__, __ne__, assert_equal, __getstate__ and __setstate__
     """
     def _compare(self, other):

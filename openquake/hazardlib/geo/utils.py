@@ -129,6 +129,10 @@ def get_spherical_bounding_box(lons, lats):
 
 @with_slots
 class OrthographicProjection(object):
+    """
+    Callable object to compute orthographic projections. See the docstring
+    of get_orthographic_projection.
+    """
     __slots__ = ('west east north south lambda0 phi0 '
                  'cos_phi0 sin_phi0 sin_pi_over_4').split()
 
@@ -188,10 +192,10 @@ def get_orthographic_projection(west, east, north, south):
     Create and return a projection object for a given bounding box.
 
     :returns:
-        Function that can perform both forward and reverse projection
-        (converting from longitudes and latitudes to x and y values
-        on 2d-space and vice versa). Function takes three arguments:
-        first two are numpy arrays of longitudes and latitudes *or*
+        callable OrthographicProjection object that can perform both forward
+        and reverse projection (converting from longitudes and latitudes to x
+        and y values on 2d-space and vice versa). The call takes three
+        arguments: first two are numpy arrays of longitudes and latitudes *or*
         abscissae and ordinates of points to project and the third one
         is a boolean that allows to choose what operation is requested --
         is it forward or reverse one. ``True`` value given to third
@@ -200,7 +204,7 @@ def get_orthographic_projection(west, east, north, south):
         is needed. The default value for "reverse" argument is ``False``,
         which means forward projection (degrees to kilometers).
 
-        Resulting function raises ``ValueError`` in forward projection
+        Raises ``ValueError`` in forward projection
         mode if any of the target points is further than 90 degree
         (along the great circle arc) from the projection center.
 
