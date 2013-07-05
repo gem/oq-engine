@@ -26,8 +26,10 @@ from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class PlanarSurface(BaseQuadrilateralSurface):
     """
     Planar rectangular surface with two sides parallel to the Earth surface.
@@ -64,6 +66,10 @@ class PlanarSurface(BaseQuadrilateralSurface):
     #: as a fraction of the surface's area.
     IMPERFECT_RECTANGLE_TOLERANCE = 0.0008
 
+    __slots__ = ('mesh_spacing strike dip width length '
+                 'corner_lons corner_lats corner_depths '
+                 'normal d uv1 uv2 zero_zero').split()
+
     def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
         super(PlanarSurface, self).__init__()
@@ -93,8 +99,8 @@ class PlanarSurface(BaseQuadrilateralSurface):
             top_left.depth, top_right.depth,
             bottom_left.depth, bottom_right.depth
         ])
+        # not set the attributes normal, d, uv1, uv2, zero_zero
         self._init_plane()
-
         # now we can check surface for validity
         dists, xx, yy = self._project(self.corner_lons, self.corner_lats,
                                       self.corner_depths)

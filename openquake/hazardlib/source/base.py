@@ -18,8 +18,10 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class SeismicSource(object):
     """
     Seismic Source is an object representing geometry and activity rate
@@ -58,9 +60,11 @@ class SeismicSource(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, rupture_mesh_spacing,
-                 magnitude_scaling_relationship, rupture_aspect_ratio):
+    __slots__ = 'source_id name tectonic_region_type mfd'.split()
+
+    def __init__(self, source_id, name, tectonic_region_type, mfd,
+                 rupture_mesh_spacing, magnitude_scaling_relationship,
+                 rupture_aspect_ratio):
 
         if rupture_mesh_spacing is not None and not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')

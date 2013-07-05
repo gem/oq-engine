@@ -23,8 +23,10 @@ from openquake.hazardlib.source.base import SeismicSource
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class CharacteristicFaultSource(SeismicSource):
     """
     Characteristic source typology represents seismicity occuring on a generic
@@ -49,6 +51,10 @@ class CharacteristicFaultSource(SeismicSource):
     magnitude scaling relationship, and aspect ratio, therefore the constructor
     set these parameters to ``None``.
     """
+    __slots__ = SeismicSource.__slots__ + (
+        'rupture_mesh_spacing magnitude_scaling_relationship '
+        'rupture_aspect_ratio surface rake').split()
+
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, surface, rake):
         super(CharacteristicFaultSource, self).__init__(

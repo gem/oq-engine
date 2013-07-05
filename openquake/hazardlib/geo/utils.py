@@ -22,6 +22,7 @@ import shapely.geometry
 
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.geodetic import EARTH_RADIUS
+from openquake.hazardlib.slots import with_slots
 
 
 def clean_points(points):
@@ -126,15 +127,75 @@ def get_spherical_bounding_box(lons, lats):
     return west, east, north, south
 
 
+@with_slots
+class OrthographicProjection(object):
+    """
+    Callable object to compute orthographic projections. See the docstring
+    of get_orthographic_projection.
+    """
+    __slots__ = ('west east north south lambda0 phi0 '
+                 'cos_phi0 sin_phi0 sin_pi_over_4').split()
+
+    def __init__(self, west, east, north, south):
+        self.west = west
+        self.east = east
+        self.north = north
+        self.south = south
+        self.lambda0, self.phi0 = numpy.radians(
+            get_middle_point(west, north, east, south))
+        self.cos_phi0 = numpy.cos(self.phi0)
+        self.sin_phi0 = numpy.sin(self.phi0)
+        self.sin_pi_over_4 = (2 ** 0.5) / 2
+
+    def __call__(self, lons, lats, reverse=False):
+        if not reverse:
+            lambdas, phis = numpy.radians(lons), numpy.radians(lats)
+            cos_phis = numpy.cos(phis)
+            lambdas -= self.lambda0
+            # calculate the sine of the distance between projection center
+            # and each of the points to project
+            sin_dist = numpy.sqrt(
+                numpy.sin((self.phi0 - phis) / 2.0) ** 2.0
+                + self.cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0
+            )
+            if (sin_dist > self.sin_pi_over_4).any():
+                raise ValueError('some points are too far from the projection '
+                                 'center lon=%s lat=%s' %
+                                 (numpy.degrees(self.lambda0),
+                                  numpy.degrees(self.phi0)))
+            xx = numpy.cos(phis) * numpy.sin(lambdas)
+            yy = (self.cos_phi0 * numpy.sin(phis) - self.sin_phi0 * cos_phis
+                  * numpy.cos(lambdas))
+            return xx * EARTH_RADIUS, yy * EARTH_RADIUS
+        else:
+            # "reverse" mode, arguments are actually abscissae
+            # and ordinates in 2d space
+            xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
+            cos_c = numpy.sqrt(1 - (xx ** 2 + yy ** 2))
+            phis = numpy.arcsin(cos_c * self.sin_phi0 + yy * self.cos_phi0)
+            lambdas = numpy.arctan2(
+                xx, self.cos_phi0 * cos_c - yy * self.sin_phi0)
+            xx = numpy.degrees(self.lambda0 + lambdas)
+            yy = numpy.degrees(phis)
+            # shift longitudes greater than 180 back into the western
+            # hemisphere, that is in range [0, -180], and longitudes
+            # smaller than -180, to the heastern emisphere [0, 180]
+            idx = xx >= 180.
+            xx[idx] = xx[idx] - 360.
+            idx = xx <= -180.
+            xx[idx] = xx[idx] + 360.
+            return xx, yy
+
+
 def get_orthographic_projection(west, east, north, south):
     """
     Create and return a projection object for a given bounding box.
 
     :returns:
-        Function that can perform both forward and reverse projection
-        (converting from longitudes and latitudes to x and y values
-        on 2d-space and vice versa). Function takes three arguments:
-        first two are numpy arrays of longitudes and latitudes *or*
+        callable OrthographicProjection object that can perform both forward
+        and reverse projection (converting from longitudes and latitudes to x
+        and y values on 2d-space and vice versa). The call takes three
+        arguments: first two are numpy arrays of longitudes and latitudes *or*
         abscissae and ordinates of points to project and the third one
         is a boolean that allows to choose what operation is requested --
         is it forward or reverse one. ``True`` value given to third
@@ -143,7 +204,7 @@ def get_orthographic_projection(west, east, north, south):
         is needed. The default value for "reverse" argument is ``False``,
         which means forward projection (degrees to kilometers).
 
-        Resulting function raises ``ValueError`` in forward projection
+        Raises ``ValueError`` in forward projection
         mode if any of the target points is further than 90 degree
         (along the great circle arc) from the projection center.
 
@@ -166,48 +227,7 @@ def get_orthographic_projection(west, east, north, south):
     can be also used for measuring distance to an extent of around 700
     kilometers (error doesn't exceed 1 km up until then).
     """
-    lambda0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
-    cos_phi0 = numpy.cos(phi0)
-    sin_phi0 = numpy.sin(phi0)
-    sin_pi_over_4 = (2 ** 0.5) / 2
-
-    def proj(lons, lats, reverse=False):
-        if not reverse:
-            lambdas, phis = numpy.radians(lons), numpy.radians(lats)
-            cos_phis = numpy.cos(phis)
-            lambdas -= lambda0
-            # calculate the sine of the distance between projection center
-            # and each of the points to project
-            sin_dist = numpy.sqrt(
-                numpy.sin((phi0 - phis) / 2.0) ** 2.0
-                + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0
-            )
-            if (sin_dist > sin_pi_over_4).any():
-                raise ValueError('some points are too far from the projection '
-                                 'center lon=%s lat=%s' %
-                                 (numpy.degrees(lambda0), numpy.degrees(phi0)))
-            xx = numpy.cos(phis) * numpy.sin(lambdas)
-            yy = (cos_phi0 * numpy.sin(phis) - sin_phi0 * cos_phis
-                  * numpy.cos(lambdas))
-            return xx * EARTH_RADIUS, yy * EARTH_RADIUS
-        else:
-            # "reverse" mode, arguments are actually abscissae
-            # and ordinates in 2d space
-            xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
-            cos_c = numpy.sqrt(1 - (xx ** 2 + yy ** 2))
-            phis = numpy.arcsin(cos_c * sin_phi0 + yy * cos_phi0)
-            lambdas = numpy.arctan2(xx, cos_phi0 * cos_c - yy * sin_phi0)
-            xx = numpy.degrees(lambda0 + lambdas)
-            yy = numpy.degrees(phis)
-            # shift longitudes greater than 180 back into the western
-            # hemisphere, that is in range [0, -180], and longitudes
-            # smaller than -180, to the heastern emisphere [0, 180]
-            idx = xx >= 180.
-            xx[idx] = xx[idx] - 360.
-            idx = xx <= -180.
-            xx[idx] = xx[idx] + 360.
-            return xx, yy
-    return proj
+    return OrthographicProjection(west, east, north, south)
 
 
 def get_middle_point(lon1, lat1, lon2, lat2):

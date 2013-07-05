@@ -275,9 +275,10 @@ class BaseQuadrilateralSurface(BaseSurface):
         """
         if self._mesh is None:
             self._mesh = self._create_mesh()
-            assert (self._mesh.depths is None or len(self._mesh.depths) == 1
-                    or self._mesh.depths[0][0] < self._mesh.depths[-1][0]), \
-                   "the first row of points in the mesh must be the shallowest"
+            assert (
+                self._mesh.depths is None or len(self._mesh.depths) == 1
+                or self._mesh.depths[0][0] < self._mesh.depths[-1][0]
+            ), "the first row of points in the mesh must be the shallowest"
         return self._mesh
 
     def get_area(self):

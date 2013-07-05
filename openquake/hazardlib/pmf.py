@@ -16,8 +16,10 @@
 """
 Module :mod:`openquake.hazardlib.pmf` implements :class:`PMF`.
 """
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class PMF(object):
     """
     Probability mass function is a function that gives the probability
@@ -40,8 +42,7 @@ class PMF(object):
         If probabilities do not sum up to 1 or there is zero or negative
         probability.
     """
-
-    __slots__ = ('data', )
+    __slots__ = ['data']
 
     def __init__(self, data):
         if not data or (sum(prob for (prob, value) in data) != 1.0):

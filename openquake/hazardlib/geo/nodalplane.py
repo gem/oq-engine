@@ -17,8 +17,10 @@
 Module :mod:`openquake.hazardlib.geo.nodalplane` implements
 :class:`NodalPlane`.
 """
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class NodalPlane(object):
     """
     Nodal plane represents earthquake rupture orientation and propagation
@@ -36,7 +38,7 @@ class NodalPlane(object):
     :raises ValueError:
         If any of parameters exceeds the definition range.
     """
-    __slots__ = ('strike', 'dip', 'rake')
+    __slots__ = ['strike', 'dip', 'rake']
 
     def __init__(self, strike, dip, rake):
         self.check_dip(dip)
