@@ -31,18 +31,48 @@ CalculationUnit = collections.namedtuple(
 
 
 class Asset(object):
+    """
+    Describe an Asset as a collection of several values. A value can
+    represent a replacement cost (e.g. structural cost, business
+    interruption cost) or another quantity that can be considered for
+    a risk analysis (e.g. occupants).
+
+    Optionally, a Asset instance can hold also a collection of
+    deductible values and insured limits considered for insured losses
+    calculations.
+    """
     def __init__(self, values, deductibles=None, insured_limits=None):
+        """
+        :param dict values:
+            asset values keyed by loss types
+        :param dict deductible:
+            deductible values (expressed as a percentage relative to
+            the value of the asset) keyed by loss types
+        :param dict insured_limits:
+            insured limits values (expressed as a percentage relative to
+            the value of the asset) keyed by loss types
+        """
         self.values = values
         self.deductibles = deductibles
         self.insured_limits = insured_limits
 
     def value(self, loss_type):
+        """
+        :returns: the asset value for `loss_type`
+        """
         return self.values[loss_type]
 
     def deductible(self, loss_type):
+        """
+        :returns: the deductible of the asset for `loss_type`
+        """
         return self.deductibles[loss_type]
 
     def insured_limit(self, loss_type):
+        """
+        :returns: the deductible of the asset for `loss_type`
+        """
+
         return self.insured_limits[loss_type]
 
 
@@ -50,61 +80,54 @@ class Classical(object):
     """
     Classical PSHA-Based Workflow.
 
-    Compute loss curves, loss maps, loss fractions for each
-    realization.
+    1) Compute loss curves, loss maps, loss fractions for each
+       realization.
+    2) Compute (if more than one realization is given) mean and
+       quantiles loss curves, maps and fractions.
 
-    Then, (if more than one realization is given) it computes mean and
-    quantiles loss curves, maps and fractions.
-    """
-
-    """
-    Output:
-
-    Hold the results computed in one calculation unit for N assets.
+    Per-realization Output are saved into
+    :class:`openquake.risklib.workflows.Classical.Output` which contains
+    the several fields:
 
     :attr assets:
-      a list of N assets the outputs refer to
-
+      an iterable over N assets the outputs refer to
     :attr loss_curves:
-      a list of N loss curves (where a loss curve is a 2-tuple losses/poes)
-
+      a numpy array of N loss curves. If the curve resolution is R, the final
+      shape of the array will be (N, 2, R), where the `two` accounts for
+      the losses/poes dimensions
     :attr loss_maps:
-      a list of P elements holding list of N loss map values where P is the
-      number of `conditional_loss_poes`
-
+      a numpy array of P elements holding N loss maps where P is the
+      number of `conditional_loss_poes` considered. Shape: (P, N)
     :attr loss_fractions:
-      a list of D elements holding list of N loss map values where D is the
-      number of `poes_disagg`
+      a numpy array of D elements holding N loss fraction values where D is the
+      number of `poes_disagg`. Shape: (D, N)
+
+    The statistical outputs are stored into
+    :class:`openquake.risklib.workflows.Classical.StatisticalOutput`,
+    which holds the following fields:
+
+    :attr assets:
+      an iterable of N assets the outputs refer to
+    :attr mean_curves:
+       A numpy array with N mean loss curves. Shape: (N, 2)
+    :attr mean_maps:
+       A numpy array with P mean loss maps. Shape: (P, N)
+    :attr mean_fractions:
+       A numpy array with F mean fractions, where F is the number of PoEs
+       used for disaggregation. Shape: (F, N)
+    :attr quantile_curves:
+       A numpy array with Q quantile curves (Q = number of quantiles).
+       Shape: (Q, N, 2, R)
+    :attr quantile_maps:
+       A numpy array with Q quantile maps shaped (Q, P, N)
+    :attr quantile_fractions:
+       A numpy array with Q quantile maps shaped (Q, F, N)
     """
 
     Output = collections.namedtuple(
         'Output',
         'assets loss_curves loss_maps loss_fractions')
 
-    """
-    The statistical outputs computed by the classical calculator.
-
-    :attr assets:
-      a list of N assets the outputs refer to
-
-    :attr list mean_curves:
-       Holds N mean loss curves. A loss curve is a 2-ple losses/poes
-    :attr list mean_maps:
-       Holds P lists, where each of them holds N mean map value
-       (P = number of PoEs)
-    :attr mean_fractions:
-       Holds F lists, where each of them holds N loss fraction value
-       (F = number of disagg PoEs)
-    :attr list quantile_curves:
-       Holds Q lists, where each of them has N quantile loss curves
-       (Q = number of quantiles)
-    :attr list quantile_maps:
-       Holds Q lists, where each of them has P lists. Each of the latter
-       holds N quantile map value
-    :attr list quantile_fractions:
-       Holds Q lists, where each of them has F lists. Each of the latter
-       holds N quantile loss fraction value
-    """
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
         'assets mean_curves mean_maps mean_fractions quantile_curves '
@@ -115,6 +138,14 @@ class Classical(object):
                  lrem_steps_per_interval,
                  conditional_loss_poes,
                  poes_disagg):
+        """
+        :param float poes_disagg:
+            Probability of Exceedance levels used for disaggregate losses by
+            taxonomy.
+
+        See :func:`openquake.risklib.scientific.classical` for a description
+        of the other parameters.
+        """
         self.curves = calculators.ClassicalLossCurve(
             vulnerability_function, lrem_steps_per_interval)
         self.maps = calculators.LossMap(conditional_loss_poes)
@@ -125,6 +156,25 @@ class Classical(object):
         self._assets = None
 
     def __call__(self, data, calc_monitor=None):
+        """
+        A generator of :class:`openquake.risklib.workflows.Classical.Output`
+        instances.
+
+        :param data:
+           an iterator over tuples with form (hid, assets, curves) where
+           at each iteration a realization of hazard data is considered,
+           hid identifies the id of the hazard realization, assets is an
+           iterator over N assets, and curves is an iterator over N hazard
+           curves.
+
+        :param calc_monitor:
+           a context manager the user can provide to log/monitor each
+           single output computation.
+
+        :NOTE: this function will collect all the loss curves as a
+        side effect in the field `_loss_curves` (if the number of realizations
+        is bigger than 1).
+        """
         loss_curves = []
 
         monitor = calc_monitor or DummyMonitor()
@@ -144,10 +194,30 @@ class Classical(object):
             self._loss_curves = numpy.array(loss_curves).transpose(1, 0, 2, 3)
 
     def statistics(self, weights, quantiles, post_processing):
+        """
+        :returns:
+            a :class:`openquake.risklib.workflows.Classical.StatisticalOutput`
+            instance holding statistical outputs (e.g. mean loss curves).
+        :param weights:
+            a collection of weights associated with each realization, to
+            allow the user to compute weighted means, weighted quantiles, etc.
+        :param quantiles:
+            quantile levels used to compute quantile outputs
+        :param post_processing:
+            an object implementing the following protocol:
+            #mean_curve(curves, weights)
+            #weighted_quantile_curve(curves, weights, quantile)
+            #quantile_curve(curves, quantile)
+        """
         if self._loss_curves is None:
             return
 
         ret = []
+
+        # FIXME(lp). This is a preliminary implementation. Please
+        # replace the code below by using vstack/column_stack, instead
+        # of appending along a dimension and then performing zip and
+        # transpose.
 
         # for each asset get all the loss curves and compute per asset
         # statistics
@@ -202,28 +272,34 @@ class Classical(object):
 
 class ProbabilisticEventBased(object):
     """
-    Implements the probabilistic event based workflow
-    """
+    Implements the Probabilistic Event Based workflow
 
-    """
-    Record the results computed in one calculation units for N assets.
+    Per-realization Output are saved into
+    :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
+    which contains the several fields:
 
     :attr assets:
-      a list of N assets the outputs refer to
+      an iterable over N assets the outputs refer to
 
     :attr loss_matrix:
-      an array of losses with dimension N x R
-      (where R is the number of ruptures)
+      an array of losses shaped N x E (where E is the number of events)
 
     :attr loss_curves:
-      a list of N loss curves (where a loss curve is a 2-tuple losses/poes)
+      a numpy array of N loss curves. If the curve resolution is R, the final
+      shape of the array will be (N, 2, R), where the `two` accounts for
+      the losses/poes dimensions
 
     :attr insured_curves:
-      a list of N insured loss curves
+      a numpy array of N insured loss curves, shaped (N, 2, R)
 
     :attr loss_maps:
-      a list of P elements holding list of N loss map values where P is the
-      number of `conditional_loss_poes`
+      a numpy array of P elements holding N loss maps where P is the
+      number of `conditional_loss_poes` considered. Shape: (P, N)
+
+    The statistical outputs are stored into
+    :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`.
+    See :class:`openquake.risklib.workflows.Classical.StatisticalOutput` for
+    more details.
     """
     Output = collections.namedtuple(
         'Output',
@@ -240,7 +316,11 @@ class ProbabilisticEventBased(object):
             time_span, tses,
             loss_curve_resolution,
             conditional_loss_poes,
-            insured_losses):
+            insured_losses=False):
+        """
+        See :func:`openquake.risklib.scientific.event_based` for a description
+        of the input parameters
+        """
         self.assets = None
         self._loss_curves = None
         self.event_loss_table = collections.Counter()
@@ -250,10 +330,34 @@ class ProbabilisticEventBased(object):
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
-        self.insured_losses = insured_losses
         self.event_loss = calculators.EventLossTable()
 
+        self.insured_losses = insured_losses
+
     def __call__(self, loss_type, data, monitor=None):
+        """
+        A generator of
+        :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
+        instances.
+
+        :param str loss_type: the loss type considered
+
+        :param data:
+           an iterator over tuples with form (hid, assets, (gmvs, events))
+           where at each iteration a realization of hazard data is considered,
+           hid identifies the id of the hazard realization, assets is an
+           iterator over N assets, events is an array of E event ids,
+           gmvs is an array N x E ground motion values.
+
+        :param calc_monitor:
+           a context manager the user can provide to log/monitor each
+           single output computation.
+
+        :NOTE: this function will collect all the loss curves as a
+        side effect in the field `_loss_curves` (if the number of realizations
+        is bigger than 1).
+        """
+
         monitor = monitor or DummyMonitor()
         loss_curves = []
 
@@ -293,26 +397,33 @@ class ProbabilisticEventBased(object):
             self._loss_curves = numpy.array(loss_curves).transpose(1, 0, 2, 3)
 
     def statistics(self, weights, quantiles, post_processing):
+        """
+        :returns:
+            a :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`
+            instance holding statistical outputs (e.g. mean loss curves).
+        :param weights:
+            a collection of weights associated with each realization, to
+            allow the user to compute weighted means, weighted quantiles, etc.
+        :param quantiles:
+            quantile levels used to compute quantile outputs
+        :param post_processing:
+            an object implementing the following protocol:
+            #mean_curve(curves, weights)
+            #weighted_quantile_curve(curves, weights, quantile)
+            #quantile_curve(curves, quantile)
+        """
+        # FIXME(lp). This is a preliminary implementation. Please
+        # replace the code below by using vstack/column_stack, instead
+        # of appending along a dimension and then performing zip and
+        # transpose.
+
         if self._loss_curves is None:
             return
 
         ret = []
 
         for curves in self._loss_curves:
-            non_trivial_curves = [(losses, poes)
-                                  for losses, poes in curves if losses[-1] > 0]
-            if not non_trivial_curves:  # no damage. all trivial curves
-                loss_ratios, _poes = curves[0]
-                curves_poes = [poes for _losses, poes in curves]
-            else:  # standard case
-                max_losses = [losses[-1]  # we assume non-decreasing losses
-                              for losses, _poes in non_trivial_curves]
-                reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
-                loss_ratios = reference_curve[0]
-                curves_poes = [interpolate.interp1d(
-                    losses, poes,
-                    bounds_error=False, fill_value=0)(loss_ratios)
-                    for losses, poes in curves]
+            loss_ratios, curves_poes = self._normalize_curves(curves)
             mean_curve, quantile_curves, mean_maps, quantile_maps = (
                 calculators.asset_statistics(
                     loss_ratios, curves_poes,
@@ -323,23 +434,33 @@ class ProbabilisticEventBased(object):
         (mean_curves, mean_maps, quantile_curves, quantile_maps) = zip(*ret)
         # now all the lists keep N items
 
+        mean_curves = numpy.array(mean_curves)
+
         # transpose maps and fractions to have P/F/Q items of N-sized lists
         mean_maps = numpy.array(mean_maps).transpose()
 
-        if (len(quantile_curves) and len(quantile_curves[0])):
-            quantile_curves = numpy.array(
-                quantile_curves).transpose(1, 0, 2, 3)
-        else:
-            quantile_curves = None
-
-        if (len(quantile_maps) and len(quantile_maps[0])):
-            quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
-        else:
-            quantile_maps = None
+        quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
+        quantile_maps = numpy.array(quantile_maps).transpose(1, 2, 0)
 
         return self.StatisticalOutput(
             self.assets, mean_curves, mean_maps,
             quantile_curves, quantile_maps)
+
+    def _normalize_curves(self, curves):
+        non_trivial_curves = [(losses, poes)
+                              for losses, poes in curves if losses[-1] > 0]
+        if not non_trivial_curves:  # no damage. all trivial curves
+            loss_ratios, _poes = curves[0]
+            curves_poes = [poes for _losses, poes in curves]
+        else:  # standard case
+            max_losses = [losses[-1]  # we assume non-decreasing losses
+                          for losses, _poes in non_trivial_curves]
+            reference_curve = non_trivial_curves[numpy.argmax(max_losses)]
+            loss_ratios = reference_curve[0]
+            curves_poes = [interpolate.interp1d(
+                losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
+                for losses, poes in curves]
+        return loss_ratios, curves_poes
 
 
 class ClassicalBCR(object):
