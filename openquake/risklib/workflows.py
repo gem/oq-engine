@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/>.
 
 import collections
-import contextlib
 import numpy
 from scipy import interpolate
 
@@ -29,6 +28,22 @@ from openquake.risklib import calculators, utils, scientific
 CalculationUnit = collections.namedtuple(
     'CalculationUnit',
     'loss_type workflow getter')
+
+
+class Asset(object):
+    def __init__(self, values, deductibles=None, insured_limits=None):
+        self.values = values
+        self.deductibles = deductibles
+        self.insured_limits = insured_limits
+
+    def value(self, loss_type):
+        return self.values[loss_type]
+
+    def deductible(self, loss_type):
+        return self.deductibles[loss_type]
+
+    def insured_limit(self, loss_type):
+        return self.insured_limits[loss_type]
 
 
 class Classical(object):
@@ -112,18 +127,18 @@ class Classical(object):
     def __call__(self, data, calc_monitor=None):
         loss_curves = []
 
-        monitor = calc_monitor or dummy_monitor
+        monitor = calc_monitor or DummyMonitor()
 
         for hid, assets, hazard_curves in data:
             with monitor:
                 curves = self.curves(hazard_curves)
-                loss_maps = self.maps(curves)
+                maps = self.maps(curves)
                 fractions = self.fractions(curves)
 
                 loss_curves.append(curves)
                 self._assets = assets
 
-                yield hid, self.Output(assets, curves, loss_maps, fractions)
+                yield hid, self.Output(assets, curves, maps, fractions)
 
         if len(loss_curves) > 1:
             self._loss_curves = numpy.array(loss_curves).transpose(1, 0, 2, 3)
@@ -147,16 +162,10 @@ class Classical(object):
                     quantiles, weights, self.maps.poes, post_processing))
 
             # compute also mean and quantile loss fractions
-            _mean_fractions = [
-                scientific.conditional_loss_ratio(
-                    _mean_curve[0], _mean_curve[1], poe)
-                for poe in self.fractions.poes]
-
-            # for each quantile build F loss maps
-            _quantile_fractions = [
-                [scientific.conditional_loss_ratio(losses, poes, poe)
-                 for losses, poes in _quantile_curves]
-                for poe in self.fractions.poes]
+            _mean_fractions, _quantile_fractions = (
+                calculators.asset_statistic_fractions(
+                    self.fractions.poes, _mean_curve,
+                    _quantile_curves, quantiles))
 
             ret.append((_mean_curve, _mean_maps, _mean_fractions,
                         _quantile_curves, _quantile_maps, _quantile_fractions))
@@ -164,6 +173,8 @@ class Classical(object):
         # zip all the per-asset statistics to have per-type statistics
         (mean_curves, mean_maps, mean_fractions,
          quantile_curves, quantile_maps, quantile_fractions) = zip(*ret)
+
+        mean_curves = numpy.array(mean_curves)
 
         # transpose maps and fractions in order to end up with P x N
         # matrix of loss map values, where P is the number of poes and
@@ -178,7 +189,7 @@ class Classical(object):
 
         # swap the first and the third dimension of quantile maps to
         # end up with a matrix of Q x P x N loss map values
-        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
+        quantile_maps = numpy.array(quantile_maps).transpose(1, 2, 0)
 
         quantile_fractions = numpy.array(quantile_fractions).transpose(
             2, 1, 0)
@@ -239,17 +250,11 @@ class ProbabilisticEventBased(object):
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
-        if insured_losses:
-            self.insured_curves = calculators.InsuredLossCurve(
-                calculators.EventBasedLossCurve(
-                    time_span, tses, loss_curve_resolution))
-        else:
-            self.insured_curves = False
-
+        self.insured_losses = insured_losses
         self.event_loss = calculators.EventLossTable()
 
     def __call__(self, loss_type, data, monitor=None):
-        monitor = monitor or dummy_monitor
+        monitor = monitor or DummyMonitor()
         loss_curves = []
 
         for hid, assets, (ground_motion_values, rupture_ids) in data:
@@ -268,13 +273,16 @@ class ProbabilisticEventBased(object):
                 self.event_loss_table += self.event_loss(
                     loss_matrix.transpose() * values, rupture_ids)
 
-                if self.insured_curves and loss_type != 'fatalities':
+                if self.insured_losses and loss_type != 'fatalities':
                     deductibles = map(lambda a: a.deductible(loss_type),
                                       assets)
                     limits = map(lambda a: a.insurance_limit(loss_type),
                                  assets)
-                    insured_curves = self.insured_curves(
-                        loss_matrix, deductibles, limits)
+
+                    insured_curves = self.curves(
+                        utils.numpy_map(
+                            scientific.insured_losses,
+                            loss_matrix, deductibles, limits))
                 else:
                     insured_curves = None
 
@@ -351,7 +359,7 @@ class ClassicalBCR(object):
             lrem_steps_per_interval)
 
     def __call__(self, loss_type, data, monitor=None):
-        monitor = monitor or dummy_monitor
+        monitor = monitor or DummyMonitor()
         for hid, assets, orig, retro in data:
             self.assets = assets
             with monitor:
@@ -400,7 +408,7 @@ class ProbabilisticEventBasedBCR(object):
             time_span, tses, loss_curve_resolution)
 
     def __call__(self, loss_type, data, monitor=None):
-        monitor = monitor or dummy_monitor
+        monitor = monitor or DummyMonitor()
         for hid, assets, (orig, _), (retro, __) in data:
             self.assets = assets
             with monitor:
@@ -432,16 +440,13 @@ class Scenario(object):
                  insured_losses):
         self.losses = calculators.ProbabilisticLoss(
             vulnerability_function, seed, asset_correlation)
-        if insured_losses:
-            self.insured_losses = calculators.InsuredLoss()
-        else:
-            self.insured_losses = False
+        self.insured_losses = insured_losses
 
     def __call__(self, loss_type, data, monitor=None):
         hid, assets, gmvs = data.next()
         values = numpy.array([a.value(loss_type) for a in assets])
 
-        with monitor or dummy_monitor:
+        with monitor or DummyMonitor():
             loss_ratio_matrix = self.losses(gmvs)
             aggregate_losses = numpy.sum(
                 loss_ratio_matrix.transpose() * values, axis=1)
@@ -451,7 +456,8 @@ class Scenario(object):
                     lambda a: a.deductible(loss_type), assets)
                 limits = utils.numpy_map(
                     lambda a: a.insurance_limit(loss_type), assets)
-                insured_loss_ratio_matrix = self.insured_losses(
+                insured_loss_ratio_matrix = utils.numpy_map(
+                    scientific.insured_losses,
                     loss_ratio_matrix,
                     deductibles,
                     limits)
@@ -468,6 +474,13 @@ class Scenario(object):
                 insured_loss_matrix, insured_losses)
 
 
-@contextlib.contextmanager
-def dummy_monitor():
-    pass
+class DummyMonitor(object):
+    """
+    This class makes it easy to disable the monitoring
+    in client code. Disabling the monitor can improve the performance.
+    """
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _etype, _exc, _tb):
+        pass

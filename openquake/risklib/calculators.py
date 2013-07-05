@@ -80,26 +80,12 @@ def ProbabilisticLoss(
         asset_correlation=asset_correlation)
 
 
-def InsuredLoss():
-    return functools.partial(
-        utils.numpy_map,
-        scientific.insured_losses)
-
-
 def Damage(fragility_functions):
     return functools.partial(
         utils.numpy_map,
         functools.partial(
             scientific.scenario_damage,
             fragility_functions))
-
-
-def InsuredLossCurve(loss_curve_calculator):
-    return utils.compose(
-        loss_curve_calculator,
-        functools.partial(
-            utils.numpy_map,
-            scientific.insured_losses))
 
 
 class EventLossTable(object):
@@ -174,3 +160,20 @@ def asset_statistics(
                      for poe in poes]
 
     return (mean_curve, quantile_curves, mean_map, quantile_maps)
+
+
+def asset_statistic_fractions(
+        disagg_poes,
+        mean_curve, quantile_curves, quantiles):
+
+    losses, poes = mean_curve
+    fractions = [
+        scientific.conditional_loss_ratio(losses, poes, poe)
+        for poe in disagg_poes]
+
+    quantiles = [
+        [scientific.conditional_loss_ratio(losses, poes, poe)
+         for losses, poes in quantile_curves]
+         for poe in disagg_poes]
+
+    return fractions, quantiles
