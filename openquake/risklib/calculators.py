@@ -73,6 +73,15 @@ def EventBasedLossCurve(time_span, tses, curve_resolution):
 
 def ProbabilisticLoss(
         vulnerability_function, seed=None, asset_correlation=0):
+    """
+    :param vulnerability_function:
+       a :class:`openquake.risklib.scientific.VulnerabilityFunction`
+       instance used to losses
+    :param float seed: a seed used to initialize the rng
+    :param float asset_correlation:
+       a value between 0 and 1 used to derive correlation of generated
+       losses between different assets of the same taxonomy.
+    """
     return functools.partial(
         scientific.vulnerability_function_applier,
         vulnerability_function,
@@ -81,6 +90,12 @@ def ProbabilisticLoss(
 
 
 def Damage(fragility_functions):
+    """
+    :param fragility_functions:
+       an iterator over callables used as fragility functions. E.g.
+       a :class:`openquake.risklib.scientific.FragilityFunctionContinuous`
+       instance
+    """
     return functools.partial(
         utils.numpy_map,
         functools.partial(
@@ -90,6 +105,15 @@ def Damage(fragility_functions):
 
 class EventLossTable(object):
     def __call__(self, loss_matrix, event_ids):
+        """
+        Compute the event loss table given a loss matrix and a set of event
+        ids.
+
+        :param loss_matrix:
+           a numpy array of losses shaped N x E
+        :param event_ids:
+           a numpy array holding E event ids
+        """
         return collections.Counter(
             dict(zip(event_ids, numpy.sum(loss_matrix, axis=1))))
 
