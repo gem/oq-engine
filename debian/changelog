@@ -1,3 +1,28 @@
+python-oq-risklib (0.3.0-1) precise; urgency=low
+
+  * Lxc sandbox - improved CI with sandboxed source tests (LP: #1177319)
+  * Refactoring: remove curve module (LP: #1174231)
+  * Update Event Based algorithm (LP: #1168446)
+  * Fix sampling in lognormaldistribution when mean = 0, covs = 0
+    (LP: #1167863)
+  * Strictly increasing vulnerability function in classical calculator
+    (LP: #1165076)
+  * Added concurrent.futures to risklib (temporary solution)
+  * Update average loss formula (LP: #1156557)
+  * Added AGPL license file
+  * Refactoring needed to support Structure dependent IMT in scenario damage
+    (LP: #1154549)
+  * Implemented scenario_damage and scenario directly in risklib (LP: #1154110)
+  * Make the risklib able to read csv inputs (LP: #1154110)
+  * Fix OQ Engine fails working end-to-end when there is a different number of
+    gmvs per site (LP: #1144388)
+  * Fix Insured losses computation
+  * Removed Asset and AssetOutput classes
+  * Small refactoring of the FragilityFunctions so that it is easier to
+    instantiate them from the FragilityModelParser in nrml (LP: #1100235)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 24 Jun 2013 16:31:18 +0200
+
 python-oq-risklib (0.2.0-1) precise; urgency=low
 
   * Rename of the package and namespace refactoring
