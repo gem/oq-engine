@@ -192,7 +192,7 @@ deps_list() {
     oldifs="$IFS"
     IFS=','
     out_list=""
-    for i in $(cat "$filename" | grep "^\(Build-\)\?Depends:" | sed 's/^\(Build-\)\?Depends: //g') ; do
+    for i in $(cat "$filename" | grep "^\(Build-\)\?Depends:" | sed 's/^\(Build-\)\?Depends: //g' | tr '\n' ',' ) ; do
         item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
         pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
         pkg_vers="$(echo "${item} " | cut -d ' ' -f 2)"
