@@ -110,12 +110,17 @@ repo_id_get () {
     local repo_name repo_line
 
     if ! repo_name="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)"; then
-        echo "no remote repository associated with the current branch, exit 1"
-        exit 1
-    fi
-    repo_name="$(echo "$repo_name" | sed 's@/.*@@g')"
+        repo_line="$(git remote -vv | grep "^origin[ ${TB}]" | grep '(fetch)$')"
+        if [ -z "$repo_line" ]; then
+            echo "no remote repository associated with the current branch, exit 1"
+            exit 1
+        fi
+    else
+        repo_name="$(echo "$repo_name" | sed 's@/.*@@g')"
 
-    repo_line="$(git remote -vv | grep "^${repo_name}[ ${TB}].*(fetch)\$")"
+        repo_line="$(git remote -vv | grep "^${repo_name}[ ${TB}].*(fetch)\$")"
+    fi
+
     if echo "$repo_line" | grep -q '[0-9a-z_-\.]\+@[a-z0-9_-\.]\+:'; then
         repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+[^ ${TB}@]\+@//g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g;s@:@/@g")"
     else
@@ -509,13 +514,6 @@ devtest_run () {
 
     mkdir _jenkins_deps
 
-    sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
-    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
-    rm /tmp/packager.eph.$$.log
-
-    _wait_ssh $lxc_ip
-
     #
     #  dependencies repos
     #
@@ -554,6 +552,12 @@ devtest_run () {
     done
     IFS="$old_ifs"
 
+    sudo echo
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+    rm /tmp/packager.eph.$$.log
+
+    _wait_ssh $lxc_ip
     set +e
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
