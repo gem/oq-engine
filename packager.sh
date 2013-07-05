@@ -511,13 +511,6 @@ devtest_run () {
 
     mkdir _jenkins_deps
 
-    sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
-    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
-    rm /tmp/packager.eph.$$.log
-
-    _wait_ssh $lxc_ip
-
     #
     #  dependencies repos
     #
@@ -556,6 +549,12 @@ devtest_run () {
     done
     IFS="$old_ifs"
 
+    sudo echo
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+    rm /tmp/packager.eph.$$.log
+
+    _wait_ssh $lxc_ip
     set +e
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
