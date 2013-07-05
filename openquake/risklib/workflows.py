@@ -119,9 +119,9 @@ class Classical(object):
        A numpy array with Q quantile curves (Q = number of quantiles).
        Shape: (Q, N, 2, R)
     :attr quantile_maps:
-       A numpy array with Q quantile maps shaped (Q, P, N)
+       A numpy array with Q quantile maps shaped (P, Q, N)
     :attr quantile_fractions:
-       A numpy array with Q quantile maps shaped (Q, F, N)
+       A numpy array with Q quantile maps shaped (F, Q, N)
     """
 
     Output = collections.namedtuple(
@@ -258,8 +258,8 @@ class Classical(object):
         quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
 
         # swap the first and the third dimension of quantile maps to
-        # end up with a matrix of Q x P x N loss map values
-        quantile_maps = numpy.array(quantile_maps).transpose(1, 2, 0)
+        # end up with a matrix of P x Q x N loss map values
+        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
 
         quantile_fractions = numpy.array(quantile_fractions).transpose(
             2, 1, 0)
@@ -440,7 +440,7 @@ class ProbabilisticEventBased(object):
         mean_maps = numpy.array(mean_maps).transpose()
 
         quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
-        quantile_maps = numpy.array(quantile_maps).transpose(1, 2, 0)
+        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
 
         return self.StatisticalOutput(
             self.assets, mean_curves, mean_maps,

@@ -35,7 +35,6 @@ setup(
     description="oq-risklib is a library for performing seismic risk analysis",
     long_description=__doc__,
     url=url,
-    scripts=[os.path.join(cd, 'bin/run_risk')],
     packages=find_packages(exclude=[
         'tests', 'tests.*', 'qa_tests', 'qa_tests.*']),
     install_requires=[
