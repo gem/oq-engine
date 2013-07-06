@@ -330,7 +330,7 @@ def list_hazard_calculations():
     Print a summary of past hazard calculations.
     """
     hcs = models.HazardCalculation.objects.filter(
-        owner__user_name=getpass.getuser())
+        owner__user_name=getpass.getuser()).order_by('oqjob__last_update')
     _print_calcs_summary(hcs)
 
 
