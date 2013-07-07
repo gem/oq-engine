@@ -65,7 +65,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 DEFAULT_GMF_REALIZATIONS = 1
 
 # NB: beware of large caches
-inserter = writer.CacheInserter(models.GmfAgg, 1000)
+inserter = writer.CacheInserter(models.GmfData, 1000)
 
 
 # Disabling pylint for 'Too many local variables'
@@ -336,7 +336,7 @@ def _save_gmfs(ses, gmf_dict, sites):
             gmvs = all_gmvs[nonzero_gmvs_idxs].tolist()
             relevant_rupture_ids = rupture_ids[nonzero_gmvs_idxs].tolist()
             if gmvs:
-                inserter.add(models.GmfAgg(
+                inserter.add(models.GmfData(
                     gmf=gmf_coll,
                     ses_id=ses.id,
                     imt=imt_name,

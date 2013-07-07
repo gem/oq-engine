@@ -844,9 +844,8 @@ class HazardCalculation(djm.Model):
                     'asset_ref')
 
                 # the points here must be sorted
-                lons, lats = zip(
-                    *sorted(set([(asset.site.x, asset.site.y)
-                                 for asset in assets])))
+                lons, lats = zip(*sorted(set((asset.site.x, asset.site.y)
+                                             for asset in assets)))
                 # Cache the mesh:
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
@@ -1868,7 +1867,7 @@ class _GroundMotionFieldNode(object):
             self.location.x, self.location.y, self.gmv)
 
 
-class GmfAgg(djm.Model):
+class GmfData(djm.Model):
     """
     Ground Motion Field: A collection of ground motion values and their
     respective geographical locations.
@@ -1889,7 +1888,7 @@ class GmfAgg(djm.Model):
 
 def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
-    Iterator for walking through all :class:`GmfAgg` objects associated
+    Iterator for walking through all :class:`GmfData` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
@@ -1911,7 +1910,7 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        for gmf in GmfAgg.objects.filter(
+        for gmf in GmfData.objects.filter(
                 gmf=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping).\
                 order_by('site'):
@@ -1920,7 +1919,7 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
 
 def get_gmfs_scenario(output, imt=None):
     """
-    Iterator for walking through all :class:`GmfAgg` objects associated
+    Iterator for walking through all :class:`GmfData` objects associated
     to a given output. Notice that the fields are ordered according to the
     location, so it is possible to get reproducible outputs in the test cases.
 
@@ -1941,7 +1940,7 @@ def get_gmfs_scenario(output, imt=None):
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfAgg.objects.filter(
+        for gmf in GmfData.objects.filter(
                 gmf=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index

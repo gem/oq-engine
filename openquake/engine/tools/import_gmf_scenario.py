@@ -21,7 +21,7 @@ def import_rows(hc, gmf_coll, rows):
             site_id[wkt] = models.HazardSite.objects.create(
                 hazard_calculation=hc, location=wkt).id
         gmfs.append(
-            models.GmfAgg(
+            models.GmfData(
                 imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
                 gmvs=gmvs, site_id=site_id[wkt], gmf=gmf_coll))
     del site_id
