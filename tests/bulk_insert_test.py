@@ -19,16 +19,10 @@
 
 import unittest
 
-from django.db import transaction
-
 from openquake.engine import writer
 
-from openquake.engine.db.models import OqUser, GmfAgg
-from openquake.engine.writer import BulkInserter, CacheInserter
-
-
-def _map_values(fields, values):
-    return sum(([item[key] for key in fields] for item in values), [])
+from openquake.engine.db.models import GmfData
+from openquake.engine.writer import CacheInserter
 
 
 class DummyConnection(object):
@@ -49,84 +43,6 @@ class DummyConnection(object):
         self.columns = columns
 
 
-class BulkInserterTestCase(unittest.TestCase):
-    """
-    Unit tests for the BulkInserter class, which simplifies database
-    bulk insert
-    """
-
-    def setUp(self):
-        self.connections = writer.connections
-
-        writer.connections = dict(
-            admin=DummyConnection(), reslt_writer=DummyConnection())
-
-    def tearDown(self):
-        writer.connections = self.connections
-
-    def test_add_entry(self):
-        """Test multiple add entry calls"""
-        inserter = BulkInserter(OqUser)
-
-        inserter.add_entry(user_name='user1', full_name='An user')
-
-        self.assertEquals(sorted(['user_name', 'full_name']),
-                          sorted(inserter.fields))
-        self.assertEquals(inserter.count, 1)
-        self.assertEquals(_map_values(inserter.fields,
-                                      [{'user_name': 'user1',
-                                        'full_name': 'An user'}]),
-                          inserter.values)
-
-        inserter.add_entry(user_name='user2', full_name='Another user')
-        inserter.add_entry(user_name='user3', full_name='A third user')
-
-        self.assertEquals(sorted(['user_name', 'full_name']),
-                          sorted(inserter.fields))
-        self.assertEquals(inserter.count, 3)
-        self.assertEquals(_map_values(inserter.fields,
-                                      [{'user_name': 'user1',
-                                        'full_name': 'An user'},
-                                       {'user_name': 'user2',
-                                        'full_name': 'Another user'},
-                                       {'user_name': 'user3',
-                                        'full_name': 'A third user'}]),
-                          inserter.values)
-
-    def test_add_entry_different_keys(self):
-        inserter = BulkInserter(OqUser)
-
-        inserter.add_entry(user_name='user1', full_name='An user')
-        self.assertRaises(AssertionError, inserter.add_entry,
-                          user_name='user1')
-        self.assertRaises(AssertionError, inserter.add_entry,
-                          user_name='user1',
-                          full_name='An user',
-                          data_is_open=False)
-
-    @transaction.commit_on_success('admin')
-    def test_flush(self):
-        inserter = BulkInserter(OqUser)
-        connection = writer.connections['admin']
-
-        inserter.add_entry(user_name='user1', full_name='An user')
-        fields = inserter.fields
-        inserter.flush()
-
-        self.assertEquals('INSERT INTO "admin"."oq_user" (%s) VALUES'
-                          ' (%%s, %%s)' %
-                          (", ".join(fields)), connection.sql)
-
-        inserter.add_entry(user_name='user1', full_name='An user')
-        inserter.add_entry(user_name='user2', full_name='Another user')
-        fields = inserter.fields
-        inserter.flush()
-
-        self.assertEquals('INSERT INTO "admin"."oq_user" (%s) VALUES'
-                          ' (%%s, %%s), (%%s, %%s)' %
-                          (", ".join(fields)), connection.sql)
-
-
 class CacheInserterTestCase(unittest.TestCase):
     """
     Unit tests for the CacheInserter class.
@@ -141,11 +57,11 @@ class CacheInserterTestCase(unittest.TestCase):
 
     # this test is probably too strict and testing implementation details
     def test_insert_gmf(self):
-        cache = CacheInserter(GmfAgg, 10)
-        gmf1 = GmfAgg(
+        cache = CacheInserter(GmfData, 10)
+        gmf1 = GmfData(
             gmf_id=1, imt='PGA', gmvs=[], rupture_ids=[],
             site_id=1)
-        gmf2 = GmfAgg(
+        gmf2 = GmfData(
             gmf_id=1, imt='PGA', gmvs=[], rupture_ids=[],
             site_id=2)
         cache.add(gmf1)
