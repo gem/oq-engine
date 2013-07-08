@@ -19,6 +19,7 @@ Module containing writers for risk output artifacts.
 """
 
 import itertools
+import json
 
 from lxml import etree
 
@@ -274,10 +275,13 @@ class AggregateLossCurveXMLWriter(object):
                 encoding="UTF-8"))
 
 
-class LossMapXMLWriter(object):
+class LossMapWriter(object):
     """
-    Serializer for loss maps produced with the classical and
+    Base class for serializing loss maps produced with the classical and
     probabilistic calculators.
+
+    Subclasses must implement the :meth:`serialize` method, which defines the
+    format of the output.
 
     :param path:
         File path (including filename) for results to be saved to.
@@ -348,7 +352,21 @@ class LossMapXMLWriter(object):
               identifier of the asset related to the loss curve.
             * define an attribute `value`, which is the value of the loss.
         """
+        raise NotImplementedError()
 
+class LossMapXMLWriter(LossMapWriter):
+    """
+    NRML/XML implementation of a :class:`LossMapWriter`.
+
+    See :class:`LossMapWriter` for information about constructor parameters.
+    """
+
+    def serialize(self, data):
+        """
+        Serialize loss map data to XML.
+
+        See :meth:`LossMapWriter.serialize` for expected input.
+        """
         _assert_valid_input(data)
 
         with open(self._path, "w") as output:
@@ -409,6 +427,92 @@ class LossMapXMLWriter(object):
 
         if self._unit is not None:
             self._loss_map.set("unit", str(self._unit))
+
+
+class LossMapGeoJSONWriter(LossMapWriter):
+    """
+    GeoJSON implementation of a :class:`LossMapWriter`. Serializes loss maps as
+    FeatureCollection artifacts with additional loss map metadata.
+
+    See :class:`LossMapWriter` for information about constructor parameters.
+    """
+
+    def serialize(self, data):
+        """
+        Serialize loss map data to a file as a GeoJSON feature collection.
+
+        See :meth:`LossMapWriter.serialize` for expected input.
+        """
+        _assert_valid_input(data)
+
+        with open(self._path, 'w') as output:
+            feature_coll = {
+                'type': 'FeatureCollection',
+                'features': [],
+                'oqtype': 'LossMap',
+                # TODO(LB): should we instead use the
+                # openquake.nrmllib.__version__?
+                'oqnrmlversion': '0.4',
+                'oqmetadata': self._create_oqmetadata(),
+            }
+
+            for loss in data:
+                loc = loss.location
+                loss_node = self._loss_nodes.get(loc.wkt)
+
+                if loss_node is None:
+                    loss_node = {
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'Point',
+                            'coordinates': [float(loc.x), float(loc.y)]
+                        },
+                        'properties': {'losses': []},
+                    }
+                    self._loss_nodes[loss.location.wkt] = loss_node
+                    feature_coll['features'].append(loss_node)
+
+                if loss.std_dev is not None:
+                    loss_node['properties']['losses'].append({
+                        'assetRef': str(loss.asset_ref),
+                        'mean': str(loss.value),
+                        'stdDev': str(loss.std_dev),
+                    })
+                else:
+                    loss_node['properties']['losses'].append({
+                        'assetRef': str(loss.asset_ref),
+                        'value': str(loss.value),
+                    })
+
+            json.dump(feature_coll, output)
+
+    def _create_oqmetadata(self):
+        """
+        Helper method to create the `oqmetadata` dictionary.
+        """
+        meta = dict()
+        meta['investigationTime'] = str(self._investigation_time)
+        meta['poE'] = str(self._poe)
+
+        if self._source_model_tree_path is not None:
+            meta['sourceModelTreePath'] = str(self._source_model_tree_path)
+
+        if self._gsim_tree_path is not None:
+            meta['gsimTreePath'] = str(self._gsim_tree_path)
+
+        if self._statistics is not None:
+            meta['statistics'] = str(self._statistics)
+
+        if self._quantile_value is not None:
+            meta['quantileValue'] = str(self._quantile_value)
+
+        if self._loss_category is not None:
+            meta['lossCategory'] = str(self._loss_category)
+
+        if self._unit is not None:
+            meta['unit'] = str(self._unit)
+
+        return meta
 
 
 class LossFractionsWriter(object):
