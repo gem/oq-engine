@@ -67,7 +67,6 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
-@transaction.commit_on_success(using='job_init')
 def store_site_model(input_mdl, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -90,126 +89,6 @@ def store_site_model(input_mdl, site_model_source):
                              input_id=input_mdl.id)
             for node in parser.parse()]
     return writer.CacheInserter.saveall(data)
-
-
-def validate_site_model(sm_nodes, mesh):
-    """Given the geometry for a site model and the geometry of interest for the
-    calculation (``mesh``, make sure the geometry of interest lies completely
-    inside of the convex hull formed by the site model locations.
-
-    If a point of interest lies directly on top of a vertex or edge of the site
-    model area (a polygon), it is considered "inside"
-
-    :param sm_nodes:
-        Sequence of :class:`~openquake.engine.db.models.SiteModel` objects.
-    :param mesh:
-        A :class:`openquake.hazardlib.geo.mesh.Mesh` which represents the
-        calculation points of interest.
-
-    :raises:
-        :exc:`RuntimeError` if the area of interest (given as a mesh) is not
-        entirely contained by the site model.
-    """
-    sm_mp = geometry.MultiPoint(
-        [(n.location.x, n.location.y) for n in sm_nodes]
-    )
-
-    sm_ch = sm_mp.convex_hull
-    # Enlarging the area if the site model nodes
-    # create a straight line with zero area.
-    if sm_ch.area == 0:
-        sm_ch = sm_ch.buffer(DILATION_ONE_METER)
-
-    sm_poly = hazardlib_geo.Polygon(
-        [hazardlib_geo.Point(*x) for x in sm_ch.exterior.coords]
-    )
-
-    # "Intersects" is the correct operation (not "contains"), since we're just
-    # checking a collection of points (mesh). "Contains" would tell us if the
-    # points are inside the polygon, but would return `False` if a point was
-    # directly on top of a polygon edge or vertex. We want these points to be
-    # included.
-    intersects = sm_poly.intersects(mesh)
-
-    if not intersects.all():
-        raise RuntimeError(
-            ['Sites of interest are outside of the site model coverage area.'
-             ' This configuration is invalid.']
-        )
-
-
-def get_site_model(hc_id):
-    """Get the site model :class:`~openquake.engine.db.models.Input` record
-    for the given job id.
-
-    :param int hc_id:
-        The id of a :class:`~openquake.engine.db.models.HazardCalculation`.
-
-    :returns:
-        The site model :class:`~openquake.engine.db.models.Input` record for
-        this job.
-    :raises:
-        :exc:`RuntimeError` if the job has more than 1 site model.
-    """
-    site_model = models.inputs4hcalc(hc_id, input_type='site_model')
-
-    if len(site_model) == 0:
-        return None
-    elif len(site_model) > 1:
-        # Multiple site models for 1 job are not allowed.
-        raise RuntimeError("Only 1 site model per job is allowed, found %s."
-                           % len(site_model))
-
-    # There's only one site model.
-    return site_model[0]
-
-
-## TODO: this could be implemented with a view, now that there is a site table
-def get_closest_site_model_data(input_model, point):
-    """Get the closest available site model data from the database for a given
-    site model :class:`~openquake.engine.db.models.Input` and
-    :class:`openquake.hazardlib.geo.point.Point`.
-
-    :param input_model:
-        :class:`openquake.engine.db.models.Input` with `input_type` of
-        'site_model'.
-    :param site:
-        :class:`openquake.hazardlib.geo.point.Point` instance.
-
-    :returns:
-        The closest :class:`openquake.engine.db.models.SiteModel` for the given
-        ``input_model`` and ``point`` of interest.
-
-        This function uses the PostGIS `ST_Distance_Sphere
-        <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
-        function to calculate distance.
-
-        If there is no site model data, return `None`.
-    """
-    query = """
-    SELECT
-        hzrdi.site_model.*,
-        min(ST_Distance_Sphere(location, %s))
-            AS min_distance
-    FROM hzrdi.site_model
-    WHERE input_id = %s
-    GROUP BY id
-    ORDER BY min_distance
-    LIMIT 1;"""
-
-    raw_query_set = models.SiteModel.objects.raw(
-        query, ['SRID=4326; %s' % point.wkt2d, input_model.id]
-    )
-
-    site_model_data = list(raw_query_set)
-
-    assert len(site_model_data) <= 1, (
-        "This query should return at most 1 record.")
-
-    if len(site_model_data) == 1:
-        return site_model_data[0]
-    else:
-        return None
 
 
 def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
@@ -337,16 +216,50 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-# FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
-# the issue is the reset of the depts; we need QA tests for that
-class SiteCollection(openquake.hazardlib.site.SiteCollection):
-    def __init__(self, sites):
-        self.sites = sites
-        super(SiteCollection, self).__init__(sites)
+def validate_site_model(sm_nodes, mesh):
+    """Given the geometry for a site model and the geometry of interest for the
+    calculation (``mesh``, make sure the geometry of interest lies completely
+    inside of the convex hull formed by the site model locations.
 
-    def __iter__(self):
-        for site in self.sites:
-            yield site
+    If a point of interest lies directly on top of a vertex or edge of the site
+    model area (a polygon), it is considered "inside"
+
+    :param sm_nodes:
+        Sequence of :class:`~openquake.engine.db.models.SiteModel` objects.
+    :param mesh:
+        A :class:`openquake.hazardlib.geo.mesh.Mesh` which represents the
+        calculation points of interest.
+
+    :raises:
+        :exc:`RuntimeError` if the area of interest (given as a mesh) is not
+        entirely contained by the site model.
+    """
+    sm_mp = geometry.MultiPoint(
+        [(n.location.x, n.location.y) for n in sm_nodes]
+    )
+
+    sm_ch = sm_mp.convex_hull
+    # Enlarging the area if the site model nodes
+    # create a straight line with zero area.
+    if sm_ch.area == 0:
+        sm_ch = sm_ch.buffer(DILATION_ONE_METER)
+
+    sm_poly = hazardlib_geo.Polygon(
+        [hazardlib_geo.Point(*x) for x in sm_ch.exterior.coords]
+    )
+
+    # "Intersects" is the correct operation (not "contains"), since we're just
+    # checking a collection of points (mesh). "Contains" would tell us if the
+    # points are inside the polygon, but would return `False` if a point was
+    # directly on top of a polygon edge or vertex. We want these points to be
+    # included.
+    intersects = sm_poly.intersects(mesh)
+
+    if not intersects.all():
+        raise RuntimeError(
+            ['Sites of interest are outside of the site model coverage area.'
+             ' This configuration is invalid.']
+        )
 
 
 class BaseHazardCalculator(base.Calculator):
@@ -558,6 +471,7 @@ class BaseHazardCalculator(base.Calculator):
                         [self.hc.id, rlz.id, haz_curve.id, imt, lons, lats]
                     )
 
+    @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
         Parse and validation logic trees (source and gsim). Then get all
@@ -568,38 +482,38 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
 
-        with self.monitor("initializing sources"):
-            [smlt] = models.inputs4hcalc(
-                self.hc.id, input_type='source_model_logic_tree')
-            [gsimlt] = models.inputs4hcalc(
-                self.hc.id, input_type='gsim_logic_tree')
-            source_paths = logictree.read_logic_trees(
-                self.hc.base_path, smlt.path, gsimlt.path)
+        [smlt] = models.inputs4hcalc(
+            self.hc.id, input_type='source_model_logic_tree')
+        [gsimlt] = models.inputs4hcalc(
+            self.hc.id, input_type='gsim_logic_tree')
+        source_paths = logictree.read_logic_trees(
+            self.hc.base_path, smlt.path, gsimlt.path)
 
-            for src_path in source_paths:
-                full_path = os.path.join(self.hc.base_path, src_path)
+        for src_path in source_paths:
+            full_path = os.path.join(self.hc.base_path, src_path)
 
-                # Get the 'source' Input:
-                inp = engine.get_input(full_path, 'source', self.hc.owner)
+            # Get the 'source' Input:
+            inp = engine.get_input(full_path, 'source', self.hc.owner)
 
-                # Associate the source input to the calculation:
-                models.Input2hcalc.objects.get_or_create(
-                    input=inp, hazard_calculation=self.hc)
+            # Associate the source input to the calculation:
+            models.Input2hcalc.objects.get_or_create(
+                input=inp, hazard_calculation=self.hc)
 
-                models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
-                                                filename=src_path)
-                src_content = StringIO.StringIO(
-                    inp.model_content.raw_content_ascii)
-                sm_parser = nrml_parsers.SourceModelParser(src_content)
+            models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
+                                            filename=src_path)
+            src_content = StringIO.StringIO(
+                inp.model_content.raw_content_ascii)
+            sm_parser = nrml_parsers.SourceModelParser(src_content)
 
-                # Covert
-                src_db_writer = source.SourceDBWriter(
-                    inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
-                    self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization
-                )
-                src_db_writer.serialize()
+            # Covert
+            src_db_writer = source.SourceDBWriter(
+                inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+                self.hc.width_of_mfd_bin,
+                self.hc.area_source_discretization
+            )
+            src_db_writer.serialize()
 
+    @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
         """
         If any risk model is given in the hazard calculation, the
@@ -610,82 +524,82 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("parsing risk models")
 
-        with self.monitor("parsing risk models"):
-            hc = self.hc
-            queryset = self.hc.inputs.filter(
-                input_type__in=[vf_type
-                                for vf_type, _desc
-                                in models.Input.VULNERABILITY_TYPE_CHOICES])
-            if queryset.exists():
-                hc.intensity_measure_types_and_levels = dict()
-                hc.intensity_measure_types = list()
+        hc = self.hc
+        queryset = self.hc.inputs.filter(
+            input_type__in=[vf_type
+                            for vf_type, _desc
+                            in models.Input.VULNERABILITY_TYPE_CHOICES])
+        if queryset.exists():
+            hc.intensity_measure_types_and_levels = dict()
+            hc.intensity_measure_types = list()
 
-                for input_type in queryset:
-                    content = StringIO.StringIO(
-                        input_type.model_content.raw_content_ascii)
-                    intensity_measure_types_and_levels = dict(
-                        (record['IMT'], record['IML']) for record in
-                        parsers.VulnerabilityModelParser(content)
-                    )
-
-                    for imt, levels in \
-                            intensity_measure_types_and_levels.items():
-                        if (imt in hc.intensity_measure_types_and_levels and
-                            (set(hc.intensity_measure_types_and_levels[imt]) -
-                             set(levels))):
-                            logs.LOG.warning(
-                                "The same IMT %s is associated with "
-                                "different levels" % imt)
-                        else:
-                            hc.intensity_measure_types_and_levels[imt] = levels
-
-                    hc.intensity_measure_types.extend(
-                        intensity_measure_types_and_levels)
-
-                # remove possible duplicates
-                if hc.intensity_measure_types is not None:
-                    hc.intensity_measure_types = list(set(
-                        hc.intensity_measure_types))
-                hc.save()
-                logs.LOG.info("Got IMT and levels "
-                              "from vulnerability models: %s - %s" % (
-                                  hc.intensity_measure_types_and_levels,
-                                  hc.intensity_measure_types))
-
-            queryset = self.hc.inputs.filter(input_type='fragility')
-            if queryset.exists():
-                hc.intensity_measure_types_and_levels = dict()
-                hc.intensity_measure_types = list()
-
-                parser = iter(parsers.FragilityModelParser(
-                    StringIO.StringIO(
-                        queryset.all()[0].model_content.raw_content_ascii)))
-                hc = self.hc
-
-                fragility_format, _limit_states = parser.next()
-
-                if (fragility_format == "continuous" and
-                        hc.calculation_mode != "scenario"):
-                    raise NotImplementedError(
-                        "Getting IMT and levels from "
-                        "a continuous fragility model is not yet supported")
-
-                hc.intensity_measure_types_and_levels = dict(
-                    (iml['IMT'], iml['imls'])
-                    for _taxonomy, iml, _params, _no_damage_limit in parser)
-                hc.intensity_measure_types.extend(
-                    hc.intensity_measure_types_and_levels)
-
-            queryset = self.hc.inputs.filter(input_type='exposure')
-            if queryset.exists():
-                exposure_model_input = queryset.all()[0]
+            for input_type in queryset:
                 content = StringIO.StringIO(
-                    exposure_model_input.model_content.raw_content_ascii)
-                with logs.tracing('storing exposure'):
-                    exposure.ExposureDBWriter(
-                        exposure_model_input).serialize(
-                            parsers.ExposureModelParser(content))
+                    input_type.model_content.raw_content_ascii)
+                intensity_measure_types_and_levels = dict(
+                    (record['IMT'], record['IML']) for record in
+                    parsers.VulnerabilityModelParser(content)
+                )
 
+                for imt, levels in \
+                        intensity_measure_types_and_levels.items():
+                    if (imt in hc.intensity_measure_types_and_levels and
+                        (set(hc.intensity_measure_types_and_levels[imt]) -
+                         set(levels))):
+                        logs.LOG.warning(
+                            "The same IMT %s is associated with "
+                            "different levels" % imt)
+                    else:
+                        hc.intensity_measure_types_and_levels[imt] = levels
+
+                hc.intensity_measure_types.extend(
+                    intensity_measure_types_and_levels)
+
+            # remove possible duplicates
+            if hc.intensity_measure_types is not None:
+                hc.intensity_measure_types = list(set(
+                    hc.intensity_measure_types))
+            hc.save()
+            logs.LOG.info("Got IMT and levels "
+                          "from vulnerability models: %s - %s" % (
+                              hc.intensity_measure_types_and_levels,
+                              hc.intensity_measure_types))
+
+        queryset = self.hc.inputs.filter(input_type='fragility')
+        if queryset.exists():
+            hc.intensity_measure_types_and_levels = dict()
+            hc.intensity_measure_types = list()
+
+            parser = iter(parsers.FragilityModelParser(
+                StringIO.StringIO(
+                    queryset.all()[0].model_content.raw_content_ascii)))
+            hc = self.hc
+
+            fragility_format, _limit_states = parser.next()
+
+            if (fragility_format == "continuous" and
+                    hc.calculation_mode != "scenario"):
+                raise NotImplementedError(
+                    "Getting IMT and levels from "
+                    "a continuous fragility model is not yet supported")
+
+            hc.intensity_measure_types_and_levels = dict(
+                (iml['IMT'], iml['imls'])
+                for _taxonomy, iml, _params, _no_damage_limit in parser)
+            hc.intensity_measure_types.extend(
+                hc.intensity_measure_types_and_levels)
+            hc.save()
+        queryset = self.hc.inputs.filter(input_type='exposure')
+        if queryset.exists():
+            exposure_model_input = queryset.all()[0]
+            content = StringIO.StringIO(
+                exposure_model_input.model_content.raw_content_ascii)
+            with logs.tracing('storing exposure'):
+                exposure.ExposureDBWriter(
+                    exposure_model_input).serialize(
+                        parsers.ExposureModelParser(content))
+
+    @EnginePerformanceMonitor.monitor
     def initialize_site_model(self):
         """
         If a site model is specified in the calculation configuration, parse
@@ -694,67 +608,26 @@ class BaseHazardCalculator(base.Calculator):
         completely envelops the calculation geometry. (If this requirement is
         not satisfied, an exception will be raised. See
         :func:`openquake.engine.calculators.hazard.general.validate_site_model`.)
-
-        Then, take all of the points/locations of interest defined by the
-        calculation geometry. For each point, do distance queries on the site
-        model and get the site parameters which are closest to the point of
-        interest. This aggregation of points to the closest site parameters
-        is what we store in the `site_collection` field.
-        If the computation does not specify a site model the same 4 reference
-        site parameters are used for all sites.
         """
         logs.LOG.progress("initializing site model")
+        site_model_inp = models.get_site_model(self.hc.id)
+        if site_model_inp:
+            # explicit cast to `str` because the XML parser doesn't like
+            # unicode. (More specifically, lxml doesn't like unicode.)
+            site_model_content = site_model_inp.model_content.\
+                raw_content_ascii
 
-        with self.monitor("initializing site model"):
-            site_model_inp = get_site_model(self.hc.id)
+            # Store `site_model` records:
+            store_site_model(
+                site_model_inp, StringIO.StringIO(site_model_content))
 
-            if site_model_inp:
-                # explicit cast to `str` because the XML parser doesn't like
-                # unicode. (More specifically, lxml doesn't like unicode.)
-                site_model_content = site_model_inp.model_content.\
-                    raw_content_ascii
+            # Get the site model records we stored:
+            site_model_data = models.SiteModel.objects.filter(
+                input=site_model_inp)
 
-                # Store `site_model` records:
-                store_site_model(
-                    site_model_inp, StringIO.StringIO(site_model_content))
-
-                # Get the site model records we stored:
-                site_model_data = models.SiteModel.objects.filter(
-                    input=site_model_inp)
-
-                points = self.hc.points_to_compute()
-                validate_site_model(site_model_data, points)
-            else:
-                points = self.hc.points_to_compute()
-
-            sites = []
-            coords = []
-            for pt in points:
-                coords.append((pt.longitude, pt.latitude))
-
-                if site_model_inp:
-                    smd = get_closest_site_model_data(site_model_inp, pt)
-                    measured = smd.vs30_type == 'measured'
-                    vs30 = smd.vs30
-                    z1pt0 = smd.z1pt0
-                    z2pt5 = smd.z2pt5
-                else:
-                    vs30 = self.hc.reference_vs30_value
-                    measured = self.hc.reference_vs30_type == 'measured'
-                    z1pt0 = self.hc.reference_depth_to_1pt0km_per_sec
-                    z2pt5 = self.hc.reference_depth_to_2pt5km_per_sec
-
-                sites.append(openquake.hazardlib.site.Site(
-                             pt, vs30, measured, z1pt0, z2pt5))
-
-            # store the sites
-            site_ids = self.hc.save_sites(coords)
-
-            # store the ids into the Site objects
-            for site, site_id in zip(sites, site_ids):
-                site.id = site_id
-            self.hc.site_collection = SiteCollection(sites)
-            self.hc.save()
+            validate_site_model(site_model_data, self.hc.points_to_compute(save_sites=True))
+        else:
+            self.hc.points_to_compute(save_sites=True)
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
@@ -1066,6 +939,7 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.info('Total number of sources: %d', total_sources)
         return int(num_tasks)
 
+    @EnginePerformanceMonitor.monitor
     def do_aggregate_post_proc(self):
         """
         Grab hazard data for all realizations and sites from the database and
@@ -1156,9 +1030,8 @@ class BaseHazardCalculator(base.Calculator):
                     self.job.id, im_type, sa_period, sa_damping))
 
             with transaction.commit_on_success(using='reslt_writer'):
-                inserter = writer.BulkInserter(
-                    models.HazardCurveData, max_cache_size=CURVE_CACHE_SIZE
-                )
+                inserter = writer.CacheInserter(
+                    models.HazardCurveData, CURVE_CACHE_SIZE)
 
                 for chunk in models.queryset_iter(all_curves_for_imt,
                                                   slice_incr):
@@ -1183,12 +1056,12 @@ class BaseHazardCalculator(base.Calculator):
                                     q_curve = quantile_curve(
                                         curves_poes, quantile
                                     )
-                                inserter.add_entry(
-                                    hazard_curve_id=(
-                                        container_ids['q%s' % quantile]
-                                    ),
-                                    poes=q_curve.tolist(),
-                                    location=site.wkt
+                                inserter.add(
+                                    models.HazardCurveData(
+                                        hazard_curve_id=(
+                                            container_ids['q%s' % quantile]),
+                                        poes=q_curve.tolist(),
+                                        location=site.wkt)
                                 )
 
                         # then means
@@ -1196,9 +1069,10 @@ class BaseHazardCalculator(base.Calculator):
                             m_curve = mean_curve(
                                 curves_poes, weights=curves_weights
                             )
-                            inserter.add_entry(
-                                hazard_curve_id=container_ids['mean'],
-                                poes=m_curve.tolist(),
-                                location=site.wkt
+                            inserter.add(
+                                models.HazardCurveData(
+                                    hazard_curve_id=container_ids['mean'],
+                                    poes=m_curve.tolist(),
+                                    location=site.wkt)
                             )
                 inserter.flush()
