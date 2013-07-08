@@ -30,7 +30,7 @@ from openquake.engine import logs
 from openquake.engine.calculators.hazard.general import CURVE_CACHE_SIZE
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine.writer import BulkInserter
+from openquake.engine.writer import CacheInserter
 
 
 # Number of locations considered by each task
@@ -325,13 +325,12 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     uhs.save()
 
     with transaction.commit_on_success(using='reslt_writer'):
-        inserter = BulkInserter(models.UHSData,
-                                max_cache_size=CURVE_CACHE_SIZE)
-
+        inserter = CacheInserter(models.UHSData, CURVE_CACHE_SIZE)
         for lon, lat, imls in uhs_results['uh_spectra']:
-            inserter.add_entry(
-                uhs_id=uhs.id,
-                imls='{%s}' % ','.join(str(x) for x in imls),
-                location='POINT(%s %s)' % (lon, lat)
+            inserter.add(
+                models.UHSData(
+                    uhs_id=uhs.id,
+                    imls='{%s}' % ','.join(str(x) for x in imls),
+                    location='POINT(%s %s)' % (lon, lat))
             )
         inserter.flush()
