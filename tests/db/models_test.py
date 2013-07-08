@@ -213,7 +213,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         hc = models.HazardCalculation(
             region='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8',
             region_grid_spacing=20)
-        mesh = hc.points_to_compute()
+        mesh = hc.points_to_compute(save_sites=False)
 
         numpy.testing.assert_array_almost_equal(lons, mesh.lons)
         numpy.testing.assert_array_almost_equal(lats, mesh.lats)
@@ -224,7 +224,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         hc = models.HazardCalculation(
             sites='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8')
 
-        mesh = hc.points_to_compute()
+        mesh = hc.points_to_compute(save_sites=False)
 
         numpy.testing.assert_array_equal(lons, mesh.lons)
         numpy.testing.assert_array_equal(lats, mesh.lats)
