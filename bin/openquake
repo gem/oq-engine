@@ -218,6 +218,10 @@ def set_up_arg_parser():
         help=('Automatically export all calculation results to the specified'
               'format. Only "xml" is supported currently.')
     )
+    export_grp.add_argument(
+        '--export-type', '--et', choices=['xml', 'geojson'], default=['xml'], action='append',
+        help=('')
+    )
 
     export_grp = parser.add_argument_group('Import')
     export_grp.add_argument(
