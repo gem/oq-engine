@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import os
 import unittest
 from lxml import etree
@@ -313,20 +314,45 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
 
-class LossMapXMLWriterTestCase(unittest.TestCase):
+class LossMapWriterTestCase(unittest.TestCase):
+    """
+    Tests for the XML and GeoJSON loss map writers.
+    """
 
-    filename = "loss_map.xml"
-
+    filename = "loss_map.dat"
     tearDown = remove_file
+    data = [
+        LOSS_NODE(
+            asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
+            std_dev=None),
+        LOSS_NODE(
+            asset_ref="asset_2", location=Point(1.0, 1.5), value=16.23,
+            std_dev=None),
+        LOSS_NODE(
+            asset_ref="asset_3", location=Point(2.0, 2.5), value=17.23,
+            std_dev=None),
+    ]
 
-    def test_empty_model_not_supported(self):
+
+    def test_empty_model_not_supported_xml(self):
         writer = writers.LossMapXMLWriter(
-            self.filename, investigation_time=10.0, poe=0.5, statistics="mean")
+            self.filename, investigation_time=10.0, poe=0.5,
+            statistics="mean"
+        )
 
         self.assertRaises(ValueError, writer.serialize, [])
         self.assertRaises(ValueError, writer.serialize, None)
 
-    def test_serialize_a_model(self):
+    def test_empty_model_not_supported_geojson(self):
+        writer = writers.LossMapGeoJSONWriter(
+            self.filename, investigation_time=10.0, poe=0.5,
+            statistics="mean"
+        )
+
+        self.assertRaises(ValueError, writer.serialize, [])
+        self.assertRaises(ValueError, writer.serialize, None)
+
+    def test_serialize_a_model_xml(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -350,26 +376,50 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
 """)
 
         writer = writers.LossMapXMLWriter(
-            self.filename, investigation_time=10.0, poe=0.8, statistics="mean")
+            self.filename, investigation_time=10.0, poe=0.8,
+            statistics="mean"
+        )
 
-        data = [
-            LOSS_NODE(
-                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
-                std_dev=None),
-            LOSS_NODE(
-                asset_ref="asset_2", location=Point(1.0, 1.5), value=16.23,
-                std_dev=None),
-            LOSS_NODE(
-                asset_ref="asset_3", location=Point(2.0, 2.5), value=17.23,
-                std_dev=None),
-        ]
-
-        writer.serialize(data)
+        writer.serialize(self.data)
 
         _utils.assert_xml_equal(expected, self.filename)
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
-    def test_serialize_optional_metadata(self):
+    def test_serialize_a_model_geojson(self):
+        expected = {
+            'oqtype': 'LossMap',
+            'oqnrmlversion': '0.4',
+            'oqmetadata': {
+                'investigationTime': '10.0',
+                'poE': '0.8',
+                'statistics': 'mean',
+            },
+            'type': 'FeatureCollection',
+            'features': [
+                {'geometry': {'coordinates': [1.0, 1.5], 'type': 'Point'},
+                 'properties': {'losses': [
+                    {'assetRef': 'asset_1', 'value': '15.23'},
+                    {'assetRef': 'asset_2', 'value': '16.23'},
+                 ]},
+                 'type': 'Feature'},
+                {'geometry': {'coordinates': [2.0, 2.5], 'type': 'Point'},
+                 'properties': {'losses': [
+                    {'assetRef': 'asset_3', 'value': '17.23'},
+                 ]},
+                 'type': 'Feature'},
+            ],
+        }
+        writer = writers.LossMapGeoJSONWriter(
+            self.filename, investigation_time=10.0, poe=0.8,
+            statistics="mean"
+        )
+
+        writer.serialize(self.data)
+
+        actual = json.load(open(self.filename))
+        self.assertEqual(expected, actual)
+
+    def test_serialize_optional_metadata_xml(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -389,7 +439,8 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         writer = writers.LossMapXMLWriter(
             self.filename,
             investigation_time=10.0, poe=0.80, statistics="quantile",
-            quantile_value=0.50, unit="USD", loss_category="economic")
+            quantile_value=0.50, unit="USD", loss_category="economic"
+        )
 
         data = [LOSS_NODE(
                 asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
@@ -400,13 +451,49 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
-    def test_serialize_using_hazard_realization(self):
+    def test_serialize_optional_metadata_geojson(self):
+        expected = {
+            'oqtype': 'LossMap',
+            'oqnrmlversion': '0.4',
+            'oqmetadata': {
+                'investigationTime': '10.0',
+                'poE': '0.8',
+                'statistics': 'quantile',
+                'quantileValue': '0.5',
+                'unit': 'USD',
+                'lossCategory': 'economic',
+            },
+            'type': 'FeatureCollection',
+            'features': [
+                {'geometry': {'coordinates': [1.0, 1.5], 'type': 'Point'},
+                 'properties': {'losses': [
+                    {'assetRef': 'asset_1', 'mean': '15.23', 'stdDev': '2'},
+                 ]},
+                 'type': 'Feature'},
+            ],
+        }
+
+        writer = writers.LossMapGeoJSONWriter(
+            self.filename,
+            investigation_time=10.0, poe=0.80, statistics="quantile",
+            quantile_value=0.50, unit="USD", loss_category="economic"
+        )
+
+        data = [LOSS_NODE(
+                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
+                std_dev=2)]
+
+        writer.serialize(data)
+        actual = json.load(open(self.filename))
+        self.assertEqual(expected, actual)
+
+    def test_serialize_using_hazard_realization_xml(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossMap investigationTime="10.0" poE="0.8"
-           sourceModelTreePath="b1|b2" gsimTreePath="b1|b2"
+           sourceModelTreePath="b1|b2" gsimTreePath="b3|b4"
            lossCategory="economic" unit="USD">
     <node>
       <gml:Point>
@@ -421,7 +508,7 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
         writer = writers.LossMapXMLWriter(
             self.filename,
             investigation_time=10.0, poe=0.80, source_model_tree_path="b1|b2",
-            gsim_tree_path="b1|b2", unit="USD", loss_category="economic")
+            gsim_tree_path="b3|b4", unit="USD", loss_category="economic")
 
         data = [LOSS_NODE(asset_ref="asset_1",
                           location=Point(1.0, 1.5), value=15.23, std_dev=None)]
@@ -430,6 +517,43 @@ class LossMapXMLWriterTestCase(unittest.TestCase):
 
         _utils.assert_xml_equal(expected, self.filename)
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
+
+    def test_serialize_using_hazard_realization_geojson(self):
+        expected = {
+            'oqtype': 'LossMap',
+            'oqnrmlversion': '0.4',
+            'oqmetadata': {
+                'investigationTime': '10.0',
+                'poE': '0.8',
+                'sourceModelTreePath': 'b1|b2',
+                'gsimTreePath': 'b3|b4',
+                'unit': 'USD',
+                'lossCategory': 'economic',
+            },
+            'type': 'FeatureCollection',
+            'features': [
+                {'geometry': {'coordinates': [1.0, 1.5], 'type': 'Point'},
+                 'properties': {'losses': [
+                    {'assetRef': 'asset_1', 'mean': '15.23', 'stdDev': '2'},
+                 ]},
+                 'type': 'Feature'},
+            ],
+        }
+
+        writer = writers.LossMapGeoJSONWriter(
+            self.filename,
+            investigation_time=10.0, poe=0.80, source_model_tree_path="b1|b2",
+            gsim_tree_path="b3|b4", unit="USD", loss_category="economic"
+        )
+
+        data = [LOSS_NODE(
+                asset_ref="asset_1", location=Point(1.0, 1.5), value=15.23,
+                std_dev=2)]
+
+        writer.serialize(data)
+        actual = json.load(open(self.filename))
+        self.assertEqual(expected, actual)
+
 
 
 class LossFractionsWriterTestCase(unittest.TestCase):
