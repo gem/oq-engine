@@ -17,6 +17,7 @@
 Classes for serializing various NRML XML artifacts.
 """
 
+import numpy
 import StringIO
 import tokenize
 
@@ -735,7 +736,7 @@ class DisaggXMLWriter(object):
                 diss_matrix.set('poE', str(result.poe))
                 diss_matrix.set('iml', str(result.iml))
 
-                for idxs, value in utils.ndenumerate(result.matrix):
+                for idxs, value in numpy.ndenumerate(result.matrix):
                     prob = etree.SubElement(diss_matrix, 'prob')
 
                     index = ','.join([str(x) for x in idxs])
