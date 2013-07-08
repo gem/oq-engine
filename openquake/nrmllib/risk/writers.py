@@ -354,6 +354,7 @@ class LossMapWriter(object):
         """
         raise NotImplementedError()
 
+
 class LossMapXMLWriter(LossMapWriter):
     """
     NRML/XML implementation of a :class:`LossMapWriter`.
