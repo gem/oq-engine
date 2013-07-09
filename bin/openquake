@@ -439,7 +439,7 @@ def export(fn, output_id, target_dir):
         print 'No output found for OUTPUT_ID %s' % output_id
         return
     try:
-        files = fn(output_id, target_dir)
+        files = fn(output_id, target_dir, 'xml')
         if len(files) > 0:
             print 'Files Exported:'
             for f in files:
