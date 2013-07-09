@@ -24,7 +24,6 @@ from collections import namedtuple
 from collections import OrderedDict
 
 from openquake.hazardlib.calc import disagg
-from openquake import nrmllib
 from openquake.nrmllib import writers
 
 from openquake.engine.db import models
