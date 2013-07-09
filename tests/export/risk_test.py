@@ -56,7 +56,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.loss_curve.id = 0
         self.output_mock.loss_curve.loss_type = "structural"
         with mock.patch(writer) as m:
-            ret = risk.export_agg_loss_curve(self.output_mock, "/tmp/")
+            ret = risk.export_agg_loss_curve_xml(self.output_mock, "/tmp/")
 
             self.assertEqual([((),
                               {'gsim_tree_path': None,
@@ -66,7 +66,7 @@ class ExportTestCase(unittest.TestCase):
                                'source_model_tree_path': None,
                                'statistics': 'mean',
                                'unit': 'bucks'})], m.call_args_list)
-            self.assertEqual('/tmp/loss-curves-0.xml', ret)
+            self.assertEqual(['/tmp/loss-curves-0.xml'], ret)
 
     def test_export_loss_curve(self):
         writer = 'openquake.nrmllib.risk.writers.LossCurveXMLWriter'
@@ -76,7 +76,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.loss_curve.loss_type = "structural"
 
         with mock.patch(writer) as m:
-            ret = risk.export_loss_curve(self.output_mock, "/tmp/")
+            ret = risk.export_loss_curve_xml(self.output_mock, "/tmp/")
 
             self.assertEqual([((),
                               {'gsim_tree_path': None,
@@ -87,7 +87,7 @@ class ExportTestCase(unittest.TestCase):
                                'source_model_tree_path': None,
                                'statistics': 'mean',
                                'unit': 'bucks'})], m.call_args_list)
-            self.assertEqual('/tmp/loss-curves-0.xml', ret)
+            self.assertEqual(['/tmp/loss-curves-0.xml'], ret)
 
     def test_export_loss_map(self):
         writer = 'openquake.nrmllib.risk.writers.LossMapXMLWriter'
@@ -97,7 +97,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.loss_map.loss_type = "structural"
 
         with mock.patch(writer) as m:
-            ret = risk.export_loss_map(self.output_mock, "/tmp/")
+            ret = risk.export_loss_map_xml(self.output_mock, "/tmp/")
 
             self.assertEqual([((),
                               {'gsim_tree_path': None,
@@ -109,7 +109,7 @@ class ExportTestCase(unittest.TestCase):
                                'source_model_tree_path': None,
                                'statistics': 'mean',
                                'unit': 'bucks'})], m.call_args_list)
-            self.assertEqual('/tmp/loss-maps-0.xml', ret)
+            self.assertEqual(['/tmp/loss-maps-0.xml'], ret)
 
     def test_export_bcr_distribution(self):
         writer = 'openquake.nrmllib.risk.writers.BCRMapXMLWriter'
@@ -118,7 +118,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.bcr_distribution.loss_type = "structural"
 
         with mock.patch(writer) as m:
-            ret = risk.export_bcr_distribution(self.output_mock, "/tmp/")
+            ret = risk.export_bcr_distribution_xml(self.output_mock, "/tmp/")
 
             self.assertEqual([((),
                               {'asset_life_expectancy': 10,
@@ -129,7 +129,7 @@ class ExportTestCase(unittest.TestCase):
                                'source_model_tree_path': None,
                                'statistics': 'mean',
                                'unit': 'bucks'})], m.call_args_list)
-            self.assertEqual('/tmp/bcr-distribution-0.xml', ret)
+            self.assertEqual(['/tmp/bcr-distribution-0.xml'], ret)
 
     def test_export_aggregate_loss(self):
         writer = 'csv.writer'
@@ -143,7 +143,7 @@ class ExportTestCase(unittest.TestCase):
             ret = risk.export_aggregate_loss(self.output_mock, "/tmp/")
 
             self.assertEqual([], m.writerow.call_args_list)
-            self.assertEqual("/tmp/aggregate-loss-0.csv", ret)
+            self.assertEqual(["/tmp/aggregate-loss-0.csv"], ret)
 
 
 class ClassicalExportTestCase(BaseExportTestCase):
@@ -198,11 +198,11 @@ class ClassicalExportTestCase(BaseExportTestCase):
             # exporter code:
             loss_curve_files = []
             for o in loss_curve_outputs:
-                loss_curve_files.extend(risk.export(o.id, target_dir))
+                loss_curve_files.extend(risk.export(o.id, target_dir, 'xml'))
 
             loss_map_files = []
             for o in loss_map_outputs:
-                loss_map_files.extend(risk.export(o.id, target_dir))
+                loss_map_files.extend(risk.export(o.id, target_dir, 'xml'))
 
             self.assertEqual(19, len(loss_curve_files))
             self.assertEqual(19, len(loss_map_files))
@@ -276,19 +276,23 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # exporter code:
             loss_curve_files = []
             for o in loss_curve_outputs:
-                loss_curve_files.extend(risk.export(o.id, target_dir))
+                loss_curve_files.extend(risk.export(o.id, target_dir, 'xml'))
 
             agg_loss_curve_files = []
             for o in agg_loss_curve_outputs:
-                agg_loss_curve_files.extend(risk.export(o.id, target_dir))
+                agg_loss_curve_files.extend(
+                    risk.export(o.id, target_dir, 'xml')
+                )
 
             event_loss_table_files = []
             for o in event_loss_tables:
-                event_loss_table_files.extend(risk.export(o.id, target_dir))
+                event_loss_table_files.extend(
+                    risk.export(o.id, target_dir, 'xml')
+                )
 
             loss_map_files = []
             for o in loss_map_outputs:
-                loss_map_files.extend(risk.export(o.id, target_dir))
+                loss_map_files.extend(risk.export(o.id, target_dir, 'xml'))
 
             self.assertEqual(19, len(loss_curve_files))
             self.assertEqual(16, len(agg_loss_curve_files))
