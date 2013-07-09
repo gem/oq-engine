@@ -226,13 +226,18 @@ class RiskCalculator(base.Calculator):
 
         exported_files = []
         with logs.tracing('exports'):
-            if 'exports' in kwargs and kwargs['exports']:
-                exported_files = sum([
-                    export.risk.export(output.id, self.rc.export_dir)
-                    for output in export.core.get_outputs(self.job.id)], [])
+            if 'exports' in kwargs:
+                outputs = export.core.get_outputs(self.job.id)
 
-                for exp_file in exported_files:
-                    logs.LOG.debug('exported %s' % exp_file)
+                for export_type in kwargs['exports']:
+                    for output in outputs:
+                        fname = export.risk.export(
+                            output.id,
+                            self.rc.export_dir,
+                            export_type
+                        )
+                        exported_files.extend(fname)
+
         return exported_files
 
     @property
