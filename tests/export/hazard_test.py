@@ -314,7 +314,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             # Test multi hazard curve export:
             hc_files = []
             for curve in multi_curves:
-                hc_files.extend(hazard.export(curve.id, target_dir))
+                hc_files.extend(check_export(curve.id, target_dir))
 
             self.assertEqual(5, len(hc_files))
 
