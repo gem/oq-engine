@@ -225,8 +225,8 @@ def set_up_arg_parser():
     export_grp.add_argument(
         '--export-type', '--et',
         choices=['xml', 'geojson'],
-        default=['xml'],
-        action='append',
+        default='xml',
+        action='store',
         help=('Use with --export-hazard or --export-risk, specify the '
               'desired output format. Defaults to "xml".')
     )
