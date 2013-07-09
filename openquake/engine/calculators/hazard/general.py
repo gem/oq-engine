@@ -863,21 +863,22 @@ class BaseHazardCalculator(base.Calculator):
         """
         exported_files = []
 
-        logs.LOG.debug('> starting exports')
-        if 'exports' in kwargs and 'xml' in kwargs['exports']:
-            outputs = export_core.get_outputs(self.job.id)
+        with logs.tracing('exports'):
+            if 'exports' in kwargs:
+                outputs = export_core.get_outputs(self.job.id)
+                if not self.hc.export_multi_curves:
+                    outputs = outputs.exclude(output_type='hazard_curve_multi')
 
-            if not self.hc.export_multi_curves:
-                outputs = outputs.exclude(output_type='hazard_curve_multi')
-
-            for output in outputs:
-                with self.monitor('exporting %s' % output.output_type):
-                    fname = hazard_export.export(
-                        output.id, self.job.hazard_calculation.export_dir)
-                    exported_files.extend(fname)
-                    logs.LOG.debug('exported %s' % fname)
-
-        logs.LOG.debug('< done with exports')
+                for export_type in kwargs['exports']:
+                    for output in outputs:
+                        with self.monitor('exporting %s to %s'
+                                          % (output.output_type, export_type)):
+                            fname = hazard_export.export(
+                                output.id,
+                                self.job.hazard_calculation.export_dir,
+                                export_type
+                            )
+                            exported_files.extend(fname)
 
         return exported_files
 
