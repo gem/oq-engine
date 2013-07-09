@@ -27,7 +27,7 @@ from openquake.nrmllib.risk import writers
 
 
 LOSS_CURVE_FILENAME_FMT = 'loss-curves-%(loss_curve_id)s.xml'
-LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s.xml'
+LOSS_MAP_FILENAME_FMT = 'loss-maps-%(loss_map_id)s.%(file_ext)s'
 LOSS_FRACTION_FILENAME_FMT = 'loss-fractions-%(loss_fraction_id)s.xml'
 AGGREGATE_LOSS_FILENAME_FMT = 'aggregate-loss-%s.csv'
 BCR_FILENAME_FMT = 'bcr-distribution-%(bcr_distribution_id)s.xml'
@@ -111,23 +111,42 @@ def export_loss_curve_xml(output, target_dir):
     return [args['path']]
 
 
-@core.makedirsdeco
-def export_loss_map_xml(output, target_dir):
+def _export_loss_map(output, target_dir, writer_class, file_ext):
     """
-    Export `output` to `target_dir` by using a nrml loss map
-    serializer
+    General loss map export code.
     """
+    core.makedirs(target_dir)
+
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.loss_map.loss_type)
     args.update(dict(
         path=os.path.join(
             target_dir,
-            LOSS_MAP_FILENAME_FMT % {'loss_map_id': output.loss_map.id}),
+            LOSS_MAP_FILENAME_FMT % {'loss_map_id': output.loss_map.id,
+                                     'file_ext': file_ext}),
         poe=output.loss_map.poe,
         loss_category=risk_calculation.exposure_model.category))
-    writers.LossMapXMLWriter(**args).serialize(
-        output.loss_map.lossmapdata_set.all().order_by('asset_ref'))
+    writer = writer_class(**args)
+    writer.serialize(
+        output.loss_map.lossmapdata_set.all().order_by('asset_ref')
+    )
     return [args['path']]
+
+
+def export_loss_map_xml(output, target_dir):
+    """
+    Serialize a loss map to NRML/XML.
+    """
+    return _export_loss_map(output, target_dir, writers.LossMapXMLWriter,
+                            'xml')
+
+
+def export_loss_map_geojson(output, target_dir):
+    """
+    Serialize a loss map to geojson.
+    """
+    return _export_loss_map(output, target_dir, writers.LossMapGeoJSONWriter,
+                            'geojson')
 
 
 @core.makedirsdeco
@@ -290,7 +309,7 @@ XML_EXPORTERS = {
     'event_loss': export_event_loss_csv,
 }
 GEOJSON_EXPORTERS = {
-    # TODO: None supported yet.
+    'loss_map': export_loss_map_geojson,
 }
 EXPORTERS = {
     'xml': XML_EXPORTERS,
