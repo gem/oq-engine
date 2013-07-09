@@ -36,21 +36,23 @@ EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
 
 # for each output_type there must be a function
 # export_<output_type>(output, target_dir)
-def export(output_id, target_dir, file_format=None):
+def export(output_id, target_dir, export_type):
     """
     Export the given risk calculation output from the database to the
-    specified directory. See `openquake.engine.export.hazard.export` for more
-    details.
+    specified directory. See :func:`openquake.engine.export.hazard.export` for
+    more details.
     """
     output = models.Output.objects.get(id=output_id)
 
-    if file_format is None:
-        fn_name = "export_%s" % output.output_type
-    else:
-        fn_name = "export_%s_%s" % (output.output_type, file_format)
+    try:
+        export_fn = EXPORTERS[export_type][output.output_type]
+    except KeyError:
+        raise NotImplementedError(
+            'No "%(fmt)s" exporter is available for "%(output_type)s"'
+            ' outputs' % dict(fmt=export_type, output_type=output.output_type)
+        )
 
-    fn = globals().get(fn_name, core._export_fn_not_implemented)
-    return [fn(output, os.path.expanduser(target_dir))]
+    return export_fn(output, os.path.expanduser(target_dir))
 
 
 def _export_common(output, loss_type):
@@ -89,8 +91,7 @@ def export_agg_loss_curve_xml(output, target_dir):
         'loss_curve_id': output.loss_curve.id})
     writers.AggregateLossCurveXMLWriter(**args).serialize(
         output.loss_curve.aggregatelosscurvedata)
-    return args['path']
-export_agg_loss_curve = export_agg_loss_curve_xml
+    return [args['path']]
 
 
 @core.makedirsdeco
@@ -107,9 +108,7 @@ def export_loss_curve_xml(output, target_dir):
     data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
 
     writers.LossCurveXMLWriter(**args).serialize(data)
-    return args['path']
-
-export_loss_curve = export_loss_curve_xml
+    return [args['path']]
 
 
 @core.makedirsdeco
@@ -128,9 +127,7 @@ def export_loss_map_xml(output, target_dir):
         loss_category=risk_calculation.exposure_model.category))
     writers.LossMapXMLWriter(**args).serialize(
         output.loss_map.lossmapdata_set.all().order_by('asset_ref'))
-    return args['path']
-
-export_loss_map = export_loss_map_xml
+    return [args['path']]
 
 
 @core.makedirsdeco
@@ -159,9 +156,7 @@ def export_loss_fraction_xml(output, target_dir):
         path, variable, args['unit'],
         loss_category, hazard_metadata, poe).serialize(
             output.loss_fraction.total_fractions(), output.loss_fraction)
-    return path
-
-export_loss_fraction = export_loss_fraction_xml
+    return [path]
 
 
 @core.makedirsdeco
@@ -183,9 +178,7 @@ def export_bcr_distribution_xml(output, target_dir):
     writers.BCRMapXMLWriter(**args).serialize(
         output.bcr_distribution.bcrdistributiondata_set.all().order_by(
             'asset_ref'))
-    return args['path']
-
-export_bcr_distribution = export_bcr_distribution_xml
+    return [args['path']]
 
 
 def make_dmg_dist_export(damagecls, writercls, filename):
@@ -214,36 +207,29 @@ def make_dmg_dist_export(damagecls, writercls, filename):
             data = damagecls.objects.filter(
                 dmg_state__risk_calculation__id=rc_id)
         writer.serialize(data.order_by('dmg_state__lsi'))
-        return file_path
+        return [file_path]
 
     return export_dmg_dist
+
 
 export_dmg_dist_per_asset_xml = make_dmg_dist_export(
     models.DmgDistPerAsset, writers.DmgDistPerAssetXMLWriter,
     "dmg-dist-asset-%s.xml")
-
-export_dmg_dist_per_asset = export_dmg_dist_per_asset_xml
 
 
 export_dmg_dist_per_taxonomy_xml = make_dmg_dist_export(
     models.DmgDistPerTaxonomy, writers.DmgDistPerTaxonomyXMLWriter,
     "dmg-dist-taxonomy-%s.xml")
 
-export_dmg_dist_per_taxonomy = export_dmg_dist_per_taxonomy_xml
-
 
 export_dmg_dist_total_xml = make_dmg_dist_export(
     models.DmgDistTotal, writers.DmgDistTotalXMLWriter,
     "dmg-dist-total-%s.xml")
 
-export_dmg_dist_total = export_dmg_dist_total_xml
-
 
 export_collapse_map_xml = make_dmg_dist_export(
     models.DmgDistPerAsset, writers.CollapseMapXMLWriter,
     "collapse-map-%s.xml")
-
-export_collapse_map = export_collapse_map_xml
 
 
 def export_aggregate_loss_csv(output, target_dir):
@@ -259,7 +245,7 @@ def export_aggregate_loss_csv(output, target_dir):
         writer.writerow(['Mean', 'Standard Deviation'])
         writer.writerow([output.aggregate_loss.mean,
                         output.aggregate_loss.std_dev])
-    return filepath
+    return [filepath]
 
 export_aggregate_loss = export_aggregate_loss_csv
 
@@ -283,6 +269,29 @@ def export_event_loss_csv(output, target_dir):
             writer.writerow(["%7d" % event_loss.rupture.id,
                              "%.07f" % event_loss.rupture.magnitude,
                              "%.07f" % event_loss.aggregate_loss])
-    return filepath
+    return [filepath]
 
-export_event_loss = export_event_loss_csv
+
+XML_EXPORTERS = {
+    'agg_loss_curve': export_agg_loss_curve_xml,
+    'bcr_distribution': export_bcr_distribution_xml,
+    'collapse_map': export_collapse_map_xml,
+    'dmg_dist_per_asset': export_dmg_dist_per_asset_xml,
+    'dmg_dist_per_taxonomy': export_dmg_dist_per_taxonomy_xml,
+    'dmg_dist_total': export_dmg_dist_total_xml,
+    'loss_curve': export_loss_curve_xml,
+    'loss_fraction': export_loss_fraction_xml,
+    'loss_map': export_loss_map_xml,
+    # There are two exceptions; aggregate_loss and event_loss can only be
+    # exported in CSV format.
+    'aggregate_loss': export_aggregate_loss_csv,
+    'event_loss': export_event_loss_csv,
+
+}
+GEOJSON_EXPORTERS = {
+    # TODO: None supported yet.
+}
+EXPORTERS = {
+    'xml': XML_EXPORTERS,
+    'geojson': GEOJSON_EXPORTERS,
+}
