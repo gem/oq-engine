@@ -40,9 +40,6 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     #: the proper hazard output
     output_type = "hazard_curve"
 
-    def test(self):
-        raise NotImplementedError
-
     def run_risk(self, cfg, hazard_id):
         """
         Given the path to job config file, run the job and assert that it was
@@ -147,9 +144,6 @@ class End2EndRiskQATestCase(BaseRiskQATestCase):
         return super(End2EndRiskQATestCase, self).run_hazard(
             self.hazard_cfg)
 
-    def test(self):
-        raise NotImplementedError
-
 
 class LogicTreeBasedTestCase(object):
     """
@@ -247,6 +241,3 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             raise SkipTest
         else:
             super(FixtureBasedQATestCase, self)._run_test()
-
-    def test(self):
-        raise NotImplementedError
