@@ -144,7 +144,7 @@ def export_loss_fraction_xml(output, target_dir):
     hazard_metadata = models.Output.HazardMetadata(
         investigation_time=args['investigation_time'],
         statistics=args['statistics'],
-        quantile=args.get('quantile'),
+        quantile=args.get('quantile_value'),
         sm_path=args['source_model_tree_path'],
         gsim_path=args['gsim_tree_path'])
     path = os.path.join(
