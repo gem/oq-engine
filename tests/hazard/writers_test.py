@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import json
 import numpy
 import os
 import StringIO
@@ -821,7 +822,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
             rupture, rup_elem)
 
 
-class HazardMapXMLWriterTestCase(unittest.TestCase):
+class HazardMapWriterTestCase(unittest.TestCase):
 
     def setUp(self):
         self.data = [
@@ -836,7 +837,7 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
     def tearDown(self):
         os.unlink(self.path)
 
-    def test_serialize(self):
+    def test_serialize_xml(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -851,14 +852,59 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
 
         metadata = dict(
             investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
-            sa_damping=5.0, smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5')
+            sa_damping=5.0, smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5'
+        )
         writer = writers.HazardMapXMLWriter(self.path, **metadata)
         writer.serialize(self.data)
 
         utils.assert_xml_equal(expected, self.path)
         self.assertTrue(utils.validates_against_xml_schema(self.path))
 
-    def test_serialize_quantile(self):
+    def test_serialize_geojson(self):
+        expected = {
+            'type': 'FeatureCollection',
+            'oqnrmlversion': '0.4',
+            'oqtype': 'HazardMap',
+            'oqmetadata': {
+                'sourceModelTreePath': 'b1_b2_b4',
+                'gsimTreePath': 'b1_b4_b5',
+                'IMT': 'SA',
+                'saPeriod': '0.025',
+                'saDamping': '5.0',
+                'investigationTime': '50.0',
+                'poE': '0.1',
+            },
+            'features': [
+                {'type': 'Feature',
+                 'geometry': {'type': 'Point', 'coordinates': [-1.0, 1.0]},
+                 'properties': {'iml': '0.01'},
+                },
+                {'type': 'Feature',
+                 'geometry': {'type': 'Point', 'coordinates': [1.0, 1.0]},
+                 'properties': {'iml': '0.02'},
+                },
+                {'type': 'Feature',
+                 'geometry': {'type': 'Point', 'coordinates': [1.0, -1.0]},
+                 'properties': {'iml': '0.03'},
+                },
+                {'type': 'Feature',
+                 'geometry': {'type': 'Point', 'coordinates': [-1.0, -1.0]},
+                 'properties': {'iml': '0.04'},
+                },
+            ],
+        }
+
+        metadata = dict(
+            investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
+            sa_damping=5.0, smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5'
+        )
+        writer = writers.HazardMapGeoJSONWriter(self.path, **metadata)
+        writer.serialize(self.data)
+
+        actual = json.load(open(self.path))
+        self.assertEqual(expected, actual)
+
+    def test_serialize_quantile_xml(self):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -871,7 +917,6 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
 </nrml>
 """)
 
-        _, self.path = tempfile.mkstemp()
         metadata = dict(
             investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
             sa_damping=5.0, statistics='quantile', quantile_value=0.85
@@ -881,6 +926,51 @@ class HazardMapXMLWriterTestCase(unittest.TestCase):
 
         utils.assert_xml_equal(expected, self.path)
         self.assertTrue(utils.validates_against_xml_schema(self.path))
+
+    def test_serialize_quantile_geojson(self):
+        expected = {
+            'type': 'FeatureCollection',
+            'oqnrmlversion': '0.4',
+            'oqtype': 'HazardMap',
+            'oqmetadata': {
+                'statistics': 'quantile',
+                'quantileValue': '0.85',
+                'IMT': 'SA',
+                'saPeriod': '0.025',
+                'saDamping': '5.0',
+                'investigationTime': '50.0',
+                'poE': '0.1',
+            },
+            'features': [
+                {'type': 'Feature',
+                 'geometry': {'type': 'Point', 'coordinates': [-1.0, 1.0]},
+                 'properties': {'iml': '0.01'},
+                },
+                {'type': 'Feature',
+                 'geometry': {'type': 'Point', 'coordinates': [1.0, 1.0]},
+                 'properties': {'iml': '0.02'},
+                },
+                {'type': 'Feature',
+                 'geometry': {'type': 'Point', 'coordinates': [1.0, -1.0]},
+                 'properties': {'iml': '0.03'},
+                },
+                {'type': 'Feature',
+                 'geometry': {'type': 'Point', 'coordinates': [-1.0, -1.0]},
+                 'properties': {'iml': '0.04'},
+                },
+            ],
+        }
+
+        metadata = dict(
+            investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
+            sa_damping=5.0, statistics='quantile', quantile_value=0.85
+        )
+        writer = writers.HazardMapGeoJSONWriter(self.path, **metadata)
+        writer.serialize(self.data)
+
+        actual = json.load(open(self.path))
+        self.assertEqual(expected, actual)
+
 
 
 class DisaggXMLWriterTestCase(unittest.TestCase):
