@@ -17,6 +17,7 @@
 Classes for serializing various NRML XML artifacts.
 """
 
+import json
 import numpy
 import StringIO
 import tokenize
@@ -642,6 +643,48 @@ class HazardMapXMLWriter(HazardMapWriter):
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
                 encoding='UTF-8'))
+
+
+class HazardMapGeoJSONWriter(HazardMapWriter):
+    """
+    GeoJSON implementation of a :class:`HazardMapWriter`. Serializes hazard
+    maps as FeatureCollection artifacts with additional hazard map metadata.
+
+    See :class:`HazardMapWriter` for information about constructor parameters.
+    """
+
+    def serialize(self, data):
+        """
+        Serialize hazard map data to GeoJSON.
+
+        See :meth:`HazardMapWriter.serialize` for details about the expected
+        input.
+        """
+        oqmetadata = {}
+        for key, value in self.metadata.iteritems():
+            oqmetadata[_ATTR_MAP.get(key)] = str(value)
+
+        feature_coll = {
+            'type': 'FeatureCollection',
+            'features': [],
+            'oqtype': 'HazardMap',
+            'oqnrmlversion': '0.4',
+            'oqmetadata': oqmetadata,
+        }
+        features = feature_coll['features']
+
+        for lon, lat, iml in data:
+            feature = {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Point',
+                    'coordinates': [float(lon), float(lat)],
+                },
+                'properties': {'iml': str(iml)},
+            }
+            features.append(feature)
+
+        json.dump(feature_coll, open(self.path, 'w'))
 
 
 class DisaggXMLWriter(object):
