@@ -662,7 +662,8 @@ class HazardMapGeoJSONWriter(HazardMapWriter):
         """
         oqmetadata = {}
         for key, value in self.metadata.iteritems():
-            oqmetadata[_ATTR_MAP.get(key)] = str(value)
+            if value is not None:
+                oqmetadata[_ATTR_MAP.get(key)] = str(value)
 
         feature_coll = {
             'type': 'FeatureCollection',
