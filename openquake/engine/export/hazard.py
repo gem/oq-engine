@@ -361,21 +361,13 @@ def export_ses_xml(output, target_dir):
 export_complete_lt_ses_xml = export_ses_xml
 
 
-@core.makedirsdeco
-def export_hazard_map_xml(output, target_dir):
+def _export_hazard_map(output, target_dir, writer_class, file_ext):
     """
-    Export the specified hazard map ``output`` to the ``target_dir``.
-
-    :param output:
-        :class:`openquake.engine.db.models.Output` with an `output_type` of
-        `hazard_map`.
-    :param str target_dir:
-        Destination directory location for exported files.
-
-    :returns:
-        A list of exported file name (including the absolute path to each
-        file).
+    General hazard map export code.
     """
+    core.makedirs(target_dir)
+
+
     hazard_map = models.HazardMap.objects.get(output=output)
     haz_calc = output.oq_job.hazard_calculation
 
@@ -390,7 +382,8 @@ def export_hazard_map_xml(output, target_dir):
         smlt_path = None
         gsimlt_path = None
 
-    path = _get_result_export_path(haz_calc.id, target_dir, output.hazard_map)
+    path = _get_result_export_path(haz_calc.id, target_dir, output.hazard_map,
+                                   file_ext=file_ext)
 
     metadata = {
         'quantile_value': hazard_map.quantile,
@@ -404,9 +397,36 @@ def export_hazard_map_xml(output, target_dir):
         'poe': hazard_map.poe,
     }
 
-    writer = writers.HazardMapXMLWriter(path, **metadata)
+    writer = writer_class(path, **metadata)
     writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
     return [path]
+
+def export_hazard_map_xml(output, target_dir):
+    """
+    Export the specified hazard map ``output`` to the ``target_dir`` as
+    NRML/XML.
+
+    :param output:
+        :class:`openquake.engine.db.models.Output` with an `output_type` of
+        `hazard_map`.
+    :param str target_dir:
+        Destination directory location for exported files.
+
+    :returns:
+        A list of exported file name (including the absolute path to each
+        file).
+    """
+    return _export_hazard_map(output, target_dir, writers.HazardMapXMLWriter,
+                              'xml')
+
+
+def export_hazard_map_geojson(output, target_dir):
+    """
+    The same thing as :func:`export_hazard_map_xml`, except results are saved
+    in GeoJSON format.
+    """
+    return _export_hazard_map(output, target_dir,
+                              writers.HazardMapGeoJSONWriter, 'geojson')
 
 
 class _DisaggMatrix(object):
@@ -567,7 +587,7 @@ XML_EXPORTERS = {
     'uh_spectra': export_uh_spectra_xml,
 }
 GEOJSON_EXPORTERS = {
-    # TODO: None supported yet.
+    'hazard_map': export_hazard_map_geojson,
 }
 EXPORTERS = {
     'xml': XML_EXPORTERS,
