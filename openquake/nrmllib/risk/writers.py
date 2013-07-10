@@ -446,46 +446,45 @@ class LossMapGeoJSONWriter(LossMapWriter):
         """
         _assert_valid_input(data)
 
-        with open(self._path, 'w') as output:
-            feature_coll = {
-                'type': 'FeatureCollection',
-                'features': [],
-                'oqtype': 'LossMap',
-                # TODO(LB): should we instead use the
-                # openquake.nrmllib.__version__?
-                'oqnrmlversion': '0.4',
-                'oqmetadata': self._create_oqmetadata(),
-            }
+        feature_coll = {
+            'type': 'FeatureCollection',
+            'features': [],
+            'oqtype': 'LossMap',
+            # TODO(LB): should we instead use the
+            # openquake.nrmllib.__version__?
+            'oqnrmlversion': '0.4',
+            'oqmetadata': self._create_oqmetadata(),
+        }
 
-            for loss in data:
-                loc = loss.location
-                loss_node = self._loss_nodes.get(loc.wkt)
+        for loss in data:
+            loc = loss.location
+            loss_node = self._loss_nodes.get(loc.wkt)
 
-                if loss_node is None:
-                    loss_node = {
-                        'type': 'Feature',
-                        'geometry': {
-                            'type': 'Point',
-                            'coordinates': [float(loc.x), float(loc.y)]
-                        },
-                        'properties': {'losses': []},
-                    }
-                    self._loss_nodes[loss.location.wkt] = loss_node
-                    feature_coll['features'].append(loss_node)
+            if loss_node is None:
+                loss_node = {
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [float(loc.x), float(loc.y)]
+                    },
+                    'properties': {'losses': []},
+                }
+                self._loss_nodes[loss.location.wkt] = loss_node
+                feature_coll['features'].append(loss_node)
 
-                if loss.std_dev is not None:
-                    loss_node['properties']['losses'].append({
-                        'assetRef': str(loss.asset_ref),
-                        'mean': str(loss.value),
-                        'stdDev': str(loss.std_dev),
-                    })
-                else:
-                    loss_node['properties']['losses'].append({
-                        'assetRef': str(loss.asset_ref),
-                        'value': str(loss.value),
-                    })
+            if loss.std_dev is not None:
+                loss_node['properties']['losses'].append({
+                    'assetRef': str(loss.asset_ref),
+                    'mean': str(loss.value),
+                    'stdDev': str(loss.std_dev),
+                })
+            else:
+                loss_node['properties']['losses'].append({
+                    'assetRef': str(loss.asset_ref),
+                    'value': str(loss.value),
+                })
 
-            json.dump(feature_coll, output)
+        json.dump(feature_coll, open(self._path, 'w'))
 
     def _create_oqmetadata(self):
         """
