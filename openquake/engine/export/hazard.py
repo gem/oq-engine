@@ -63,7 +63,7 @@ def export(output_id, target_dir, export_type='xml'):
     return export_fn(output, os.path.expanduser(target_dir))
 
 
-def _get_result_export_path(calc_id, target_dir, result):
+def _get_result_export_path(calc_id, target_dir, result, file_ext='xml'):
     """
     Get the full absolute path (including file name) for a given ``result``.
 
@@ -78,6 +78,9 @@ def _get_result_export_path(calc_id, target_dir, result):
     :param result:
         :mod:`openquake.engine.db.models` result object with a foreign key
         reference to :class:`~openquake.engine.db.models.Output`.
+    :param file_ext:
+        Desired file extension for the output file.
+        Defaults to 'xml'.
 
     :returns:
         Full path (including filename) to the destination export file.
@@ -113,11 +116,13 @@ def _get_result_export_path(calc_id, target_dir, result):
             # we could have stats
             if result.statistics == 'quantile':
                 # quantile
-                filename = '%s-%s.xml' % (output_type,
-                                          'quantile_%s' % result.quantile)
+                filename = '%s-%s.%s' % (output_type,
+                                         'quantile_%s' % result.quantile,
+                                         file_ext)
             else:
                 # mean
-                filename = '%s-%s.xml' % (output_type, result.statistics)
+                filename = '%s-%s.%s' % (output_type, result.statistics,
+                                         file_ext)
         else:
             # otherwise, we need to include logic tree branch info
             ltr = result.lt_realization
@@ -125,13 +130,13 @@ def _get_result_export_path(calc_id, target_dir, result):
             gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
             if ltr.weight is None:
                 # Monte-Carlo logic tree sampling
-                filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.xml' % (
-                    output_type, sm_ltp, gsim_ltp, ltr.ordinal
+                filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
+                    output_type, sm_ltp, gsim_ltp, ltr.ordinal, file_ext
                 )
             else:
                 # End Branch Enumeration
-                filename = '%s-smltp_%s-gsimltp_%s.xml' % (
-                    output_type, sm_ltp, gsim_ltp
+                filename = '%s-smltp_%s-gsimltp_%s.%s' % (
+                    output_type, sm_ltp, gsim_ltp, file_ext
                 )
     elif output_type in ('gmf', 'ses'):
         # only logic trees, no stats
@@ -140,13 +145,13 @@ def _get_result_export_path(calc_id, target_dir, result):
         gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
         if ltr.weight is None:
             # Monte-Carlo logic tree sampling
-            filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.xml' % (
-                output_type, sm_ltp, gsim_ltp, ltr.ordinal
+            filename = '%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
+                output_type, sm_ltp, gsim_ltp, ltr.ordinal, file_ext
             )
         else:
             # End Branch Enumeration
-            filename = '%s-smltp_%s-gsimltp_%s.xml' % (
-                output_type, sm_ltp, gsim_ltp
+            filename = '%s-smltp_%s-gsimltp_%s.%s' % (
+                output_type, sm_ltp, gsim_ltp, file_ext
             )
     elif output_type == 'disagg_matrix':
         # only logic trees, no stats
@@ -157,16 +162,16 @@ def _get_result_export_path(calc_id, target_dir, result):
         gsim_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.gsim_lt_path)
         if ltr.weight is None:
             # Monte-Carlo logic tree sampling
-            filename = '%s-%s-smltp_%s-gsimltp_%s-ltr_%s.xml' % (
-                output_type, location, sm_ltp, gsim_ltp, ltr.ordinal
+            filename = '%s-%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
+                output_type, location, sm_ltp, gsim_ltp, ltr.ordinal, file_ext
             )
         else:
             # End Branch Enumeration
-            filename = '%s-%s-smltp_%s-gsimltp_%s.xml' % (
-                output_type, location, sm_ltp, gsim_ltp
+            filename = '%s-%s-smltp_%s-gsimltp_%s.%s' % (
+                output_type, location, sm_ltp, gsim_ltp, file_ext
             )
     else:
-        filename = '%s.xml' % output_type
+        filename = '%s.%s' % (output_type, file_ext)
 
     return os.path.abspath(os.path.join(directory, filename))
 
