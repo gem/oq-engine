@@ -569,10 +569,10 @@ class SESXMLWriter(object):
                 corner_elem.set('depth', str(corner[2]))
 
 
-class HazardMapXMLWriter(object):
+class HazardMapWriter(object):
     """
     :param path:
-        File path (including filename) for XML results to be saved to.
+        File path (including filename) for results to be saved to.
     :param metadata:
         The following keyword args are required:
 
@@ -608,7 +608,23 @@ class HazardMapXMLWriter(object):
             Iterable of hazard map data. Each datum should be a triple of
             (lon, lat, iml) values.
         """
+        raise NotImplementedError()
 
+
+class HazardMapXMLWriter(HazardMapWriter):
+    """
+    NRML/XML implementation of a :class:`HazardMapWriter`.
+
+    See :class:`HazardMapWriter` for information about constructor parameters.
+    """
+
+    def serialize(self, data):
+        """
+        Serialize hazard map data to XML.
+
+        See :meth:`HazardMapWriter.serialize` for details about the expected
+        input.
+        """
         with open(self.path, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
