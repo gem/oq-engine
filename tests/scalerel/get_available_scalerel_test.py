@@ -7,7 +7,8 @@ class AvailableScaleRelTestCase(unittest.TestCase):
 
     def test_get_available_scalerel(self):
         self.assertEqual({'WC1994': scalerel.wc1994.WC1994,
-                          'PeerMSR': scalerel.peer.PeerMSR},
+                          'PeerMSR': scalerel.peer.PeerMSR,
+						  'CEUS2011': scalerel.ceus2011.CEUS2011},
                          dict(scalerel.get_available_scalerel()))
 
     def test_get_available_area_scalerel(self):
