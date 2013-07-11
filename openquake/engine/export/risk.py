@@ -36,7 +36,7 @@ EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
 
 # for each output_type there must be a function
 # export_<output_type>(output, target_dir)
-def export(output_id, target_dir, export_type):
+def export(output_id, target_dir, export_type='xml'):
     """
     Export the given risk calculation output from the database to the
     specified directory. See :func:`openquake.engine.export.hazard.export` for
