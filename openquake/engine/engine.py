@@ -593,7 +593,7 @@ def haz_job_from_file(cfg_file_path, username, log_level, exports):
 
     # read calculation params and create the calculation profile
     params, files = parse_config(open(cfg_file_path, 'r'))
-    calculation =  create_hazard_calculation(
+    calculation = create_hazard_calculation(
         username, params, files.values()
     )
     job.hazard_calculation = calculation
@@ -658,6 +658,7 @@ def print_outputs_summary(outputs):
         for o in outputs.order_by('output_type'):
             print '%s | %s | %s' % (o.id, o.output_type, o.display_name)
 
+
 def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
              hazard_calculation_id=None):
     """
@@ -702,8 +703,8 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
                 list_risk_outputs(completed_job.risk_calculation.id)
             else:
                 complain_and_exit('Calculation %s failed'
-                                         % completed_job.risk_calculation.id,
-                                         exit_code=1)
+                                  % completed_job.risk_calculation.id,
+                                  exit_code=1)
     except IOError as e:
         print str(e)
     except Exception as e:
