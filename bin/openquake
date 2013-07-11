@@ -269,8 +269,10 @@ def list_inputs(input_type):
     available_input_types = ["exposure"]
 
     if input_type not in available_input_types:
-        complain_and_exit("Wrong input type. Available input types: %s" % (
-            ", ".join(available_input_types)))
+        engine.complain_and_exit(
+            "Wrong input type. Available input types: %s"
+            % (", ".join(available_input_types))
+        )
     inputs = models.Input.objects.filter(
         input_type=input_type).order_by('-last_update')
 
@@ -333,19 +335,7 @@ def list_imported_outputs():
     List outputs which were imported from a file, not calculated from a job
     """
     outputs = models.Output.objects.filter(oq_job__isnull=True)
-    _print_outputs_summary(outputs)
-
-
-def list_hazard_outputs(hc_id):
-    """
-    List the outputs for a given
-    :class:`~openquake.engine.db.models.HazardCalculation`.
-
-    :param hc_id:
-        ID of a hazard calculation.
-    """
-    outputs = models.Output.objects.filter(oq_job__hazard_calculation=hc_id)
-    _print_outputs_summary(outputs)
+    engine.print_outputs_summary(outputs)
 
 
 def list_risk_outputs(rc_id):
@@ -357,17 +347,7 @@ def list_risk_outputs(rc_id):
         ID of a risk calculation.
     """
     outputs = models.Output.objects.filter(oq_job__risk_calculation=rc_id)
-    _print_outputs_summary(outputs)
-
-
-def _print_outputs_summary(outputs):
-    """
-    List of :class:`openquake.engine.db.models.Output` objects.
-    """
-    if len(outputs) > 0:
-        print 'id | output_type | name'
-        for o in outputs.order_by('output_type'):
-            print '%s | %s | %s' % (o.id, o.output_type, o.display_name)
+    engine.print_outputs_summary(outputs)
 
 
 def export_hazard(haz_output_id, target_dir, export_type):
@@ -458,9 +438,9 @@ def run_risk(
                     completed_job.risk_calculation.id)
                 list_risk_outputs(completed_job.risk_calculation.id)
             else:
-                complain_and_exit('Calculation %s failed'
-                                  % completed_job.risk_calculation.id,
-                                  exit_code=1)
+                engine.complain_and_exit('Calculation %s failed'
+                                         % completed_job.risk_calculation.id,
+                                         exit_code=1)
     except IOError as e:
         print str(e)
     except Exception as e:
@@ -472,11 +452,6 @@ def _touch_log_file(log_file):
     'append' mode ('a'). If the specified file is not writable, an
     :exc:`IOError` will be raised."""
     open(abspath(log_file), 'a').close()
-
-
-def complain_and_exit(msg, exit_code=0):
-    print msg
-    sys.exit(exit_code)
 
 
 def del_haz_calc(hc_id, confirmed=False):
@@ -532,7 +507,7 @@ def optimize_source_model(input_path, area_src_disc, output_path):
     area_src_disc = float(area_src_disc)
     source.optimize_source_model(input_path, area_src_disc,
                                  output_path)
-    complain_and_exit(output_path)
+    engine.complain_and_exit(output_path)
 
 
 def main():
@@ -541,7 +516,7 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        complain_and_exit(__version__)
+        engine.complain_and_exit(__version__)
 
     if args.config_file:
         os.environ[config.OQ_CONFIG_FILE_VAR] = abspath(expanduser(args.config_file))
@@ -559,7 +534,7 @@ def main():
     elif args.list_hazard_calculations:
         list_hazard_calculations()
     elif args.list_hazard_outputs is not None:
-        list_hazard_outputs(args.list_hazard_outputs)
+        engine.list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
         output_id, target_dir = args.export_hazard
         output_id = int(output_id)
@@ -582,7 +557,7 @@ def main():
         export_risk(output_id, expanduser(target_dir), args.export_type)
     elif args.run_risk is not None:
         if args.hazard_output_id is None and args.hazard_calculation_id is None:
-            complain_and_exit(MISSING_HAZARD_MSG)
+            engine.complain_and_exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         run_risk(expanduser(args.run_risk), args.log_level, log_file,
