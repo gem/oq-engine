@@ -655,3 +655,79 @@ def print_outputs_summary(outputs):
         print 'id | output_type | name'
         for o in outputs.order_by('output_type'):
             print '%s | %s | %s' % (o.id, o.output_type, o.display_name)
+
+def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
+             hazard_calculation_id=None):
+    """
+    Run a risk calculation using the specified config file and other options.
+    One of hazard_output_id or hazard_calculation_id must be specified.
+
+    :param str cfg_file:
+        Path to calculation config (INI-style) file.
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param list exports:
+        A list of export types requested by the user. Currently only 'xml'
+        is supported.
+    :param str hazard_ouput_id:
+        The Hazard Output ID used by the risk calculation (can be None)
+    :param str hazard_calculation_id:
+        The Hazard Calculation ID used by the risk calculation (can be None)
+    """
+    assert not(hazard_output_id is None and hazard_calculation_id is None)
+    try:
+        if log_file is not None:
+            touch_log_file(log_file)
+
+        job = prepare_job(user_name=getpass.getuser(), log_level=log_level)
+        params, files = parse_config(open(cfg_file, 'r'))
+
+        # Add the hazard output id to the risk calculation constructor
+        # args
+        params.update(dict(hazard_output_id=hazard_output_id,
+                           hazard_calculation_id=hazard_calculation_id))
+
+        calculation = create_risk_calculation(
+            job.owner, params, files.values()
+        )
+        job.risk_calculation = calculation
+        job.save()
+
+        error_message = validate(job, 'risk', params, files,  exports)
+        if error_message:
+            sys.exit(error_message)
+
+        # Initialize the supervisor, instantiate the calculator,
+        # and run the calculation.
+        completed_job = run_calc(
+            job, log_level, log_file, exports, 'risk'
+        )
+        if completed_job is not None:
+            # We check for `None` here because the supervisor and executor
+            # process forks return to here as well. We want to ignore them.
+            if completed_job.status == 'complete':
+                print 'Calculation %d results:' % (
+                    completed_job.risk_calculation.id)
+                list_risk_outputs(completed_job.risk_calculation.id)
+            else:
+                complain_and_exit('Calculation %s failed'
+                                         % completed_job.risk_calculation.id,
+                                         exit_code=1)
+    except IOError as e:
+        print str(e)
+    except Exception as e:
+        raise
+
+
+def list_risk_outputs(rc_id):
+    """
+    List the outputs for a given
+    :class:`~openquake.engine.db.models.RiskCalculation`.
+
+    :param rc_id:
+        ID of a risk calculation.
+    """
+    outputs = models.Output.objects.filter(oq_job__risk_calculation=rc_id)
+    print_outputs_summary(outputs)
