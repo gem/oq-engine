@@ -66,7 +66,9 @@ def prepare_job(user_name="openquake", log_level='progress'):
 
 
 def prepare_user(user_name):
-    """Make sure user with the given name exists, return it."""
+    """
+    Make sure user with the given name exists, return it.
+    """
     # See if the current user exists
     # If not, create a record for them
     try:
@@ -236,7 +238,8 @@ def get_input(path, input_type, owner, name=None):
 
 
 def create_hazard_calculation(username, params, files):
-    """Given a params `dict` parsed from the config file, create a
+    """
+    Given a params `dict` parsed from the config file, create a
     :class:`~openquake.engine.db.models.HazardCalculation`.
 
     :param username:
@@ -617,14 +620,18 @@ def get_hazard_outputs(hc_id):
     """
     :param hc_id:
         ID of a hazard calculation.
+    :returns:
+        A sequence of :class:`openquake.engine.db.models.Output` objects
     """
     return models.Output.objects.filter(oq_job__hazard_calculation=hc_id)
 
 
 def touch_log_file(log_file):
-    """If a log file destination is specified, attempt to open the file in
+    """
+    If a log file destination is specified, attempt to open the file in
     'append' mode ('a'). If the specified file is not writable, an
-    :exc:`IOError` will be raised."""
+    :exc:`IOError` will be raised.
+    """
     try:
         open(os.path.abspath(log_file), 'a').close()
     except IOError as e:
