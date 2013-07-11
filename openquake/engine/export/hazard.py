@@ -32,7 +32,7 @@ from openquake.engine.export import core
 
 # for each output_type there must be a function
 # export_<output_type>(output, target_dir)
-def export(output_id, target_dir, export_type):
+def export(output_id, target_dir, export_type='xml'):
     """
     Export the given hazard calculation output from the database to the
     specified directory.
@@ -42,7 +42,7 @@ def export(output_id, target_dir, export_type):
     :param str target_dir:
         Directory where output artifacts should be written.
     :param export_type:
-        The desired export format.
+        The desired export format. Defaults to 'xml'.
     :returns:
         List of file names (including the full directory path) containing the
         exported results.
