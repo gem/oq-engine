@@ -683,23 +683,10 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
         if log_file is not None:
             touch_log_file(log_file)
 
-        job = prepare_job(user_name=getpass.getuser(), log_level=log_level)
-        params, files = parse_config(open(cfg_file, 'r'))
-
-        # Add the hazard output id to the risk calculation constructor
-        # args
-        params.update(dict(hazard_output_id=hazard_output_id,
-                           hazard_calculation_id=hazard_calculation_id))
-
-        calculation = create_risk_calculation(
-            job.owner, params, files.values()
+        job = risk_job_from_file(
+            cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
+            hazard_calculation_id
         )
-        job.risk_calculation = calculation
-        job.save()
-
-        error_message = validate(job, 'risk', params, files,  exports)
-        if error_message:
-            sys.exit(error_message)
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
@@ -721,6 +708,53 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
         print str(e)
     except Exception as e:
         raise
+
+
+def risk_job_from_file(cfg_file_path, username, log_level, exports,
+                       hazard_output_id=None, hazard_calculation_id=None):
+    """
+    Create a full risk job profile from a job config file.
+
+    :param str cfg_file_path:
+        Path to the job.ini.
+    :param str username:
+        The user who will own this job profile and all results.
+    :param str log_level:
+        Desired log level.
+    :param exports:
+        List of desired export types.
+    :param int hazard_output_id:
+        ID of a hazard output to use as input to this calculation. Specify
+        this xor ``hazard_calculation_id``.
+    :param int hazard_calculation_id:
+        ID of a complete hazard calculation to use as input to this
+        calculation. Specify this xor ``hazard_output_id``.
+
+    :returns:
+        :class:`openquake.engine.db.models.OqJob` object
+    :raises:
+        `RuntimeError` if the input job configuration is not valid
+    """
+    # create the job
+    job = prepare_job(user_name=username, log_level=log_level)
+
+    # read calculation params and create the calculation profile
+    params, files = parse_config(open(cfg_file_path, 'r'))
+    # Add the hazard output id to the risk calculation constructor args
+    params.update(dict(hazard_output_id=hazard_output_id,
+                       hazard_calculation_id=hazard_calculation_id))
+
+    calculation = create_risk_calculation(
+        job.owner, params, files.values()
+    )
+    job.risk_calculation = calculation
+    job.save()
+
+    error_message = validate(job, 'risk', params, files,  exports)
+    if error_message:
+        raise RuntimeError(error_message)
+
+    return job
 
 
 def list_risk_outputs(rc_id):
