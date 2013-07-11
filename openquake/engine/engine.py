@@ -765,5 +765,14 @@ def list_risk_outputs(rc_id):
     :param rc_id:
         ID of a risk calculation.
     """
-    outputs = models.Output.objects.filter(oq_job__risk_calculation=rc_id)
-    print_outputs_summary(outputs)
+    print_outputs_summary(get_risk_outputs(rc_id))
+
+
+def get_risk_outputs(rc_id):
+    """
+    :param rc_id:
+        ID of a risk calculation.
+    :returns:
+        A sequence of :class:`openquake.engine.db.models.Output` objects
+    """
+    return models.Output.objects.filter(oq_job__risk_calculation=rc_id)
