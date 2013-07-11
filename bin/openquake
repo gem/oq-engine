@@ -261,61 +261,6 @@ def set_up_arg_parser():
     return parser
 
 
-def run_hazard(cfg_file, log_level, log_file, exports):
-    """
-    Run a hazard calculation using the specified config file and other options.
-
-    :param str cfg_file:
-        Path to calculation config (INI-style) file.
-    :param str log_level:
-        'debug', 'info', 'warn', 'error', or 'critical'
-    :param str log_file:
-        Path to log file.
-    :param list exports:
-        A list of export types requested by the user. Currently only 'xml'
-        is supported.
-    """
-    try:
-        if log_file is not None:
-            try:
-                _touch_log_file(log_file)
-            except IOError as e:
-                raise IOError('Error writing to log file %s: %s'
-                              % (log_file, e.strerror))
-
-        job = engine.prepare_job(
-            user_name=getpass.getuser(), log_level=log_level)
-        params, files = engine.parse_config(open(cfg_file, 'r'))
-        calculation = engine.create_hazard_calculation(job.owner, params,
-                                                       files.values())
-        job.hazard_calculation = calculation
-        job.save()
-
-        error_message = validate(job, 'hazard', params, files, exports)
-        if error_message:
-            sys.exit(error_message)
-
-        # Initialize the supervisor, instantiate the calculator,
-        # and run the calculation.
-        completed_job = engine.run_calc(
-            job, log_level, log_file, exports, 'hazard')
-        if completed_job is not None:
-            # We check for `None` here because the supervisor and executor
-            # process forks return to here as well. We want to ignore them.
-            if completed_job.status == 'complete':
-                print 'Calculation %d results:' % (
-                    completed_job.hazard_calculation.id)
-                list_hazard_outputs(completed_job.hazard_calculation.id)
-            else:
-                complain_and_exit('Calculation %d failed'
-                                  % completed_job.hazard_calculation.id,
-                                  exit_code=1)
-    except IOError as e:
-        print str(e)
-    except Exception as e:
-        raise
-
-
 def list_inputs(input_type):
     """
     Print a list of available input models
@@ -623,8 +568,8 @@ def main():
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        run_hazard(expanduser(args.run_hazard), args.log_level, log_file,
-                   args.exports)
+        engine.run_hazard(expanduser(args.run_hazard), args.log_level,
+                          log_file, args.exports)
     elif args.delete_hazard_calculation is not None:
         del_haz_calc(args.delete_hazard_calculation, args.yes)
     # risk
