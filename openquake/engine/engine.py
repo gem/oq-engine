@@ -580,6 +580,8 @@ def haz_job_from_file(cfg_file_path, username, log_level, exports):
         The user who will own this job profile and all results.
     :param str log_level:
         Desired log level.
+    :param exports:
+        List of desired export types.
 
     :returns:
         :class:`openquake.engine.db.models.OqJob` object
