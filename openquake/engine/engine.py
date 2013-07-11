@@ -679,7 +679,6 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
-    assert not(hazard_output_id is None and hazard_calculation_id is None)
     try:
         if log_file is not None:
             touch_log_file(log_file)
@@ -736,6 +735,10 @@ def risk_job_from_file(cfg_file_path, username, log_level, exports,
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
+    assert not(hazard_output_id is None and hazard_calculation_id is None), (
+        "Must specify either `hazard_output_id` or `hazard_calculation_id`, "
+        "and not both"
+    )
     # create the job
     job = prepare_job(user_name=username, log_level=log_level)
 
