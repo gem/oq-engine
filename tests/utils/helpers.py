@@ -636,7 +636,7 @@ def get_hazard_job(cfg, username=None):
     job = engine.prepare_job(username)
     params, files = engine.parse_config(open(cfg, 'r'))
     haz_calc = engine.create_hazard_calculation(
-        job.owner, params, files.values())
+        job.owner.user_name, params, files.values())
     haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
     job.hazard_calculation = haz_calc
     job.save()

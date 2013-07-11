@@ -242,8 +242,9 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         self.files = [self.site_model]
 
     def test_create_hazard_calculation(self):
-        hc = engine.create_hazard_calculation(self.owner, self.params,
-                                              self.files)
+        hc = engine.create_hazard_calculation(
+            self.owner.user_name, self.params, self.files
+        )
         # Normalize/clean fields by fetching a fresh copy from the db.
         hc = models.HazardCalculation.objects.get(id=hc.id)
 
@@ -276,8 +277,9 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         ]
 
         with warnings.catch_warnings(record=True) as w:
-            engine.create_hazard_calculation(self.owner, self.params,
-                                             self.files)
+            engine.create_hazard_calculation(
+                self.owner.user_name, self.params, self.files
+            )
         actual_warnings = [msg.message.message for msg in w]
         self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
 
@@ -351,7 +353,8 @@ class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
         job = engine.prepare_job(getpass.getuser())
         params, files = engine.parse_config(open(cfg, 'r'))
         calculation = engine.create_hazard_calculation(
-            job.owner, params, files.values())
+            job.owner.user_name, params, files.values()
+        )
 
         form = validation.ClassicalHazardForm(
             instance=calculation, files=files
