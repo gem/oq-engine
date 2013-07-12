@@ -780,3 +780,17 @@ def get_risk_outputs(rc_id):
         A sequence of :class:`openquake.engine.db.models.Output` objects
     """
     return models.Output.objects.filter(oq_job__risk_calculation=rc_id)
+
+
+def get_hazard_calculations(username):
+    """
+    Get all hazard calculations belonging to the given ``username``.
+    """
+    return models.HazardCalculation.objects.filter(owner__user_name=username)
+
+
+def get_risk_calculations(username):
+    """
+    Get all risk calculations belonging to the given ``username``.
+    """
+    return models.RiskCalculation.objects.filter(owner__user_name=username)
