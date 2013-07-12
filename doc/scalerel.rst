@@ -13,6 +13,14 @@ Wells and Coppersmith
     :members:
 
 
+---------------------
+CEUS SSC
+---------------------
+
+.. automodule:: openquake.hazardlib.scalerel.ceus2011
+    :members:
+
+
 ----
 Peer
 ----
