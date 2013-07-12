@@ -910,3 +910,31 @@ def random_location_generator(min_x=-180, max_x=180, min_y=-90, max_y=90):
     return shapely.geometry.Point(
         (min_x + random.random() * (max_x - min_x),
          min_y + random.random() * (max_y - min_y)))
+
+
+class MultiMock(object):
+
+    def __init__(self, **mocks):
+        # dict of mock names -> mock paths
+        self._mocks = mocks
+        self.active_patches = {}
+        self.active_mocks = {}
+
+    def __enter__(self):
+        for key, value in self._mocks.iteritems():
+            the_patch = mock_module.patch(value)
+            self.active_patches[key] = the_patch
+            self.active_mocks[key] = the_patch.start()
+        return self
+
+    def __exit__(self, *args):
+        for each_mock in self.active_mocks.itervalues():
+            each_mock.stop()
+        for each_patch in self.active_patches.itervalues():
+            each_patch.stop()
+
+    def __iter__(self):
+        return self.active_mocks.itervalues()
+
+    def __getitem__(self, key):
+        return self.active_mocks.get(key)
