@@ -35,7 +35,7 @@ EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
 
 
 # for each output_type there must be a function
-# export_<output_type>(output, target_dir)
+# export_<output_type>_<export_type>(output, target_dir)
 def export(output_id, target_dir, export_type='xml'):
     """
     Export the given risk calculation output from the database to the
@@ -282,8 +282,10 @@ XML_EXPORTERS = {
     'loss_curve': export_loss_curve_xml,
     'loss_fraction': export_loss_fraction_xml,
     'loss_map': export_loss_map_xml,
+    # TODO(LB):
     # There are two exceptions; aggregate_loss and event_loss can only be
     # exported in CSV format.
+    # We should re-think the way we're handling the export cases.
     'aggregate_loss': export_aggregate_loss_csv,
     'event_loss': export_event_loss_csv,
 
