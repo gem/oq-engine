@@ -13,7 +13,7 @@ METHOD_NOT_ALLOWED = 405
 JSON = 'application/json'
 
 IGNORE_FIELDS = ('base_path', 'export_dir', 'owner')
-GEOM_FIELDS = ('region', 'sites')
+GEOM_FIELDS = ('region', 'sites', 'region_constraint', 'sites_disagg')
 
 LOGGER = logging.getLogger('openquakeserver')
 
