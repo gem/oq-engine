@@ -288,7 +288,6 @@ XML_EXPORTERS = {
     # We should re-think the way we're handling the export cases.
     'aggregate_loss': export_aggregate_loss_csv,
     'event_loss': export_event_loss_csv,
-
 }
 GEOJSON_EXPORTERS = {
     # TODO: None supported yet.
