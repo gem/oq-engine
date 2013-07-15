@@ -5,13 +5,6 @@ from django.utils import unittest
 from django.test.client import RequestFactory
 
 from engine import views
-def _get_haz_calcs():
-    return [
-        (1, 'executing', 'description 1'),
-        (2, 'pre_executing', 'description 2'),
-        (3, 'complete', 'description e'),
-    ]
-views._get_haz_calcs = views._get_haz_calcs
 
 
 class CalcHazardTestCase(unittest.TestCase):

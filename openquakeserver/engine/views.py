@@ -1,13 +1,10 @@
 import json
 import logging
-import os
 import urlparse
 
 from django.http import HttpResponse
-from django.conf import settings
 
 from openquake.engine.db import models as oqe_models
-from openquake.engine import settings as oqe_settings
 
 METHOD_NOT_ALLOWED = 405
 JSON = 'application/json'
