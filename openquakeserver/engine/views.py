@@ -58,7 +58,38 @@ def calc_hazard_info(request, calc_id):
 
 
 def calc_risk(request):
-    raise NotImplementedError
+    """
+    The following request types are supported:
+
+        * GET: List risk calculations.
+
+    Responses are in JSON.
+    """
+    if not request.method == 'GET':
+        return HttpResponse(status=METHOD_NOT_ALLOWED)
+
+    base_url = 'http://%s' % request.META['HTTP_HOST']
+
+    risk_calc_data = _get_risk_calcs()
+
+    response_data = []
+    for hc_id, status, desc in risk_calc_data:
+        url = urlparse.urljoin(base_url, 'calc/risk/%d' % hc_id)
+        response_data.append(
+            dict(id=hc_id, status=status, description=desc, url=url)
+        )
+
+    return HttpResponse(content=json.dumps(response_data),
+                        content_type=JSON)
+
+
+def _get_risk_calcs():
+    return oqe_models.OqJob.objects\
+        .select_related()\
+        .filter(risk_calculation__isnull=False)\
+        .values_list('risk_calculation',
+                     'status',
+                     'risk_calculation__description')
 
 
 def calc_risk_info(request, calc_id):
