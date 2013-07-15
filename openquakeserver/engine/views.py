@@ -54,38 +54,7 @@ def _get_haz_calcs():
 
 
 def calc_hazard_info(request, calc_id):
-    if not request.method == 'GET':
-        return HttpResponse(status=METHOD_NOT_ALLOWED)
-
-    response_data = _get_haz_calc_info(calc_id)
-
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
-
-
-def _get_haz_calc_info(calc_id):
-    job = oqe_models.OqJob.objects\
-        .select_related()\
-        .get(hazard_calculation=calc_id)
-
-    hc = job.hazard_calculation
-    fields = [x.name for x in hc._meta.fields if x.name not in IGNORE_FIELDS]
-    response_data = {}
-    for field_name in fields:
-        try:
-            value = getattr(hc, field_name)
-            if value is not None:
-                # TODO: special handling for geometry
-                # convert it to geojson or wkt?
-                if field_name in GEOM_FIELDS:
-                    response_data[field_name] = json.loads(value.geojson)
-                else:
-                    response_data[field_name] = value
-        except AttributeError:
-            # Better that we miss an attribute than crash.
-            pass
-
-    response_data['status'] = job.status
-    return response_data
+    raise NotImplementedError
 
 
 def calc_risk(request):
