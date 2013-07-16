@@ -1,7 +1,8 @@
 import json
 import mock
-from django.utils import unittest
 
+from collections import namedtuple
+from django.utils import unittest
 from django.test.client import RequestFactory
 
 from engine import views
@@ -73,3 +74,77 @@ class CalcRiskTestCase(unittest.TestCase):
 
             self.assertEqual(200, response.status_code)
             self.assertEqual(expected_content, response.content)
+
+
+class CalcToResponseDataTestCase(unittest.TestCase):
+    """
+    Tests for `engine.views._calc_to_respons_data`.
+    """
+
+    def setUp(self):
+        Field = namedtuple('Field', 'name')
+        self.calc = mock.Mock()
+        field_names = [
+            'base_path', 'export_dir', 'owner',
+            'region', 'sites', 'region_constraint', 'sites_disagg',
+            'hazard_calculation', 'hazard_output',
+            'description', 'maximum_distance',
+        ]
+        self.calc._meta.fields = [Field(name) for name in field_names]
+
+        # general stuff
+        self.calc.base_path = '/foo/bar/'
+        self.calc.export_dir = '/tmp/outputs/'
+        self.calc.owner = object()
+
+        # geometry
+        self.calc.region.geojson = (
+            '{ "type": "Polygon", "coordinates": '
+               '[[[1, 1], [2, 3], [3, 1], [1, 1]]] }'
+        )
+        self.calc.sites.geojson = (
+            '{ "type": "MultiPoint", "coordinates": '
+               '[[100.0, 0.0], [101.0, 1.0]] }'
+        )
+        self.calc.region_constraint.geojson = (
+            '{ "type": "Polygon", "coordinates": '
+               '[[[2, 2], [3, 4], [4, 1], [1, 1]]] }'
+        )
+        self.calc.sites_disagg.geojson = (
+            '{ "type": "MultiPoint", "coordinates": '
+               '[[100.1, 0.1], [101.1, 1.1]] }'
+        )
+
+        # risk inputs
+        self.calc.hazard_calculation = object()
+        self.calc.hazard_output = object()
+
+        # some sample parameters
+        self.calc.description = 'the description'
+        self.calc.maximum_distance = 195.5
+
+    def test(self):
+        expected = {
+            'description': 'the description',
+            'maximum_distance': 195.5,
+            'region': {
+                'coordinates': [[[1, 1], [2, 3], [3, 1], [1, 1]]],
+                'type': 'Polygon',
+            },
+            'region_constraint': {
+                'coordinates': [[[2, 2], [3, 4], [4, 1], [1, 1]]],
+                'type': 'Polygon',
+            },
+            'sites': {
+                'coordinates': [[100.0, 0.0], [101.0, 1.0]],
+                'type': 'MultiPoint',
+            },
+            'sites_disagg': {
+                'coordinates': [[100.1, 0.1], [101.1, 1.1]],
+                'type': 'MultiPoint',
+            },
+        }
+
+        response_data = views._calc_to_response_data(self.calc)
+
+        self.assertEqual(expected, response_data)
