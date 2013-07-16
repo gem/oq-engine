@@ -27,6 +27,7 @@ from collections import OrderedDict
 from itertools import izip
 
 import openquake.nrmllib
+from openquake.nrmllib import Output
 from openquake.nrmllib import utils
 from openquake.nrmllib import models
 
@@ -128,8 +129,9 @@ class BaseCurveXMLWriter(object):
     """
     Base class for curve writers.
 
-    :param path:
-        File path (including filename) for XML results to be saved to.
+    :param dest:
+        File path (including filename) or file-like object for XML results to
+        be saved to.
     :param metadata:
         The following keyword args are required:
 
@@ -147,8 +149,8 @@ class BaseCurveXMLWriter(object):
           produced these curves. Only required for non-statisical curves.
     """
 
-    def __init__(self, path, **metadata):
-        self.path = path
+    def __init__(self, dest, **metadata):
+        self.dest = dest
         self.metadata = metadata
         _validate_hazard_metadata(metadata)
 
@@ -186,7 +188,7 @@ class HazardCurveXMLWriter(BaseCurveXMLWriter):
             * location: An object representing the location of the curve; must
               have `x` and `y` to represent lon and lat, respectively.
         """
-        with open(self.path, 'w') as fh:
+        with Output(self.dest, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
             self.add_hazard_curves(root, self.metadata, data)
@@ -226,14 +228,14 @@ class MultiHazardCurveXMLWriter(object):
     :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter` to
     actually serialize the single set of curves.
 
-    :attr str path:
-         The path of the filename to be written
+    :attr str dest:
+         The path of the filename to be written, or a file-like object
     :attr metadata_set:
          Iterable over metadata suitable to create instances of
          :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter`
     """
-    def __init__(self, path, metadata_set):
-        self.path = path
+    def __init__(self, dest, metadata_set):
+        self.dest = dest
         self.metadata_set = metadata_set
 
         for metadata in metadata_set:
@@ -249,11 +251,11 @@ class MultiHazardCurveXMLWriter(object):
            :meth:`serialize` of the class
            :class:`openquake.nrmllib.hazard.writers.HazardCurveXMLWriter`
         """
-        with open(self.path, 'w') as fh:
+        with Output(self.dest, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
             for metadata, curve_data in zip(self.metadata_set, curve_set):
-                writer = HazardCurveXMLWriter(self.path, **metadata)
+                writer = HazardCurveXMLWriter(self.dest, **metadata)
                 writer.add_hazard_curves(root, metadata, curve_data)
 
             fh.write(etree.tostring(
@@ -263,8 +265,9 @@ class MultiHazardCurveXMLWriter(object):
 
 class EventBasedGMFXMLWriter(object):
     """
-    :param str path:
-        File path (including filename) for XML results to be saved to.
+    :param dest:
+        File path (including filename) or a file-like object for XML results to
+        be saved to.
     :param str sm_lt_path:
         Source model logic tree branch identifier of the logic tree realization
         which produced this collection of ground motion fields.
@@ -273,8 +276,8 @@ class EventBasedGMFXMLWriter(object):
         produced this collection of ground motion fields.
     """
 
-    def __init__(self, path, sm_lt_path, gsim_lt_path):
-        self.path = path
+    def __init__(self, dest, sm_lt_path, gsim_lt_path):
+        self.dest = dest
         self.sm_lt_path = sm_lt_path
         self.gsim_lt_path = gsim_lt_path
 
@@ -305,7 +308,7 @@ class EventBasedGMFXMLWriter(object):
             * `lon` and `lat` attributes (to indicate the geographical location
               of the ground motion field)
         """
-        with open(self.path, 'w') as fh:
+        with Output(self.dest, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -352,8 +355,9 @@ class EventBasedGMFXMLWriter(object):
 
 class SESXMLWriter(object):
     """
-    :param str path:
-        File path (including filename) for XML results to be saved to.
+    :param dest:
+        File path (including filename) or a file-like object for XML results to
+        be saved to.
     :param str sm_lt_path:
         Source model logic tree branch identifier of the logic tree realization
         which produced this collection of stochastic event sets.
@@ -362,8 +366,8 @@ class SESXMLWriter(object):
         produced this collection of stochastic event sets.
     """
 
-    def __init__(self, path, sm_lt_path, gsim_lt_path):
-        self.path = path
+    def __init__(self, dest, sm_lt_path, gsim_lt_path):
+        self.dest = dest
         self.sm_lt_path = sm_lt_path
         self.gsim_lt_path = gsim_lt_path
 
@@ -423,7 +427,7 @@ class SESXMLWriter(object):
 
             Each of these should be a triple of `lon`, `lat`, `depth`.
         """
-        with open(self.path, 'w') as fh:
+        with Output(self.dest, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -572,8 +576,9 @@ class SESXMLWriter(object):
 
 class HazardMapWriter(object):
     """
-    :param path:
-        File path (including filename) for results to be saved to.
+    :param dest:
+        File path (including filename) or a file-like object for results to be
+        saved to.
     :param metadata:
         The following keyword args are required:
 
@@ -596,8 +601,8 @@ class HazardMapWriter(object):
         * sa_damping: Only used with imt = 'SA'.
     """
 
-    def __init__(self, path, **metadata):
-        self.path = path
+    def __init__(self, dest, **metadata):
+        self.dest = dest
         self.metadata = metadata
         _validate_hazard_metadata(metadata)
 
@@ -626,7 +631,7 @@ class HazardMapXMLWriter(HazardMapWriter):
         See :meth:`HazardMapWriter.serialize` for details about the expected
         input.
         """
-        with open(self.path, 'w') as fh:
+        with Output(self.dest, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -685,13 +690,15 @@ class HazardMapGeoJSONWriter(HazardMapWriter):
             }
             features.append(feature)
 
-        json.dump(feature_coll, open(self.path, 'w'))
+        with Output(self.dest, 'w') as fh:
+            json.dump(feature_coll, fh)
 
 
 class DisaggXMLWriter(object):
     """
-    :param path:
-        File path (including filename) for XML results to be saved to.
+    :param dest:
+        File path (including filename) or file-like object for XML results to
+        be saved to.
     :param metadata:
         The following keyword args are required:
 
@@ -742,8 +749,8 @@ class DisaggXMLWriter(object):
         ('TRT', 'tectonic_region_types'),
     ])
 
-    def __init__(self, path, **metadata):
-        self.path = path
+    def __init__(self, dest, **metadata):
+        self.dest = dest
         self.metadata = metadata
         _validate_hazard_metadata(self.metadata)
 
@@ -764,7 +771,7 @@ class DisaggXMLWriter(object):
               curve at the given ``poe``.
         """
 
-        with open(self.path, 'w') as fh:
+        with Output(self.dest, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -810,12 +817,13 @@ class DisaggXMLWriter(object):
 
 class ScenarioGMFXMLWriter(object):
     """
-    :param str path:
-        File path (including filename) for XML results to be saved to.
+    :param dest:
+        File path (including filename) or file-like object for XML results to
+        be saved to.
     """
 
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, dest):
+        self.dest = dest
 
     def serialize(self, data):
         """
@@ -837,7 +845,7 @@ class ScenarioGMFXMLWriter(object):
             * `lon` and `lat` attributes (to indicate the geographical location
               of the ground motion field
         """
-        with open(self.path, 'w') as fh:
+        with Output(self.dest, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
             gmfset = etree.SubElement(root, 'gmfSet')
@@ -870,8 +878,8 @@ class UHSXMLWriter(BaseCurveXMLWriter):
                    ascending order
     """
 
-    def __init__(self, path, **metadata):
-        super(UHSXMLWriter, self).__init__(path, **metadata)
+    def __init__(self, dest, **metadata):
+        super(UHSXMLWriter, self).__init__(dest, **metadata)
 
         if self.metadata.get('poe') is None:
             raise ValueError('`poe` keyword arg is required')
@@ -902,7 +910,7 @@ class UHSXMLWriter(BaseCurveXMLWriter):
         """
         gml_ns = openquake.nrmllib.SERIALIZE_NS_MAP['gml']
 
-        with open(self.path, 'w') as fh:
+        with Output(self.dest, 'w') as fh:
             root = etree.Element(
                 'nrml', nsmap=openquake.nrmllib.SERIALIZE_NS_MAP
             )
@@ -936,11 +944,12 @@ class SourceModelXMLWriter(object):
     This class is the writer counterpart to
     :class:`openquake.nrmllib.hazard.SourceModelParser`.
 
-    :param str path:
-        Path to the file where we want to write the source model.
+    :param dest:
+        Path to the file or file-like object where we want to write the source
+        model.
     """
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, dest):
+        self.dest = dest
 
     @staticmethod
     def _coords_from_geom(wkt):
@@ -1298,7 +1307,7 @@ class SourceModelXMLWriter(object):
             A :class:`openquake.nrmllib.models.SourceModel` object, which is an
             iterable collection of sources.
         """
-        with open(self.path, 'w') as fh:
+        with Output(self.dest, 'w') as fh:
             root = etree.Element(
                 'nrml', nsmap=openquake.nrmllib.SERIALIZE_NS_MAP
             )

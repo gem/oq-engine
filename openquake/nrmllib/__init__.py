@@ -54,3 +54,26 @@ def assert_valid(source):
     if _NRML_SCHEMA is None:  # the nrml schema is parsed only once
         _NRML_SCHEMA = etree.XMLSchema(etree.parse(nrml_schema_file()))
     _NRML_SCHEMA.assertValid(etree.parse(source))
+
+
+class Output(object):
+    """
+    Context-managed output object which accepts either a path or a file-like
+    object.
+    """
+
+    def __init__(self, dest, mode='w'):
+        self._dest = dest
+        self._mode = mode
+        self._file = None
+
+    def __enter__(self):
+        if isinstance(self._dest, (basestring, buffer)):
+            self._file = open(self._dest, self._mode)
+        else:
+            # assume it is a file-like; don't change anything
+            self._file = self._dest
+        return self._file
+
+    def __exit__(self, *args):
+        self._file.close()
