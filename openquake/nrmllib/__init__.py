@@ -64,7 +64,7 @@ class NRMLFile(object):
     Behaves like a file.
     """
 
-    def __init__(self, dest, mode='w'):
+    def __init__(self, dest, mode='r'):
         self._dest = dest
         self._mode = mode
         self._file = None
