@@ -25,11 +25,14 @@ from lxml import etree
 
 import openquake.nrmllib
 
+from openquake.nrmllib import Output
+
 
 class LossCurveXMLWriter(object):
     """
-    :param path:
-        File path (including filename) for results to be saved to.
+    :param dest:
+        File path (including filename) or file-like object for results to be
+        saved to.
     :param float investigation_time:
         Investigation time (also known as Time Span) defined in
         the calculation which produced these results (in years).
@@ -56,7 +59,7 @@ class LossCurveXMLWriter(object):
         True if it is an insured loss curve
     """
 
-    def __init__(self, path, investigation_time,
+    def __init__(self, dest, investigation_time,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None,
                  insured=False):
@@ -65,7 +68,7 @@ class LossCurveXMLWriter(object):
                                  statistics, quantile_value)
 
         self._unit = unit
-        self._path = path
+        self._dest = dest
         self._statistics = statistics
         self._quantile_value = quantile_value
         self._gsim_tree_path = gsim_tree_path
@@ -107,7 +110,7 @@ class LossCurveXMLWriter(object):
 
         _assert_valid_input(data)
 
-        with open(self._path, "w") as output:
+        with Output(self._dest, 'w') as output:
             root = etree.Element("nrml",
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -174,8 +177,9 @@ class LossCurveXMLWriter(object):
 
 class AggregateLossCurveXMLWriter(object):
     """
-    :param path:
-        File path (including filename) for results to be saved to.
+    :param dest:
+        File path (including filename) or file-like objects for results to be
+        saved to.
     :param float investigation_time:
         Investigation time (also known as Time Span) defined in
         the calculation which produced these results (in years).
@@ -197,7 +201,7 @@ class AggregateLossCurveXMLWriter(object):
         it describes the quantile value.
     """
 
-    def __init__(self, path, investigation_time,
+    def __init__(self, dest, investigation_time,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None):
 
@@ -205,7 +209,7 @@ class AggregateLossCurveXMLWriter(object):
                                  statistics, quantile_value)
 
         self._unit = unit
-        self._path = path
+        self._dest = dest
         self._statistics = statistics
         self._quantile_value = quantile_value
         self._gsim_tree_path = gsim_tree_path
@@ -234,7 +238,7 @@ class AggregateLossCurveXMLWriter(object):
         if data is None:
             raise ValueError("You can not serialize an empty document")
 
-        with open(self._path, "w") as output:
+        with Output(self._dest, 'w') as output:
             root = etree.Element("nrml",
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -283,8 +287,9 @@ class LossMapWriter(object):
     Subclasses must implement the :meth:`serialize` method, which defines the
     format of the output.
 
-    :param path:
-        File path (including filename) for results to be saved to.
+    :param dest:
+        File path (including filename) or file-like object for results to be
+        saved to.
     :param float investigation_time:
         Investigation time (also known as Time Span) defined in
         the calculation which produced these results (in years).
@@ -312,7 +317,7 @@ class LossMapWriter(object):
         it describes the quantile value.
     """
 
-    def __init__(self, path, investigation_time, poe,
+    def __init__(self, dest, investigation_time, poe,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None,
                  loss_category=None):
@@ -325,7 +330,7 @@ class LossMapWriter(object):
 
         self._poe = poe
         self._unit = unit
-        self._path = path
+        self._dest = dest
         self._statistics = statistics
         self._loss_category = loss_category
         self._quantile_value = quantile_value
@@ -370,7 +375,7 @@ class LossMapXMLWriter(LossMapWriter):
         """
         _assert_valid_input(data)
 
-        with open(self._path, "w") as output:
+        with Output(self._dest, 'w') as output:
             root = etree.Element("nrml",
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -484,7 +489,8 @@ class LossMapGeoJSONWriter(LossMapWriter):
                     'value': str(loss.value),
                 })
 
-        json.dump(feature_coll, open(self._path, 'w'))
+        with Output(self._dest, 'w') as fh:
+            fh.write(json.dumps(feature_coll))
 
     def _create_oqmetadata(self):
         """
@@ -520,26 +526,28 @@ class LossFractionsWriter(object):
     Serializer for loss fractions produced with the classical and
     event based calculators.
 
-    :attr path:
-      Full pathname file, where the results will be saved into.
+    :attr dest:
+        Full path including file name or file-like object where the results
+        will be saved into.
     :attr str variable:
-      The variable used for disaggregation
+        The variable used for disaggregation
     :attr str unit:
         Attribute describing how the value of the assets has been measured.
     :attr str loss_category:
         Attribute describing the category (economic, population, buildings,
         etc..) of the losses producing this loss map.
-    :attr object hazard_metadata: metadata of hazard outputs used by risk
-       calculation. It has the attributes: investigation_time,
-       source_model_tree_path, gsim_tree_path, statistics, quantile_value
+    :attr object hazard_metadata:
+       metadata of hazard outputs used by risk calculation. It has the
+        attributes: investigation_time, source_model_tree_path, gsim_tree_path,
+        statistics, quantile_value
     :attr float poe:
         Probability of exceedance used to interpolate the losses
         producing this fraction map.
     """
 
-    def __init__(self, path, variable, loss_unit,
+    def __init__(self, dest, variable, loss_unit,
                  loss_category, hazard_metadata, poe=None):
-        self.path = path
+        self.dest = dest
         self.variable = variable
         self.loss_unit = loss_unit
         self.loss_category = loss_category
@@ -572,7 +580,7 @@ class LossFractionsWriter(object):
                 bin_element.set("absoluteLoss", "%.4e" % absolute_loss)
                 bin_element.set("fraction", "%.5f" % fraction)
 
-        with open(self.path, "w") as output:
+        with Output(self.dest, 'w') as output:
             root = etree.Element(
                 "nrml", nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -621,8 +629,9 @@ class BCRMapXMLWriter(object):
     Serializer for bcr (benefit cost ratio) maps produced with the classical
     and probabilistic calculators.
 
-    :param path:
-        File path (including filename) for results to be saved to.
+    :param dest:
+        File path (including filename) or file-like object for results to be
+        saved to.
     :param float interest_rate:
         The inflation discount rate.
     :param float asset_life_expectancy:
