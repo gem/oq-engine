@@ -26,6 +26,12 @@ def calc_hazard(request):
     if not request.method == 'GET':
         return HttpResponse(status=METHOD_NOT_ALLOWED)
 
+    if request.is_secure():
+        base_url = 'https://%s'
+    else:
+        base_url = 'http://%s'
+    base_url %= request.META['HTTP_HOST']
+
     base_url = 'http://%s' % request.META['HTTP_HOST']
 
     haz_calc_data = _get_haz_calcs()
@@ -65,7 +71,11 @@ def calc_risk(request):
     if not request.method == 'GET':
         return HttpResponse(status=METHOD_NOT_ALLOWED)
 
-    base_url = 'http://%s' % request.META['HTTP_HOST']
+    if request.is_secure():
+        base_url = 'https://%s'
+    else:
+        base_url = 'http://%s'
+    base_url %= request.META['HTTP_HOST']
 
     risk_calc_data = _get_risk_calcs()
 
