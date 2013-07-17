@@ -56,7 +56,7 @@ def assert_valid(source):
     _NRML_SCHEMA.assertValid(etree.parse(source))
 
 
-class Output(object):
+class NRMLFile(object):
     """
     Context-managed output object which accepts either a path or a file-like
     object.

@@ -25,7 +25,7 @@ from lxml import etree
 
 import openquake.nrmllib
 
-from openquake.nrmllib import Output
+from openquake.nrmllib import NRMLFile
 
 
 class LossCurveXMLWriter(object):
@@ -110,7 +110,7 @@ class LossCurveXMLWriter(object):
 
         _assert_valid_input(data)
 
-        with Output(self._dest, 'w') as output:
+        with NRMLFile(self._dest, 'w') as output:
             root = etree.Element("nrml",
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -238,7 +238,7 @@ class AggregateLossCurveXMLWriter(object):
         if data is None:
             raise ValueError("You can not serialize an empty document")
 
-        with Output(self._dest, 'w') as output:
+        with NRMLFile(self._dest, 'w') as output:
             root = etree.Element("nrml",
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -375,7 +375,7 @@ class LossMapXMLWriter(LossMapWriter):
         """
         _assert_valid_input(data)
 
-        with Output(self._dest, 'w') as output:
+        with NRMLFile(self._dest, 'w') as output:
             root = etree.Element("nrml",
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
@@ -489,7 +489,7 @@ class LossMapGeoJSONWriter(LossMapWriter):
                     'value': str(loss.value),
                 })
 
-        with Output(self._dest, 'w') as fh:
+        with NRMLFile(self._dest, 'w') as fh:
             fh.write(json.dumps(feature_coll))
 
     def _create_oqmetadata(self):
@@ -580,7 +580,7 @@ class LossFractionsWriter(object):
                 bin_element.set("absoluteLoss", "%.4e" % absolute_loss)
                 bin_element.set("fraction", "%.5f" % fraction)
 
-        with Output(self.dest, 'w') as output:
+        with NRMLFile(self.dest, 'w') as output:
             root = etree.Element(
                 "nrml", nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
