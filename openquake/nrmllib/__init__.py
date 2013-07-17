@@ -60,6 +60,8 @@ class Output(object):
     """
     Context-managed output object which accepts either a path or a file-like
     object.
+
+    Behaves like a file.
     """
 
     def __init__(self, dest, mode='w'):
