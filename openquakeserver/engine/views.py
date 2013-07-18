@@ -39,7 +39,7 @@ def calc_hazard(request):
 
     response_data = []
     for hc_id, status, desc in haz_calc_data:
-        url = urlparse.urljoin(base_url, 'calc/hazard/%d' % hc_id)
+        url = urlparse.urljoin(base_url, 'v1/calc/hazard/%d' % hc_id)
         response_data.append(
             dict(id=hc_id, status=status, description=desc, url=url)
         )
@@ -121,7 +121,7 @@ def calc_risk(request):
 
     response_data = []
     for hc_id, status, desc in risk_calc_data:
-        url = urlparse.urljoin(base_url, 'calc/risk/%d' % hc_id)
+        url = urlparse.urljoin(base_url, 'v1/calc/risk/%d' % hc_id)
         response_data.append(
             dict(id=hc_id, status=status, description=desc, url=url)
         )

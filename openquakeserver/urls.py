@@ -9,7 +9,7 @@ urlpatterns = patterns('',
     # Examples:
     # url(r'^$', 'openquakeserver.views.home', name='home'),
     # url(r'^openquakeserver/', include('openquakeserver.foo.urls')),
-    url(r'^calc/', include('openquakeserver.engine.calc_urls')),
+    url(r'^v1/calc/', include('openquakeserver.engine.v1.calc_urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:
     # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
