@@ -1,4 +1,4 @@
-# Django settings for openquakeserver project.
+from openquake.engine import settings as oqe_settings
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -9,16 +9,20 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
-        'NAME': 'oqengineserver.db',                      # Or path to database file if using sqlite3.
-        'USER': '',                      # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
-    }
+DATABASES = oqe_settings.DATABASES
+DATABASES['default'] = {
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': 'oqengineserver.db',
+    'USER': '',
+    'PASSWORD': '',
+    'HOST': '',
+    'PORT': '',
 }
+
+DATABASE_ROUTERS = [
+    'openquakeserver.routers.DefaultRouter',
+    'openquake.engine.db.routers.OQRouter',
+]
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -113,10 +117,8 @@ INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
     # Uncomment the next line to enable the admin:
-    # 'django.contrib.admin',
+    'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
     'south',
@@ -131,11 +133,21 @@ INSTALLED_APPS = (
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
     'handlers': {
         'mail_admins': {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
-        }
+        },
+        'console':{
+            'level':'DEBUG',
+            'class':'logging.StreamHandler',
+            'formatter': 'simple'
+        },
     },
     'loggers': {
         'django.request': {
@@ -143,5 +155,10 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
-    }
+        'openquakeserver': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
 }
