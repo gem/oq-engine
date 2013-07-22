@@ -258,7 +258,7 @@ GROUP BY site_id ORDER BY site_id;
         """
         gmvs = []
         ruptures = []
-        for gmf in models.GmfAgg.objects.filter(
+        for gmf in models.GmfData.objects.filter(
                 gmf=hazard_id,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
                 sa_damping=self.sa_damping):
