@@ -320,7 +320,7 @@ if __name__ == '__main__':
     p.add_argument('host', nargs='?', default='localhost')
     p.add_argument('dbname', nargs='?', default='openquake')
     p.add_argument('user', nargs='?', default='oq_admin')
-    p.add_argument('password', nargs='?', default='')
+    p.add_argument('password', nargs='?', default='openquake')
     p.add_argument('port', nargs='?', default='5432')
     arg = p.parse_args()
     main(arg.hazard_calculation_id, arg.outdir, arg.host,
