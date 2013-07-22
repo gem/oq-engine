@@ -62,7 +62,13 @@ class ClassicalTest(unittest.TestCase):
 
     def test_call_three_realizations(self):
         assets = [workflows.Asset(dict(structural=10))] * 4
-        curves = [mock.Mock()] * 4
+
+        curves = []
+        for _ in range(0, 4):
+            m = mock.Mock()
+            m.__nonzero__ = mock.Mock()
+            m.__nonzero__.return_value = True
+            curves.append(m)
 
         data = ((1, assets, curves[0]),
                 (2, assets, curves[1]),
@@ -131,13 +137,15 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.vf = mock.MagicMock()
         self.poes = [0.1, 0.2]
         self.workflow = workflows.ProbabilisticEventBased(
-            self.vf, 1, 0.75, 50, 1000, 20, self.poes)
+            self.vf, 1, 0.75, 50, 1000, 20, self.poes, True)
 
     def tearDown(self):
         self.patch.stop()
 
     def test_call_one_realization(self):
-        assets = [workflows.Asset(dict(structural=10))]
+        assets = [workflows.Asset(dict(structural=10),
+                                  dict(structural=0.1),
+                                  dict(structural=0.8))]
         hazard = (mock.Mock(), mock.Mock())
         data = ((1, assets, hazard),)
         self.workflow.losses.return_value = numpy.empty((1, 100))
@@ -169,7 +177,9 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
             self.calcs.EventLossTable.call_args_list)
 
     def test_call_three_realizations(self):
-        assets = [workflows.Asset(dict(structural=10))] * 4
+        assets = [workflows.Asset(dict(structural=10),
+                                  dict(structural=0.1),
+                                  dict(structural=0.8))] * 4
         hazard = [(mock.Mock(), mock.Mock())] * 3
 
         self.workflow.losses.return_value = numpy.empty((4, 100))
@@ -209,7 +219,9 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.assertIsNone(self.workflow.statistics(mock.Mock(),
                                                    mock.Mock(),
                                                    mock.Mock()))
-        assets = [workflows.Asset(dict(structural=10))] * 4
+        assets = [workflows.Asset(dict(structural=10),
+                                  dict(structural=0.1),
+                                  dict(structural=0.8))] * 4
         hazard = [(mock.Mock(), mock.Mock())] * 3
         data = ((1, assets, hazard[0]),
                 (2, assets, hazard[1]),
@@ -217,9 +229,9 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
 
         quantiles = [0.3, 0.7, 0.8, 0.9]
 
-        self.workflow.losses.return_value = numpy.empty((4, 100))
+        self.workflow.losses.return_value = numpy.random.random((4, 100))
         self.workflow.event_loss.return_value = collections.Counter((1, 1))
-        self.workflow.curves.return_value = numpy.empty((4, 2, 10))
+        self.workflow.curves.return_value = numpy.random.random((4, 2, 10))
 
         self.calcs.asset_statistics.return_value = (
             numpy.empty((2, 10)), numpy.empty((len(quantiles), 2, 10)),
@@ -240,3 +252,59 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                          stats.quantile_curves.shape)
         self.assertEqual((len(self.poes), len(quantiles), 4),
                          stats.quantile_maps.shape)
+
+
+class ClassicalBCRTest(unittest.TestCase):
+    def setUp(self):
+        self.patch = mock.patch('openquake.risklib.workflows.calculators')
+        self.calcs = self.patch.start()
+        self.vf = mock.MagicMock()
+        self.vf_retro = mock.MagicMock()
+        self.workflow = workflows.ClassicalBCR(
+            self.vf, self.vf_retro, 3, 0.1, 30)
+        self.workflow.curves_orig.return_value = numpy.empty((4, 2, 10))
+        self.workflow.curves_retro.return_value = numpy.empty((4, 2, 10))
+
+    def tearDown(self):
+        self.patch.stop()
+
+    def test_call_one_realization(self):
+        assets = [workflows.Asset(dict(structural=10),
+                                  retrofitting_values=dict(structural=10))]
+        curves = [mock.Mock()]
+        curves_retro = [mock.Mock()]
+        data = ((1, assets, curves, curves_retro),)
+        ret = list(self.workflow("structural", data))
+
+        self.assertEqual(1, len(ret))
+        hid, _output = ret[0]
+
+        self.assertEqual(1, hid)
+
+        self.assertEqual(
+            [((self.vf, 3), {}), ((self.vf_retro, 3), {})],
+            self.calcs.ClassicalLossCurve.call_args_list)
+
+    def test_call_three_realizations(self):
+        assets = [workflows.Asset(
+            dict(structural=10),
+            retrofitting_values=dict(structural=10))] * 4
+
+        curves = [mock.Mock()] * 4
+        curves_retro = [mock.Mock()] * 4
+
+        data = ((1, assets, curves[0], curves_retro[0]),
+                (2, assets, curves[1], curves_retro[1]),
+                (3, assets, curves[2], curves_retro[2]),)
+
+        i = 0
+        for i, (hid, _output) in enumerate(
+                self.workflow("structural", data), 1):
+            self.assertEqual(i, hid)
+
+        self.assertEqual(3, i)
+
+        self.assertEqual(
+            [((self.vf, 3), {}),
+             ((self.vf_retro, 3), {})],
+            self.calcs.ClassicalLossCurve.call_args_list)

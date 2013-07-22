@@ -41,20 +41,27 @@ class Asset(object):
     deductible values and insured limits considered for insured losses
     calculations.
     """
-    def __init__(self, values, deductibles=None, insured_limits=None):
+    def __init__(self,
+                 values,
+                 deductibles=None,
+                 insurance_limits=None,
+                 retrofitting_values=None):
         """
         :param dict values:
             asset values keyed by loss types
         :param dict deductible:
             deductible values (expressed as a percentage relative to
             the value of the asset) keyed by loss types
-        :param dict insured_limits:
+        :param dict insurance_limits:
             insured limits values (expressed as a percentage relative to
             the value of the asset) keyed by loss types
+        :param dict retrofitting_values:
+            asset retrofitting values keyed by loss types
         """
         self.values = values
+        self.retrofitting_values = retrofitting_values
         self.deductibles = deductibles
-        self.insured_limits = insured_limits
+        self.insurance_limits = insurance_limits
 
     def value(self, loss_type):
         """
@@ -68,12 +75,18 @@ class Asset(object):
         """
         return self.deductibles[loss_type]
 
-    def insured_limit(self, loss_type):
+    def insurance_limit(self, loss_type):
         """
         :returns: the deductible of the asset for `loss_type`
         """
 
-        return self.insured_limits[loss_type]
+        return self.insurance_limits[loss_type]
+
+    def retrofitted(self, loss_type):
+        """
+        :returns: the asset retrofitted value for `loss_type`
+        """
+        return self.retrofitting_values[loss_type]
 
 
 class Classical(object):
