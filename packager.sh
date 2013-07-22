@@ -50,6 +50,10 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
 GEM_ALWAYS_YES=false
 
+# By setting this variable, the script will generate the test fixture
+# from scratch
+# GEM_GENERATE_FIXTURE=yes
+
 if [ "$GEM_EPHEM_CMD" = "" ]; then
     GEM_EPHEM_CMD="lxc-start-ephemeral"
 fi
@@ -264,15 +268,21 @@ _devtest_innervm_run () {
         ssh $lxc_ip "sudo su postgres -c \"psql -c \\\"ALTER ROLE $dbu WITH PASSWORD 'openquake'\\\"\""
     done
 
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; 
+    # run celeryd daemon
+    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
+
+    if [ -z "$GEM_GENERATE_FIXTURE" ]; then
+        ssh $lxc_ip "./bin/build_fixture"
+    fi
+
+    if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        # load test fixtures
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; 
                  for i in \$(find qa_tests/risk/ -iname fixtures.tar); do
                    python openquake/engine/tools/restore_hazards.py \$i
                  done"
 
-    # run celeryd daemon
-    ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
-    if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine ;
