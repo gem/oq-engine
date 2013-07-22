@@ -235,8 +235,6 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
         mocks = [p.start() for p in patches]
 
-        # we don't expect the site collection to be loaded yet:
-        self.assertIsNone(self.calc.hc.site_collection)
         self.calc.pre_execute()
 
         # make sure the site_collection is loaded:

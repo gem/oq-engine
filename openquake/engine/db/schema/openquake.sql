@@ -257,8 +257,6 @@ CREATE TABLE uiapi.hazard_calculation (
             'scenario'
         )),
     region_grid_spacing float,
-    -- a pickled `openquake.hazardlib.site.SiteCollection` object
-    site_collection BYTEA,
     -- logic tree parameters:
     random_seed INTEGER,
     number_of_logic_tree_samples INTEGER,
