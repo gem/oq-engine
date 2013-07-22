@@ -50,9 +50,9 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
 GEM_ALWAYS_YES=false
 
-# By setting this variable, the script will generate the test fixture
-# from scratch
-# GEM_GENERATE_FIXTURE=yes
+# By setting this variable to "true", the script will generate the
+# test fixture from scratch
+# GEM_GENERATE_FIXTURE=true
 
 if [ "$GEM_EPHEM_CMD" = "" ]; then
     GEM_EPHEM_CMD="lxc-start-ephemeral"
@@ -271,7 +271,7 @@ _devtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
-    if [ -z "$GEM_GENERATE_FIXTURE" ]; then
+    if [ "$GEM_GENERATE_FIXTURE" == "true" ]; then
         ssh $lxc_ip "./bin/build_fixture"
     fi
 
