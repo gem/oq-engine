@@ -272,7 +272,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     if [ "$GEM_GENERATE_FIXTURE" == "true" ]; then
-        ssh $lxc_ip "./bin/build_fixture"
+        ssh $lxc_ip "cd oq-engine ; ./bin/build_fixture"
     fi
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
