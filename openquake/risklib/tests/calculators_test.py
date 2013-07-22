@@ -149,6 +149,19 @@ class ProbabilisticLossTest(unittest.TestCase):
                                     'asset_correlation': asset_correlation})])
 
 
+class DamageTest(unittest.TestCase):
+    def test_generator(self):
+        with mock.patch('openquake.risklib.scientific.scenario_damage') as m:
+            fragility_functions = mock.Mock()
+            calc = calculators.Damage(fragility_functions)
+            calc([1, 2, 3])
+
+            self.assertEqual([((fragility_functions, 1,), dict()),
+                              ((fragility_functions, 2,), dict()),
+                              ((fragility_functions, 3,), dict())],
+                             m.call_args_list)
+
+
 class EventLossTableTest(unittest.TestCase):
     def test_call_no_events(self):
         self.assertEqual({}, calculators.EventLossTable()([[]], []))
