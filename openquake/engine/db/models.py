@@ -52,6 +52,8 @@ from openquake.hazardlib import geo as hazardlib_geo
 from openquake.engine.db import fields
 from openquake.engine import writer
 
+import openquake.hazardlib.site
+
 #: Default Spectral Acceleration damping. At the moment, this is not
 #: configurable.
 DEFAULT_SA_DAMPING = 5.0
@@ -184,6 +186,91 @@ def inputs4rcalc(calc_id, input_type=None):
         result = result.filter(input_type=input_type)
     return result
 
+
+def get_site_model(hc_id):
+    """Get the site model :class:`~openquake.engine.db.models.Input` record
+    for the given job id.
+
+    :param int hc_id:
+        The id of a :class:`~openquake.engine.db.models.HazardCalculation`.
+
+    :returns:
+        The site model :class:`~openquake.engine.db.models.Input` record for
+        this job.
+    :raises:
+        :exc:`RuntimeError` if the job has more than 1 site model.
+    """
+    site_model = inputs4hcalc(hc_id, input_type='site_model')
+
+    if len(site_model) == 0:
+        return None
+    elif len(site_model) > 1:
+        # Multiple site models for 1 job are not allowed.
+        raise RuntimeError("Only 1 site model per job is allowed, found %s."
+                           % len(site_model))
+
+    # There's only one site model.
+    return site_model[0]
+
+
+## TODO: this could be implemented with a view, now that there is a site table
+def get_closest_site_model_data(input_model, point):
+    """Get the closest available site model data from the database for a given
+    site model :class:`~openquake.engine.db.models.Input` and
+    :class:`openquake.hazardlib.geo.point.Point`.
+
+    :param input_model:
+        :class:`openquake.engine.db.models.Input` with `input_type` of
+        'site_model'.
+    :param site:
+        :class:`openquake.hazardlib.geo.point.Point` instance.
+
+    :returns:
+        The closest :class:`openquake.engine.db.models.SiteModel` for the given
+        ``input_model`` and ``point`` of interest.
+
+        This function uses the PostGIS `ST_Distance_Sphere
+        <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
+        function to calculate distance.
+
+        If there is no site model data, return `None`.
+    """
+    query = """
+    SELECT
+        hzrdi.site_model.*,
+        min(ST_Distance_Sphere(location, %s))
+            AS min_distance
+    FROM hzrdi.site_model
+    WHERE input_id = %s
+    GROUP BY id
+    ORDER BY min_distance
+    LIMIT 1;"""
+
+    raw_query_set = SiteModel.objects.raw(
+        query, ['SRID=4326; %s' % point.wkt2d, input_model.id]
+    )
+
+    site_model_data = list(raw_query_set)
+
+    assert len(site_model_data) <= 1, (
+        "This query should return at most 1 record.")
+
+    if len(site_model_data) == 1:
+        return site_model_data[0]
+
+
+# FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
+# the issue is the reset of the depts; we need QA tests for that
+class SiteCollection(openquake.hazardlib.site.SiteCollection):
+    cache = {}  # hazard_calculation_id -> site_collection
+
+    def __init__(self, sites):
+        self.sites = sites
+        super(SiteCollection, self).__init__(sites)
+
+    def __iter__(self):
+        for site in self.sites:
+            yield site
 
 ## Tables in the 'admin' schema.
 
@@ -568,8 +655,6 @@ class HazardCalculation(djm.Model):
     region_grid_spacing = djm.FloatField(null=True, blank=True)
     # The points of interest for a calculation.
     sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
-    # this is initialized by initialize_site_model
-    site_collection = fields.PickleField(null=True, blank=True)
 
     ########################
     # Logic Tree parameters:
@@ -822,7 +907,7 @@ class HazardCalculation(djm.Model):
         realizations_nr = self.ltrealization_set.count()
         return realizations_nr
 
-    def points_to_compute(self):
+    def points_to_compute(self, save_sites=True):
         """
         Generate a :class:`~openquake.hazardlib.geo.mesh.Mesh` of points.
         These points indicate the locations of interest in a hazard
@@ -844,9 +929,8 @@ class HazardCalculation(djm.Model):
                     'asset_ref')
 
                 # the points here must be sorted
-                lons, lats = zip(
-                    *sorted(set([(asset.site.x, asset.site.y)
-                                 for asset in assets])))
+                lons, lats = zip(*sorted(set((asset.site.x, asset.site.y)
+                                             for asset in assets)))
                 # Cache the mesh:
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
@@ -866,7 +950,52 @@ class HazardCalculation(djm.Model):
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
                 )
+            # store the sites
+            if save_sites and self._points_to_compute:
+                self.save_sites([(pt.longitude, pt.latitude)
+                                 for pt in self._points_to_compute])
+
         return self._points_to_compute
+
+    @property
+    def site_collection(self):
+        """
+        Create a SiteCollection from a HazardCalculation object as follows.
+        First, take all of the points/locations of interest defined by the
+        calculation geometry. For each point, do distance queries on the site
+        model and get the site parameters which are closest to the point of
+        interest. This aggregation of points to the closest site parameters
+        is what we store in the `site_collection` field.
+        If the computation does not specify a site model the same 4 reference
+        site parameters are used for all sites.
+        """
+        if self.id in SiteCollection.cache:
+            return SiteCollection.cache[self.id]
+
+        site_model_inp = get_site_model(self.id)
+        hsites = HazardSite.objects.filter(hazard_calculation=self)
+        sites = []
+        for hsite in hsites:
+            pt = openquake.hazardlib.geo.point.Point(
+                hsite.location.x, hsite.location.y)
+            if site_model_inp:
+                smd = get_closest_site_model_data(site_model_inp, pt)
+                measured = smd.vs30_type == 'measured'
+                vs30 = smd.vs30
+                z1pt0 = smd.z1pt0
+                z2pt5 = smd.z2pt5
+            else:
+                vs30 = self.reference_vs30_value
+                measured = self.reference_vs30_type == 'measured'
+                z1pt0 = self.reference_depth_to_1pt0km_per_sec
+                z2pt5 = self.reference_depth_to_2pt5km_per_sec
+
+            sites.append(openquake.hazardlib.site.Site(
+                         pt, vs30, measured, z1pt0, z2pt5, hsite.id))
+
+        sitecoll = SiteCollection.cache[self.id] = \
+            SiteCollection(sites) if sites else None
+        return sitecoll
 
     @property
     def exposure_model(self):
@@ -1867,7 +1996,7 @@ class _GroundMotionFieldNode(object):
             self.location.x, self.location.y, self.gmv)
 
 
-class GmfAgg(djm.Model):
+class GmfData(djm.Model):
     """
     Ground Motion Field: A collection of ground motion values and their
     respective geographical locations.
@@ -1888,7 +2017,7 @@ class GmfAgg(djm.Model):
 
 def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
-    Iterator for walking through all :class:`GmfAgg` objects associated
+    Iterator for walking through all :class:`GmfData` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
@@ -1910,7 +2039,7 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        for gmf in GmfAgg.objects.filter(
+        for gmf in GmfData.objects.filter(
                 gmf=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping).\
                 order_by('site'):
@@ -1919,7 +2048,7 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
 
 def get_gmfs_scenario(output, imt=None):
     """
-    Iterator for walking through all :class:`GmfAgg` objects associated
+    Iterator for walking through all :class:`GmfData` objects associated
     to a given output. Notice that the fields are ordered according to the
     location, so it is possible to get reproducible outputs in the test cases.
 
@@ -1940,7 +2069,7 @@ def get_gmfs_scenario(output, imt=None):
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfAgg.objects.filter(
+        for gmf in GmfData.objects.filter(
                 gmf=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
