@@ -203,7 +203,7 @@ def export_hazard_curve_multi(output, target_dir):
     metadata_set = []
     path = None
     for hc in hcs:
-        metadata, path = _curve_metadata(output, target_dir)
+        metadata, path = _curve_metadata(hc.output, target_dir)
         metadata_set.append(metadata)
     assert(path)
 
