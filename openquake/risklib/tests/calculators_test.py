@@ -147,3 +147,158 @@ class ProbabilisticLossTest(unittest.TestCase):
                 m.call_args_list,
                 [((vf, [1, 2, 3]), {'seed': seed,
                                     'asset_correlation': asset_correlation})])
+
+
+class EventLossTableTest(unittest.TestCase):
+    def test_call_no_events(self):
+        self.assertEqual({}, calculators.EventLossTable()([[]], []))
+
+    def test_call(self):
+        self.assertEqual(
+            {1: 3, 2: 12},
+            calculators.EventLossTable()([[0, 1, 2], [3, 4, 5]], [1, 2]))
+
+
+class LossMapTest(unittest.TestCase):
+    def setUp(self):
+        losses = numpy.linspace(0, 10, 11)
+        poes = numpy.linspace(1, 0, 11)
+        self.curves = [(losses, poes), (losses * 2, poes)]
+
+    def test_no_poes(self):
+        self.assertEqual([], calculators.LossMap([])(self.curves))
+
+    def test_one_poe(self):
+        numpy.testing.assert_allclose(
+            [[3.5, 7]], calculators.LossMap([0.65])(self.curves))
+
+    def test_more_poes(self):
+        numpy.testing.assert_allclose(
+            [[4.5, 9], [5, 10]],
+            calculators.LossMap([0.55, 0.5])(self.curves))
+
+
+class AssetStatisticsTestCase(unittest.TestCase):
+    BASE_EXPECTED_POES = numpy.linspace(1, 0, 11)
+
+    def setUp(self):
+        self.losses = numpy.linspace(0, 1, 11)
+
+    # fake post_processing module singleton
+    class post_processing(object):
+        @staticmethod
+        def mean_curve(_curve_poes, _weights):
+            return (AssetStatisticsTestCase.BASE_EXPECTED_POES)
+
+        @staticmethod
+        def weighted_quantile_curve(_curve_poes, _weights, quantile):
+            return -AssetStatisticsTestCase.BASE_EXPECTED_POES * quantile
+
+        @staticmethod
+        def quantile_curve(_curve_poes, quantile):
+            return AssetStatisticsTestCase.BASE_EXPECTED_POES * quantile
+
+    def test_compute_stats_no_quantiles_no_poes(self):
+        (mean_curve, quantile_curves, mean_maps, quantile_maps) = (
+            calculators.asset_statistics(
+                self.losses, mock.Mock(), [],
+                [None], [], self.post_processing))
+
+        numpy.testing.assert_allclose(mean_curve,
+                                      (self.losses, self.BASE_EXPECTED_POES))
+
+        self.assertEqual([], quantile_curves)
+        self.assertEqual([], mean_maps)
+        self.assertEqual([], quantile_maps)
+
+    def test_compute_stats_quantiles_weighted(self):
+        (mean_curve, quantile_curves, mean_maps, quantile_maps) = (
+            calculators.asset_statistics(
+                self.losses, mock.Mock(),
+                quantiles=[0.1, 0.2],
+                poes=[],
+                weights=[0.1, 0.2],
+                post_processing=self.post_processing))
+
+        numpy.testing.assert_allclose(
+            mean_curve, (self.losses, self.BASE_EXPECTED_POES))
+
+        q1, q2 = quantile_curves
+        numpy.testing.assert_allclose(
+            q1, (self.losses, -self.BASE_EXPECTED_POES * 0.1))
+        numpy.testing.assert_allclose(
+            q2, (self.losses, -self.BASE_EXPECTED_POES * 0.2))
+
+        self.assertEqual([], mean_maps)
+        self.assertEqual([], quantile_maps)
+
+    def test_compute_stats_quantiles_montecarlo(self):
+        (mean_curve, quantile_curves, mean_maps, quantile_maps) = (
+            calculators.asset_statistics(
+                self.losses, mock.Mock(),
+                quantiles=[0.1, 0.2],
+                poes=[],
+                weights=[None, None],
+                post_processing=self.post_processing))
+
+        numpy.testing.assert_allclose(
+            mean_curve, (self.losses, self.BASE_EXPECTED_POES))
+
+        q1, q2 = quantile_curves
+        numpy.testing.assert_allclose(
+            q1, (self.losses, self.BASE_EXPECTED_POES * 0.1))
+        numpy.testing.assert_allclose(
+            q2, (self.losses, self.BASE_EXPECTED_POES * 0.2))
+
+        self.assertEqual([], mean_maps)
+        self.assertEqual([], quantile_maps)
+
+    def test_compute_stats_quantile_poes(self):
+        (mean_curve, quantile_curves, mean_maps, quantile_maps) = (
+            calculators.asset_statistics(
+                self.losses, mock.Mock(),
+                quantiles=[0.1, 0.2],
+                poes=[0.2, 0.8],
+                weights=[None],
+                post_processing=self.post_processing))
+
+        numpy.testing.assert_allclose(
+            mean_curve, (self.losses, self.BASE_EXPECTED_POES))
+        q1, q2 = quantile_curves
+        numpy.testing.assert_allclose(
+            q1, (self.losses, self.BASE_EXPECTED_POES * 0.1))
+        numpy.testing.assert_allclose(
+            q2, (self.losses, self.BASE_EXPECTED_POES * 0.2))
+
+        numpy.testing.assert_allclose(mean_maps, [0.8, 0.2])
+
+        numpy.testing.assert_allclose(quantile_maps, numpy.zeros((2, 2)))
+
+
+class AssetStatisticsFractions(unittest.TestCase):
+    def setUp(self):
+        losses = numpy.linspace(0, 1, 11)
+        self.mean_curve = (losses, numpy.linspace(1, 0, 11))
+        self.quantile_curves = ((losses, numpy.linspace(1, 0, 11)),
+                                (losses, numpy.linspace(1, 0, 11) / 2))
+
+    def test_no_disagg(self):
+        fractions, quantiles = calculators.asset_statistic_fractions(
+            [], self.mean_curve, self.quantile_curves)
+
+        self.assertEqual([], fractions)
+        self.assertEqual([], quantiles)
+
+    def test_no_quantiles(self):
+        fractions, quantiles = calculators.asset_statistic_fractions(
+            [0.1], self.mean_curve, [])
+
+        numpy.testing.assert_allclose([0.9], fractions)
+        self.assertEqual([[]], quantiles)
+
+    def test_fractions(self):
+        fractions, quantiles = calculators.asset_statistic_fractions(
+            [0.1], self.mean_curve, self.quantile_curves)
+
+        numpy.testing.assert_allclose([0.9], fractions)
+        numpy.testing.assert_allclose([[0.9, 0.8]], quantiles)

@@ -110,7 +110,9 @@ class EventLossTable(object):
         ids.
 
         :param loss_matrix:
-           a numpy array of losses shaped N x E
+           a numpy array of losses shaped N x E, where E is the number
+           of events and N the number of samplings
+
         :param event_ids:
            a numpy array holding E event ids
         """
@@ -186,9 +188,7 @@ def asset_statistics(
     return (mean_curve, quantile_curves, mean_map, quantile_maps)
 
 
-def asset_statistic_fractions(
-        disagg_poes,
-        mean_curve, quantile_curves, quantiles):
+def asset_statistic_fractions(disagg_poes, mean_curve, quantile_curves):
 
     losses, poes = mean_curve
     fractions = [
@@ -198,6 +198,6 @@ def asset_statistic_fractions(
     quantiles = [
         [scientific.conditional_loss_ratio(losses, poes, poe)
          for losses, poes in quantile_curves]
-         for poe in disagg_poes]
+        for poe in disagg_poes]
 
     return fractions, quantiles

@@ -234,8 +234,7 @@ class Classical(object):
             # compute also mean and quantile loss fractions
             _mean_fractions, _quantile_fractions = (
                 calculators.asset_statistic_fractions(
-                    self.fractions.poes, _mean_curve,
-                    _quantile_curves, quantiles))
+                    self.fractions.poes, _mean_curve, _quantile_curves))
 
             ret.append((_mean_curve, _mean_maps, _mean_fractions,
                         _quantile_curves, _quantile_maps, _quantile_fractions))
