@@ -367,7 +367,6 @@ def _export_hazard_map(output, target_dir, writer_class, file_ext):
     """
     core.makedirs(target_dir)
 
-
     hazard_map = models.HazardMap.objects.get(output=output)
     haz_calc = output.oq_job.hazard_calculation
 
@@ -400,6 +399,7 @@ def _export_hazard_map(output, target_dir, writer_class, file_ext):
     writer = writer_class(path, **metadata)
     writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
     return [path]
+
 
 def export_hazard_map_xml(output, target_dir):
     """
