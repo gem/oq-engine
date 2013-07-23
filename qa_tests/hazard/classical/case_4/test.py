@@ -59,7 +59,7 @@ class ClassicalHazardCase4TestCase(qa_utils.BaseQATestCase):
                 expected_curve_poes, actual_curve.poes, decimal=3)
 
             # Test the export as well:
-            [exported_file] = hazard_export.export(
+            exported_file = hazard_export.export(
                 actual_curve.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML), exported_file)
