@@ -356,11 +356,9 @@ def export(fn, output_id, target_dir, export_type):
         print 'No output found for OUTPUT_ID %s' % output_id
         return
     try:
-        files = fn(output_id, target_dir, export_type)
-        if len(files) > 0:
-            print 'Files Exported:'
-            for f in files:
-                print f
+        the_file = fn(output_id, target_dir, export_type)
+        print 'File Exported:'
+        print the_file
     except NotImplementedError, err:
         print err.message
         print 'This feature is probably not implemented yet'
