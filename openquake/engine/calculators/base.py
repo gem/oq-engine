@@ -21,7 +21,9 @@ import math
 import kombu
 
 import openquake.engine
+
 from openquake.engine import logs
+from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import config, tasks, general
 
 # Routing key format string for communication between tasks and the control
@@ -44,6 +46,10 @@ class Calculator(object):
         self.job = job
 
         self.progress = dict(total=0, computed=0, in_queue=0)
+
+    def monitor(self, operation):
+        return EnginePerformanceMonitor(
+            operation, self.job.id, tracing=True, flush=True)
 
     def task_arg_gen(self, block_size):
         """
@@ -254,9 +260,49 @@ class Calculator(object):
         such as computing mean results from a set of curves or plotting maps.
         """
 
+    def _get_outputs_for_export(self):
+        """
+        Util function for getting :class:`openquake.engine.db.models.Output`
+        objects to be exported.
+        """
+        raise NotImplementedError()
+
+    def _do_export(self, output_id, export_dir, export_type):
+        """
+        Perform a single export.
+        """
+        raise NotImplementedError()
+
     def export(self, *args, **kwargs):
-        """Implement this method in subclasses to write results
-           to places other than the database."""
+        """
+        If requested by the user, automatically export all result artifacts to
+        the specified format. (NOTE: The only export format supported at the
+        moment is NRML XML.
+
+        :param exports:
+            Keyword arg. List of export types.
+        :returns:
+            A list of the export filenames, including the absolute path to each
+            file.
+        """
+        exported_files = []
+
+        with logs.tracing('exports'):
+            if 'exports' in kwargs:
+                outputs = self._get_outputs_for_export()
+
+                for export_type in kwargs['exports']:
+                    for output in outputs:
+                        with self.monitor('exporting %s to %s'
+                                          % (output.output_type, export_type)):
+                            fname = self._do_export(
+                                output.id,
+                                self.job.calculation.export_dir,
+                                export_type
+                            )
+                            exported_files.extend(fname)
+
+        return exported_files
 
     def clean_up(self, *args, **kwargs):
         """Implement this method in subclasses to perform clean-up actions

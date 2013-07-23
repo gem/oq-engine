@@ -25,6 +25,7 @@ from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard
+from openquake import nrmllib
 
 from tests.export.core_test import BaseExportTestCase, number_of
 from tests.utils import helpers
@@ -35,7 +36,10 @@ def check_export(output_id, target_dir):
     Call hazard.export by checking that the exported file is valid
     according to our XML schema.
     """
-    return hazard.export(output_id, target_dir, check_schema=True)
+    files = hazard.export(output_id, target_dir, 'xml')
+    for f in files:
+        nrmllib.assert_valid(f)
+    return files
 
 
 class GetResultExportPathTestCase(unittest.TestCase):
