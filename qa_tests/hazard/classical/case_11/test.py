@@ -166,37 +166,37 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
             aaae(expected_q0_9_poes, quantile_0_9_curve.poes, decimal=4)
 
             # Test the exports as well:
-            [exported_file_b1_b2] = hazard_export.export(
+            exported_file_b1_b2 = hazard_export.export(
                 curve_b1_b2.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_B1_B2),
                 exported_file_b1_b2)
 
-            [exported_file_b1_b3] = hazard_export.export(
+            exported_file_b1_b3 = hazard_export.export(
                 curve_b1_b3.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_B1_B3),
                 exported_file_b1_b3)
 
-            [exported_file_b1_b4] = hazard_export.export(
+            exported_file_b1_b4 = hazard_export.export(
                 curve_b1_b4.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_B1_B4),
                 exported_file_b1_b4)
 
-            [exported_file_mean] = hazard_export.export(
+            exported_file_mean = hazard_export.export(
                 mean_curve.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_MEAN),
                 exported_file_mean)
 
-            [q01_file] = hazard_export.export(
+            q01_file = hazard_export.export(
                 quantile_0_1_curve.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_QUANTILE_0_1),
                 q01_file)
 
-            [q09_file] = hazard_export.export(
+            q09_file = hazard_export.export(
                 quantile_0_9_curve.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_QUANTILE_0_9),
