@@ -273,10 +273,6 @@ class BaseHazardCalculator(base.Calculator):
 
         self.progress.update(in_queue=0)
 
-    def monitor(self, operation):
-        return EnginePerformanceMonitor(
-            operation, self.job.id, tracing=True, flush=True)
-
     @property
     def hc(self):
         """
@@ -851,36 +847,27 @@ class BaseHazardCalculator(base.Calculator):
             hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
             hc_prog.save()
 
-    def export(self, *args, **kwargs):
+    def _get_outputs_for_export(self):
         """
-        If requested by the user, automatically export all result artifacts to
-        the specified format. (NOTE: The only export format supported at the
-        moment is NRML XML.
+        Util function for getting :class:`openquake.engine.db.models.Output`
+        objects to be exported.
 
-        :returns:
-            A list of the export filenames, including the absolute path to each
-            file.
+        Gathers all outputs for the job, but filters out `hazard_curve_multi`
+        outputs if this option was turned off in the calculation profile.
         """
-        exported_files = []
+        outputs = export_core.get_outputs(self.job.id)
+        if not self.hc.export_multi_curves:
+            outputs = outputs.exclude(output_type='hazard_curve_multi')
+        return outputs
 
-        with logs.tracing('exports'):
-            if 'exports' in kwargs:
-                outputs = export_core.get_outputs(self.job.id)
-                if not self.hc.export_multi_curves:
-                    outputs = outputs.exclude(output_type='hazard_curve_multi')
+    def _do_export(self, output_id, export_dir, export_type):
+        """
+        Hazard-specific implementation of
+        :meth:`openquake.engine.calculators.base.Calculator._do_export`.
 
-                for export_type in kwargs['exports']:
-                    for output in outputs:
-                        with self.monitor('exporting %s to %s'
-                                          % (output.output_type, export_type)):
-                            fname = hazard_export.export(
-                                output.id,
-                                self.job.hazard_calculation.export_dir,
-                                export_type
-                            )
-                            exported_files.extend(fname)
-
-        return exported_files
+        Calls the hazard exporter.
+        """
+        return hazard_export.export(output_id, export_dir, export_type)
 
     def record_init_stats(self):
         """
