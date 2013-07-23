@@ -260,6 +260,10 @@ VulnerabilityFunction`
 def vulnerability_function_applier(
         vulnerability_function, ground_motion_values,
         seed=None, asset_correlation=0):
+    if numpy.array(ground_motion_values).ndim == 1:
+        return numpy.array([])
+
+    # FIXME(lp). Refactor me to avoid the side effect
     vulnerability_function.init_distribution(
         len(ground_motion_values),
         len(ground_motion_values[0]),

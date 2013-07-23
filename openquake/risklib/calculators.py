@@ -116,6 +116,9 @@ class EventLossTable(object):
         :param event_ids:
            a numpy array holding E event ids
         """
+        if numpy.array(loss_matrix).ndim == 1:
+            return collections.Counter()
+
         return collections.Counter(
             dict(zip(event_ids, numpy.sum(loss_matrix, axis=1))))
 
