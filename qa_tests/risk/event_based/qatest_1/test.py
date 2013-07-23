@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import unittest
 from nose.plugins.attrib import attr as noseattr
-
 from qa_tests import risk
 
 from openquake.engine.db import models
@@ -24,6 +24,7 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     hazard_calculation_fixture = "PEB QA test 1"
 
     @noseattr('qa', 'risk', 'event_based')
+    @unittest.skip("skip until expected data are updated")
     def test(self):
         self._run_test()
 
