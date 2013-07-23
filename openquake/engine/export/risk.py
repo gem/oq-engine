@@ -87,11 +87,11 @@ def export_agg_loss_curve_xml(output, target_dir):
     serializer
     """
     args = _export_common(output, output.loss_curve.loss_type)
-    args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
+    args['dest'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.loss_curve.id})
     writers.AggregateLossCurveXMLWriter(**args).serialize(
         output.loss_curve.aggregatelosscurvedata)
-    return [args['path']]
+    return args['dest']
 
 
 @core.makedirsdeco
@@ -101,14 +101,14 @@ def export_loss_curve_xml(output, target_dir):
     serializer
     """
     args = _export_common(output, output.loss_curve.loss_type)
-    args['path'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
+    dest = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.loss_curve.id})
     args['insured'] = output.loss_curve.insured
 
     data = output.loss_curve.losscurvedata_set.all().order_by('asset_ref')
 
-    writers.LossCurveXMLWriter(**args).serialize(data)
-    return [args['path']]
+    writers.LossCurveXMLWriter(dest, **args).serialize(data)
+    return dest
 
 
 def _export_loss_map(output, target_dir, writer_class, file_ext):
@@ -120,7 +120,7 @@ def _export_loss_map(output, target_dir, writer_class, file_ext):
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.loss_map.loss_type)
     args.update(dict(
-        path=os.path.join(
+        dest=os.path.join(
             target_dir,
             LOSS_MAP_FILENAME_FMT % {'loss_map_id': output.loss_map.id,
                                      'file_ext': file_ext}),
@@ -130,7 +130,7 @@ def _export_loss_map(output, target_dir, writer_class, file_ext):
     writer.serialize(
         output.loss_map.lossmapdata_set.all().order_by('asset_ref')
     )
-    return [args['path']]
+    return args['dest']
 
 
 def export_loss_map_xml(output, target_dir):
@@ -175,7 +175,7 @@ def export_loss_fraction_xml(output, target_dir):
         path, variable, args['unit'],
         loss_category, hazard_metadata, poe).serialize(
             output.loss_fraction.total_fractions(), output.loss_fraction)
-    return [path]
+    return path
 
 
 @core.makedirsdeco
@@ -187,17 +187,19 @@ def export_bcr_distribution_xml(output, target_dir):
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.bcr_distribution.loss_type)
 
+    dest = os.path.join(
+        target_dir,
+        BCR_FILENAME_FMT % {'bcr_distribution_id': output.bcr_distribution.id},
+    )
     args.update(
-        dict(path=os.path.join(target_dir, BCR_FILENAME_FMT % {
-            'bcr_distribution_id': output.bcr_distribution.id}),
-            interest_rate=risk_calculation.interest_rate,
-            asset_life_expectancy=risk_calculation.asset_life_expectancy))
+        dict(interest_rate=risk_calculation.interest_rate,
+             asset_life_expectancy=risk_calculation.asset_life_expectancy))
     del args['investigation_time']
 
-    writers.BCRMapXMLWriter(**args).serialize(
+    writers.BCRMapXMLWriter(dest, **args).serialize(
         output.bcr_distribution.bcrdistributiondata_set.all().order_by(
             'asset_ref'))
-    return [args['path']]
+    return dest
 
 
 def make_dmg_dist_export(damagecls, writercls, filename):
@@ -226,7 +228,7 @@ def make_dmg_dist_export(damagecls, writercls, filename):
             data = damagecls.objects.filter(
                 dmg_state__risk_calculation__id=rc_id)
         writer.serialize(data.order_by('dmg_state__lsi'))
-        return [file_path]
+        return file_path
 
     return export_dmg_dist
 
@@ -264,7 +266,7 @@ def export_aggregate_loss_csv(output, target_dir):
         writer.writerow(['Mean', 'Standard Deviation'])
         writer.writerow([output.aggregate_loss.mean,
                         output.aggregate_loss.std_dev])
-    return [filepath]
+    return filepath
 
 export_aggregate_loss = export_aggregate_loss_csv
 
@@ -288,7 +290,7 @@ def export_event_loss_csv(output, target_dir):
             writer.writerow(["%7d" % event_loss.rupture.id,
                              "%.07f" % event_loss.rupture.magnitude,
                              "%.07f" % event_loss.aggregate_loss])
-    return [filepath]
+    return filepath
 
 
 XML_EXPORTERS = {
