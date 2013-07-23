@@ -215,25 +215,21 @@ class RiskCalculator(base.Calculator):
         return dict([(loss_type, self.calculation_units(loss_type, assets))
                      for loss_type in loss_types(self.risk_models)])
 
-    def export(self, *args, **kwargs):
+    def _get_outputs_for_export(self):
         """
-        If requested by the user, automatically export all result artifacts.
-
-        :returns:
-            A list of the export filenames, including the absolute path to each
-            file.
+        Util function for getting :class:`openquake.engine.db.models.Output`
+        objects to be exported.
         """
+        return export.core.get_outputs(self.job.id)
 
-        exported_files = []
-        with logs.tracing('exports'):
-            if 'exports' in kwargs and kwargs['exports']:
-                exported_files = sum([
-                    export.risk.export(output.id, self.rc.export_dir)
-                    for output in export.core.get_outputs(self.job.id)], [])
+    def _do_export(self, output_id, export_dir, export_type):
+        """
+        Risk-specific implementation of
+        :meth:`openquake.engine.calculators.base.Calculator._do_export`.
 
-                for exp_file in exported_files:
-                    logs.LOG.debug('exported %s' % exp_file)
-        return exported_files
+        Calls the risk exporter.
+        """
+        return export.risk.export(output_id, export_dir, export_type)
 
     @property
     def rc(self):
