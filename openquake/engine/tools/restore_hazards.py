@@ -36,12 +36,12 @@ class CSVInserter(object):
         """
         self.io.seek(0)
         conn = self.curs.connection
-        try:  # XXX: will this work in a concurrent situation?
-            # set the sequence id to the right value
-            self.curs.execute("select setval('%s_id_seq', %d) " % (
-                              self.tablename, self.max_id))
-            # bulk import; the two operations must go together
+        try:
             self.curs.copy_from(self.io, self.tablename)
+
+            self.curs.execute(
+                "select setval('%s_id_seq', (select max(id) from %s))" % (
+                    self.tablename, self.tablename))
         except:
             conn.rollback()
             raise
