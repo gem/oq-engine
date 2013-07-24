@@ -17,22 +17,18 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-from openquake.risklib import scientific, utils
-from openquake.risklib.api import Classical
 
-from openquake.engine.calculators.base import signal_task_complete
+from openquake.risklib import workflows
+
 from openquake.engine.calculators.risk import base, hazard_getters, writers
 from openquake.engine.calculators.risk.classical import core as classical
-from openquake.engine.utils import tasks
-from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 from django.db import transaction
 
 
-@tasks.oqtask
-@base.count_progress_risk('r')
-def classical_bcr(job_id, units, containers, params):
+@base.risk_task
+def classical_bcr(job_id, units, containers, _params):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -42,9 +38,8 @@ def classical_bcr(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
-    :param dict units:
-      A dict of :class:`..base.CalculationUnit` instances keyed by
-      loss type string
+    :param list units:
+      A list of :class:`openquake.risklib.workflows.CalculationUnit`
     :param containers:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
@@ -60,46 +55,24 @@ def classical_bcr(job_id, units, containers, params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
-        for loss_type in units:
+        for unit in units:
             do_classical_bcr(
-                loss_type, units[loss_type], containers, params, profile)
-    num_items = base.get_num_items(units)
-    signal_task_complete(job_id=job_id, num_items=num_items)
-classical_bcr.ignore_result = False
+                unit,
+                containers.with_args(loss_type=unit.loss_type), profile)
 
 
-def do_classical_bcr(loss_type, units, containers, params, profile):
-    for unit_orig, unit_retro in utils.pairwise(units):
-        with profile('getting hazard'):
-            assets, hazard_curves = unit_orig.getter()
-            _, hazard_curves_retrofitted = unit_retro.getter()
+def do_classical_bcr(unit, containers, profile):
+    for hazard_output_id, outputs in unit.workflow(
+            unit.loss_type,
+            unit.getter(profile('getting hazard')),
+            profile('computing bcr')):
 
-        with profile('computing bcr'):
-            original_loss_curves = unit_orig.calc(hazard_curves)
-            retrofitted_loss_curves = unit_retro.calc(
-                hazard_curves_retrofitted)
-
-            eal_original = [
-                scientific.average_loss(losses, poes)
-                for losses, poes in original_loss_curves]
-
-            eal_retrofitted = [
-                scientific.average_loss(losses, poes)
-                for losses, poes in retrofitted_loss_curves]
-
-            bcr_results = [
-                scientific.bcr(
-                    eal_original[i], eal_retrofitted[i],
-                    params.interest_rate, params.asset_life_expectancy,
-                    asset.value(loss_type), asset.retrofitted(loss_type))
-                for i, asset in enumerate(assets)]
-
-        with logs.tracing('writing results'):
+        with profile('writing results'):
             containers.write(
-                assets, zip(eal_original, eal_retrofitted, bcr_results),
+                unit.workflow.assets,
+                outputs,
                 output_type="bcr_distribution",
-                loss_type=loss_type,
-                hazard_output_id=unit_orig.getter.hazard_output.id)
+                hazard_output_id=hazard_output_id)
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
@@ -117,45 +90,30 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         super(ClassicalBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
 
-    def calculation_units(self, loss_type, assets):
-        units = []
-
+    def calculation_unit(self, loss_type, assets):
         taxonomy = assets[0].taxonomy
         model_orig = self.risk_models[taxonomy][loss_type]
         model_retro = self.risk_models_retrofitted[taxonomy][loss_type]
 
-        for ho in self.rc.hazard_outputs():
-            units.extend([
-                base.CalculationUnit(
-                    Classical(
-                        model_orig.vulnerability_function,
-                        steps=self.rc.lrem_steps_per_interval),
-                    hazard_getters.HazardCurveGetterPerAsset(
-                        ho,
-                        assets,
-                        self.rc.best_maximum_distance,
-                        model_orig.imt)),
-                base.CalculationUnit(
-                    Classical(
-                        model_retro.vulnerability_function,
-                        steps=self.rc.lrem_steps_per_interval),
-                    hazard_getters.HazardCurveGetterPerAsset(
-                        ho,
-                        assets,
-                        self.rc.best_maximum_distance,
-                        model_retro.imt))])
-        return units
-
-    @property
-    def calculator_parameters(self):
-        """
-        Specific calculator parameters returned as list suitable to be
-        passed in task_arg_gen
-        """
-
-        return base.make_calc_params(
-            asset_life_expectancy=self.rc.asset_life_expectancy,
-            interest_rate=self.rc.interest_rate)
+        return workflows.CalculationUnit(
+            loss_type,
+            workflows.ClassicalBCR(
+                model_orig.vulnerability_function,
+                model_retro.vulnerability_function,
+                self.rc.lrem_steps_per_interval,
+                self.rc.interest_rate,
+                self.rc.asset_life_expectancy),
+            hazard_getters.BCRGetter(
+                hazard_getters.HazardCurveGetterPerAsset(
+                    self.rc.hazard_outputs(),
+                    assets,
+                    self.rc.best_maximum_distance,
+                    model_orig.imt),
+                hazard_getters.HazardCurveGetterPerAsset(
+                    self.rc.hazard_outputs(),
+                    assets,
+                    self.rc.best_maximum_distance,
+                    model_retro.imt)))
 
     def create_outputs(self, hazard_output):
         """

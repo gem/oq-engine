@@ -29,7 +29,8 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(
             get_data_path('scenario_risk/job.ini'),
-            get_data_path('scenario_hazard/job.ini'), output_type="gmf_scenario")
+            get_data_path('scenario_hazard/job.ini'),
+            output_type="gmf_scenario")
 
         self.calculator = scenario.ScenarioRiskCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
@@ -38,13 +39,6 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         self.job.is_running = True
         self.job.status = 'executing'
         self.job.save()
-
-    def test_calculator_parameters(self):
-        """
-        Test that the specific calculation parameters are present
-        """
-
-        self.assertFalse(self.calculator.calculator_parameters.insured_losses)
 
     def test_celery_task(self):
         # Test that the celery task when called properly call the

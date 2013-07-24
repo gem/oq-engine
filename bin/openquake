@@ -342,7 +342,7 @@ def list_hazard_calculations():
     Print a summary of past hazard calculations.
     """
     hcs = models.HazardCalculation.objects.filter(
-        owner__user_name=getpass.getuser())
+        owner__user_name=getpass.getuser()).order_by('oqjob__last_update')
     _print_calcs_summary(hcs)
 
 
@@ -367,25 +367,17 @@ def _print_calcs_summary(calcs):
         print ('calc_id | status | last_update | '
                'description')
         for calc in calcs:
-            jobs = calc.oqjob_set.all()
-
-            try:
-                latest_job = jobs.latest('id')
-            except ObjectDoesNotExist:
-                # no jobs associated with the calculation
-                status = ''
-                last_update = ''
+            latest_job = calc.oqjob
+            if latest_job.is_running:
+                status = 'pending'
             else:
-                if latest_job.is_running:
-                    status = 'pending'
+                if latest_job.status == 'complete':
+                    status = 'successful'
                 else:
-                    if latest_job.status == 'complete':
-                        status = 'successful'
-                    else:
-                        status = 'failed'
-                last_update = latest_job.last_update.strftime(
-                    '%Y-%m-%d %H:%M:%S %Z'
-                )
+                    status = 'failed'
+            last_update = latest_job.last_update.strftime(
+                '%Y-%m-%d %H:%M:%S %Z'
+            )
 
             print '%s | %s | %s | %s' % (
                 calc.id, status, last_update, calc.description
