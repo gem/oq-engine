@@ -24,7 +24,6 @@ from collections import namedtuple
 from collections import OrderedDict
 
 from openquake.hazardlib.calc import disagg
-from openquake import nrmllib
 from openquake.nrmllib import writers
 
 from openquake.engine.db import models
@@ -33,7 +32,7 @@ from openquake.engine.export import core
 
 # for each output_type there must be a function
 # export_<output_type>(output, target_dir)
-def export(output_id, target_dir, check_schema=False):
+def export(output_id, target_dir, export_type='xml'):
     """
     Export the given hazard calculation output from the database to the
     specified directory.
@@ -42,8 +41,8 @@ def export(output_id, target_dir, check_schema=False):
         ID of a :class:`openquake.engine.db.models.Output`.
     :param str target_dir:
         Directory where output artifacts should be written.
-    :param bool check_schema:
-        If True, checks that the generated file is valid for the NRML schema
+    :param export_type:
+        The desired export format. Defaults to 'xml'.
     :returns:
         List of file names (including the full directory path) containing the
         exported results.
@@ -53,13 +52,15 @@ def export(output_id, target_dir, check_schema=False):
         `output_type` attribute of :class:`openquake.engine.db.models.Output`.)
     """
     output = models.Output.objects.get(id=output_id)
-    export_fn = globals().get(
-        'export_' + output.output_type, core._export_fn_not_implemented)
-    fnames = export_fn(output, os.path.expanduser(target_dir))
-    if check_schema:
-        for fname in fnames:
-            nrmllib.assert_valid(fname)
-    return fnames
+
+    try:
+        export_fn = EXPORTERS[export_type][output.output_type]
+    except KeyError:
+        raise NotImplementedError(
+            'No "%(fmt)s" exporter is available for "%(output_type)s"'
+            ' outputs' % dict(fmt=export_type, output_type=output.output_type)
+        )
+    return export_fn(output, os.path.expanduser(target_dir))
 
 
 def _get_result_export_path(calc_id, target_dir, result):
@@ -171,7 +172,7 @@ def _get_result_export_path(calc_id, target_dir, result):
 
 
 @core.makedirsdeco
-def export_hazard_curve(output, target_dir):
+def export_hazard_curve_xml(output, target_dir):
     """
     Export the specified hazard curve ``output`` to the ``target_dir``.
 
@@ -195,7 +196,7 @@ def export_hazard_curve(output, target_dir):
 
 
 @core.makedirsdeco
-def export_hazard_curve_multi(output, target_dir):
+def export_hazard_curve_multi_xml(output, target_dir):
     hcs = output.hazard_curve
 
     data = [_curve_data(hc) for hc in hcs]
@@ -255,7 +256,7 @@ def _curve_data(hc):
 
 
 @core.makedirsdeco
-def export_gmf(output, target_dir):
+def export_gmf_xml(output, target_dir):
     """
     Export the GMF Collection specified by ``output`` to the ``target_dir``.
 
@@ -288,11 +289,11 @@ def export_gmf(output, target_dir):
 
     return [path]
 
-export_complete_lt_gmf = export_gmf
+export_complete_lt_gmf_xml = export_gmf_xml
 
 
 @core.makedirsdeco
-def export_gmf_scenario(output, target_dir):
+def export_gmf_scenario_xml(output, target_dir):
     """
     Export the GMFs specified by ``output`` to the ``target_dir``.
 
@@ -318,7 +319,7 @@ def export_gmf_scenario(output, target_dir):
 
 
 @core.makedirsdeco
-def export_ses(output, target_dir):
+def export_ses_xml(output, target_dir):
     """
     Export the Stochastic Event Set Collection specified by ``output`` to the
     ``target_dir``.
@@ -352,11 +353,11 @@ def export_ses(output, target_dir):
 
     return [path]
 
-export_complete_lt_ses = export_ses
+export_complete_lt_ses_xml = export_ses_xml
 
 
 @core.makedirsdeco
-def export_hazard_map(output, target_dir):
+def export_hazard_map_xml(output, target_dir):
     """
     Export the specified hazard map ``output`` to the ``target_dir``.
 
@@ -444,7 +445,7 @@ class _DisaggMatrix(object):
 
 
 @core.makedirsdeco
-def export_disagg_matrix(output, target_dir):
+def export_disagg_matrix_xml(output, target_dir):
     """
     Export disaggregation histograms to the ``target_dir``.
 
@@ -506,7 +507,7 @@ def export_disagg_matrix(output, target_dir):
 
 
 @core.makedirsdeco
-def export_uh_spectra(output, target_dir):
+def export_uh_spectra_xml(output, target_dir):
     """
     Export the specified UHS ``output`` to the ``target_dir``.
 
@@ -546,3 +547,24 @@ def export_uh_spectra(output, target_dir):
     writer.serialize(uhs)
 
     return [path]
+
+
+XML_EXPORTERS = {
+    'complete_lt_gmf': export_complete_lt_gmf_xml,
+    'complete_lt_ses': export_complete_lt_ses_xml,
+    'disagg_matrix': export_disagg_matrix_xml,
+    'gmf': export_gmf_xml,
+    'gmf_scenario': export_gmf_scenario_xml,
+    'hazard_curve': export_hazard_curve_xml,
+    'hazard_curve_multi': export_hazard_curve_multi_xml,
+    'hazard_map': export_hazard_map_xml,
+    'ses': export_ses_xml,
+    'uh_spectra': export_uh_spectra_xml,
+}
+GEOJSON_EXPORTERS = {
+    # TODO: None supported yet.
+}
+EXPORTERS = {
+    'xml': XML_EXPORTERS,
+    'geojson': GEOJSON_EXPORTERS,
+}
