@@ -75,5 +75,5 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         self.assertEqual(1, models.AggregateLoss.objects.filter(
                          output__oq_job=self.job).count())
 
-        files = self.calculator.export(exports=True)
+        files = self.calculator.export(exports=['xml'])
         self.assertEqual(2, len(files))
