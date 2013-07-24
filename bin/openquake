@@ -212,11 +212,23 @@ def set_up_arg_parser():
         help='Delete a risk calculation and all associated outputs',
         metavar='RISK_CALCULATION_ID')
 
-    export_grp = parser.add_argument_group('List and export')
+    export_grp = parser.add_argument_group('Export')
     export_grp.add_argument(
         '--exports', choices=['xml'],  default=[], action="append",
-        help=('Automatically export all calculation results to the specified'
-              'format. Only "xml" is supported currently.')
+        help=('Use with --run-hazard and --run-risk to automatically export '
+              'all calculation results to the specified format. Only "xml" is '
+              'supported currently. This is optional. If not specified, '
+              'nothing will be exported; results will only be stored in the '
+              'database.'
+        )
+    )
+    export_grp.add_argument(
+        '--export-type', '--et',
+        choices=['xml', 'geojson'],
+        default='xml',
+        action='store',
+        help=('Use with --export-hazard or --export-risk, specify the '
+              'desired output format. Defaults to "xml".')
     )
 
     export_grp = parser.add_argument_group('Import')
@@ -413,15 +425,15 @@ def _print_outputs_summary(outputs):
             print '%s | %s | %s' % (o.id, o.output_type, o.display_name)
 
 
-def export_hazard(haz_output_id, target_dir):
-    export(hazard_export.export, haz_output_id, target_dir)
+def export_hazard(haz_output_id, target_dir, export_type):
+    export(hazard_export.export, haz_output_id, target_dir, export_type)
 
 
-def export_risk(risk_output_id, target_dir):
-    export(risk_export.export, risk_output_id, target_dir)
+def export_risk(risk_output_id, target_dir, export_type):
+    export(risk_export.export, risk_output_id, target_dir, export_type)
 
 
-def export(fn, output_id, target_dir):
+def export(fn, output_id, target_dir, export_type):
     """
     Simple UI wrapper around
     :func:`openquake.engine.export.hazard.export` which prints a summary
@@ -431,7 +443,7 @@ def export(fn, output_id, target_dir):
         print 'No output found for OUTPUT_ID %s' % output_id
         return
     try:
-        files = fn(output_id, target_dir)
+        files = fn(output_id, target_dir, export_type)
         if len(files) > 0:
             print 'Files Exported:'
             for f in files:
@@ -607,7 +619,7 @@ def main():
         output_id, target_dir = args.export_hazard
         output_id = int(output_id)
 
-        export_hazard(output_id, expanduser(target_dir))
+        export_hazard(output_id, expanduser(target_dir), args.export_type)
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
@@ -622,7 +634,7 @@ def main():
         list_risk_outputs(args.list_risk_outputs)
     elif args.export_risk is not None:
         output_id, target_dir = args.export_risk
-        export_risk(output_id, expanduser(target_dir))
+        export_risk(output_id, expanduser(target_dir), args.export_type)
     elif args.run_risk is not None:
         if args.hazard_output_id is None and args.hazard_calculation_id is None:
             complain_and_exit(MISSING_HAZARD_MSG)
