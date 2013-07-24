@@ -13,10 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import csv
-import numpy
-
 from nose.plugins.attrib import attr as noseattr
 
 from qa_tests import risk
@@ -30,7 +26,6 @@ from openquake.engine.db import models
 
 
 class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
-    risk_cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
     output_type = "gmf"
 
     check_exports = False
@@ -54,8 +49,7 @@ class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
             ses_per_logic_tree_path=1)
         job.save()
 
-        gmf_coll = helpers.create_gmf_from_csv(
-            job, os.path.join(os.path.dirname(__file__), 'gmf.csv'))
+        helpers.create_gmf_from_csv(job, self._test_path('gmf.csv'))
 
         return job
 
@@ -68,6 +62,7 @@ class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
         return data
 
     def expected_data(self):
-        return [[1.37096021, 0.95967214, 71.12525504],
-                [0.7280975, 0.50966825, 18.88680667],
-                [2.08079383, 1.45655568, 53.97567025]]
+        return [
+            [0.15280346, 0., 26.42475147],
+            [0.31141922, 0., 26.92732075],
+            [0.39231522, 0., 33.92211259]]
