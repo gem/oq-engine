@@ -44,12 +44,8 @@ class HazardGetter(object):
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
 
-    :attr int hazard_output:
-        A Hazard Output object :class:`openquake.engine.db.models.Output`
-
-    :attr int hazard_id:
-        The ID of an Hazard Output container object
-        (e.g. :class:`openquake.engine.db.models.HazardCurve`)
+    :attr hazard_outputs:
+        A list of hazard output container instances (e.g. HazardCurve)
 
     :attr assets:
         The assets for which we wants to compute.
@@ -59,22 +55,13 @@ class HazardGetter(object):
 
     :attr imt:
         The imt (in long form) for which data have to be retrieved
-
-    :attr float weight:
-        The weight (if applicable) to be given to the retrieved data
     """
-    def __init__(self, hazard_output, assets, max_distance, imt):
-        self.hazard_output = hazard_output
-        hazard = hazard_output.output_container
-        self.hazard_id = hazard.id
+    def __init__(self, hazard_outputs, assets, max_distance, imt):
+        self.hazard_outputs = hazard_outputs
         self.assets = assets
         self.max_distance = max_distance
         self.imt = imt
         self.imt_type, self.sa_period, self.sa_damping = models.parse_imt(imt)
-        if hasattr(hazard, 'lt_realization') and hazard.lt_realization:
-            self.weight = hazard.lt_realization.weight
-        else:
-            self.weight = None
         # FIXME(lp). It is better to directly store the convex hull
         # instead of the mesh. We are not doing it because
         # hazardlib.Polygon is not (yet) pickeable
@@ -88,13 +75,13 @@ class HazardGetter(object):
             self.__class__.__name__, self.max_distance,
             [a.id for a in self.assets])
 
-    def get_data(self):
+    def get_data(self, hazard_output, monitor):
         """
         Subclasses must implement this.
         """
         raise NotImplementedError
 
-    def __call__(self, monitor=None):
+    def get_for_hazard(self, hazard_output, monitor=None):
         """
         :param monitor: a performance monitor or None
         :returns:
@@ -103,12 +90,10 @@ class HazardGetter(object):
             the corresponding hazard data.
         """
         monitor = monitor or DummyMonitor()
-        assets, data = self.get_data(monitor)
+        assets, data = self.get_data(hazard_output, monitor)
         missing_asset_ids = set(self.asset_dict) - set(a.id for a in assets)
 
         for missing_asset_id in missing_asset_ids:
-            # please don't remove this log: it was required by Vitor since
-            # this is a case that should NOT happen and must raise a warning
             logs.LOG.warn(
                 "No hazard with imt %s has been found for "
                 "the asset %s within %s km" % (
@@ -117,6 +102,19 @@ class HazardGetter(object):
                     self.max_distance))
 
         return assets, data
+
+    def __call__(self, monitor=None):
+        for hazard in self.hazard_outputs:
+            h = hazard.output_container
+            yield (hazard.id,) + self.get_for_hazard(h, monitor)
+
+    def weights(self):
+        ws = []
+        for hazard in self.hazard_outputs:
+            h = hazard.output_container
+            if hasattr(h, 'lt_realization') and h.lt_realization:
+                ws.append(h.lt_realization.weight)
+        return ws
 
 
 class HazardCurveGetterPerAsset(HazardGetter):
@@ -136,16 +134,15 @@ class HazardCurveGetterPerAsset(HazardGetter):
             hazard, assets, max_distance, imt)
         self._cache = {}
 
-    def get_data(self, monitor):
+    def get_data(self, hazard_output, monitor):
         """
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :meth:`HazardGetter.get_data` interface.
         """
-        hc = models.HazardCurve.objects.get(pk=self.hazard_id)
+        hc = hazard_output
 
         if hc.output.output_type == 'hazard_curve':
             imls = hc.imls
-            hazard_id = self.hazard_id
         elif hc.output.output_type == 'hazard_curve_multi':
             hc = models.HazardCurve.objects.get(
                 output__oq_job=hc.output.oq_job,
@@ -156,10 +153,9 @@ class HazardCurveGetterPerAsset(HazardGetter):
                 sa_period=self.sa_period,
                 sa_damping=self.sa_damping)
             imls = hc.imls
-            hazard_id = hc.id
 
         hazard_assets = [
-            (asset.id, self.get_by_site(asset.site, hazard_id, imls))
+            (asset.id, self.get_by_site(asset.site, hc.id, imls))
             for asset in self.assets]
 
         assets = []
@@ -215,7 +211,7 @@ class GroundMotionValuesGetter(HazardGetter):
         super(GroundMotionValuesGetter, self).__init__(
             hazard_output, assets, max_distance, imt)
 
-    def __iter__(self):
+    def assets_gen(self, hazard_output):
         """
         Iterator yielding site_id, assets.
         """
@@ -237,7 +233,7 @@ SELECT site_id, array_agg(asset_id ORDER BY asset_id) AS asset_ids FROM (
 GROUP BY site_id ORDER BY site_id;
    """
         args = (self.max_distance * KILOMETERS_TO_METERS,
-                self.hazard_output.oq_job.hazard_calculation.id,
+                hazard_output.output.oq_job.hazard_calculation.id,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
                 self._assets_mesh.get_convex_hull().wkt)
@@ -256,14 +252,14 @@ GROUP BY site_id ORDER BY site_id;
             if assets:
                 yield site_id, assets
 
-    def get_gmvs_ruptures(self, site_id):
+    def get_gmvs_ruptures(self, hazard_id, site_id):
         """
         :returns: gmvs and ruptures for the given site and IMT
         """
         gmvs = []
         ruptures = []
         for gmf in models.GmfData.objects.filter(
-                gmf=self.hazard_output.gmf.id,
+                gmf=hazard_id,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
                 sa_damping=self.sa_damping):
             gmvs.extend(gmf.gmvs)
@@ -273,7 +269,7 @@ GROUP BY site_id ORDER BY site_id;
             logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
         return gmvs, ruptures
 
-    def get_data(self, monitor):
+    def get_data(self, hazard_output, monitor):
         """
         :returns: a list with all the assets and the hazard data.
 
@@ -288,12 +284,13 @@ GROUP BY site_id ORDER BY site_id;
         # dictionary site -> ({rupture_id: gmv}, n_assets)
         # the ordering is there only to have repeatable runs
         with monitor.copy('associating assets->site'):
-            site_assets = list(self)
+            site_assets = list(self.assets_gen(hazard_output))
         for site_id, assets in site_assets:
             n_assets = len(assets)
             all_assets.extend(assets)
             with monitor.copy('getting gmvs and ruptures'):
-                gmvs, ruptures = self.get_gmvs_ruptures(site_id)
+                gmvs, ruptures = self.get_gmvs_ruptures(
+                    hazard_output.id, site_id)
             if ruptures:  # event based
                 site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
                 for r in ruptures:
@@ -312,3 +309,22 @@ GROUP BY site_id ORDER BY site_id;
                 gmv.clear()  # save memory
                 all_gmvs.extend([array] * n_assets)
         return all_assets, (all_gmvs, all_ruptures)
+
+
+class BCRGetter(object):
+    def __init__(self, getter_orig, getter_retro):
+        self.assets = getter_orig.assets
+        self.getter_orig = getter_orig
+        self.getter_retro = getter_retro
+
+    def __call__(self, monitor):
+        orig_gen = self.getter_orig(monitor)
+        retro_gen = self.getter_retro(monitor)
+
+        try:
+            while 1:
+                hid, assets, orig = orig_gen.next()
+                _hid, _assets, retro = retro_gen.next()
+                yield hid, assets, orig, retro
+        except StopIteration:
+            pass

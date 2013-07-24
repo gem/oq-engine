@@ -17,30 +17,25 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-import numpy
-from openquake.risklib.api import Classical
-from openquake.risklib.scientific import conditional_loss_ratio
+from openquake.risklib import workflows
 
 from django.db import transaction
 
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.calculators.base import signal_task_complete
+from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import base, hazard_getters
-from openquake.engine.utils import tasks
 
 
-@tasks.oqtask
-@base.count_progress_risk('r')
+@base.risk_task
 def classical(job_id, units, containers, params):
     """
     Celery task for the classical risk calculator.
 
     :param int job_id:
       ID of the currently running job
-    :param dict units:
-      A dict of :class:`..base.CalculationUnit` instances keyed by
-      loss type string
+    :param list units:
+      A list of :class:`openquake.risklib.workflow.CalculationUnit` instances
     :param containers:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
@@ -54,15 +49,15 @@ def classical(job_id, units, containers, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='reslt_writer'):
-        for loss_type in units:
+        for unit in units:
             do_classical(
-                loss_type, units[loss_type], containers, params, profile)
-    num_items = base.get_num_items(units)
-    signal_task_complete(job_id=job_id, num_items=num_items)
-classical.ignore_result = False
+                unit,
+                containers.with_args(loss_type=unit.loss_type),
+                params,
+                profile)
 
 
-def do_classical(loss_type, units, containers, params, profile):
+def do_classical(unit, containers, params, profile):
     """
     See `classical` for a description of the parameters.
 
@@ -77,238 +72,81 @@ def do_classical(loss_type, units, containers, params, profile):
     compute mean and quantile artifacts.
     """
 
-    outputs = individual_outputs(
-        units, params.conditional_loss_poes, params.poes_disagg, profile)
-
-    with profile('saving individual risk'):
-        hids = [unit.getter.hazard_output.id for unit in units]
-        save_individual_outputs(loss_type, containers, hids, outputs, params)
-
-    if len(units) < 2:  # skip statistics if we are working on a single unit
-        return
+    for hazard_output_id, outputs in unit.workflow(
+            unit.getter(profile('getting data')),
+            profile('computing individual risk')):
+        with profile('saving individual risk'):
+            save_individual_outputs(
+                containers.with_args(hazard_output_id=hazard_output_id),
+                params,
+                outputs)
 
     with profile('computing risk statistics'):
-        weights = [unit.getter.weight for unit in units]
-        stats = statistics(outputs, weights, params)
+        stats = unit.workflow.statistics(
+            unit.getter.weights(),
+            params.quantiles,
+            post_processing)
 
     with profile('saving risk statistics'):
-        save_statistical_output(loss_type, containers, stats, params)
+        if stats is not None:
+            save_statistical_output(
+                containers.with_args(hazard_output_id=None), stats, params)
 
 
-class AssetsIndividualOutputs(object):
-    """Record the results computed for ALL the calculation units.
-
-  :attr assets:
-    an iterable over the assets considered by the calculation units
-
-  :attr curve_matrix:
-    a numpy array shaped N x A (N = number of units, A number of
-    assets) where each element is a loss curve. A loss curve is described
-    by a tuple (losses, poes)
-
-  :attr map_matrix:
-    a numpy array with N x P x A loss map values where P is the number of
-    `conditional_loss_poes`
-
-   :attr fraction_matrix:
-    a numpy array with N x F x A loss fraction value where F is the number of
-    `poes_disagg`
+def save_individual_outputs(containers, params, outs):
+    """
+    Save an instance of `UnitOutputs` in the proper `containers`
     """
 
-    def __init__(self, assets, curve_matrix, map_matrix, fraction_matrix):
-        self.assets = assets
-        self.curve_matrix = curve_matrix
-        self.map_matrix = map_matrix
-        self.fraction_matrix = fraction_matrix
+    containers.write(outs.assets, outs.loss_curves, output_type="loss_curve")
 
-
-def individual_outputs(units, conditional_loss_poes, poes_disagg, profile):
-    """
-    See `do_classical` for a description of the params
-
-    :returns:
-      an instance of `AssetsIndividualOutputs`
-    """
-    loss_curve_matrix = []
-    loss_maps = []
-    fractions = []
-
-    for unit in units:
-        with profile('getting hazard'):
-            assets, hazard_curves = unit.getter()
-
-        with profile('computing individual risk'):
-            curves = unit.calc(hazard_curves)
-            loss_curve_matrix.append(curves)
-            loss_maps.append([[conditional_loss_ratio(losses, poes, poe)
-                               for losses, poes in curves]
-                              for poe in conditional_loss_poes])
-            fractions.append([[conditional_loss_ratio(losses, poes, poe)
-                              for losses, poes in curves]
-                             for poe in poes_disagg])
-    return AssetsIndividualOutputs(
-        assets,
-        numpy.array(loss_curve_matrix),
-        numpy.array(loss_maps),
-        numpy.array(fractions))
-
-
-def save_individual_outputs(loss_type, containers, hids, outputs, params):
-    """
-    Save an instance of `AssetsIndividualOutputs` in the proper
-    `containers`
-    """
-    # loss curves
     containers.write_all(
-        "hazard_output_id", hids,
-        outputs.curve_matrix, outputs.assets,
-        output_type="loss_curve", loss_type=loss_type)
+        "poe", params.conditional_loss_poes,
+        outs.loss_maps,
+        outs.assets,
+        output_type="loss_map")
 
-    # loss maps
-    for hid, maps in zip(hids, outputs.map_matrix):
-        containers.write_all(
-            "poe", params.conditional_loss_poes, maps, outputs.assets,
-            hazard_output_id=hid,
-            output_type="loss_map", loss_type=loss_type)
-
-    # loss fractions
-    for hid, fractions in zip(hids, outputs.fraction_matrix):
-        containers.write_all(
-            "poe", params.poes_disagg, fractions,
-            outputs.assets, [a.taxonomy for a in outputs.assets],
-            hazard_output_id=hid, output_type="loss_fraction",
-            variable="taxonomy", loss_type=loss_type)
+    taxonomies = [a.taxonomy for a in outs.assets]
+    containers.write_all(
+        "poe", params.poes_disagg,
+        outs.loss_fractions, outs.assets, taxonomies,
+        output_type="loss_fraction", variable="taxonomy")
 
 
-class StatisticalOutputs(object):
-    """The statistical outputs computed by the classical calculator.
-
-    :attr list assets:
-       the assets (instances of
-       :class:`openquake.engine.db.models.ExposureData`) of which outputs
-       have been computed
-    :attr list mean_curves:
-       Holds N mean loss curves. A loss curve is a 2-ple losses/poes
-    :attr list mean_maps:
-       Holds P lists, where each of them holds N mean map value
-       (P = number of PoEs)
-    :attr mean_fractions:
-       Holds F lists, where each of them holds N loss fraction value
-       (F = number of disagg PoEs)
-    :attr list quantile_curves:
-       Holds Q lists, where each of them has N quantile loss curves
-       (Q = number of quantiles)
-    :attr list quantile_maps:
-       Holds Q lists, where each of them has P lists. Each of the latter
-       holds N quantile map value
-    :attr list quantile_fractions:
-       Holds Q lists, where each of them has F lists. Each of the latter
-       holds N quantile loss fraction value
-       """
-    def __init__(self, assets, mean_curves, mean_maps, mean_fractions,
-                 quantile_curves, quantile_maps, quantile_fractions):
-        self.assets = assets
-        self.mean_curves = mean_curves
-        self.mean_maps = mean_maps
-        self.mean_fractions = mean_fractions
-        self.quantile_curves = quantile_curves
-        self.quantile_maps = quantile_maps
-        self.quantile_fractions = quantile_fractions
-
-
-def statistics(outputs, weights, params):
-    """
-    :param outputs:
-      An instance of `AssetsIndividualOutputs`
-
-    See `classical` for a description of `params`
-
-    :returns:
-      an instance of `StatisticalOutputs`
-
-    It makes use of `..base.statistics` to compute curves and maps
-    """
-    ret = []
-
-    # traverse the curve matrix on the second dimension (the assets)
-    # accumulating results in `ret`, then return `ret` unzipped
-    for loss_ratio_curves in outputs.curve_matrix.transpose(1, 0, 2, 3):
-
-        # get the loss ratios only from the first curve
-        loss_ratios, _poes = loss_ratio_curves[0]
-        curves_poes = [poes for _losses, poes in loss_ratio_curves]
-
-        mean_curve, quantile_curves, mean_maps, quantile_maps = (
-            base.asset_statistics(
-                loss_ratios, curves_poes,
-                params.quantiles, weights, params.conditional_loss_poes))
-
-        # compute also mean and quantile loss fractions
-        mean_fractions = [
-            conditional_loss_ratio(mean_curve[0], mean_curve[1], poe)
-            for poe in params.poes_disagg]
-
-        quantile_fractions = [[
-            conditional_loss_ratio(quantile_curve[0], quantile_curve[1], poe)
-            for poe in params.poes_disagg]
-            for quantile_curve in quantile_curves]
-
-        ret.append((mean_curve, mean_maps, mean_fractions,
-                    quantile_curves, quantile_maps, quantile_fractions))
-
-    (mean_curve, mean_maps, mean_fractions,
-     quantile_curves, quantile_maps, quantile_fractions) = zip(*ret)
-    # now all the lists keep N items
-
-    # transpose maps and fractions to have P/F/Q items of N-sized lists
-    mean_maps = numpy.array(mean_maps).transpose()
-    mean_fractions = numpy.array(mean_fractions).transpose()
-    quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
-    quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
-    quantile_fractions = numpy.array(quantile_fractions).transpose(2, 1, 0)
-
-    return StatisticalOutputs(
-        outputs.assets, mean_curve, mean_maps,
-        mean_fractions, quantile_curves, quantile_maps, quantile_fractions)
-
-
-def save_statistical_output(loss_type, containers, stats, params):
+def save_statistical_output(containers, stats, params):
     # mean curves, maps and fractions
-
     containers.write(
         stats.assets, stats.mean_curves,
-        output_type="loss_curve", statistics="mean", loss_type=loss_type)
+        output_type="loss_curve", statistics="mean")
 
     containers.write_all("poe", params.conditional_loss_poes,
                          stats.mean_maps, stats.assets,
                          output_type="loss_map",
-                         statistics="mean", loss_type=loss_type)
+                         statistics="mean")
 
     containers.write_all("poe", params.poes_disagg,
                          stats.mean_fractions,
                          stats.assets,
                          [a.taxonomy for a in stats.assets],
                          output_type="loss_fraction", statistics="mean",
-                         variable="taxonomy", loss_type=loss_type)
+                         variable="taxonomy")
 
     # quantile curves, maps and fractions
     containers.write_all(
         "quantile", params.quantiles, stats.quantile_curves,
-        stats.assets, output_type="loss_curve", statistics="quantile",
-        loss_type=loss_type)
+        stats.assets, output_type="loss_curve", statistics="quantile")
 
     for quantile, maps in zip(params.quantiles, stats.quantile_maps):
         containers.write_all("poe", params.conditional_loss_poes, maps,
                              stats.assets, output_type="loss_map",
-                             statistics="quantile", quantile=quantile,
-                             loss_type=loss_type)
+                             statistics="quantile", quantile=quantile)
 
     for quantile, fractions in zip(params.quantiles, stats.quantile_fractions):
         containers.write_all("poe", params.poes_disagg, fractions,
                              stats.assets, [a.taxonomy for a in stats.assets],
                              output_type="loss_fraction",
                              statistics="quantile", quantile=quantile,
-                             variable="taxonomy", loss_type=loss_type)
+                             variable="taxonomy")
 
 
 class ClassicalRiskCalculator(base.RiskCalculator):
@@ -320,27 +158,30 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     #: celery task
     core_calc_task = classical
 
-    def calculation_units(self, loss_type, assets):
+    def calculation_unit(self, loss_type, assets):
         """
         :returns:
-          a list of instances of `..base.CalculationUnit` for the given
-          `assets` to be run in the celery task
+          a :class:`openquake.risklib.workflows.CalculationUnit`
+          instance for the given `loss_type` and `assets` to be run in
+          the celery task
         """
 
         # assume all assets have the same taxonomy
         taxonomy = assets[0].taxonomy
         model = self.risk_models[taxonomy][loss_type]
 
-        return [base.CalculationUnit(
-            Classical(
-                vulnerability_function=model.vulnerability_function,
-                steps=self.rc.lrem_steps_per_interval),
+        return workflows.CalculationUnit(
+            loss_type,
+            workflows.Classical(
+                model.vulnerability_function,
+                self.rc.lrem_steps_per_interval,
+                self.rc.conditional_loss_poes,
+                self.rc.poes_disagg),
             hazard_getters.HazardCurveGetterPerAsset(
-                ho,
+                self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
-                for ho in self.rc.hazard_outputs()]
 
     def validate_hazard(self):
         """
