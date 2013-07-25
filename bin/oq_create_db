@@ -184,7 +184,6 @@ if [ "$check_table_spaces" == "on" ]; then
             psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'" $psql_batch_options
             if [ "$table_spaces_only" == "on" ]; then
                 psql -p $db_port -U $db_admin_user -d $db_name -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'" $psql_batch_options
-                psql -p $db_port -U $db_admin_user -d $db_name -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)" $psql_batch_options
             fi
         fi
     done
@@ -230,7 +229,6 @@ load_file="$schema_path/load.sql"
 if [ -r $load_file ]; then
     echo ".. Loading static data from: $load_file .."
     psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $load_file
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('oq-engine', '$oq_version', 0);"
 fi
 
 # Apply database schema/table comments if present.
