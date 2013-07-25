@@ -18,3 +18,4 @@
 
 INSERT INTO admin.organization(name) VALUES('GEM Foundation');
 INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
+INSERT INTO admin.revision_info(artefact, revision, step) VALUES('oq-engine', '1.0.1', 1);
