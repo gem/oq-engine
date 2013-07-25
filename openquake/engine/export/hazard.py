@@ -215,7 +215,6 @@ def export_hazard_curve_multi_xml(output, target):
     data = [_curve_data(hc) for hc in hcs]
 
     metadata_set = []
-    path = None
     for hc in hcs:
         metadata, dest = _curve_metadata(hc.output, target)
         metadata_set.append(metadata)
@@ -402,6 +401,7 @@ def _export_hazard_map(output, target, writer_class, file_ext):
     writer = writer_class(dest, **metadata)
     writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
     return dest
+
 
 def export_hazard_map_xml(output, target):
     """
