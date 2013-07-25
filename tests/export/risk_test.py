@@ -55,6 +55,7 @@ class ExportTestCase(unittest.TestCase):
 
         self.output_mock.loss_curve.id = 0
         self.output_mock.loss_curve.loss_type = "structural"
+        self.output_mock.output_type = 'agg_loss_curve'
         with mock.patch(writer) as m:
             ret = risk.export_agg_loss_curve_xml(self.output_mock, "/tmp/")
 
@@ -73,6 +74,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.loss_curve.id = 0
         self.output_mock.loss_curve.insured = False
         self.output_mock.loss_curve.loss_type = "structural"
+        self.output_mock.output_type = 'loss_curve'
 
         with mock.patch(writer) as m:
             ret = risk.export_loss_curve_xml(self.output_mock, "/tmp/")
@@ -93,6 +95,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.loss_map.id = 0
         self.output_mock.loss_map.poe = 0.1
         self.output_mock.loss_map.loss_type = "structural"
+        self.output_mock.output_type = 'loss_map'
 
         with mock.patch(writer) as m:
             ret = risk.export_loss_map_xml(self.output_mock, "/tmp/")
@@ -113,6 +116,7 @@ class ExportTestCase(unittest.TestCase):
 
         self.output_mock.bcr_distribution.id = 0
         self.output_mock.bcr_distribution.loss_type = "structural"
+        self.output_mock.output_type = 'bcr_distribution'
 
         with mock.patch(writer) as m:
             ret = risk.export_bcr_distribution_xml(self.output_mock, "/tmp/")
@@ -134,6 +138,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.aggregate_loss.mean = 1
         self.output_mock.aggregate_loss.std_dev = 2
         self.output_mock.aggregate_loss.loss_type = "structural"
+        self.output_mock.output_type = 'aggregate_loss'
 
         with mock.patch(writer) as m:
             ret = risk.export_aggregate_loss(self.output_mock, "/tmp/")
