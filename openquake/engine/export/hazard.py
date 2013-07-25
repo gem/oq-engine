@@ -59,7 +59,7 @@ def export(output_id, target, export_type='xml'):
 
     # If the `target` is a string directory path, use expand user to handle
     # tokens like '~':
-    if isinstance(target, basestring):
+    if isinstance(target, (basestring, buffer)):
         target = os.path.expanduser(target)
     return export_fn(output, target)
 
@@ -89,7 +89,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
         If the ``target`` is a file-like, we don't do anything special
         and simply return it.
     """
-    if not isinstance(target, basestring):
+    if not isinstance(target, (basestring, buffer)):
         # It's not a file path. In this case, we expect a file-like object.
         # Just return it.
         return target
