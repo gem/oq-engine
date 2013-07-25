@@ -87,11 +87,13 @@ def export_agg_loss_curve_xml(output, target_dir):
     serializer
     """
     args = _export_common(output, output.loss_curve.loss_type)
-    args['dest'] = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
-        'loss_curve_id': output.loss_curve.id})
-    writers.AggregateLossCurveXMLWriter(**args).serialize(
+    dest = os.path.join(
+        target_dir,
+        LOSS_CURVE_FILENAME_FMT % {'loss_curve_id': output.loss_curve.id}
+    )
+    writers.AggregateLossCurveXMLWriter(dest, **args).serialize(
         output.loss_curve.aggregatelosscurvedata)
-    return args['dest']
+    return dest
 
 
 @core.makedirsdeco
@@ -119,18 +121,21 @@ def _export_loss_map(output, target_dir, writer_class, file_ext):
 
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.loss_map.loss_type)
+
+    dest = os.path.join(
+        target_dir,
+        LOSS_MAP_FILENAME_FMT % {'loss_map_id': output.loss_map.id,
+                                 'file_ext': file_ext}
+    )
+
     args.update(dict(
-        dest=os.path.join(
-            target_dir,
-            LOSS_MAP_FILENAME_FMT % {'loss_map_id': output.loss_map.id,
-                                     'file_ext': file_ext}),
         poe=output.loss_map.poe,
         loss_category=risk_calculation.exposure_model.category))
-    writer = writer_class(**args)
+    writer = writer_class(dest, **args)
     writer.serialize(
         output.loss_map.lossmapdata_set.all().order_by('asset_ref')
     )
-    return args['dest']
+    return dest
 
 
 def export_loss_map_xml(output, target_dir):
