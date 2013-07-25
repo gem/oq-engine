@@ -234,7 +234,3 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             raise SkipTest
         else:
             return self._get_queryset()[0].oqjob
-
-    def test(self):
-        raise NotImplementedError
-
