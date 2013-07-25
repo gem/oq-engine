@@ -27,7 +27,7 @@ the development of the  library by adding the most recent methodologies
 adopted by the seismological/seismic hazard communities. Comments,
 suggestions and criticisms from the community are always very welcome.
 
-Copyright (C) 2012 GEM Foundation.
+Copyright (C) 2012-2013 GEM Foundation.
 """
 from setuptools import setup, find_packages, Extension
 
