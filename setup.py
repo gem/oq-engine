@@ -29,12 +29,28 @@ suggestions and criticisms from the community are always very welcome.
 
 Copyright (C) 2012-2013 GEM Foundation.
 """
+import re
 from setuptools import setup, find_packages, Extension
 
 import numpy
 
 
-version = "0.11.0"
+def get_version():
+    version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
+    version = None
+
+    package_init = 'openquake/hazardlib/__init__.py'
+    for line in open(package_init, 'r'):
+        version_match = re.search(version_re, line, re.M)
+        if version_match:
+            version = version_match.group(1)
+            break
+    else:
+        sys.exit('__version__ variable not found in %s' % package_init)
+
+    return version
+version = get_version()
+
 url = "http://github.com/gem/oq-hazardlib"
 
 geoutils_speedups = Extension('openquake.hazardlib.geo._utils_speedups',
