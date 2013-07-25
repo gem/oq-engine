@@ -58,10 +58,9 @@ class ExportTestCase(unittest.TestCase):
         with mock.patch(writer) as m:
             ret = risk.export_agg_loss_curve_xml(self.output_mock, "/tmp/")
 
-            self.assertEqual([((),
+            self.assertEqual([(('/tmp/loss-curves-0.xml', ),
                               {'gsim_tree_path': None,
                                'investigation_time': 30,
-                               'dest': '/tmp/loss-curves-0.xml',
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
@@ -98,11 +97,10 @@ class ExportTestCase(unittest.TestCase):
         with mock.patch(writer) as m:
             ret = risk.export_loss_map_xml(self.output_mock, "/tmp/")
 
-            self.assertEqual([((),
+            self.assertEqual([(('/tmp/loss-maps-0.xml', ),
                               {'gsim_tree_path': None,
                                'investigation_time': 30,
                                'loss_category': 'air',
-                               'dest': '/tmp/loss-maps-0.xml',
                                'poe': 0.1,
                                'quantile_value': None,
                                'source_model_tree_path': None,
@@ -119,11 +117,10 @@ class ExportTestCase(unittest.TestCase):
         with mock.patch(writer) as m:
             ret = risk.export_bcr_distribution_xml(self.output_mock, "/tmp/")
 
-            self.assertEqual([((),
+            self.assertEqual([(('/tmp/bcr-distribution-0.xml', ),
                               {'asset_life_expectancy': 10,
                                'gsim_tree_path': None,
                                'interest_rate': 0.3,
-                               'dest': '/tmp/bcr-distribution-0.xml',
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
