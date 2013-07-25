@@ -22,10 +22,27 @@ very welcome.
 Copyright (C) 2013 GEM Foundation.
 """
 import os
+import re
+import sys
 from setuptools import setup, find_packages
 
 
-version = "0.3.0"
+def get_version():
+    version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
+    version = None
+
+    package_init = 'openquake/risklib/__init__.py'
+    for line in open(package_init, 'r'):
+        version_match = re.search(version_re, line, re.M)
+        if version_match:
+            version = version_match.group(1)
+            break
+    else:
+        sys.exit('__version__ variable not found in %s' % package_init)
+
+    return version
+version = get_version()
+
 url = "http://github.com/gem/oq-risklib"
 cd = os.path.dirname(os.path.join(__file__))
 
