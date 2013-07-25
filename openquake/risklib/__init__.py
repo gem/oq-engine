@@ -15,6 +15,8 @@
 # License along with OpenQuake Risklib. If not, see
 # <http://www.gnu.org/licenses/>.
 
+__version__ = '0.3.0'
+
 
 from openquake.risklib.scientific import (
     VulnerabilityFunction, DegenerateDistribution, classical)
