@@ -35,8 +35,8 @@ EVENT_LOSS_FILENAME_FMT = 'event-loss-%s.csv'
 
 
 # for each output_type there must be a function
-# export_<output_type>_<export_type>(output, target_dir)
-def export(output_id, target_dir, export_type='xml'):
+# export_<output_type>_<export_type>(output, target)
+def export(output_id, target, export_type='xml'):
     """
     Export the given risk calculation output from the database to the
     specified directory. See :func:`openquake.engine.export.hazard.export` for
@@ -52,7 +52,7 @@ def export(output_id, target_dir, export_type='xml'):
             ' outputs' % dict(fmt=export_type, output_type=output.output_type)
         )
 
-    return export_fn(output, os.path.expanduser(target_dir))
+    return export_fn(output, os.path.expanduser(target))
 
 
 def _export_common(output, loss_type):
@@ -81,14 +81,14 @@ def _export_common(output, loss_type):
 
 
 @core.makedirsdeco
-def export_agg_loss_curve_xml(output, target_dir):
+def export_agg_loss_curve_xml(output, target):
     """
-    Export `output` to `target_dir` by using a nrml loss curves
+    Export `output` to `target` by using a nrml loss curves
     serializer
     """
     args = _export_common(output, output.loss_curve.loss_type)
     dest = os.path.join(
-        target_dir,
+        target,
         LOSS_CURVE_FILENAME_FMT % {'loss_curve_id': output.loss_curve.id}
     )
     writers.AggregateLossCurveXMLWriter(dest, **args).serialize(
@@ -97,13 +97,13 @@ def export_agg_loss_curve_xml(output, target_dir):
 
 
 @core.makedirsdeco
-def export_loss_curve_xml(output, target_dir):
+def export_loss_curve_xml(output, target):
     """
-    Export `output` to `target_dir` by using a nrml loss curves
+    Export `output` to `target` by using a nrml loss curves
     serializer
     """
     args = _export_common(output, output.loss_curve.loss_type)
-    dest = os.path.join(target_dir, LOSS_CURVE_FILENAME_FMT % {
+    dest = os.path.join(target, LOSS_CURVE_FILENAME_FMT % {
         'loss_curve_id': output.loss_curve.id})
     args['insured'] = output.loss_curve.insured
 
@@ -113,17 +113,17 @@ def export_loss_curve_xml(output, target_dir):
     return dest
 
 
-def _export_loss_map(output, target_dir, writer_class, file_ext):
+def _export_loss_map(output, target, writer_class, file_ext):
     """
     General loss map export code.
     """
-    core.makedirs(target_dir)
+    core.makedirs(target)
 
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.loss_map.loss_type)
 
     dest = os.path.join(
-        target_dir,
+        target,
         LOSS_MAP_FILENAME_FMT % {'loss_map_id': output.loss_map.id,
                                  'file_ext': file_ext}
     )
@@ -138,26 +138,26 @@ def _export_loss_map(output, target_dir, writer_class, file_ext):
     return dest
 
 
-def export_loss_map_xml(output, target_dir):
+def export_loss_map_xml(output, target):
     """
     Serialize a loss map to NRML/XML.
     """
-    return _export_loss_map(output, target_dir, writers.LossMapXMLWriter,
+    return _export_loss_map(output, target, writers.LossMapXMLWriter,
                             'xml')
 
 
-def export_loss_map_geojson(output, target_dir):
+def export_loss_map_geojson(output, target):
     """
     Serialize a loss map to geojson.
     """
-    return _export_loss_map(output, target_dir, writers.LossMapGeoJSONWriter,
+    return _export_loss_map(output, target, writers.LossMapGeoJSONWriter,
                             'geojson')
 
 
 @core.makedirsdeco
-def export_loss_fraction_xml(output, target_dir):
+def export_loss_fraction_xml(output, target):
     """
-    Export `output` to `target_dir` by using a nrml loss fractions
+    Export `output` to `target` by using a nrml loss fractions
     serializer
     """
     risk_calculation = output.oq_job.risk_calculation
@@ -169,7 +169,7 @@ def export_loss_fraction_xml(output, target_dir):
         sm_path=args['source_model_tree_path'],
         gsim_path=args['gsim_tree_path'])
     path = os.path.join(
-        target_dir,
+        target,
         LOSS_FRACTION_FILENAME_FMT % {
             'loss_fraction_id': output.loss_fraction.id})
     poe = output.loss_fraction.poe
@@ -184,16 +184,16 @@ def export_loss_fraction_xml(output, target_dir):
 
 
 @core.makedirsdeco
-def export_bcr_distribution_xml(output, target_dir):
+def export_bcr_distribution_xml(output, target):
     """
-    Export `output` to `target_dir` by using a nrml bcr distribution
+    Export `output` to `target` by using a nrml bcr distribution
     serializer
     """
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.bcr_distribution.loss_type)
 
     dest = os.path.join(
-        target_dir,
+        target,
         BCR_FILENAME_FMT % {'bcr_distribution_id': output.bcr_distribution.id},
     )
     args.update(
@@ -210,19 +210,19 @@ def export_bcr_distribution_xml(output, target_dir):
 def make_dmg_dist_export(damagecls, writercls, filename):
     # XXX: clearly this is not a good approach for large exposures
     @core.makedirsdeco
-    def export_dmg_dist(output, target_dir):
+    def export_dmg_dist(output, target):
         """
         Export the damage distribution identified
-        by the given output to the `target_dir`.
+        by the given output to the `target`.
 
         :param output: db output record which identifies the distribution.
         :type output: :py:class:`openquake.engine.db.models.Output`
-        :param target_dir: destination directory of the exported file.
-        :type target_dir: string
+        :param target: destination directory of the exported file.
+        :type target: string
         """
         job = output.oq_job
         rc_id = job.risk_calculation.id
-        file_path = os.path.join(target_dir, filename % job.id)
+        file_path = os.path.join(target, filename % job.id)
         dmg_states = list(models.DmgState.objects.filter(
             risk_calculation__id=rc_id).order_by('lsi'))
         if writercls is writers.CollapseMapXMLWriter:  # special case
@@ -258,11 +258,11 @@ export_collapse_map_xml = make_dmg_dist_export(
     "collapse-map-%s.xml")
 
 
-def export_aggregate_loss_csv(output, target_dir):
+def export_aggregate_loss_csv(output, target):
     """
     Export aggregate losses in CSV
     """
-    filepath = os.path.join(target_dir,
+    filepath = os.path.join(target,
                             AGGREGATE_LOSS_FILENAME_FMT % (
                                 output.aggregate_loss.id))
 
@@ -276,12 +276,12 @@ def export_aggregate_loss_csv(output, target_dir):
 export_aggregate_loss = export_aggregate_loss_csv
 
 
-def export_event_loss_csv(output, target_dir):
+def export_event_loss_csv(output, target):
     """
     Export Event Loss Table in CSV format
     """
 
-    filepath = os.path.join(target_dir,
+    filepath = os.path.join(target,
                             EVENT_LOSS_FILENAME_FMT % (
                                 output.id))
 
