@@ -17,9 +17,10 @@
 # <http://www.gnu.org/licenses/>.
 
 
+import functools
 import collections
 import itertools
-import functools
+import numpy
 
 
 class Register(collections.OrderedDict):
@@ -65,3 +66,23 @@ class memoized(object):
     def __get__(self, obj, objtype):
         """Support instance methods."""
         return functools.partial(self.__call__, obj)
+
+
+def _composed(f, g, *args, **kwargs):
+    return f(g(*args, **kwargs))
+
+
+def compose(*a):
+    try:
+        return functools.partial(_composed, a[0], compose(*a[1:]))
+    except IndexError:
+        return a[0]
+
+
+def mapper(fn):
+    def wrapped(arg_list):
+        return map(fn, arg_list)
+    return wrapped
+
+
+numpy_map = compose(numpy.array, map)

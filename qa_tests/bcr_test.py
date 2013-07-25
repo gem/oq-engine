@@ -17,7 +17,6 @@
 
 import unittest
 
-from openquake.risklib import api
 from openquake.risklib import scientific
 
 
@@ -33,9 +32,6 @@ class BCRTestCase(unittest.TestCase):
             scientific.VulnerabilityFunction(
                 [0.1, 0.2, 0.3, 0.45, 0.6], [0.035, 0.07, 0.14, 0.28, 0.56],
                 [0.5, 0.4, 0.3, 0.2, 0.1], "LN"))
-
-        calculator_rm = api.Classical(vulnerability_function_rm, steps=5)
-        calculator_rf = api.Classical(vulnerability_function_rf, steps=5)
 
         asset_value = 2.
         retrofitting_cost = .1
@@ -53,8 +49,14 @@ class BCRTestCase(unittest.TestCase):
             (0.7, 0.000272824002045979), (0.8, 0.0),
             (0.9, 0.0), (1.0, 0.0)]
 
-        [original_loss_ratio_curve] = calculator_rm([hazard])
-        [retrofitted_loss_ratio_curve] = calculator_rf([hazard])
+        original_loss_ratio_curve = scientific.classical(
+            vulnerability_function_rm,
+            hazard,
+            steps=5)
+        retrofitted_loss_ratio_curve = scientific.classical(
+            vulnerability_function_rf,
+            hazard,
+            steps=5)
 
         eal_original = scientific.average_loss(*original_loss_ratio_curve)
         eal_retrofitted = scientific.average_loss(

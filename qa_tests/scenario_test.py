@@ -18,7 +18,6 @@
 import os
 import unittest
 
-from openquake.risklib import api
 from openquake.risklib import scientific
 from openquake.risklib.tests.utils import vectors_from_csv
 
@@ -58,10 +57,10 @@ class ScenarioTestCase(unittest.TestCase):
     )
 
     def test_mean_based(self):
-        calculator = api.Scenario(
-            self.vulnerability_model_mean["RM"], None, None)
+        calculator = scientific.vulnerability_function_applier
 
         [asset_output_a1, asset_output_a3] = calculator(
+            self.vulnerability_model_mean["RM"],
             [self.hazard_mean["a1"], self.hazard_mean["a3"]])
 
         self.assertAlmostEqual(440.147078317589, asset_output_a1.mean() * 3000)
@@ -75,8 +74,9 @@ class ScenarioTestCase(unittest.TestCase):
             92.2122644809969,
             asset_output_a3.std(ddof=1) * 1000)
 
-        calculator.vulnerability_function = self.vulnerability_model_mean["RC"]
-        [asset_output_a2] = calculator([self.hazard_mean["a2"]])
+        [asset_output_a2] = calculator(
+            self.vulnerability_model_mean["RC"],
+            [self.hazard_mean["a2"]])
 
         self.assertAlmostEqual(
             432.225448142534, asset_output_a2.mean() * 2000)
@@ -90,9 +90,12 @@ class ScenarioTestCase(unittest.TestCase):
             RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], [0.1, 0.2, 0.3, 0.4, 0.5]),
         )
 
-        calculator = api.Scenario(vulnerability_model['RM'], seed=37)
+        calculator = scientific.vulnerability_function_applier
 
-        [asset_output_a1, asset_output_a3] = calculator([gmv.a1, gmv.a3])
+        [asset_output_a1, asset_output_a3] = calculator(
+            vulnerability_model['RM'],
+            [gmv.a1, gmv.a3],
+            seed=37)
 
         self.assertAlmostEqual(521.885458891, asset_output_a1.mean() * 3000,
                                delta=0.05 * 521.885458891)
@@ -103,10 +106,10 @@ class ScenarioTestCase(unittest.TestCase):
 
         self.assertTrue(asset_output_a3.std(ddof=1) * 1000 > 94.2302991022)
 
-        calculator.vulnerability_function = vulnerability_model["RC"]
-        calculator.vulnerability_function.init_distribution(seed=37)
-
-        [asset_output_a2] = calculator([gmv.a2])
+        [asset_output_a2] = calculator(
+            vulnerability_model["RC"],
+            [gmv.a2],
+            seed=37)
 
         self.assertAlmostEqual(
             510.821363253,

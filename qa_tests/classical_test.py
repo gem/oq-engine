@@ -18,7 +18,6 @@
 import unittest
 import numpy
 
-from openquake.risklib import api
 from openquake.risklib import scientific
 
 
@@ -43,14 +42,12 @@ class ClassicalTestCase(unittest.TestCase):
         0.92, 0.96, 1.00]
 
     def test_lognormal_distribution(self):
-        calculator = api.Classical(
+        loss_ratio_curve = scientific.classical(
             scientific.VulnerabilityFunction(
                 [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-                [0.5, 0.4, 0.3, 0.2, 0.1], "LN"), steps=5)
-
-        # api.ConditionalLosses(,
-        # asset_value = 2
-        [loss_ratio_curve] = calculator([self.hazard_curve])
+                [0.5, 0.4, 0.3, 0.2, 0.1], "LN"),
+            self.hazard_curve,
+            steps=5)
 
         poes = [
             0.039334753367700, 0.039319630829000,
@@ -85,12 +82,12 @@ class ClassicalTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.0, conditional_losses[0.05])
 
     def test_beta_distribution(self):
-        calculator = api.Classical(
+        loss_ratio_curve = scientific.classical(
             scientific.VulnerabilityFunction(
                 [0.1, 0.2, 0.3, 0.45, 0.6], [0.05, 0.1, 0.2, 0.4, 0.8],
-                [0.5, 0.4, 0.3, 0.2, 0.1], "BT"), steps=5)
-
-        [loss_ratio_curve] = calculator([self.hazard_curve])
+                [0.5, 0.4, 0.3, 0.2, 0.1], "BT"),
+            self.hazard_curve,
+            steps=5)
 
         poes = [
             0.039334753367700, 0.039125428171600,
