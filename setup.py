@@ -30,6 +30,7 @@ suggestions and criticisms from the community are always very welcome.
 Copyright (C) 2012-2013 GEM Foundation.
 """
 import re
+import sys
 from setuptools import setup, find_packages, Extension
 
 import numpy
