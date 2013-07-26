@@ -86,12 +86,12 @@ class ClassicalHazardCase1TestCase(qa_utils.BaseQATestCase):
             )
 
             # Test the exports as well:
-            [exported_file] = hazard_export.export(
+            exported_file = hazard_export.export(
                 pga_curve.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_PGA_XML), exported_file)
 
-            [exported_file] = hazard_export.export(
+            exported_file = hazard_export.export(
                 sa_curve.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_SA_XML), exported_file)
