@@ -5,6 +5,7 @@ import urlparse
 from django.http import HttpResponse
 
 from openquake.engine.db import models as oqe_models
+from openquake.engine import engine
 
 METHOD_NOT_ALLOWED = 405
 JSON = 'application/json'
@@ -110,6 +111,27 @@ def _get_haz_calc_info(calc_id):
     return response_data
 
 
+def calc_hazard_results(request, calc_id):
+    if not request.method == 'GET':
+        return HttpResponse(status=METHOD_NOT_ALLOWED)
+
+    base_url = _get_base_url(request)
+
+    results = engine.get_hazard_outputs(calc_id)
+
+    response_data = []
+    for result in results:
+        url = urlparse.urljoin(base_url,
+                               'v1/calc/hazard/result/%d' % result.id)
+        datum = dict(
+            id=result.id,
+            name=result.display_name,
+            type=result.output_type,
+            url=url,
+        )
+        response_data.append(datum)
+
+    return HttpResponse(content=json.dumps(response_data))
 
 
 def calc_risk(request):
@@ -166,3 +188,26 @@ def _get_risk_calc_info(calc_id):
 
     response_data['status'] = job.status
     return response_data
+
+
+def calc_risk_results(request, calc_id):
+    if not request.method == 'GET':
+        return HttpResponse(status=METHOD_NOT_ALLOWED)
+
+    base_url = _get_base_url(request)
+
+    results = engine.get_risk_outputs(calc_id)
+
+    response_data = []
+    for result in results:
+        url = urlparse.urljoin(base_url,
+                               'v1/calc/risk/result/%d' % result.id)
+        datum = dict(
+            id=result.id,
+            name=result.display_name,
+            type=result.output_type,
+            url=url,
+        )
+        response_data.append(datum)
+
+    return HttpResponse(content=json.dumps(response_data))
