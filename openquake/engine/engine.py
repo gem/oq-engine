@@ -37,6 +37,10 @@ from openquake.engine.supervising import supervisor
 from openquake.engine.utils import monitor, get_calculator_class
 from openquake.engine.writer import CacheInserter
 
+from openquake import hazardlib
+from openquake import risklib
+from openquake import nrmllib
+
 
 INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
@@ -60,7 +64,14 @@ def prepare_job(user_name="openquake", log_level='progress'):
     # See if the current user exists
     # If not, create a record for them
     owner = prepare_user(user_name)
-    job = models.OqJob(owner=owner, log_level=log_level)
+    job = models.OqJob(
+        owner=owner,
+        log_level=log_level,
+        oq_version=openquake.engine.__version__,
+        nrml_version=nrmllib.__version__,
+        hazardlib_version=hazardlib.__version__,
+        risklib_version=risklib.__version__,
+    )
     job.save()
     return job
 
