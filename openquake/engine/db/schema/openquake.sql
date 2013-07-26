@@ -574,17 +574,18 @@ CREATE TABLE hzrdr.ses (
 CREATE TABLE hzrdr.ses_rupture (
     id SERIAL PRIMARY KEY,
     ses_id INTEGER NOT NULL,
-    magnitude float NOT NULL,
-    strike float NOT NULL,
-    dip float NOT NULL,
-    rake float NOT NULL,
-    tectonic_region_type VARCHAR NOT NULL,
-    is_from_fault_source BOOLEAN NOT NULL,
-    is_multi_surface BOOLEAN NOT NULL,
-    lons BYTEA NOT NULL,
-    lats BYTEA NOT NULL,
-    depths BYTEA NOT NULL,
-    surface BYTEA NOT NULL
+    magnitude float NULL,
+    strike float NULL,
+    dip float NULL,
+    rake float NULL,
+    tectonic_region_type VARCHAR NULL,
+    is_from_fault_source BOOLEAN NULL,
+    is_multi_surface BOOLEAN NULL,
+    lons BYTEA NULL,
+    lats BYTEA NULL,
+    depths BYTEA NULL,
+    surface BYTEA NULL,
+    rupture BYTEA NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 
