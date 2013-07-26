@@ -49,6 +49,8 @@ from django.contrib.gis.db import models as djm
 from shapely import wkt
 
 from openquake.hazardlib import geo as hazardlib_geo
+from openquake.hazardlib import source as hazardlib_source
+
 from openquake.engine.db import fields
 from openquake.engine import writer
 
@@ -267,10 +269,17 @@ class SiteCollection(openquake.hazardlib.site.SiteCollection):
     def __init__(self, sites):
         self.sites = sites
         super(SiteCollection, self).__init__(sites)
+        self.sites_dict = dict((s.id, s) for s in sites)
 
     def __iter__(self):
         for site in self.sites:
             yield site
+
+    def get_by_id(self, site_id):
+        return self.sites_dict[site_id]
+
+    def __contains__(self, site):
+        return site.id in self.sites_dict
 
 ## Tables in the 'admin' schema.
 
@@ -1203,20 +1212,25 @@ class RiskCalculation(djm.Model):
         `filters` to the default queryset
         """
 
-        if self.calculation_mode in ["classical", "classical_bcr"]:
-            filters = dict(output_type='hazard_curve_multi',
-                           hazard_curve__lt_realization__isnull=False)
-        elif self.calculation_mode in ["event_based", "event_based_bcr"]:
-            filters = dict(output_type='gmf',
-                           gmf__lt_realization__isnull=False)
-        elif self.calculation_mode in ['scenario', 'scenario_damage']:
-            filters = dict(output_type='gmf_scenario')
-        else:
-            raise NotImplementedError
-
         if self.hazard_output:
             return [self.hazard_output]
         elif self.hazard_calculation:
+            if self.calculation_mode in ["classical", "classical_bcr"]:
+                filters = dict(output_type='hazard_curve_multi',
+                               hazard_curve__lt_realization__isnull=False)
+            elif self.calculation_mode in ["event_based", "event_based_bcr"]:
+                if self.hazard_calculation.ground_motion_fields:
+                    filters = dict(output_type='gmf',
+                                   gmf__lt_realization__isnull=False)
+                else:
+                    filters = dict(
+                        output_type='ses',
+                        ses__lt_realization__isnull=False)
+            elif self.calculation_mode in ['scenario', 'scenario_damage']:
+                filters = dict(output_type='gmf_scenario')
+            else:
+                raise NotImplementedError
+
             return self.hazard_calculation.oqjob.output_set.filter(
                 **filters).order_by('id')
         else:
@@ -1761,42 +1775,9 @@ class SES(djm.Model):
 class SESRupture(djm.Model):
     """
     A rupture as part of a Stochastic Event Set.
-
-    Ruptures will have different geometrical definitions, depending on whether
-    the event was generated from a point/area source or a simple/complex fault
-    source.
     """
     ses = djm.ForeignKey('SES')
-    magnitude = djm.FloatField()
-    strike = djm.FloatField()
-    dip = djm.FloatField()
-    rake = djm.FloatField()
-    tectonic_region_type = djm.TextField()
-    # If True, this rupture was generated from a simple/complex fault
-    # source. If False, this rupture was generated from a point/area source.
-    is_from_fault_source = djm.BooleanField()
-    is_multi_surface = djm.BooleanField()
-    # The following fields can be interpreted different ways, depending on the
-    # value of `is_from_fault_source`.
-    # If `is_from_fault_source` is True, each of these fields should contain a
-    # 2D numpy array (all of the same shape). Each triple of (lon, lat, depth)
-    # for a given index represents the node of a rectangular mesh.
-    # If `is_from_fault_source` is False, each of these fields should contain
-    # a sequence (tuple, list, or numpy array, for example) of 4 values. In
-    # order, the triples of (lon, lat, depth) represent top left, top right,
-    # bottom left, and bottom right corners of the the rupture's planar
-    # surface.
-    # Update:
-    # There is now a third case. If the rupture originated from a
-    # characteristic fault source with a multi-planar-surface geometry,
-    # `lons`, `lats`, and `depths` will contain one or more sets of 4 points,
-    # similar to how planar surface geometry is stored (see above).
-    lons = fields.PickleField()
-    lats = fields.PickleField()
-    depths = fields.PickleField()
-
-    # HazardLib Surface object. Stored as it is needed by risk disaggregation
-    surface = fields.PickleField()
+    rupture = fields.PickleField()
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
@@ -1842,6 +1823,129 @@ class SESRupture(djm.Model):
             self._validate_planar_surface()
             return self.lons[3], self.lats[3], self.depths[3]
         return None
+
+    @property
+    def is_from_fault_source(self):
+        """
+        If True, this rupture was generated from a simple/complex fault
+        source. If False, this rupture was generated from a point/area source.
+        """
+        typology = self.rupture.source_typology
+        is_char = typology is hazardlib_source.CharacteristicFaultSource
+        is_complex_or_simple = typology in (
+            hazardlib_source.ComplexFaultSource,
+            hazardlib_source.SimpleFaultSource)
+        is_complex_or_simple_surface = isinstance(
+            self.rupture.surface, (hazardlib_geo.ComplexFaultSurface,
+                                   hazardlib_geo.SimpleFaultSurface))
+        return is_complex_or_simple or (
+            is_char and is_complex_or_simple_surface)
+
+    @property
+    def is_multi_surface(self):
+        typology = self.rupture.source_typology
+        is_char = typology is hazardlib_source.CharacteristicFaultSource
+        is_multi_sur = isinstance(
+            self.rupture.surface, hazardlib_geo.MultiSurface)
+        return is_char and is_multi_sur
+
+    def get_geom(self):
+        """
+        The following fields can be interpreted different ways,
+        depending on the value of `is_from_fault_source`. If
+        `is_from_fault_source` is True, each of these fields should
+        contain a 2D numpy array (all of the same shape). Each triple
+        of (lon, lat, depth) for a given index represents the node of
+        a rectangular mesh. If `is_from_fault_source` is False, each
+        of these fields should contain a sequence (tuple, list, or
+        numpy array, for example) of 4 values. In order, the triples
+        of (lon, lat, depth) represent top left, top right, bottom
+        left, and bottom right corners of the the rupture's planar
+        surface. Update: There is now a third case. If the rupture
+        originated from a characteristic fault source with a
+        multi-planar-surface geometry, `lons`, `lats`, and `depths`
+        will contain one or more sets of 4 points, similar to how
+        planar surface geometry is stored (see above).
+        """
+        if self.is_from_fault_source:
+            # for simple and complex fault sources,
+            # rupture surface geometry is represented by a mesh
+            surf_mesh = self.rupture.surface.get_mesh()
+            lons = surf_mesh.lons
+            lats = surf_mesh.lats
+            depths = surf_mesh.depths
+        else:
+            if self.is_multi_surface:
+                # `list` of
+                # openquake.hazardlib.geo.surface.planar.PlanarSurface
+                # objects:
+                surfaces = self.rupture.surface.surfaces
+
+                # lons, lats, and depths are arrays with len == 4*N,
+                # where N is the number of surfaces in the
+                # multisurface for each `corner_*`, the ordering is:
+                #   - top left
+                #   - top right
+                #   - bottom left
+                #   - bottom right
+                lons = numpy.concatenate([x.corner_lons for x in surfaces])
+                lats = numpy.concatenate([x.corner_lats for x in surfaces])
+                depths = numpy.concatenate([x.corner_depths for x in surfaces])
+            else:
+                # For area or point source,
+                # rupture geometry is represented by a planar surface,
+                # defined by 3D corner points
+                surface = self.rupture.surface
+                lons = numpy.zeros((4))
+                lats = numpy.zeros((4))
+                depths = numpy.zeros((4))
+
+                # NOTE: It is important to maintain the order of these
+                # corner points. TODO: check the ordering
+                for i, corner in enumerate((surface.top_left,
+                                            surface.top_right,
+                                            surface.bottom_left,
+                                            surface.bottom_right)):
+                    lons[i] = corner.longitude
+                    lats[i] = corner.latitude
+                    depths[i] = corner.depth
+        return lons, lats, depths
+
+    @property
+    def lons(self):
+        return self.get_geom()[0]
+
+    @property
+    def lats(self):
+        return self.get_geom()[1]
+
+    @property
+    def depths(self):
+        return self.get_geom()[2]
+
+    @property
+    def surface(self):
+        return self.rupture.surface
+
+    @property
+    def magnitude(self):
+        return self.rupture.mag
+
+    @property
+    def strike(self):
+        return self.rupture.surface.get_strike()
+
+    @property
+    def dip(self):
+        return self.rupture.surface.get_dip()
+
+    @property
+    def rake(self):
+        return self.rupture.rake
+
+    @property
+    def tectonic_region_type(self):
+        return self.rupture.tectonic_region_type
 
 
 class _GmfsPerSES(object):
