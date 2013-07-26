@@ -8,10 +8,15 @@ from django.test.client import RequestFactory
 from engine import views
 
 
-class CalcHazardTestCase(unittest.TestCase):
 
-    def setUp(self):
-        self.factory = RequestFactory()
+class BaseViewTestCase(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.factory = RequestFactory()
+
+
+class CalcHazardTestCase(BaseViewTestCase):
 
     def test_get(self):
         expected_content = json.dumps([
@@ -42,10 +47,8 @@ class CalcHazardTestCase(unittest.TestCase):
             self.assertEqual(expected_content, response.content)
 
 
-class CalcRiskTestCase(unittest.TestCase):
 
-    def setUp(self):
-        self.factory = RequestFactory()
+class CalcRiskTestCase(BaseViewTestCase):
 
     def test_get(self):
         expected_content = json.dumps([
