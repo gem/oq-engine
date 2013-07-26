@@ -80,7 +80,7 @@ class CalcRiskTestCase(BaseViewTestCase):
 
 class CalcToResponseDataTestCase(unittest.TestCase):
     """
-    Tests for `engine.views._calc_to_respons_data`.
+    Tests for `engine.views._calc_to_response_data`.
     """
 
     def setUp(self):
