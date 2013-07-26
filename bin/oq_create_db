@@ -182,9 +182,6 @@ if [ "$check_table_spaces" == "on" ]; then
         ts_found=`psql -p $db_port -U $db_admin_user -c '\db' -d postgres $psql_batch_options | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
         if [ $ts_found -eq 0 ]; then
             psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'" $psql_batch_options
-            if [ "$table_spaces_only" == "on" ]; then
-                psql -p $db_port -U $db_admin_user -d $db_name -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'" $psql_batch_options
-            fi
         fi
     done
 fi
