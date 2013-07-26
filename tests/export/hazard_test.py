@@ -31,18 +31,17 @@ from tests.export.core_test import BaseExportTestCase, number_of
 from tests.utils import helpers
 
 
-def check_export(output_id, target_dir):
+def check_export(output_id, target):
     """
     Call hazard.export by checking that the exported file is valid
     according to our XML schema.
     """
-    files = hazard.export(output_id, target_dir, 'xml')
-    for f in files:
-        nrmllib.assert_valid(f)
-    return files
+    out_file = hazard.export(output_id, target, 'xml')
+    nrmllib.assert_valid(out_file)
+    return out_file
 
 
-class GetResultExportPathTestCase(unittest.TestCase):
+class GetResultExportDestTestCase(unittest.TestCase):
 
     def setUp(self):
         self.Location = namedtuple('Location', 'x, y')
@@ -121,7 +120,7 @@ class GetResultExportPathTestCase(unittest.TestCase):
         for i, curve in enumerate(curves):
             self.assertEqual(
                 expected_paths[i],
-                hazard._get_result_export_path(7, self.target_dir, curve)
+                hazard._get_result_export_dest(7, self.target_dir, curve)
             )
 
     def test_hazard_map(self):
@@ -152,7 +151,7 @@ class GetResultExportPathTestCase(unittest.TestCase):
         for i, hmap in enumerate(maps):
             self.assertEqual(
                 expected_paths[i],
-                hazard._get_result_export_path(7, self.target_dir, hmap)
+                hazard._get_result_export_dest(7, self.target_dir, hmap)
             )
 
     def test_uhs(self):
@@ -174,7 +173,7 @@ class GetResultExportPathTestCase(unittest.TestCase):
         for i, uhs in enumerate(uh_spectra):
             self.assertEqual(
                 expected_paths[i],
-                hazard._get_result_export_path(7, self.target_dir, uhs)
+                hazard._get_result_export_dest(7, self.target_dir, uhs)
             )
 
     def test_disagg(self):
@@ -199,7 +198,7 @@ class GetResultExportPathTestCase(unittest.TestCase):
         for i, matrix in enumerate(matrices):
             self.assertEqual(
                 expected_paths[i],
-                hazard._get_result_export_path(7, self.target_dir, matrix)
+                hazard._get_result_export_dest(7, self.target_dir, matrix)
             )
 
     def test_gmf(self):
@@ -213,7 +212,7 @@ class GetResultExportPathTestCase(unittest.TestCase):
 
         self.assertEqual(
             expected_path,
-            hazard._get_result_export_path(8, self.target_dir, gmf)
+            hazard._get_result_export_dest(8, self.target_dir, gmf)
         )
 
     def test_ses(self):
@@ -227,7 +226,7 @@ class GetResultExportPathTestCase(unittest.TestCase):
 
         self.assertEqual(
             expected_path,
-            hazard._get_result_export_path(8, self.target_dir, ses)
+            hazard._get_result_export_dest(8, self.target_dir, ses)
         )
 
     def test_clt_gmf(self):
@@ -240,7 +239,7 @@ class GetResultExportPathTestCase(unittest.TestCase):
 
         self.assertEqual(
             expected_path,
-            hazard._get_result_export_path(9, self.target_dir, gmf)
+            hazard._get_result_export_dest(9, self.target_dir, gmf)
         )
 
     def test_clt_ses(self):
@@ -253,7 +252,7 @@ class GetResultExportPathTestCase(unittest.TestCase):
 
         self.assertEqual(
             expected_path,
-            hazard._get_result_export_path(10, self.target_dir, ses)
+            hazard._get_result_export_dest(10, self.target_dir, ses)
         )
 
 
@@ -311,14 +310,14 @@ class ClassicalExportTestCase(BaseExportTestCase):
             # Test hazard curve export:
             hc_files = []
             for curve in curves:
-                hc_files.extend(check_export(curve.id, target_dir))
+                hc_files.append(check_export(curve.id, target_dir))
 
             self.assertEqual(10, len(hc_files))
 
             # Test multi hazard curve export:
             hc_files = []
             for curve in multi_curves:
-                hc_files.extend(check_export(curve.id, target_dir))
+                hc_files.append(check_export(curve.id, target_dir))
 
             self.assertEqual(5, len(hc_files))
 
@@ -328,7 +327,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             # Test hazard map export:
             hm_files = []
             for haz_map in maps:
-                hm_files.extend(check_export(haz_map.id, target_dir))
+                hm_files.append(check_export(haz_map.id, target_dir))
 
             self.assertEqual(20, len(hm_files))
 
@@ -338,7 +337,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             # Test UHS export:
             uhs_files = []
             for u in uhs:
-                uhs_files.extend(check_export(u.id, target_dir))
+                uhs_files.append(check_export(u.id, target_dir))
             for f in uhs_files:
                 self._test_exported_file(f)
         finally:
@@ -387,8 +386,8 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             exported_files = []
             for ses_output in ses_outputs:
-                files = check_export(ses_output.id, target_dir)
-                exported_files.extend(files)
+                out_file = check_export(ses_output.id, target_dir)
+                exported_files.append(out_file)
 
             self.assertEqual(2, len(exported_files))
 
@@ -399,7 +398,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # Complete LT SES:
             [complete_lt_ses] = outputs.filter(output_type='complete_lt_ses')
 
-            [exported_file] = check_export(complete_lt_ses.id, target_dir)
+            exported_file = check_export(complete_lt_ses.id, target_dir)
 
             self._test_exported_file(exported_file)
 
@@ -410,8 +409,8 @@ class EventBasedExportTestCase(BaseExportTestCase):
 
             exported_files = []
             for gmf_output in gmf_outputs:
-                files = check_export(gmf_output.id, target_dir)
-                exported_files.extend(files)
+                out_file = check_export(gmf_output.id, target_dir)
+                exported_files.append(out_file)
 
             self.assertEqual(2, len(exported_files))
             # Check the file paths exist, are absolute, and the files aren't
@@ -423,7 +422,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # Complete LT GMF:
             [complete_lt_gmf] = outputs.filter(output_type='complete_lt_gmf')
 
-            [exported_file] = check_export(complete_lt_gmf.id, target_dir)
+            exported_file = check_export(complete_lt_gmf.id, target_dir)
 
             self._test_exported_file(exported_file)
 
@@ -442,7 +441,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             haz_curves = outputs.filter(output_type='hazard_curve')
             self.assertEqual(12, haz_curves.count())
             for curve in haz_curves:
-                [exported_file] = check_export(curve.id, target_dir)
+                exported_file = check_export(curve.id, target_dir)
                 self._test_exported_file(exported_file)
 
             ##############
@@ -450,7 +449,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             haz_maps = outputs.filter(output_type='hazard_map')
             self.assertEqual(24, haz_maps.count())
             for hmap in haz_maps:
-                [exported_file] = check_export(hmap.id, target_dir)
+                exported_file = check_export(hmap.id, target_dir)
                 self._test_exported_file(exported_file)
         finally:
             shutil.rmtree(target_dir)
@@ -481,16 +480,14 @@ class ScenarioExportTestCase(BaseExportTestCase):
             gmf_outputs = outputs.filter(output_type='gmf_scenario')
             self.assertEqual(1, len(gmf_outputs))
 
-            exported_files = check_export(gmf_outputs[0].id, target_dir)
+            exported_file = check_export(gmf_outputs[0].id, target_dir)
 
-            self.assertEqual(1, len(exported_files))
             # Check the file paths exist, is absolute, and the file isn't
             # empty.
-            f = exported_files[0]
-            self._test_exported_file(f)
+            self._test_exported_file(exported_file)
 
             # Check for the correct number of GMFs in the file:
-            tree = etree.parse(f)
+            tree = etree.parse(exported_file)
             self.assertEqual(20, number_of('nrml:gmf', tree))
         finally:
             shutil.rmtree(target_dir)
@@ -522,7 +519,7 @@ class DisaggExportTestCase(BaseExportTestCase):
             self.assertEqual(4, len(curves))
             curve_files = []
             for curve in curves:
-                curve_files.extend(check_export(curve.id, target_dir))
+                curve_files.append(check_export(curve.id, target_dir))
 
             self.assertEqual(4, len(curve_files))
             for f in curve_files:
@@ -533,7 +530,7 @@ class DisaggExportTestCase(BaseExportTestCase):
             self.assertEqual(8, len(matrices))
             disagg_files = []
             for matrix in matrices:
-                disagg_files.extend(check_export(matrix.id, target_dir))
+                disagg_files.append(check_export(matrix.id, target_dir))
 
             self.assertEqual(8, len(disagg_files))
             for f in disagg_files:
