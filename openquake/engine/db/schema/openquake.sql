@@ -180,6 +180,7 @@ CREATE TABLE uiapi.oq_job (
     oq_version VARCHAR,
     hazardlib_version VARCHAR,
     nrml_version VARCHAR,
+    risklib_version VARCHAR,
     is_running BOOLEAN NOT NULL DEFAULT FALSE,
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
