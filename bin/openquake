@@ -96,7 +96,6 @@ from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 from openquake.engine.input import source
-from openquake.engine.job.validation import validate
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 
@@ -215,11 +214,12 @@ def set_up_arg_parser():
     export_grp = parser.add_argument_group('Export')
     export_grp.add_argument(
         '--exports', choices=['xml'],  default=[], action="append",
-        help=('Use with --run-hazard and --run-risk to automatically export '
-              'all calculation results to the specified format. Only "xml" is '
-              'supported currently. This is optional. If not specified, '
-              'nothing will be exported; results will only be stored in the '
-              'database.'
+        help=(
+            'Use with --run-hazard and --run-risk to automatically export '
+            'all calculation results to the specified format. Only "xml" is '
+            'supported currently. This is optional. If not specified, '
+            'nothing will be exported; results will only be stored in the '
+            'database.'
         )
     )
     export_grp.add_argument(
@@ -261,61 +261,6 @@ def set_up_arg_parser():
     return parser
 
 
-def run_hazard(cfg_file, log_level, log_file, exports):
-    """
-    Run a hazard calculation using the specified config file and other options.
-
-    :param str cfg_file:
-        Path to calculation config (INI-style) file.
-    :param str log_level:
-        'debug', 'info', 'warn', 'error', or 'critical'
-    :param str log_file:
-        Path to log file.
-    :param list exports:
-        A list of export types requested by the user. Currently only 'xml'
-        is supported.
-    """
-    try:
-        if log_file is not None:
-            try:
-                _touch_log_file(log_file)
-            except IOError as e:
-                raise IOError('Error writing to log file %s: %s'
-                              % (log_file, e.strerror))
-
-        job = engine.prepare_job(
-            user_name=getpass.getuser(), log_level=log_level)
-        params, files = engine.parse_config(open(cfg_file, 'r'))
-        calculation = engine.create_hazard_calculation(job.owner, params,
-                                                       files.values())
-        job.hazard_calculation = calculation
-        job.save()
-
-        error_message = validate(job, 'hazard', params, files, exports)
-        if error_message:
-            sys.exit(error_message)
-
-        # Initialize the supervisor, instantiate the calculator,
-        # and run the calculation.
-        completed_job = engine.run_calc(
-            job, log_level, log_file, exports, 'hazard')
-        if completed_job is not None:
-            # We check for `None` here because the supervisor and executor
-            # process forks return to here as well. We want to ignore them.
-            if completed_job.status == 'complete':
-                print 'Calculation %d results:' % (
-                    completed_job.hazard_calculation.id)
-                list_hazard_outputs(completed_job.hazard_calculation.id)
-            else:
-                complain_and_exit('Calculation %d failed'
-                                  % completed_job.hazard_calculation.id,
-                                  exit_code=1)
-    except IOError as e:
-        print str(e)
-    except Exception as e:
-        raise
-
-
 def list_inputs(input_type):
     """
     Print a list of available input models
@@ -324,8 +269,10 @@ def list_inputs(input_type):
     available_input_types = ["exposure"]
 
     if input_type not in available_input_types:
-        complain_and_exit("Wrong input type. Available input types: %s" % (
-            ", ".join(available_input_types)))
+        engine.complain_and_exit(
+            "Wrong input type. Available input types: %s"
+            % (", ".join(available_input_types))
+        )
     inputs = models.Input.objects.filter(
         input_type=input_type).order_by('-last_update')
 
@@ -337,12 +284,12 @@ def list_inputs(input_type):
     for inp in inputs:
         print "%9d|%s|%12s" % (inp.id, inp.path, inp.last_update)
 
+
 def list_hazard_calculations():
     """
     Print a summary of past hazard calculations.
     """
-    hcs = models.HazardCalculation.objects.filter(
-        owner__user_name=getpass.getuser()).order_by('oqjob__last_update')
+    hcs = engine.get_hazard_calculations(getpass.getuser())
     _print_calcs_summary(hcs)
 
 
@@ -350,8 +297,7 @@ def list_risk_calculations():
     """
     Print a summary of past risk calculations.
     """
-    rcs = models.RiskCalculation.objects.filter(
-        owner__user_name=getpass.getuser())
+    rcs = engine.get_risk_calculations(getpass.getuser())
     _print_calcs_summary(rcs)
 
 
@@ -383,46 +329,13 @@ def _print_calcs_summary(calcs):
                 calc.id, status, last_update, calc.description
             )
 
+
 def list_imported_outputs():
     """
     List outputs which were imported from a file, not calculated from a job
     """
     outputs = models.Output.objects.filter(oq_job__isnull=True)
-    _print_outputs_summary(outputs)
-
-
-def list_hazard_outputs(hc_id):
-    """
-    List the outputs for a given
-    :class:`~openquake.engine.db.models.HazardCalculation`.
-
-    :param hc_id:
-        ID of a hazard calculation.
-    """
-    outputs = models.Output.objects.filter(oq_job__hazard_calculation=hc_id)
-    _print_outputs_summary(outputs)
-
-
-def list_risk_outputs(rc_id):
-    """
-    List the outputs for a given
-    :class:`~openquake.engine.db.models.RiskCalculation`.
-
-    :param rc_id:
-        ID of a risk calculation.
-    """
-    outputs = models.Output.objects.filter(oq_job__risk_calculation=rc_id)
-    _print_outputs_summary(outputs)
-
-
-def _print_outputs_summary(outputs):
-    """
-    List of :class:`openquake.engine.db.models.Output` objects.
-    """
-    if len(outputs) > 0:
-        print 'id | output_type | name'
-        for o in outputs.order_by('output_type'):
-            print '%s | %s | %s' % (o.id, o.output_type, o.display_name)
+    engine.print_outputs_summary(outputs)
 
 
 def export_hazard(haz_output_id, target_dir, export_type):
@@ -453,85 +366,11 @@ def export(fn, output_id, target_dir, export_type):
         print 'This feature is probably not implemented yet'
 
 
-def run_risk(
-        cfg_file, log_level, log_file,
-        exports, hazard_output_id=None, hazard_calculation_id=None):
-    """
-    Run a risk calculation using the specified config file and other options.
-    One of hazard_output_id or hazard_calculation_id must be specified.
-
-    :param str cfg_file:
-        Path to calculation config (INI-style) file.
-    :param str log_level:
-        'debug', 'info', 'warn', 'error', or 'critical'
-    :param str log_file:
-        Path to log file.
-    :param list exports:
-        A list of export types requested by the user. Currently only 'xml'
-        is supported.
-    :param str hazard_ouput_id:
-        The Hazard Output ID used by the risk calculation (can be None)
-    :param str hazard_calculation_id:
-        The Hazard Calculation ID used by the risk calculation (can be None)
-    """
-    assert not(hazard_output_id is None and hazard_calculation_id is None)
-    try:
-        if log_file is not None:
-            try:
-                _touch_log_file(log_file)
-            except IOError as e:
-                raise IOError('Error writing to log file %s: %s'
-                              % (log_file, e.strerror))
-
-        job = engine.prepare_job(
-            user_name=getpass.getuser(), log_level=log_level)
-        params, files = engine.parse_config(open(cfg_file, 'r'))
-
-        # Add the hazard output id to the risk calculation constructor
-        # args
-        params.update(dict(hazard_output_id=hazard_output_id,
-                           hazard_calculation_id=hazard_calculation_id))
-
-        calculation = engine.create_risk_calculation(
-            job.owner, params, files.values())
-        job.risk_calculation = calculation
-        job.save()
-
-        error_message = validate(job, 'risk', params, files,  exports)
-        if error_message:
-            sys.exit(error_message)
-
-        # Initialize the supervisor, instantiate the calculator,
-        # and run the calculation.
-        completed_job = engine.run_calc(
-            job, log_level, log_file, exports, 'risk')
-        if completed_job is not None:
-            # We check for `None` here because the supervisor and executor
-            # process forks return to here as well. We want to ignore them.
-            if completed_job.status == 'complete':
-                print 'Calculation %d results:' % (
-                    completed_job.risk_calculation.id)
-                list_risk_outputs(completed_job.risk_calculation.id)
-            else:
-                complain_and_exit('Calculation %s failed'
-                                  % completed_job.risk_calculation.id,
-                                  exit_code=1)
-    except IOError as e:
-        print str(e)
-    except Exception as e:
-        raise
-
-
 def _touch_log_file(log_file):
     """If a log file destination is specified, attempt to open the file in
     'append' mode ('a'). If the specified file is not writable, an
     :exc:`IOError` will be raised."""
     open(abspath(log_file), 'a').close()
-
-
-def complain_and_exit(msg, exit_code=0):
-    print msg
-    sys.exit(exit_code)
 
 
 def del_haz_calc(hc_id, confirmed=False):
@@ -587,7 +426,7 @@ def optimize_source_model(input_path, area_src_disc, output_path):
     area_src_disc = float(area_src_disc)
     source.optimize_source_model(input_path, area_src_disc,
                                  output_path)
-    complain_and_exit(output_path)
+    engine.complain_and_exit(output_path)
 
 
 def main():
@@ -596,10 +435,11 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        complain_and_exit(__version__)
+        engine.complain_and_exit(__version__)
 
     if args.config_file:
-        os.environ[config.OQ_CONFIG_FILE_VAR] = abspath(expanduser(args.config_file))
+        os.environ[config.OQ_CONFIG_FILE_VAR] = \
+            abspath(expanduser(args.config_file))
         config.refresh()
 
     if args.optimize_source_model:
@@ -614,7 +454,7 @@ def main():
     elif args.list_hazard_calculations:
         list_hazard_calculations()
     elif args.list_hazard_outputs is not None:
-        list_hazard_outputs(args.list_hazard_outputs)
+        engine.list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
         output_id, target_dir = args.export_hazard
         output_id = int(output_id)
@@ -623,26 +463,27 @@ def main():
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        run_hazard(expanduser(args.run_hazard), args.log_level, log_file,
-                   args.exports)
+        engine.run_hazard(expanduser(args.run_hazard), args.log_level,
+                          log_file, args.exports)
     elif args.delete_hazard_calculation is not None:
         del_haz_calc(args.delete_hazard_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
         list_risk_calculations()
     elif args.list_risk_outputs is not None:
-        list_risk_outputs(args.list_risk_outputs)
+        engine.list_risk_outputs(args.list_risk_outputs)
     elif args.export_risk is not None:
         output_id, target_dir = args.export_risk
         export_risk(output_id, expanduser(target_dir), args.export_type)
     elif args.run_risk is not None:
-        if args.hazard_output_id is None and args.hazard_calculation_id is None:
-            complain_and_exit(MISSING_HAZARD_MSG)
+        if (args.hazard_output_id is None
+                and args.hazard_calculation_id is None):
+            engine.complain_and_exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        run_risk(expanduser(args.run_risk), args.log_level, log_file,
-                 args.exports, hazard_output_id=args.hazard_output_id,
-                 hazard_calculation_id=args.hazard_calculation_id)
+        engine.run_risk(expanduser(args.run_risk), args.log_level, log_file,
+                        args.exports, hazard_output_id=args.hazard_output_id,
+                        hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_risk_calc(args.delete_risk_calculation, args.yes)
 
