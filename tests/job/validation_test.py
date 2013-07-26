@@ -960,8 +960,9 @@ class ValidateTestCase(unittest.TestCase):
         # Add a few superfluous parameters:
         params['ses_per_logic_tree_path'] = 5
         params['ground_motion_correlation_model'] = 'JB2009'
-        calculation = engine.create_hazard_calculation(job.owner, params,
-                                                       files.values())
+        calculation = engine.create_hazard_calculation(
+            job.owner.user_name, params, files.values()
+        )
         job.hazard_calculation = calculation
         job.save()
 
