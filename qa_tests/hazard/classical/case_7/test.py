@@ -108,18 +108,18 @@ class ClassicalHazardCase7TestCase(qa_utils.BaseQATestCase):
                 expected_mean_poes, mean_curve.poes, decimal=3)
 
             # Test the exports as well:
-            [exported_file_b1] = hazard_export.export(
+            exported_file_b1 = hazard_export.export(
                 actual_curve_b1.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_B1), exported_file_b1)
 
-            [exported_file_b2] = hazard_export.export(
+            exported_file_b2 = hazard_export.export(
                 actual_curve_b2.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_B2), exported_file_b2)
 
             # mean:
-            [exported_file_mean] = hazard_export.export(
+            exported_file_mean = hazard_export.export(
                 mean_curve.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_MEAN), exported_file_mean)

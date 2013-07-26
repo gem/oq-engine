@@ -31,25 +31,21 @@ from openquake.engine.export import core
 
 
 # for each output_type there must be a function
-# export_<output_type>(output, target_dir)
-def export(output_id, target_dir, export_type='xml'):
+# export_<output_type>(output, target)
+def export(output_id, target, export_type='xml'):
     """
     Export the given hazard calculation output from the database to the
     specified directory.
 
     :param int output_id:
         ID of a :class:`openquake.engine.db.models.Output`.
-    :param str target_dir:
-        Directory where output artifacts should be written.
+    :param target:
+        Output directory OR a file-like object to write results to.
     :param export_type:
         The desired export format. Defaults to 'xml'.
     :returns:
-        List of file names (including the full directory path) containing the
-        exported results.
-
-        The quantity and type of the result files depends on
-        the type of output, as well as calculation parameters. (See the
-        `output_type` attribute of :class:`openquake.engine.db.models.Output`.)
+        Return the complete file path OR the file-like object itself where the
+        results were written to, depending on what ``target`` is.
     """
     output = models.Output.objects.get(id=output_id)
 
@@ -60,10 +56,15 @@ def export(output_id, target_dir, export_type='xml'):
             'No "%(fmt)s" exporter is available for "%(output_type)s"'
             ' outputs' % dict(fmt=export_type, output_type=output.output_type)
         )
-    return export_fn(output, os.path.expanduser(target_dir))
+
+    # If the `target` is a string directory path, use expand user to handle
+    # tokens like '~':
+    if isinstance(target, (basestring, buffer)):
+        target = os.path.expanduser(target)
+    return export_fn(output, target)
 
 
-def _get_result_export_path(calc_id, target_dir, result, file_ext='xml'):
+def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
     """
     Get the full absolute path (including file name) for a given ``result``.
 
@@ -73,8 +74,9 @@ def _get_result_export_path(calc_id, target_dir, result, file_ext='xml'):
     :param int calc_id:
         ID of the associated
         :class:`openquake.engine.db.models.HazardCalculation`.
-    :param str target_dir:
-        Destination directory location for exported files.
+    :param target:
+        Destination directory location for exported files OR a file-like
+        object. If file-like, we just simply return it.
     :param result:
         :mod:`openquake.engine.db.models` result object with a foreign key
         reference to :class:`~openquake.engine.db.models.Output`.
@@ -84,7 +86,14 @@ def _get_result_export_path(calc_id, target_dir, result, file_ext='xml'):
 
     :returns:
         Full path (including filename) to the destination export file.
+        If the ``target`` is a file-like, we don't do anything special
+        and simply return it.
     """
+    if not isinstance(target, (basestring, buffer)):
+        # It's not a file path. In this case, we expect a file-like object.
+        # Just return it.
+        return target
+
     output = result.output
     output_type = output.output_type
 
@@ -104,7 +113,7 @@ def _get_result_export_path(calc_id, target_dir, result, file_ext='xml'):
             imt_dir = 'SA-%s' % result.sa_period
 
     # construct the directory which will contain the result XML file:
-    directory = os.path.join(target_dir, calc_dir, type_dir, imt_dir)
+    directory = os.path.join(target, calc_dir, type_dir, imt_dir)
     core.makedirs(directory)
 
     if output_type in ('hazard_curve', 'hazard_map', 'uh_spectra'):
@@ -177,49 +186,47 @@ def _get_result_export_path(calc_id, target_dir, result, file_ext='xml'):
 
 
 @core.makedirsdeco
-def export_hazard_curve_xml(output, target_dir):
+def export_hazard_curve_xml(output, target):
     """
-    Export the specified hazard curve ``output`` to the ``target_dir``.
+    Export the specified hazard curve ``output`` to the ``target``.
 
     :param output:
         :class:`openquake.engine.db.models.Output` with an `output_type` of
         `hazard_curve`.
-    :param str target_dir:
-        Destination directory location for exported files.
+    :param target:
+        The same ``target`` as :func:`export`.
 
     :returns:
-        A list of exported file names (including the absolute path to each
-        file).
+        The same return value as defined by :func:`export`.
     """
     hc = models.HazardCurve.objects.get(output=output.id)
 
     hcd = _curve_data(hc)
-    metadata, path = _curve_metadata(output, target_dir)
-    nrml.HazardCurveXMLWriter(path, **metadata).serialize(hcd)
+    metadata, dest = _curve_metadata(output, target)
+    writers.HazardCurveXMLWriter(dest, **metadata).serialize(hcd)
 
-    return [path]
+    return dest
 
 
 @core.makedirsdeco
-def export_hazard_curve_multi_xml(output, target_dir):
+def export_hazard_curve_multi_xml(output, target):
     hcs = output.hazard_curve
 
     data = [_curve_data(hc) for hc in hcs]
 
     metadata_set = []
-    path = None
     for hc in hcs:
-        metadata, path = _curve_metadata(hc.output, target_dir)
+        metadata, dest = _curve_metadata(hc.output, target)
         metadata_set.append(metadata)
-    assert(path)
+    assert(dest is not None)
 
-    writer = nrml.MultiHazardCurveXMLWriter(path, metadata_set)
+    writer = nrml.MultiHazardCurveXMLWriter(dest, metadata_set)
     writer.serialize(data)
 
-    return [path]
+    return dest
 
 
-def _curve_metadata(output, target_dir):
+def _curve_metadata(output, target):
     hc = models.HazardCurve.objects.get(output=output.id)
     if hc.lt_realization is not None:
         # If the curves are for a specified logic tree realization,
@@ -233,8 +240,8 @@ def _curve_metadata(output, target_dir):
         gsimlt_path = None
 
     haz_calc = output.oq_job.hazard_calculation
-    path = _get_result_export_path(
-        haz_calc.id, target_dir, output.hazard_curve)
+    dest = _get_result_export_dest(
+        haz_calc.id, target, output.hazard_curve)
 
     return {
         'quantile_value': hc.quantile,
@@ -246,7 +253,7 @@ def _curve_metadata(output, target_dir):
         'investigation_time': hc.investigation_time,
         'imt': hc.imt,
         'imls': hc.imls,
-    }, path
+    }, dest
 
 
 def _curve_data(hc):
@@ -261,19 +268,18 @@ def _curve_data(hc):
 
 
 @core.makedirsdeco
-def export_gmf_xml(output, target_dir):
+def export_gmf_xml(output, target):
     """
-    Export the GMF Collection specified by ``output`` to the ``target_dir``.
+    Export the GMF Collection specified by ``output`` to the ``target``.
 
     :param output:
         :class:`openquake.engine.db.models.Output` with an `output_type` of
         `gmf`.
-    :param str target_dir:
-        Destination directory location for exported files.
+    :param target:
+        The same ``target`` as :func:`export`.
 
     :returns:
-        A list of exported file names (including the absolute path to each
-        file).
+        The same return value as defined by :func:`export`.
     """
     gmf_coll = models.Gmf.objects.get(output=output.id)
     lt_rlz = gmf_coll.lt_realization
@@ -286,53 +292,49 @@ def export_gmf_xml(output, target_dir):
         sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
         gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
-    path = _get_result_export_path(haz_calc.id, target_dir, output.gmf)
+    dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
 
     writer = nrml.EventBasedGMFXMLWriter(
-        path, sm_lt_path, gsim_lt_path)
+        dest, sm_lt_path, gsim_lt_path)
     writer.serialize(gmf_coll)
 
-    return [path]
+    return dest
 
 export_complete_lt_gmf_xml = export_gmf_xml
 
 
 @core.makedirsdeco
-def export_gmf_scenario_xml(output, target_dir):
+def export_gmf_scenario_xml(output, target):
     """
-    Export the GMFs specified by ``output`` to the ``target_dir``.
+    Export the GMFs specified by ``output`` to the ``target``.
 
     :param output:
         :class:`openquake.engine.db.models.Output`
         with an `output_type` of `gmf_scenario`.
-    :param str target_dir:
-        Destination directory location for exported files.
+    :param target:
+        The same ``target`` as :func:`export`.
 
     :returns:
-        A list of exported file names (including the absolute path to each
-        file).
+        The same return value as defined by :func:`export`.
     """
     haz_calc = output.oq_job.hazard_calculation
-    calc_dir = 'calc_%s' % haz_calc.id
-    path = os.path.abspath(os.path.join(target_dir, calc_dir,
-                                        'gmf', 'gmf.xml'))
-    core.makedirs(os.path.dirname(path))
+    dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
     gmfs = models.get_gmfs_scenario(output)
-    writer = nrml.ScenarioGMFXMLWriter(path)
+    writer = nrml.ScenarioGMFXMLWriter(dest)
     writer.serialize(gmfs)
-    return [path]
+    return dest
 
 
 @core.makedirsdeco
-def export_ses_xml(output, target_dir):
+def export_ses_xml(output, target):
     """
     Export the Stochastic Event Set Collection specified by ``output`` to the
-    ``target_dir``.
+    ``target``.
 
     :param output:
         :class:`openquake.engine.db.models.Output` with an `output_type` of
         `ses`.
-    :param str target_dir:
+    :param str target:
         Destination directory location for exported files.
 
     :returns:
@@ -350,22 +352,22 @@ def export_ses_xml(output, target_dir):
         sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
         gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
-    path = _get_result_export_path(haz_calc.id, target_dir,
+    dest = _get_result_export_dest(haz_calc.id, target,
                                    output.ses)
 
-    writer = nrml.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
+    writer = nrml.SESXMLWriter(dest, sm_lt_path, gsim_lt_path)
     writer.serialize(ses_coll)
 
-    return [path]
+    return dest
 
 export_complete_lt_ses_xml = export_ses_xml
 
 
-def _export_hazard_map(output, target_dir, writer_class, file_ext):
+def _export_hazard_map(output, target, writer_class, file_ext):
     """
     General hazard map export code.
     """
-    core.makedirs(target_dir)
+    core.makedirs(target)
 
     hazard_map = models.HazardMap.objects.get(output=output)
     haz_calc = output.oq_job.hazard_calculation
@@ -381,7 +383,7 @@ def _export_hazard_map(output, target_dir, writer_class, file_ext):
         smlt_path = None
         gsimlt_path = None
 
-    path = _get_result_export_path(haz_calc.id, target_dir, output.hazard_map,
+    dest = _get_result_export_dest(haz_calc.id, target, output.hazard_map,
                                    file_ext=file_ext)
 
     metadata = {
@@ -396,37 +398,37 @@ def _export_hazard_map(output, target_dir, writer_class, file_ext):
         'poe': hazard_map.poe,
     }
 
-    writer = writer_class(path, **metadata)
+    writer = writer_class(dest, **metadata)
     writer.serialize(zip(hazard_map.lons, hazard_map.lats, hazard_map.imls))
-    return [path]
+    return dest
 
 
-def export_hazard_map_xml(output, target_dir):
+def export_hazard_map_xml(output, target):
     """
-    Export the specified hazard map ``output`` to the ``target_dir`` as
+    Export the specified hazard map ``output`` to the ``target`` as
     NRML/XML.
 
     :param output:
         :class:`openquake.engine.db.models.Output` with an `output_type` of
         `hazard_map`.
-    :param str target_dir:
+    :param target:
         Destination directory location for exported files.
 
     :returns:
         A list of exported file name (including the absolute path to each
         file).
     """
-    return _export_hazard_map(output, target_dir, nrml.HazardMapXMLWriter,
+    return _export_hazard_map(output, target, writers.HazardMapXMLWriter,
                               'xml')
 
 
-def export_hazard_map_geojson(output, target_dir):
+def export_hazard_map_geojson(output, target):
     """
     The same thing as :func:`export_hazard_map_xml`, except results are saved
     in GeoJSON format.
     """
-    return _export_hazard_map(output, target_dir,
-                              nrml.HazardMapGeoJSONWriter, 'geojson')
+    return _export_hazard_map(output, target,
+                              writers.HazardMapGeoJSONWriter, 'geojson')
 
 
 class _DisaggMatrix(object):
@@ -470,14 +472,14 @@ class _DisaggMatrix(object):
 
 
 @core.makedirsdeco
-def export_disagg_matrix_xml(output, target_dir):
+def export_disagg_matrix_xml(output, target):
     """
-    Export disaggregation histograms to the ``target_dir``.
+    Export disaggregation histograms to the ``target``.
 
     :param output:
         :class:`openquake.engine.db.models.Output` with an `output_type` of
         `disagg_matrix`.
-    :param str target_dir:
+    :param str target:
         Destination directory location for exported files.
 
     :returns:
@@ -489,7 +491,7 @@ def export_disagg_matrix_xml(output, target_dir):
     lt_rlz = disagg_result.lt_realization
     haz_calc = output.oq_job.hazard_calculation
 
-    path = _get_result_export_path(haz_calc.id, target_dir,
+    dest = _get_result_export_dest(haz_calc.id, target,
                                    output.disagg_matrix)
 
     pmf_map = OrderedDict([
@@ -520,7 +522,7 @@ def export_disagg_matrix_xml(output, target_dir):
         gsimlt_path=core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path),
     )
 
-    writer = nrml.DisaggXMLWriter(path, **writer_kwargs)
+    writer = nrml.DisaggXMLWriter(dest, **writer_kwargs)
 
     data = (_DisaggMatrix(pmf_fn(disagg_result.matrix), dim_labels,
                           disagg_result.poe, disagg_result.iml)
@@ -528,18 +530,18 @@ def export_disagg_matrix_xml(output, target_dir):
 
     writer.serialize(data)
 
-    return [path]
+    return dest
 
 
 @core.makedirsdeco
-def export_uh_spectra_xml(output, target_dir):
+def export_uh_spectra_xml(output, target):
     """
-    Export the specified UHS ``output`` to the ``target_dir``.
+    Export the specified UHS ``output`` to the ``target``.
 
     :param output:
         :class:`openquake.engine.db.models.Output` with an `output_type` of
         `uh_spectra`.
-    :param str target_dir:
+    :param str target:
         Destination directory location for exported files.
 
     :returns:
@@ -548,7 +550,7 @@ def export_uh_spectra_xml(output, target_dir):
     uhs = models.UHS.objects.get(output=output)
     haz_calc = output.oq_job.hazard_calculation
 
-    path = _get_result_export_path(haz_calc.id, target_dir, output.uh_spectra)
+    dest = _get_result_export_dest(haz_calc.id, target, output.uh_spectra)
 
     if uhs.lt_realization is not None:
         lt_rlz = uhs.lt_realization
@@ -568,10 +570,10 @@ def export_uh_spectra_xml(output, target_dir):
         'investigation_time': uhs.investigation_time,
     }
 
-    writer = nrml.UHSXMLWriter(path, **metadata)
+    writer = nrml.UHSXMLWriter(dest, **metadata)
     writer.serialize(uhs)
 
-    return [path]
+    return dest
 
 
 XML_EXPORTERS = {
