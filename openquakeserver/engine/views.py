@@ -32,6 +32,28 @@ def _get_base_url(request):
     return base_url
 
 
+def _calc_to_response_data(calc):
+    """
+    Extract the calculation parameters into a dictionary.
+    """
+    fields = [x.name for x in calc._meta.fields if x.name not in IGNORE_FIELDS]
+    response_data = {}
+    for field_name in fields:
+        try:
+            value = getattr(calc, field_name)
+            if value is not None:
+                if field_name in GEOM_FIELDS:
+                    response_data[field_name] = json.loads(value.geojson)
+                elif field_name in RISK_INPUTS:
+                    response_data[field_name] = value.id
+                else:
+                    response_data[field_name] = value
+        except AttributeError:
+            # Better that we miss an attribute than crash.
+            pass
+    return response_data
+
+
 def calc_hazard(request):
     """
     The following request types are supported:
@@ -88,26 +110,6 @@ def _get_haz_calc_info(calc_id):
     return response_data
 
 
-def _calc_to_response_data(calc):
-    """
-    Extract the calculation parameters into a dictionary.
-    """
-    fields = [x.name for x in calc._meta.fields if x.name not in IGNORE_FIELDS]
-    response_data = {}
-    for field_name in fields:
-        try:
-            value = getattr(calc, field_name)
-            if value is not None:
-                if field_name in GEOM_FIELDS:
-                    response_data[field_name] = json.loads(value.geojson)
-                elif field_name in RISK_INPUTS:
-                    response_data[field_name] = value.id
-                else:
-                    response_data[field_name] = value
-        except AttributeError:
-            # Better that we miss an attribute than crash.
-            pass
-    return response_data
 
 
 def calc_risk(request):
