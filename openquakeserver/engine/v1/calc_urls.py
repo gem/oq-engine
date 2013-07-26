@@ -1,7 +1,7 @@
 from django.conf.urls.defaults import patterns
 from django.conf.urls.defaults import url
 
-# each url is prefixed with /calc/
+# each url is prefixed with /v1/calc/
 urlpatterns = patterns(
     'openquakeserver.engine.views',
     url(r'^hazard$', 'calc_hazard'),
