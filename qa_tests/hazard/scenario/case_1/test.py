@@ -563,7 +563,7 @@ class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             job = self.run_hazard(cfg)
             [output] = export.core.get_outputs(job.id)
-            [exported_file] = export.hazard.export(
+            exported_file = export.hazard.export(
                 output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML), exported_file)
