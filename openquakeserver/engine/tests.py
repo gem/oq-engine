@@ -19,7 +19,7 @@ class BaseViewTestCase(unittest.TestCase):
 class CalcHazardTestCase(BaseViewTestCase):
 
     def test_get(self):
-        expected_content = json.dumps([
+        expected_content = [
             {u'url': u'http://www.openquake.org/v1/calc/hazard/1',
              u'status': u'executing',
              u'description': u'description 1',
@@ -32,7 +32,7 @@ class CalcHazardTestCase(BaseViewTestCase):
              u'status': u'complete',
              u'description': u'description e',
              u'id': 3},
-        ])
+        ]
         with mock.patch('engine.views._get_haz_calcs') as ghc:
             ghc.return_value = [
                 (1, 'executing', 'description 1'),
@@ -44,14 +44,13 @@ class CalcHazardTestCase(BaseViewTestCase):
             response = views.calc_hazard(request)
 
             self.assertEqual(200, response.status_code)
-            self.assertEqual(expected_content, response.content)
-
+            self.assertEqual(expected_content, json.loads(response.content))
 
 
 class CalcRiskTestCase(BaseViewTestCase):
 
     def test_get(self):
-        expected_content = json.dumps([
+        expected_content = [
             {u'url': u'http://www.openquake.org/v1/calc/risk/1',
              u'status': u'executing',
              u'description': u'description 1',
@@ -64,7 +63,7 @@ class CalcRiskTestCase(BaseViewTestCase):
              u'status': u'complete',
              u'description': u'description e',
              u'id': 3},
-        ])
+        ]
         with mock.patch('engine.views._get_risk_calcs') as grc:
             grc.return_value = [
                 (1, 'executing', 'description 1'),
@@ -76,7 +75,7 @@ class CalcRiskTestCase(BaseViewTestCase):
             response = views.calc_risk(request)
 
             self.assertEqual(200, response.status_code)
-            self.assertEqual(expected_content, response.content)
+            self.assertEqual(expected_content, json.loads(response.content))
 
 
 class CalcToResponseDataTestCase(unittest.TestCase):
