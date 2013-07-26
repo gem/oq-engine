@@ -17,6 +17,24 @@ class BaseViewTestCase(unittest.TestCase):
         cls.factory = RequestFactory()
 
 
+class UtilsTestCase(BaseViewTestCase):
+
+    def setUp(self):
+        self.request = self.factory.get('does not matter')
+
+    def test__get_base_url_http(self):
+        self.request.is_secure = lambda: False
+        self.request.META['HTTP_HOST'] = 'www.openquake.org:8080'
+        self.assertEqual('http://www.openquake.org:8080',
+                         views._get_base_url(self.request))
+
+    def test__get_base_url_https(self):
+        self.request.is_secure = lambda: True
+        self.request.META['HTTP_HOST'] = 'www.openquake.org'
+        self.assertEqual('https://www.openquake.org',
+                         views._get_base_url(self.request))
+
+
 class CalcHazardTestCase(BaseViewTestCase):
 
     def test_get(self):
