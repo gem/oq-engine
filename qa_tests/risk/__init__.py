@@ -94,7 +94,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                 expected_outputs = self.expected_outputs()
                 for i, output in enumerate(self.actual_xml_outputs(job)):
                     try:
-                        [exported_file] = export.risk.export(
+                        exported_file = export.risk.export(
                             output.id, result_dir)
                     except:
                         print "Error in exporting %s" % output
@@ -234,7 +234,3 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             raise SkipTest
         else:
             return self._get_queryset()[0].oqjob
-
-    def test(self):
-        raise NotImplementedError
-
