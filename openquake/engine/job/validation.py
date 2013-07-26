@@ -552,6 +552,7 @@ class ClassicalRiskForm(BaseOQModelForm):
         fields = (
             'description',
             'no_progress_timeout',
+            'exposure_input_id',
             'region_constraint',
             'maximum_distance',
             'lrem_steps_per_interval',
@@ -569,6 +570,7 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
+            'exposure_input_id',
             'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
@@ -586,6 +588,7 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
+            'exposure_input_id',
             'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
@@ -605,6 +608,7 @@ class EventBasedRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
+            'exposure_input_id',
             'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
@@ -643,6 +647,7 @@ class ScenarioDamageRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
+            'exposure_input_id',
             'region_constraint',
             'maximum_distance',
             'export_dir',
@@ -656,6 +661,7 @@ class ScenarioRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
+            'exposure_input_id',
             'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
@@ -685,6 +691,10 @@ class ScenarioRiskForm(BaseOQModelForm):
 
 
 def description_is_valid(_mdl):
+    return True, []
+
+
+def exposure_input_id_is_valid(_mdl):
     return True, []
 
 

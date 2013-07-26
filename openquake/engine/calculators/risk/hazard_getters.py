@@ -24,11 +24,18 @@ calculation.
 
 import collections
 import numpy
+import scipy
+
+
+from openquake.hazardlib import geo, const
+from openquake.hazardlib.calc import filters
+from openquake.hazardlib.calc.gmf import ground_motion_field_with_residuals
 
 from openquake.engine import logs
-from openquake.hazardlib import geo
 from openquake.engine.db import models
 from openquake.engine.performance import DummyMonitor
+from openquake.engine.calculators.hazard import general
+from openquake.engine.input import logictree
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
@@ -207,9 +214,17 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
-    def __init__(self, hazard_output, assets, max_distance, imt):
+
+    def __init__(self, hazard, assets, max_distance, imt, seed=None):
         super(GroundMotionValuesGetter, self).__init__(
-            hazard_output, assets, max_distance, imt)
+            hazard, assets, max_distance, imt)
+
+        # seed the rng. This allows different tasks to get the same
+        # random numbers. The seed have to be set when computing
+        # ground motion values on the fly in order to provide the right
+        # correlation between random numbers generated across tasks
+        assert hazard[0].output_type != "ses" or seed is not None
+        numpy.random.seed(seed)
 
     def assets_gen(self, hazard_output):
         """
@@ -252,14 +267,15 @@ GROUP BY site_id ORDER BY site_id;
             if assets:
                 yield site_id, assets
 
-    def get_gmvs_ruptures(self, hazard_id, site_id):
+    def get_gmvs_ruptures(self, gmf, site_id):
         """
         :returns: gmvs and ruptures for the given site and IMT
         """
         gmvs = []
         ruptures = []
+
         for gmf in models.GmfData.objects.filter(
-                gmf=hazard_id,
+                gmf=gmf,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
                 sa_damping=self.sa_damping):
             gmvs.extend(gmf.gmvs)
@@ -277,6 +293,7 @@ GROUP BY site_id ORDER BY site_id;
         with the GMVs; for event based computations the data is
         a pair (GMVs, rupture_ids).
         """
+
         all_ruptures = set()
         all_assets = []
         all_gmvs = []
@@ -285,12 +302,50 @@ GROUP BY site_id ORDER BY site_id;
         # the ordering is there only to have repeatable runs
         with monitor.copy('associating assets->site'):
             site_assets = list(self.assets_gen(hazard_output))
+
+        if hazard_output.output.output_type == 'ses':
+            logs.LOG.info('Compute Ground motion field values on the fly')
+
+            # getting some params from the db
+            hc = hazard_output.output.oq_job.hazard_calculation
+            truncation_level = hc.truncation_level
+            gsims = logictree.LogicTreeProcessor(
+                hc.id).parse_gmpe_logictree_path(
+                    hazard_output.lt_realization.gsim_lt_path)
+            if hc.ground_motion_correlation_model is not None:
+                model = general.get_correl_model(hc)
+            else:
+                model = None
+
+            with monitor.copy('getting ruptures'):
+                ruptures = models.SESRupture.objects.filter(
+                    ses__ses_collection=hazard_output).order_by(
+                        'ses__ordinal', 'id')
+                r_objs = [r.rupture for r in ruptures]
+
+                r_seeds = [numpy.random.randint(0, models.MAX_SINT_32)
+                           for r in ruptures]
+                r_ids = [r.id for r in ruptures]
+
+                if any(map(lambda r: r is "not computed", r_objs)):
+                    msg = ("The stochastic event set has been computed with "
+                           " a version of openquake engine too old. "
+                           "Please, re-run your hazard")
+                    logs.LOG.error(msg)
+                    raise RuntimeError(msg)
+
+            with monitor.copy('computing gmvs'):
+                all_assets, gmvs = GroundMotionValuesCalcGetter(
+                    self.imt, hc.site_collection, site_assets,
+                    truncation_level, gsims, model).compute(
+                        r_objs, r_seeds, r_ids, hc.maximum_distance)
+            return all_assets, (gmvs, r_ids)
+
         for site_id, assets in site_assets:
             n_assets = len(assets)
             all_assets.extend(assets)
             with monitor.copy('getting gmvs and ruptures'):
-                gmvs, ruptures = self.get_gmvs_ruptures(
-                    hazard_output.id, site_id)
+                gmvs, ruptures = self.get_gmvs_ruptures(hazard_output, site_id)
             if ruptures:  # event based
                 site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
                 for r in ruptures:
@@ -328,3 +383,200 @@ class BCRGetter(object):
                 yield hid, assets, orig, retro
         except StopIteration:
             pass
+
+
+class GroundMotionValuesCalcGetter(object):
+    """
+    Compute ground motion values suitable to be used for a risk event
+    based calculation, given a set of ruptures computed by an hazard
+    calculation
+    """
+    def __init__(self, imt, site_collection, sites_assets,
+                 truncation_level, gsims, correlation_model):
+        """
+        :param str imt:
+            the intensity measure type considered
+        :param site_collection:
+            a :class:`openquake.engine.db.models.SiteCollection` instance
+            holding all the sites of the hazard calculation from which the
+            ruptures have been computed
+        :param sites_assets:
+            an iterator over tuple of the form (site_id, assets), where
+            site_id is the id of a
+            :class:`openquake.engine.db.models.HazardSite` object and
+            assets is a list of asset object associated to such site
+        :param float truncation_level:
+            the truncation level of the normal distribution used to generate
+            random numbers. If none, a non-truncated normal is used
+        :param gsims:
+            a dictionary of the gsims considered keyed by the tectonic
+            region type
+        :param correlation_model:
+            Instance of correlation model object. See
+            :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
+            case non-correlated ground motion fields are calculated.
+            Correlation model is not used if ``truncation_level`` is zero.
+        """
+
+        self.imt = general.imt_to_hazardlib(imt)
+        self.site_collection = site_collection
+        self.sites_assets = sites_assets
+        self.truncation_level = truncation_level
+        self.sites = models.SiteCollection(
+            [self.site_collection.get_by_id(site_id)
+             for site_id, _assets in self.sites_assets])
+
+        all_site_ids = [s.id for s in self.site_collection]
+        self.sites_dict = dict((all_site_id, i)
+                               for i, all_site_id in enumerate(all_site_ids))
+
+        self.generate_epsilons = truncation_level != 0
+        self.correlation_matrix = None
+        if self.generate_epsilons:
+            if truncation_level is None:
+                self.distribution = scipy.stats.norm()
+            elif truncation_level > 0:
+                self.distribution = scipy.stats.truncnorm(
+                    -truncation_level, truncation_level)
+
+            if correlation_model is not None:
+                c = correlation_model.get_lower_triangle_correlation_matrix(
+                    site_collection, self.imt)
+                self.correlation_matrix = c
+
+        self.gsims = gsims
+
+    def sites_of_interest(self, rupture, maximum_distance):
+        """
+        :param openquake.hazardlib.source.rupture.Rupture rupture:
+            Rupture to calculate ground motion fields radiated from.
+
+        :returns:
+            a 2-tuple with 1) an
+            :class:`openquake.engine.db.models.SiteCollection` object
+            holding the sites that are within ``hazard_maximum_distance``
+            from the `rupture`. 2) the indices of the filtered sites in
+            the whole ``sites`` collection of fields
+        """
+        # filtering ruptures/sites
+        rupture_sites = list(
+            filters.rupture_site_distance_filter(
+                maximum_distance)([(rupture, self.sites)]))
+        if not rupture_sites:
+            return [], []
+        [(rupture, sites_filtered)] = rupture_sites
+
+        # convert the hazard lib site collection to engine one
+        # that supports a fast __contains__ method and holds the site enhanced
+        # by with ids
+        if sites_filtered.indices is not None:
+            sites_filtered = models.SiteCollection(
+                numpy.array(self.site_collection.sites)[
+                    sites_filtered.indices])
+
+        # find the indices in the site collection
+        site_ids_indexes = [self.sites_dict[s.id] for s in sites_filtered]
+        return sites_filtered, site_ids_indexes
+
+    def epsilons(self, rupture_seed, mask, total_residual):
+        """
+        :param int rupture_seed:
+            a seed used to initialize the rng
+        :param mask:
+            the set of indices used to slice the matrices computed
+        :param bool total_residual:
+            True if only the matrix with the epsilons for the total
+            residual should be computed
+        :returns:
+            Three matrices holding the epsilons for the total, inter-event,
+            intra-event residuals. If `generate_epsilons` is False, all of them
+            are None. If ``total_residual`` is True, the latter two are None.
+            Otherwise, the first one is None.
+        """
+        if not self.generate_epsilons:
+            return None, None, None
+
+        # we seet the rupture_seed such that in every task we
+        # always get the same numbers for a given rupture
+        numpy.random.seed(rupture_seed)
+
+        if total_residual:
+            total_residual_epsilons = self.distribution.rvs(
+                size=len(self.site_collection))[mask]
+            return total_residual_epsilons, None, None
+        else:
+            inter_residual_epsilons = self.distribution.rvs(size=1)
+            all_intra = self.distribution.rvs(size=len(self.site_collection))
+            if self.correlation_matrix is not None:
+                all_intra = numpy.array(
+                    numpy.dot(self.correlation_matrix, all_intra))[0]
+            intra_residual_epsilons = all_intra[mask]
+            return None, inter_residual_epsilons, intra_residual_epsilons
+
+    def gsim(self, rupture):
+        """
+        Shortcut to get a gsim associated with a rupture and a boolean value
+        saying if such gsim is defined only for total standard deviation
+        """
+        gsim = self.gsims[rupture.tectonic_region_type]
+        cond = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == set(
+            [const.StdDev.TOTAL])
+        return gsim, cond
+
+    def compute(self, ruptures, rupture_seeds, rupture_ids, maximum_distance):
+        """
+        Compute ground motion values radiated from `ruptures`.
+
+        :param ruptures:
+            an iterator over N
+            :class:`openquake.hazardlib.source.rupture.Rupture` instances
+        :param rupture_seeds:
+            an interator over N integer values to be used to initialize the
+            RNG
+        :param rupture_ids:
+            an iterator over N integer values. Each of them uniquely identifies
+            the corresponding `rupture`
+        :param float maximum_distance:
+            the maximum distance threshold used to filter the sites to be
+            considered for each rupture
+        :returns:
+            a tuple with two elements. The first one is a list of A numpy
+            array. Each of them contains the ground motion values associated
+            with an asset. The second element contains the list of A assets
+            considered.
+        """
+        all_gmvs = []
+        all_assets = []
+        site_gmv = collections.defaultdict(dict)
+
+        for rupture, rupture_seed, rupture_id in zip(
+                ruptures, rupture_seeds, rupture_ids):
+            gsim, tstddev = self.gsim(rupture)
+
+            sites_of_interest, mask = self.sites_of_interest(
+                rupture, maximum_distance)
+            if not sites_of_interest:
+                continue
+
+            (total, inter, intra) = self.epsilons(rupture_seed, mask, tstddev)
+
+            gmf = ground_motion_field_with_residuals(
+                rupture, sites_of_interest,
+                self.imt, gsim, self.truncation_level,
+                total_residual_epsilons=total,
+                intra_residual_epsilons=intra,
+                inter_residual_epsilons=inter)
+
+            for site, gmv in zip(sites_of_interest, gmf):
+                site_gmv[site.id][rupture_id] = gmv
+
+        for site_id, assets in self.sites_assets:
+            n_assets = len(assets)
+            if site_id not in site_gmv:
+                gmvs = numpy.zeros(len(ruptures))
+            else:
+                gmvs = [site_gmv[site_id].get(r, 0) for r in rupture_ids]
+            all_gmvs.extend([gmvs] * n_assets)
+            all_assets.extend(assets)
+
+        return all_assets, all_gmvs

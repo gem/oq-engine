@@ -237,6 +237,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
 
+        # used for computing gmvs on the fly
+        self.imt_seeds = dict()
+
     def task_completed_hook(self, message):
         """
         Updates the event loss table
@@ -255,7 +258,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 raise RuntimeError(
                     "The provided hazard calculation ID "
                     "is not an event based calculation")
-        elif not self.rc.hazard_output.output_type == "gmf":
+        elif not self.rc.hazard_output.output_type in ["gmf", "ses"]:
             raise RuntimeError(
                 "The provided hazard output is not a gmf collection")
 
@@ -302,7 +305,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                     ruptures = models.SESRupture.objects.filter(
                         ses__ses_collection__lt_realization=
-                        hazard_output.gmf.lt_realization)
+                        hazard_output.output_container.lt_realization)
 
                     for rupture in ruptures:
                         if rupture.id in event_loss_table:
@@ -356,6 +359,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         time_span, tses = self.hazard_times()
 
+        if not risk_model.imt in self.imt_seeds:
+            self.imt_seeds[risk_model.imt] = self.rnd.randint(
+                0, models.MAX_SINT_32)
+
         return workflows.CalculationUnit(
             loss_type,
             workflows.ProbabilisticEventBased(
@@ -370,7 +377,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
-                risk_model.imt))
+                risk_model.imt,
+                self.imt_seeds[risk_model.imt]))
 
     def hazard_times(self):
         """
