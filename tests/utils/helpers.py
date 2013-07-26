@@ -914,10 +914,11 @@ def random_location_generator(min_x=-180, max_x=180, min_y=-90, max_y=90):
 
 class MultiMock(object):
     """
-    Context-managed multi-object. This is useful if you need to mock multiple
-    things at once. So instead of creating individual patch+mock objects for
-    each, you can define them basically as a dictionary. You can also use the
-    mock context managers without having to nest `with` statements.
+    Context-managed multi-mock object. This is useful if you need to mock
+    multiple things at once. So instead of creating individual patch+mock
+    objects for each, you can define them basically as a dictionary. You can
+    also use the mock context managers without having to nest `with`
+    statements.
 
     Example usage:
 
