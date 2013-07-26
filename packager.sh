@@ -54,6 +54,7 @@ sig_hand () {
     if [ -f /tmp/packager.eph.$$.log ]; then
         rm /tmp/packager.eph.$$.log
     fi
+    exit 1
 }
 
 #
@@ -431,27 +432,12 @@ cd "$GEM_BUILD_SRC"
 # date
 dt="$(date +%s)"
 
-# version from setup.py
-stp_vers="$(cat setup.py | grep "^version[ 	]*=[ 	]*['\"]" | sed -n "s/^version[ 	]*=[ 	]*['\"]//g;s/['\"].*//gp")"
-stp_maj="$(echo "$stp_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
-stp_min="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
-stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
-stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')"
-# echo "stp [$stp_vers] [$stp_maj] [$stp_min] [$stp_bfx] [$stp_suf]"
-
-if [ 0 -eq 1 ]; then
-    # version info from openquake/__init__.py
-    ini_maj="$(cat openquake/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_min="$(cat openquake/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_bfx="$(cat openquake/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-    ini_suf="" # currently not included into the version array structure
-# echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
-else
-    ini_maj="$stp_maj"
-    ini_min="$stp_min"
-    ini_bfx="$stp_bfx"
-    ini_suf="$stp_suf"
-fi
+# version info from openquake/risklib/__init__.py
+ini_vers="$(sed 's/^[ 	]*__version__[ 	]*=[ 	]*["'"'"']\([^"'"'"']*\)/\1/g' openquake/risklib/__init__.py)"
+ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
+ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+ini_suf="" # currently not included into the version array structure
 
 # version info from debian/changelog
 h="$(head -n1 debian/changelog)"
@@ -492,13 +478,12 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     rm debian/changelog.orig
 fi
 
-if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
-      "$ini_min" != "$pkg_min" -o "$ini_min" != "$stp_min" -o \
-      "$ini_bfx" != "$pkg_bfx" -o "$ini_bfx" != "$stp_bfx" ]; then
+if [  "$ini_maj" != "$pkg_maj" -o \
+      "$ini_min" != "$pkg_min" -o \
+      "$ini_bfx" != "$pkg_bfx" ]; then
     echo
     echo "Versions are not aligned"
     echo "    init:  ${ini_maj}.${ini_min}.${ini_bfx}"
-    echo "    setup: ${stp_maj}.${stp_min}.${stp_bfx}"
     echo "    pkg:   ${pkg_maj}.${pkg_min}.${pkg_bfx}"
     echo
     echo "press [enter] to continue, [ctrl+c] to abort"
