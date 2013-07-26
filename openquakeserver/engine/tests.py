@@ -7,6 +7,7 @@ from django.test.client import RequestFactory
 
 from engine import views
 
+FakeOutput = namedtuple('FakeOutput', 'id, display_name, output_type')
 
 
 class BaseViewTestCase(unittest.TestCase):
@@ -150,3 +151,55 @@ class CalcToResponseDataTestCase(unittest.TestCase):
         response_data = views._calc_to_response_data(self.calc)
 
         self.assertEqual(expected, response_data)
+
+
+class CalcHazardResultsTestCase(BaseViewTestCase):
+
+    def test(self):
+        expected_content = [
+            {'id': 1, 'name': 'output1', 'type': 'hazard_curve',
+             'url': 'http://www.openquake.org/v1/calc/hazard/result/1'},
+            {'id': 2, 'name': 'output2', 'type': 'hazard_curve',
+             'url': 'http://www.openquake.org/v1/calc/hazard/result/2'},
+            {'id': 3, 'name': 'output3', 'type': 'hazard_map',
+             'url': 'http://www.openquake.org/v1/calc/hazard/result/3'},
+        ]
+        with mock.patch('openquake.engine.engine.get_hazard_outputs') as gho:
+            gho.return_value = [
+                FakeOutput(1, 'output1', 'hazard_curve'),
+                FakeOutput(2, 'output2', 'hazard_curve'),
+                FakeOutput(3, 'output3', 'hazard_map'),
+            ]
+            request = self.factory.get('/v1/calc/hazard/1/results')
+            request.META['HTTP_HOST'] = 'www.openquake.org'
+            response = views.calc_hazard_results(request, 7)
+
+            self.assertEqual(1, gho.call_count)
+            self.assertEqual(((7, ), {}), gho.call_args)
+            self.assertEqual(200, response.status_code)
+            self.assertEqual(expected_content, json.loads(response.content))
+
+
+class CalcRiskResultsTestCase(BaseViewTestCase):
+
+    def test(self):
+        expected_content = [
+            {'id': 1, 'name': 'output1', 'type': 'loss_curve',
+             'url': 'http://www.openquake.org/v1/calc/risk/result/1'},
+            {'id': 2, 'name': 'output2', 'type': 'loss_curve',
+             'url': 'http://www.openquake.org/v1/calc/risk/result/2'},
+            {'id': 3, 'name': 'output3', 'type': 'loss_map',
+             'url': 'http://www.openquake.org/v1/calc/risk/result/3'},
+        ]
+        with mock.patch('openquake.engine.engine.get_risk_outputs') as gro:
+            gro.return_value = [
+                FakeOutput(1, 'output1', 'loss_curve'),
+                FakeOutput(2, 'output2', 'loss_curve'),
+                FakeOutput(3, 'output3', 'loss_map'),
+            ]
+            request = self.factory.get('/v1/calc/risk/1/results')
+            request.META['HTTP_HOST'] = 'www.openquake.org'
+            response = views.calc_risk_results(request, 1)
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual(expected_content, json.loads(response.content))
