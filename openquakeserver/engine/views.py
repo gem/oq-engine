@@ -16,6 +16,22 @@ RISK_INPUTS = ('hazard_calculation', 'hazard_output')
 LOGGER = logging.getLogger('openquakeserver')
 
 
+def _get_base_url(request):
+    """
+    Construct a base URL, given a request object.
+
+    This comprises the protocol prefix (http:// or https://) and the host,
+    which can include the port number. For example:
+    http://www.openquake.org or https://www.openquake.org:8000.
+    """
+    if request.is_secure():
+        base_url = 'https://%s'
+    else:
+        base_url = 'http://%s'
+    base_url %= request.META['HTTP_HOST']
+    return base_url
+
+
 def calc_hazard(request):
     """
     The following request types are supported:
@@ -27,13 +43,7 @@ def calc_hazard(request):
     if not request.method == 'GET':
         return HttpResponse(status=METHOD_NOT_ALLOWED)
 
-    if request.is_secure():
-        base_url = 'https://%s'
-    else:
-        base_url = 'http://%s'
-    base_url %= request.META['HTTP_HOST']
-
-    base_url = 'http://%s' % request.META['HTTP_HOST']
+    base_url = _get_base_url(request)
 
     haz_calc_data = _get_haz_calcs()
 
@@ -111,11 +121,7 @@ def calc_risk(request):
     if not request.method == 'GET':
         return HttpResponse(status=METHOD_NOT_ALLOWED)
 
-    if request.is_secure():
-        base_url = 'https://%s'
-    else:
-        base_url = 'http://%s'
-    base_url %= request.META['HTTP_HOST']
+    base_url = _get_base_url(request)
 
     risk_calc_data = _get_risk_calcs()
 
