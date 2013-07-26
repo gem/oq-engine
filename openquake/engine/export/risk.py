@@ -65,14 +65,6 @@ def _get_result_export_dest(target, output, file_ext='xml'):
     As a side effect, intermediate directories are created such that the file
     can be created and written to immediately.
 
-    TODO: REMOVE ME?????
-    :param int calc_id:
-        ID of the associated
-        :class:`openquake.engine.db.models.RiskCalculation`.
-
-
-
-
     :param target:
         Destination directory location for exported files OR a file-like
         object. If file-like, we just simply return it.
