@@ -156,7 +156,7 @@ def ground_motion_field_with_residuals(
     epsilons) are given in input; only one intensity measure type is
     considered.
 
-    See :fun:``openquake.hazardlib.calc.gmf.ground_motion_fields`` for
+    See :func:``openquake.hazardlib.calc.gmf.ground_motion_fields`` for
     the description of most of the input parameters.
 
     :param total_residual_epsilons:
