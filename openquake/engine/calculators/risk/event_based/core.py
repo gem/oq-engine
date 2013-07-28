@@ -238,7 +238,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.rnd.seed(self.rc.master_seed)
 
         # used for computing gmvs on the fly
-        self.imt_seeds = dict()
+        rnd = random.Random()
+        rnd.seed(self.rc.master_seed)
+        self.hazard_seeds = [rnd.randint(0, models.MAX_SINT_32)
+                             for _ in self.rc.hazard_outputs()]
 
     def task_completed_hook(self, message):
         """
@@ -359,10 +362,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         time_span, tses = self.hazard_times()
 
-        if not risk_model.imt in self.imt_seeds:
-            self.imt_seeds[risk_model.imt] = self.rnd.randint(
-                0, models.MAX_SINT_32)
-
         return workflows.CalculationUnit(
             loss_type,
             workflows.ProbabilisticEventBased(
@@ -378,7 +377,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 assets,
                 self.rc.best_maximum_distance,
                 risk_model.imt,
-                self.imt_seeds[risk_model.imt]))
+                self.hazard_seeds))
 
     def hazard_times(self):
         """
