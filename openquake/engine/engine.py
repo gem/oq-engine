@@ -799,7 +799,7 @@ def get_hazard_calculations(username):
     """
     return models.HazardCalculation.objects\
         .filter(owner__user_name=username)\
-        .order_by('oq_job__last_update')
+        .order_by('oqjob__last_update')
 
 
 def get_risk_calculations(username):

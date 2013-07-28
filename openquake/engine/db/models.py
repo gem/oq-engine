@@ -1773,12 +1773,33 @@ class SES(djm.Model):
         return SESRupture.objects.filter(ses=self.id).iterator()
 
 
+def old_field_property(prop):
+    def wrapped_property(s):
+        if getattr(s, "old_%s" % prop.__name__) is not None:
+            return getattr(s, "old_%s" % prop.__name__)
+        else:
+            return prop(s)
+    return property(wrapped_property)
+
+
 class SESRupture(djm.Model):
     """
     A rupture as part of a Stochastic Event Set.
     """
     ses = djm.ForeignKey('SES')
     rupture = fields.PickleField()
+
+    old_magnitude = djm.FloatField(null=True)
+    old_strike = djm.FloatField(null=True)
+    old_dip = djm.FloatField(null=True)
+    old_rake = djm.FloatField(null=True)
+    old_tectonic_region_type = djm.TextField(null=True)
+    old_is_from_fault_source = djm.BooleanField(null=True)
+    old_is_multi_surface = djm.BooleanField(null=True)
+    old_lons = fields.PickleField(null=True)
+    old_lats = fields.PickleField(null=True)
+    old_depths = fields.PickleField(null=True)
+    old_surface = fields.PickleField(null=True)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
@@ -1825,7 +1846,7 @@ class SESRupture(djm.Model):
             return self.lons[3], self.lats[3], self.depths[3]
         return None
 
-    @property
+    @old_field_property
     def is_from_fault_source(self):
         """
         If True, this rupture was generated from a simple/complex fault
@@ -1842,7 +1863,7 @@ class SESRupture(djm.Model):
         return is_complex_or_simple or (
             is_char and is_complex_or_simple_surface)
 
-    @property
+    @old_field_property
     def is_multi_surface(self):
         typology = self.rupture.source_typology
         is_char = typology is hazardlib_source.CharacteristicFaultSource
@@ -1912,39 +1933,39 @@ class SESRupture(djm.Model):
                     depths[i] = corner.depth
         return lons, lats, depths
 
-    @property
+    @old_field_property
     def lons(self):
         return self.get_geom()[0]
 
-    @property
+    @old_field_property
     def lats(self):
         return self.get_geom()[1]
 
-    @property
+    @old_field_property
     def depths(self):
         return self.get_geom()[2]
 
-    @property
+    @old_field_property
     def surface(self):
         return self.rupture.surface
 
-    @property
+    @old_field_property
     def magnitude(self):
         return self.rupture.mag
 
-    @property
+    @old_field_property
     def strike(self):
         return self.rupture.surface.get_strike()
 
-    @property
+    @old_field_property
     def dip(self):
         return self.rupture.surface.get_dip()
 
-    @property
+    @old_field_property
     def rake(self):
         return self.rupture.rake
 
-    @property
+    @old_field_property
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
