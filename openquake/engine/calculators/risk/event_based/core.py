@@ -237,7 +237,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
 
-        # used for computing gmvs on the fly
+        # seed the rng to generate different seeds per-each output
+        # (i.e. each hazard realization). This allows different tasks
+        # to generate the same random numbers given an output. These
+        # seeds will be used when computing ground motion values on
+        # the fly in order to provide the right correlation between
+        # random numbers generated across tasks
+
         rnd = random.Random()
         rnd.seed(self.rc.master_seed)
         self.hazard_seeds = [rnd.randint(0, models.MAX_SINT_32)
