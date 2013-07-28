@@ -27,7 +27,6 @@ from tests.utils import helpers
 
 from openquake.engine import export
 from openquake.engine.db import models
-from openquake.engine.tools.restore_hazards import hazard_restore_local
 
 
 class BaseRiskQATestCase(qa_utils.BaseQATestCase):
@@ -108,6 +107,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                         StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
             shutil.rmtree(result_dir)
+
+        return job
 
     def actual_xml_outputs(self, job):
         """
@@ -214,7 +215,7 @@ class CompleteTestCase(object):
         :returns:
             an iterable over data objects (e.g. LossCurveData)
         """
-        raise NotImplementedError
+        return ()
 
 
 class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
