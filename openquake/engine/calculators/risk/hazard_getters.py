@@ -222,16 +222,12 @@ class GroundMotionValuesGetter(HazardGetter):
         self.seeds = seeds or [None] * len(hazard)
 
     def __call__(self, monitor=None):
+        """
+        Override base method to seed the rng for each hazard output
+        """
         for hazard, seed in zip(self.hazard_outputs, self.seeds):
             h = hazard.output_container
-
-            # seed the rng. This allows different tasks to get the
-            # same random numbers. The seed have to be set when
-            # computing ground motion values on the fly in order to
-            # provide the right correlation between random numbers
-            # generated across tasks
             numpy.random.seed(seed)
-
             yield (hazard.id,) + self.get_for_hazard(h, monitor)
 
     def assets_gen(self, hazard_output):
