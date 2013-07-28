@@ -193,8 +193,10 @@ class CompleteTestCase(object):
 
         for data_hash, expected_output in self.expected_output_data():
             if not data_hash in outputs:
+                found = filter(lambda o: o[0] == data_hash[0], outputs)
                 raise AssertionError(
-                    "The output with hash %s is missing" % str(data_hash))
+                    "The output with hash %s is missing. Found %s" % (
+                        str(data_hash), found))
             actual_output = outputs[data_hash]
             try:
                 expected_output.assertAlmostEqual(actual_output)

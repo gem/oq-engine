@@ -215,16 +215,24 @@ class GroundMotionValuesGetter(HazardGetter):
     with a set of assets all of the same taxonomy.
     """
 
-    def __init__(self, hazard, assets, max_distance, imt, seed=None):
+    def __init__(self, hazard, assets, max_distance, imt, seeds=None):
         super(GroundMotionValuesGetter, self).__init__(
             hazard, assets, max_distance, imt)
+        assert hazard[0].output_type != "ses" or seeds is not None
+        self.seeds = seeds or [None] * len(hazard)
 
-        # seed the rng. This allows different tasks to get the same
-        # random numbers. The seed have to be set when computing
-        # ground motion values on the fly in order to provide the right
-        # correlation between random numbers generated across tasks
-        assert hazard[0].output_type != "ses" or seed is not None
-        numpy.random.seed(seed)
+    def __call__(self, monitor=None):
+        for hazard, seed in zip(self.hazard_outputs, self.seeds):
+            h = hazard.output_container
+
+            # seed the rng. This allows different tasks to get the
+            # same random numbers. The seed have to be set when
+            # computing ground motion values on the fly in order to
+            # provide the right correlation between random numbers
+            # generated across tasks
+            numpy.random.seed(seed)
+
+            yield (hazard.id,) + self.get_for_hazard(h, monitor)
 
     def assets_gen(self, hazard_output):
         """
