@@ -18,9 +18,6 @@
 
 """
 Set up some system-wide loggers
-TODO(jmc): init_logs should take filename, or sysout
-TODO(jmc): support debug level per logger.
-
 """
 import logging
 import socket
