@@ -355,6 +355,8 @@ class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
         calculation = engine.create_hazard_calculation(
             job.owner.user_name, params, files.values()
         )
+        job.hazard_calculation = calculation
+        job.save()
 
         form = validation.ClassicalHazardForm(
             instance=calculation, files=files
