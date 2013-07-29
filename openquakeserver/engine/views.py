@@ -94,9 +94,8 @@ def _calc_to_response_data(calc):
 @allowed_methods(('GET', ))
 def calc_hazard(request):
     """
-    The following request types are supported:
-
-        * GET: List hazard calculations.
+    Get a list of risk calculations and report their id, status, description,
+    and a url where more detailed information can be accessed.
 
     Responses are in JSON.
     """
@@ -116,6 +115,11 @@ def calc_hazard(request):
 
 
 def _get_haz_calcs():
+    """
+    Helper function for get job+calculation data from the oq-engine database.
+
+    Gets all hazard calculation records available.
+    """
     return oqe_models.OqJob.objects\
         .select_related()\
         .filter(hazard_calculation__isnull=False)\
@@ -126,12 +130,21 @@ def _get_haz_calcs():
 
 @allowed_methods(('GET', ))
 def calc_hazard_info(request, calc_id):
+    """
+    Get a JSON blob containing all of parameters for the given calculation
+    (specified by ``calc_id``). Also includes the current job status (
+    executing, complete, etc.).
+    """
     response_data = _get_haz_calc_info(calc_id)
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 def _get_haz_calc_info(calc_id):
+    """
+    Helper function to get job info and hazard calculation params from the
+    oq-engine DB, as a dictionary.
+    """
     job = oqe_models.OqJob.objects\
         .select_related()\
         .get(hazard_calculation=calc_id)
@@ -145,6 +158,16 @@ def _get_haz_calc_info(calc_id):
 
 @allowed_methods(('GET', ))
 def calc_hazard_results(request, calc_id):
+    """
+    Get a summarized list of hazard calculation results for a given
+    ``calc_id``. Result is a JSON array of objects containing the following
+    attributes:
+
+        * id
+        * name
+        * type (hazard_curve, hazard_map, etc.)
+        * url (the exact url where the full result can be accessed)
+    """
     base_url = _get_base_url(request)
 
     results = engine.get_hazard_outputs(calc_id)
@@ -166,15 +189,20 @@ def calc_hazard_results(request, calc_id):
 
 @allowed_methods(('GET', ))
 def get_hazard_result(request, result_id):
+    """
+    Download a specific hazard result, by ``result_id``.
+
+    Parameters for the GET request can include an `export_type`, such as 'xml',
+    'geojson', 'csv', etc.
+    """
     return _get_result(request, result_id, hazard_export.export)
 
 
 @allowed_methods(('GET', ))
 def calc_risk(request):
     """
-    The following request types are supported:
-
-        * GET: List risk calculations.
+    Get a list of risk calculations and report their id, status, description,
+    and a url where more detailed information can be accessed.
 
     Responses are in JSON.
     """
@@ -194,6 +222,11 @@ def calc_risk(request):
 
 
 def _get_risk_calcs():
+    """
+    Helper function for get job+calculation data from the oq-engine database.
+
+    Gets all risk calculation records available.
+    """
     return oqe_models.OqJob.objects\
         .select_related()\
         .filter(risk_calculation__isnull=False)\
@@ -204,12 +237,21 @@ def _get_risk_calcs():
 
 @allowed_methods(('GET', ))
 def calc_risk_info(request, calc_id):
+    """
+    Get a JSON blob containing all of parameters for the given calculation
+    (specified by ``calc_id``). Also includes the current job status (
+    executing, complete, etc.).
+    """
     response_data = _get_risk_calc_info(calc_id)
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 def _get_risk_calc_info(calc_id):
+    """
+    Helper function to get job info and hazard calculation params from the
+    oq-engine DB, as a dictionary.
+    """
     job = oqe_models.OqJob.objects\
         .select_related()\
         .get(risk_calculation=calc_id)
@@ -223,6 +265,16 @@ def _get_risk_calc_info(calc_id):
 
 @allowed_methods(('GET', ))
 def calc_risk_results(request, calc_id):
+    """
+    Get a summarized list of risk calculation results for a given
+    ``calc_id``. Result is a JSON array of objects containing the following
+    attributes:
+
+        * id
+        * name
+        * type (hazard_curve, hazard_map, etc.)
+        * url (the exact url where the full result can be accessed)
+    """
     base_url = _get_base_url(request)
 
     results = engine.get_risk_outputs(calc_id)
@@ -244,10 +296,40 @@ def calc_risk_results(request, calc_id):
 
 @allowed_methods(('GET', ))
 def get_risk_result(request, result_id):
+    """
+    Download a specific hazard result, by ``result_id``.
+
+    Parameters for the GET request can include an `export_type`, such as 'xml',
+    'geojson', 'csv', etc.
+    """
     return _get_result(request, result_id, risk_export.export)
 
 
 def _get_result(request, result_id, export_fn):
+    """
+    The common abstracted functionality for getting hazard or risk results.
+    The functionality is the same, except for the hazard/risk specific
+    ``export_fn``.
+
+    :param request:
+        `django.http.HttpRequest` object. Can contain a `export_type` GET
+        param (the default is 'xml' if no param is specified).
+    :param result_id:
+        The id of the requested artifact.
+    :param export_fn:
+        Export function, which accepts the following params:
+
+            * result_id (int)
+            * target (a file path or file-like)
+            * export_type (option kwarg)
+
+    :returns:
+        If the requested ``result_id`` is not available in the format
+        designated by the `export_type`.
+
+        Otherwise, return a `django.http.HttpResponse` containing the content
+        of the requested artifact.
+    """
     export_type = request.GET.get('export_type', DEFAULT_EXPORT_TYPE)
 
     content = StringIO.StringIO()
@@ -267,4 +349,3 @@ def _get_result(request, result_id, export_fn):
     # TODO(LB): A possible necessary optimization--in the future--would be to
     # iteratively stream large files.
     return HttpResponse(content=resp_content.getvalue())
-
