@@ -267,9 +267,12 @@ class SiteCollection(openquake.hazardlib.site.SiteCollection):
     cache = {}  # hazard_calculation_id -> site_collection
 
     def __init__(self, sites):
-        self.sites = sites
         super(SiteCollection, self).__init__(sites)
         self.sites_dict = dict((s.id, s) for s in sites)
+
+    @property
+    def sites(self):
+        return self.sites_dict.values()
 
     def __iter__(self):
         for site in self.sites:
