@@ -203,7 +203,7 @@ def export_hazard_curve_xml(output, target):
 
     hcd = _curve_data(hc)
     metadata, dest = _curve_metadata(output, target)
-    writers.HazardCurveXMLWriter(dest, **metadata).serialize(hcd)
+    nrml.HazardCurveXMLWriter(dest, **metadata).serialize(hcd)
 
     return dest
 
@@ -367,8 +367,6 @@ def _export_hazard_map(output, target, writer_class, file_ext):
     """
     General hazard map export code.
     """
-    core.makedirs(target)
-
     hazard_map = models.HazardMap.objects.get(output=output)
     haz_calc = output.oq_job.hazard_calculation
 
@@ -418,7 +416,7 @@ def export_hazard_map_xml(output, target):
         A list of exported file name (including the absolute path to each
         file).
     """
-    return _export_hazard_map(output, target, writers.HazardMapXMLWriter,
+    return _export_hazard_map(output, target, nrml.HazardMapXMLWriter,
                               'xml')
 
 
@@ -428,7 +426,7 @@ def export_hazard_map_geojson(output, target):
     in GeoJSON format.
     """
     return _export_hazard_map(output, target,
-                              writers.HazardMapGeoJSONWriter, 'geojson')
+                              nrml.HazardMapGeoJSONWriter, 'geojson')
 
 
 class _DisaggMatrix(object):
