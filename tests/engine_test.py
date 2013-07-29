@@ -341,29 +341,6 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
              '-0.5000000000000000 0.5000000000000000))'))
 
 
-class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
-    """Integration test for basic engine functions.
-
-    Test reading/generating a hazard job profile from a config file, then run
-    through the validation form.
-    """
-
-    def test_read_and_validate_hazard_config(self):
-        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
-        job = engine.prepare_job(getpass.getuser())
-        params, files = engine.parse_config(open(cfg, 'r'))
-        calculation = engine.create_hazard_calculation(
-            job.owner.user_name, params, files.values()
-        )
-        job.hazard_calculation = calculation
-        job.save()
-
-        form = validation.ClassicalHazardForm(
-            instance=calculation, files=files
-        )
-        self.assertTrue(form.is_valid())
-
-
 class OpenquakeCliTestCase(unittest.TestCase):
     """
     Run "openquake --version" as a separate
