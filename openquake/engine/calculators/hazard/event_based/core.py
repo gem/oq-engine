@@ -131,7 +131,7 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
             return
 
     with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
-        rupture_ids = _save_ses_ruptures(ses, ruptures, cmplt_lt_ses)
+        rupture_ids = _save_ses_rupture(ses, ruptures, cmplt_lt_ses)
 
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
@@ -188,7 +188,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids):
     return gmf_cache
 
 
-def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
+def _save_ses_rupture(ses, ruptures, complete_logic_tree_ses):
     """
     Helper function for saving stochastic event set ruptures to the database.
 

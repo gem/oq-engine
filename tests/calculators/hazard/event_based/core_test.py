@@ -194,7 +194,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             mock.MagicMock())
         self.patch_save_rup = mock.patch(
             'openquake.engine.calculators.hazard.'
-            'event_based.core._save_ses_rupture')
+            'event_based.core._save_ses_rupture',
+            mock.MagicMock(return_value=[1, 2]))
         self.patch_save_gmf = mock.patch(
             'openquake.engine.calculators.hazard.'
             'event_based.core._save_gmfs')
@@ -238,7 +239,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             # check that we called the right number of times the patched
             # functions: 40 = 2 Lt * 4 sources * 5 ses = 8 tasks * 5 ses
             self.assertEqual(ses_mock.call_count, 40)
-            self.assertEqual(save_rup_mock.call_count, 80)  # 2 rupt per ses
+            self.assertEqual(save_rup_mock.call_count, 40)  # 2 rupt per ses
             self.assertEqual(gmf_mock.call_count, 80)  # 2 ruptures per ses
             self.assertEqual(save_gmf_mock.call_count, 40)  # num_tasks * ses
 
