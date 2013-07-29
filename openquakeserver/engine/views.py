@@ -16,6 +16,33 @@ RISK_INPUTS = ('hazard_calculation', 'hazard_output')
 
 LOGGER = logging.getLogger('openquakeserver')
 
+class allowed_methods(object):
+    """
+    Use as a view decorator to strictly enforce HTTP request types.
+
+    It works like this:
+
+    .. code-block:: python
+
+        @allowed_methods(('GET', 'POST'))
+        def some_view(request):
+            # code goes here
+
+        @ allowed_methods(('DELETE', ))
+        def some_other_view(request):
+            # code goes here
+    """
+
+    def __init__(self, methods):
+        self.methods = methods
+
+    def __call__(self, func):
+        def wrapped(request, *args, **kwargs):
+            if not request.method in self.methods:
+                return HttpResponse(status=METHOD_NOT_ALLOWED)
+            else:
+                return func(request, *args, **kwargs)
+        return wrapped
 
 def _get_base_url(request):
     """
@@ -55,6 +82,7 @@ def _calc_to_response_data(calc):
     return response_data
 
 
+@allowed_methods(('GET', ))
 def calc_hazard(request):
     """
     The following request types are supported:
@@ -63,9 +91,6 @@ def calc_hazard(request):
 
     Responses are in JSON.
     """
-    if not request.method == 'GET':
-        return HttpResponse(status=METHOD_NOT_ALLOWED)
-
     base_url = _get_base_url(request)
 
     haz_calc_data = _get_haz_calcs()
@@ -90,10 +115,8 @@ def _get_haz_calcs():
                      'hazard_calculation__description')
 
 
+@allowed_methods(('GET', ))
 def calc_hazard_info(request, calc_id):
-    if not request.method == 'GET':
-        return HttpResponse(status=METHOD_NOT_ALLOWED)
-
     response_data = _get_haz_calc_info(calc_id)
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
@@ -111,10 +134,8 @@ def _get_haz_calc_info(calc_id):
     return response_data
 
 
+@allowed_methods(('GET', ))
 def calc_hazard_results(request, calc_id):
-    if not request.method == 'GET':
-        return HttpResponse(status=METHOD_NOT_ALLOWED)
-
     base_url = _get_base_url(request)
 
     results = engine.get_hazard_outputs(calc_id)
@@ -134,6 +155,7 @@ def calc_hazard_results(request, calc_id):
     return HttpResponse(content=json.dumps(response_data))
 
 
+@allowed_methods(('GET', ))
 def calc_risk(request):
     """
     The following request types are supported:
@@ -142,9 +164,6 @@ def calc_risk(request):
 
     Responses are in JSON.
     """
-    if not request.method == 'GET':
-        return HttpResponse(status=METHOD_NOT_ALLOWED)
-
     base_url = _get_base_url(request)
 
     risk_calc_data = _get_risk_calcs()
@@ -169,10 +188,8 @@ def _get_risk_calcs():
                      'risk_calculation__description')
 
 
+@allowed_methods(('GET', ))
 def calc_risk_info(request, calc_id):
-    if not request.method == 'GET':
-        return HttpResponse(status=METHOD_NOT_ALLOWED)
-
     response_data = _get_risk_calc_info(calc_id)
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
@@ -190,10 +207,8 @@ def _get_risk_calc_info(calc_id):
     return response_data
 
 
+@allowed_methods(('GET', ))
 def calc_risk_results(request, calc_id):
-    if not request.method == 'GET':
-        return HttpResponse(status=METHOD_NOT_ALLOWED)
-
     base_url = _get_base_url(request)
 
     results = engine.get_risk_outputs(calc_id)
