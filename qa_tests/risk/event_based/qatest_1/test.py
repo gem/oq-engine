@@ -24,7 +24,6 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     hazard_calculation_fixture = "PEB QA test 1"
 
     @noseattr('qa', 'risk', 'event_based')
-    @unittest.skip("skip until expected data are updated")
     def test(self):
         self._run_test()
 
