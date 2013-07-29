@@ -795,4 +795,6 @@ def get_risk_calculations(username):
     """
     Get all risk calculations belonging to the given ``username``.
     """
-    return models.RiskCalculation.objects.filter(owner__user_name=username)
+    return models.RiskCalculation.objects\
+        .filter(owner__user_name=username)\
+        .order_by('oqjob__last_update')
