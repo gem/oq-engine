@@ -169,6 +169,7 @@ def get_hazard_result(request, result_id):
     return _get_result(request, result_id, hazard_export.export)
 
 
+@allowed_methods(('GET', ))
 def calc_risk(request):
     """
     The following request types are supported:
