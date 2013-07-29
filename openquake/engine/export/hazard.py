@@ -367,8 +367,6 @@ def _export_hazard_map(output, target, writer_class, file_ext):
     """
     General hazard map export code.
     """
-    core.makedirs(target)
-
     hazard_map = models.HazardMap.objects.get(output=output)
     haz_calc = output.oq_job.hazard_calculation
 
