@@ -155,16 +155,16 @@ class HazardDumper(object):
                      where hazard_calculation_id in %s
                      and input_type in ('source_model_logic_tree',
                                         'gsim_logic_tree')""" % ids)
+        if input_ids != "()":  # scenario calcs do not have logic tree inputs
+            self.curs.copy(
+                """copy (select * from uiapi.input where id in %s)
+                   to stdout with (format '%s')""" % (input_ids, self.format),
+                self.outdir, 'uiapi.input.csv', 'w')
 
-        self.curs.copy(
-            """copy (select * from uiapi.input where id in %s)
-               to stdout with (format '%s')""" % (input_ids, self.format),
-            self.outdir, 'uiapi.input.csv', 'w')
-
-        self.curs.copy(
-            """copy (select * from uiapi.input2hcalc where input_id in %s)
-               to stdout with (format '%s')""" % (input_ids, self.format),
-            self.outdir, 'uiapi.input2hcalc.csv', 'w')
+            self.curs.copy(
+                """copy (select * from uiapi.input2hcalc where input_id in %s)
+                   to stdout with (format '%s')""" % (input_ids, self.format),
+                self.outdir, 'uiapi.input2hcalc.csv', 'w')
 
     def performance(self, *job_ids):
         """Dump performance"""
