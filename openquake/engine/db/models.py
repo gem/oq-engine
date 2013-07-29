@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -268,7 +267,7 @@ class SiteCollection(openquake.hazardlib.site.SiteCollection):
 
     def __init__(self, sites):
         super(SiteCollection, self).__init__(sites)
-        self.sites_dict = dict((s.id, s) for s in sites)
+        self.sites_dict = collections.OrderedDict((s.id, s) for s in sites)
 
     @property
     def sites(self):
