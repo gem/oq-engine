@@ -194,7 +194,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             mock.MagicMock())
         self.patch_save_rup = mock.patch(
             'openquake.engine.calculators.hazard.'
-            'event_based.core._save_ses_rupture',
+            'event_based.core._save_ses_ruptures',
             mock.MagicMock(return_value=[1, 2]))
         self.patch_save_gmf = mock.patch(
             'openquake.engine.calculators.hazard.'
@@ -219,7 +219,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             from openquake.engine.calculators.hazard.event_based import core
             ses_mock = calc.stochastic.stochastic_event_set_poissonian
             gmf_mock = calc.gmf.ground_motion_fields
-            save_rup_mock = core._save_ses_rupture
+            save_rup_mock = core._save_ses_ruptures
             save_gmf_mock = core._save_gmfs
 
             # run the calculation in process (to easy debugging)
