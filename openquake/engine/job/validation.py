@@ -688,10 +688,6 @@ def description_is_valid(_mdl):
     return True, []
 
 
-def exposure_input_id_is_valid(_mdl):
-    return True, []
-
-
 def calculation_mode_is_valid(mdl, expected_calc_mode):
     if not mdl.calculation_mode == expected_calc_mode:
         return False, ['Calculation mode must be "%s"' % expected_calc_mode]
