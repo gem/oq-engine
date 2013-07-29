@@ -1077,8 +1077,6 @@ class RiskCalculation(djm.Model):
         (u'classical', u'Classical PSHA'),
         (u'classical_bcr', u'Classical BCR'),
         (u'event_based', u'Probabilistic Event-Based'),
-        # TODO(LB): Enable these once calculators are supported and
-        # implemented.
         (u'scenario', u'Scenario'),
         (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
