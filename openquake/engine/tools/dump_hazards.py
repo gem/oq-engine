@@ -307,7 +307,7 @@ def main(hazard_calculation_id, outdir=None,
     # the typical use case is to dump from a remote database
     logging.basicConfig(level=logging.INFO)
     conn = psycopg2.connect(
-        host=host, dbname=dbname, user=user, password=password, port=port)
+        host=host, database=dbname, user=user, password=password, port=port)
     hc = HazardDumper(conn, outdir)
     hc.dump(hazard_calculation_id)
     log.info('Written %s' % hc.mktar())
