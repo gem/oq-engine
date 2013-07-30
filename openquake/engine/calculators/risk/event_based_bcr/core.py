@@ -19,7 +19,8 @@ Core functionality for the Event Based BCR Risk calculator.
 
 from openquake.risklib import workflows
 
-from openquake.engine.calculators.risk import base, hazard_getters, writers
+from openquake.engine.calculators.risk import (
+    base, hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.event_based import core as event_based
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.db import models
@@ -84,6 +85,9 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     """
     core_calc_task = event_based_bcr
 
+    validators = event_based.EventBasedRiskCalculator.validators + [
+        validation.ExposureHasRetrofittedCosts]
+
     def __init__(self, job):
         super(EventBasedBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
@@ -124,21 +128,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
                     assets,
                     self.rc.best_maximum_distance,
                     model_retro.imt)))
-
-    def get_taxonomies(self):
-        """
-        Override the default get_taxonomies to provide more detailed
-        validation of the exposure.
-
-        Check that the reco value is present in the exposure
-        """
-        taxonomies = super(EventBasedBCRRiskCalculator, self).get_taxonomies()
-
-        if (self.rc.exposure_model.exposuredata_set.filter(
-                cost__converted_retrofitted_cost__isnull=True)).exists():
-            raise ValueError("Some assets do not have retrofitted costs")
-
-        return taxonomies
 
     def post_process(self):
         """

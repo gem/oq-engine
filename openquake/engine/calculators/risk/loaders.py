@@ -21,6 +21,7 @@
 I/O handling for risk calculators
 """
 
+import collections
 import StringIO
 from openquake.risklib import scientific
 
@@ -92,3 +93,42 @@ def _parse_vulnerability(vuln_content):
             raise ValueError(msg)
 
     return vfs.items()
+
+
+def fragility(fragility_input):
+    return _parse_fragility(
+        StringIO.StringIO(fragility_input.model_content.raw_content_ascii))
+
+
+def _parse_fragility(content):
+    """
+    Parse the fragility XML file and return fragility_model,
+    fragility_functions, and damage_states for usage in get_risk_models.
+    """
+    iterparse = iter(parsers.FragilityModelParser(content))
+    fmt, limit_states = iterparse.next()
+
+    damage_states = ['no_damage'] + limit_states
+    fragility_functions = collections.defaultdict(dict)
+
+    taxonomy_imt = dict()
+    for taxonomy, iml, params, no_damage_limit in iterparse:
+        taxonomy_imt[taxonomy] = iml['IMT']
+
+        if fmt == "discrete":
+            if no_damage_limit is None:
+                fragility_functions[taxonomy] = [
+                    scientific.FragilityFunctionDiscrete(
+                        iml['imls'], poes, iml['imls'][0])
+                    for poes in params]
+            else:
+                fragility_functions[taxonomy] = [
+                    scientific.FragilityFunctionDiscrete(
+                        [no_damage_limit] + iml['imls'], [0.0] + poes,
+                        no_damage_limit)
+                    for poes in params]
+        else:
+            fragility_functions[taxonomy] = [
+                scientific.FragilityFunctionContinuous(*mean_stddev)
+                for mean_stddev in params]
+    return fragility_functions, taxonomy_imt, damage_states

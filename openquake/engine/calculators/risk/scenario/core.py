@@ -26,7 +26,8 @@ from openquake.risklib import workflows
 
 from openquake.engine import logs
 from openquake.engine.calculators.base import signal_task_complete
-from openquake.engine.calculators.risk import base, hazard_getters, writers
+from openquake.engine.calculators.risk import (
+    base, hazard_getters, writers, validation)
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -34,7 +35,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 @tasks.oqtask
 @base.count_progress_risk('r')
-def scenario(job_id, units, containers, params):
+def scenario(job_id, units, containers, _params):
     """
     Celery task for the scenario risk calculator.
 
@@ -108,6 +109,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     """
 
     core_calc_task = scenario
+    validators = base.RiskCalculator.validators + [
+        validation.RequireScenarioHazard,
+        validation.ExposureHasInsuranceBounds]
 
     def __init__(self, job):
         super(ScenarioRiskCalculator, self).__init__(job)
@@ -115,35 +119,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.insured_losses = dict()
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
-
-    def validate_hazard(self):
-        super(ScenarioRiskCalculator, self).validate_hazard()
-        if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calculation_mode != "scenario":
-                raise RuntimeError(
-                    "The provided hazard calculation ID "
-                    "is not a scenario calculation")
-        elif not self.rc.hazard_output.output_type == "gmf_scenario":
-            raise RuntimeError(
-                "The provided hazard output is not a gmf scenario collection")
-
-    def get_taxonomies(self):
-        """
-        If insured losses are required we check for the presence of
-        the deductible and insurance limit
-        """
-        taxonomies = super(ScenarioRiskCalculator, self).get_taxonomies()
-        if self.rc.insured_losses:
-            queryset = self.rc.exposure_model.exposuredata_set.filter(
-                (db.models.Q(cost__deductible_absolute__isnull=True) |
-                 db.models.Q(cost__insurance_limit_absolute__isnull=True)))
-            if queryset.exists():
-                logs.LOG.error(
-                    "missing insured limits in exposure for assets %s" % (
-                        queryset.all()))
-                raise RuntimeError(
-                    "Deductible or insured limit missing in exposure")
-        return taxonomies
 
     def task_completed_hook(self, message):
         aggregate_losses_dict = message.get('aggregate_losses')
