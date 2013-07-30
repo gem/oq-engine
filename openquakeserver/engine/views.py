@@ -348,4 +348,5 @@ def _get_result(request, result_id, export_fn):
 
     # TODO(LB): A possible necessary optimization--in the future--would be to
     # iteratively stream large files.
-    return HttpResponse(content=resp_content.getvalue())
+    # TODO(LB): Large files could pose a memory consumption problem.
+    return HttpResponse(resp_content.getvalue())
