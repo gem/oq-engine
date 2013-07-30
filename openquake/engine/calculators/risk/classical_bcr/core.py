@@ -129,7 +129,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         """
         ret = writers.OutputDict()
 
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             name = "BCR Map. type=%s hazard=%s" % (loss_type, hazard_output)
             ret.set(models.BCRDistribution.objects.create(
                     hazard_output=hazard_output,

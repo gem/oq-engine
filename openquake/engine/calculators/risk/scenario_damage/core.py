@@ -24,6 +24,8 @@ import numpy
 
 from django import db
 
+from openquake.risklib import workflows, calculators
+
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation, loaders)
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -104,8 +106,9 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
     #: The core calculation celery task function
     core_calc_task = scenario_damage
-    validators = base.BaseRiskCalculator.validators + [
-        validation.RequireScenarioHazard]
+    validators = [validation.HazardIMT, validation.EmptyExposure,
+                  validation.OrphanTaxonomies,
+                  validation.NoRiskModels, validation.RequireScenarioHazard]
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
@@ -194,7 +197,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             self.rc.inputs.get(input_type='fragility'))
         risk_models = dict([(tax,
                              dict(
-                                 damage=base.RiskModel(
+                                 damage=models.RiskModel(
                                      taxonomy_imt[tax], None, ffs)))
                             for tax, ffs in fm.items()])
         for lsi, dstate in enumerate(damage_states):

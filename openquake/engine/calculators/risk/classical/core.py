@@ -196,7 +196,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         containers = super(ClassicalRiskCalculator, self).create_outputs(
             hazard_output)
 
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             for poe in self.rc.poes_disagg or []:
                 containers.set(models.LossFraction.objects.create(
                     hazard_output_id=hazard_output.id,
@@ -224,7 +224,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if len(self.rc.hazard_outputs()) < 2:
             return containers
 
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             for poe in self.rc.poes_disagg or []:
                 name = "mean loss fractions. type=%s poe=%.4f" % (
                     loss_type, poe)
@@ -238,7 +238,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                         output_type="loss_fraction"),
                     statistics="mean"))
 
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             for quantile in self.rc.quantile_loss_curves or []:
                 for poe in self.rc.poes_disagg or []:
                     name = ("quantile(%.4f) loss fractions "

@@ -1306,7 +1306,10 @@ class RiskCalculation(djm.Model):
 
     @property
     def exposure_model(self):
-        return self.get_exposure_input().exposuremodel
+        try:
+            return self.get_exposure_input().exposuremodel
+        except ObjectDoesNotExist:
+            return None
 
     def get_exposure_input(self):
         try:
@@ -1317,11 +1320,11 @@ class RiskCalculation(djm.Model):
 
     def vulnerability_inputs(self, retrofitted):
         for loss_type in LOSS_TYPES:
-            cost_type = cost_type(loss_type)
+            ctype = cost_type(loss_type)
             if retrofitted:
-                input_type = "%s_vulnerability_retrofitted" % cost_type
+                input_type = "%s_vulnerability_retrofitted" % ctype
             else:
-                input_type = "%s_vulnerability" % cost_type
+                input_type = "%s_vulnerability" % ctype
 
             queryset = self.inputs.filter(input_type=input_type)
             if queryset.exists():

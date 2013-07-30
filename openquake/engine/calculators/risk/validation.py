@@ -61,7 +61,7 @@ class EmptyExposure(Validator):
     Checks that at least one asset is in the exposure
     """
     def get_errors(self):
-        if not sum(self.calc.taxonomies_asset_count):
+        if not sum(self.calc.taxonomies_asset_count.values()):
             return ('Region of interest is not covered by the exposure input. '
                     'This configuration is invalid. '
                     'Change the region constraint input or use a proper '
@@ -76,18 +76,9 @@ class OrphanTaxonomies(Validator):
     def get_errors(self):
         taxonomies = self.calc.taxonomies_asset_count
         orphans = set(taxonomies) - set(self.calc.risk_models)
-        if orphans:
-            msg = ('The following taxonomies are in the exposure model '
-                   'but not in the risk model: %s' % sorted(orphans))
-            if self.rc.taxonomies_from_model:
-                # only consider the taxonomies in the fragility model
-                taxonomies = dict(
-                    (t, taxonomies[t])
-                    for t in taxonomies if t in self.calc.risk_models)
-                logs.LOG.warn(msg)
-            else:
-                # all taxonomies in the exposure must be covered
-                return msg
+        if orphans and not self.calc.rc.taxonomies_from_model:
+            return ('The following taxonomies are in the exposure model '
+                    'but not in the risk model: %s' % orphans)
 
 
 class ExposureLossTypes(Validator):
@@ -102,13 +93,12 @@ class ExposureLossTypes(Validator):
             cost_type = models.cost_type(loss_type)
 
             if loss_type != "fatalities":
-                if not self.rc.exposure_model.exposuredata_set.filter(
+                if not self.calc.rc.exposure_model.exposuredata_set.filter(
                         cost__cost_type__name=cost_type).exists():
                     return ("Invalid exposure "
                             "for computing loss type %s. " % loss_type)
-                else:
-                    if self.rc.exposure_model.missing_occupants():
-                        return "Invalid exposure for computing fatalities."
+            elif self.calc.rc.exposure_model.missing_occupants():
+                return "Invalid exposure for computing fatalities."
 
 
 class NoRiskModels(Validator):
