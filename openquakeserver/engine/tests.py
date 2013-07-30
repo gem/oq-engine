@@ -122,19 +122,19 @@ class CalcToResponseDataTestCase(unittest.TestCase):
         # geometry
         self.calc.region.geojson = (
             '{ "type": "Polygon", "coordinates": '
-               '[[[1, 1], [2, 3], [3, 1], [1, 1]]] }'
+            '[[[1, 1], [2, 3], [3, 1], [1, 1]]] }'
         )
         self.calc.sites.geojson = (
             '{ "type": "MultiPoint", "coordinates": '
-               '[[100.0, 0.0], [101.0, 1.0]] }'
+            '[[100.0, 0.0], [101.0, 1.0]] }'
         )
         self.calc.region_constraint.geojson = (
             '{ "type": "Polygon", "coordinates": '
-               '[[[2, 2], [3, 4], [4, 1], [1, 1]]] }'
+            '[[[2, 2], [3, 4], [4, 1], [1, 1]]] }'
         )
         self.calc.sites_disagg.geojson = (
             '{ "type": "MultiPoint", "coordinates": '
-               '[[100.1, 0.1], [101.1, 1.1]] }'
+            '[[100.1, 0.1], [101.1, 1.1]] }'
         )
 
         # risk inputs

@@ -25,6 +25,7 @@ DEFAULT_EXPORT_TYPE = 'xml'
 
 LOGGER = logging.getLogger('openquakeserver')
 
+
 class allowed_methods(object):
     """
     Use as a view decorator to strictly enforce HTTP request types.
@@ -52,6 +53,7 @@ class allowed_methods(object):
             else:
                 return func(request, *args, **kwargs)
         return wrapped
+
 
 def _get_base_url(request):
     """
