@@ -27,7 +27,7 @@ from openquake.risklib import scientific
 
 from openquake.nrmllib.risk import parsers
 from openquake.engine.input.exposure import ExposureDBWriter
-from openquake.engine.db.models import RiskModel
+from openquake.engine.db.models import RiskModel, DmgState
 
 
 def exposure(exposure_model_input):
@@ -95,9 +95,18 @@ def _parse_vulnerability(vuln_content):
     return vfs.items()
 
 
-def fragility(fragility_input):
-    return _parse_fragility(
+def fragility(risk_calculation, fragility_input):
+    risk_models, damage_states = _parse_fragility(
         StringIO.StringIO(fragility_input.model_content.raw_content_ascii))
+
+    for lsi, dstate in enumerate(damage_states):
+            DmgState.objects.get_or_create(
+                risk_calculation=risk_calculation, dmg_state=dstate, lsi=lsi)
+    damage_state_ids = [d.id for d in DmgState.objects.filter(
+        risk_calculation=risk_calculation).order_by('lsi')]
+
+    return risk_models, damage_state_ids
+
 
 
 def _parse_fragility(content):
@@ -111,9 +120,9 @@ def _parse_fragility(content):
     damage_states = ['no_damage'] + limit_states
     fragility_functions = collections.defaultdict(dict)
 
-    taxonomy_imt = dict()
+    tax_imt = dict()
     for taxonomy, iml, params, no_damage_limit in iterparse:
-        taxonomy_imt[taxonomy] = iml['IMT']
+        tax_imt[taxonomy] = iml['IMT']
 
         if fmt == "discrete":
             if no_damage_limit is None:
@@ -131,4 +140,6 @@ def _parse_fragility(content):
             fragility_functions[taxonomy] = [
                 scientific.FragilityFunctionContinuous(*mean_stddev)
                 for mean_stddev in params]
-    return fragility_functions, taxonomy_imt, damage_states
+    risk_models = dict((tax, dict(damage=RiskModel(tax_imt[tax], None, ffs)))
+                       for tax, ffs in fragility_functions.items())
+    return damage_states, risk_models

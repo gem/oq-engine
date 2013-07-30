@@ -133,10 +133,8 @@ class RiskCalculator(base.Calculator):
             4. the output containers to be populated
             5. the specific calculator parameter set
         """
-        output_containers = self.create_statistical_outputs()
-
-        for hazard in self.rc.hazard_outputs():
-            output_containers.update(self.create_outputs(hazard))
+        output_containers = writers.combine_builders(
+            builder(self) for builder in self.output_builders)
 
         num_tasks = 0
         for taxonomy, assets_nr in self.taxonomies_asset_count.items():
@@ -239,111 +237,6 @@ class RiskCalculator(base.Calculator):
                 risk_models[taxonomy][loss_type] = model
 
         return risk_models
-
-    def create_outputs(self, hazard_output):
-        """
-        Create outputs container objects (e.g. LossCurve, Output).
-
-        Derived classes should override this to create containers for
-        storing objects other than LossCurves, LossMaps
-
-        The default behavior is to create a loss curve and loss maps
-        output.
-
-        :returns:
-            An instance of
-            :class:`openquake.engine.calculators.risk.writers.OutputDict`
-        """
-
-        ret = writers.OutputDict()
-
-        job = self.job
-
-        for loss_type in models.loss_types(self.risk_models):
-            # add loss curve containers
-            ret.set(models.LossCurve.objects.create(
-                hazard_output_id=hazard_output.id,
-                loss_type=loss_type,
-                output=models.Output.objects.create_output(
-                    job,
-                    "loss curves. type=%s, hazard=%s" % (
-                        loss_type, hazard_output.id),
-                    "loss_curve")))
-
-            # then loss maps containers
-            for poe in self.rc.conditional_loss_poes or []:
-                ret.set(models.LossMap.objects.create(
-                        hazard_output_id=hazard_output.id,
-                        loss_type=loss_type,
-                        output=models.Output.objects.create_output(
-                            self.job,
-                            "loss maps. type=%s poe=%s, hazard=%s" % (
-                                loss_type, poe, hazard_output.id),
-                            "loss_map"),
-                        poe=poe))
-        return ret
-
-    def create_statistical_outputs(self):
-        """
-        Create mean/quantile `models.LossCurve`/`LossMap` containers.
-
-        :returns:
-           an instance of
-           :class:`openquake.engine.calculators.risk.writers.OutputDict`
-        """
-
-        ret = writers.OutputDict()
-
-        if len(self.rc.hazard_outputs()) < 2:
-            return ret
-
-        for loss_type in models.loss_types(self.risk_models):
-            ret.set(models.LossCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job=self.job,
-                    display_name='mean loss curves. type=%s' % loss_type,
-                    output_type='loss_curve'),
-                statistics='mean',
-                loss_type=loss_type))
-
-            for quantile in self.rc.quantile_loss_curves or []:
-                name = 'quantile(%s) loss curves. type=%s' % (
-                    quantile, loss_type)
-                ret.set(models.LossCurve.objects.create(
-                    output=models.Output.objects.create_output(
-                        job=self.job,
-                        display_name=name,
-                        output_type='loss_curve'),
-                    statistics='quantile',
-                    quantile=quantile,
-                    loss_type=loss_type))
-
-            for poe in self.rc.conditional_loss_poes or []:
-                ret.set(models.LossMap.objects.create(
-                    output=models.Output.objects.create_output(
-                        job=self.job,
-                        display_name="mean loss map type=%s poe=%.4f" % (
-                            loss_type, poe),
-                        output_type="loss_map"),
-                    statistics="mean",
-                    loss_type=loss_type,
-                    poe=poe))
-
-            for quantile in self.rc.quantile_loss_curves or []:
-                for poe in self.rc.conditional_loss_poes or []:
-                    name = "quantile(%.4f) loss map type=%s poe=%.4f" % (
-                        quantile, loss_type, poe)
-                    ret.set(models.LossMap.objects.create(
-                        output=models.Output.objects.create_output(
-                            job=self.job,
-                            display_name=name,
-                            output_type="loss_map"),
-                        statistics="quantile",
-                        quantile=quantile,
-                        loss_type=loss_type,
-                        poe=poe))
-
-        return ret
 
 
 class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
