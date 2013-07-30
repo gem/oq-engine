@@ -328,3 +328,235 @@ class OutputDict(dict):
                 key, None) is None, "OutputDict can not be updated"
 
         self[key] = container.id
+
+
+class OutputBuilder(object):
+    def __init__(self, calculator):
+        self.calc = calculator
+
+    def statistical_outputs(self, _loss_type):
+        return OutputDict()
+
+    def individual_outputs(self, _loss_type, _hazard_output):
+        return OutputDict()
+
+
+def combine_builders(builders):
+    outputs = OutputDict()
+
+    if not builders:
+        return outputs
+
+    a_builder = builders[0]
+
+    loss_types = models.loss_types(a_builder.calc.risk_models)
+    hazard_outputs = a_builder.calc.rc.hazard_outputs()
+
+    for builder in builders:
+        for loss_type in loss_types:
+
+            if len(hazard_outputs) > 1:
+                outputs.update(builder.statistical_outputs(loss_type))
+
+            for hazard in hazard_outputs:
+                outputs.update(builder.individual_outputs(loss_type, hazard))
+
+    return outputs
+
+
+class LossCurveMapBuilder(OutputBuilder):
+    def individual_outputs(self, loss_type, hazard_output):
+        ret = OutputDict()
+
+        ret.set(models.LossCurve.objects.create(
+                hazard_output_id=hazard_output.id,
+                loss_type=loss_type,
+                output=models.Output.objects.create_output(
+                    self.calc.job,
+                    "loss curves. type=%s, hazard=%s" % (
+                        loss_type, hazard_output.id),
+                    "loss_curve")))
+
+        for poe in self.calc.rc.conditional_loss_poes or []:
+            ret.set(models.LossMap.objects.create(
+                    hazard_output_id=hazard_output.id,
+                    loss_type=loss_type,
+                    output=models.Output.objects.create_output(
+                        self.calc.job,
+                        "loss maps. type=%s poe=%s, hazard=%s" % (
+                            loss_type, poe, hazard_output.id),
+                        "loss_map"),
+                    poe=poe))
+
+        return ret
+
+    def statistical_outputs(self, loss_type):
+        ret = OutputDict()
+
+        ret.set(models.LossCurve.objects.create(
+            output=models.Output.objects.create_output(
+                job=self.calc.job,
+                display_name='mean loss curves. type=%s' % loss_type,
+                output_type='loss_curve'),
+            statistics='mean',
+            loss_type=loss_type))
+
+        for quantile in self.calc.rc.quantile_loss_curves or []:
+            name = 'quantile(%s) loss curves. type=%s' % (
+                quantile, loss_type)
+            ret.set(models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.calc.job,
+                    display_name=name,
+                    output_type='loss_curve'),
+                statistics='quantile',
+                quantile=quantile,
+                loss_type=loss_type))
+
+        for poe in self.calc.rc.conditional_loss_poes or []:
+            ret.set(models.LossMap.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.calc.job,
+                    display_name="mean loss map type=%s poe=%.4f" % (
+                        loss_type, poe),
+                    output_type="loss_map"),
+                statistics="mean",
+                loss_type=loss_type,
+                poe=poe))
+
+        for quantile in self.calc.rc.quantile_loss_curves or []:
+            for poe in self.calc.rc.conditional_loss_poes or []:
+                name = "quantile(%.4f) loss map type=%s poe=%.4f" % (
+                    quantile, loss_type, poe)
+                ret.set(models.LossMap.objects.create(
+                    output=models.Output.objects.create_output(
+                        job=self.calc.job,
+                        display_name=name,
+                        output_type="loss_map"),
+                    statistics="quantile",
+                    quantile=quantile,
+                    loss_type=loss_type,
+                    poe=poe))
+
+        return ret
+
+
+class LossMapBuilder(OutputBuilder):
+    def individual_outputs(self, loss_type, hazard_output):
+        ret = OutputDict()
+
+        if self.calc.rc.insured_losses:
+            ret.set(models.LossMap.objects.create(
+                output=models.Output.objects.create_output(
+                    self.calc.job, "Insured Loss Map", "loss_map"),
+                hazard_output=hazard_output,
+                loss_type=loss_type,
+                insured=True))
+
+        ret.set(models.LossMap.objects.create(
+                output=models.Output.objects.create_output(
+                    self.calc.job, "Loss Map", "loss_map"),
+                hazard_output=hazard_output,
+                loss_type=loss_type))
+
+
+class BCRMapBuilder(OutputBuilder):
+    def individual_outputs(self, loss_type, hazard_output):
+        ret = OutputDict()
+        name = "BCR Map. type=%s hazard=%s" % (loss_type, hazard_output)
+        ret.set(models.BCRDistribution.objects.create(
+                hazard_output=hazard_output,
+                loss_type=loss_type,
+                output=models.Output.objects.create_output(
+                    self.calc.job, name, "bcr_distribution")))
+        return ret
+
+
+class InsuredLossCurveBuilder(OutputBuilder):
+    def individual_outputs(self, loss_type, hazard_output):
+        outputs = OutputDict()
+
+        if loss_type != "fatalities":
+            if self.calc.rc.insured_losses:
+                name = "insured loss curves. type=%s hazard %s" % (
+                    loss_type, hazard_output),
+                outputs.set(
+                    models.LossCurve.objects.create(
+                        insured=True,
+                        loss_type=loss_type,
+                        hazard_output=hazard_output,
+                        output=models.Output.objects.create_output(
+                            self.calc.job, name, "loss_curve")))
+        return outputs
+
+
+class LossFractionBuilder(OutputBuilder):
+    def individual_outputs(self, loss_type, hazard_output):
+        outputs = OutputDict()
+
+        variables = ["magnitude_distance", "coordinates"]
+
+        if self.rc.sites_disagg:
+            for variable in variables:
+                name = ("loss fractions. type=%s variable=%s "
+                        "hazard=%s" % (loss_type, hazard_output, variable))
+                outputs.set(
+                    models.LossFraction.objects.create(
+                        output=models.Output.objects.create_output(
+                            self.calc.job, name, "loss_fraction"),
+                        hazard_output=hazard_output,
+                        loss_type=loss_type,
+                        variable=variable))
+
+        return outputs
+
+
+class ConditionalLossFractionBuilder(OutputBuilder):
+    def statistical_outputs(self, loss_type):
+        containers = OutputDict()
+
+        for poe in self.calc.rc.poes_disagg or []:
+            name = "mean loss fractions. type=%s poe=%.4f" % (
+                loss_type, poe)
+            containers.set(models.LossFraction.objects.create(
+                variable="taxonomy",
+                poe=poe,
+                loss_type=loss_type,
+                output=models.Output.objects.create_output(
+                    job=self.calc.job,
+                    display_name=name,
+                    output_type="loss_fraction"),
+                statistics="mean"))
+
+        for quantile in self.calc.rc.quantile_loss_curves or []:
+            for poe in self.calc.rc.poes_disagg or []:
+                name = ("quantile(%.4f) loss fractions "
+                        "loss_type=%s poe=%.4f" % (
+                            quantile, loss_type, poe))
+                containers.set(models.LossFraction.objects.create(
+                    variable="taxonomy",
+                    poe=poe,
+                    loss_type=loss_type,
+                    output=models.Output.objects.create_output(
+                        job=self.calc.job,
+                        display_name=name,
+                        output_type="loss_fraction"),
+                    statistics="quantile",
+                    quantile=quantile))
+
+    def individual_outputs(self, loss_type, hazard_output):
+        containers = OutputDict()
+
+        for poe in self.rc.poes_disagg or []:
+            containers.set(models.LossFraction.objects.create(
+                hazard_output_id=hazard_output.id,
+                variable="taxonomy",
+                loss_type=loss_type,
+                output=models.Output.objects.create_output(
+                    self.calc.job,
+                    "loss fractions. type=%s poe=%s hazard=%s" % (
+                        loss_type, poe, hazard_output.id),
+                    "loss_fraction"),
+                poe=poe))
+
+        return containers

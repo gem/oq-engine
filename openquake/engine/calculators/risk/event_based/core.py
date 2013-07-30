@@ -236,9 +236,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         validation.RequireEventBasedHazard,
         validation.ExposureHasInsuranceBounds]
 
+    output_builders = [writers.LossCurveMapBuilder,
+                       writers.InsuredLossCurveBuilder,
+                       writers.LossFractionBuilder]
+
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)
-        self.event_loss_tables = dict()
+        self.event_loss_tables = collections.defaultdict(collections.Counter)
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
 
@@ -378,51 +382,3 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             mag_bin_width=self.rc.mag_bin_width,
             distance_bin_width=self.rc.distance_bin_width,
             coordinate_bin_width=self.rc.coordinate_bin_width)
-
-    def create_outputs(self, hazard_output):
-        """
-        Add Insured Curve output containers
-        """
-        # includes loss curves and loss maps
-        outputs = super(EventBasedRiskCalculator, self).create_outputs(
-            hazard_output)
-
-        for loss_type in models.loss_types(self.risk_models):
-            if loss_type != "fatalities":
-                if self.rc.insured_losses:
-                    name = "insured loss curves. type=%s hazard %s" % (
-                        loss_type, hazard_output),
-                    outputs.set(
-                        models.LossCurve.objects.create(
-                            insured=True,
-                            loss_type=loss_type,
-                            hazard_output=hazard_output,
-                            output=models.Output.objects.create_output(
-                                self.job, name, "loss_curve")))
-
-            if self.rc.sites_disagg:
-                name = ("loss fractions. type=%s variable=magnitude_distance "
-                        "hazard=%s" % (loss_type, hazard_output))
-                outputs.set(
-                    models.LossFraction.objects.create(
-                        output=models.Output.objects.create_output(
-                            self.job, name, "loss_fraction"),
-                        hazard_output=hazard_output,
-                        loss_type=loss_type,
-                        variable="magnitude_distance"))
-                name = ("loss fractions. type=%s variable=coordinates "
-                        "hazard=%s" % (loss_type, hazard_output))
-                outputs.set(models.LossFraction.objects.create(
-                    output=models.Output.objects.create_output(
-                        self.job, name, "loss_fraction"),
-                    hazard_output=hazard_output,
-                    loss_type=loss_type,
-                    variable="coordinate"))
-
-        return outputs
-
-    def create_statistical_outputs(self):
-        for loss_type in models.loss_types(self.risk_models):
-            self.event_loss_tables[loss_type] = collections.Counter()
-        return super(
-            EventBasedRiskCalculator, self).create_statistical_outputs()
