@@ -21,6 +21,7 @@
 Custom validation module for risk calculators
 """
 
+from django import db
 from openquake.engine import logs
 from openquake.engine.db import models
 
@@ -115,3 +116,78 @@ class NoRiskModels(Validator):
         if not self.calc.risk_models:
             return 'At least one risk model of type %s must be defined' % (
                 models.LOSS_TYPES)
+
+
+class RequireClassicalHazard(Validator):
+    """
+    Checks that the given hazard has hazard curves
+    """
+    def get_errors(self):
+        rc = self.calc.rc
+
+        if rc.hazard_calculation:
+            if rc.hazard_calculation.calculation_mode != 'classical':
+                return ("The provided hazard calculation ID "
+                        "is not a classical calculation")
+        elif not rc.hazard_output.is_hazard_curve():
+            return "The provided hazard output is not an hazard curve"
+
+
+class RequireScenarioHazard(Validator):
+    """
+    Checks that the given hazard has ground motion fields got from a
+    scenario hazard calculation
+    """
+    def get_errors(self):
+        rc = self.calc.rc
+
+        if rc.hazard_calculation:
+            if rc.hazard_calculation.calculation_mode != "scenario":
+                return ("The provided hazard calculation ID "
+                        "is not a scenario calculation")
+        elif not rc.hazard_output.output_type == "gmf_scenario":
+            return "The provided hazard is not a gmf scenario collection"
+
+
+class RequireEventBasedHazard(Validator):
+    """
+    Checks that the given hazard has ground motion fields (or
+    stochastic event set) got from a event based hazard calculation
+    """
+    def get_errors(self):
+        rc = self.calc.rc
+
+        if rc.hazard_calculation:
+            if rc.hazard_calculation.calculation_mode != "event_based":
+                return ("The provided hazard calculation ID "
+                        "is not a scenario calculation")
+        elif not rc.hazard_output.output_type in ["gmf", "ses"]:
+            return "The provided hazard is not a gmf scenario collection"
+
+
+class ExposureHasInsuranceBounds(Validator):
+    """
+    If insured losses are required we check for the presence of
+    the deductible and insurance limit
+    """
+
+    def get_errors(self):
+        if self.calc.rc.insured_losses:
+            queryset = self.calc.rc.exposure_model.exposuredata_set.filter(
+                (db.models.Q(cost__deductible_absolute__isnull=True) |
+                 db.models.Q(cost__insurance_limit_absolute__isnull=True)))
+            if queryset.exists():
+                logs.LOG.error(
+                    "missing insured limits in exposure for assets %s" % (
+                        queryset.all()))
+                return "Deductible or insured limit missing in exposure"
+
+
+class ExposureHasRetrofittedCosts(Validator):
+    """
+    Check that the retrofitted value is present in the exposure
+    """
+    def get_errors(self):
+        if (self.calc.rc.exposure_model.exposuredata_set.filter(
+                cost__converted_retrofitted_cost__isnull=True)).exists():
+            return "Some assets do not have retrofitted costs"

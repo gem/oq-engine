@@ -28,7 +28,7 @@ from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific, workflows
 
 from openquake.engine.calculators import post_processing
-from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.calculators.risk import base, hazard_getters, validation
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs, writer
@@ -231,6 +231,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     #: The core calculation celery task function
     core_calc_task = event_based
 
+    # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
+    validators = base.RiskCalculator.validators + [
+        validation.RequireEventBasedHazard,
+        validation.ExposureHasInsuranceBounds]
+
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)
         self.event_loss_tables = dict()
@@ -256,41 +261,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for loss_type in base.loss_types(self.risk_models):
             task_loss_table = message['event_loss_tables'][loss_type]
             self.event_loss_tables[loss_type] += task_loss_table
-
-    def validate_hazard(self):
-        """
-        Check that the given hazard comes from an event based calculation
-        """
-        super(EventBasedRiskCalculator, self).validate_hazard()
-        if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calculation_mode != "event_based":
-                raise RuntimeError(
-                    "The provided hazard calculation ID "
-                    "is not an event based calculation")
-        elif not self.rc.hazard_output.output_type in ["gmf", "ses"]:
-            raise RuntimeError(
-                "The provided hazard output is not a gmf collection")
-
-    def get_taxonomies(self):
-        """
-        If insured losses are required we check for the presence of
-        the deductible and insurance limit
-        """
-        taxonomies = super(EventBasedRiskCalculator, self).get_taxonomies()
-
-        assets_without_limits = (
-            self.rc.exposure_model.exposuredata_set.filter(
-                (db.models.Q(cost__deductible_absolute__isnull=True) |
-                 db.models.Q(cost__insurance_limit_absolute__isnull=True))))
-
-        if self.rc.insured_losses and assets_without_limits.exists():
-            raise RuntimeError(
-                "Deductible or insured limit missing in exposure for "
-                "some assets")
-
-        # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
-
-        return taxonomies
 
     def post_process(self):
         """
