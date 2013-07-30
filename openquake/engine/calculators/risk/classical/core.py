@@ -21,10 +21,10 @@ from openquake.risklib import workflows
 
 from django.db import transaction
 
-from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators import post_processing
-from openquake.engine.calculators.risk import base, hazard_getters, validation
+from openquake.engine.calculators.risk import (
+    base, hazard_getters, validation, writers)
 
 
 @base.risk_task
@@ -35,7 +35,7 @@ def classical(job_id, units, containers, params):
     :param int job_id:
       ID of the currently running job
     :param list units:
-      A list of :class:`openquake.risklib.workflow.CalculationUnit` instances
+      A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
     :param containers:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
@@ -160,6 +160,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
     validators = base.RiskCalculator.validators + [
         validation.RequireClassicalHazard]
+
+    output_builders = [writers.LossCurveMapBuilder,
+                       writers.ConditionalLossFractionBuilder]
 
     def calculation_unit(self, loss_type, assets):
         """
