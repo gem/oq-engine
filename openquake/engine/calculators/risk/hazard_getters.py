@@ -322,21 +322,27 @@ GROUP BY site_id ORDER BY site_id;
                 model = None
 
             with monitor.copy('getting ruptures'):
-                ruptures = models.SESRupture.objects.filter(
+                queryset = models.SESRupture.objects.filter(
                     ses__ses_collection=hazard_output).order_by(
                         'ses__ordinal', 'id')
-                r_objs = [r.rupture for r in ruptures]
 
-                r_seeds = [numpy.random.randint(0, models.MAX_SINT_32)
-                           for r in ruptures]
-                r_ids = [r.id for r in ruptures]
-
-                if any(r is "not computed" for r in r_objs):
+                if queryset.filter(rupture="not computed").exists():
                     msg = ("The stochastic event set has been computed with "
                            " a version of openquake engine too old. "
                            "Please, re-run your hazard")
                     logs.LOG.error(msg)
                     raise RuntimeError(msg)
+
+                r_ids = queryset.values_list('id', flat=True)
+
+                # using an iterator over ruptures to save memory
+                def ruptures():
+                    for r in queryset.iterator():
+                        yield r.rupture
+                r_objs = ruptures()
+
+                r_seeds = [numpy.random.randint(0, models.MAX_SINT_32)
+                           for r in r_ids]
 
             with monitor.copy('computing gmvs'):
                 all_assets, gmvs = GroundMotionValuesCalcGetter(
