@@ -331,7 +331,7 @@ GROUP BY site_id ORDER BY site_id;
                            for r in ruptures]
                 r_ids = [r.id for r in ruptures]
 
-                if any(map(lambda r: r is "not computed", r_objs)):
+                if any(r is "not computed" for r in r_objs):
                     msg = ("The stochastic event set has been computed with "
                            " a version of openquake engine too old. "
                            "Please, re-run your hazard")
@@ -473,10 +473,7 @@ class GroundMotionValuesCalcGetter(object):
         # convert the hazard lib site collection to engine one
         # that supports a fast __contains__ method and holds the site enhanced
         # by with ids
-        if sites_filtered.indices is not None:
-            sites_filtered = models.SiteCollection(
-                numpy.array(self.site_collection.sites)[
-                    sites_filtered.indices])
+        sites_filtered = self.site_collection.slice(sites_filtered.indices)
 
         # find the indices in the site collection
         site_ids_indexes = [self.sites_dict[s.id] for s in sites_filtered]
