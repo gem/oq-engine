@@ -123,7 +123,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     def task_completed_hook(self, message):
         aggregate_losses_dict = message.get('aggregate_losses')
 
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             aggregate_losses = aggregate_losses_dict.get(loss_type)
 
             if aggregate_losses is not None:
@@ -134,7 +134,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
         if self.rc.insured_losses:
             insured_losses_dict = message.get('insured_losses')
-            for loss_type in base.loss_types(self.risk_models):
+            for loss_type in models.loss_types(self.risk_models):
                 insured_losses = insured_losses_dict.get(
                     loss_type)
                 if insured_losses is not None:
@@ -198,7 +198,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         ret = writers.OutputDict()
 
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             if self.rc.insured_losses:
                 ret.set(models.LossMap.objects.create(
                     output=models.Output.objects.create_output(
