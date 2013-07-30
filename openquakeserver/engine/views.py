@@ -345,10 +345,10 @@ def _get_result(request, result_id, export_fn):
     resp_content = StringIO.StringIO()
     resp_content.writelines(content.buflist)
     del content
-    # rewind and prepare to throw the content back to the client
-    resp_content.seek(0)
 
     # TODO(LB): A possible necessary optimization--in the future--would be to
     # iteratively stream large files.
     # TODO(LB): Large files could pose a memory consumption problem.
-    return HttpResponse(resp_content.getvalue())
+    resp_value = resp_content.getvalue()
+    resp_content.close()
+    return HttpResponse(resp_value)
