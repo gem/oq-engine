@@ -258,7 +258,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         Updates the event loss table
         """
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             task_loss_table = message['event_loss_tables'][loss_type]
             self.event_loss_tables[loss_type] += task_loss_table
 
@@ -387,7 +387,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         outputs = super(EventBasedRiskCalculator, self).create_outputs(
             hazard_output)
 
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             if loss_type != "fatalities":
                 if self.rc.insured_losses:
                     name = "insured loss curves. type=%s hazard %s" % (
@@ -422,7 +422,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         return outputs
 
     def create_statistical_outputs(self):
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             self.event_loss_tables[loss_type] = collections.Counter()
         return super(
             EventBasedRiskCalculator, self).create_statistical_outputs()

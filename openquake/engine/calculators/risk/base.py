@@ -70,6 +70,15 @@ class RiskCalculator(base.Calculator):
         with logs.tracing('parse risk models'):
             self.risk_models = self.get_risk_models()
 
+            # consider only the taxonomies in the risk models if
+            # taxonomies_from_model has been set to True in the
+            # job.ini
+            if self.rc.taxonomies_from_model:
+                self.taxonomies_asset_count = dict(
+                    (t, count)
+                    for t, count in self.taxonomies_asset_count.items()
+                    if t in self.risk_models)
+
         self._initialize_progress(sum(self.taxonomies_asset_count.values()))
 
         for validator_class in self.validators:
