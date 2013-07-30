@@ -221,6 +221,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                 dmg_state=dstate, lsi=lsi)
         self.damage_state_ids = [d.id for d in models.DmgState.objects.filter(
             risk_calculation=self.rc).order_by('lsi')]
+        self.validate_risk_models(risk_models)
         return risk_models
 
     def parse_fragility_model(self):
