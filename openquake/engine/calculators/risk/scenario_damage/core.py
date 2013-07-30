@@ -20,17 +20,12 @@
 Core functionality for the scenario_damage risk calculator.
 """
 
-import StringIO
-import collections
-
 import numpy
 
 from django import db
 
-from openquake.nrmllib.risk import parsers
-from openquake.risklib import scientific, calculators, workflows
-
-from openquake.engine.calculators.risk import base, hazard_getters, writers
+from openquake.engine.calculators.risk import (
+    base, hazard_getters, writers, validation, loaders)
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
@@ -109,6 +104,8 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
     #: The core calculation celery task function
     core_calc_task = scenario_damage
+    validators = base.BaseRiskCalculator.validators + [
+        validation.RequireScenarioHazard]
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
@@ -117,22 +114,6 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         # becomes available, as computed by the workers
         self.ddpt = {}
         self.damage_state_ids = None
-
-    def validate_hazard(self):
-        """
-        Override default behavior to add an additional validation.
-        Check that the given hazard input is of the proper type.
-        """
-        if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calculation_mode != "scenario":
-                raise RuntimeError(
-                    "The provided hazard calculation ID "
-                    "is not a scenario calculation")
-        elif not self.rc.hazard_output.output_type == "gmf_scenario":
-            raise RuntimeError(
-                "The provided hazard output is not a gmf scenario collection")
-
-        super(ScenarioDamageRiskCalculator, self).validate_hazard()
 
     def calculation_unit(self, loss_type, assets):
         """
@@ -209,7 +190,8 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         Set the attributes fragility_model, fragility_functions, damage_states
         and manage the case of missing taxonomies.
         """
-        fm, taxonomy_imt, damage_states = self.parse_fragility_model()
+        fm, taxonomy_imt, damage_states = loaders.fragility(
+            self.rc.inputs.get(input_type='fragility'))
         risk_models = dict([(tax,
                              dict(
                                  damage=base.RiskModel(
@@ -221,44 +203,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                 dmg_state=dstate, lsi=lsi)
         self.damage_state_ids = [d.id for d in models.DmgState.objects.filter(
             risk_calculation=self.rc).order_by('lsi')]
-        self.validate_risk_models(risk_models)
         return risk_models
-
-    def parse_fragility_model(self):
-        """
-        Parse the fragility XML file and return fragility_model,
-        fragility_functions, and damage_states for usage in get_risk_models.
-        """
-        content = StringIO.StringIO(
-            self.rc.inputs.get(
-                input_type='fragility').model_content.raw_content_ascii)
-        iterparse = iter(parsers.FragilityModelParser(content))
-        fmt, limit_states = iterparse.next()
-
-        damage_states = ['no_damage'] + limit_states
-        fragility_functions = collections.defaultdict(dict)
-
-        taxonomy_imt = dict()
-        for taxonomy, iml, params, no_damage_limit in iterparse:
-            taxonomy_imt[taxonomy] = iml['IMT']
-
-            if fmt == "discrete":
-                if no_damage_limit is None:
-                    fragility_functions[taxonomy] = [
-                        scientific.FragilityFunctionDiscrete(
-                            iml['imls'], poes, iml['imls'][0])
-                        for poes in params]
-                else:
-                    fragility_functions[taxonomy] = [
-                        scientific.FragilityFunctionDiscrete(
-                            [no_damage_limit] + iml['imls'], [0.0] + poes,
-                            no_damage_limit)
-                        for poes in params]
-            else:
-                fragility_functions[taxonomy] = [
-                    scientific.FragilityFunctionContinuous(*mean_stddev)
-                    for mean_stddev in params]
-        return fragility_functions, taxonomy_imt, damage_states
 
     def create_statistical_outputs(self):
         """

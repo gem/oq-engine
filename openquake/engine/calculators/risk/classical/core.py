@@ -24,7 +24,7 @@ from django.db import transaction
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators import post_processing
-from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.calculators.risk import base, hazard_getters, validation
 
 
 @base.risk_task
@@ -158,6 +158,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     #: celery task
     core_calc_task = classical
 
+    validators = base.RiskCalculator.validators + [
+        validation.RequireClassicalHazard]
+
     def calculation_unit(self, loss_type, assets):
         """
         :returns:
@@ -182,20 +185,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
-
-    def validate_hazard(self):
-        """
-        Checks that the given hazard has hazard curves
-        """
-        super(ClassicalRiskCalculator, self).validate_hazard()
-        if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calculation_mode != 'classical':
-                raise RuntimeError(
-                    "The provided hazard calculation ID "
-                    "is not a classical calculation")
-        elif not self.rc.hazard_output.is_hazard_curve():
-            raise RuntimeError(
-                "The provided hazard output is not an hazard curve")
 
     def create_outputs(self, hazard_output):
         """
