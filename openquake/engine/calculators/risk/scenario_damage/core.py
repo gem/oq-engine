@@ -190,37 +190,13 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
     def get_risk_models(self, retrofitted=False):
         """
-        Set the attributes fragility_model, fragility_functions, damage_states
-        and manage the case of missing taxonomies.
+        Load fragility model and store damage states
         """
-        fm, taxonomy_imt, damage_states = loaders.fragility(
-            self.rc.inputs.get(input_type='fragility'))
-        risk_models = dict([(tax,
-                             dict(
-                                 damage=models.RiskModel(
-                                     taxonomy_imt[tax], None, ffs)))
-                            for tax, ffs in fm.items()])
-        for lsi, dstate in enumerate(damage_states):
-            models.DmgState.objects.get_or_create(
-                risk_calculation=self.job.risk_calculation,
-                dmg_state=dstate, lsi=lsi)
-        self.damage_state_ids = [d.id for d in models.DmgState.objects.filter(
-            risk_calculation=self.rc).order_by('lsi')]
+        risk_models, damage_state_ids = loaders.fragility(
+            self.rc, self.rc.inputs.get(input_type='fragility'))
+
+        self.damage_state_ids = damage_state_ids
         return risk_models
-
-    def create_statistical_outputs(self):
-        """
-        Override default behaviour as scenario damage calculator does
-        not use output containers"
-        """
-        return writers.OutputDict()
-
-    def create_outputs(self, _ho):
-        """
-        Override default behaviour as scenario damage calculator does
-        not use output containers"
-        """
-        return writers.OutputDict()
 
     @property
     def calculator_parameters(self):

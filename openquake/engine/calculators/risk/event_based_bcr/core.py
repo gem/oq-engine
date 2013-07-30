@@ -88,6 +88,8 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     validators = event_based.EventBasedRiskCalculator.validators + [
         validation.ExposureHasRetrofittedCosts]
 
+    output_builders = [writers.BCRMapBuilder]
+
     def __init__(self, job):
         super(EventBasedBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
@@ -138,32 +140,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         """
         No need to update event loss tables in the BCR calculator
         """
-
-    def create_outputs(self, hazard_output):
-        """
-        Create BCR Distribution output container, i.e. a
-        :class:`openquake.engine.db.models.BCRDistribution` instance and its
-        :class:`openquake.engine.db.models.Output` container.
-
-        :returns: an instance of OutputDict.
-        """
-        ret = writers.OutputDict()
-        for loss_type in models.loss_types(self.risk_models):
-            name = "BCR Map. type=%s hazard=%s" % (loss_type, hazard_output)
-            ret.set(models.BCRDistribution.objects.create(
-                    hazard_output=hazard_output,
-                    loss_type=loss_type,
-                    output=models.Output.objects.create_output(
-                        self.job, name, "bcr_distribution")))
-
-        return ret
-
-    def create_statistical_outputs(self):
-        """
-        Override default behaviour as BCR and scenario calculators do
-        not compute mean/quantiles outputs"
-        """
-        return writers.OutputDict()
 
     def pre_execute(self):
         """

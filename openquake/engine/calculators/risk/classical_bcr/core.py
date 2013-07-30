@@ -90,6 +90,8 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
     validators = classical.ClassicalRiskCalculator.validators + [
         validation.ExposureHasRetrofittedCosts]
 
+    output_builders = [writers.BCRMapBuilder]
+
     def __init__(self, job):
         super(ClassicalBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
@@ -118,32 +120,6 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
                     assets,
                     self.rc.best_maximum_distance,
                     model_retro.imt)))
-
-    def create_outputs(self, hazard_output):
-        """
-        Create BCR Distribution output container, i.e. a
-        :class:`openquake.engine.db.models.BCRDistribution` instance and its
-        :class:`openquake.engine.db.models.Output` container.
-
-        :returns: an instance of OutputDict
-        """
-        ret = writers.OutputDict()
-
-        for loss_type in models.loss_types(self.risk_models):
-            name = "BCR Map. type=%s hazard=%s" % (loss_type, hazard_output)
-            ret.set(models.BCRDistribution.objects.create(
-                    hazard_output=hazard_output,
-                    loss_type=loss_type,
-                    output=models.Output.objects.create_output(
-                        self.job, name, "bcr_distribution")))
-        return ret
-
-    def create_statistical_outputs(self):
-        """
-        Override default behaviour as BCR and scenario calculators do
-        not compute mean/quantiles outputs"
-        """
-        return writers.OutputDict()
 
     def pre_execute(self):
         """
