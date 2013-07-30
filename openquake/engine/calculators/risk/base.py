@@ -19,19 +19,12 @@
 
 from functools import wraps
 import collections
-import StringIO
-
-from django.core.exceptions import ObjectDoesNotExist
-
-from openquake.risklib import scientific
-from openquake.nrmllib.risk import parsers
 
 from openquake.engine import logs, export
 from openquake.engine.utils import config, stats, tasks
 from openquake.engine.db import models
 from openquake.engine.calculators import base
-from openquake.engine.calculators.risk import writers
-from openquake.engine.input.exposure import ExposureDBWriter
+from openquake.engine.calculators.risk import writers, validation, loaders
 
 
 class RiskCalculator(base.Calculator):
@@ -40,7 +33,7 @@ class RiskCalculator(base.Calculator):
     functionality, including initialization procedures and the core
     distribution/execution logic.
 
-    :attribute dict taxonomies:
+    :attribute dict taxonomies_asset_count:
         A dictionary mapping each taxonomy with the number of assets the
         calculator will work on. Assets are extracted from the exposure input
         and filtered according to the `RiskCalculation.region_constraint`.
@@ -49,88 +42,42 @@ class RiskCalculator(base.Calculator):
         A nested dict taxonomy -> loss type -> instances of `RiskModel`.
     """
 
+    # a list of :class:`openquake.engine.calculators.risk.validation` classes
+    validators = [validation.HazardIMT, validation.EmptyExposure,
+                  validation.OrphanTaxonomies, validation.ExposureLossTypes,
+                  validation.NoRiskModels]
+
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
 
-        # FIXME(lp). taxonomy_asset_count would be a better name
-        self.taxonomies = None
+        self.taxonomies_asset_count = None
         self.risk_models = None
 
     def pre_execute(self):
         """
         In this phase, the general workflow is:
-            1. Parse and validate the exposure to get the taxonomies
-            2. Parse and validate the available risk models
-            3. Validate the given hazard
-            4. Initialize progress counters
-            5. Update the job stats
+            1. Parse the exposure to get the taxonomies
+            2. Parse the available risk models
+            3. Initialize progress counters
+            4. Validate exposure and risk models
         """
-
-        # reload the risk calculation to avoid getting raw string
-        # values instead of arrays
-        self.job.risk_calculation = models.RiskCalculation.objects.get(
-            pk=self.rc.pk)
-
-        self.taxonomies = self.get_taxonomies()
-
-        self.validate_hazard()
+        with logs.tracing('get exposure'):
+            self.taxonomies_asset_count = (
+                self.rc.exposure_model or loaders.exposure(
+                    self.rc.get_exposure_input()).taxonomies_in(
+                        self.rc.region_constraint))
 
         with logs.tracing('parse risk models'):
             self.risk_models = self.get_risk_models()
-            self.check_taxonomies(self.risk_models)
-            self.check_imts(required_imts(self.risk_models))
 
-        assets_num = sum(self.taxonomies.values())
-        self._initialize_progress(assets_num)
+        self._initialize_progress(sum(self.taxonomies_asset_count.values()))
 
-    def validate_hazard(self):
-        """
-        Calculators must override this to provide additional
-        validation.
-
-        :raises:
-           `ValueError` if an Hazard Calculation has been passed
-           but it does not exist
-        """
-        # If an Hazard Calculation ID has been given in input, check
-        # that it exists
-        try:
-            self.rc.hazard_calculation
-        except ObjectDoesNotExist:
-            raise RuntimeError(
-                "The provided hazard calculation ID does not exist")
-
-    def get_taxonomies(self):
-        """
-          Parse the exposure input and store the exposure data (if not
-          already present). Then, check if the exposure filtered with
-          region_constraint is not empty.
-
-          :returns:
-              a dictionary mapping taxonomy string to the number of
-              assets in that taxonomy
-        """
-        # if we are not going to use a preloaded exposure, we need to
-        # parse and store the exposure from the given xml file
-        if self.rc.exposure_input is None:
-            queryset = self.rc.inputs.filter(input_type='exposure')
-            if queryset.exists():
-                with logs.tracing('store exposure'):
-                    exposure = self._store_exposure(queryset.all()[0])
-            else:
-                raise ValueError("No exposure model given in input")
-        else:  # exposure has been preloaded. Get it from the rc
-            exposure = self.rc.exposure_model
-
-        taxonomies = exposure.taxonomies_in(self.rc.region_constraint)
-
-        if not sum(taxonomies.values()):
-            raise ValueError(
-                ['Region of interest is not covered by the exposure input.'
-                 ' This configuration is invalid. '
-                 ' Change the region constraint input or use a proper '
-                 ' exposure file'])
-        return taxonomies
+        for validator_class in self.validators:
+            validator = validator_class(self)
+            errors = validator.get_errors()
+            if errors:
+                raise ValueError("""Problems in calculator configuration:
+                                 %s""" % errors)
 
     def block_size(self):
         """
@@ -143,7 +90,7 @@ class RiskCalculator(base.Calculator):
         Number of tasks generated by the task_arg_gen
         """
         num_tasks = 0
-        for num_assets in self.taxonomies.values():
+        for num_assets in self.taxonomies_asset_count.values():
             n, r = divmod(num_assets, block_size)
             if r:
                 n += 1
@@ -183,7 +130,7 @@ class RiskCalculator(base.Calculator):
             output_containers.update(self.create_outputs(hazard))
 
         num_tasks = 0
-        for taxonomy, assets_nr in self.taxonomies.items():
+        for taxonomy, assets_nr in self.taxonomies_asset_count.items():
             asset_offsets = range(0, assets_nr, block_size)
 
             for offset in asset_offsets:
@@ -193,7 +140,7 @@ class RiskCalculator(base.Calculator):
 
                 calculation_units = [
                     self.calculation_unit(loss_type, assets)
-                    for loss_type in loss_types(self.risk_models)]
+                    for loss_type in models.loss_types(self.risk_models)]
 
                 num_tasks += 1
                 yield [self.job.id,
@@ -249,29 +196,6 @@ class RiskCalculator(base.Calculator):
         """
         return []
 
-    def _store_exposure(self, exposure_model_input):
-        """
-        Load exposure assets and write them to database.
-
-        :param exposure_model_input: a
-        :class:`openquake.engine.db.models.Input` object with input
-        type `exposure`
-        """
-
-        # If this was an existing model, it was already parsed and should be in
-        # the DB.
-        if models.ExposureModel.objects.filter(
-                input=exposure_model_input).exists():
-            logs.LOG.debug("skipping storing exposure as an input model "
-                           "was already present")
-            return exposure_model_input.exposuremodel
-
-        content = StringIO.StringIO(
-            exposure_model_input.model_content.raw_content_ascii)
-        ExposureDBWriter(exposure_model_input).serialize(
-            parsers.ExposureModelParser(content))
-        return exposure_model_input.exposuremodel
-
     def _initialize_progress(self, total):
         """Record the total/completed number of work items.
 
@@ -295,162 +219,17 @@ class RiskCalculator(base.Calculator):
         then set the `risk_models` attribute.
 
         :param bool retrofitted:
-            True if retrofitted models should be set
+            True if retrofitted models should be get
         :returns:
-            all the intensity measure types required by the risk models
-        :raises:
-            * `ValueError` if no models can be found
-            * `ValueError` if the exposure does not provide the costs needed
-            by the available loss types in the risk models
+            A nested dict taxonomy -> loss type -> instances of `RiskModel`.
         """
         risk_models = collections.defaultdict(dict)
 
-        for loss_type in models.LOSS_TYPES:
-            if loss_type == "fatalities":
-                cost_type = "occupants"
-            else:
-                cost_type = loss_type
-
-            vfs = self.get_vulnerability_model(cost_type, retrofitted)
-            for taxonomy, model in vfs.items():
+        for v_input, loss_type in self.rc.vulnerability_inputs(retrofitted):
+            for taxonomy, model in loaders.vulnerability(v_input):
                 risk_models[taxonomy][loss_type] = model
 
-            if vfs:
-                if loss_type != "fatalities":
-                    if not self.rc.exposure_model.exposuredata_set.filter(
-                            cost__cost_type__name=cost_type).exists():
-                        raise ValueError(
-                            "Invalid exposure "
-                            "for computing loss type %s. " % loss_type)
-                else:
-                    if self.rc.exposure_model.missing_occupants():
-                        raise ValueError("Invalid exposure "
-                                         "for computing occupancy losses.")
-
-        if not risk_models:
-            raise ValueError(
-                'At least one risk model of type %s must be defined' % (
-                    models.LOSS_TYPES))
         return risk_models
-
-    def check_imts(self, model_imts):
-        """
-        Raise a ValueError if no hazard exists in any of the given
-        intensity measure types
-
-        :param model_imts:
-           an iterable of intensity measure types in long form string.
-        """
-        imts = self.hc.get_imts()
-        imts = sorted(imts)
-
-        # check that the hazard data have all the imts needed by the
-        # risk calculation
-        missing = set(model_imts) - set(imts)
-        missing = sorted(list(missing))
-
-        if missing:
-            raise ValueError(
-                "There is no hazard output for: %s. "
-                "The available IMTs are: %s." % (", ".join(missing),
-                                                 ", ".join(imts)))
-
-    def check_taxonomies(self, taxonomies):
-        """
-        If the model has less taxonomies than the exposure raises an
-        error unless the parameter ``taxonomies_from_model`` is set.
-
-        :param taxonomies:
-            Taxonomies coming from the fragility/vulnerability model
-        """
-        orphans = set(self.taxonomies) - set(taxonomies)
-        if orphans:
-            msg = ('The following taxonomies are in the exposure model '
-                   'but not in the risk model: %s' % sorted(orphans))
-            if self.rc.taxonomies_from_model:
-                # only consider the taxonomies in the fragility model
-                self.taxonomies = dict((t, self.taxonomies[t])
-                                       for t in self.taxonomies
-                                       if t in taxonomies)
-                logs.LOG.warn(msg)
-            else:
-                # all taxonomies in the exposure must be covered
-                raise RuntimeError(msg)
-
-    def get_vulnerability_model(self, cost_type, retrofitted=False):
-        """
-        Load and parse the vulnerability model input associated with this
-        calculation.
-
-        :param str cost_type:
-            any value that has a corresponding CostType instance in the
-            current calculation
-        :param bool retrofitted:
-            `True` if the retrofitted model is going to be parsed
-
-        :returns:
-            a dictionary mapping each taxonomy to a :class:`RiskModel` instance
-        """
-
-        if retrofitted:
-            input_type = "vulnerability_retrofitted"
-        else:
-            input_type = "vulnerability"
-
-        input_type = "%s_%s" % (cost_type, input_type)
-
-        queryset = self.rc.inputs.filter(input_type=input_type)
-        if not queryset.exists():
-            return {}
-        else:
-            model = queryset[0]
-
-        content = StringIO.StringIO(model.model_content.raw_content_ascii)
-
-        return self.parse_vulnerability_model(content)
-
-    def parse_vulnerability_model(self, vuln_content):
-        """
-        :param vuln_content:
-            File-like object containg the vulnerability model XML.
-        :returns:
-            a `dict` of `RiskModel` keyed by taxonomy
-        :raises:
-            * `ValueError` if validation of any vulnerability function fails
-        """
-        vfs = dict()
-
-        for record in parsers.VulnerabilityModelParser(vuln_content):
-            taxonomy = record['ID']
-            imt = record['IMT']
-            loss_ratios = record['lossRatio']
-            covs = record['coefficientsVariation']
-            distribution = record['probabilisticDistribution']
-
-            if taxonomy in vfs:
-                raise ValueError("Error creating vulnerability function for "
-                                 "taxonomy %s. A taxonomy can not "
-                                 "be associated with "
-                                 "different vulnerability functions" % (
-                                 taxonomy))
-
-            try:
-                vfs[taxonomy] = RiskModel(
-                    imt,
-                    scientific.VulnerabilityFunction(
-                        record['IML'],
-                        loss_ratios,
-                        covs,
-                        distribution),
-                    None)
-            except ValueError, err:
-                msg = (
-                    "Invalid vulnerability function with ID '%s': %s"
-                    % (taxonomy, err.message)
-                )
-                raise ValueError(msg)
-
-        return vfs
 
     def create_outputs(self, hazard_output):
         """
@@ -471,7 +250,7 @@ class RiskCalculator(base.Calculator):
 
         job = self.job
 
-        for loss_type in loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             # add loss curve containers
             ret.set(models.LossCurve.objects.create(
                 hazard_output_id=hazard_output.id,
@@ -509,7 +288,7 @@ class RiskCalculator(base.Calculator):
         if len(self.rc.hazard_outputs()) < 2:
             return ret
 
-        for loss_type in loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             ret.set(models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.job,
@@ -594,13 +373,6 @@ def risk_task(task):
     return tasks.oqtask(count_progress_risk('r')(fn))
 
 
-#: Hold both a Vulnerability function or a fragility function set and
-#: the IMT associated to it
-RiskModel = collections.namedtuple(
-    'RiskModel',
-    'imt vulnerability_function fragility_functions')
-
-
 #: Calculator parameters are used to compute derived outputs like loss
 #: maps, disaggregation plots, quantile/mean curves. See
 #: :class:`openquake.engine.db.models.RiskCalculation` for a description
@@ -646,20 +418,3 @@ def make_calc_params(conditional_loss_poes=None,
                       distance_bin_width,
                       coordinate_bin_width,
                       damage_state_ids)
-
-
-def required_imts(risk_models):
-    """
-    Get all the intensity measure types required by `risk_models`
-
-    A nested dict taxonomy -> loss_type -> `RiskModel` instance
-
-    :returns: a set with all the required imts
-    """
-    risk_models = sum([d.values() for d in risk_models.values()], [])
-    return set([m.imt for m in risk_models])
-
-
-def loss_types(risk_models):
-    return set(sum([d.keys() for d in risk_models.values()], []))
-

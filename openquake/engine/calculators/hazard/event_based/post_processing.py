@@ -41,8 +41,6 @@ This could be the target for future optimizations.
 import itertools
 import numpy
 
-from django import db
-
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 
