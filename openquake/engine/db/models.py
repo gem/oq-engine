@@ -299,15 +299,21 @@ class SiteCollection(openquake.hazardlib.site.SiteCollection):
 
     def __init__(self, sites):
         super(SiteCollection, self).__init__(sites)
-        self.sites_dict = collections.OrderedDict((s.id, s) for s in sites)
+        self.sites_dict = dict((s.id, s) for s in sites)
 
-    @property
-    def sites(self):
-        return self.sites_dict.values()
+    def slice(self, indices):
+        if indices is None:
+            return self
+        sites = []
+        for i, site in enumerate(self):
+            if i in indices:
+                sites.append(site)
+        return self.__class__(sites)
 
     def __iter__(self):
-        for site in self.sites:
-            yield site
+        ids = sorted(self.sites_dict)
+        for site_id in ids:
+            yield self.sites_dict[site_id]
 
     def get_by_id(self, site_id):
         return self.sites_dict[site_id]
@@ -1842,6 +1848,10 @@ class SESRupture(djm.Model):
     A rupture as part of a Stochastic Event Set.
     """
     ses = djm.ForeignKey('SES')
+
+    #: A pickled
+    #: :class:`openquake.hazardlib.source.rupture.ProbabilisticRupture`
+    #: instance
     rupture = fields.PickleField()
 
     old_magnitude = djm.FloatField(null=True)
@@ -1854,6 +1864,10 @@ class SESRupture(djm.Model):
     old_lons = fields.PickleField(null=True)
     old_lats = fields.PickleField(null=True)
     old_depths = fields.PickleField(null=True)
+
+    #: A pickled
+    #: :class:`openquake.hazardlib.geo.surface.BaseSurface`
+    #: instance
     old_surface = fields.PickleField(null=True)
 
     class Meta:
