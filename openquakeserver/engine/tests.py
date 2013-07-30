@@ -1,5 +1,6 @@
 import json
 import mock
+import StringIO
 
 from collections import namedtuple
 from django.utils import unittest
@@ -221,3 +222,84 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
 
             self.assertEqual(200, response.status_code)
             self.assertEqual(expected_content, json.loads(response.content))
+
+
+class GetResultTestCase(BaseViewTestCase):
+    """
+    Tests for :func:`engine.views.get_hazard_result` and
+    :func:`engine.views.get_risk_result`.
+    """
+
+    def test_hazard_default_export_type(self):
+        with mock.patch('openquake.engine.export.hazard.export') as export:
+            ret_val = StringIO.StringIO()
+            ret_val.write('Fake result file content')
+            ret_val.close()
+            export.return_value = ret_val
+
+            request = self.factory.get('/v1/calc/hazard/result/37')
+            response = views.get_hazard_result(request, 37)
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual('Fake result file content', response.content)
+
+            # Test the call to the export function, including the handling for
+            # the default export type:
+            self.assertEqual(1, export.call_count)
+            self.assertEqual(37, export.call_args[0][0])
+            self.assertEqual('xml', export.call_args[1]['export_type'])
+
+    def test_hazard(self):
+        with mock.patch('openquake.engine.export.hazard.export') as export:
+            ret_val = StringIO.StringIO()
+            ret_val.write('Fake result file content')
+            ret_val.close()
+            export.return_value = ret_val
+
+            request = self.factory.get(
+                '/v1/calc/hazard/result/37?export_type=csv'
+            )
+            response = views.get_hazard_result(request, 37)
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual('Fake result file content', response.content)
+
+            self.assertEqual(1, export.call_count)
+            self.assertEqual(37, export.call_args[0][0])
+            self.assertEqual('csv', export.call_args[1]['export_type'])
+
+    def test_risk_default_export_type(self):
+        with mock.patch('openquake.engine.export.risk.export') as export:
+            ret_val = StringIO.StringIO()
+            ret_val.write('Fake result file content')
+            ret_val.close()
+            export.return_value = ret_val
+
+            request = self.factory.get('/v1/calc/risk/result/37')
+            response = views.get_risk_result(request, 37)
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual('Fake result file content', response.content)
+
+            self.assertEqual(1, export.call_count)
+            self.assertEqual(37, export.call_args[0][0])
+            self.assertEqual('xml', export.call_args[1]['export_type'])
+
+    def test_risk(self):
+        with mock.patch('openquake.engine.export.risk.export') as export:
+            ret_val = StringIO.StringIO()
+            ret_val.write('Fake result file content')
+            ret_val.close()
+            export.return_value = ret_val
+
+            request = self.factory.get(
+                '/v1/calc/risk/result/37?export_type=csv'
+            )
+            response = views.get_risk_result(request, 37)
+
+            self.assertEqual(200, response.status_code)
+            self.assertEqual('Fake result file content', response.content)
+
+            self.assertEqual(1, export.call_count)
+            self.assertEqual(37, export.call_args[0][0])
+            self.assertEqual('csv', export.call_args[1]['export_type'])
