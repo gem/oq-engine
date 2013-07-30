@@ -24,10 +24,9 @@ from django import db
 
 from openquake.risklib import workflows
 
-from openquake.engine import logs
 from openquake.engine.calculators.base import signal_task_complete
 from openquake.engine.calculators.risk import (
-    base, hazard_getters, writers, validation)
+    base, hazard_getters, validation, writers)
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -109,9 +108,12 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     """
 
     core_calc_task = scenario
+
     validators = base.RiskCalculator.validators + [
         validation.RequireScenarioHazard,
         validation.ExposureHasInsuranceBounds]
+
+    output_builders = [writers.LossMapBuilder]
 
     def __init__(self, job):
         super(ScenarioRiskCalculator, self).__init__(job)
@@ -190,33 +192,3 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
-
-    def create_outputs(self, hazard_output):
-        """
-        Create the the output of a ScenarioRisk calculator
-        which is a LossMap.
-        """
-        ret = writers.OutputDict()
-
-        for loss_type in models.loss_types(self.risk_models):
-            if self.rc.insured_losses:
-                ret.set(models.LossMap.objects.create(
-                    output=models.Output.objects.create_output(
-                        self.job, "Insured Loss Map", "loss_map"),
-                    hazard_output=hazard_output,
-                    loss_type=loss_type,
-                    insured=True))
-
-            ret.set(models.LossMap.objects.create(
-                    output=models.Output.objects.create_output(
-                        self.job, "Loss Map", "loss_map"),
-                    hazard_output=hazard_output,
-                    loss_type=loss_type))
-        return ret
-
-    def create_statistical_outputs(self):
-        """
-        Override default behaviour as BCR and scenario calculators do
-        not compute mean/quantiles outputs"
-        """
-        return writers.OutputDict()
