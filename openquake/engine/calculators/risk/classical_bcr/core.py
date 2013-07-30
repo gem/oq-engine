@@ -147,8 +147,4 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         and the risk model for the retrofitted one.
         """
         super(ClassicalBCRRiskCalculator, self).pre_execute()
-        models_retro = super(ClassicalBCRRiskCalculator, self).get_risk_models(
-            retrofitted=True)
-        self.check_taxonomies(models_retro)
-        self.check_imts(base.required_imts(models_retro))
-        self.risk_models_retrofitted = models_retro
+        self.risk_models_retrofitted = self.get_risk_models(retrofitted=True)

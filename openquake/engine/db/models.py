@@ -44,6 +44,8 @@ import numpy
 from scipy import interpolate
 
 from django.db import transaction, connections
+from django.core.exceptions import ObjectDoesNotExist
+
 from django.contrib.gis.db import models as djm
 from shapely import wkt
 
@@ -105,6 +107,36 @@ RISK_RTOL = 0.08
 
 #: absolute tolerance to consider two risk outputs (almost) equal
 RISK_ATOL = 0.01
+
+
+#: Hold both a Vulnerability function or a fragility function set and
+#: the IMT associated to it
+RiskModel = collections.namedtuple(
+    'RiskModel',
+    'imt vulnerability_function fragility_functions')
+
+
+def required_imts(risk_models):
+    """
+    Get all the intensity measure types required by `risk_models`
+
+    A nested dict taxonomy -> loss_type -> `RiskModel` instance
+
+    :returns: a set with all the required imts
+    """
+    risk_models = sum([d.values() for d in risk_models.values()], [])
+    return set([m.imt for m in risk_models])
+
+
+def loss_types(risk_models):
+    return set(sum([d.keys() for d in risk_models.values()], []))
+
+
+def cost_type(loss_type):
+    if loss_type == "fatalities":
+        return "occupants"
+    else:
+        return loss_type
 
 
 def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
@@ -1203,8 +1235,11 @@ class RiskCalculation(djm.Model):
         :returns:
             :class:`HazardCalculation` instance.
         """
-        hcalc = (self.hazard_calculation or
-                 self.hazard_output.oq_job.hazard_calculation)
+        try:
+            hcalc = (self.hazard_calculation or
+                     self.hazard_output.oq_job.hazard_calculation)
+        except ObjectDoesNotExist:
+            raise RuntimeError("The provided hazard does not exist")
         return hcalc
 
     def hazard_outputs(self):
@@ -1271,9 +1306,26 @@ class RiskCalculation(djm.Model):
 
     @property
     def exposure_model(self):
-        exposure_input = self.exposure_input or self.inputs.get(
-            input_type="exposure")
-        return exposure_input.exposuremodel
+        return self.get_exposure_input().exposuremodel
+
+    def get_exposure_input(self):
+        try:
+            return self.exposure_input or self.inputs.get(
+                input_type="exposure")
+        except ObjectDoesNotExist:
+            raise RuntimeError("Calculation has no exposure associated with")
+
+    def vulnerability_inputs(self, retrofitted):
+        for loss_type in LOSS_TYPES:
+            cost_type = cost_type(loss_type)
+            if retrofitted:
+                input_type = "%s_vulnerability_retrofitted" % cost_type
+            else:
+                input_type = "%s_vulnerability" % cost_type
+
+            queryset = self.inputs.filter(input_type=input_type)
+            if queryset.exists():
+                yield queryset[0], loss_type
 
 
 def _prep_geometry(kwargs):

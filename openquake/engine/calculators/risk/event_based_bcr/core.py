@@ -182,9 +182,4 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         and the risk model for the retrofitted one.
         """
         super(EventBasedBCRRiskCalculator, self).pre_execute()
-        models_retro = super(
-            EventBasedBCRRiskCalculator, self).get_risk_models(
-                retrofitted=True)
-        self.check_taxonomies(models_retro)
-        self.check_imts(base.required_imts(models_retro))
-        self.risk_models_retrofitted = models_retro
+        self.risk_models_retrofitted = self.get_risk_models(retrofitted=True)
