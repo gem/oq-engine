@@ -35,7 +35,7 @@ from openquake.hazardlib.calc.gmf import ground_motion_field_with_residuals
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.performance import DummyMonitor
+from openquake.engine.performance import DummyMonitor, HFMonitor
 from openquake.engine.calculators.hazard import general
 from openquake.engine.input import logictree
 
@@ -574,29 +574,40 @@ class GroundMotionValuesCalcGetter(object):
         """
         all_gmvs = []
         all_assets = []
+
         site_gmv = collections.defaultdict(dict)
+        performance_dict = collections.Counter()
 
         for rupture, rupture_seed, rupture_id in itertools.izip(
                 ruptures, rupture_seeds, rupture_ids):
 
             gsim, tstddev = self.gsim(rupture)
 
-            sites_of_interest, mask = self.sites_of_interest(
-                rupture, maximum_distance)
+            with HFMonitor(performance_dict, 'filtering sites'):
+                sites_of_interest, mask = self.sites_of_interest(
+                    rupture, maximum_distance)
+
             if not sites_of_interest:
                 continue
 
-            (total, inter, intra) = self.epsilons(rupture_seed, mask, tstddev)
+            with HFMonitor(performance_dict, 'generating epsilons'):
+                (total, inter, intra) = self.epsilons(
+                    rupture_seed, mask, tstddev)
 
-            gmf = ground_motion_field_with_residuals(
-                rupture, sites_of_interest,
-                self.imt, gsim, self.truncation_level,
-                total_residual_epsilons=total,
-                intra_residual_epsilons=intra,
-                inter_residual_epsilons=inter)
+            with HFMonitor(performance_dict, 'compute ground motion fields'):
+                gmf = ground_motion_field_with_residuals(
+                    rupture, sites_of_interest,
+                    self.imt, gsim, self.truncation_level,
+                    total_residual_epsilons=total,
+                    intra_residual_epsilons=intra,
+                    inter_residual_epsilons=inter)
 
-            for site, gmv in itertools.izip(sites_of_interest, gmf):
-                site_gmv[site.id][rupture_id] = gmv
+            with HFMonitor(performance_dict, 'collecting gmvs'):
+                for site, gmv in itertools.izip(sites_of_interest, gmf):
+                    site_gmv[site.id][rupture_id] = gmv
+
+        logs.LOG.debug('Disaggregation of the time spent in the loop %s' % (
+            performance_dict))
 
         for site_id, assets in self.sites_assets:
             n_assets = len(assets)
