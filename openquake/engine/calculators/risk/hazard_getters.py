@@ -27,11 +27,7 @@ import collections
 import numpy
 import scipy
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
+import cPickle as pickle
 
 from openquake.hazardlib import geo, const
 from openquake.hazardlib.calc import filters
