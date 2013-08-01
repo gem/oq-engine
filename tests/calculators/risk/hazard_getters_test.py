@@ -185,7 +185,7 @@ class GroundMotionValuesCalcGetterTestCase(unittest.TestCase):
         sites, _idxs = calc.sites_of_interest(r, 0)
         self.assertEqual([], sites)
 
-        ret = SiteCollection(self.sites.sites)
+        ret = SiteCollection(list(iter(self.sites)))
         ret.indices = [1]
         r.source_typology.filter_sites_by_distance_to_rupture = mock.Mock(
             return_value=ret)
