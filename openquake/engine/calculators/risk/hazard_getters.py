@@ -315,60 +315,7 @@ GROUP BY site_id ORDER BY site_id;
 
         if hazard_output.output.output_type == 'ses':
             logs.LOG.info('Compute Ground motion field values on the fly')
-
-            # getting some params from the db
-            hc = hazard_output.output.oq_job.hazard_calculation
-            truncation_level = hc.truncation_level
-            gsims = logictree.LogicTreeProcessor(
-                hc.id).parse_gmpe_logictree_path(
-                    hazard_output.lt_realization.gsim_lt_path)
-            if hc.ground_motion_correlation_model is not None:
-                model = general.get_correl_model(hc)
-            else:
-                model = None
-
-            queryset = models.SESRupture.objects.filter(
-                ses__ses_collection=hazard_output).order_by('id')
-
-            if queryset.filter(rupture="not computed").exists():
-                msg = ("The stochastic event set has been computed with "
-                       " a version of openquake engine too old. "
-                       "Please, re-run your hazard")
-                logs.LOG.error(msg)
-                raise RuntimeError(msg)
-
-            r_ids = queryset.values_list('id', flat=True)
-
-            # using a generator over ruptures to save memory
-            def ruptures():
-                count = queryset.count()
-                cursor = models.getcursor('job_init')
-                # a rupture "consumes" 8Kb. This limit actually
-                # control the amount of memory used to store them
-                limit = 10000
-                offsets = range(0, count, limit)
-                query = """
-                        SELECT rup.rupture FROM hzrdr.ses_rupture AS rup
-                        JOIN hzrdr.ses AS ses ON ses.id = rup.ses_id
-                        WHERE ses.ses_collection_id = %s
-                        ORDER BY rup.id LIMIT %s OFFSET %s"""
-                for offset in offsets:
-                    cursor.execute(query, (hazard_output.id, limit, offset))
-                    for (rupture_data,) in cursor.fetchall():
-                        yield pickle.loads(str(rupture_data))
-            r_objs = ruptures()
-
-            r_seeds = [numpy.random.randint(0, models.MAX_SINT_32)
-                       for r in r_ids]
-
-            calc_getter = GroundMotionValuesCalcGetter(
-                self.imt, hc.site_collection, site_assets,
-                truncation_level, gsims, model)
-
-            with monitor.copy('computing gmvs'):
-                all_assets, gmvs = calc_getter.compute(
-                    r_objs, r_seeds, r_ids, hc.maximum_distance)
-            return all_assets, (gmvs, r_ids)
+            return self.compute_gmvs(hazard_output, site_assets, monitor)
 
         for site_id, assets in site_assets:
             n_assets = len(assets)
@@ -393,6 +340,64 @@ GROUP BY site_id ORDER BY site_id;
                 gmv.clear()  # save memory
                 all_gmvs.extend([array] * n_assets)
         return all_assets, (all_gmvs, all_ruptures)
+
+    def compute_gmvs(self, hazard_output, site_assets, monitor):
+        """
+        Compute ground motion values on the fly
+        """
+        # get needed hazard calculation params from the db
+        hc = hazard_output.output.oq_job.hazard_calculation
+        truncation_level = hc.truncation_level
+        gsims = logictree.LogicTreeProcessor(
+            hc.id).parse_gmpe_logictree_path(
+                hazard_output.lt_realization.gsim_lt_path)
+        if hc.ground_motion_correlation_model is not None:
+            model = general.get_correl_model(hc)
+        else:
+            model = None
+
+        # check that the ruptures have been computed by a sufficiently
+        # new version of openquake
+        queryset = models.SESRupture.objects.filter(
+            ses__ses_collection=hazard_output).order_by('id')
+
+        if queryset.filter(rupture="not computed").exists():
+            msg = ("The stochastic event set has been computed with "
+                   " a version of openquake engine too old. "
+                   "Please, re-run your hazard")
+            logs.LOG.error(msg)
+            raise RuntimeError(msg)
+        count = queryset.count()
+
+        # using a generator over ruptures to save memory
+        def ruptures():
+            cursor = models.getcursor('job_init')
+            # a rupture "consumes" 8Kb. This limit actually
+            # control the amount of memory used to store them
+            limit = 10000
+            offsets = range(0, count, limit)
+            query = """
+                    SELECT rup.rupture FROM hzrdr.ses_rupture AS rup
+                    JOIN hzrdr.ses AS ses ON ses.id = rup.ses_id
+                    WHERE ses.ses_collection_id = %s
+                    ORDER BY rup.id LIMIT %s OFFSET %s"""
+            for offset in offsets:
+                cursor.execute(query, (hazard_output.id, limit, offset))
+                for (rupture_data,) in cursor.fetchall():
+                    yield pickle.loads(str(rupture_data))
+        r_objs = ruptures()
+
+        r_seeds = numpy.random.randint(0, models.MAX_SINT_32, count)
+        r_ids = queryset.values_list('id', flat=True)
+
+        calc_getter = GroundMotionValuesCalcGetter(
+            self.imt, hc.site_collection, site_assets,
+            truncation_level, gsims, model)
+
+        with monitor.copy('computing gmvs'):
+            all_assets, gmvs = calc_getter.compute(
+                r_objs, r_seeds, r_ids, hc.maximum_distance)
+        return all_assets, (gmvs, r_ids)
 
 
 class BCRGetter(object):
