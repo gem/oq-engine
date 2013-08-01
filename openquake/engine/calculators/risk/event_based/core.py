@@ -237,6 +237,18 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
 
+        # seed the rng to generate different seeds per-each output
+        # (i.e. each hazard realization). This allows different tasks
+        # to generate the same random numbers given an output. These
+        # seeds will be used when computing ground motion values on
+        # the fly in order to provide the right correlation between
+        # random numbers generated across tasks
+
+        rnd = random.Random()
+        rnd.seed(self.rc.master_seed)
+        self.hazard_seeds = [rnd.randint(0, models.MAX_SINT_32)
+                             for _ in self.rc.hazard_outputs()]
+
     def task_completed_hook(self, message):
         """
         Updates the event loss table
@@ -255,7 +267,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 raise RuntimeError(
                     "The provided hazard calculation ID "
                     "is not an event based calculation")
-        elif not self.rc.hazard_output.output_type == "gmf":
+        elif not self.rc.hazard_output.output_type in ["gmf", "ses"]:
             raise RuntimeError(
                 "The provided hazard output is not a gmf collection")
 
@@ -302,7 +314,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
                     ruptures = models.SESRupture.objects.filter(
                         ses__ses_collection__lt_realization=
-                        hazard_output.gmf.lt_realization)
+                        hazard_output.output_container.lt_realization)
 
                     for rupture in ruptures:
                         if rupture.id in event_loss_table:
@@ -370,7 +382,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
-                risk_model.imt))
+                risk_model.imt,
+                self.hazard_seeds))
 
     def hazard_times(self):
         """

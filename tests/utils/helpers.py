@@ -38,6 +38,11 @@ import textwrap
 import time
 import shapely
 
+from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.surface.planar import PlanarSurface
+from openquake.hazardlib.tom import PoissonTOM
+
 from django.core import exceptions
 
 from openquake.engine.db import models
@@ -896,13 +901,16 @@ def get_ruptures(job, ses_collection, num):
     return [
         models.SESRupture.objects.create(
             ses=ses,
-            magnitude=i * 10. / float(num),
-            strike=0,
-            dip=0,
-            rake=0,
-            tectonic_region_type="test region type",
-            is_from_fault_source=False,
-            lons=[], lats=[], depths=[])
+            rupture=ProbabilisticRupture(
+                mag=1 + i * 10. / float(num), rake=0,
+                tectonic_region_type="test region type",
+                hypocenter=Point(0, 0, 0.1),
+                surface=PlanarSurface(
+                    10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
+                    Point(1, 0, 2), Point(0, 0, 2)),
+                occurrence_rate=1,
+                temporal_occurrence_model=PoissonTOM(10),
+                source_typology=object()))
         for i in range(num)]
 
 
