@@ -100,10 +100,7 @@ CREATE OR REPLACE FUNCTION hzrdr.finalize_hazard_curves(
 )
     RETURNS VARCHAR
 AS $$
-    try:
-        import cPickle as pickle
-    except ImportError:
-        import pickle
+    import cPickle as pickle
 
     def make_point_wkt(x, y):
         """
