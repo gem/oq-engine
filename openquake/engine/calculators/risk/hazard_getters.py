@@ -499,7 +499,7 @@ class GroundMotionValuesCalcGetter(object):
         # convert the hazard lib site collection to engine one
         # that supports a fast __contains__ method and holds the site enhanced
         # by with ids
-        sites_filtered = self.sites.slice(sites_filtered.indices)
+        sites_filtered = self.sites.subcollection(sites_filtered.indices)
 
         # find the indices in the site collection
         site_ids_indexes = [self.sites_dict[s.id] for s in sites_filtered]
