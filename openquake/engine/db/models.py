@@ -269,7 +269,15 @@ class SiteCollection(openquake.hazardlib.site.SiteCollection):
         super(SiteCollection, self).__init__(sites)
         self.sites_dict = dict((s.id, s) for s in sites)
 
-    def slice(self, indices):
+    def subcollection(self, indices):
+        """
+        :param indices:
+            an array of integer identifying the ordinal of the sites
+            to select. Sites are ordered by the value of their id field
+        :returns:
+            `self` is `indices` is None, otherwise, a `SiteCollection`
+            holding sites at `indices`
+        """
         if indices is None:
             return self
         sites = []
