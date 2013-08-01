@@ -94,7 +94,7 @@ class HazardGetter(object):
         """
         raise NotImplementedError
 
-    def get_for_hazard(self, hazard_output, monitor=None):
+    def get_assets_data(self, hazard_output, monitor=None):
         """
         :param monitor: a performance monitor or None
         :returns:
@@ -119,7 +119,7 @@ class HazardGetter(object):
     def __call__(self, monitor=None):
         for hazard in self.hazard_outputs:
             h = hazard.output_container
-            yield (hazard.id,) + self.get_for_hazard(h, monitor)
+            yield (hazard.id,) + self.get_assets_data(h, monitor)
 
     def weights(self):
         ws = []
@@ -234,7 +234,7 @@ class GroundMotionValuesGetter(HazardGetter):
         for hazard, seed in zip(self.hazard_outputs, self.seeds):
             h = hazard.output_container
             numpy.random.seed(seed)
-            yield (hazard.id,) + self.get_for_hazard(h, monitor)
+            yield (hazard.id,) + self.get_assets_data(h, monitor)
 
     def assets_gen(self, hazard_output):
         """
