@@ -18,11 +18,15 @@ set -e
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 ## Create test fixture suitable to populate the database before
-## running the risk QA tests EOF
+## running the risk QA tests
 
 
 OPENQUAKE=$(dirname $0)/openquake
 QA_TESTS_DIR=$(dirname $0)/../qa_tests/risk/
+
+if [ "$1" != "--reuse-db" ]; then
+    . $(dirname $0)/oq_create_db
+fi
 
 for qa_test in $(find $QA_TESTS_DIR -iname job_haz.ini); do
 
