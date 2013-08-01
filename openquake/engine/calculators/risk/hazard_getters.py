@@ -22,9 +22,15 @@ A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
+import itertools
 import collections
 import numpy
 import scipy
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 
 from openquake.hazardlib import geo, const
@@ -321,28 +327,47 @@ GROUP BY site_id ORDER BY site_id;
             else:
                 model = None
 
-            with monitor.copy('getting ruptures'):
-                ruptures = models.SESRupture.objects.filter(
-                    ses__ses_collection=hazard_output).order_by(
-                        'ses__ordinal', 'id')
-                r_objs = [r.rupture for r in ruptures]
+            queryset = models.SESRupture.objects.filter(
+                ses__ses_collection=hazard_output).order_by('id')
 
-                r_seeds = [numpy.random.randint(0, models.MAX_SINT_32)
-                           for r in ruptures]
-                r_ids = [r.id for r in ruptures]
+            if queryset.filter(rupture="not computed").exists():
+                msg = ("The stochastic event set has been computed with "
+                       " a version of openquake engine too old. "
+                       "Please, re-run your hazard")
+                logs.LOG.error(msg)
+                raise RuntimeError(msg)
 
-                if any(r is "not computed" for r in r_objs):
-                    msg = ("The stochastic event set has been computed with "
-                           " a version of openquake engine too old. "
-                           "Please, re-run your hazard")
-                    logs.LOG.error(msg)
-                    raise RuntimeError(msg)
+            r_ids = queryset.values_list('id', flat=True)
+
+            # using a generator over ruptures to save memory
+            def ruptures():
+                count = queryset.count()
+                cursor = models.getcursor('job_init')
+                # a rupture "consumes" 8Kb. This limit actually
+                # control the amount of memory used to store them
+                limit = 10000
+                offsets = range(0, count, limit)
+                query = """
+                        SELECT rup.rupture FROM hzrdr.ses_rupture AS rup
+                        JOIN hzrdr.ses AS ses ON ses.id = rup.ses_id
+                        WHERE ses.ses_collection_id = %s
+                        ORDER BY rup.id LIMIT %s OFFSET %s"""
+                for offset in offsets:
+                    cursor.execute(query, (hazard_output.id, limit, offset))
+                    for (rupture_data,) in cursor.fetchall():
+                        yield pickle.loads(str(rupture_data))
+            r_objs = ruptures()
+
+            r_seeds = [numpy.random.randint(0, models.MAX_SINT_32)
+                       for r in r_ids]
+
+            calc_getter = GroundMotionValuesCalcGetter(
+                self.imt, hc.site_collection, site_assets,
+                truncation_level, gsims, model)
 
             with monitor.copy('computing gmvs'):
-                all_assets, gmvs = GroundMotionValuesCalcGetter(
-                    self.imt, hc.site_collection, site_assets,
-                    truncation_level, gsims, model).compute(
-                        r_objs, r_seeds, r_ids, hc.maximum_distance)
+                all_assets, gmvs = calc_getter.compute(
+                    r_objs, r_seeds, r_ids, hc.maximum_distance)
             return all_assets, (gmvs, r_ids)
 
         for site_id, assets in site_assets:
@@ -473,7 +498,7 @@ class GroundMotionValuesCalcGetter(object):
         # convert the hazard lib site collection to engine one
         # that supports a fast __contains__ method and holds the site enhanced
         # by with ids
-        sites_filtered = self.site_collection.slice(sites_filtered.indices)
+        sites_filtered = self.sites.slice(sites_filtered.indices)
 
         # find the indices in the site collection
         site_ids_indexes = [self.sites_dict[s.id] for s in sites_filtered]
@@ -550,8 +575,9 @@ class GroundMotionValuesCalcGetter(object):
         all_assets = []
         site_gmv = collections.defaultdict(dict)
 
-        for rupture, rupture_seed, rupture_id in zip(
+        for rupture, rupture_seed, rupture_id in itertools.izip(
                 ruptures, rupture_seeds, rupture_ids):
+
             gsim, tstddev = self.gsim(rupture)
 
             sites_of_interest, mask = self.sites_of_interest(
@@ -568,15 +594,17 @@ class GroundMotionValuesCalcGetter(object):
                 intra_residual_epsilons=intra,
                 inter_residual_epsilons=inter)
 
-            for site, gmv in zip(sites_of_interest, gmf):
+            for site, gmv in itertools.izip(sites_of_interest, gmf):
                 site_gmv[site.id][rupture_id] = gmv
 
         for site_id, assets in self.sites_assets:
             n_assets = len(assets)
-            if site_id not in site_gmv:
-                gmvs = numpy.zeros(len(ruptures))
-            else:
+            if site_id in site_gmv:
                 gmvs = [site_gmv[site_id].get(r, 0) for r in rupture_ids]
+            else:
+                gmvs = numpy.zeros(len(rupture_ids))
+            del site_gmv[site_id]
+
             all_gmvs.extend([gmvs] * n_assets)
             all_assets.extend(assets)
 
