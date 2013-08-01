@@ -49,7 +49,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         Ground-shaking intensity model, instance of subclass of either
         :class:`~openquake.hazardlib.gsim.base.GMPE` or
         :class:`~openquake.hazardlib.gsim.base.IPE`.
-    :param trunctation_level:
+    :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution, or ``None``.
     :param realizations:
@@ -136,9 +136,72 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                 )
 
             inter_residual = stddev_inter * distribution.rvs(size=realizations)
+
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)
 
         result[imt] = sites.expand(gmf, total_sites, placeholder=0)
 
     return result
+
+
+def ground_motion_field_with_residuals(
+        rupture, sites, imt, gsim, truncation_level,
+        total_residual_epsilons=None,
+        intra_residual_epsilons=None,
+        inter_residual_epsilons=None):
+    """
+    A simplified version of ``ground_motion_fields`` where: the values
+    due to uncertainty (total, intra-event or inter-event residual
+    epsilons) are given in input; only one intensity measure type is
+    considered.
+
+    See :func:``openquake.hazardlib.calc.gmf.ground_motion_fields`` for
+    the description of most of the input parameters.
+
+    :param total_residual_epsilons:
+        a 2d numpy array of floats with the epsilons needed to compute the
+        total residuals in the case the GSIM provides only total standard
+        deviation.
+    :param intra_residual_epsilons:
+        a 2d numpy array of floats with the epsilons needed to compute the
+        intra event residuals
+    :param inter_residual_epsilons:
+        a 2d numpy array of floats with the epsilons needed to compute the
+        intra event residuals
+
+    :returns:
+        a 1d numpy array of floats, representing ground shaking intensity
+        for all sites in the collection.
+    """
+
+    sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
+
+    if truncation_level == 0:
+        mean, _stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                   stddev_types=[])
+        return gsim.to_imt_unit_values(mean)
+
+    if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == set([StdDev.TOTAL]):
+        assert total_residual_epsilons is not None
+
+        mean, [stddev_total] = gsim.get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, [StdDev.TOTAL]
+        )
+        stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
+        total_residual = stddev_total * total_residual_epsilons
+        gmf = gsim.to_imt_unit_values(mean + total_residual)
+    else:
+        assert inter_residual_epsilons is not None
+        assert intra_residual_epsilons is not None
+        mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
+            sctx, rctx, dctx, imt, [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
+        )
+
+        intra_residual = stddev_intra * intra_residual_epsilons
+        inter_residual = stddev_inter * inter_residual_epsilons
+
+        gmf = gsim.to_imt_unit_values(
+            mean + intra_residual + inter_residual)
+
+    return gmf
