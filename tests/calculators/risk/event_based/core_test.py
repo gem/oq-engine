@@ -45,11 +45,6 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         self.assertEqual([0.1, 0.2, 0.3], params.conditional_loss_poes)
         self.assertTrue(params.insured_losses)
 
-    def test_imt_validation(self):
-        self.assertRaises(ValueError,
-                          self.calculator.check_imts,
-                          ["FOO"])
-
     def test_celery_task(self):
         # Test that the celery task when called properly call the
         # specific method to write loss curves
