@@ -90,15 +90,9 @@ class ExposureLossTypes(Validator):
         loss_types = models.loss_types(self.calc.risk_models)
 
         for loss_type in loss_types:
-            cost_type = models.cost_type(loss_type)
-
-            if loss_type != "fatalities":
-                if not self.calc.rc.exposure_model.exposuredata_set.filter(
-                        cost__cost_type__name=cost_type).exists():
-                    return ("Invalid exposure "
-                            "for computing loss type %s. " % loss_type)
-            elif self.calc.rc.exposure_model.missing_occupants():
-                return "Invalid exposure for computing fatalities."
+            if not self.calc.rc.exposure_model.supports_loss_type(loss_type):
+                return ("Invalid exposure "
+                        "for computing loss type %s. " % loss_type)
 
 
 class NoRiskModels(Validator):
