@@ -110,6 +110,9 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                   validation.OrphanTaxonomies,
                   validation.NoRiskModels, validation.RequireScenarioHazard]
 
+    # FIXME. scenario damage calculator does not use output builders
+    output_builders = []
+
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
         # let's define a dictionary taxonomy -> fractions
