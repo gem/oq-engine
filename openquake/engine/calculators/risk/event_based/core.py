@@ -28,7 +28,8 @@ from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific, workflows
 
 from openquake.engine.calculators import post_processing
-from openquake.engine.calculators.risk import base, hazard_getters, validation
+from openquake.engine.calculators.risk import (
+    base, hazard_getters, validation, writers)
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs, writer
