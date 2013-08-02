@@ -492,7 +492,7 @@ class InsuredLossCurveBuilder(OutputBuilder):
 
 class LossFractionBuilder(OutputBuilder):
     def individual_outputs(self, loss_type, hazard_output):
-        variables = ["magnitude_distance", "coordinates"]
+        variables = ["magnitude_distance", "coordinate"]
 
         loss_fractions = []
         if self.calc.rc.sites_disagg:
