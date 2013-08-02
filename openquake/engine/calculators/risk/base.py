@@ -134,7 +134,7 @@ class RiskCalculator(base.Calculator):
             5. the specific calculator parameter set
         """
         output_containers = writers.combine_builders(
-            builder(self) for builder in self.output_builders)
+            [builder(self) for builder in self.output_builders])
 
         num_tasks = 0
         for taxonomy, assets_nr in self.taxonomies_asset_count.items():

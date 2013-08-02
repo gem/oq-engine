@@ -96,17 +96,16 @@ def _parse_vulnerability(vuln_content):
 
 
 def fragility(risk_calculation, fragility_input):
-    risk_models, damage_states = _parse_fragility(
+    damage_states, risk_models = _parse_fragility(
         StringIO.StringIO(fragility_input.model_content.raw_content_ascii))
 
     for lsi, dstate in enumerate(damage_states):
-            DmgState.objects.get_or_create(
-                risk_calculation=risk_calculation, dmg_state=dstate, lsi=lsi)
+        DmgState.objects.get_or_create(
+            risk_calculation=risk_calculation, dmg_state=dstate, lsi=lsi)
     damage_state_ids = [d.id for d in DmgState.objects.filter(
         risk_calculation=risk_calculation).order_by('lsi')]
 
     return risk_models, damage_state_ids
-
 
 
 def _parse_fragility(content):
