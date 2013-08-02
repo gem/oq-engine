@@ -3098,18 +3098,23 @@ class ExposureModel(djm.Model):
         else:
             return self.costtype_set.get(name=loss_type).unit
 
-    def missing_occupants(self):
+    def supports_loss_type(self, loss_type):
         """
         :returns:
-            True if the exposure model does not include information about
-            occupants for any of the assets
+            True if the exposure contains the asset data needed
+            for computing losses for `loss_type`
         """
-        if self.category == "population":
+        if loss_type != "fatalities":
+            ct = cost_type(loss_type)
             return self.exposuredata_set.filter(
-                number_of_units__isnull=True).exists()
+                cost__cost_type__name=ct).exists()
         else:
-            return self.exposuredata_set.filter(
-                occupancy__isnull=True).exists()
+            if self.category == "population":
+                return not self.exposuredata_set.filter(
+                    number_of_units__isnull=True).exists()
+            else:
+                return not self.exposuredata_set.filter(
+                    occupancy__isnull=True).exists()
 
 
 class CostType(djm.Model):
