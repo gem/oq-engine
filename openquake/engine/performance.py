@@ -225,14 +225,14 @@ class DummyMonitor(PerformanceMonitor):
         pass
 
 
-class HFMonitor(object):
+class LightMonitor(object):
     """
     in situations where a `PerformanceMonitor` is overkill or affects
-    the performance (as in high frequency loops), this helper can aid
-    in getting roughly the performance of a small piece of code.
-    Please note that it does not prevent the common traps in measuring
-    the performance as stated in the "Algorithms" chapter in the
-    Python Cookbook.
+    the performance (as in short loops), this helper can aid in
+    measuring roughly the performance of a small piece of code. Please
+    note that it does not prevent the common traps in measuring the
+    performance as stated in the "Algorithms" chapter in the Python
+    Cookbook.
     """
 
     def __enter__(self):
