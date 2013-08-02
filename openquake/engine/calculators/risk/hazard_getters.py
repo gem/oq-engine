@@ -35,7 +35,7 @@ from openquake.hazardlib.calc.gmf import ground_motion_field_with_residuals
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.performance import DummyMonitor, HFMonitor
+from openquake.engine.performance import DummyMonitor, LightMonitor
 from openquake.engine.calculators.hazard import general
 from openquake.engine.input import logictree
 
@@ -583,18 +583,18 @@ class GroundMotionValuesCalcGetter(object):
 
             gsim, tstddev = self.gsim(rupture)
 
-            with HFMonitor(performance_dict, 'filtering sites'):
+            with LightMonitor(performance_dict, 'filtering sites'):
                 sites_of_interest, mask = self.sites_of_interest(
                     rupture, maximum_distance)
 
             if not sites_of_interest:
                 continue
 
-            with HFMonitor(performance_dict, 'generating epsilons'):
+            with LightMonitor(performance_dict, 'generating epsilons'):
                 (total, inter, intra) = self.epsilons(
                     rupture_seed, mask, tstddev)
 
-            with HFMonitor(performance_dict, 'compute ground motion fields'):
+            with LightMonitor(performance_dict, 'compute ground motion fields'):
                 gmf = ground_motion_field_with_residuals(
                     rupture, sites_of_interest,
                     self.imt, gsim, self.truncation_level,
@@ -602,7 +602,7 @@ class GroundMotionValuesCalcGetter(object):
                     intra_residual_epsilons=intra,
                     inter_residual_epsilons=inter)
 
-            with HFMonitor(performance_dict, 'collecting gmvs'):
+            with LightMonitor(performance_dict, 'collecting gmvs'):
                 for site, gmv in itertools.izip(sites_of_interest, gmf):
                     site_gmv[site.id][rupture_id] = gmv
 
