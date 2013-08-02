@@ -34,7 +34,6 @@ def number_of(elem_name, tree):
 
 
 class BaseExportTestCase(unittest.TestCase):
-
     def _test_exported_file(self, filename):
         self.assertTrue(os.path.exists(filename))
         self.assertTrue(os.path.isabs(filename))
