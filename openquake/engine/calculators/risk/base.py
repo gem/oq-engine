@@ -226,7 +226,7 @@ class RiskCalculator(base.Calculator):
         then set the `risk_models` attribute.
 
         :param bool retrofitted:
-            True if retrofitted models should be get
+            True if retrofitted models should be retrieved
         :returns:
             A nested dict taxonomy -> loss type -> instances of `RiskModel`.
         """
