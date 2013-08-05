@@ -22,7 +22,7 @@ import itertools
 import numpy
 from django import db
 
-from openquake.risklib import api, scientific
+from openquake.risklib import workflows
 
 from openquake.engine import logs
 from openquake.engine.calculators.base import signal_task_complete
@@ -40,9 +40,8 @@ def scenario(job_id, units, containers, params):
 
     :param int job_id:
       ID of the currently running job
-    :param dict units:
-      A dict of :class:`..base.CalculationUnit` instances keyed by
-      loss type string
+    :param list units:
+      A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
     :param containers:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
@@ -56,11 +55,13 @@ def scenario(job_id, units, containers, params):
     agg = dict()
     insured = dict()
     with db.transaction.commit_on_success(using='reslt_writer'):
-        for loss_type in units:
-            # in scenario calculation we have only ONE calculation unit
-            unit = units[loss_type][0]
-            agg[loss_type], insured[loss_type] = do_scenario(
-                loss_type, unit, containers, params, profile)
+        for unit in units:
+            agg[unit.loss_type], insured[unit.loss_type] = do_scenario(
+                unit,
+                containers.with_args(
+                    loss_type=unit.loss_type,
+                    output_type="loss_map"),
+                profile)
     num_items = base.get_num_items(units)
     signal_task_complete(
         job_id=job_id, num_items=num_items,
@@ -68,58 +69,34 @@ def scenario(job_id, units, containers, params):
 scenario.ignore_result = False
 
 
-def do_scenario(loss_type, unit, containers, params, profile):
+def do_scenario(unit, containers, profile):
     """
     See `scenario` for a description of the input parameters
     """
 
-    with profile('getting hazard'):
-        assets, ground_motion_values = unit.getter()
-
-    if not len(assets):
-        logs.LOG.info("Exit from task as no asset could be processed")
-        return None, None
-
-    with profile('computing risk'):
-        loss_ratio_matrix = unit.calc(ground_motion_values)
-
-        if params.insured_losses:
-            insured_loss_matrix = [
-                scientific.insured_losses(
-                    loss_ratio_matrix[i], asset.value(loss_type),
-                    asset.deductible(loss_type),
-                    asset.insurance_limit(loss_type))
-                for i, asset in enumerate(assets)]
+    (hid, assets, loss_ratio_matrix, aggregate_losses,
+     insured_loss_matrix, insured_losses) = (
+         unit.workflow(
+             unit.loss_type,
+             unit.getter(profile('getting data')),
+             profile('computing risk')))
 
     with profile('saving risk outputs'):
         containers.write(
             assets,
-            [losses.mean() for losses in loss_ratio_matrix],
-            [losses.std(ddof=1) for losses in loss_ratio_matrix],
-            output_type="loss_map",
-            loss_type=loss_type,
-            hazard_output_id=unit.getter.hazard_output.id,
+            loss_ratio_matrix.mean(axis=1),
+            loss_ratio_matrix.std(ddof=1, axis=1),
+            hazard_output_id=hid,
             insured=False)
 
-        if params.insured_losses:
+        if insured_loss_matrix is not None:
             containers.write(
                 assets,
-                [losses.mean() for losses in insured_loss_matrix],
-                [losses.std(ddof=1) for losses in insured_loss_matrix],
+                insured_loss_matrix.mean(axis=0),
+                insured_loss_matrix.std(ddof=1, axis=0),
                 itertools.cycle([True]),
-                output_type="loss_map",
-                loss_type=loss_type,
-                hazard_output_id=unit.getter.hazard_output.id,
+                hazard_output_id=hid,
                 insured=True)
-
-    aggregate_losses = sum(loss_ratio_matrix[i] * asset.value(loss_type)
-                           for i, asset in enumerate(assets))
-
-    if params.insured_losses:
-        insured_losses = (
-            numpy.array(insured_loss_matrix).transpose().sum(axis=1))
-    else:
-        insured_losses = "Not computed"
 
     return aggregate_losses, insured_losses
 
@@ -215,7 +192,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         mean=numpy.mean(insured_losses),
                         std_dev=numpy.std(insured_losses, ddof=1))
 
-    def calculation_units(self, loss_type, assets):
+    def calculation_unit(self, loss_type, assets):
         """
         :returns:
           a list of instances of `..base.CalculationUnit` for the given
@@ -226,26 +203,18 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         taxonomy = assets[0].taxonomy
         model = self.risk_models[taxonomy][loss_type]
 
-        return [base.CalculationUnit(
-            api.Scenario(
+        return workflows.CalculationUnit(
+            loss_type,
+            workflows.Scenario(
                 model.vulnerability_function,
-                seed=self.rnd.randint(0, models.MAX_SINT_32),
-                correlation=self.rc.asset_correlation),
+                self.rnd.randint(0, models.MAX_SINT_32),
+                self.rc.asset_correlation,
+                self.rc.insured_losses),
             hazard_getters.GroundMotionValuesGetter(
-                ho,
+                self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
-                for ho in self.rc.hazard_outputs()]
-
-    @property
-    def calculator_parameters(self):
-        """
-        Provides calculator specific params coming from
-        :class:`openquake.engine.db.RiskCalculation`
-        """
-
-        return base.make_calc_params(insured_losses=self.rc.insured_losses)
 
     def create_outputs(self, hazard_output):
         """

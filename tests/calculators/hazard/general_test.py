@@ -212,7 +212,7 @@ class GetSiteModelTestCase(unittest.TestCase):
             'random_seed': 37,
         }
         owner = helpers.default_user()
-        hc = engine.create_hazard_calculation(owner, params, [])
+        hc = engine.create_hazard_calculation(owner.user_name, params, [])
         return hc
 
     def test_get_site_model(self):
@@ -225,13 +225,13 @@ class GetSiteModelTestCase(unittest.TestCase):
         site_model_inp.save()
 
         # The link has not yet been made in the input2haz_calc table.
-        self.assertIsNone(general.get_site_model(haz_calc.id))
+        self.assertIsNone(models.get_site_model(haz_calc.id))
 
         # Complete the link:
         models.Input2hcalc(
             input=site_model_inp, hazard_calculation=haz_calc).save()
 
-        actual_site_model = general.get_site_model(haz_calc.id)
+        actual_site_model = models.get_site_model(haz_calc.id)
         self.assertEqual(site_model_inp, actual_site_model)
 
     def test_get_site_model_too_many_site_models(self):
@@ -255,7 +255,7 @@ class GetSiteModelTestCase(unittest.TestCase):
             input=site_model_inp2, hazard_calculation=haz_calc).save()
 
         with self.assertRaises(RuntimeError) as assert_raises:
-            general.get_site_model(haz_calc.id)
+            models.get_site_model(haz_calc.id)
 
         self.assertEqual('Only 1 site model per job is allowed, found 2.',
                          assert_raises.exception.message)
@@ -274,7 +274,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
     def test_get_closest_site_model_data_no_data(self):
         # We haven't yet linked any site model data to this input, so we
         # expect a result of `None`.
-        self.assertIsNone(general.get_closest_site_model_data(
+        self.assertIsNone(models.get_closest_site_model_data(
             self.site_model_inp, hazardlib_geo.Point(0, 0))
         )
 
@@ -313,8 +313,8 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         point1 = hazardlib_geo.Point(-0.0000001, 0)
         point2 = hazardlib_geo.Point(0.0000001, 0)
 
-        res1 = general.get_closest_site_model_data(self.site_model_inp, point1)
-        res2 = general.get_closest_site_model_data(self.site_model_inp, point2)
+        res1 = models.get_closest_site_model_data(self.site_model_inp, point1)
+        res2 = models.get_closest_site_model_data(self.site_model_inp, point2)
 
         self.assertEqual(sm1, res1)
         self.assertEqual(sm2, res2)
@@ -372,7 +372,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         params, files = engine.parse_config(open(cfg, 'r'))
 
         haz_calc = engine.create_hazard_calculation(
-            job.owner, params, files.values())
+            job.owner.user_name, params, files.values())
         haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
         job.hazard_calculation = haz_calc
         job.is_running = True
