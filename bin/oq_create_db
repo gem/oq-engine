@@ -182,10 +182,6 @@ if [ "$check_table_spaces" == "on" ]; then
         ts_found=`psql -p $db_port -U $db_admin_user -c '\db' -d postgres $psql_batch_options | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
         if [ $ts_found -eq 0 ]; then
             psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'" $psql_batch_options
-            if [ "$table_spaces_only" == "on" ]; then
-                psql -p $db_port -U $db_admin_user -d $db_name -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'" $psql_batch_options
-                psql -p $db_port -U $db_admin_user -d $db_name -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)" $psql_batch_options
-            fi
         fi
     done
 fi
@@ -230,7 +226,6 @@ load_file="$schema_path/load.sql"
 if [ -r $load_file ]; then
     echo ".. Loading static data from: $load_file .."
     psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $load_file
-    psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('oq-engine', '$oq_version', 0);"
 fi
 
 # Apply database schema/table comments if present.
@@ -261,16 +256,17 @@ if [ -r $security_file ]; then
     psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $security_file
 fi
 
+# Loading test fixtures if present
+if [ -r "$fixtures" ]; then
+    echo ".. Loading test fixtures"
+    python -c "from openquake.engine.tools.restore_hazards import hazard_restore_local; hazard_restore_local('$fixtures')"
+fi
+
 # Apply database table indexes if present.
 indexes_file="$schema_path/indexes.sql"
 if [ -r $indexes_file ]; then
     echo ".. Applying index definitions: $indexes_file .."
     psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $indexes_file
-fi
-
-if [ -r "$fixtures" ]; then
-    echo ".. Loading test fixtures"
-    python -c "from openquake.engine.tools.restore_hazards import hazard_restore_local; hazard_restore_local('$fixtures')"
 fi
 
 echo ".. Done .."

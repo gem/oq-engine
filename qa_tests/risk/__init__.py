@@ -15,6 +15,7 @@
 
 import tempfile
 import os
+import sys
 import warnings
 from unittest.case import SkipTest
 import numpy
@@ -33,15 +34,14 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     Base abstract class for risk QA tests.
     """
 
-    #: holds the path to a job.ini. Derived classes must define it
-    risk_cfg = None
+    def _test_path(self, relative_path):
+        return os.path.join(os.path.dirname(
+            sys.modules[self.__class__.__module__].__file__),
+            relative_path)
 
     #: QA test must override this params to feed the risk job with
     #: the proper hazard output
     output_type = "hazard_curve"
-
-    def test(self):
-        raise NotImplementedError
 
     def run_risk(self, cfg, hazard_id):
         """
@@ -65,7 +65,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
     def check_outputs(self, job):
         expected_data = self.expected_data()
         actual_data = self.actual_data(job)
-            # assert actual_data, 'Got no actual data!'
+
+        # assert actual_data, 'Got no actual data!'
 
         for i, actual in enumerate(actual_data):
             numpy.testing.assert_allclose(
@@ -83,7 +84,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
 
         try:
             job = self.run_risk(
-                self.risk_cfg, self.hazard_id(self.get_hazard_job()))
+                self._test_path('job_risk.ini'),
+                self.hazard_id(self.get_hazard_job()))
 
             self.check_outputs(job)
 
@@ -91,7 +93,7 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                 expected_outputs = self.expected_outputs()
                 for i, output in enumerate(self.actual_xml_outputs(job)):
                     try:
-                        [exported_file] = export.risk.export(
+                        exported_file = export.risk.export(
                             output.id, result_dir)
                     except:
                         print "Error in exporting %s" % output
@@ -105,6 +107,8 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                         StringIO.StringIO(expected_outputs[i]), exported_file)
         finally:
             shutil.rmtree(result_dir)
+
+        return job
 
     def actual_xml_outputs(self, job):
         """
@@ -137,25 +141,10 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
             output_type=self.output_type).latest('last_update').id
 
 
-class End2EndRiskQATestCase(BaseRiskQATestCase):
-    """
-    Run an end-to-end calculation (by first running a hazard
-    calculation, then running a risk calculation
-    """
-
-    def get_hazard_job(self):
-        return super(End2EndRiskQATestCase, self).run_hazard(
-            self.hazard_cfg)
-
-    def test(self):
-        raise NotImplementedError
-
-
 class LogicTreeBasedTestCase(object):
     """
-    A class meant to mixed-in with a BaseRiskQATestCase or
-    End2EndRiskQATestCase that runs a risk calculation by giving in
-    input a hazard calculation id
+    A class meant to mixed-in with a BaseRiskQATestCase
+    that runs a risk calculation by giving in input a hazard calculation id
     """
 
     def run_risk(self, cfg, hazard_id):
@@ -192,19 +181,23 @@ class CompleteTestCase(object):
     calculation apart the ones that satisfy #should_skip
     """
 
+    items_per_output = 10
+
     def check_outputs(self, job):
         outputs = []
 
         for output in job.output_set.all():
-            for item in list(output.output_container)[0:10]:
+            for item in list(output.output_container)[0:self.items_per_output]:
                 outputs.append((item.data_hash, item))
 
         outputs = dict(outputs)
 
         for data_hash, expected_output in self.expected_output_data():
             if not data_hash in outputs:
+                found = filter(lambda o: o[0] == data_hash[0], outputs)
                 raise AssertionError(
-                    "The output with hash %s is missing" % str(data_hash))
+                    "The output with hash %s is missing. Found %s" % (
+                        str(data_hash), found))
             actual_output = outputs[data_hash]
             try:
                 expected_output.assertAlmostEqual(actual_output)
@@ -212,17 +205,17 @@ class CompleteTestCase(object):
                 print "Problems with output %s" % str(data_hash)
                 raise
 
-    def _csv(self, filename, *slicer):
-        path = os.path.join(
-            os.path.dirname(self.risk_cfg), "expected", filename + ".csv")
-        return numpy.genfromtxt(path, delimiter=",")[slicer]
+    def _csv(self, filename, *slicer, **kwargs):
+        dtype = kwargs.get('dtype', float)
+        path = self._test_path("expected/%s.csv" % filename)
+        return numpy.genfromtxt(path, dtype, delimiter=",")[slicer]
 
     def expected_output_data(self):
         """
         :returns:
             an iterable over data objects (e.g. LossCurveData)
         """
-        raise NotImplementedError
+        return ()
 
 
 class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
@@ -232,21 +225,15 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
     """
 
     #: derived qa test must override this
-    hazard_calculation_fixture_id = None
+    hazard_calculation_fixture = None
 
     def _get_queryset(self):
         return models.HazardCalculation.objects.filter(
             description=self.hazard_calculation_fixture)
 
     def get_hazard_job(self):
-        return self._get_queryset()[0].oqjob_set.all()[0]
-
-    def _run_test(self):
         if not self._get_queryset().exists():
-            warnings.warn("fixture not present. skipping test")
+            warnings.warn("fixture not loaded. skipping test")
             raise SkipTest
         else:
-            super(FixtureBasedQATestCase, self)._run_test()
-
-    def test(self):
-        raise NotImplementedError
+            return self._get_queryset()[0].oqjob

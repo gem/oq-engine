@@ -288,7 +288,7 @@ class ScriptsToRunTestCase(unittest.TestCase):
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
         self.path = "%s/schema/upgrades" % self.tdir
-        self.top = "%s/openquake/hzrdi" % self.path
+        self.top = "%s/" % self.path
         # older revision
         self.path_38_1 = "%s/0.3.8/1" % self.top
         os.makedirs(self.path_38_1)
@@ -386,13 +386,13 @@ class RunScriptsTestCase(unittest.TestCase):
             # The mock was called four times.
             self.assertEqual(4, mock_psql.call_count)
             # The first call executed an SQL script.
-            self.assertEqual({"script": "openquake/hzrdi/0.3.9-1/3/01-c.sql"},
+            self.assertEqual({"script": "0.3.9-1/3/01-c.sql"},
                              mock_psql.call_args_list[0][1])
             # The second call executed the second SQL script.
-            self.assertEqual({"script": "openquake/hzrdi/0.3.9-1/3/02-d.sql"},
+            self.assertEqual({"script": "0.3.9-1/3/02-d.sql"},
                              mock_psql.call_args_list[1][1])
             # The third call executed the second SQL script.
-            self.assertEqual({"script": "openquake/hzrdi/0.4.2/2/01-a.sql"},
+            self.assertEqual({"script": "0.4.2/2/01-a.sql"},
                              mock_psql.call_args_list[2][1])
             # The last call executed the command to update the revision step.
             self.assertEqual(
@@ -428,10 +428,10 @@ class RunScriptsTestCase(unittest.TestCase):
             # The mock was called thrice.
             self.assertEqual(3, mock_psql.call_count)
             # The first call executed an SQL script.
-            self.assertEqual({"script": "openquake/hzrdi/0.3.9-1/3/01-c.sql"},
+            self.assertEqual({"script": "0.3.9-1/3/01-c.sql"},
                              mock_psql.call_args_list[0][1])
             # The second call executed the second SQL script.
-            self.assertEqual({"script": "openquake/hzrdi/0.3.9-1/3/02-d.sql"},
+            self.assertEqual({"script": "0.3.9-1/3/02-d.sql"},
                              mock_psql.call_args_list[1][1])
             # Please note how the step is assigned a -1 value which indicates
             # a database upgrade failure.

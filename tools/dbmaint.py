@@ -144,7 +144,8 @@ def script_sort_key(script):
 def scripts_to_run(artefact, rev_info, config):
     """The SQL scripts that need to run given the `artefact` and `rev_info`.
 
-    :param string artefact: name of the revision controlled database artefact
+    :param str artefact:
+        DEPRECATED: name of the revision controlled database artefact
     :param dict rev_info: current revision info: revision and step
     :param dict config: the configuration to use: database, host, user, path.
 
@@ -155,7 +156,7 @@ def scripts_to_run(artefact, rev_info, config):
     revision = rev_info['revision']
 
     # find upgrade scripts for this revision
-    path = "%s/%s/%s" % (config['path'], artefact, revision)
+    path = "%s/%s" % (config['path'], revision)
     files = find_scripts(path)
     step = int(rev_info['step'])
     for script in files:
@@ -164,7 +165,7 @@ def scripts_to_run(artefact, rev_info, config):
             result.append(os.path.join(revision, script))
 
     # find upgrade scripts for revisions newer than the current one
-    path = "%s/%s" % (config['path'], artefact)
+    path = config['path']
     current_revision_key = version_key(revision)
     if os.path.isdir(path):
         dirs = [os.path.join(path, d)
@@ -193,7 +194,7 @@ def run_scripts(artefact, rev_info, scripts, config):
     Once all scripts complete the step of the `artefact` at hand will be
     updated to the highest step encountered.
 
-    :param string artefact: name of the revision controlled database artefact
+    :param str artefact: name of the revision controlled database artefact
     :param dict rev_info: current revision info: revision and step
     :param list scripts: a sorted list of SQL script paths (relative to the
         path in `config`)
@@ -213,7 +214,7 @@ def run_scripts(artefact, rev_info, scripts, config):
             max_revision = revision
 
         # Run the SQL script.
-        results = psql(config, script="%s/%s" % (artefact, script))
+        results = psql(config, script=script)
         if script_failed(results, script, config):
             # A step of '-1' indicates a broken upgrade.
             max_step = -1
@@ -272,21 +273,6 @@ def perform_upgrade(config):
         rev_data[info[0]] = dict(zip(columns, info[1:]))
     logging.debug(rev_data)
 
-    # one-time only upgrade step (can't be a normal upgrade step)
-    if not 'openquake' in rev_data:
-        # this code works because we don't support upgrades from 0.3.9; the
-        # +1 is for the missing upgrade step for the big schema rename
-        cmd = "INSERT INTO admin.revision_info (artefact, revision, step)" \
-              "    VALUES ('openquake', '0.4.2', " \
-              "            (SELECT SUM(step) FROM admin.revision_info" \
-              "                 WHERE revision = '0.4.2') + 1)"
-        code, out, err = psql(config, cmd=cmd)
-        step = sum(int(r['step']) for r in rev_data.values()
-                       if r['revision'] == '0.4.2')
-        cmd = "DELETE FROM INTO admin.revision_info" \
-              "    WHERE artefact <> 'openquake'"
-        rev_data = dict(openquake=dict(revision='0.4.2', step=step))
-
     # Run upgrade scripts (if any) for all artefacts.
     for artefact, rev_info in rev_data.iteritems():
         scripts = scripts_to_run(artefact, rev_info, config)
@@ -304,7 +290,8 @@ def main(cargs):
         return arg.split('-')[-1]
 
     config = dict(
-        db="openquake", user="postgres", path="openquake/db/schema/upgrades",
+        db="openquake", user="postgres",
+        path="openquake/engine/db/schema/upgrades",
         host="localhost", dryrun=False)
     longopts = ["%s" % k if isinstance(v, bool) else "%s=" % k
                 for k, v in config.iteritems()] + ["help"]

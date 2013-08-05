@@ -160,6 +160,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
         # our mock hazard map results:
         aaae([0.0091, 0.00687952], hm_0_02.imls)
 
+    @attr('slow')
     def test_hazard_curves_to_hazard_map_logic_tree(self):
         lt_haz_curves = models.HazardCurve.objects.filter(
             output__oq_job=self.job,
@@ -181,6 +182,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
 
                 self._test_maps(curve, hm_0_1, hm_0_02, lt_rlz=lt_rlz)
 
+    @attr('slow')
     def test_hazard_curves_to_hazard_map_mean(self):
         mean_haz_curves = models.HazardCurve.objects.filter(
             output__oq_job=self.job,
@@ -200,6 +202,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
 
                 self._test_maps(curve, hm_0_1, hm_0_02)
 
+    @attr('slow')
     def test_hazard_curves_to_hazard_map_quantile(self):
         with mock.patch('%s.compute_hazard_maps' % MOCK_PREFIX) as compute:
             compute.return_value = self.MOCK_HAZARD_MAP

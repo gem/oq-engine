@@ -108,5 +108,5 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
                          models.LossMapData.objects.filter(
                              loss_map__output__oq_job=self.job).count())
 
-        files = self.calculator.export(exports=True)
+        files = self.calculator.export(exports=['xml'])
         self.assertEqual(7, len(files))

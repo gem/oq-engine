@@ -55,13 +55,13 @@ class ExportTestCase(unittest.TestCase):
 
         self.output_mock.loss_curve.id = 0
         self.output_mock.loss_curve.loss_type = "structural"
+        self.output_mock.output_type = 'agg_loss_curve'
         with mock.patch(writer) as m:
-            ret = risk.export_agg_loss_curve(self.output_mock, "/tmp/")
+            ret = risk.export_agg_loss_curve_xml(self.output_mock, "/tmp/")
 
-            self.assertEqual([((),
+            self.assertEqual([(('/tmp/loss-curves-0.xml', ),
                               {'gsim_tree_path': None,
                                'investigation_time': 30,
-                               'path': '/tmp/loss-curves-0.xml',
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
@@ -74,15 +74,15 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.loss_curve.id = 0
         self.output_mock.loss_curve.insured = False
         self.output_mock.loss_curve.loss_type = "structural"
+        self.output_mock.output_type = 'loss_curve'
 
         with mock.patch(writer) as m:
-            ret = risk.export_loss_curve(self.output_mock, "/tmp/")
+            ret = risk.export_loss_curve_xml(self.output_mock, "/tmp/")
 
-            self.assertEqual([((),
+            self.assertEqual([(('/tmp/loss-curves-0.xml', ),
                               {'gsim_tree_path': None,
                                'investigation_time': 30,
                                'insured': False,
-                               'path': '/tmp/loss-curves-0.xml',
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
@@ -95,15 +95,15 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.loss_map.id = 0
         self.output_mock.loss_map.poe = 0.1
         self.output_mock.loss_map.loss_type = "structural"
+        self.output_mock.output_type = 'loss_map'
 
         with mock.patch(writer) as m:
-            ret = risk.export_loss_map(self.output_mock, "/tmp/")
+            ret = risk.export_loss_map_xml(self.output_mock, "/tmp/")
 
-            self.assertEqual([((),
+            self.assertEqual([(('/tmp/loss-maps-0.xml', ),
                               {'gsim_tree_path': None,
                                'investigation_time': 30,
                                'loss_category': 'air',
-                               'path': '/tmp/loss-maps-0.xml',
                                'poe': 0.1,
                                'quantile_value': None,
                                'source_model_tree_path': None,
@@ -116,15 +116,15 @@ class ExportTestCase(unittest.TestCase):
 
         self.output_mock.bcr_distribution.id = 0
         self.output_mock.bcr_distribution.loss_type = "structural"
+        self.output_mock.output_type = 'bcr_distribution'
 
         with mock.patch(writer) as m:
-            ret = risk.export_bcr_distribution(self.output_mock, "/tmp/")
+            ret = risk.export_bcr_distribution_xml(self.output_mock, "/tmp/")
 
-            self.assertEqual([((),
+            self.assertEqual([(('/tmp/bcr-distribution-0.xml', ),
                               {'asset_life_expectancy': 10,
                                'gsim_tree_path': None,
                                'interest_rate': 0.3,
-                               'path': '/tmp/bcr-distribution-0.xml',
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
@@ -138,6 +138,7 @@ class ExportTestCase(unittest.TestCase):
         self.output_mock.aggregate_loss.mean = 1
         self.output_mock.aggregate_loss.std_dev = 2
         self.output_mock.aggregate_loss.loss_type = "structural"
+        self.output_mock.output_type = 'aggregate_loss'
 
         with mock.patch(writer) as m:
             ret = risk.export_aggregate_loss(self.output_mock, "/tmp/")
@@ -198,11 +199,11 @@ class ClassicalExportTestCase(BaseExportTestCase):
             # exporter code:
             loss_curve_files = []
             for o in loss_curve_outputs:
-                loss_curve_files.extend(risk.export(o.id, target_dir))
+                loss_curve_files.append(risk.export(o.id, target_dir, 'xml'))
 
             loss_map_files = []
             for o in loss_map_outputs:
-                loss_map_files.extend(risk.export(o.id, target_dir))
+                loss_map_files.append(risk.export(o.id, target_dir, 'xml'))
 
             self.assertEqual(19, len(loss_curve_files))
             self.assertEqual(19, len(loss_map_files))
@@ -276,19 +277,23 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # exporter code:
             loss_curve_files = []
             for o in loss_curve_outputs:
-                loss_curve_files.extend(risk.export(o.id, target_dir))
+                loss_curve_files.append(risk.export(o.id, target_dir, 'xml'))
 
             agg_loss_curve_files = []
             for o in agg_loss_curve_outputs:
-                agg_loss_curve_files.extend(risk.export(o.id, target_dir))
+                agg_loss_curve_files.append(
+                    risk.export(o.id, target_dir, 'xml')
+                )
 
             event_loss_table_files = []
             for o in event_loss_tables:
-                event_loss_table_files.extend(risk.export(o.id, target_dir))
+                event_loss_table_files.append(
+                    risk.export(o.id, target_dir, 'xml')
+                )
 
             loss_map_files = []
             for o in loss_map_outputs:
-                loss_map_files.extend(risk.export(o.id, target_dir))
+                loss_map_files.append(risk.export(o.id, target_dir, 'xml'))
 
             self.assertEqual(19, len(loss_curve_files))
             self.assertEqual(16, len(agg_loss_curve_files))

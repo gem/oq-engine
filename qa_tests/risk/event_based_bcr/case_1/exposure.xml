@@ -21,7 +21,7 @@
         </costs>
       </asset>
       <asset id="a3" taxonomy="VF">
-        <location lon="-20.000" lat="37.225"/>
+        <location lon="-120.000" lat="37.25"/>
         <costs>
           <cost type="structural" value="3" retrofitted="0.2"/>
         </costs>

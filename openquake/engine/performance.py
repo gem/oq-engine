@@ -37,6 +37,20 @@ class PerformanceMonitor(object):
     or store the results of the analysis.
     """
 
+    @classmethod
+    def monitor(cls, method):
+        """
+        A decorator to add monitoring to calculator methods. The only
+        constraints are:
+        1) the method has no arguments except self
+        2) there is an attribute self.job.id
+        """
+        def newmeth(self):
+            with cls(method.__name__, self.job.id):
+                return method(self)
+        newmeth.__name__ = method.__name__
+        return newmeth
+
     def __init__(self, pids):
         self._procs = [psutil.Process(pid) for pid in pids if pid]
         self._start_time = None  # seconds from the epoch
@@ -102,8 +116,13 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     pgpid = None
     pypid = None
 
+    @classmethod
+    def store_task_id(cls, job_id, task):
+        with cls('storing task id', job_id, task, flush=True):
+            pass
+
     def __init__(self, operation, job_id, task=None, tracing=False,
-                 profile_pymem=True, profile_pgmem=False):
+                 profile_pymem=True, profile_pgmem=False, flush=False):
         self.operation = operation
         self.job_id = job_id
         if task:
@@ -115,6 +134,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         self.tracing = tracing
         self.profile_pymem = profile_pymem
         self.profile_pgmem = profile_pgmem
+        self.flush = flush
         if self.profile_pymem and self.pypid is None:
             self.__class__.pypid = os.getpid()
         if self.profile_pgmem and self.pgpid is None:
@@ -167,6 +187,8 @@ class EnginePerformanceMonitor(PerformanceMonitor):
                 pymemory=pymemory,
                 pgmemory=pgmemory)
             self.cache.add(perf)
+            if self.flush:
+                self.cache.flush()
 
     def __enter__(self):
         super(EnginePerformanceMonitor, self).__enter__()
@@ -183,7 +205,7 @@ class EnginePerformanceMonitor(PerformanceMonitor):
 atexit.register(EnginePerformanceMonitor.cache.flush)
 
 
-class DummyMonitor(object):
+class DummyMonitor(PerformanceMonitor):
     """
     This class makes it easy to disable the monitoring
     in client code. Disabling the monitor can improve the performance.
@@ -191,12 +213,36 @@ class DummyMonitor(object):
     def __init__(self, operation='', job_id=0, *args, **kw):
         self.operation = operation
         self.job_id = job_id
-
-    def __enter__(self):
-        return self
+        self._procs = []
 
     def copy(self, operation):
         return self.__class__(operation, self.job_id)
 
+    def __enter__(self):
+        return self
+
     def __exit__(self, etype, exc, tb):
         pass
+
+
+class LightMonitor(object):
+    """
+    in situations where a `PerformanceMonitor` is overkill or affects
+    the performance (as in short loops), this helper can aid in
+    measuring roughly the performance of a small piece of code. Please
+    note that it does not prevent the common traps in measuring the
+    performance as stated in the "Algorithms" chapter in the Python
+    Cookbook.
+    """
+
+    def __enter__(self):
+        self.t0 = time.time()
+        return self
+
+    def __init__(self, counter, operation):
+        self.counter = counter
+        self.operation = operation
+        self.t0 = None
+
+    def __exit__(self, etype, exc, tb):
+        self.counter.update({self.operation: time.time() - self.t0})
