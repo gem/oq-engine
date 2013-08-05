@@ -46,7 +46,6 @@
 
           <costs>
             <cost type="structural" value="250000"/>
-            <cost type="structural" value="205432"/>
             <cost type="non_structural" value="21000"/>
             <cost type="contents" value="21.95"/>
             <cost type="business_interruption" value="40"/>
@@ -64,7 +63,6 @@
 
           <costs>
             <cost type="structural" value="500000"/>
-            <cost type="structural" value="495432"/>
             <cost type="contents" value="30.95"/>
           </costs>
 
