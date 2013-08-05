@@ -41,12 +41,6 @@ from django.db import transaction
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.calc import stochastic
-from openquake.hazardlib.geo import ComplexFaultSurface
-from openquake.hazardlib.geo import MultiSurface
-from openquake.hazardlib.geo import SimpleFaultSurface
-from openquake.hazardlib.source import CharacteristicFaultSource
-from openquake.hazardlib.source import ComplexFaultSource
-from openquake.hazardlib.source import SimpleFaultSource
 
 from openquake.engine import writer, logs
 from openquake.engine.utils.general import block_splitter
@@ -65,7 +59,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 DEFAULT_GMF_REALIZATIONS = 1
 
 # NB: beware of large caches
-inserter = writer.CacheInserter(models.GmfAgg, 1000)
+inserter = writer.CacheInserter(models.GmfData, 1000)
 
 
 # Disabling pylint for 'Too many local variables'
@@ -123,18 +117,21 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     src_filter = filters.source_site_distance_filter(hc.maximum_distance)
     rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
 
+    with EnginePerformanceMonitor(
+            'reading site collection', job_id, ses_and_gmfs):
+        site_collection = hc.site_collection
+
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
         ruptures = list(stochastic.stochastic_event_set_poissonian(
-                        source_iter, hc.investigation_time, hc.site_collection,
+                        source_iter, hc.investigation_time, site_collection,
                         src_filter, rup_filter))
         if not ruptures:
             return
 
     with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
-        rupture_ids = [_save_ses_rupture(ses, rupture, cmplt_lt_ses)
-                       for rupture in ruptures]
+        rupture_ids = _save_ses_ruptures(ses, ruptures, cmplt_lt_ses)
 
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
@@ -143,7 +140,7 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
                 hc, gsims, ruptures, rupture_ids)
 
         with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
-            _save_gmfs(ses, gmf_cache, hc.site_collection)
+            _save_gmfs(ses, gmf_cache, site_collection)
 
 ses_and_gmfs.ignore_result = False  # essential
 
@@ -191,8 +188,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_ids):
     return gmf_cache
 
 
-@transaction.commit_on_success(using='reslt_writer')
-def _save_ses_rupture(ses, rupture, complete_logic_tree_ses):
+def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
     """
     Helper function for saving stochastic event set ruptures to the database.
 
@@ -206,96 +202,20 @@ def _save_ses_rupture(ses, rupture, complete_logic_tree_ses):
         logic tree` stochastic event set.
         If not None, save a copy of the input `rupture` to this SES.
     """
-    is_from_fault_source = (
-        rupture.source_typology in (ComplexFaultSource, SimpleFaultSource)
-        or
-        (rupture.source_typology is CharacteristicFaultSource
-         and isinstance(rupture.surface, (ComplexFaultSurface,
-                                          SimpleFaultSurface)))
-    )
-    is_multi_surface = False
-    if (rupture.source_typology is CharacteristicFaultSource
-            and isinstance(rupture.surface, MultiSurface)):
-        is_multi_surface = True
-
-    if is_from_fault_source:
-        # for simple and complex fault sources,
-        # rupture surface geometry is represented by a mesh
-        surf_mesh = rupture.surface.get_mesh()
-        lons = surf_mesh.lons
-        lats = surf_mesh.lats
-        depths = surf_mesh.depths
-    else:
-        if is_multi_surface:
-            # `list` of openquake.hazardlib.geo.surface.planar.PlanarSurface
-            # objects:
-            surfaces = rupture.surface.surfaces
-
-            # lons, lats, and depths are arrays with len == 4*N, where N is the
-            # number of surfaces in the multisurface
-            # for each `corner_*`, the ordering is:
-            #   - top left
-            #   - top right
-            #   - bottom left
-            #   - bottom right
-            lons = numpy.concatenate([x.corner_lons for x in surfaces])
-            lats = numpy.concatenate([x.corner_lats for x in surfaces])
-            depths = numpy.concatenate([x.corner_depths for x in surfaces])
-        else:
-            # For area or point source,
-            # rupture geometry is represented by a planar surface,
-            # defined by 3D corner points
-            surface = rupture.surface
-            lons = numpy.zeros((4))
-            lats = numpy.zeros((4))
-            depths = numpy.zeros((4))
-
-            # NOTE: It is important to maintain the order of these corner
-            # points.
-            # TODO: check the ordering
-            for i, corner in enumerate((surface.top_left,
-                                        surface.top_right,
-                                        surface.bottom_left,
-                                        surface.bottom_right)):
-                lons[i] = corner.longitude
-                lats[i] = corner.latitude
-                depths[i] = corner.depth
 
     # TODO: Possible future optimiztion:
     # Refactor this to do bulk insertion of ruptures
-    rupture_id = models.SESRupture.objects.create(
-        ses=ses,
-        magnitude=rupture.mag,
-        strike=rupture.surface.get_strike(),
-        dip=rupture.surface.get_dip(),
-        rake=rupture.rake,
-        surface=rupture.surface,
-        tectonic_region_type=rupture.tectonic_region_type,
-        is_from_fault_source=is_from_fault_source,
-        is_multi_surface=is_multi_surface,
-        lons=lons,
-        lats=lats,
-        depths=depths
-    ).id
+    with transaction.commit_on_success(using='reslt_writer'):
+        rupture_ids = [models.SESRupture.objects.create(ses=ses, rupture=r).id
+                       for r in ruptures]
 
-    # FIXME(lp): do not save a copy. use the same approach used for
-    # gmf and gmfset
-    if complete_logic_tree_ses is not None:
-        models.SESRupture.objects.create(
-            ses=complete_logic_tree_ses,
-            magnitude=rupture.mag,
-            strike=rupture.surface.get_strike(),
-            dip=rupture.surface.get_dip(),
-            rake=rupture.rake,
-            tectonic_region_type=rupture.tectonic_region_type,
-            is_from_fault_source=is_from_fault_source,
-            is_multi_surface=is_multi_surface,
-            lons=lons,
-            lats=lats,
-            depths=depths
-        )
+        if complete_logic_tree_ses is not None:
+            for rupture in ruptures:
+                models.SESRupture.objects.create(
+                    ses=complete_logic_tree_ses,
+                    rupture=rupture)
 
-    return rupture_id
+    return rupture_ids
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -336,7 +256,7 @@ def _save_gmfs(ses, gmf_dict, sites):
             gmvs = all_gmvs[nonzero_gmvs_idxs].tolist()
             relevant_rupture_ids = rupture_ids[nonzero_gmvs_idxs].tolist()
             if gmvs:
-                inserter.add(models.GmfAgg(
+                inserter.add(models.GmfData(
                     gmf=gmf_coll,
                     ses_id=ses.id,
                     imt=imt_name,
@@ -402,7 +322,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             logs.LOG.info('Found %d sources for realization %d',
                           n, lt_rlz.id)
         total_sources = sum(num_sources)
-        logs.LOG.info('Total number of sources: %d', total_sources)
+
+        if len(num_sources) > 1:
+            logs.LOG.info('Total number of sources: %d', total_sources)
 
         self.preferred_block_size = int(
             math.ceil(float(total_sources * num_ses) / preferred_num_tasks))
@@ -494,7 +416,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         initialize DB records for those results here.
 
         Throughout the course of the calculation, computed ruptures will be
-        copied into this collection. See :func:`_save_ses_rupture` for more
+        copied into this collection. See :func:`_save_ses_ruptures` for more
         info.
         """
         # `complete logic tree` SES
@@ -528,7 +450,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.)
         """
-
         # Parse risk models.
         self.parse_risk_models()
 
@@ -564,7 +485,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         If requested, perform additional processing of GMFs to produce hazard
         curves.
         """
-
         if self.hc.hazard_curves_from_gmfs:
             with EnginePerformanceMonitor('generating hazard curves',
                                           self.job.id):

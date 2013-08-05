@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = "0.9.2"
+version = "1.0.0"
 url = "http://openquake.org/"
 
 README = """
@@ -45,7 +45,8 @@ setup(
 
     include_package_data=True,
     package_data={"openquake.engine": [
-            "db/schema/*", "openquake.cfg", "README", "LICENSE"]},
+        "db/schema/*.sql", "db/schema/upgrades/*/*/*.sql",
+        "openquake.cfg", "README", "LICENSE"]},
     exclude_package_data={"": ["bin/oqpath.py", "bin/oq_check_monitors",
                                "bin/oq_log_sink"]},
     scripts=["openquake/engine/bin/oq_create_db"],

@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -49,8 +48,12 @@ from django.contrib.gis.db import models as djm
 from shapely import wkt
 
 from openquake.hazardlib import geo as hazardlib_geo
+from openquake.hazardlib import source as hazardlib_source
+
 from openquake.engine.db import fields
 from openquake.engine import writer
+
+import openquake.hazardlib.site
 
 #: Default Spectral Acceleration damping. At the moment, this is not
 #: configurable.
@@ -184,6 +187,115 @@ def inputs4rcalc(calc_id, input_type=None):
         result = result.filter(input_type=input_type)
     return result
 
+
+def get_site_model(hc_id):
+    """Get the site model :class:`~openquake.engine.db.models.Input` record
+    for the given job id.
+
+    :param int hc_id:
+        The id of a :class:`~openquake.engine.db.models.HazardCalculation`.
+
+    :returns:
+        The site model :class:`~openquake.engine.db.models.Input` record for
+        this job.
+    :raises:
+        :exc:`RuntimeError` if the job has more than 1 site model.
+    """
+    site_model = inputs4hcalc(hc_id, input_type='site_model')
+
+    if len(site_model) == 0:
+        return None
+    elif len(site_model) > 1:
+        # Multiple site models for 1 job are not allowed.
+        raise RuntimeError("Only 1 site model per job is allowed, found %s."
+                           % len(site_model))
+
+    # There's only one site model.
+    return site_model[0]
+
+
+## TODO: this could be implemented with a view, now that there is a site table
+def get_closest_site_model_data(input_model, point):
+    """Get the closest available site model data from the database for a given
+    site model :class:`~openquake.engine.db.models.Input` and
+    :class:`openquake.hazardlib.geo.point.Point`.
+
+    :param input_model:
+        :class:`openquake.engine.db.models.Input` with `input_type` of
+        'site_model'.
+    :param site:
+        :class:`openquake.hazardlib.geo.point.Point` instance.
+
+    :returns:
+        The closest :class:`openquake.engine.db.models.SiteModel` for the given
+        ``input_model`` and ``point`` of interest.
+
+        This function uses the PostGIS `ST_Distance_Sphere
+        <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
+        function to calculate distance.
+
+        If there is no site model data, return `None`.
+    """
+    query = """
+    SELECT
+        hzrdi.site_model.*,
+        min(ST_Distance_Sphere(location, %s))
+            AS min_distance
+    FROM hzrdi.site_model
+    WHERE input_id = %s
+    GROUP BY id
+    ORDER BY min_distance
+    LIMIT 1;"""
+
+    raw_query_set = SiteModel.objects.raw(
+        query, ['SRID=4326; %s' % point.wkt2d, input_model.id]
+    )
+
+    site_model_data = list(raw_query_set)
+
+    assert len(site_model_data) <= 1, (
+        "This query should return at most 1 record.")
+
+    if len(site_model_data) == 1:
+        return site_model_data[0]
+
+
+# FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
+# the issue is the reset of the depts; we need QA tests for that
+class SiteCollection(openquake.hazardlib.site.SiteCollection):
+    cache = {}  # hazard_calculation_id -> site_collection
+
+    def __init__(self, sites):
+        super(SiteCollection, self).__init__(sites)
+        self.sites_dict = dict((s.id, s) for s in sites)
+
+    def subcollection(self, indices):
+        """
+        :param indices:
+            an array of integer identifying the ordinal of the sites
+            to select. Sites are ordered by the value of their id field
+        :returns:
+            `self` is `indices` is None, otherwise, a `SiteCollection`
+            holding sites at `indices`
+        """
+        if indices is None:
+            return self
+        sites = []
+        for i, site in enumerate(self):
+            if i in indices:
+                sites.append(site)
+        return self.__class__(sites)
+
+    def __iter__(self):
+        ids = sorted(self.sites_dict)
+        for site_id in ids:
+            yield self.sites_dict[site_id]
+
+    def get_by_id(self, site_id):
+        return self.sites_dict[site_id]
+
+    def __contains__(self, site):
+        return site.id in self.sites_dict
 
 ## Tables in the 'admin' schema.
 
@@ -412,8 +524,8 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     owner = djm.ForeignKey('OqUser')
-    hazard_calculation = djm.ForeignKey('HazardCalculation', null=True)
-    risk_calculation = djm.ForeignKey('RiskCalculation', null=True)
+    hazard_calculation = djm.OneToOneField('HazardCalculation', null=True)
+    risk_calculation = djm.OneToOneField('RiskCalculation', null=True)
     LOG_LEVEL_CHOICES = (
         (u'debug', u'Debug'),
         (u'info', u'Info'),
@@ -436,6 +548,7 @@ class OqJob(djm.Model):
     oq_version = djm.TextField(null=True, blank=True)
     hazardlib_version = djm.TextField(null=True, blank=True)
     nrml_version = djm.TextField(null=True, blank=True)
+    risklib_version = djm.TextField(null=True, blank=True)
     is_running = djm.BooleanField(default=False)
     duration = djm.IntegerField(default=0)
     job_pid = djm.IntegerField(default=0)
@@ -568,8 +681,6 @@ class HazardCalculation(djm.Model):
     region_grid_spacing = djm.FloatField(null=True, blank=True)
     # The points of interest for a calculation.
     sites = djm.MultiPointField(srid=DEFAULT_SRID, null=True, blank=True)
-    # this is initialized by initialize_site_model
-    site_collection = fields.PickleField(null=True, blank=True)
 
     ########################
     # Logic Tree parameters:
@@ -822,7 +933,7 @@ class HazardCalculation(djm.Model):
         realizations_nr = self.ltrealization_set.count()
         return realizations_nr
 
-    def points_to_compute(self):
+    def points_to_compute(self, save_sites=True):
         """
         Generate a :class:`~openquake.hazardlib.geo.mesh.Mesh` of points.
         These points indicate the locations of interest in a hazard
@@ -844,9 +955,8 @@ class HazardCalculation(djm.Model):
                     'asset_ref')
 
                 # the points here must be sorted
-                lons, lats = zip(
-                    *sorted(set([(asset.site.x, asset.site.y)
-                                 for asset in assets])))
+                lons, lats = zip(*sorted(set((asset.site.x, asset.site.y)
+                                             for asset in assets)))
                 # Cache the mesh:
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
@@ -866,7 +976,52 @@ class HazardCalculation(djm.Model):
                 self._points_to_compute = hazardlib_geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
                 )
+            # store the sites
+            if save_sites and self._points_to_compute:
+                self.save_sites([(pt.longitude, pt.latitude)
+                                 for pt in self._points_to_compute])
+
         return self._points_to_compute
+
+    @property
+    def site_collection(self):
+        """
+        Create a SiteCollection from a HazardCalculation object as follows.
+        First, take all of the points/locations of interest defined by the
+        calculation geometry. For each point, do distance queries on the site
+        model and get the site parameters which are closest to the point of
+        interest. This aggregation of points to the closest site parameters
+        is what we store in the `site_collection` field.
+        If the computation does not specify a site model the same 4 reference
+        site parameters are used for all sites.
+        """
+        if self.id in SiteCollection.cache:
+            return SiteCollection.cache[self.id]
+
+        site_model_inp = get_site_model(self.id)
+        hsites = HazardSite.objects.filter(hazard_calculation=self)
+        sites = []
+        for hsite in hsites:
+            pt = openquake.hazardlib.geo.point.Point(
+                hsite.location.x, hsite.location.y)
+            if site_model_inp:
+                smd = get_closest_site_model_data(site_model_inp, pt)
+                measured = smd.vs30_type == 'measured'
+                vs30 = smd.vs30
+                z1pt0 = smd.z1pt0
+                z2pt5 = smd.z2pt5
+            else:
+                vs30 = self.reference_vs30_value
+                measured = self.reference_vs30_type == 'measured'
+                z1pt0 = self.reference_depth_to_1pt0km_per_sec
+                z2pt5 = self.reference_depth_to_2pt5km_per_sec
+
+            sites.append(openquake.hazardlib.site.Site(
+                         pt, vs30, measured, z1pt0, z2pt5, hsite.id))
+
+        sitecoll = SiteCollection.cache[self.id] = \
+            SiteCollection(sites) if sites else None
+        return sitecoll
 
     @property
     def exposure_model(self):
@@ -948,8 +1103,6 @@ class RiskCalculation(djm.Model):
         (u'classical', u'Classical PSHA'),
         (u'classical_bcr', u'Classical BCR'),
         (u'event_based', u'Probabilistic Event-Based'),
-        # TODO(LB): Enable these once calculators are supported and
-        # implemented.
         (u'scenario', u'Scenario'),
         (u'scenario_damage', u'Scenario Damage'),
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
@@ -1074,23 +1227,27 @@ class RiskCalculation(djm.Model):
         `filters` to the default queryset
         """
 
-        if self.calculation_mode in ["classical", "classical_bcr"]:
-            filters = dict(output_type='hazard_curve_multi',
-                           hazard_curve__lt_realization__isnull=False)
-        elif self.calculation_mode in ["event_based", "event_based_bcr"]:
-            filters = dict(output_type='gmf',
-                           gmf__lt_realization__isnull=False)
-        elif self.calculation_mode in ['scenario', 'scenario_damage']:
-            filters = dict(output_type='gmf_scenario')
-        else:
-            raise NotImplementedError
-
         if self.hazard_output:
             return [self.hazard_output]
         elif self.hazard_calculation:
-            return self.hazard_calculation.oqjob_set.filter(
-                status="complete").latest(
-                    'last_update').output_set.filter(**filters).order_by('id')
+            if self.calculation_mode in ["classical", "classical_bcr"]:
+                filters = dict(output_type='hazard_curve_multi',
+                               hazard_curve__lt_realization__isnull=False)
+            elif self.calculation_mode in ["event_based", "event_based_bcr"]:
+                if self.hazard_calculation.ground_motion_fields:
+                    filters = dict(output_type='gmf',
+                                   gmf__lt_realization__isnull=False)
+                else:
+                    filters = dict(
+                        output_type='ses',
+                        ses__lt_realization__isnull=False)
+            elif self.calculation_mode in ['scenario', 'scenario_damage']:
+                filters = dict(output_type='gmf_scenario')
+            else:
+                raise NotImplementedError
+
+            return self.hazard_calculation.oqjob.output_set.filter(
+                **filters).order_by('id')
         else:
             raise RuntimeError("Neither hazard calculation "
                                "neither a hazard output has been provided")
@@ -1630,45 +1787,41 @@ class SES(djm.Model):
         return SESRupture.objects.filter(ses=self.id).iterator()
 
 
+def old_field_property(prop):
+    def wrapped_property(s):
+        if getattr(s, "old_%s" % prop.__name__) is not None:
+            return getattr(s, "old_%s" % prop.__name__)
+        else:
+            return prop(s)
+    return property(wrapped_property)
+
+
 class SESRupture(djm.Model):
     """
     A rupture as part of a Stochastic Event Set.
-
-    Ruptures will have different geometrical definitions, depending on whether
-    the event was generated from a point/area source or a simple/complex fault
-    source.
     """
     ses = djm.ForeignKey('SES')
-    magnitude = djm.FloatField()
-    strike = djm.FloatField()
-    dip = djm.FloatField()
-    rake = djm.FloatField()
-    tectonic_region_type = djm.TextField()
-    # If True, this rupture was generated from a simple/complex fault
-    # source. If False, this rupture was generated from a point/area source.
-    is_from_fault_source = djm.BooleanField()
-    is_multi_surface = djm.BooleanField()
-    # The following fields can be interpreted different ways, depending on the
-    # value of `is_from_fault_source`.
-    # If `is_from_fault_source` is True, each of these fields should contain a
-    # 2D numpy array (all of the same shape). Each triple of (lon, lat, depth)
-    # for a given index represents the node of a rectangular mesh.
-    # If `is_from_fault_source` is False, each of these fields should contain
-    # a sequence (tuple, list, or numpy array, for example) of 4 values. In
-    # order, the triples of (lon, lat, depth) represent top left, top right,
-    # bottom left, and bottom right corners of the the rupture's planar
-    # surface.
-    # Update:
-    # There is now a third case. If the rupture originated from a
-    # characteristic fault source with a multi-planar-surface geometry,
-    # `lons`, `lats`, and `depths` will contain one or more sets of 4 points,
-    # similar to how planar surface geometry is stored (see above).
-    lons = fields.PickleField()
-    lats = fields.PickleField()
-    depths = fields.PickleField()
 
-    # HazardLib Surface object. Stored as it is needed by risk disaggregation
-    surface = fields.PickleField()
+    #: A pickled
+    #: :class:`openquake.hazardlib.source.rupture.ProbabilisticRupture`
+    #: instance
+    rupture = fields.PickleField()
+
+    old_magnitude = djm.FloatField(null=True)
+    old_strike = djm.FloatField(null=True)
+    old_dip = djm.FloatField(null=True)
+    old_rake = djm.FloatField(null=True)
+    old_tectonic_region_type = djm.TextField(null=True)
+    old_is_from_fault_source = djm.NullBooleanField(null=True)
+    old_is_multi_surface = djm.NullBooleanField(null=True)
+    old_lons = fields.PickleField(null=True)
+    old_lats = fields.PickleField(null=True)
+    old_depths = fields.PickleField(null=True)
+
+    #: A pickled
+    #: :class:`openquake.hazardlib.geo.surface.BaseSurface`
+    #: instance
+    old_surface = fields.PickleField(null=True)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
@@ -1714,6 +1867,129 @@ class SESRupture(djm.Model):
             self._validate_planar_surface()
             return self.lons[3], self.lats[3], self.depths[3]
         return None
+
+    @old_field_property
+    def is_from_fault_source(self):
+        """
+        If True, this rupture was generated from a simple/complex fault
+        source. If False, this rupture was generated from a point/area source.
+        """
+        typology = self.rupture.source_typology
+        is_char = typology is hazardlib_source.CharacteristicFaultSource
+        is_complex_or_simple = typology in (
+            hazardlib_source.ComplexFaultSource,
+            hazardlib_source.SimpleFaultSource)
+        is_complex_or_simple_surface = isinstance(
+            self.rupture.surface, (hazardlib_geo.ComplexFaultSurface,
+                                   hazardlib_geo.SimpleFaultSurface))
+        return is_complex_or_simple or (
+            is_char and is_complex_or_simple_surface)
+
+    @old_field_property
+    def is_multi_surface(self):
+        typology = self.rupture.source_typology
+        is_char = typology is hazardlib_source.CharacteristicFaultSource
+        is_multi_sur = isinstance(
+            self.rupture.surface, hazardlib_geo.MultiSurface)
+        return is_char and is_multi_sur
+
+    def get_geom(self):
+        """
+        The following fields can be interpreted different ways,
+        depending on the value of `is_from_fault_source`. If
+        `is_from_fault_source` is True, each of these fields should
+        contain a 2D numpy array (all of the same shape). Each triple
+        of (lon, lat, depth) for a given index represents the node of
+        a rectangular mesh. If `is_from_fault_source` is False, each
+        of these fields should contain a sequence (tuple, list, or
+        numpy array, for example) of 4 values. In order, the triples
+        of (lon, lat, depth) represent top left, top right, bottom
+        left, and bottom right corners of the the rupture's planar
+        surface. Update: There is now a third case. If the rupture
+        originated from a characteristic fault source with a
+        multi-planar-surface geometry, `lons`, `lats`, and `depths`
+        will contain one or more sets of 4 points, similar to how
+        planar surface geometry is stored (see above).
+        """
+        if self.is_from_fault_source:
+            # for simple and complex fault sources,
+            # rupture surface geometry is represented by a mesh
+            surf_mesh = self.rupture.surface.get_mesh()
+            lons = surf_mesh.lons
+            lats = surf_mesh.lats
+            depths = surf_mesh.depths
+        else:
+            if self.is_multi_surface:
+                # `list` of
+                # openquake.hazardlib.geo.surface.planar.PlanarSurface
+                # objects:
+                surfaces = self.rupture.surface.surfaces
+
+                # lons, lats, and depths are arrays with len == 4*N,
+                # where N is the number of surfaces in the
+                # multisurface for each `corner_*`, the ordering is:
+                #   - top left
+                #   - top right
+                #   - bottom left
+                #   - bottom right
+                lons = numpy.concatenate([x.corner_lons for x in surfaces])
+                lats = numpy.concatenate([x.corner_lats for x in surfaces])
+                depths = numpy.concatenate([x.corner_depths for x in surfaces])
+            else:
+                # For area or point source,
+                # rupture geometry is represented by a planar surface,
+                # defined by 3D corner points
+                surface = self.rupture.surface
+                lons = numpy.zeros((4))
+                lats = numpy.zeros((4))
+                depths = numpy.zeros((4))
+
+                # NOTE: It is important to maintain the order of these
+                # corner points. TODO: check the ordering
+                for i, corner in enumerate((surface.top_left,
+                                            surface.top_right,
+                                            surface.bottom_left,
+                                            surface.bottom_right)):
+                    lons[i] = corner.longitude
+                    lats[i] = corner.latitude
+                    depths[i] = corner.depth
+        return lons, lats, depths
+
+    @old_field_property
+    def lons(self):
+        return self.get_geom()[0]
+
+    @old_field_property
+    def lats(self):
+        return self.get_geom()[1]
+
+    @old_field_property
+    def depths(self):
+        return self.get_geom()[2]
+
+    @old_field_property
+    def surface(self):
+        return self.rupture.surface
+
+    @old_field_property
+    def magnitude(self):
+        return self.rupture.mag
+
+    @old_field_property
+    def strike(self):
+        return self.rupture.surface.get_strike()
+
+    @old_field_property
+    def dip(self):
+        return self.rupture.surface.get_dip()
+
+    @old_field_property
+    def rake(self):
+        return self.rupture.rake
+
+    @old_field_property
+    def tectonic_region_type(self):
+        return self.rupture.tectonic_region_type
 
 
 class _GmfsPerSES(object):
@@ -1868,7 +2144,7 @@ class _GroundMotionFieldNode(object):
             self.location.x, self.location.y, self.gmv)
 
 
-class GmfAgg(djm.Model):
+class GmfData(djm.Model):
     """
     Ground Motion Field: A collection of ground motion values and their
     respective geographical locations.
@@ -1889,7 +2165,7 @@ class GmfAgg(djm.Model):
 
 def get_gmvs_per_site(output, imt=None, sort=sorted):
     """
-    Iterator for walking through all :class:`GmfAgg` objects associated
+    Iterator for walking through all :class:`GmfData` objects associated
     to a given output. Notice that values for the same site are
     displayed together and then ordered according to the iml, so that
     it is possible to get reproducible outputs in the test cases.
@@ -1911,7 +2187,7 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     else:
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
-        for gmf in GmfAgg.objects.filter(
+        for gmf in GmfData.objects.filter(
                 gmf=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping).\
                 order_by('site'):
@@ -1920,7 +2196,7 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
 
 def get_gmfs_scenario(output, imt=None):
     """
-    Iterator for walking through all :class:`GmfAgg` objects associated
+    Iterator for walking through all :class:`GmfData` objects associated
     to a given output. Notice that the fields are ordered according to the
     location, so it is possible to get reproducible outputs in the test cases.
 
@@ -1941,7 +2217,7 @@ def get_gmfs_scenario(output, imt=None):
         imts = [parse_imt(imt)]
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfAgg.objects.filter(
+        for gmf in GmfData.objects.filter(
                 gmf=coll, imt=imt,
                 sa_period=sa_period, sa_damping=sa_damping):
             for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
@@ -2246,8 +2522,21 @@ class LossFraction(djm.Model):
 
             node[1] = collections.OrderedDict(
                 sorted([(k, v) for k, v in node[1].items()],
-                       key=lambda kv: kv[1][0]))
+                       key=lambda kv: kv[0]))
             yield node
+
+    def to_array(self):
+        """
+        :returns: the loss fractions as numpy array
+
+        :NOTE:  (not memory efficient)
+        """
+        def to_tuple():
+            for (lon, lat), data in self.iteritems():
+                for taxonomy, (absolute_loss, fraction) in data.items():
+                    yield lon, lat, taxonomy, absolute_loss, fraction
+
+        return numpy.array(list(to_tuple()), dtype='f4, f4, S3, f4, f4')
 
 
 class LossFractionData(djm.Model):
@@ -2264,7 +2553,9 @@ class LossFractionData(djm.Model):
         """
         A db-sequence independent tuple that identifies this output
         """
-        return self.loss_fraction.output_hash + (self.location, self.value)
+        return (self.loss_fraction.output_hash +
+                ("%.5f" % self.location.x, "%.5f" % self.location.y,
+                 self.value))
 
     def assertAlmostEqual(self, data):
         return risk_almost_equal(
@@ -2628,7 +2919,7 @@ class DmgDistPerAsset(djm.Model):
 
     @property
     def output(self):
-        return self.dmg_state.rc_calculation.oqjob_set.all()[0].output_set.get(
+        return self.dmg_state.rc_calculation.oqjob.output_set.get(
             output_type="dmg_dist_per_asset")
 
 
@@ -2645,7 +2936,7 @@ class DmgDistPerTaxonomy(djm.Model):
 
     @property
     def output(self):
-        return self.dmg_state.rc_calculation.oqjob_set.all()[0].output_set.get(
+        return self.dmg_state.rc_calculation.oqjob.output_set.get(
             output_type="dmg_dist_per_taxonomy")
 
     @property
@@ -2684,7 +2975,7 @@ class DmgDistTotal(djm.Model):
 
     @property
     def output(self):
-        return self.dmg_state.rc_calculation.oqjob_set.all()[0].output_set.get(
+        return self.dmg_state.rc_calculation.oqjob.output_set.get(
             output_type="dmg_dist_total")
 
     @property
@@ -2798,7 +3089,7 @@ class Occupancy(djm.Model):
 
     exposure_data = djm.ForeignKey("ExposureData")
     period = djm.TextField()
-    occupants = djm.IntegerField()
+    occupants = djm.FloatField()
 
     class Meta:
         db_table = 'riski\".\"occupancy'
@@ -2883,7 +3174,7 @@ class AssetManager(djm.GeoManager):
         else:
             # otherwise we will "left join" the occupancy table
             occupancy_join = "LEFT JOIN riski.occupancy"
-            occupants_field = "AVG(riski.occupancy.occupants::float)"
+            occupants_field = "AVG(riski.occupancy.occupants)"
 
             # and the time_event is not specified we compute the
             # number of occupants by averaging the occupancy data for
@@ -3043,14 +3334,16 @@ class ExposureData(djm.Model):
         Extract the deductible limit of the asset for the given
         `loss_type`. See the method `value` for details.
         """
-        return getattr(self, "deductible_%s" % loss_type)
+        return (getattr(self, "deductible_%s" % loss_type) /
+                getattr(self, loss_type))
 
     def insurance_limit(self, loss_type):
         """
         Extract the insurance limit of the asset for the given
         `loss_type`. See the method `value` for details.
         """
-        return getattr(self, "insurance_limit_%s" % loss_type)
+        return (getattr(self, "insurance_limit_%s" % loss_type) /
+                getattr(self, loss_type))
 
 
 def make_absolute(limit, value, is_absolute=None):

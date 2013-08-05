@@ -133,6 +133,39 @@ class HazardDumper(object):
                   to stdout with (format '%s')""" % (ids, self.format),
             self.outdir, 'hzrdi.hazard_site.csv', 'w')
 
+        # model_content, inputs
+
+        # at this moment, only logic tree content is needed
+        self.curs.copy(
+            """copy (select mc.* from uiapi.model_content mc
+                     join uiapi.input as input
+                     on input.model_content_id = mc.id
+                     join uiapi.input2hcalc h2c
+                     on h2c.input_id = input.id
+                     where h2c.hazard_calculation_id = %s
+                     and input.input_type in ('source_model_logic_tree',
+                                              'gsim_logic_tree'))
+               to stdout with (format '%s')""" % (ids, self.format),
+            self.outdir, 'uiapi.model_content.csv', 'w')
+
+        input_ids = self.curs.tuplestr(
+            """select i.* from uiapi.input i
+                     join uiapi.input2hcalc h2c
+                     on h2c.input_id = i.id
+                     where hazard_calculation_id in %s
+                     and input_type in ('source_model_logic_tree',
+                                        'gsim_logic_tree')""" % ids)
+        if input_ids != "()":  # scenario calcs do not have logic tree inputs
+            self.curs.copy(
+                """copy (select * from uiapi.input where id in %s)
+                   to stdout with (format '%s')""" % (input_ids, self.format),
+                self.outdir, 'uiapi.input.csv', 'w')
+
+            self.curs.copy(
+                """copy (select * from uiapi.input2hcalc where input_id in %s)
+                   to stdout with (format '%s')""" % (input_ids, self.format),
+                self.outdir, 'uiapi.input2hcalc.csv', 'w')
+
     def performance(self, *job_ids):
         """Dump performance"""
         ids = _tuplestr(job_ids)
@@ -175,22 +208,23 @@ class HazardDumper(object):
         self.curs.copy(
             """copy (select * from uiapi.output where id in %s)
                   to stdout with (format '%s')""" % (ids, self.format),
-            self.outdir, 'uiapi.output.csv', 'w')
+            self.outdir, 'uiapi.output.csv', 'a')
 
     def hazard_curve(self, output):
         """Dump hazard_curve, hazard_curve_data"""
         self.curs.copy(
             """copy (select * from hzrdr.hazard_curve where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
-            self.outdir, 'hzrdr.hazard_curve.csv', 'w')
+            self.outdir, 'hzrdr.hazard_curve.csv', 'a')
 
         ids = self.curs.tuplestr(
             'select id from hzrdr.hazard_curve where output_id in %s' % output)
+
         self.curs.copy(
             """copy (select * from hzrdr.hazard_curve_data
                   where hazard_curve_id in {})
                   to stdout with (format '{}')""".format(ids, self.format),
-            self.outdir, 'hzrdr.hazard_curve_data.csv', 'w')
+            self.outdir, 'hzrdr.hazard_curve_data.csv', 'a')
 
     def gmf(self, output):
         """Dump gmf, gmf_data"""
@@ -198,7 +232,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.gmf
                   where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
-            self.outdir, 'hzrdr.gmf.csv', 'w')
+            self.outdir, 'hzrdr.gmf.csv', 'a')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.gmf '
                                       'where output_id in %s' % output)
@@ -206,7 +240,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.gmf_data
                   where gmf_id in %s)
                   to stdout with (format '%s')""" % (coll_ids, self.format),
-            self.outdir, 'hzrdr.gmf_data.csv', 'w')
+            self.outdir, 'hzrdr.gmf_data.csv', 'a')
 
     def ses(self, output):
         """Dump ses_collection, ses, ses_rupture"""
@@ -214,7 +248,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.ses_collection
                   where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
-            self.outdir, 'hzrdr.ses_collection.csv', 'w')
+            self.outdir, 'hzrdr.ses_collection.csv', 'a')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.ses_collection '
                                       'where output_id in %s' % output)
@@ -222,7 +256,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.ses
                   where ses_collection_id in %s)
                   to stdout with (format '%s')""" % (coll_ids, self.format),
-            self.outdir, 'hzrdr.ses.csv', 'w')
+            self.outdir, 'hzrdr.ses.csv', 'a')
 
         ses_ids = self.curs.tuplestr(
             'select id from hzrdr.ses where ses_collection_id in %s'
@@ -231,7 +265,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.ses_rupture
                   where ses_id in %s)
                   to stdout with (format '%s')""" % (ses_ids, self.format),
-            self.outdir, 'hzrdr.ses_rupture.csv', 'w')
+            self.outdir, 'hzrdr.ses_rupture.csv', 'a')
 
     def dump(self, *hazard_calculation_ids):
         """
@@ -249,10 +283,21 @@ class HazardDumper(object):
         outputs = curs.fetchall("""\
         select output_type, array_agg(id) from uiapi.output
         where oq_job_id in %s group by output_type
-        having output_type in ('hazard_curve', 'ses', 'gmf', 'gmf_scenario')
+        having output_type in ('hazard_curve', 'hazard_curve_multi',
+                               'ses', 'gmf', 'gmf_scenario')
            """ % jobs)
         if not outputs:
             raise RuntimeError('No outputs for job %s' % jobs)
+
+        # sort the outputs to prevent foreign key errors
+        ordering = {
+            'hazard_curve': 1,
+            'hazard_curve_multi': 2,
+            'ses': 1,
+            'gmf': 2,
+            'gmf_scenario': 2
+        }
+        outputs = sorted(outputs, key=lambda o: ordering[o[0]])
 
         # dump data and collect generated filenames
         self.oq_job(jobs)
@@ -260,7 +305,8 @@ class HazardDumper(object):
         self.output(_tuplestr(all_outs))
         for output_type, output_ids in outputs:
             ids = _tuplestr(output_ids)
-            if output_type == 'hazard_curve':
+            print "Dumping %s %s" % (output_type, ids)
+            if output_type in ['hazard_curve', 'hazard_curve_multi']:
                 self.hazard_curve(ids)
             elif output_type in ('gmf', 'gmf_scenario'):
                 self.gmf(ids)
@@ -294,7 +340,7 @@ def main(hazard_calculation_id, outdir=None,
     # the typical use case is to dump from a remote database
     logging.basicConfig(level=logging.INFO)
     conn = psycopg2.connect(
-        host=host, dbname=dbname, user=user, password=password, port=port)
+        host=host, database=dbname, user=user, password=password, port=port)
     hc = HazardDumper(conn, outdir)
     hc.dump(hazard_calculation_id)
     log.info('Written %s' % hc.mktar())
@@ -307,7 +353,7 @@ if __name__ == '__main__':
     p.add_argument('host', nargs='?', default='localhost')
     p.add_argument('dbname', nargs='?', default='openquake')
     p.add_argument('user', nargs='?', default='oq_admin')
-    p.add_argument('password', nargs='?', default='')
+    p.add_argument('password', nargs='?', default='openquake')
     p.add_argument('port', nargs='?', default='5432')
     arg = p.parse_args()
     main(arg.hazard_calculation_id, arg.outdir, arg.host,

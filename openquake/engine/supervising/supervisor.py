@@ -125,7 +125,7 @@ def _get_task_ids(job_id):
     Get all Celery task IDs for a given ``job_id``.
     """
     return Performance.objects.filter(
-        oq_job=job_id, operation='logging setup', task_id__isnull=False)\
+        oq_job=job_id, operation='storing task id', task_id__isnull=False)\
         .values_list('task_id', flat=True)
 
 

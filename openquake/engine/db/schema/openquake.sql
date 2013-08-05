@@ -180,6 +180,7 @@ CREATE TABLE uiapi.oq_job (
     oq_version VARCHAR,
     hazardlib_version VARCHAR,
     nrml_version VARCHAR,
+    risklib_version VARCHAR,
     is_running BOOLEAN NOT NULL DEFAULT FALSE,
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
@@ -257,8 +258,6 @@ CREATE TABLE uiapi.hazard_calculation (
             'scenario'
         )),
     region_grid_spacing float,
-    -- a pickled `openquake.hazardlib.site.SiteCollection` object
-    site_collection BYTEA,
     -- logic tree parameters:
     random_seed INTEGER,
     number_of_logic_tree_samples INTEGER,
@@ -576,17 +575,18 @@ CREATE TABLE hzrdr.ses (
 CREATE TABLE hzrdr.ses_rupture (
     id SERIAL PRIMARY KEY,
     ses_id INTEGER NOT NULL,
-    magnitude float NOT NULL,
-    strike float NOT NULL,
-    dip float NOT NULL,
-    rake float NOT NULL,
-    tectonic_region_type VARCHAR NOT NULL,
-    is_from_fault_source BOOLEAN NOT NULL,
-    is_multi_surface BOOLEAN NOT NULL,
-    lons BYTEA NOT NULL,
-    lats BYTEA NOT NULL,
-    depths BYTEA NOT NULL,
-    surface BYTEA NOT NULL
+    old_magnitude float NULL,
+    old_strike float NULL,
+    old_dip float NULL,
+    old_rake float NULL,
+    old_tectonic_region_type VARCHAR NULL,
+    old_is_from_fault_source BOOLEAN NULL,
+    old_is_multi_surface BOOLEAN NULL,
+    old_lons BYTEA NULL,
+    old_lats BYTEA NULL,
+    old_depths BYTEA NULL,
+    old_surface BYTEA NULL,
+    rupture BYTEA NOT NULL DEFAULT 'not computed'
 ) TABLESPACE hzrdr_ts;
 
 
@@ -952,7 +952,7 @@ CREATE TABLE riski.exposure_model (
 CREATE TABLE riski.cost_type (
     id SERIAL PRIMARY KEY,
     exposure_model_id INTEGER NOT NULL,
- 
+
     name VARCHAR NOT NULL,
     conversion VARCHAR NOT NULL CONSTRAINT conversion_value
         CHECK(conversion = 'per_asset'
@@ -1007,7 +1007,7 @@ CREATE TABLE riski.occupancy (
     id SERIAL PRIMARY KEY,
     exposure_data_id INTEGER NOT NULL,
     period VARCHAR NOT NULL,
-    occupants INTEGER NOT NULL
+    occupants float NOT NULL
 ) TABLESPACE riski_ts;
 
 

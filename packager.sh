@@ -50,6 +50,10 @@ GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
 GEM_ALWAYS_YES=false
 
+# By setting this variable to "true", the script will generate the
+# test fixture from scratch
+# GEM_GENERATE_FIXTURE=true
+
 if [ "$GEM_EPHEM_CMD" = "" ]; then
     GEM_EPHEM_CMD="lxc-start-ephemeral"
 fi
@@ -107,7 +111,25 @@ dep2var () {
 #
 #  repo_id_get - retry git repo from local git remote command
 repo_id_get () {
-    repo_id="$(git remote -vv | grep '(fetch)$' | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+    local repo_name repo_line
+
+    if ! repo_name="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)"; then
+        repo_line="$(git remote -vv | grep "^origin[ ${TB}]" | grep '(fetch)$')"
+        if [ -z "$repo_line" ]; then
+            echo "no remote repository associated with the current branch, exit 1"
+            exit 1
+        fi
+    else
+        repo_name="$(echo "$repo_name" | sed 's@/.*@@g')"
+
+        repo_line="$(git remote -vv | grep "^${repo_name}[ ${TB}].*(fetch)\$")"
+    fi
+
+    if echo "$repo_line" | grep -q '[0-9a-z_-\.]\+@[a-z0-9_-\.]\+:'; then
+        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+[^ ${TB}@]\+@//g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g;s@:@/@g")"
+    else
+        repo_id="$(echo "$repo_line" | sed "s/^[^ ${TB}]\+[ ${TB}]\+git:\/\///g;s/.git[ ${TB}]\+(fetch)$/.git/g;s@/${GEM_GIT_PACKAGE}.git@@g")"
+    fi
 
     echo "$repo_id"
 }
@@ -149,9 +171,8 @@ usage () {
     echo "    $0 pkgtest <branch-name>                     install oq-engine package and related dependencies into"
     echo "                                                 an ubuntu lxc environment and run package tests and demos"
 
-    echo "    $0 [-f <fixture-file>] devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
+    echo "    $0 devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
     echo "                                                 setup environment and run development tests."
-    echo "                                                 Optionally, it loads fixtures data before running tests."
     echo
     exit $ret
 }
@@ -218,7 +239,8 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # build oq-hazardlib speedups and put in the right place
-    ssh $lxc_ip "cd oq-hazardlib
+    ssh $lxc_ip "set -e
+                 cd oq-hazardlib
                  python ./setup.py build
                  for i in \$(find build/ -name *.so); do
                      o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
@@ -230,7 +252,7 @@ _devtest_innervm_run () {
 
     # configure the machine to run tests
     ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
-    ssh $lxc_ip "
+    ssh $lxc_ip "set -e
         for dbu in oq_reslt_writer oq_job_superv oq_job_init oq_admin; do
             sudo sed -i \"1ilocal   openquake   \$dbu                   md5\" /etc/postgresql/9.1/main/pg_hba.conf
         done"
@@ -249,16 +271,19 @@ _devtest_innervm_run () {
     # run celeryd daemon
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
-    if [ ! -z "$FIXTURES" ]; then
-        scp "$FIXTURES" "${lxc_ip}:/tmp/fixtures.tar"
-        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
-                     cd oq-engine ;
-                     python openquake/engine/tools/restore_hazards.py /tmp/fixtures.tar
-        "
+    if [ "$GEM_GENERATE_FIXTURE" == "true" ]; then
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; ./bin/build_fixture --reuse-db"
     fi
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
-        # run tests
+        # load test fixtures
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; 
+                 for i in \$(find qa_tests/risk/ -iname fixtures.tar); do
+                   python openquake/engine/tools/restore_hazards.py \$i
+                 done"
+
+
+        # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine ;
                  nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest -x tests/
@@ -382,18 +407,19 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}/examples/demos ."
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
-        # run all of the hazard demos
-        ssh $lxc_ip "cd demos
+        # run all of the hazard and risk demos
+        ssh $lxc_ip "set -e ; cd demos
         for ini in \$(find ./hazard -name job.ini); do
             openquake --run-hazard  \$ini --exports xml
         done
 
         for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d); do
-            cd $demo_dir
+            cd \$demo_dir
+            echo \"Running demo in \$demo_dir\"
             openquake --run-hazard job_hazard.ini
             calculation_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
             openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id
-            cd ../..
+            cd -
         done"
     fi
 
@@ -498,13 +524,6 @@ devtest_run () {
 
     mkdir _jenkins_deps
 
-    sudo echo
-    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
-    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
-    rm /tmp/packager.eph.$$.log
-
-    _wait_ssh $lxc_ip
-
     #
     #  dependencies repos
     #
@@ -543,6 +562,12 @@ devtest_run () {
     done
     IFS="$old_ifs"
 
+    sudo echo
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+    rm /tmp/packager.eph.$$.log
+
+    _wait_ssh $lxc_ip
     set +e
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
@@ -661,9 +686,6 @@ BUILD_DEVEL=0
 BUILD_UNSIGN=0
 BUILD_FLAGS=""
 
-#: a path to a fixture file produced by the dump_hazards.py script
-FIXTURES=""
-
 trap sig_hand SIGINT SIGTERM
 #  args management
 while [ $# -gt 0 ]; do
@@ -676,10 +698,6 @@ while [ $# -gt 0 ]; do
                 echo
                 exit 1
             fi
-            ;;
-        -F|--fixtures)
-            FIXTURES=$2
-            shift  # consume argument
             ;;
         -B|--binaries)
             BUILD_BINARIES=1
@@ -746,7 +764,7 @@ stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')
 stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')"
 # echo "stp [$stp_vers] [$stp_maj] [$stp_min] [$stp_bfx] [$stp_suf]"
 
-# version info from openquake/__init__.py
+# version info from openquake/engine/__init__.py
 ini_maj="$(cat openquake/engine/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
 ini_min="$(cat openquake/engine/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
 ini_bfx="$(cat openquake/engine/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
