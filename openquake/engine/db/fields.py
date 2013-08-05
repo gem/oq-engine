@@ -21,10 +21,8 @@ try:
     import simplejson as json
 except ImportError:
     import json
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+
+import cPickle as pickle
 
 from django.contrib.gis import forms
 from django.contrib.gis.db import models as djm

@@ -85,13 +85,13 @@ class ClassicalHazardCase9TestCase(qa_utils.BaseQATestCase):
                 expected_curve_poes_b1_b3, curve_b1_b3.poes, decimal=4)
 
             # Test the exports as well:
-            [exported_file_b1_b2] = hazard_export.export(
+            exported_file_b1_b2 = hazard_export.export(
                 curve_b1_b2.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_B1_B2),
                 exported_file_b1_b2)
 
-            [exported_file_b1_b3] = hazard_export.export(
+            exported_file_b1_b3 = hazard_export.export(
                 curve_b1_b3.hazard_curve.output.id, result_dir)
             self.assert_xml_equal(
                 StringIO.StringIO(self.EXPECTED_XML_B1_B3),

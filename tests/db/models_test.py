@@ -39,7 +39,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(
+            owner.user_name, params, files.values()
+        )
 
         expected_ids = sorted([x.id for x in files.values()])
 
@@ -53,7 +55,9 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
-        hc = engine.create_hazard_calculation(owner, params, files.values())
+        hc = engine.create_hazard_calculation(
+            owner.user_name, params, files.values()
+        )
 
         # It should only be 1 id, actually.
         expected_ids = [x.id for x in files.values()
@@ -213,7 +217,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         hc = models.HazardCalculation(
             region='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8',
             region_grid_spacing=20)
-        mesh = hc.points_to_compute()
+        mesh = hc.points_to_compute(save_sites=False)
 
         numpy.testing.assert_array_almost_equal(lons, mesh.lons)
         numpy.testing.assert_array_almost_equal(lats, mesh.lats)
@@ -224,7 +228,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         hc = models.HazardCalculation(
             sites='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8')
 
-        mesh = hc.points_to_compute()
+        mesh = hc.points_to_compute(save_sites=False)
 
         numpy.testing.assert_array_equal(lons, mesh.lons)
         numpy.testing.assert_array_equal(lats, mesh.lats)
@@ -261,15 +265,17 @@ class SESRuptureTestCase(unittest.TestCase):
         self.ps_depths = [0.1, 0.2, 0.3, 0.4]
 
         self.fault_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, strike=0, dip=0, rake=0,
-            tectonic_region_type='Active Shallow Crust',
-            is_from_fault_source=True, lons=self.mesh_lons,
-            lats=self.mesh_lats, depths=self.mesh_depths)
+            ses=ses, old_magnitude=5, old_strike=0, old_dip=0, old_rake=0,
+            old_tectonic_region_type='Active Shallow Crust',
+            old_is_from_fault_source=True, old_lons=self.mesh_lons,
+            old_is_multi_surface=False,
+            old_lats=self.mesh_lats, old_depths=self.mesh_depths)
         self.source_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, strike=0, dip=0, rake=0,
-            tectonic_region_type='Active Shallow Crust',
-            is_from_fault_source=False, lons=self.ps_lons, lats=self.ps_lats,
-            depths=self.ps_depths)
+            ses=ses, magnitude=5, old_strike=0, old_dip=0, old_rake=0,
+            old_tectonic_region_type='Active Shallow Crust',
+            old_is_from_fault_source=False, old_lons=self.ps_lons,
+            old_is_multi_surface=False,
+            old_lats=self.ps_lats, old_depths=self.ps_depths)
 
     def test_fault_rupture(self):
         # Test loading a fault rupture from the DB, just to illustrate a use
@@ -303,17 +309,17 @@ class SESRuptureTestCase(unittest.TestCase):
         # If any of the coord attributes are a len != 4,
         # we should get an exception
 
-        source_rupture.lons = [1, 2, 3]
+        source_rupture.old_lons = [1, 2, 3]
         self.assertRaises(ValueError, source_rupture._validate_planar_surface)
-        source_rupture.lons = lons
+        source_rupture.old_lons = lons
 
-        source_rupture.lats = [1, 2, 3]
+        source_rupture.old_lats = [1, 2, 3]
         self.assertRaises(ValueError, source_rupture._validate_planar_surface)
-        source_rupture.lats = lats
+        source_rupture.old_lats = lats
 
-        source_rupture.depths = [1, 2, 3]
+        source_rupture.old_depths = [1, 2, 3]
         self.assertRaises(ValueError, source_rupture._validate_planar_surface)
-        source_rupture.depths = depths
+        source_rupture.old_depths = depths
 
 
 class ParseImtTestCase(unittest.TestCase):

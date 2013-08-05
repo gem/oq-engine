@@ -1,0 +1,46 @@
+#!/bin/bash
+
+set -e
+
+# Copyright (c) 2013, GEM Foundation.
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+## Create test fixture suitable to populate the database before
+## running the risk QA tests
+
+
+OPENQUAKE=$(dirname $0)/openquake
+QA_TESTS_DIR=$(dirname $0)/../qa_tests/risk/
+
+if [ "$1" != "--reuse-db" ]; then
+    . $(dirname $0)/oq_create_db
+fi
+
+for qa_test in $(find $QA_TESTS_DIR -iname job_haz.ini); do
+
+    # Run the hazard
+    $OPENQUAKE --run-hazard $qa_test
+
+    # get the resulting calculation id
+    calculation_id=$($OPENQUAKE --list-hazard-calculations | grep successful | tail -1 | awk '{print $1}')
+
+    fixture_file_prefix=$(dirname $qa_test)/fixtures
+
+    # remove the old fixture
+    rm -f "$fixture_file_prefix".tar
+
+    # dump the new one
+    python $(dirname $0)/../openquake/engine/tools/dump_hazards.py $calculation_id $fixture_file_prefix
+done
