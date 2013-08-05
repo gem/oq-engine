@@ -489,11 +489,9 @@ class BaseHazardCalculator(base.Calculator):
             full_path = os.path.join(self.hc.base_path, src_path)
 
             # Get the 'source' Input:
-            inp = engine.get_input(full_path, 'source', self.hc.owner)
-
-            # Associate the source input to the calculation:
-            models.Input2hcalc.objects.get_or_create(
-                input=inp, hazard_calculation=self.hc)
+            inp = engine.get_or_create_input(
+                full_path, 'source', self.hc.owner, haz_calc_id=self.hc.id
+            )
 
             models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
                                             filename=src_path)
