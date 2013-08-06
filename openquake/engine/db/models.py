@@ -3098,6 +3098,16 @@ class ExposureModel(djm.Model):
         else:
             return self.costtype_set.get(name=loss_type).unit
 
+    def has_insurance_bounds(self):
+        return not self.exposuredata_set.filter(
+            (djm.Q(cost__deductible_absolute__isnull=True) |
+             djm.Q(cost__insurance_limit_absolute__isnull=True))).exists()
+
+    def has_retrofitted_costs(self):
+        return not (
+            self.exposuredata_set.filter(
+                cost__converted_retrofitted_cost__isnull=True)).exists()
+
     def supports_loss_type(self, loss_type):
         """
         :returns:
