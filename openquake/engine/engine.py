@@ -111,8 +111,7 @@ def parse_config(source):
         File-like object containing the config parameters.
     :returns:
         A `dict` of the parameter keys and values parsed from the config file
-        and a `dict` of :class:`~openquake.engine.db.models.Input` objects,
-        keyed by the config file parameter.
+        and a `dict` of input model file paths keyed by input type.
 
         These dicts are return as a tuple/pair.
     """
@@ -150,9 +149,7 @@ def parse_config(source):
                     # It's a relative path.
                     path = os.path.join(base_path, path)
 
-                files[key] = create_input(
-                    path, input_type, prepare_user(getpass.getuser())
-                )
+                files[input_type] = path
             else:
                 params[key] = value
 
