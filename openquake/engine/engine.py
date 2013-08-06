@@ -350,8 +350,10 @@ def create_hazard_calculation(username, params, files):
     hc.full_clean()
     hc.save()
 
-    for f in files:
-        models.Input2hcalc(input=f, hazard_calculation=hc).save()
+    # Load the other input files into the database.
+    # This also links the inputs to the calculation via the `input2hcalc` table.
+    for input_type, input_path in files.iteritems():
+        get_or_create_input(input_path, input_type, owner, haz_calc_id=hc.id)
 
     return hc
 
@@ -382,8 +384,8 @@ def create_risk_calculation(owner, params, files):
     rc.full_clean()
     rc.save()
 
-    for f in files:
-        models.Input2rcalc(input=f, risk_calculation=rc).save()
+    for input_type, input_path in files.iteritems():
+        get_or_create_input(input_path, input_type, owner, risk_calc_id=rc.id)
 
     return rc
 
@@ -673,7 +675,7 @@ def haz_job_from_file(cfg_file_path, username, log_level, exports):
     # read calculation params and create the calculation profile
     params, files = parse_config(open(cfg_file_path, 'r'))
     calculation = create_hazard_calculation(
-        username, params, files.values()
+        username, params, files
     )
     job.hazard_calculation = calculation
     job.save()
@@ -828,7 +830,7 @@ def risk_job_from_file(cfg_file_path, username, log_level, exports,
                        hazard_calculation_id=hazard_calculation_id))
 
     calculation = create_risk_calculation(
-        job.owner, params, files.values()
+        job.owner, params, files
     )
     job.risk_calculation = calculation
     job.save()
