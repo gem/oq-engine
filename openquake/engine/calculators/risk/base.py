@@ -83,10 +83,10 @@ class RiskCalculator(base.Calculator):
 
         for validator_class in self.validators:
             validator = validator_class(self)
-            errors = validator.get_errors()
-            if errors:
+            error = validator.get_error()
+            if error:
                 raise ValueError("""Problems in calculator configuration:
-                                 %s""" % errors)
+                                 %s""" % error)
 
     def block_size(self):
         """

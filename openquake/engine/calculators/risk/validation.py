@@ -21,8 +21,6 @@
 Custom validation module for risk calculators
 """
 
-from django import db
-from openquake.engine import logs
 from openquake.engine.db import models
 
 
@@ -33,7 +31,7 @@ class Validator(object):
     def __init__(self, risk_calculator):
         self.calc = risk_calculator
 
-    def get_errors(self):
+    def get_error(self):
         raise NotImplementedError
 
 
@@ -42,7 +40,7 @@ class HazardIMT(Validator):
     Check that a proper hazard output exists in any of the
     intensity measure types given in the risk models
     """
-    def get_errors(self):
+    def get_error(self):
         model_imts = models.required_imts(self.calc.risk_models)
         imts = self.calc.hc.get_imts()
 
@@ -60,7 +58,7 @@ class EmptyExposure(Validator):
     """
     Checks that at least one asset is in the exposure
     """
-    def get_errors(self):
+    def get_error(self):
         if not sum(self.calc.taxonomies_asset_count.values()):
             return ('Region of interest is not covered by the exposure input. '
                     'This configuration is invalid. '
@@ -73,7 +71,7 @@ class OrphanTaxonomies(Validator):
     Checks that the taxonomies in the risk models match with the ones
     in the exposure.
     """
-    def get_errors(self):
+    def get_error(self):
         taxonomies = self.calc.taxonomies_asset_count
         orphans = set(taxonomies) - set(self.calc.risk_models)
         if orphans and not self.calc.rc.taxonomies_from_model:
@@ -86,7 +84,7 @@ class ExposureLossTypes(Validator):
     Check that the exposure has all the cost informations for the loss
     types given in the risk models
     """
-    def get_errors(self):
+    def get_error(self):
         loss_types = models.loss_types(self.calc.risk_models)
 
         for loss_type in loss_types:
@@ -96,7 +94,7 @@ class ExposureLossTypes(Validator):
 
 
 class NoRiskModels(Validator):
-    def get_errors(self):
+    def get_error(self):
         if not self.calc.risk_models:
             return 'At least one risk model of type %s must be defined' % (
                 models.LOSS_TYPES)
@@ -106,7 +104,7 @@ class RequireClassicalHazard(Validator):
     """
     Checks that the given hazard has hazard curves
     """
-    def get_errors(self):
+    def get_error(self):
         rc = self.calc.rc
 
         if rc.hazard_calculation:
@@ -122,7 +120,7 @@ class RequireScenarioHazard(Validator):
     Checks that the given hazard has ground motion fields got from a
     scenario hazard calculation
     """
-    def get_errors(self):
+    def get_error(self):
         rc = self.calc.rc
 
         if rc.hazard_calculation:
@@ -138,15 +136,15 @@ class RequireEventBasedHazard(Validator):
     Checks that the given hazard has ground motion fields (or
     stochastic event set) got from a event based hazard calculation
     """
-    def get_errors(self):
+    def get_error(self):
         rc = self.calc.rc
 
         if rc.hazard_calculation:
             if rc.hazard_calculation.calculation_mode != "event_based":
                 return ("The provided hazard calculation ID "
-                        "is not a scenario calculation")
+                        "is not a event based calculation")
         elif not rc.hazard_output.output_type in ["gmf", "ses"]:
-            return "The provided hazard is not a gmf scenario collection"
+            return "The provided hazard is not a gmf or ses collection"
 
 
 class ExposureHasInsuranceBounds(Validator):
@@ -155,23 +153,16 @@ class ExposureHasInsuranceBounds(Validator):
     the deductible and insurance limit
     """
 
-    def get_errors(self):
-        if self.calc.rc.insured_losses:
-            queryset = self.calc.rc.exposure_model.exposuredata_set.filter(
-                (db.models.Q(cost__deductible_absolute__isnull=True) |
-                 db.models.Q(cost__insurance_limit_absolute__isnull=True)))
-            if queryset.exists():
-                logs.LOG.error(
-                    "missing insured limits in exposure for assets %s" % (
-                        queryset.all()))
-                return "Deductible or insured limit missing in exposure"
+    def get_error(self):
+        if (self.calc.rc.insured_losses and
+            not self.calc.rc.exposure_model.has_insurance_bounds()):
+            return "Deductible or insured limit missing in exposure"
 
 
 class ExposureHasRetrofittedCosts(Validator):
     """
     Check that the retrofitted value is present in the exposure
     """
-    def get_errors(self):
-        if (self.calc.rc.exposure_model.exposuredata_set.filter(
-                cost__converted_retrofitted_cost__isnull=True)).exists():
+    def get_error(self):
+        if not self.calc.rc.exposure_model.has_retrofitted_costs():
             return "Some assets do not have retrofitted costs"
