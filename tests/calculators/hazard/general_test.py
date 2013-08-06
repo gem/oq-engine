@@ -212,7 +212,7 @@ class GetSiteModelTestCase(unittest.TestCase):
             'random_seed': 37,
         }
         owner = helpers.default_user()
-        hc = engine.create_hazard_calculation(owner.user_name, params, [])
+        hc = engine.create_hazard_calculation(owner.user_name, params, {})
         return hc
 
     def test_get_site_model(self):
@@ -372,7 +372,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         params, files = engine.parse_config(open(cfg, 'r'))
 
         haz_calc = engine.create_hazard_calculation(
-            job.owner.user_name, params, files.values())
+            job.owner.user_name, params, files)
         haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
         job.hazard_calculation = haz_calc
         job.is_running = True
