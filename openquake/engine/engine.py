@@ -233,7 +233,7 @@ def get_or_create_input(path, input_type, owner, name=None,
         (see :class:`openquake.engine.db.models.ModelContent`)
         and associate it to the `Input`.
     """
-    assert set([haz_calc_id, risk_calc_id]) == set([None]), (
+    assert not [haz_calc_id, risk_calc_id] == [None, None], (
         "Must specify one of either `haz_calc_id` or `risk_calc_id`."
     )
 
