@@ -1,0 +1,2 @@
+CREATE INDEX hzrdi_hazard_site_hazard_calculation_idx
+ON hzrdi.hazard_site(hazard_calculation_id);
