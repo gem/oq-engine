@@ -462,4 +462,8 @@ def _get_result(request, result_id, export_fn):
     # TODO(LB): Large files could pose a memory consumption problem.
     resp_value = resp_content.getvalue()
     resp_content.close()
-    return HttpResponse(resp_value)
+    # TODO: Need to look at `content_type`, otherwise XML gets treated at HTML
+    # in the browser
+    content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type,
+                                               DEFAULT_CONTENT_TYPE)
+    return HttpResponse(resp_value, content_type=content_type)
