@@ -1,13 +1,23 @@
 import StringIO
 import json
 import logging
+import os
+import shutil
+import tempfile
 import urlparse
 
 from django.http import HttpResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from openquake import nrmllib
 from openquake.engine import engine as oq_engine
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
+from xml.etree import ElementTree as etree
+
+from engine import forms
+from engine import tasks
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -17,10 +27,16 @@ IGNORE_FIELDS = ('base_path', 'export_dir', 'owner')
 GEOM_FIELDS = ('region', 'sites', 'region_constraint', 'sites_disagg')
 RISK_INPUTS = ('hazard_calculation', 'hazard_output')
 
+DEFAULT_LOG_LEVEL = 'progress'
+
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
 #: XML by default.
 DEFAULT_EXPORT_TYPE = 'xml'
+
+EXPORT_CONTENT_TYPE_MAP = dict(xml='application/xml',
+                               geojson='application/json')
+DEFAULT_CONTENT_TYPE = 'text/plain'
 
 LOGGER = logging.getLogger('openquakeserver')
 
@@ -113,6 +129,102 @@ def calc_hazard(request):
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
+
+
+# csrf_excempt so we post to the view without necessarily having a form
+@csrf_exempt
+@allowed_methods(('GET', 'POST'))
+def run_hazard_calc(request):
+    """
+    Run a calculation.
+
+    A 'GET' will simply return a form for uploading calculation input files.
+
+    A 'POST' (from the form) will load the calculation profile and enqueue
+    the calculation job. Once in queue, the view will respond with a summary of
+    the calculation, like what is implemented in `/v1/calc/hazard/:calc_id`.
+    """
+    if request.method == 'GET':
+        form = forms.HazardForm()
+        return render(
+            request,
+            'run_hazard_calc.html',
+            {'post_url': request.path, 'form': form}
+        )
+    else:
+        # POST: run a new calculation
+
+
+        # TODO: create temp dir
+        temp_dir = tempfile.mkdtemp()
+        files = {}
+        # Move each file to a new temp dir, using the upload file names
+        # (not the temporary ones).
+        for key, each_file in request.FILES.iteritems():
+            new_path = os.path.join(temp_dir, each_file.name)
+            shutil.move(each_file.temporary_file_path(), new_path)
+            files[key] = new_path
+
+        job_file = files.pop('job_config')
+        # TODO: Get the user from the user authenticated in the `request`.
+        job = oq_engine.haz_job_from_file(
+            job_file, request.user.username, DEFAULT_LOG_LEVEL, []
+        )
+        hc = job.hazard_calculation
+
+        _load_source_models(sorted(files.values()), job.owner, hc.id)
+
+        tasks.run_hazard_calc.apply_async((hc.id, ))
+
+        base_url = _get_base_url(request)
+        return HttpResponse(content=json.dumps(_get_haz_calc_info(hc.id)),
+                            content_type=JSON)
+
+
+def _load_source_models(files, owner, hc_id):
+    """
+    Given a list of file paths to any type of hazard input models, check if
+    they are source models (which are soft-linked in a source model logic tree,
+    and will otherwise get missed when a calculation profile is loaded) and if
+    they are, load them into the oq-engine DB and link them to the calculation
+    profile given by ``hc_id``.
+
+    :param list files:
+        List of input model file paths.
+    :param owner:
+        Owner DB record object. See :class:`openquake.engine.db.models.OqUser`.
+    :param int hc_id:
+        Hazard calculation ID.
+    """
+    for input_model in files:
+        # Check if it is a source model.
+        if _is_source_model(open(input_model, 'r')):
+            # Load it into the DB.
+            oq_engine.get_or_create_input(
+                input_model,
+                'source',
+                owner,
+                haz_calc_id=hc_id,
+            )
+
+
+def _is_source_model(tempfile):
+    """
+    Return true if an uploaded NRML file is a seismic source model.
+    """
+    tree = etree.iterparse(tempfile, events=('start', 'end'))
+    # pop off the first elements, which should be a <nrml> element
+    # and something else
+    _, nrml_elem = tree.next()
+    _, model_elem = tree.next()
+
+    assert nrml_elem.tag == '{%s}nrml' % nrmllib.NAMESPACE, (
+        "Input file is not a NRML artifact"
+    )
+
+    if model_elem.tag == '{%s}sourceModel' % nrmllib.NAMESPACE:
+        return True
+    return False
 
 
 def _get_haz_calcs():
