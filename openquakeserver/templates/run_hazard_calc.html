@@ -1,0 +1,34 @@
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js">
+</script>
+
+
+<button id="add-input-model">Add input model</button>
+<form id="calc-form" enctype="multipart/form-data"
+      action="{{ post_url }}" method="post">
+
+{{ form.as_p }}
+
+<!-- Dynamically add more fields here -->
+<div id="additional-fields"></div>
+
+<input type="submit" value="Submit" />
+</form>
+
+<script>
+$('#add-input-model').click(
+    function() {
+        var modelCount = $('input[id^="id_model_"]').length;
+        modelCount++;
+
+        var newID = 'id_model_' + modelCount;
+        var modelLabel = '<label for="' + newID
+            + '">Input model ' + modelCount + '</label>';
+        var modelField = '<input type="file" name="input_model_'
+            + modelCount + '" id="' + newID + '" />';
+        $('#additional-fields').append(
+            '<p>' + modelLabel + modelField + '</p>'
+        );
+    }
+);
+</script>
+
