@@ -4,9 +4,8 @@ import logging
 import urlparse
 
 from django.http import HttpResponse
-
+from openquake.engine import engine as oq_engine
 from openquake.engine.db import models as oqe_models
-from openquake.engine import engine
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 
@@ -172,7 +171,7 @@ def calc_hazard_results(request, calc_id):
     """
     base_url = _get_base_url(request)
 
-    results = engine.get_hazard_outputs(calc_id)
+    results = oq_engine.get_hazard_outputs(calc_id)
 
     response_data = []
     for result in results:
@@ -279,7 +278,7 @@ def calc_risk_results(request, calc_id):
     """
     base_url = _get_base_url(request)
 
-    results = engine.get_risk_outputs(calc_id)
+    results = oq_engine.get_risk_outputs(calc_id)
 
     response_data = []
     for result in results:
