@@ -999,11 +999,17 @@ class HazardCalculation(djm.Model):
             return SiteCollection.cache[self.id]
 
         site_model_inp = get_site_model(self.id)
-        hsites = HazardSite.objects.filter(hazard_calculation=self)
+        hsites = HazardSite.objects\
+            .filter(hazard_calculation=self)\
+            .extra(select={'x': 'ST_X(location::geometry)',
+                           'y': 'ST_Y(location::geometry)'})\
+            .values_list('id', 'x', 'y')\
+            .order_by('id', 'x', 'y')\
+            .iterator()
         sites = []
-        for hsite in hsites:
+        for site_id, site_x, site_y in hsites:
             pt = openquake.hazardlib.geo.point.Point(
-                hsite.location.x, hsite.location.y)
+                site_x, site_y)
             if site_model_inp:
                 smd = get_closest_site_model_data(site_model_inp, pt)
                 measured = smd.vs30_type == 'measured'
@@ -1017,7 +1023,7 @@ class HazardCalculation(djm.Model):
                 z2pt5 = self.reference_depth_to_2pt5km_per_sec
 
             sites.append(openquake.hazardlib.site.Site(
-                         pt, vs30, measured, z1pt0, z2pt5, hsite.id))
+                         pt, vs30, measured, z1pt0, z2pt5, site_id))
 
         sitecoll = SiteCollection.cache[self.id] = \
             SiteCollection(sites) if sites else None
