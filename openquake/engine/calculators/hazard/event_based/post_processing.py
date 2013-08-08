@@ -79,7 +79,12 @@ def gmf_to_hazard_curve_arg_gen(job):
         :class:`openquake.engine.db.models.OqJob` instance.
     """
     hc = job.hazard_calculation
-    sites = models.HazardSite.objects.filter(hazard_calculation=hc)
+    sites = models.HazardSite.objects\
+        .filter(hazard_calculation=hc)\
+        .extra(select={'x': 'ST_X(location::geometry)',
+                       'y': 'ST_Y(location::geometry)'})\
+        .order_by('id', 'x', 'y')\
+        .iterator()
 
     lt_realizations = models.LtRealization.objects.filter(
         hazard_calculation=hc.id)
