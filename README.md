@@ -7,6 +7,49 @@ GEM (i.e. Global Earthquake Model) Model Facility. The main purpouse
 of the hmtk is to provide a suite of tools for the creation of PSHA 
 input models.
 
+The toolkit contains the following functionalities for constructing 
+seismic hazard input models (please refer to the documentation and
+tutorial for more information):
+
+
+SEISMICITY TOOLS:
+
+* Declustering:
+    * Gardner & Knopoff (1974)
+    * AFTERAN (Musson, 1999)
+
+* Completeness:
+    * Stepp (1971)
+
+* Earthquake Recurrence:
+    * Weichet (1980)
+    * ''Simple'' Maximum Likelihood (Aki, 1965)
+    * ''Averaged'' Maximum Likelihood
+    * Kijko & Smit (2012)
+
+* Instrumental Seismicity Estimator of Maximum Magnitude
+    * ''Fixed b-value'' (Kijko, 2004)
+    * ''Uncertain b-value'' (Kijko, 2004)
+    * ''Nonparametric Gaussian'' (Kijko, 2004)
+    * Cumulative Moment
+
+* Smoothed Seismicity
+    * Isotropic Gaussian Smoothing (Frankel, 1995, approach)
+
+GEOLOGICAL EARTHQUAKE RECURRENCE TOOLS:
+
+* Anderson & Luco (1983)
+    * ''Arbitrary'' recurrence - based on fault area
+    * ''Area-Mmax'' recurrence - based on rupture area
+    * ''Characteristic'' - via a Truncated Gaussian Distribution
+    * Exponential (Youngs & Coppersmith, 1985)
+    * Hybrid Characteristic (Youngs & Coppersmith, 1985)
+
+GEODETIC SEISMICITY RECURRENCE TOOLS:
+
+* Seismic Hazard Inferred from Tectonics (SHIFT) (Bird & Liu, 2007)
+
+
 The Hazard Modeller's Toolkit is free software: you can redistribute 
 it and/or modify it under the terms of the GNU Affero General Public 
 License as published by the Free Software Foundation, either version 

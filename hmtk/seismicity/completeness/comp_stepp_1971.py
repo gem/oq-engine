@@ -180,10 +180,13 @@ class Stepp1971(BaseCatalogueCompleteness):
                     np.isnan(comp_time[iloc]):
                     comp_time[iloc] = comp_time[iloc - 1]
 
+        #self.completeness_table = np.column_stack([
+        #    np.floor(self.end_year - comp_time), 
+        #    mag_cents])
+        
         self.completeness_table = np.column_stack([
             np.floor(self.end_year - comp_time), 
-            mag_cents])
-        
+            self.magnitude_bin[:-1]])
         return self.completeness_table 
     
    

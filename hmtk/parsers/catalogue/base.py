@@ -71,3 +71,25 @@ class BaseCatalogueParser(object):
         """
         Return an instance of the class :class:`Catalogue`
         """
+        
+class BaseCatalogueWriter(object):
+    """
+    A base class for a Catalogue writer
+    """
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, output_file):
+        """ 
+        Initialise the object and check output file existance. If file already
+        exists then raise error
+        """
+        self.output_file = output_file
+        if os.path.exists(self.output_file):
+            raise IOError('Catalogue output file %s already exists!' %
+                          self.output_file)
+
+    @abc.abstractmethod
+    def write_file(self):
+        """
+        Return an instance of the class :class:`Catalogue`
+        """

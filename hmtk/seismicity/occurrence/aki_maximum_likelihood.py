@@ -46,7 +46,7 @@
 # liability for use of the software. 
 
 # -*- coding: utf-8 -*-
-
+import warnings
 import numpy as np
 from hmtk.seismicity.occurrence.base import SeismicityOccurrence
 from hmtk.seismicity.occurrence.utils import recurrence_table, input_checks 
@@ -74,7 +74,7 @@ class AkiMaxLikelihood(SeismicityOccurrence):
         """
         # Input checks
         cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
-                                                    completeness)
+                                                  completeness)
         rt = recurrence_table(catalogue['magnitude'], dmag, catalogue['year'])
         bval, sigma_b = self._aki_ml(rt[:,0], rt[:,1])
         return bval, sigma_b 
@@ -103,11 +103,17 @@ class AkiMaxLikelihood(SeismicityOccurrence):
         number_obs = number_obs[id0]
         # Get Number of events, minimum magnitude and mean magnitude
         neq = np.sum(number_obs)
+        if neq <= 1:
+            # Cannot determine b-value (too few event) return NaNs
+            warnings.warn('Too few events (<= 1) to calculate b-value')
+            return np.nan, np.nan
+
         m_min = np.min(mval)
         m_ave = np.sum(mval * number_obs) / neq
         # Calculate b-value
         bval = np.log10(np.exp(1.0)) / (m_ave - m_min + (dmag / 2.))
         # Calculate sigma b from Bender estimator
-        sigma_b = np.sum(number_obs * ((mval - m_ave) ** 2.0)) / (neq * (neq - 1))
+        sigma_b = np.sum(number_obs * ((mval - m_ave) ** 2.0)) /\
+            (neq * (neq - 1))
         sigma_b = np.log(10.) * (bval ** 2.0) * np.sqrt(sigma_b)
         return bval, sigma_b

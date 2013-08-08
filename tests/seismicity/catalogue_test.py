@@ -86,6 +86,8 @@ class CatalogueTestCase(unittest.TestCase):
         cat.load_from_array(['year','magnitude'], self.data_array)
         self.assertTrue(np.allclose(cat.data['magnitude'],self.data_array[:,1]))
         self.assertTrue(np.allclose(cat.data['year'],self.data_array[:,0]))
+        self.assertTrue(np.allclose(cat.data['eventID'], 
+                                    np.array(range(0, 7), dtype=int)))
         
     def test_load_to_array(self):
         """
@@ -96,15 +98,31 @@ class CatalogueTestCase(unittest.TestCase):
         data = cat.load_to_array(['year','magnitude'])
         self.assertTrue(np.allclose(data,self.data_array))
     
-    def test_catalogue_mt_filter(self):
+    def test_catalogue_mt_filter_no_flag(self):
         """
         Tests the catalogue magnitude-time filter
         """
         cat = Catalogue()
         cat.load_from_array(['year','magnitude'], self.data_array)
+        cat.data['eventID'] = np.arange(0, len(cat.data['magnitude']), 1)
         cat.catalogue_mt_filter(self.mt_table)
         mag = np.array([7.0, 5.5, 5.01, 6.99])
         yea = np.array([1920, 1970, 1960, 1960])
+        self.assertTrue(np.allclose(cat.data['magnitude'],mag))
+        self.assertTrue(np.allclose(cat.data['year'],yea))
+
+    def test_catalogue_mt_filter_with_flag(self):
+        '''
+        Tests the catalogue magnitude-time filter when an input boolean vector
+        is also defined
+        '''
+        cat = Catalogue()
+        cat.load_from_array(['year','magnitude'], self.data_array)
+        cat.data['eventID'] = np.arange(0, len(cat.data['magnitude']), 1)
+        flag = np.array([1, 1, 1, 1, 1, 0, 1], dtype=bool)
+        cat.catalogue_mt_filter(self.mt_table, flag)
+        mag = np.array([7.0, 5.5, 6.99])
+        yea = np.array([1920, 1970, 1960])
         self.assertTrue(np.allclose(cat.data['magnitude'],mag))
         self.assertTrue(np.allclose(cat.data['year'],yea))
        

@@ -92,7 +92,6 @@ class Catalogue(object):
                 self.data[attribute] = np.array([], dtype=int)
             else:
                 self.data[attribute] = []
-
         # Consider removing
 #        self.data['xyz'] = None
 #        self.data['flag_vector'] = None
@@ -134,24 +133,33 @@ class Catalogue(object):
             A list of keys explaining the content of the columns in the array
         :type list:
         """
-        for i,key in enumerate(keys):
-            self.data[key] = data_array[:,i]
+        if not 'eventID' in keys:
+            self.data['eventID'] = np.array(range(0, np.shape(data_array)[0]),
+                                            dtype=int)
+
+        for i, key in enumerate(keys):
+            self.data[key] = data_array[:, i]
     
-    def catalogue_mt_filter(self, mt_table):
+    def catalogue_mt_filter(self, mt_table, flag=None):
         """
         Filter the catalogue using a magnitude-time table. The table has 
-        two columns and n-rows. The first column contains the magnitude 
-        the second years.
+        two columns and n-rows. 
+        :param nump.ndarray mt_table:
+            Magnitude time table with n-rows where column 1 is year and column
+            2 is magnitude
+
         """
-        flag = np.ones(np.shape(self.data['magnitude'])[0], dtype=bool)
+        if flag is None:
+            # No flag defined, therefore all events are initially valid
+            flag = np.ones(self.get_number_events(), dtype=bool)
+        
         for comp_val in mt_table:
-            id0 = np.logical_and(self.data['year'] < comp_val[0],
+            id0 = np.logical_and(self.data['year'].astype(float) < comp_val[0],
                                  self.data['magnitude'] < comp_val[1])
             flag[id0] = False
-        for key in self.data.keys():
-            if len(self.data[key]):
-                self.data[key] = self.data[key][np.nonzero(flag)]
-
+        if not np.all(flag):
+            self.purge_catalogue(flag)
+    
 
     def get_decimal_time(self):                                                 
         '''                                                                     

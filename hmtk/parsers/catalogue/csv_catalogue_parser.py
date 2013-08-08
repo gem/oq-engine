@@ -51,9 +51,9 @@ implements :class:`CsvCatalogueParser`.
 """
 import csv
 import numpy as np
-
+from copy import deepcopy
 from hmtk.seismicity.catalogue import Catalogue
-from hmtk.parsers.catalogue.base import BaseCatalogueParser
+from hmtk.parsers.catalogue.base import BaseCatalogueParser, BaseCatalogueWriter
 
 class CsvCatalogueParser(BaseCatalogueParser):
     """CSV Catalogue Parser Class
@@ -62,7 +62,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
     def read_file(self):
         """
         """
-        filedata = open(self.input_file, 'rt')
+        filedata = open(self.input_file, 'rU')
         catalogue = Catalogue()
         # Reading the data file
         data = csv.DictReader(filedata)
@@ -113,3 +113,94 @@ class CsvCatalogueParser(BaseCatalogueParser):
         else:    
             attribute_array = np.hstack([attribute_array, np.nan])
         return attribute_array
+        
+class CsvCatalogueWriter(BaseCatalogueWriter):
+        '''
+        Writes catalogue to csv file
+        '''
+        # Because the catalogues TOTAL_ATTRIBUTE_LIST is randomly ordered, 
+        # the preferred output order is given as a list here
+        OUTPUT_LIST = ['eventID', 'Agency', 'year', 'month', 'day', 'hour',
+                       'minute', 'second', 'timeError', 'longitude', 
+                       'latitude', 'SemiMajor90', 'SemiMinor90', 'ErrorStrike', 
+                       'depth', 'depthError', 'magnitude', 'sigmaMagnitude',
+                       'magnitudeType']
+        def write_file(self, catalogue, flag_vector=None, magnitude_table=None):
+            '''
+            Writes the catalogue to file, purging events if necessary
+            :param catalogue:
+                Earthquake catalogue as instance of :class:
+                hmtk.seismicity.catalogue.Catalogue
+            :param numpy.array flag_vector:
+                Boolean vector specifying whether each event is valid (therefore
+                written) or otherwise
+            :param numpy.ndarray magnitude_table:
+                Magnitude-time table specifying the year and magnitudes of 
+                completeness
+            '''
+            # First apply purging conditions
+            output_catalogue = self.apply_purging(catalogue, 
+                                                  flag_vector, 
+                                                  magnitude_table)
+            outfile = open(self.output_file, 'wt')
+            writer = csv.DictWriter(outfile, fieldnames=self.OUTPUT_LIST)
+            headers = dict((name0, name0) for name0 in self.OUTPUT_LIST)
+            writer.writeheader()
+            # Quick check to remove nan arrays
+            for key in self.OUTPUT_LIST:
+                if isinstance(output_catalogue.data[key], np.ndarray) and \
+                    np.all(np.isnan(output_catalogue.data[key])):
+                    output_catalogue.data[key] = []
+            # Write the catalogue
+            for iloc in range(0, output_catalogue.get_number_events()):
+                row_dict = {}
+                for key in self.OUTPUT_LIST:
+                    if len(output_catalogue.data[key]) > 0:
+                        row_dict[key] = output_catalogue.data[key][iloc]
+                    else:
+                        row_dict[key] = ''
+                writer.writerow(row_dict)
+            outfile.close()
+            
+            
+        def apply_purging(self, catalogue, flag_vector, magnitude_table):
+            '''
+            Apply all the various purging conditions (if specified)
+            :param catalogue:
+                Earthquake catalogue as instance of :class:
+                hmtk.seismicity.catalogue.Catalogue:
+            param numpy.array flag_vector:
+                Boolean vector specifying whether each event is valid (therefore
+                written) or otherwise
+            :param numpy.ndarray magnitude_table:
+                Magnitude-time table specifying the year and magnitudes of 
+                completeness
+            '''
+            output_catalogue = deepcopy(catalogue)
+            if magnitude_table is not None:
+                if flag_vector is not None:
+                    output_catalogue.catalogue_mt_filter(
+                        magnitude_table, flag_vector)
+                    return output_catalogue
+                else:
+                    output_catalogue.catalogue_mt_filter(
+                        magnitude_table)
+                    return output_catalogue
+            
+            if flag_vector is not None:
+                output_catalogue.purge_catalogue(flag_vector)
+            return output_catalogue
+            
+            
+#            if flag_vector is not None:
+#                    magtime_flag = output_catalogue.catalogue_mt_filter(
+#                        magnitude_table)
+#                    flag_vector = np.logical_and(flag_vector, magtime_flag)
+#                else:
+#                    flag_vecotor = output_catalogue.catalogue_mt_filter(
+#                        magnitude_table)
+#                output_catalogue.purge_catalogue(flag_vector)
+#            else:
+#                if flag_vector is not None:
+#                    output_catalogue.purge_catalogue(flag_vector)
+#            return output_catalogue
