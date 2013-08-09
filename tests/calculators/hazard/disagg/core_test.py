@@ -292,19 +292,19 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
                 disagg_core.compute_disagg(*diss1[0:-1])
                 # 2 poes * 2 imts * 1 site = 4
                 self.assertEqual(4, disagg_mock.call_count)
-                self.assertEqual(4, save_mock.call_count)
+                self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
                 disagg_core.compute_disagg(*diss2[0:-1])
                 self.assertEqual(4, disagg_mock.call_count)
-                self.assertEqual(4, save_mock.call_count)
+                self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
                 disagg_core.compute_disagg(*diss3[0:-1])
                 self.assertEqual(8, disagg_mock.call_count)
-                self.assertEqual(8, save_mock.call_count)
+                self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
                 disagg_core.compute_disagg(*diss4[0:-1])
                 self.assertEqual(8, disagg_mock.call_count)
-                self.assertEqual(8, save_mock.call_count)
+                self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
         # Finally, test that realization data is up to date and correct:
         rlzs = models.LtRealization.objects.filter(
