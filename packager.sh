@@ -217,6 +217,7 @@ _devtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
@@ -313,8 +314,7 @@ _devtest_innervm_run () {
         fi
     fi
 
-    ssh $lxc_ip "history > devtest.history"
-    scp "${lxc_ip}:devtest.history" .
+    scp "${lxc_ip}:ssh.log" devtest.history
 
     # TODO: version check
 #    echo "NOW PRESS ENTER TO CONTINUE"
@@ -343,6 +343,7 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
@@ -426,8 +427,7 @@ _pkgtest_innervm_run () {
         done"
     fi
 
-    ssh $lxc_ip "history > pkgtest.history"
-    scp "${lxc_ip}:pkgtest.history" .
+    scp "${lxc_ip}:ssh.log" pkgtest.history
 
     trap ERR
 
