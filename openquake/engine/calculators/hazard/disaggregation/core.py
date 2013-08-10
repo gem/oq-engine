@@ -179,6 +179,8 @@ def compute_disagg(job_id, sites, lt_rlz_id):
                         'computing disaggregation', job_id, disagg_task):
                     bin_edges, diss_matrix = openquake.hazardlib.calc.\
                         disagg.disaggregation_poissonian(**calc_kwargs)
+                    if not bin_edges:  # no ruptures generated
+                        continue
 
                 with EnginePerformanceMonitor(
                         'saving disaggregation', job_id, disagg_task):
