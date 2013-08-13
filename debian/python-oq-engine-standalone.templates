@@ -1,4 +1,4 @@
-Template: python-oq-engine/override-psql-std-conf-str
+Template: python-oq-engine-standalone/override-psql-std-conf-str
 Type: boolean
 Default: yes
 Description: Set standard-conforming-strings = off in postgresql.conf ?

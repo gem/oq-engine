@@ -3,7 +3,7 @@
 #
 # see: dh_installdeb(1)
 
-#set -x
+set -x
 set -e
 
 # summary of how this script can be called:
@@ -21,98 +21,493 @@ set -e
 # load debconf suite
 . /usr/share/debconf/confmodule
 
+GEM_DEBUG=y
 GEM_DEB_PACKAGE="python-oq-engine-master"
-PG_CONF="/etc/postgresql/9.1/main/postgresql.conf"
-SDIR=/etc/openquake
-IDIR=/usr/share/pyshared/openquake/engine
-
-chown -R root.openquake $SDIR
+# a tab char to avoid C & P problems and to be more clear
+GEM_TB="	"
 
 #
-#  NOTE
-#        look 'debian/config' file if you want to change something here
+# To run this script for test you can use:
+# $ DEBCONF_DEBUG=developer DEBCONF_PACKAGE=python-oq-engine-master ./python-oq-engine-master.postinst
 #
+# GEM_FAKEROOT: env var to be able to test script without superuser permissions
 
-# does a bad explicit configuration exist?
-if grep -q '^[ 	]*standard_conforming_strings[ 	]*=' "$PG_CONF" ; then
-    if grep -q '^[ 	]*standard_conforming_strings[ 	]*=[ 	]*on' "$PG_CONF" ; then
-        db_get ${GEM_DEB_PACKAGE}/override-psql-std-conf-str || true
-        if [ "$RET" = "true" ]; then
-            if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
-                cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
-            fi
-            sed -i 's/^[ 	]*standard_conforming_strings[ 	]*=.*/# ADDED BY python-oq-engine\nstandard_conforming_strings = off/g' "$PG_CONF"
+PG_BASE="${GEM_FAKEROOT}/etc/postgresql/9.1/main"
+PG_CONF="${PG_BASE}/postgresql.conf"
+PG_HBA_CONF="${PG_BASE}/pg_hba.conf"
+
+OQ_BASE="${GEM_FAKEROOT}/etc/openquake"
+OQ_CONF="${OQ_BASE}/openquake.cfg"
+OQ_SHARE="${GEM_FAKEROOT}/usr/share/pyshared/openquake/engine"
+
+GEM_LOGFILE=${GEM_FAKEROOT}/var/tmp/openquake-db-installation
+
+#functions
+gem_mesg () {
+    echo "=============================================================================="
+    echo
+    echo "  $1"
+    echo
+    echo "=============================================================================="
+}
+
+gem_get_pg_vars () {
+    local var_name="$1" var_mult="$2" var_line var_val
+
+    # grep value from the configuration file
+    var_line="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*${var_name}[ $GEM_TAB]*=" || true)"
+
+    if [ "$var_line" != "" ]; then
+        var_val="$(echo "$var_line" | sed "s/^[^=]*=[ $GEM_TB]\?['\"]\?//g;s/['\"]\?[ $GEM_TB]*\$//g;s/[ $GEM_TB].*//g")"
+        if echo "$var_val" | grep -q '.*[gG][bB]$' ; then
+            var_val="$(echo "$var_val" | sed 's/[gG][bB]$//g')"
+            var_val=$((var_val * 1024 * 1024 * 1024))
+        elif echo "$var_val" | grep -q '.*[mM][bB]$' ; then
+            var_val="$(echo "$var_val" | sed 's/[mM][bB]$//g')"
+            var_val=$((var_val * 1024 * 1024))
+        elif echo "$var_val" | grep -q '.*[kK][bB]$' ; then
+            var_val="$(echo "$var_val" | sed 's/[kK][bB]$//g')"
+            var_val=$((var_val * 1024))
+        fi
+    else
+        # if the var isn't defined try to retrieve its default value from the database directly
+        var_val="$(su - "psql -A -t -c \"SELECT setting FROM pg_settings WHERE name = '${var_name}';\" postgres postgres" postgres)"
+        if [ "$var_val" = "" ]; then
+            return 1
+        fi
+        if [ "$var_mult" != "" ]; then
+            var_val=$((var_val * var_mult))
         fi
     fi
-elif grep -q  '^[ 	]*#[ 	]*standard_conforming_strings[ 	]*=' "$PG_CONF" ; then
-    if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
-        cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
+    echo "$var_val"
+    return 0
+}
+
+strip_block ()
+{
+    local is_begin="$1" is_end="$2" file_cur="$3" file_over="$4"
+
+    if [ $is_begin -eq 0 -a $is_end -eq 0 -a "$file_cur" = "$file_over" ]; then
+        sed '/^# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN.*/,/^# PYTHON-OQ-ENGINE: CONFIGURATION END.*/d' "$file_cur"
+    else
+        cat "$file_cur"
     fi
-    sed -i 's/^[ 	]*#[ 	]*standard_conforming_strings[ 	]*=.*/# ADDED BY python-oq-engine\nstandard_conforming_strings = off/g' "$PG_CONF"
+}
+
+# begin_end_set - set is_begin and is_end global vars
+begin_end_set ()
+{
+    local gem_var_file_over="$1"
+
+    if [ ! -f "$gem_var_file_over" ]; then
+        return 1
+    fi
+
+    is_begin=0; grep -q "^# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN" "$gem_var_file_over" || is_begin=1
+    is_end=0 ; grep -q "^# PYTHON-OQ-ENGINE: CONFIGURATION END" "$gem_var_file_over" || is_end=1
+    if [ $is_begin -ne $is_end ]; then
+        echo "Malformed $gem_var_file_over configuration block, PYTHON-OQ-ENGINE delimiters not consistent."
+        return 1
+    fi
+}
+
+
+override_attribute () {
+    local gem_var_name="$1" gem_var_value_req="$2" gem_var_value_def="$3"  gem_var_file_over="$4"
+    local file_cur gem_var_name_search gem_var_name_orname gem_var_value_max=0
+    GEM_OVERRIDE_ATTRIBUTE_GEMRET=0
+
+    if ! begin_end_set "$gem_var_file_over"; then
+        return 1
+    fi
+
+    shift 4
+
+    gem_var_name_search="$(echo "$gem_var_name" | sed 's/\./\\./g')"
+    gem_var_name_db="$(echo "${gem_var_name}-override" | sed 's/\./-/g')"
+    gem_var_name_or="$(echo "${gem_var_name_db}" | sed 's/-/_/g')"
+    for file_cur in "$@" ; do
+        if strip_block $is_begin $is_end "$file_cur" "$gem_var_file_over" | \
+            grep -q "^[ $GEM_TAB]*${gem_var_name_search}[ $GEM_TAB]*=" ; then
+            # get the current value
+            gem_var_value_max="$(strip_block $is_begin $is_end "$file_cur" "$gem_var_file_over" |\
+                                 grep "^[ $GEM_TAB]*${gem_var_name_search}[ $GEM_TAB]*=" | tail -n 1 |\
+                                 sed "s/^[^=]*=[ $GEM_TAB]//g;s/[^0-9].*$//g;")"
+        fi
+    done
+
+    if [ $gem_var_value_max -eq 0 ]; then
+        gem_var_value_max="$gem_var_value_def"
+    fi
+
+    # if the current value of the var is less than ask for override the var and comment all current occurrencies
+    if [ $gem_var_value_req -gt $gem_var_value_max ]; then
+        db_get ${GEM_DEB_PACKAGE}/${gem_var_name_db} || true
+        gem_var_override="$RET"
+        if [ "$gem_var_override" = "true" ]; then
+            for file_cur in "$@"; do
+                if grep -q "^[ $GEM_TAB]*${gem_var_name_search}[ $GEM_TAB]*=" "$file_cur" ; then
+                    sed -i "s/^\([ $GEM_TAB]*${gem_var_name_search}[ $GEM_TAB]*=.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$file_cur"
+                fi
+            done
+        fi
+    fi
+
+    echo "$gem_var_value_max"
+    eval ${gem_var_name_or}=\"$gem_var_override\"
+    return 0
+    }
+
+
+# GEM DEVEL BEGIN
+if [ "$GEM_FAKEROOT" ]; then
+    /home/nastasi/git/mockpg/mockpg.py -t 5 \
+        "SELECT setting FROM pg_settings WHERE name = 'max_locks_per_transaction';" '[ [ "setting" ], [ "64" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'max_connections';" '[ [ "setting" ], [ "100" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'max_prepared_transactions';" '[ [ "setting" ], [ "0" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'autovacuum_max_workers';" '[ [ "setting" ], [ "3" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'block_size';" '[ [ "setting" ], [ "4096" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'shared_buffers';" '[ [ "setting" ], [ "3072" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'wal_block_size';" '[ [ "setting" ], [ "4096" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'wal_segment_size';" '[ [ "setting" ], [ "2048" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'wal_buffers';" '[ [ "setting" ], [ "-1" ] ]' \
+        &
+    mockpg_id=$!
+    sleep 1
+
+    GEM_FAKE_PG_ARGS="-h /tmp/mockpg"
+    # mock of chown function
+    chown_orig="$(which chown)"
+    chown() {
+        echo "MOCK: chown" "$@"
+        $chown_orig $@ || true
+    }
+
+    chmod_orig="$(which chmod)"
+    chmod() {
+        echo "MOCK: chmod" "$@"
+        $chmod_orig $@ || true
+    }
+
+    sysctl_orig="$(which sysctl)"
+    sysctl() {
+        echo "MOCK: sysctl" "$@"
+        $sysctl_orig $@ || true
+    }
+
+    su_orig="$(which su)"
+    su() {
+        if [ "$1" = "-" -a "$(echo "$2" | cut -c 1-5)" = "psql " ]; then
+            eval psql $GEM_FAKE_PG_ARGS "$(echo "$2" | cut -c 5-)"
+        else
+            echo "MOCK: su" "$@"
+            if [ "$1" = "-c" -a "$(echo "$2" | cut -c -21)" = "/usr/bin/oq_create_db" ]; then
+                mv "${GEM_LOGFILE}.orig" "${GEM_LOGFILE}"
+            fi
+        fi
+        return 0
+    }
+
+    service_orig="$(which service)"
+    service() {
+        echo "MOCK: service" "$@"
+        return 0
+    }
+fi
+# GEM DEVEL END
+chown -R root.openquake $OQ_BASE
+
+#
+#  processes dimensioning
+db_get ${GEM_DEB_PACKAGE}/workers-cores-number || true
+workers_cores_number=$RET
+
+#
+#  postgresql.conf configuration
+if [ ! -f "$PG_CONF" ]; then
+    echo "required configuration file $PG_CONF not exists"
+    db_stop
+    exit 1
+fi
+
+if ! begin_end_set "$PG_CONF"; then
+    db_stop
+    exit 1
+fi
+
+# save old oq-engine-related parameters values before refresh the OQ-ENGINE configuration block
+std_conf_str_req="on"
+# here update with the function ===++===++++++==
+std_conf_str_old="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=" | \
+        sed "s/^[^=]*=[ $GEM_TB]//g;s/[ $GEM_TB]*\$//g" || true)"
+max_conn_old="$(cat "$PG_CONF" | grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" | \
+        sed "s/^[^=]*=[ $GEM_TB]//g;s/[^0-9].*\$//g" || true)"
+
+# postgresql.conf: remove the PYTHON-OQ-ENGINE configuration block
+tmpfile="$(mktemp)"
+strip_block $is_begin $is_end "$PG_CONF" "$PG_CONF" > $tmpfile
+psql_conf_std_conf_str_set=1
+
+
+# postgresql.conf: standard_conforming_strings attr management
+# does a bad explicit configuration of standard_conforming_strings exists ?
+if grep -q "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=" "$tmpfile" ; then
+    if grep -q "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=[ $GEM_TAB]*on" "$tmpfile" ; then
+        db_get ${GEM_DEB_PACKAGE}/psql-conf-std-conf-str-override || true
+        if [ "$RET" = "true" ]; then
+            sed -i "s/^\([ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=[ $GEM_TAB]*on[ $GEM_TAB].*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
+            psql_conf_std_conf_str_set=0
+        fi
+    fi
 else
-    if [ ! -f "${PG_CONF}.${GEM_DEB_PACKAGE}.orig" ]; then
-        cp "$PG_CONF" "${PG_CONF}.${GEM_DEB_PACKAGE}.orig"
+    psql_conf_std_conf_str_set=0
+fi
+
+# postgresql.conf: max_connections attribute management
+pg_conf_max_conn_set=1
+max_conn_req="$((workers_cores_number * 2))"
+if grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" "$tmpfile" ; then
+    # get the current value
+    max_conn_cur="$(grep "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" "$tmpfile" | sed "s/^[^=]*=[ $GEM_TAB]//g;s/[^0-9].*$//g;")"
+    if [ $max_conn_cur -lt $max_conn_req ]; then
+        db_get ${GEM_DEB_PACKAGE}/pg-conf-max-conn-override || true
+        pg_conf_max_conn_override="$RET"
+        if [ "$pg_conf_max_conn_override" = "true" ]; then
+            sed -i "s/^\([ $GEM_TAB]*max_connections[ $GEM_TAB]*=.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
+            pg_conf_max_conn_set=0
+        fi
     fi
-    echo "# ADDED BY python-oq-engine" >>  "$PG_CONF"
-    echo "standard_conforming_strings = off" >>  "$PG_CONF"
+else
+    if [ $max_conn_cur -lt $max_conn_req ]; then
+        pg_conf_max_conn_set=0
+    fi
+fi
+
+# postgresql.conf: if a modification is required a PYTHON-OQ-ENGINE configuration block is added
+if [ $psql_conf_std_conf_str_set -eq 0 -o $pg_conf_max_conn_set -eq 0 ]; then
+    tmpfile2="$(mktemp)"
+    cat ${tmpfile} | sed -n ":loop ; /^#.*/{p; n; bloop} ; q" > $tmpfile2
+
+    echo "# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN" >> $tmpfile2
+    if [ $psql_conf_std_conf_str_set -eq 0 ]; then
+        echo "standard_conforming_strings = off" >> $tmpfile2
+    fi
+    if [ $pg_conf_max_conn_set -eq 0 ]; then
+        echo "max_connections = $max_conn_req" >> $tmpfile2
+    fi
+    echo "# PYTHON-OQ-ENGINE: CONFIGURATION END" >> $tmpfile2
+    cat ${tmpfile} | sed -n ":loop ; /^#.*/{   n; bloop} ; :rest ; p; n; brest" >>$tmpfile2
+    cp "$PG_CONF" "${PG_CONF}.old"
+    cp $tmpfile2 "$PG_CONF"
+    rm $tmpfile2
+fi
+rm $tmpfile
+
+# print a message about what must be done to activate the new configuration
+if [ "$max_conn_old" != "$max_conn_req" -a "$max_conn_override" = "true" ]; then
+    gem_mesg "NOTE: to activate current postgresql configuration you must restart the postgresql service"
+else
+    if [ "$std_conf_str_old" != "$std_conf_str_req" -a "$std_conf_str_override" = "true" ]; then
+        service postgresql reload 9.1
+    fi
+fi
+
+#
+#  pg_hba.conf configuration
+
+#  Example of what will be installed:
+#
+# # PYTHON-OQ-ENGINE: CONFIGURATION BEGIN - DON'T REMOVE
+# local   openquake   oq_admin                      md5
+# local   openquake   oq_job_init                   md5
+# local   openquake   oq_job_superv                 md5
+# local   openquake   oq_reslt_writer               md5
+#
+# host   openquake   oq_admin        172.16.12.0/24 md5
+# host   openquake   oq_job_init     172.16.12.0/24 md5
+# host   openquake   oq_job_superv   172.16.12.0/24 md5
+# host   openquake   oq_reslt_writer 172.16.12.0/24 md5
+#  ...
+# host ...
+#
+# # PYTHON-OQ-ENGINE: CONFIGURATION END - DON'T REMOVE
+
+if ! begin_end_set "$PG_HBA_CONF"; then
+    db_stop
+    exit 1
+fi
+# remove the PYTHON-OQ-ENGINE configuration block and all other oq_* occurrencies
+tmpfile="$(mktemp)"
+strip_block $is_begin $is_end "$PG_HBA_CONF" "$PG_HBA_CONF" |\
+    sed -n ":loop /^\(local\|host\)[ $GEM_TB].*[ $GEM_TB]oq_[a-z_]\+[ $GEM_TB].*/{n ; bloop} ; p" > "$tmpfile"
+
+# now in tmpfile we have something similar to the original pg_hba.conf file
+db_get ${GEM_DEB_PACKAGE}/pg-hba-allowed-hosts || true
+pg_hba_allowed_hosts="$RET"
+
+tmpfile2="$(mktemp)"
+
+local_peer=0
+if grep -q "^local[ $GEM_TB]\+all[ $GEM_TB]\+postgres[ $GEM_TB]\+peer" "$PG_HBA_CONF"; then
+    local_peer=1
+fi
+if [ $local_peer -eq 1 ]; then
+    # step 1: recreate the header of the new pg_hba.conf (all header until "local .... "
+    cat ${tmpfile} | sed  ":loop ; /^local[ $GEM_TB]\+all[ $GEM_TB]\+postgres[ $GEM_TB]\+peer/q"  > $tmpfile2
+else
+    cat ${tmpfile} | sed -n ":loop ; /^#.*/{p; n; bloop} ; /^[ $GEM_TB]*\$/{p; n; bloop} ; q" > $tmpfile2
+fi
+
+# step 2: add the new PYTHON-OQ-ENGINE block
+echo "# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN" >> $tmpfile2
+old_ifs="$IFS"
+IFS=" "
+for pg_hba_allowed_host in local $pg_hba_allowed_hosts; do
+    for allowed_user in admin job_init job_superv reslt_writer; do
+        if [ "$pg_hba_allowed_host" = "local" ]; then
+            echo "local${GEM_TB}openquake${GEM_TB}oq_${allowed_user}${GEM_TB}${GEM_TB}${GEM_TB}md5" >> $tmpfile2
+        else
+            echo "host${GEM_TB}openquake${GEM_TB}oq_${allowed_user}${GEM_TB}${pg_hba_allowed_host}${GEM_TB}md5" >> $tmpfile2
+        fi
+    done
+    echo >> $tmpfile2
+done
+echo "# PYTHON-OQ-ENGINE: CONFIGURATION END" >> $tmpfile2
+
+# step 3: add the rest of the configuration file
+if [ $local_peer -eq 1 ]; then
+    cat ${tmpfile} | sed "0,/^local[ $GEM_TB]\+all[ $GEM_TB]\+postgres[ $GEM_TB]\+peer/d" >>$tmpfile2
+else
+    cat ${tmpfile} | sed -n ":loop ; /^#.*/{   n; bloop} ; /^[ $GEM_TB]*\$/{   n; bloop} ; :rest ; p; n; brest" >>$tmpfile2
+fi
+
+cp "$PG_HBA_CONF" "${PG_HBA_CONF}.old"
+cp $tmpfile2 "$PG_HBA_CONF"
+
+rm $tmpfile $tmpfile2
+
+#
+#  openquake.cfg settings
+concurrent_tasks_req="$max_conn_req"
+sed -i "s/^\([ $GEM_TB]*concurrent_tasks[ $GEM_TB]*=[ $GEM_TB]*\).*/\1$concurrent_tasks_req/g" $OQ_CONF
+
+#
+#  system settings
+gem_max_locks_per_transaction="$(gem_get_pg_vars "max_locks_per_transaction")"
+gem_max_connections="$(gem_get_pg_vars "max_connections")"
+gem_max_prepared_transactions="$(gem_get_pg_vars "max_prepared_transactions")"
+gem_autovacuum_max_workers="$(gem_get_pg_vars "autovacuum_max_workers")"
+gem_block_size="$(gem_get_pg_vars "block_size")"
+gem_shared_buffers="$(gem_get_pg_vars "shared_buffers" $gem_block_size)"
+gem_shared_buffers="$((gem_shared_buffers / gem_block_size))"
+gem_wal_buffers="$(gem_get_pg_vars "wal_buffers")"
+gem_wal_block_size="$(gem_get_pg_vars "wal_block_size")"
+gem_wal_segment_size="$(gem_get_pg_vars "wal_segment_size")"
+
+if [ "$gem_wal_buffers" = "-1" ]; then
+    gem_wal_buffers="$((gem_shared_buffers / 32))"
+    gem_wal_segment_size_in_byte="$((gem_wal_segment_size * gem_wal_block_size))"
+    if [ $gem_wal_buffers -lt 16384 ]; then
+        gem_wal_buffers=16384
+    elif [ $gem_wal_buffers -gt $gem_wal_segment_size_in_byte ]; then
+        gem_wal_buffers=$gem_wal_segment_size_in_byte
+    fi
+fi
+gem_wal_buffers=$((gem_wal_buffers / gem_wal_block_size))
+
+if [ $GEM_DEBUG ]; then
+    echo "max_locks_per_transaction=[$gem_max_locks_per_transaction]"
+    echo "max_connections=[$gem_max_connections]"
+    echo "max_prepared_transactions=[$gem_max_prepared_transactions]"
+    echo "autovacuum_max_workers=[$gem_autovacuum_max_workers]"
+    echo "block_size=[$gem_block_size]"
+    echo "shared_buffers=[$gem_shared_buffers]"
+    echo "wal_block_size=[$gem_wal_block_size]"
+    echo "wal_buffers=[$gem_wal_buffers]"
+fi
+
+# Connections 	(1800 + 270 * max_locks_per_transaction) * max_connections
+# Autovacuum workers 	(1800 + 270 * max_locks_per_transaction) * autovacuum_max_workers
+# Prepared transactions 	(770 + 270 * max_locks_per_transaction) * max_prepared_transactions
+# Shared disk buffers 	(block_size + 208) * shared_buffers
+# WAL buffers 	(wal_block_size + 8) * wal_buffers
+# Fixed space requirements 	770 kB
+
+gem_page_size="$(getconf PAGE_SIZE)"
+
+gem_shmmax_req=$(( (1800 + 270 *gem_max_locks_per_transaction) * (gem_max_connections + gem_autovacuum_max_workers) ))
+gem_shmmax_req=$(( gem_shmmax_req + (770 + 270 * gem_max_locks_per_transaction) * gem_max_prepared_transactions ))
+gem_shmmax_req=$(( gem_shmmax_req + (gem_block_size + 208) * gem_shared_buffers ))
+gem_shmmax_req=$(( gem_shmmax_req + (gem_wal_block_size + 8) * gem_wal_buffers ))
+gem_shmmax_req=$(( gem_shmmax_req + (770 * 1024) ))
+
+# var not exists         : if override, create our config block
+# var < in of the block  : if override, recreation our config block
+# var < out of the block : if override, comment current set and create our config block
+# var = in of the block  : if override, recreation our config block
+# var > in of the block  : if override, recreation our config block
+# var = out of the block : fare nulla
+# var > out of the block : fare nulla
+
+gem_shmmax_cur="$(override_attribute 'kernel.shmmax' "$gem_shmmax_req" "$(cat ${GEM_FAKEROOT}/proc/sys/kernel/shmmax)" "${GEM_FAKEROOT}/etc/sysctl.d/30-postgresql-shm.conf" ${GEM_FAKEROOT}/etc/sysctl.d/*.conf ${GEM_FAKEROOT}/etc/sysctl.conf)"
+
+if [ "$kernel_shmmax_override" = "" -a $gem_shmmax_req -gt $gem_shmmax_cur ]; then
+    db_get ${GEM_DEB_PACKAGE}/kernel-shmmax-override || true
+    kernel_shmmax_override="$RET"
+fi
+
+gem_shmall_req=$((gem_shmmax_req / gem_page_size + 1 + 1024))
+gem_shmall_cur="$(override_attribute 'kernel.shmall' "$gem_shmall_req" "$(cat ${GEM_FAKEROOT}/proc/sys/kernel/shmall)" "${GEM_FAKEROOT}/etc/sysctl.d/30-postgresql-shm.conf" ${GEM_FAKEROOT}/etc/sysctl.d/*.conf ${GEM_FAKEROOT}/etc/sysctl.conf)"
+if [ "$kernel_shmall_override" = "" -a $gem_shmall_req -gt $gem_shmall_cur ]; then
+    db_get ${GEM_DEB_PACKAGE}/kernel-shmall-override || true
+    kernel_shmall_override="$RET"
+fi
+
+if [ $gem_shmmax_req -gt $gem_shmmax_cur -o $gem_shmall_req -gt $gem_shmall_cur ]; then # or or or ...
+    begin_end_set "${GEM_FAKEROOT}/etc/sysctl.d/30-postgresql-shm.conf"
+
+    tmpfile="$(mktemp)"
+    strip_block $is_begin $is_end "${GEM_FAKEROOT}/etc/sysctl.d/30-postgresql-shm.conf" "${GEM_FAKEROOT}/etc/sysctl.d/30-postgresql-shm.conf" > "$tmpfile"
+
+    echo "# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN" >> "$tmpfile"
+    if [ "$kernel_shmmax_override" = "true" -a $gem_shmmax_req -gt $gem_shmmax_cur ]; then
+        echo "kernel.shmmax = $gem_shmmax_req" >>       "$tmpfile"
+        sysctl -w kernel.shmmax=$gem_shmmax_req
+    fi
+    if [ "$kernel_shmall_override" = "true" -a $gem_shmall_req -gt $gem_shmall_cur ]; then
+        echo "kernel.shmall = $gem_shmall_req" >>       "$tmpfile"
+        sysctl -w kernel.shmall=$gem_shmall_req
+    fi
+    echo "# PYTHON-OQ-ENGINE: CONFIGURATION END" >>   "$tmpfile"
+
+    cp "$tmpfile" "${GEM_FAKEROOT}/etc/sysctl.d/30-postgresql-shm.conf"
+    rm "$tmpfile"
+fi
+
+
+if [ "$GEM_FAKEROOT" ]; then
+    echo "mockpg stop" | nc -U /tmp/mockpg/.s.PGSQL.5432
 fi
 
 # postgres is installed by definition (depends), flatten and recreate the database.
 pgport=$(cat /etc/postgresql/9.1/main/postgresql.conf | perl -wane ' if ($_ =~ /^\s*port\s*=/) { s/^\s*port\s*=\s*(\d+).*$/$1/; print $_; }')
-LOGFILE=/var/tmp/openquake-db-installation
-rm -f $LOGFILE
-su -c "/usr/bin/oq_create_db --yes --db-name=openquake --db-port=$pgport --schema-path=$IDIR/db/schema > $LOGFILE 2>&1" postgres
+rm -f $GEM_LOGFILE
+su -c "/usr/bin/oq_create_db --yes --db-name=openquake --db-port=$pgport --schema-path=$OQ_SHARE/db/schema > $GEM_LOGFILE 2>&1" postgres
 for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer; do
-    su -c "psql -p $pgport -c \"ALTER ROLE $dbu WITH PASSWORD 'openquake'\" >> $LOGFILE 2>&1" postgres
+    su -c "psql -p $pgport -c \"ALTER ROLE $dbu WITH PASSWORD 'openquake'\" >> $GEM_LOGFILE 2>&1" postgres
 done
-chmod 644 $LOGFILE
+chmod 644 $GEM_LOGFILE
 
-num_of_errors=$(grep -i error $LOGFILE | grep -v "is not empty" | grep -v error_msg_ | wc -l)
+num_of_errors=$(grep -i error $GEM_LOGFILE | grep -v "is not empty" | grep -v error_msg_ | wc -l)
 if [ $num_of_errors -gt 0 ]; then
     echo "Failed to initialise the openquake database"
     echo "Please file a bug here:"
     echo "    https://bugs.launchpad.net/openquake/+filebug"
     echo "and attach this file to it:"
-    echo "    $LOGFILE"
+    echo "    $GEM_LOGFILE"
     su -c "psql -p $pgport c \"DROP DATABASE openquake\" >/dev/null 2>&1" postgres
     db_stop
     exit 1
-fi
-
-PG_ROOT=/etc/postgresql/9.1/main
-# Do we already have oq_* database users configured and how many?
-oq_config_lines=$(grep oq_ $PG_ROOT/pg_hba.conf | grep -v '^#' | wc -l)
-# Do we already have oq_* database users *auto-configured* and how many?
-auto_oq_config_lines=$(grep oq_ $PG_ROOT/pg_hba.conf | grep -v '^#' | grep '^local' | wc -l)
-if [ $oq_config_lines -eq $auto_oq_config_lines ]; then
-    # The oq_* db users (if any) have been auto-configured i.e. it's OK
-    # if we flatten them.
-    rm -f $PG_ROOT/pg_hba.conf.orig
-    mv $PG_ROOT/pg_hba.conf $PG_ROOT/pg_hba.conf.orig
-    cat $PG_ROOT/pg_hba.conf.orig | grep -v 'local..*oq_' > $PG_ROOT/pg_hba.conf
-    for dbu in oq_reslt_writer oq_job_superv oq_job_init oq_admin; do
-        sed -i "0,/\(^[  ]*[^#]\+\)/{s/\(^[        ]*[^#]\+\)/local   openquake   $dbu                   md5\n\1/}" $PG_ROOT/pg_hba.conf
-    done
-
-    #
-    #  FIXME
-    #
-    #  HERE CONFIG FOR WORKERS ACCESS
-    #
-
-    /etc/init.d/postgresql reload 9.1
-else
-    echo ""
-    echo "============================================================"
-    echo "Your system seems to have a custom pg_hba.conf (postgres"
-    echo "authentication configuration)"
-    echo ""
-    echo "Please ask the system administrator to grant access to the"
-    echo "'openquake' database to the following users:"
-    echo ""
-    echo "      oq_admin oq_job_init oq_job_superv oq_reslt_writer"
-    echo "============================================================"
-    echo ""
 fi
 
 # dh_installdeb will replace this with shell code automatically

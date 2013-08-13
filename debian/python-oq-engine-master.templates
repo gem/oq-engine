@@ -1,0 +1,52 @@
+Template: python-oq-engine-master/pg-conf-std-conf-str-override
+Type: boolean
+Default: yes
+Description: Set standard-conforming-strings = off in postgresql.conf ?
+ python-oq-engine requires either standard-conforming-strings = off
+ in the postgres configuration file or a patch.
+ .
+ Your postgresql configuration file currently has
+ standard-conforming-strings = on.
+ .
+ If you need to keep standard-conforming-strings = on then you must
+ apply a patch to python-django otherwise python-oq-engine will not work.
+ See https://github.com/gem/oq-engine/wiki/ubuntu-python-django-patch
+ for instructions.
+ .
+ If you choose 'Yes' now, this installation script will set
+ standard-conforming-strings = off in the postgres configuration file
+ otherwise we will leave your configuration file unchanged and continue
+ installing the oq-engine; you must apply the patch or manually edit
+ the configuration file before using the engine.
+
+Template: python-oq-engine-master/pg-hba-allowed-hosts
+Type: string
+Default:
+Description: A space separated list of network-addresses/net-masks to
+ configure network access to postgres database.
+ .
+ Local entries are already added.
+
+Template: python-oq-engine-master/pg-conf-max-conn-override
+Type: boolean
+Default: false
+Description: A max_connection entry in postgresql.conf is found.
+ Do you want the package overrides it ?
+
+Template: python-oq-engine-master/workers-cores-number
+Type: string
+Default:
+Description: The total number of cores dedicated to openquake calculations.
+ Here we are
+
+Template: python-oq-engine-master/kernel-shmmax-override
+Type: boolean
+Default: false
+Description: This package could require a more large shmmax value.
+ Is it possible to override the system shmmax value if required ?
+
+Template: python-oq-engine-master/kernel-shmall-override
+Type: boolean
+Default: false
+Description: This package could require a more large shmall value.
+ Is it possible to override the system shmall value if required ?
