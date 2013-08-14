@@ -225,12 +225,15 @@ class Classical(object):
         if self._loss_curves is None:
             return
 
-        ret = []
+        curve_resolution = self._loss_curves.shape[3]
 
-        # FIXME(lp). This is a preliminary implementation. Please
-        # replace the code below by using vstack/column_stack, instead
-        # of appending along a dimension and then performing zip and
-        # transpose.
+        mean_curves = numpy.zeros((0, 2, curve_resolution))
+        mean_maps = numpy.zeros((len(self.maps.poes), 0))
+        mean_fractions = numpy.zeros((len(self.fractions.poes), 0))
+        quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
+        quantile_maps = numpy.zeros((len(self.maps.poes), len(quantiles), 0))
+        quantile_fractions = numpy.zeros(
+            (len(self.fractions.poes), len(quantiles), 0))
 
         # for each asset get all the loss curves and compute per asset
         # statistics
@@ -249,32 +252,17 @@ class Classical(object):
                 calculators.asset_statistic_fractions(
                     self.fractions.poes, _mean_curve, _quantile_curves))
 
-            ret.append((_mean_curve, _mean_maps, _mean_fractions,
-                        _quantile_curves, _quantile_maps, _quantile_fractions))
-
-        # zip all the per-asset statistics to have per-type statistics
-        (mean_curves, mean_maps, mean_fractions,
-         quantile_curves, quantile_maps, quantile_fractions) = zip(*ret)
-
-        mean_curves = numpy.array(mean_curves)
-
-        # transpose maps and fractions in order to end up with P x N
-        # matrix of loss map values, where P is the number of poes and
-        # N is the number of assets
-        mean_maps = numpy.array(mean_maps).transpose()
-        mean_fractions = numpy.array(mean_fractions).transpose()
-
-        # swap the first and the second dimension of quantile curves
-        # to end up with a matrix with Q x N Loss curves where a Q is
-        # the number of quantiles
-        quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
-
-        # swap the first and the third dimension of quantile maps to
-        # end up with a matrix of P x Q x N loss map values
-        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
-
-        quantile_fractions = numpy.array(quantile_fractions).transpose(
-            2, 1, 0)
+            mean_curves = numpy.vstack(
+                (mean_curves, _mean_curve[numpy.newaxis, :]))
+            mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
+            mean_fractions = numpy.hstack(
+                (mean_fractions, _mean_fractions[:, numpy.newaxis]))
+            quantile_curves = numpy.hstack(
+                (quantile_curves, _quantile_curves[:, numpy.newaxis]))
+            quantile_maps = numpy.dstack(
+                (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
+            quantile_fractions = numpy.dstack(
+                (quantile_fractions, _quantile_fractions[:, :, numpy.newaxis]))
 
         return self.StatisticalOutput(
             self._assets,
@@ -424,35 +412,29 @@ class ProbabilisticEventBased(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        # FIXME(lp). This is a preliminary implementation. Please
-        # replace the code below by using vstack/column_stack, instead
-        # of appending along a dimension and then performing zip and
-        # transpose.
-
         if self._loss_curves is None:
             return
 
-        ret = []
+        curve_resolution = self._loss_curves.shape[3]
+        mean_curves = numpy.zeros((0, 2, curve_resolution))
+        mean_maps = numpy.zeros((len(self.maps.poes), 0))
+        quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
+        quantile_maps = numpy.zeros((len(self.maps.poes), len(quantiles), 0))
 
         for curves in self._loss_curves:
             loss_ratios, curves_poes = self._normalize_curves(curves)
-            mean_curve, quantile_curves, mean_maps, quantile_maps = (
+            _mean_curve, _quantile_curves, _mean_maps, _quantile_maps = (
                 calculators.asset_statistics(
                     loss_ratios, curves_poes,
                     quantiles, weights, self.maps.poes, post_processing))
 
-            ret.append((mean_curve, mean_maps, quantile_curves, quantile_maps))
-
-        (mean_curves, mean_maps, quantile_curves, quantile_maps) = zip(*ret)
-        # now all the lists keep N items
-
-        mean_curves = numpy.array(mean_curves)
-
-        # transpose maps and fractions to have P/F/Q items of N-sized lists
-        mean_maps = numpy.array(mean_maps).transpose()
-
-        quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
-        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
+            mean_curves = numpy.vstack(
+                (mean_curves, _mean_curve[numpy.newaxis, :]))
+            mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
+            quantile_curves = numpy.hstack(
+                (quantile_curves, _quantile_curves[:, numpy.newaxis]))
+            quantile_maps = numpy.dstack(
+                (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
 
         return self.StatisticalOutput(
             self.assets, mean_curves, mean_maps,

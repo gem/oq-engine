@@ -167,7 +167,8 @@ def asset_statistics(
     """
     montecarlo = weights[0] is not None
 
-    quantile_curves = []
+    quantile_curves = numpy.zeros((0, 2, len(losses)))
+
     for quantile in quantiles:
         if montecarlo:
             q_curve = post_processing.weighted_quantile_curve(
@@ -175,18 +176,24 @@ def asset_statistics(
         else:
             q_curve = post_processing.quantile_curve(curves_poes, quantile)
 
-        quantile_curves.append((losses, q_curve))
+        quantile_curves = numpy.vstack(
+            (quantile_curves,
+             numpy.array([losses, q_curve])[numpy.newaxis, :]))
 
     # then mean loss curve
     mean_curve_poes = post_processing.mean_curve(curves_poes, weights)
-    mean_curve = (losses, mean_curve_poes)
+    mean_curve = numpy.array([losses, mean_curve_poes])
 
-    mean_map = [scientific.conditional_loss_ratio(losses, mean_curve_poes, poe)
-                for poe in poes]
+    mean_map = numpy.array(
+        [scientific.conditional_loss_ratio(losses, mean_curve_poes, poe)
+         for poe in poes])
 
-    quantile_maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
-                      for losses, poes in quantile_curves]
-                     for poe in poes]
+    quantile_maps = numpy.array(
+        [[scientific.conditional_loss_ratio(losses, poes, poe)
+          for losses, poes in quantile_curves]
+         for poe in poes])
+    if not quantile_maps.size:
+        quantile_maps = numpy.zeros((len(poes), len(quantile_curves)))
 
     return (mean_curve, quantile_curves, mean_map, quantile_maps)
 
@@ -194,13 +201,13 @@ def asset_statistics(
 def asset_statistic_fractions(disagg_poes, mean_curve, quantile_curves):
 
     losses, poes = mean_curve
-    fractions = [
+    fractions = numpy.array([
         scientific.conditional_loss_ratio(losses, poes, poe)
-        for poe in disagg_poes]
+        for poe in disagg_poes])
 
-    quantiles = [
+    quantiles = numpy.array([
         [scientific.conditional_loss_ratio(losses, poes, poe)
          for losses, poes in quantile_curves]
-        for poe in disagg_poes]
+        for poe in disagg_poes])
 
     return fractions, quantiles
