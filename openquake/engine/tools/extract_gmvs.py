@@ -66,8 +66,8 @@ def extract(hc_id, a_writer):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print "usage extract_gmvs.py <hazard_calculation ID>"
+    if sys.argv[1] in ['-h', '--help'] or len(sys.argv) != 2:
+        print "Usage:\n %s <hazard_calculation ID>" % sys.argv[0]
         sys.exit(1)
 
     extract(sys.argv[1], csv.writer(sys.stdout, delimiter=','))
