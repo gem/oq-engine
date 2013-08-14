@@ -160,6 +160,10 @@ override_attribute () {
 
 
 # GEM DEVEL BEGIN
+#
+# NOTE: this block of code and all "${GEM_FAKEROOT}" occurrencies are removed during the packaging phase
+#       because are development tools only (look debian/rules file for details).
+#
 if [ "$GEM_FAKEROOT" ]; then
     /home/nastasi/git/mockpg/mockpg.py -t 5 \
         "SELECT setting FROM pg_settings WHERE name = 'max_locks_per_transaction';" '[ [ "setting" ], [ "64" ] ]' \

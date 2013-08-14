@@ -22,7 +22,7 @@ bd=openquake/bin
 
 override_dh_installdeb:
 	dh_installdeb
-	sed -i 's@$${GEM_FAKEROOT}@@g;/^# GEM DEVEL BEGIN/,/^# GEM DEVEL END/c# GEM DEVEL BLOCK REMOVED DURING PACKAGING' $$(find -name postinst | grep 'DEBIAN/postinst')
+	sed -i 's@$${GEM_FAKEROOT}@@g;/^# GEM DEVEL BEGIN/,/^# GEM DEVEL END/c# GEM DEVEL BLOCK REMOVED DURING PACKAGING, LOOK SOURCES FOR DETAILS' $$(find -name postinst | grep 'DEBIAN/postinst')
 
 override_dh_installinit:
 	dh_installinit --no-start --no-restart-on-upgrade --name=celeryd -- defaults 21 19
