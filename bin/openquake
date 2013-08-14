@@ -352,9 +352,15 @@ def export(fn, output_id, target_dir, export_type):
     :func:`openquake.engine.export.hazard.export` which prints a summary
     of files exported, if any.
     """
-    if not models.Output.objects.filter(pk=output_id).exists():
+    queryset = models.Output.objects.filter(pk=output_id)
+    if not queryset.exists():
         print 'No output found for OUTPUT_ID %s' % output_id
         return
+
+    if queryset.all()[0].oq_job.status != "complete":
+        print ("Exporting output produced by a job which did not run "
+               "successfully. Results might be uncomplete")
+
     try:
         the_file = fn(output_id, target_dir, export_type)
         print 'File Exported:'
