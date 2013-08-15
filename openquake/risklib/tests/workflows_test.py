@@ -97,11 +97,11 @@ class ClassicalTest(unittest.TestCase):
         self.calcs.asset_statistics.return_value = (
             numpy.empty((2, 10)), numpy.empty((len(quantiles), 2, 10)),
             numpy.empty(len(self.poes)),
-            numpy.empty((len(self.poes), len(quantiles))))
+            numpy.empty((len(quantiles), len(self.poes))))
 
         self.calcs.asset_statistic_fractions.return_value = (
             numpy.empty(len(self.poes_disagg)),
-            numpy.empty((len(self.poes_disagg), len(quantiles))))
+            numpy.empty((len(quantiles), len(self.poes_disagg))))
 
         data = ((1, assets, curves[0]),
                 (2, assets, curves[1]),
@@ -121,9 +121,9 @@ class ClassicalTest(unittest.TestCase):
                          stats.mean_fractions.shape)
         self.assertEqual((len(quantiles), 4, 2, 10),
                          stats.quantile_curves.shape)
-        self.assertEqual((len(self.poes), len(quantiles), 4),
+        self.assertEqual((len(quantiles), len(self.poes), 4),
                          stats.quantile_maps.shape)
-        self.assertEqual((len(self.poes_disagg), len(quantiles), 4),
+        self.assertEqual((len(quantiles), len(self.poes_disagg), 4),
                          stats.quantile_fractions.shape)
 
     def test_statistics_no_quantiles(self):
@@ -135,11 +135,11 @@ class ClassicalTest(unittest.TestCase):
             numpy.empty((2, 10)),
             numpy.empty((len(quantiles), 2, 10)),
             numpy.empty(len(self.poes)),
-            numpy.empty((len(self.poes), 0)))
+            numpy.empty((0, len(self.poes))))
 
         self.calcs.asset_statistic_fractions.return_value = (
             numpy.empty(len(self.poes_disagg)),
-            numpy.empty((len(self.poes_disagg), 0)))
+            numpy.empty((0, len(self.poes_disagg))))
 
         data = ((1, assets, curves[0]),
                 (2, assets, curves[1]),
@@ -159,9 +159,9 @@ class ClassicalTest(unittest.TestCase):
                          stats.mean_fractions.shape)
         self.assertEqual((len(quantiles), 4, 2, 10),
                          stats.quantile_curves.shape)
-        self.assertEqual((len(self.poes), len(quantiles), 4),
+        self.assertEqual((len(quantiles), len(self.poes), 4),
                          stats.quantile_maps.shape)
-        self.assertEqual((len(self.poes_disagg), len(quantiles), 4),
+        self.assertEqual((len(quantiles), len(self.poes_disagg), 4),
                          stats.quantile_fractions.shape)
 
 
@@ -264,7 +264,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.calcs.asset_statistics.return_value = (
             numpy.empty((2, 10)), numpy.empty((len(quantiles), 2, 10)),
             numpy.empty(len(self.poes)),
-            numpy.empty((len(self.poes), len(quantiles))))
+            numpy.empty((len(quantiles), len(self.poes))))
 
         list(self.workflow("structural", data))
 
@@ -278,7 +278,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.assertEqual((len(self.poes), 4), stats.mean_maps.shape)
         self.assertEqual((len(quantiles), 4, 2, 10),
                          stats.quantile_curves.shape)
-        self.assertEqual((len(self.poes), len(quantiles), 4),
+        self.assertEqual((len(quantiles), len(self.poes), 4),
                          stats.quantile_maps.shape)
 
     def test_statistics_no_quantiles(self):
@@ -299,7 +299,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.calcs.asset_statistics.return_value = (
             numpy.empty((2, 10)), numpy.empty((len(quantiles), 2, 10)),
             numpy.empty(len(self.poes)),
-            numpy.zeros((len(self.poes), len(quantiles))))
+            numpy.zeros((len(quantiles), len(self.poes))))
 
         list(self.workflow("structural", data))
 
@@ -310,7 +310,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
 
         self.assertEqual((len(quantiles), 4, 2, 10),
                          stats.quantile_curves.shape)
-        self.assertEqual((len(self.poes), len(quantiles), 4),
+        self.assertEqual((len(quantiles), len(self.poes), 4),
                          stats.quantile_maps.shape)
 
 

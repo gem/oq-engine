@@ -299,19 +299,19 @@ class AssetStatisticsFractions(unittest.TestCase):
         fractions, quantiles = calculators.asset_statistic_fractions(
             [], self.mean_curve, self.quantile_curves)
 
-        self.assertEqual(0, len(fractions))
-        self.assertEqual(0, len(quantiles))
+        self.assertEqual(0, fractions.size)
+        self.assertEqual(0, quantiles.size)
 
     def test_no_quantiles(self):
         fractions, quantiles = calculators.asset_statistic_fractions(
             [0.1], self.mean_curve, [])
 
         numpy.testing.assert_allclose([0.9], fractions)
-        self.assertEqual((1, 0), quantiles.shape)
+        self.assertEqual(0, quantiles.size)
 
     def test_fractions(self):
         fractions, quantiles = calculators.asset_statistic_fractions(
             [0.1], self.mean_curve, self.quantile_curves)
 
         numpy.testing.assert_allclose([0.9], fractions)
-        numpy.testing.assert_allclose([[0.9, 0.8]], quantiles)
+        numpy.testing.assert_allclose([[0.9], [0.8]], quantiles)

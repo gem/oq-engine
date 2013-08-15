@@ -132,9 +132,9 @@ class Classical(object):
        A numpy array with Q quantile curves (Q = number of quantiles).
        Shape: (Q, N, 2, R)
     :attr quantile_maps:
-       A numpy array with Q quantile maps shaped (P, Q, N)
+       A numpy array with Q quantile maps shaped (Q, P, N)
     :attr quantile_fractions:
-       A numpy array with Q quantile maps shaped (F, Q, N)
+       A numpy array with Q quantile maps shaped (Q, F, N)
     """
 
     Output = collections.namedtuple(
@@ -231,9 +231,9 @@ class Classical(object):
         mean_maps = numpy.zeros((len(self.maps.poes), 0))
         mean_fractions = numpy.zeros((len(self.fractions.poes), 0))
         quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
-        quantile_maps = numpy.zeros((len(self.maps.poes), len(quantiles), 0))
+        quantile_maps = numpy.zeros((len(quantiles), len(self.maps.poes), 0))
         quantile_fractions = numpy.zeros(
-            (len(self.fractions.poes), len(quantiles), 0))
+            (len(quantiles), len(self.fractions.poes), 0))
 
         # for each asset get all the loss curves and compute per asset
         # statistics
@@ -297,7 +297,7 @@ class ProbabilisticEventBased(object):
       number of `conditional_loss_poes` considered. Shape: (P, N)
 
     The statistical outputs are stored into
-    :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`.
+    :class:`.ProbabilisticEventBased.StatisticalOutput`.
     See :class:`openquake.risklib.workflows.Classical.StatisticalOutput` for
     more details.
     """
@@ -399,7 +399,7 @@ class ProbabilisticEventBased(object):
     def statistics(self, weights, quantiles, post_processing):
         """
         :returns:
-            a :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`
+            a :class:`.ProbabilisticEventBased.StatisticalOutput`
             instance holding statistical outputs (e.g. mean loss curves).
         :param weights:
             a collection of weights associated with each realization, to
@@ -419,7 +419,7 @@ class ProbabilisticEventBased(object):
         mean_curves = numpy.zeros((0, 2, curve_resolution))
         mean_maps = numpy.zeros((len(self.maps.poes), 0))
         quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
-        quantile_maps = numpy.zeros((len(self.maps.poes), len(quantiles), 0))
+        quantile_maps = numpy.zeros((len(quantiles), len(self.maps.poes), 0))
 
         for curves in self._loss_curves:
             loss_ratios, curves_poes = self._normalize_curves(curves)

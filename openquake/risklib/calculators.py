@@ -189,17 +189,16 @@ def asset_statistics(
          for poe in poes])
 
     quantile_maps = numpy.array(
-        [[scientific.conditional_loss_ratio(losses, poes, poe)
-          for losses, poes in quantile_curves]
-         for poe in poes])
+        [[scientific.conditional_loss_ratio(losses, curve_poes, poe)
+          for poe in poes]
+         for losses, curve_poes in quantile_curves])
     if not quantile_maps.size:
-        quantile_maps = numpy.zeros((len(poes), len(quantile_curves)))
+        quantile_maps = numpy.zeros((len(quantile_curves), len(poes)))
 
     return (mean_curve, quantile_curves, mean_map, quantile_maps)
 
 
 def asset_statistic_fractions(disagg_poes, mean_curve, quantile_curves):
-
     losses, poes = mean_curve
     fractions = numpy.array([
         scientific.conditional_loss_ratio(losses, poes, poe)
@@ -207,7 +206,7 @@ def asset_statistic_fractions(disagg_poes, mean_curve, quantile_curves):
 
     quantiles = numpy.array([
         [scientific.conditional_loss_ratio(losses, poes, poe)
-         for losses, poes in quantile_curves]
-        for poe in disagg_poes])
+         for poe in disagg_poes]
+        for losses, poes in quantile_curves])
 
     return fractions, quantiles
