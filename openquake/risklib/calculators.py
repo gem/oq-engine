@@ -140,10 +140,12 @@ class LossMap(object):
 def exposure_statistics(
         loss_curves, map_poes, weights, quantiles, post_processing):
     """
-    Compute exposure statistics for N assets.
+    Compute exposure statistics for N assets and R realizations.
 
     :param loss_curves:
-        a numpy array with loss curves (shape = N x 2 x curve_resolution)
+        a list with N loss curves data. Each item holds a 2-tuple with
+        1) the loss ratios on which the curves have been defined on
+        2) the poes of the R curves
     :param map_poes:
         a numpy array with P poes used to compute loss maps
     :param weights:
@@ -161,7 +163,7 @@ def exposure_statistics(
             3) a numpy array with Q x N quantile loss curves
             4) a numpy array with Q x P quantile map values
     """
-    curve_resolution = loss_curves.shape[2]
+    curve_resolution = len(loss_curves[0][0])
     map_nr = len(map_poes)
 
     # Collect per-asset statistic along the last dimension of the

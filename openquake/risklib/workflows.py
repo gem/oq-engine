@@ -166,7 +166,7 @@ class Classical(object):
         self.fractions = calculators.LossMap(poes_disagg)
 
         # needed to compute statistics
-        self._loss_curves = None
+        self._loss_curves = []
         self._assets = None
 
     def __call__(self, data, calc_monitor=None):
@@ -189,8 +189,6 @@ class Classical(object):
         side effect in the field `_loss_curves` (if the number of realizations
         is bigger than 1).
         """
-        loss_curves = []
-
         monitor = calc_monitor or DummyMonitor()
 
         for hid, assets, hazard_curves in data:
@@ -199,13 +197,10 @@ class Classical(object):
                 maps = self.maps(curves)
                 fractions = self.fractions(curves)
 
-                loss_curves.append(curves)
+                self._loss_curves.append(curves)
                 self._assets = assets
 
                 yield hid, self.Output(assets, curves, maps, fractions)
-
-        if len(loss_curves) > 1:
-            self._loss_curves = numpy.array(loss_curves).transpose(1, 0, 2, 3)
 
     def statistics(self, weights, quantiles, post_processing):
         """
@@ -223,12 +218,18 @@ class Classical(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        if self._loss_curves is None:
+        if len(self._loss_curves) < 2:
             return
+
+        def normalize_curves(curves):
+            losses = curves[0][0]
+            return [losses, [poes for _losses, poes in curves]]
 
         (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
             calculators.exposure_statistics(
-                self._loss_curves,
+                [normalize_curves(curves)
+                 for curves
+                 in numpy.array(self._loss_curves).transpose(1, 0, 2, 3)],
                 self.maps.poes + self.fractions.poes,
                 weights, quantiles, post_processing))
 
@@ -294,7 +295,7 @@ class ProbabilisticEventBased(object):
         of the input parameters
         """
         self.assets = None
-        self._loss_curves = None
+        self._loss_curves = []
         self.event_loss_table = collections.Counter()
 
         self.losses = calculators.ProbabilisticLoss(
@@ -331,7 +332,6 @@ class ProbabilisticEventBased(object):
         """
 
         monitor = monitor or DummyMonitor()
-        loss_curves = []
 
         for hid, assets, (ground_motion_values, rupture_ids) in data:
             self.assets = assets
@@ -340,7 +340,7 @@ class ProbabilisticEventBased(object):
                 loss_matrix = self.losses(ground_motion_values)
 
                 curves = self.curves(loss_matrix)
-                loss_curves.append(curves)
+                self._loss_curves.append(curves)
 
                 values = utils.numpy_map(lambda a: a.value(loss_type),
                                          assets)
@@ -365,9 +365,6 @@ class ProbabilisticEventBased(object):
             yield hid, self.Output(
                 assets, loss_matrix, curves, insured_curves, maps)
 
-        if len(loss_curves) > 1:
-            self._loss_curves = numpy.array(loss_curves).transpose(1, 0, 2, 3)
-
     def statistics(self, weights, quantiles, post_processing):
         """
         :returns:
@@ -384,12 +381,13 @@ class ProbabilisticEventBased(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        if self._loss_curves is None:
+        if len(self._loss_curves) < 2:
             return
 
+        curve_matrix = numpy.array(self._loss_curves).transpose(1, 0, 2, 3)
         (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
             calculators.exposure_statistics(
-                self._normalize_curves(self._loss_curves),
+                [self._normalize_curves(curves) for curves in curve_matrix],
                 self.maps.poes, weights, quantiles, post_processing))
 
         return self.StatisticalOutput(
@@ -400,7 +398,7 @@ class ProbabilisticEventBased(object):
         non_trivial_curves = [(losses, poes)
                               for losses, poes in curves if losses[-1] > 0]
         if not non_trivial_curves:  # no damage. all trivial curves
-            return curves
+            return curves[0][0], [poes for _losses, poes in curves]
         else:  # standard case
             max_losses = [losses[-1]  # we assume non-decreasing losses
                           for losses, _poes in non_trivial_curves]
@@ -409,9 +407,7 @@ class ProbabilisticEventBased(object):
             curves_poes = [interpolate.interp1d(
                 losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
                 for losses, poes in curves]
-        return itertools.izip(
-            itertools.repeat(loss_ratios, len(curves_poes)),
-            curves_poes)
+        return loss_ratios, curves_poes
 
 
 class ClassicalBCR(object):

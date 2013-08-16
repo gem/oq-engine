@@ -55,11 +55,13 @@ class ClassicalTest(unittest.TestCase):
 
         self.assertEqual(assets, output.assets)
         self.assertEqual(1, hid)
-        self.assertIsNone(self.workflow._loss_curves)
+        self.assertEqual(1, len(self.workflow._loss_curves))
 
         self.assertEqual(
             [((self.vf, 3), {})],
             self.calcs.ClassicalLossCurve.call_args_list)
+        self.assertIsNone(
+            self.workflow.statistics(mock.Mock(), mock.Mock(), mock.Mock()))
 
     def test_call_three_realizations(self):
         assets = [workflows.Asset(dict(structural=10))] * 4
@@ -117,7 +119,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
 
         self.assertEqual(assets, output.assets)
         self.assertEqual(1, hid)
-        self.assertIsNone(self.workflow._loss_curves)
+        self.assertEqual(1, len(self.workflow._loss_curves))
 
         self.assertEqual(
             [((self.vf, 1, 0.75), {})],
@@ -169,20 +171,22 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
     def test_normalize_all_trivial(self):
         poes = numpy.linspace(1, 0, 11)
         losses = numpy.zeros(11)
-        curves = numpy.array(
-            [[losses, poes],
-             [losses, poes / 2]])
+        curves = [[losses, poes], [losses, poes / 2]]
+        exp_losses, (poes1, poes2) = self.workflow._normalize_curves(curves)
 
-        numpy.testing.assert_allclose(
-            curves, self.workflow._normalize_curves(curves))
+        numpy.testing.assert_allclose(exp_losses, losses)
+        numpy.testing.assert_allclose(poes1, poes)
+        numpy.testing.assert_allclose(poes2, poes / 2)
 
     def test_normalize_one_trivial(self):
         trivial = [numpy.zeros(6), numpy.linspace(1, 0, 6)]
-        curve = [numpy.linspace(0, 1, 6), numpy.linspace(1, 0, 6)]
-        numpy.testing.assert_allclose(
-            [[curve[0], [numpy.nan, 0., 0., 0., 0., 0.]],
-              curve],
-            list(self.workflow._normalize_curves([trivial, curve])))
+        curve = [numpy.linspace(0., 1., 6), numpy.linspace(1., 0., 6)]
+        exp_losses, (poes1, poes2) = self.workflow._normalize_curves(
+            [trivial, curve])
+
+        numpy.testing.assert_allclose(exp_losses, curve[0])
+        numpy.testing.assert_allclose(poes1, [numpy.nan, 0., 0., 0., 0., 0.])
+        numpy.testing.assert_allclose(poes2, curve[1])
 
 
 class ClassicalBCRTest(unittest.TestCase):
