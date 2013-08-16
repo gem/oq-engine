@@ -1018,20 +1018,31 @@ class HazardCalculation(djm.Model):
     @property
     def site_collection(self):
         """
-        Create a SiteCollection from a HazardCalculation object as follows.
+        Create a SiteCollection from a HazardCalculation object.
         First, take all of the points/locations of interest defined by the
         calculation geometry. For each point, do distance queries on the site
         model and get the site parameters which are closest to the point of
         interest. This aggregation of points to the closest site parameters
         is what we store in the `site_collection` field.
         If the computation does not specify a site model the same 4 reference
-        site parameters are used for all sites.
+        site parameters are used for all sites. The sites are ordered by id,
+        to ensure reproducibility in tests.
         """
         if self.id in SiteCollection.cache:
             return SiteCollection.cache[self.id]
 
         site_model_inp = get_site_model(self.id)
-        hsites = HazardSite.objects.filter(hazard_calculation=self)
+        hsites = HazardSite.objects.filter(
+            hazard_calculation=self).order_by('id')
+        # NB: the sites MUST be ordered. The issue is that the disaggregation
+        # calculator has a for loop of kind
+        # for site in sites:
+        #     bin_edge, disagg_matrix = disaggregation_poissonian(site, ...)
+        # the generated ruptures are random if the order of the sites
+        # is random, even if the seed is fixed; in particular for some
+        # ordering no ruptures are generated and the test
+        # qa_tests/hazard/disagg/case_1/test.py fails with a bad
+        # error message
         sites = []
         for hsite in hsites:
             pt = openquake.hazardlib.geo.point.Point(
