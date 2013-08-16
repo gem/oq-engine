@@ -179,7 +179,7 @@ class LossMapTest(unittest.TestCase):
         self.curves = [(losses, poes), (losses * 2, poes)]
 
     def test_no_poes(self):
-        self.assertEqual([], calculators.LossMap([])(self.curves))
+        self.assertEqual(0, calculators.LossMap([])(self.curves).size)
 
     def test_one_poe(self):
         numpy.testing.assert_allclose(
@@ -267,7 +267,7 @@ class AssetStatisticsTestCase(unittest.TestCase):
         self.assertEqual(0, quantile_maps.size)
 
     def test_compute_stats_quantile_poes(self):
-        (mean_curve, quantile_curves, mean_maps, quantile_maps) = (
+        (mean_curve, quantile_curves, mean_map, quantile_maps) = (
             calculators.asset_statistics(
                 self.losses, mock.Mock(),
                 quantiles=[0.1, 0.2],
@@ -283,35 +283,6 @@ class AssetStatisticsTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             q2, (self.losses, self.BASE_EXPECTED_POES * 0.2))
 
-        numpy.testing.assert_allclose(mean_maps, [0.8, 0.2])
+        numpy.testing.assert_allclose(mean_map, [0.8, 0.2])
 
         numpy.testing.assert_allclose(quantile_maps, numpy.zeros((2, 2)))
-
-
-class AssetStatisticsFractions(unittest.TestCase):
-    def setUp(self):
-        losses = numpy.linspace(0, 1, 11)
-        self.mean_curve = (losses, numpy.linspace(1, 0, 11))
-        self.quantile_curves = ((losses, numpy.linspace(1, 0, 11)),
-                                (losses, numpy.linspace(1, 0, 11) / 2))
-
-    def test_no_disagg(self):
-        fractions, quantiles = calculators.asset_statistic_fractions(
-            [], self.mean_curve, self.quantile_curves)
-
-        self.assertEqual(0, fractions.size)
-        self.assertEqual(0, quantiles.size)
-
-    def test_no_quantiles(self):
-        fractions, quantiles = calculators.asset_statistic_fractions(
-            [0.1], self.mean_curve, [])
-
-        numpy.testing.assert_allclose([0.9], fractions)
-        self.assertEqual(0, quantiles.size)
-
-    def test_fractions(self):
-        fractions, quantiles = calculators.asset_statistic_fractions(
-            [0.1], self.mean_curve, self.quantile_curves)
-
-        numpy.testing.assert_allclose([0.9], fractions)
-        numpy.testing.assert_allclose([[0.9], [0.8]], quantiles)

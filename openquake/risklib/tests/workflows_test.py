@@ -30,13 +30,14 @@ class ClassicalTest(unittest.TestCase):
     def setUp(self):
         self.patch = mock.patch('openquake.risklib.workflows.calculators')
         self.calcs = self.patch.start()
-        self.calcs.LossMap = lambda x: mock.Mock()
+        self.calcs.LossMap = mock.MagicMock
         self.vf = mock.MagicMock()
         self.poes = [0.1, 0.2]
         self.poes_disagg = [0.1, 0.2, 0.3]
         self.workflow = workflows.Classical(
             self.vf, 3, self.poes, self.poes_disagg)
         self.workflow.maps.poes = self.poes
+        self.workflow.fractions = lambda curves: numpy.empty((len(curves), 3))
         self.workflow.fractions.poes = self.poes_disagg
         self.workflow.curves.return_value = numpy.empty((4, 2, 10))
 
@@ -96,8 +97,8 @@ class ClassicalTest(unittest.TestCase):
 
         self.calcs.asset_statistics.return_value = (
             numpy.empty((2, 10)), numpy.empty((len(quantiles), 2, 10)),
-            numpy.empty(len(self.poes)),
-            numpy.empty((len(quantiles), len(self.poes))))
+            numpy.empty(len(self.poes + self.poes_disagg)),
+            numpy.empty((len(quantiles), len(self.poes + self.poes_disagg))))
 
         self.calcs.asset_statistic_fractions.return_value = (
             numpy.empty(len(self.poes_disagg)),
@@ -111,8 +112,7 @@ class ClassicalTest(unittest.TestCase):
 
         post_proc = mock.MagicMock()
         stats = self.workflow.statistics(
-            numpy.linspace(0.5, 0.8, 3),
-            quantiles, post_proc)
+            numpy.linspace(0.5, 0.8, 3), quantiles, post_proc)
 
         self.assertEqual(assets, stats.assets)
         self.assertEqual((4, 2, 10), stats.mean_curves.shape)
@@ -134,12 +134,8 @@ class ClassicalTest(unittest.TestCase):
         self.calcs.asset_statistics.return_value = (
             numpy.empty((2, 10)),
             numpy.empty((len(quantiles), 2, 10)),
-            numpy.empty(len(self.poes)),
-            numpy.empty((0, len(self.poes))))
-
-        self.calcs.asset_statistic_fractions.return_value = (
-            numpy.empty(len(self.poes_disagg)),
-            numpy.empty((0, len(self.poes_disagg))))
+            numpy.empty(len(self.poes + self.poes_disagg)),
+            numpy.empty((0, len(self.poes + self.poes_disagg))))
 
         data = ((1, assets, curves[0]),
                 (2, assets, curves[1]),

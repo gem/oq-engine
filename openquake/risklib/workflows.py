@@ -227,18 +227,17 @@ class Classical(object):
 
         curve_resolution = self._loss_curves.shape[3]
 
+        # Collect per-asset statistic along the last dimension of the
+        # following arrays
+        map_nr = len(self.maps.poes + self.fractions.poes)
         mean_curves = numpy.zeros((0, 2, curve_resolution))
-        mean_maps = numpy.zeros((len(self.maps.poes), 0))
-        mean_fractions = numpy.zeros((len(self.fractions.poes), 0))
+        mean_maps = numpy.zeros((map_nr, 0))
         quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
-        quantile_maps = numpy.zeros((len(quantiles), len(self.maps.poes), 0))
-        quantile_fractions = numpy.zeros(
-            (len(quantiles), len(self.fractions.poes), 0))
+        quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
 
-        # for each asset get all the loss curves and compute per asset
-        # statistics
         for loss_ratio_curves in self._loss_curves:
-            # get the loss ratios only from the first curve
+            # in the classical calculator we assume that all loss
+            # curves are defined on the same set of loss ratios
             loss_ratios, _poes = loss_ratio_curves[0]
             curves_poes = [poes for _losses, poes in loss_ratio_curves]
 
@@ -247,27 +246,22 @@ class Classical(object):
                     loss_ratios, curves_poes,
                     quantiles, weights, self.maps.poes, post_processing))
 
-            # compute also mean and quantile loss fractions
-            _mean_fractions, _quantile_fractions = (
-                calculators.asset_statistic_fractions(
-                    self.fractions.poes, _mean_curve, _quantile_curves))
-
             mean_curves = numpy.vstack(
                 (mean_curves, _mean_curve[numpy.newaxis, :]))
             mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
-            mean_fractions = numpy.hstack(
-                (mean_fractions, _mean_fractions[:, numpy.newaxis]))
             quantile_curves = numpy.hstack(
                 (quantile_curves, _quantile_curves[:, numpy.newaxis]))
             quantile_maps = numpy.dstack(
                 (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
-            quantile_fractions = numpy.dstack(
-                (quantile_fractions, _quantile_fractions[:, :, numpy.newaxis]))
 
         return self.StatisticalOutput(
             self._assets,
-            mean_curves, mean_maps,
-            mean_fractions, quantile_curves, quantile_maps, quantile_fractions)
+            mean_curves,
+            mean_maps[0:len(self.maps.poes)],
+            mean_maps[len(self.maps.poes):],
+            quantile_curves,
+            quantile_maps[:, 0:len(self.maps.poes)],
+            quantile_maps[:, len(self.maps.poes):])
 
 
 class ProbabilisticEventBased(object):
