@@ -217,6 +217,7 @@ _devtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
@@ -313,6 +314,8 @@ _devtest_innervm_run () {
         fi
     fi
 
+    scp "${lxc_ip}:ssh.log" devtest.history
+
     # TODO: version check
 #    echo "NOW PRESS ENTER TO CONTINUE"
 #    read aaa
@@ -340,6 +343,7 @@ _pkgtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get -y upgrade"
     gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
@@ -422,6 +426,8 @@ _pkgtest_innervm_run () {
             cd -
         done"
     fi
+
+    scp "${lxc_ip}:ssh.log" pkgtest.history
 
     trap ERR
 
@@ -556,8 +562,17 @@ devtest_run () {
             git clone $repo/${dep}.git _jenkins_deps/$dep
             branch="master"
         fi
+        cd _jenkins_deps/$dep
+        commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
+        cd -
+        echo "dependency: $dep"
+        echo "repo:       $repo"
+        echo "branch:     $branch"
+        echo "commit:     $commit"
+        echo
         var_pfx="$(dep2var "$dep")"
-        echo "${var_pfx}_REPO=$repo" >> _jenkins_deps_info
+        echo "${var_pfx}_COMMIT=$commit" >> _jenkins_deps_info
+        echo "${var_pfx}_REPO=$repo"     >> _jenkins_deps_info
         echo "${var_pfx}_BRANCH=$branch" >> _jenkins_deps_info
     done
     IFS="$old_ifs"
