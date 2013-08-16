@@ -219,7 +219,7 @@ def asset_statistics(
         [[losses, quantile_curve(post_processing, weights)(
           curves_poes, quantile)]
          for quantile in quantiles])
-    quantile_maps = LossMap(poes)(quantile_curves)
+    quantile_maps = LossMap(poes)(quantile_curves).transpose()
 
     return (mean_curve, quantile_curves, mean_map, quantile_maps)
 
