@@ -30,11 +30,15 @@ class ClassicalTest(unittest.TestCase):
     def setUp(self):
         self.patch = mock.patch('openquake.risklib.workflows.calculators')
         self.calcs = self.patch.start()
+        self.calcs.LossMap = mock.MagicMock
         self.vf = mock.MagicMock()
         self.poes = [0.1, 0.2]
         self.poes_disagg = [0.1, 0.2, 0.3]
         self.workflow = workflows.Classical(
             self.vf, 3, self.poes, self.poes_disagg)
+        self.workflow.maps.poes = self.poes
+        self.workflow.fractions = lambda curves: numpy.empty((len(curves), 3))
+        self.workflow.fractions.poes = self.poes_disagg
         self.workflow.curves.return_value = numpy.empty((4, 2, 10))
 
     def tearDown(self):
@@ -51,14 +55,13 @@ class ClassicalTest(unittest.TestCase):
 
         self.assertEqual(assets, output.assets)
         self.assertEqual(1, hid)
-        self.assertIsNone(self.workflow._loss_curves)
+        self.assertEqual(1, len(self.workflow._loss_curves))
 
         self.assertEqual(
             [((self.vf, 3), {})],
             self.calcs.ClassicalLossCurve.call_args_list)
-        self.assertEqual(
-            [(([0.1, 0.2],), {}), (([0.1, 0.2, 0.3],), {})],
-            self.calcs.LossMap.call_args_list)
+        self.assertIsNone(
+            self.workflow.statistics(mock.Mock(), mock.Mock(), mock.Mock()))
 
     def test_call_three_realizations(self):
         assets = [workflows.Asset(dict(structural=10))] * 4
@@ -85,49 +88,6 @@ class ClassicalTest(unittest.TestCase):
         self.assertEqual(
             [((self.vf, 3), {})],
             self.calcs.ClassicalLossCurve.call_args_list)
-        self.assertEqual(
-            [(([0.1, 0.2],), {}), (([0.1, 0.2, 0.3],), {})],
-            self.calcs.LossMap.call_args_list)
-
-    def test_statistics(self):
-        self.assertIsNone(self.workflow.statistics(mock.Mock(),
-                                                   mock.Mock(),
-                                                   mock.Mock()))
-        assets = [workflows.Asset(dict(structural=10))] * 4
-        curves = [mock.Mock()] * 4
-        quantiles = [0.3, 0.7, 0.8, 0.9]
-
-        self.calcs.asset_statistics.return_value = (
-            numpy.empty((2, 10)), numpy.empty((len(quantiles), 2, 10)),
-            numpy.empty(len(self.poes)),
-            numpy.empty((len(quantiles), len(self.poes))))
-
-        self.calcs.asset_statistic_fractions.return_value = (
-            numpy.empty(len(self.poes_disagg)),
-            numpy.empty((len(self.poes_disagg), len(quantiles))))
-
-        data = ((1, assets, curves[0]),
-                (2, assets, curves[1]),
-                (3, assets, curves[2]),)
-
-        list(self.workflow(data))
-
-        post_proc = mock.MagicMock()
-        stats = self.workflow.statistics(
-            numpy.linspace(0.5, 0.8, 3),
-            quantiles, post_proc)
-
-        self.assertEqual(assets, stats.assets)
-        self.assertEqual((4, 2, 10), stats.mean_curves.shape)
-        self.assertEqual((len(self.poes), 4), stats.mean_maps.shape)
-        self.assertEqual((len(self.poes_disagg), 4),
-                         stats.mean_fractions.shape)
-        self.assertEqual((len(quantiles), 4, 2, 10),
-                         stats.quantile_curves.shape)
-        self.assertEqual((len(self.poes), len(quantiles), 4),
-                         stats.quantile_maps.shape)
-        self.assertEqual((len(quantiles), len(self.poes_disagg), 4),
-                         stats.quantile_fractions.shape)
 
 
 class ProbabilisticEventBasedTest(unittest.TestCase):
@@ -138,6 +98,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.poes = [0.1, 0.2]
         self.workflow = workflows.ProbabilisticEventBased(
             self.vf, 1, 0.75, 50, 1000, 20, self.poes, True)
+        self.workflow.maps.poes = self.poes
 
     def tearDown(self):
         self.patch.stop()
@@ -158,7 +119,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
 
         self.assertEqual(assets, output.assets)
         self.assertEqual(1, hid)
-        self.assertIsNone(self.workflow._loss_curves)
+        self.assertEqual(1, len(self.workflow._loss_curves))
 
         self.assertEqual(
             [((self.vf, 1, 0.75), {})],
@@ -167,10 +128,6 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.assertEqual(
             [((50, 1000, 20), {})],
             self.calcs.EventBasedLossCurve.call_args_list)
-
-        self.assertEqual(
-            [(([0.1, 0.2],), {})],
-            self.calcs.LossMap.call_args_list)
 
         self.assertEqual(
             [((), {})],
@@ -205,53 +162,31 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                 self.calcs.EventBasedLossCurve.call_args_list)
 
             self.assertEqual(
-                [(([0.1, 0.2],), {})],
-                self.calcs.LossMap.call_args_list)
-
-            self.assertEqual(
                 [((), {})],
                 self.calcs.EventLossTable.call_args_list)
 
         self.assertEqual(3, i)
         self.assertIsNotNone(self.workflow._loss_curves)
 
-    def test_statistics(self):
-        self.assertIsNone(self.workflow.statistics(mock.Mock(),
-                                                   mock.Mock(),
-                                                   mock.Mock()))
-        assets = [workflows.Asset(dict(structural=10),
-                                  dict(structural=0.1),
-                                  dict(structural=0.8))] * 4
-        hazard = [(mock.Mock(), mock.Mock())] * 3
-        data = ((1, assets, hazard[0]),
-                (2, assets, hazard[1]),
-                (3, assets, hazard[2]),)
+    def test_normalize_all_trivial(self):
+        poes = numpy.linspace(1, 0, 11)
+        losses = numpy.zeros(11)
+        curves = [[losses, poes], [losses, poes / 2]]
+        exp_losses, (poes1, poes2) = self.workflow._normalize_curves(curves)
 
-        quantiles = [0.3, 0.7, 0.8, 0.9]
+        numpy.testing.assert_allclose(exp_losses, losses)
+        numpy.testing.assert_allclose(poes1, poes)
+        numpy.testing.assert_allclose(poes2, poes / 2)
 
-        self.workflow.losses.return_value = numpy.random.random((4, 100))
-        self.workflow.event_loss.return_value = collections.Counter((1, 1))
-        self.workflow.curves.return_value = numpy.random.random((4, 2, 10))
+    def test_normalize_one_trivial(self):
+        trivial = [numpy.zeros(6), numpy.linspace(1, 0, 6)]
+        curve = [numpy.linspace(0., 1., 6), numpy.linspace(1., 0., 6)]
+        exp_losses, (poes1, poes2) = self.workflow._normalize_curves(
+            [trivial, curve])
 
-        self.calcs.asset_statistics.return_value = (
-            numpy.empty((2, 10)), numpy.empty((len(quantiles), 2, 10)),
-            numpy.empty(len(self.poes)),
-            numpy.empty((len(quantiles), len(self.poes))))
-
-        list(self.workflow("structural", data))
-
-        post_proc = mock.MagicMock()
-        stats = self.workflow.statistics(
-            numpy.linspace(0.5, 0.8, 3),
-            quantiles, post_proc)
-
-        self.assertEqual(assets, stats.assets)
-        self.assertEqual((4, 2, 10), stats.mean_curves.shape)
-        self.assertEqual((len(self.poes), 4), stats.mean_maps.shape)
-        self.assertEqual((len(quantiles), 4, 2, 10),
-                         stats.quantile_curves.shape)
-        self.assertEqual((len(self.poes), len(quantiles), 4),
-                         stats.quantile_maps.shape)
+        numpy.testing.assert_allclose(exp_losses, curve[0])
+        numpy.testing.assert_allclose(poes1, [numpy.nan, 0., 0., 0., 0., 0.])
+        numpy.testing.assert_allclose(poes2, curve[1])
 
 
 class ClassicalBCRTest(unittest.TestCase):
@@ -308,3 +243,47 @@ class ClassicalBCRTest(unittest.TestCase):
             [((self.vf, 3), {}),
              ((self.vf_retro, 3), {})],
             self.calcs.ClassicalLossCurve.call_args_list)
+
+
+class ScenarioTestCase(unittest.TestCase):
+    def test_call(self):
+        vf = mock.MagicMock()
+        calc = workflows.Scenario(vf, 0, 0, True)
+
+        assets = [workflows.Asset(
+            dict(structural=10),
+            deductibles=dict(structural=0.1),
+            insurance_limits=dict(structural=0.8))] * 4
+
+        hazard = (mock.Mock(), mock.Mock())
+        calc.losses = mock.Mock(return_value=numpy.empty((4, 2)))
+
+        (hid, ret_assets, loss_ratio_matrix, aggregate_losses,
+         insured_loss_matrix, insured_losses) = (
+             calc("structural", iter(((1, assets, hazard),))))
+
+        self.assertEqual(1, hid)
+        self.assertEqual(assets, ret_assets)
+        self.assertEqual((4, 2), loss_ratio_matrix.shape)
+        self.assertEqual((2,), aggregate_losses.shape)
+        self.assertEqual((2, 4), insured_loss_matrix.shape)
+        self.assertEqual((2,), insured_losses.shape)
+
+    def test_call_no_insured(self):
+        vf = mock.MagicMock()
+        calc = workflows.Scenario(vf, 0, 0, False)
+
+        assets = [workflows.Asset(dict(structural=10))] * 4
+        hazard = (mock.Mock(), mock.Mock())
+        calc.losses = mock.Mock(return_value=numpy.empty((4, 2)))
+
+        (hid, ret_assets, loss_ratio_matrix, aggregate_losses,
+         insured_loss_matrix, insured_losses) = (
+             calc("structural", iter(((1, assets, hazard),))))
+
+        self.assertEqual(1, hid)
+        self.assertEqual(assets, ret_assets)
+        self.assertEqual((4, 2), loss_ratio_matrix.shape)
+        self.assertEqual((2,), aggregate_losses.shape)
+        self.assertIsNone(insured_loss_matrix)
+        self.assertIsNone(insured_losses)

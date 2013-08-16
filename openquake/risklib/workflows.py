@@ -17,6 +17,7 @@
 # <http://www.gnu.org/licenses/>.
 
 import collections
+import itertools
 import numpy
 from scipy import interpolate
 
@@ -132,9 +133,9 @@ class Classical(object):
        A numpy array with Q quantile curves (Q = number of quantiles).
        Shape: (Q, N, 2, R)
     :attr quantile_maps:
-       A numpy array with Q quantile maps shaped (P, Q, N)
+       A numpy array with Q quantile maps shaped (Q, P, N)
     :attr quantile_fractions:
-       A numpy array with Q quantile maps shaped (F, Q, N)
+       A numpy array with Q quantile maps shaped (Q, F, N)
     """
 
     Output = collections.namedtuple(
@@ -165,7 +166,7 @@ class Classical(object):
         self.fractions = calculators.LossMap(poes_disagg)
 
         # needed to compute statistics
-        self._loss_curves = None
+        self._loss_curves = []
         self._assets = None
 
     def __call__(self, data, calc_monitor=None):
@@ -188,8 +189,6 @@ class Classical(object):
         side effect in the field `_loss_curves` (if the number of realizations
         is bigger than 1).
         """
-        loss_curves = []
-
         monitor = calc_monitor or DummyMonitor()
 
         for hid, assets, hazard_curves in data:
@@ -198,13 +197,10 @@ class Classical(object):
                 maps = self.maps(curves)
                 fractions = self.fractions(curves)
 
-                loss_curves.append(curves)
+                self._loss_curves.append(curves)
                 self._assets = assets
 
                 yield hid, self.Output(assets, curves, maps, fractions)
-
-        if len(loss_curves) > 1:
-            self._loss_curves = numpy.array(loss_curves).transpose(1, 0, 2, 3)
 
     def statistics(self, weights, quantiles, post_processing):
         """
@@ -222,64 +218,29 @@ class Classical(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        if self._loss_curves is None:
+        if len(self._loss_curves) < 2:
             return
 
-        ret = []
+        def normalize_curves(curves):
+            losses = curves[0][0]
+            return [losses, [poes for _losses, poes in curves]]
 
-        # FIXME(lp). This is a preliminary implementation. Please
-        # replace the code below by using vstack/column_stack, instead
-        # of appending along a dimension and then performing zip and
-        # transpose.
-
-        # for each asset get all the loss curves and compute per asset
-        # statistics
-        for loss_ratio_curves in self._loss_curves:
-            # get the loss ratios only from the first curve
-            loss_ratios, _poes = loss_ratio_curves[0]
-            curves_poes = [poes for _losses, poes in loss_ratio_curves]
-
-            _mean_curve, _quantile_curves, _mean_maps, _quantile_maps = (
-                calculators.asset_statistics(
-                    loss_ratios, curves_poes,
-                    quantiles, weights, self.maps.poes, post_processing))
-
-            # compute also mean and quantile loss fractions
-            _mean_fractions, _quantile_fractions = (
-                calculators.asset_statistic_fractions(
-                    self.fractions.poes, _mean_curve, _quantile_curves))
-
-            ret.append((_mean_curve, _mean_maps, _mean_fractions,
-                        _quantile_curves, _quantile_maps, _quantile_fractions))
-
-        # zip all the per-asset statistics to have per-type statistics
-        (mean_curves, mean_maps, mean_fractions,
-         quantile_curves, quantile_maps, quantile_fractions) = zip(*ret)
-
-        mean_curves = numpy.array(mean_curves)
-
-        # transpose maps and fractions in order to end up with P x N
-        # matrix of loss map values, where P is the number of poes and
-        # N is the number of assets
-        mean_maps = numpy.array(mean_maps).transpose()
-        mean_fractions = numpy.array(mean_fractions).transpose()
-
-        # swap the first and the second dimension of quantile curves
-        # to end up with a matrix with Q x N Loss curves where a Q is
-        # the number of quantiles
-        quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
-
-        # swap the first and the third dimension of quantile maps to
-        # end up with a matrix of P x Q x N loss map values
-        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
-
-        quantile_fractions = numpy.array(quantile_fractions).transpose(
-            2, 1, 0)
+        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
+            calculators.exposure_statistics(
+                [normalize_curves(curves)
+                 for curves
+                 in numpy.array(self._loss_curves).transpose(1, 0, 2, 3)],
+                self.maps.poes + self.fractions.poes,
+                weights, quantiles, post_processing))
 
         return self.StatisticalOutput(
             self._assets,
-            mean_curves, mean_maps,
-            mean_fractions, quantile_curves, quantile_maps, quantile_fractions)
+            mean_curves,
+            mean_maps[0:len(self.maps.poes)],
+            mean_maps[len(self.maps.poes):],
+            quantile_curves,
+            quantile_maps[:, 0:len(self.maps.poes)],
+            quantile_maps[:, len(self.maps.poes):])
 
 
 class ProbabilisticEventBased(object):
@@ -309,7 +270,7 @@ class ProbabilisticEventBased(object):
       number of `conditional_loss_poes` considered. Shape: (P, N)
 
     The statistical outputs are stored into
-    :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`.
+    :class:`.ProbabilisticEventBased.StatisticalOutput`.
     See :class:`openquake.risklib.workflows.Classical.StatisticalOutput` for
     more details.
     """
@@ -334,7 +295,7 @@ class ProbabilisticEventBased(object):
         of the input parameters
         """
         self.assets = None
-        self._loss_curves = None
+        self._loss_curves = []
         self.event_loss_table = collections.Counter()
 
         self.losses = calculators.ProbabilisticLoss(
@@ -371,7 +332,6 @@ class ProbabilisticEventBased(object):
         """
 
         monitor = monitor or DummyMonitor()
-        loss_curves = []
 
         for hid, assets, (ground_motion_values, rupture_ids) in data:
             self.assets = assets
@@ -380,7 +340,7 @@ class ProbabilisticEventBased(object):
                 loss_matrix = self.losses(ground_motion_values)
 
                 curves = self.curves(loss_matrix)
-                loss_curves.append(curves)
+                self._loss_curves.append(curves)
 
                 values = utils.numpy_map(lambda a: a.value(loss_type),
                                          assets)
@@ -405,13 +365,10 @@ class ProbabilisticEventBased(object):
             yield hid, self.Output(
                 assets, loss_matrix, curves, insured_curves, maps)
 
-        if len(loss_curves) > 1:
-            self._loss_curves = numpy.array(loss_curves).transpose(1, 0, 2, 3)
-
     def statistics(self, weights, quantiles, post_processing):
         """
         :returns:
-            a :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`
+            a :class:`.ProbabilisticEventBased.StatisticalOutput`
             instance holding statistical outputs (e.g. mean loss curves).
         :param weights:
             a collection of weights associated with each realization, to
@@ -424,35 +381,14 @@ class ProbabilisticEventBased(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        # FIXME(lp). This is a preliminary implementation. Please
-        # replace the code below by using vstack/column_stack, instead
-        # of appending along a dimension and then performing zip and
-        # transpose.
-
-        if self._loss_curves is None:
+        if len(self._loss_curves) < 2:
             return
 
-        ret = []
-
-        for curves in self._loss_curves:
-            loss_ratios, curves_poes = self._normalize_curves(curves)
-            mean_curve, quantile_curves, mean_maps, quantile_maps = (
-                calculators.asset_statistics(
-                    loss_ratios, curves_poes,
-                    quantiles, weights, self.maps.poes, post_processing))
-
-            ret.append((mean_curve, mean_maps, quantile_curves, quantile_maps))
-
-        (mean_curves, mean_maps, quantile_curves, quantile_maps) = zip(*ret)
-        # now all the lists keep N items
-
-        mean_curves = numpy.array(mean_curves)
-
-        # transpose maps and fractions to have P/F/Q items of N-sized lists
-        mean_maps = numpy.array(mean_maps).transpose()
-
-        quantile_curves = numpy.array(quantile_curves).transpose(1, 0, 2, 3)
-        quantile_maps = numpy.array(quantile_maps).transpose(2, 1, 0)
+        curve_matrix = numpy.array(self._loss_curves).transpose(1, 0, 2, 3)
+        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
+            calculators.exposure_statistics(
+                [self._normalize_curves(curves) for curves in curve_matrix],
+                self.maps.poes, weights, quantiles, post_processing))
 
         return self.StatisticalOutput(
             self.assets, mean_curves, mean_maps,
@@ -462,8 +398,7 @@ class ProbabilisticEventBased(object):
         non_trivial_curves = [(losses, poes)
                               for losses, poes in curves if losses[-1] > 0]
         if not non_trivial_curves:  # no damage. all trivial curves
-            loss_ratios, _poes = curves[0]
-            curves_poes = [poes for _losses, poes in curves]
+            return curves[0][0], [poes for _losses, poes in curves]
         else:  # standard case
             max_losses = [losses[-1]  # we assume non-decreasing losses
                           for losses, _poes in non_trivial_curves]
@@ -595,6 +530,7 @@ class Scenario(object):
                     deductibles,
                     limits)
 
+                # FIXME(lp): transpose the matrix back
                 insured_loss_matrix = (
                     insured_loss_ratio_matrix.transpose() * values)
 

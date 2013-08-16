@@ -132,8 +132,62 @@ class LossMap(object):
             losses, poes = curve
             return scientific.conditional_loss_ratio(losses, poes, poe)
 
-        return [[single_map(curve, poe) for curve in curves]
-                for poe in self.poes]
+        return numpy.array(
+            [[single_map(curve, poe) for curve in curves]
+             for poe in self.poes])
+
+
+def exposure_statistics(
+        loss_curves, map_poes, weights, quantiles, post_processing):
+    """
+    Compute exposure statistics for N assets and R realizations.
+
+    :param loss_curves:
+        a list with N loss curves data. Each item holds a 2-tuple with
+        1) the loss ratios on which the curves have been defined on
+        2) the poes of the R curves
+    :param map_poes:
+        a numpy array with P poes used to compute loss maps
+    :param weights:
+        a list of N weights used to compute mean/quantile weighted statistics
+    :param quantiles:
+        the quantile levels used to compute quantile results
+    :param post_processing:
+       a module providing #weighted_quantile_curve, #quantile_curve,
+       #mean_curve
+
+    :returns:
+        a tuple with four elements:
+            1) a numpy array with N mean loss curves
+            2) a numpy array with P x N mean map values
+            3) a numpy array with Q x N quantile loss curves
+            4) a numpy array with Q x P quantile map values
+    """
+    curve_resolution = len(loss_curves[0][0])
+    map_nr = len(map_poes)
+
+    # Collect per-asset statistic along the last dimension of the
+    # following arrays
+    mean_curves = numpy.zeros((0, 2, curve_resolution))
+    mean_maps = numpy.zeros((map_nr, 0))
+    quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
+    quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
+
+    for loss_ratios, curves_poes in loss_curves:
+        _mean_curve, _quantile_curves, _mean_maps, _quantile_maps = (
+            asset_statistics(
+                loss_ratios, curves_poes,
+                quantiles, weights, map_poes, post_processing))
+
+        mean_curves = numpy.vstack(
+            (mean_curves, _mean_curve[numpy.newaxis, :]))
+        mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
+        quantile_curves = numpy.hstack(
+            (quantile_curves, _quantile_curves[:, numpy.newaxis]))
+        quantile_maps = numpy.dstack(
+            (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
+
+    return mean_curves, mean_maps, quantile_curves, quantile_maps
 
 
 def asset_statistics(
@@ -149,15 +203,8 @@ def asset_statistics(
     :param list quantiles:
        an iterable over the quantile levels to be considered for
        quantile outputs
-    :param list weights:
-       the weights associated with each realization. If all the elements are
-       `None`, implicit weights are taken into account
     :param list poes:
        the poe taken into account for computing loss maps
-    :param post_processing:
-       a module providing #weighted_quantile_curve, #quantile_curve,
-       #mean_curve
-
     :returns:
        a tuple with
        1) mean loss curve
@@ -165,42 +212,34 @@ def asset_statistics(
        3) mean loss map
        4) a list of quantile loss maps
     """
-    montecarlo = weights[0] is not None
-
-    quantile_curves = []
-    for quantile in quantiles:
-        if montecarlo:
-            q_curve = post_processing.weighted_quantile_curve(
-                curves_poes, weights, quantile)
-        else:
-            q_curve = post_processing.quantile_curve(curves_poes, quantile)
-
-        quantile_curves.append((losses, q_curve))
-
-    # then mean loss curve
-    mean_curve_poes = post_processing.mean_curve(curves_poes, weights)
-    mean_curve = (losses, mean_curve_poes)
-
-    mean_map = [scientific.conditional_loss_ratio(losses, mean_curve_poes, poe)
-                for poe in poes]
-
-    quantile_maps = [[scientific.conditional_loss_ratio(losses, poes, poe)
-                      for losses, poes in quantile_curves]
-                     for poe in poes]
+    mean_curve = numpy.array([losses, post_processing.mean_curve(
+        curves_poes, weights)])
+    mean_map = LossMap(poes)([mean_curve]).reshape(len(poes))
+    quantile_curves = numpy.array(
+        [[losses, quantile_curve(post_processing, weights)(
+          curves_poes, quantile)]
+         for quantile in quantiles])
+    quantile_maps = LossMap(poes)(quantile_curves).transpose()
 
     return (mean_curve, quantile_curves, mean_map, quantile_maps)
 
 
-def asset_statistic_fractions(disagg_poes, mean_curve, quantile_curves):
+def quantile_curve(post_processing, weights):
+    """
+    Helper functions that wraps the `post_processing` object
 
-    losses, poes = mean_curve
-    fractions = [
-        scientific.conditional_loss_ratio(losses, poes, poe)
-        for poe in disagg_poes]
-
-    quantiles = [
-        [scientific.conditional_loss_ratio(losses, poes, poe)
-         for losses, poes in quantile_curves]
-        for poe in disagg_poes]
-
-    return fractions, quantiles
+    :param post_processing:
+       a module providing #weighted_quantile_curve, #quantile_curve,
+       #mean_curve
+    :param list weights:
+       the weights associated with each realization. If all the elements are
+       `None`, implicit weights are taken into account
+    :returns:
+        a function that a quantile curve given curve poes and
+        the quantile value in input
+    """
+    if weights[0] is None:  # implicit weights
+        return post_processing.quantile_curve
+    else:
+        return lambda poes, quantile: post_processing.weighted_quantile_curve(
+            poes, weights, quantile)
