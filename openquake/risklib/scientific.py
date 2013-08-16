@@ -21,6 +21,7 @@
 This module includes the scientific API of the oq-risklib
 """
 
+import abc
 import itertools
 import bisect
 
@@ -350,6 +351,8 @@ class Distribution(object):
     :class:`openquake.risklib.utils.Register`
     """
 
+    __metaclass__ = abc.ABCMeta
+
     def init(self, asset_count=1, sample_count=1, seed=None, correlation=0):
         """
         Abstract method to be extended by derived classes. It must be
@@ -370,8 +373,9 @@ class Distribution(object):
         that indicates the correlation between samples across
         different assets.
         """
-        pass
+        assert correlation >=0 and correlation <= 1
 
+    @abc.abstractmethod
     def sample(self, means, covs, stddevs):
         """
         :returns: sample a set of losses
@@ -381,6 +385,7 @@ class Distribution(object):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
     def survival(self, loss_ratio, mean, stddev):
         """
         Return the survival function of the distribution with `mean`

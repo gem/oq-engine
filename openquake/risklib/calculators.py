@@ -137,6 +137,57 @@ class LossMap(object):
              for poe in self.poes])
 
 
+def exposure_statistics(
+        loss_curves, map_poes, weights, quantiles, post_processing):
+    """
+    Compute exposure statistics for N assets.
+
+    :param loss_curves:
+        a numpy array with loss curves (shape = N x 2 x curve_resolution)
+    :param map_poes:
+        a numpy array with P poes used to compute loss maps
+    :param weights:
+        a list of N weights used to compute mean/quantile weighted statistics
+    :param quantiles:
+        the quantile levels used to compute quantile results
+    :param post_processing:
+       a module providing #weighted_quantile_curve, #quantile_curve,
+       #mean_curve
+
+    :returns:
+        a tuple with four elements:
+            1) a numpy array with N mean loss curves
+            2) a numpy array with P x N mean map values
+            3) a numpy array with Q x N quantile loss curves
+            4) a numpy array with Q x P quantile map values
+    """
+    curve_resolution = loss_curves.shape[2]
+    map_nr = len(map_poes)
+
+    # Collect per-asset statistic along the last dimension of the
+    # following arrays
+    mean_curves = numpy.zeros((0, 2, curve_resolution))
+    mean_maps = numpy.zeros((map_nr, 0))
+    quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
+    quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
+
+    for loss_ratios, curves_poes in loss_curves:
+        _mean_curve, _quantile_curves, _mean_maps, _quantile_maps = (
+            asset_statistics(
+                loss_ratios, curves_poes,
+                quantiles, weights, map_poes, post_processing))
+
+        mean_curves = numpy.vstack(
+            (mean_curves, _mean_curve[numpy.newaxis, :]))
+        mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
+        quantile_curves = numpy.hstack(
+            (quantile_curves, _quantile_curves[:, numpy.newaxis]))
+        quantile_maps = numpy.dstack(
+            (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
+
+    return mean_curves, mean_maps, quantile_curves, quantile_maps
+
+
 def asset_statistics(
         losses, curves_poes, quantiles, weights, poes, post_processing):
     """

@@ -48,10 +48,6 @@ class memoized(object):
         self.cache = {}
 
     def __call__(self, *args):
-        if not isinstance(args, collections.Hashable):
-            # uncacheable. a list, for instance.
-            # better to not cache than blow up.
-            return self.func(*args)
         if args in self.cache:
             return self.cache[args]
         else:
@@ -77,12 +73,6 @@ def compose(*a):
         return functools.partial(_composed, a[0], compose(*a[1:]))
     except IndexError:
         return a[0]
-
-
-def mapper(fn):
-    def wrapped(arg_list):
-        return map(fn, arg_list)
-    return wrapped
 
 
 numpy_map = compose(numpy.array, map)

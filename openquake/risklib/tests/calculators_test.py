@@ -286,3 +286,31 @@ class AssetStatisticsTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(mean_map, [0.8, 0.2])
 
         numpy.testing.assert_allclose(quantile_maps, numpy.zeros((2, 2)))
+
+    def test_exposure(self):
+        resolution = 10
+        quantiles = 4
+        poes = 3
+        assets = 7
+
+        with mock.patch('openquake.risklib.calculators.asset_statistics') as m:
+            m.return_value = (numpy.empty((2, resolution)),
+                              numpy.empty((quantiles, 2, resolution)),
+                              numpy.empty(poes),
+                              numpy.empty((quantiles, poes)))
+
+            loss_curves = numpy.empty((assets, 2, resolution))
+
+            (mean_curves, mean_maps,
+             quantile_curves, quantile_maps) = (
+                 calculators.exposure_statistics(loss_curves,
+                                                 numpy.empty(poes),
+                                                 numpy.empty(assets),
+                                                 numpy.empty(quantiles),
+                                                 mock.Mock()))
+
+            self.assertEqual((assets, 2, resolution), mean_curves.shape)
+            self.assertEqual((poes, assets), mean_maps.shape)
+            self.assertEqual((quantiles, assets, 2, resolution),
+                             quantile_curves.shape)
+            self.assertEqual((quantiles, poes, assets), quantile_maps.shape)

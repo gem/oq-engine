@@ -17,6 +17,7 @@
 # <http://www.gnu.org/licenses/>.
 
 import collections
+import itertools
 import numpy
 from scipy import interpolate
 
@@ -225,34 +226,11 @@ class Classical(object):
         if self._loss_curves is None:
             return
 
-        curve_resolution = self._loss_curves.shape[3]
-
-        # Collect per-asset statistic along the last dimension of the
-        # following arrays
-        map_nr = len(self.maps.poes + self.fractions.poes)
-        mean_curves = numpy.zeros((0, 2, curve_resolution))
-        mean_maps = numpy.zeros((map_nr, 0))
-        quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
-        quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
-
-        for loss_ratio_curves in self._loss_curves:
-            # in the classical calculator we assume that all loss
-            # curves are defined on the same set of loss ratios
-            loss_ratios, _poes = loss_ratio_curves[0]
-            curves_poes = [poes for _losses, poes in loss_ratio_curves]
-
-            _mean_curve, _quantile_curves, _mean_maps, _quantile_maps = (
-                calculators.asset_statistics(
-                    loss_ratios, curves_poes,
-                    quantiles, weights, self.maps.poes, post_processing))
-
-            mean_curves = numpy.vstack(
-                (mean_curves, _mean_curve[numpy.newaxis, :]))
-            mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
-            quantile_curves = numpy.hstack(
-                (quantile_curves, _quantile_curves[:, numpy.newaxis]))
-            quantile_maps = numpy.dstack(
-                (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
+        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
+            calculators.exposure_statistics(
+                self._loss_curves,
+                self.maps.poes + self.fractions.poes,
+                weights, quantiles, post_processing))
 
         return self.StatisticalOutput(
             self._assets,
@@ -409,26 +387,10 @@ class ProbabilisticEventBased(object):
         if self._loss_curves is None:
             return
 
-        curve_resolution = self._loss_curves.shape[3]
-        mean_curves = numpy.zeros((0, 2, curve_resolution))
-        mean_maps = numpy.zeros((len(self.maps.poes), 0))
-        quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
-        quantile_maps = numpy.zeros((len(quantiles), len(self.maps.poes), 0))
-
-        for curves in self._loss_curves:
-            loss_ratios, curves_poes = self._normalize_curves(curves)
-            _mean_curve, _quantile_curves, _mean_maps, _quantile_maps = (
-                calculators.asset_statistics(
-                    loss_ratios, curves_poes,
-                    quantiles, weights, self.maps.poes, post_processing))
-
-            mean_curves = numpy.vstack(
-                (mean_curves, _mean_curve[numpy.newaxis, :]))
-            mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
-            quantile_curves = numpy.hstack(
-                (quantile_curves, _quantile_curves[:, numpy.newaxis]))
-            quantile_maps = numpy.dstack(
-                (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
+        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
+            calculators.exposure_statistics(
+                self._normalize_curves(self._loss_curves),
+                self.maps.poes, weights, quantiles, post_processing))
 
         return self.StatisticalOutput(
             self.assets, mean_curves, mean_maps,
@@ -438,8 +400,7 @@ class ProbabilisticEventBased(object):
         non_trivial_curves = [(losses, poes)
                               for losses, poes in curves if losses[-1] > 0]
         if not non_trivial_curves:  # no damage. all trivial curves
-            loss_ratios, _poes = curves[0]
-            curves_poes = [poes for _losses, poes in curves]
+            return curves
         else:  # standard case
             max_losses = [losses[-1]  # we assume non-decreasing losses
                           for losses, _poes in non_trivial_curves]
@@ -448,7 +409,9 @@ class ProbabilisticEventBased(object):
             curves_poes = [interpolate.interp1d(
                 losses, poes, bounds_error=False, fill_value=0)(loss_ratios)
                 for losses, poes in curves]
-        return loss_ratios, curves_poes
+        return itertools.izip(
+            itertools.repeat(loss_ratios, len(curves_poes)),
+            curves_poes)
 
 
 class ClassicalBCR(object):
@@ -571,6 +534,7 @@ class Scenario(object):
                     deductibles,
                     limits)
 
+                # FIXME(lp): transpose the matrix back
                 insured_loss_matrix = (
                     insured_loss_ratio_matrix.transpose() * values)
 
