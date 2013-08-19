@@ -638,14 +638,7 @@ def get_hazard_job(cfg, username=None):
     """
     username = username if username is not None else default_user().user_name
 
-    job = engine.prepare_job(username)
-    params, files = engine.parse_config(open(cfg, 'r'))
-    haz_calc = engine.create_hazard_calculation(
-        job.owner.user_name, params, files)
-    haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
-    job.hazard_calculation = haz_calc
-    job.save()
-    return job
+    return engine.haz_job_from_file(cfg, username, 'error', [])
 
 
 def get_risk_job(cfg, username=None, hazard_calculation_id=None,
