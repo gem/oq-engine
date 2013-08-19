@@ -40,36 +40,24 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
         params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
         hc = engine.create_hazard_calculation(
-            owner.user_name, params, files.values()
+            owner.user_name, params, files
         )
 
-        expected_ids = sorted([x.id for x in files.values()])
-
         inputs = models.inputs4hcalc(hc.id)
-
-        actual_ids = sorted([x.id for x in inputs])
-
-        self.assertEqual(expected_ids, actual_ids)
+        self.assertEqual(2, inputs.count())
 
     def test_with_input_type(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         params, files = engine.parse_config(open(cfg, 'r'))
         owner = helpers.default_user()
         hc = engine.create_hazard_calculation(
-            owner.user_name, params, files.values()
+            owner.user_name, params, files
         )
-
-        # It should only be 1 id, actually.
-        expected_ids = [x.id for x in files.values()
-                        if x.input_type == 'source_model_logic_tree']
 
         inputs = models.inputs4hcalc(
             hc.id, input_type='source_model_logic_tree'
         )
-
-        actual_ids = sorted([x.id for x in inputs])
-
-        self.assertEqual(expected_ids, actual_ids)
+        self.assertEqual(1, inputs.count())
 
 
 class Inputs4RiskCalcTestCase(unittest.TestCase):
@@ -83,13 +71,9 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
             get_data_path('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
 
-        expected_ids = sorted([x.id for x in files.values()])
 
         inputs = models.inputs4rcalc(rc.id)
-
-        actual_ids = sorted([x.id for x in inputs])
-
-        self.assertEqual(expected_ids, actual_ids)
+        self.assertEqual(2, inputs.count())
 
     def test_with_input_type(self):
         job, files = helpers.get_fake_risk_job(
@@ -97,15 +81,8 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
             get_data_path('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
 
-        # It should only be 1 id, actually.
-        expected_ids = [x.id for x in files.values()
-                        if x.input_type == 'exposure']
-
         inputs = models.inputs4rcalc(rc.id, input_type='exposure')
-
-        actual_ids = sorted([x.id for x in inputs])
-
-        self.assertEqual(expected_ids, actual_ids)
+        self.assertEqual(1, inputs.count())
 
 
 class HazardCalculationGeometryTestCase(unittest.TestCase):
