@@ -89,7 +89,7 @@ class PreExecuteTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('classical_job.ini')
         params, files = engine.parse_config(open(cfg, 'r'))
         haz_job.hazard_calculation = engine.create_hazard_calculation(
-            haz_job.owner.user_name, params, files.values())
+            haz_job.owner.user_name, params, files)
         haz_job.save()
 
         hazard_curve_output = models.Output.objects.create_output(
@@ -126,7 +126,7 @@ class PreExecuteTestCase(unittest.TestCase):
             'end-to-end-hazard-risk/job_haz_classical.ini')
         params, files = engine.parse_config(open(cfg, 'r'))
         haz_job.hazard_calculation = engine.create_hazard_calculation(
-            haz_job.owner.user_name, params, files.values())
+            haz_job.owner.user_name, params, files)
         haz_job.save()
 
         hazard_curve_output = models.Output.objects.create_output(
