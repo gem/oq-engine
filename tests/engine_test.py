@@ -14,10 +14,13 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import getpass
-import os
 import StringIO
+import getpass
+import mock
+import os
+import shutil
 import subprocess
+import tempfile
 import unittest
 import warnings
 
@@ -125,10 +128,9 @@ bar = baz
         self.assertEqual(expected_params, params)
 
     def test_parse_config_with_files(self):
-        site_model_input = helpers.touch(content="foo")
-
-        try:
-            source = StringIO.StringIO("""
+        temp_dir = tempfile.mkdtemp()
+        site_model_input = helpers.touch(dir=temp_dir, content="foo")
+        job_config = helpers.touch(dir=temp_dir, content="""
 [general]
 calculation_mode = classical
 [site]
@@ -138,10 +140,8 @@ truncation_level=0
 random_seed=0
     """ % site_model_input)
 
-            # Add a 'name' to make this look like a real file:
-            source.name = 'path/to/some/job.ini'
-            exp_base_path = os.path.dirname(
-                os.path.join(os.path.abspath('.'), source.name))
+        try:
+            exp_base_path = os.path.dirname(job_config)
 
             expected_params = {
                 'base_path': exp_base_path,
@@ -151,13 +151,12 @@ random_seed=0
                 'maximum_distance': '0'
             }
 
-            params, files = engine.parse_config(source)
+            params, files = engine.parse_config(open(job_config, 'r'))
             self.assertEqual(expected_params, params)
-            self.assertEqual(['site_model_file'], files.keys())
-            self.assertEqual('acbd18db4cc2f85cedef654fccc4a4d8',
-                             files['site_model_file'].digest)
+            self.assertEqual(['site_model'], files.keys())
+            self.assertEqual([site_model_input], files.values())
         finally:
-            os.unlink(site_model_input)
+            shutil.rmtree(temp_dir)
 
     def test__parse_sites_csv(self):
         expected_wkt = 'MULTIPOINT(0.1 0.2, 2 3, 4.1 5.6)'
@@ -240,11 +239,19 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
                                   input_type='site_model', owner=self.owner)
         self.site_model.save()
         self.files = [self.site_model]
+        self.files = dict(site_model='/foo/bar')
 
     def test_create_hazard_calculation(self):
-        hc = engine.create_hazard_calculation(
-            self.owner.user_name, self.params, self.files
-        )
+        with mock.patch('openquake.engine.engine.get_or_create_input') as goci:
+            hc = engine.create_hazard_calculation(
+                self.owner.user_name, self.params, self.files
+            )
+
+        self.assertEqual(1, goci.call_count)
+        exp_args = (('/foo/bar', 'site_model', self.owner),
+                    {'haz_calc_id': hc.id})
+        self.assertEqual(exp_args, goci.call_args)
+
         # Normalize/clean fields by fetching a fresh copy from the db.
         hc = models.HazardCalculation.objects.get(id=hc.id)
 
@@ -255,12 +262,6 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         self.assertEqual(hc.investigation_time, 50.0)
         self.assertEqual(hc.truncation_level, 0.0)
         self.assertEqual(hc.maximum_distance, 200.0)
-
-        # Test the input2haz_calc link:
-        [inp2hcs] = models.Input2hcalc.objects.filter(
-            hazard_calculation=hc.id)
-
-        self.assertEqual(self.site_model.id, inp2hcs.input.id)
 
     def test_create_hazard_calculation_warns(self):
         # If unknown parameters are specified in the config file, we expect
@@ -277,9 +278,11 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         ]
 
         with warnings.catch_warnings(record=True) as w:
-            engine.create_hazard_calculation(
-                self.owner.user_name, self.params, self.files
-            )
+            with mock.patch(
+                    'openquake.engine.engine.get_or_create_input') as goci:
+                engine.create_hazard_calculation(
+                    self.owner.user_name, self.params, self.files
+                )
         actual_warnings = [msg.message.message for msg in w]
         self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
 
@@ -324,8 +327,19 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         exposure_file.save()
 
         files = [vuln_file, exposure_file]
+        files = dict(structural_vulnerability='/foo/bar', exposure='/foo/baz')
 
-        rc = engine.create_risk_calculation(owner, params, files)
+        with mock.patch('openquake.engine.engine.get_or_create_input') as goci:
+            rc = engine.create_risk_calculation(owner, params, files)
+
+        self.assertEqual(2, goci.call_count)
+        exp_args = [
+            (('/foo/bar', 'structural_vulnerability', owner),
+             {'risk_calc_id': rc.id}),
+            (('/foo/baz', 'exposure', owner),
+             {'risk_calc_id': rc.id}),
+        ]
+        self.assertEqual(exp_args, goci.call_args_list)
         # Normalize/clean fields by fetching a fresh copy from the db.
         rc = models.RiskCalculation.objects.get(id=rc.id)
 
