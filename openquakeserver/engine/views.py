@@ -168,6 +168,14 @@ def run_hazard_calc(request):
         )
         hc = job.hazard_calculation
 
+        # We need to explicitly load all source model input files before the
+        # calculation is run. They need to be stored in the database (not on
+        # the filesystem) before we start the job. Otherwise, the calculation
+        # will attempt to load these models "too late" from the filesystem,
+        # at which point we will fail since each calculation is run by a remote
+        # worker which does not necessarily have access to the same file
+        # system.
+        # See :func:`_load_source_models` for more details.
         _load_source_models(sorted(files.values()), job.owner, hc.id)
 
         tasks.run_hazard_calc.apply_async((hc.id, ))
