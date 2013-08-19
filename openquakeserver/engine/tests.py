@@ -421,8 +421,10 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         mocks = dict(
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
+            rmtree='shutil.rmtree',
             job_from_file='openquake.engine.engine.haz_job_from_file',
             load_sm='engine.views._load_source_models',
+            info='engine.views._get_haz_calc_info',
             run_hazard_task='engine.tasks.run_hazard_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
@@ -471,8 +473,13 @@ class RunHazardCalcTestCase(BaseViewTestCase):
                 )
                 multi_mock['job_from_file'].return_value = fake_job
 
+                multi_mock['info'].return_value = dict(id=666, fakeparam='foo')
+
                 # Call the function under test
-                views.run_hazard_calc(request)
+                response = views.run_hazard_calc(request)
+
+            self.assertEqual(dict(id=666, fakeparam='foo'),
+                             json.loads(response.content))
 
             self.assertEqual(1, multi_mock['mkdtemp'].call_count)
 
@@ -480,9 +487,16 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             self.assertEqual(move_exp_call_args,
                              multi_mock['move'].call_args_list)
 
+            self.assertEqual(1, multi_mock['rmtree'].call_count)
+            self.assertEqual(((temp_dir, ), {}),
+                             multi_mock['rmtree'].call_args)
+
             self.assertEqual(1, multi_mock['job_from_file'].call_count)
             self.assertEqual(jff_exp_call_args,
                              multi_mock['job_from_file'].call_args)
+
+            self.assertEqual(1, multi_mock['info'].call_count)
+            self.assertEqual(((666, ), {}), multi_mock['info'].call_args)
 
             self.assertEqual(1, multi_mock['load_sm'].call_count)
             self.assertEqual(load_sm_exp_call_args,
