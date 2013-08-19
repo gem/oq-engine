@@ -376,6 +376,7 @@ class IsSourceModelTestCase(unittest.TestCase):
         self.assertEqual('Input file is not a NRML artifact',
                          ar.exception.message)
 
+
 class FakeTempUploadedFile(object):
 
     def __init__(self, path, name):
@@ -401,9 +402,9 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         fake_model_1 = FakeTempUploadedFile('/foo/bar/tmpHmcdv2tmp.upload',
                                             'source_model_logic_tree.xml')
         fake_model_2 = FakeTempUploadedFile('/foo/bar/tmpI66zIGtmp.upload',
-                                             'gsim_logic_tree.xml')
+                                            'gsim_logic_tree.xml')
         fake_model_3 = FakeTempUploadedFile('/foo/bar/tmpHGa9Whtmp.upload',
-                                             'source_model.xml')
+                                            'source_model.xml')
 
         request = self.factory.post('/v1/calc/hazard/run')
         request.user = mock.Mock()
@@ -443,11 +444,9 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         )
 
         load_sm_exp_call_args = (
-            ([
-              pathjoin(temp_dir, fake_model_2.name),
+            ([pathjoin(temp_dir, fake_model_2.name),
               pathjoin(temp_dir, fake_model_3.name),
-              pathjoin(temp_dir, fake_model_1.name),
-             ],
+              pathjoin(temp_dir, fake_model_1.name)],
              FakeUser(1), 666),
             {}
         )
@@ -458,6 +457,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
 
             with multi_mock:
                 multi_mock['mkdtemp'].return_value = temp_dir
+
                 def apply_async(*args, **kwargs):
                     aa_call_data['args'] = args
                     aa_call_data['kwargs'] = kwargs
