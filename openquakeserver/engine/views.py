@@ -153,9 +153,6 @@ def run_hazard_calc(request):
         )
     else:
         # POST: run a new calculation
-
-
-        # TODO: create temp dir
         temp_dir = tempfile.mkdtemp()
         files = {}
         # Move each file to a new temp dir, using the upload file names
@@ -166,7 +163,6 @@ def run_hazard_calc(request):
             files[key] = new_path
 
         job_file = files.pop('job_config')
-        # TODO: Get the user from the user authenticated in the `request`.
         job = oq_engine.haz_job_from_file(
             job_file, request.user.username, DEFAULT_LOG_LEVEL, []
         )
