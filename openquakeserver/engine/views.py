@@ -330,6 +330,47 @@ def calc_risk(request):
                         content_type=JSON)
 
 
+@csrf_exempt
+@allowed_methods(('GET', 'POST'))
+def run_risk_calc(request):
+    """
+    Run a calculation.
+
+    Similar to :func:`run_hazard_calc`, except that an additional POST param
+    must be included. This param is either the `hazard_calc` or
+    `hazard_result`, the value of which must be the corresponding ID.
+    """
+    if request.method == 'GET':
+        form = forms.RiskForm()
+        return render(
+            request,
+            'run_calc.html',
+            {'post_url': request.path, 'form': form}
+        )
+    else:
+        # POST: run a new calculation
+        temp_dir = tempfile.mkdtemp()
+        files = {}
+        for key, each_file in request.FILES.iteritems():
+            new_path = os.path.join(temp_dir, each_file.name)
+            shutil.move(each_file.temporary_file_path(), new_path)
+            files[key] = new_path
+
+        job_file = files.pop('job_config')
+        job = oq_engine.risk_job_from_file(
+            job_file, request.user.username, DEFAULT_LOG_LEVEL, [],
+            hazard_calculation_id=request.POST.get('hazard_calc'),
+            hazard_output_id=request.POST.get('hazard_result'),
+        )
+        rc = job.risk_calculation
+
+        tasks.run_risk_calc.apply_async((rc.id, ))
+
+        base_url = _get_base_url(request)
+        return HttpResponse(content=json.dumps(_get_risk_calc_info(rc.id)),
+                            content_type=JSON)
+
+
 def _get_risk_calcs():
     """
     Helper function for get job+calculation data from the oq-engine database.
