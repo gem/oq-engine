@@ -491,4 +491,4 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             self.assertEqual({'count': 1, 'args': ((666,),), 'kwargs': {}},
                              aa_call_data)
         finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
+            shutil.rmtree(temp_dir)
