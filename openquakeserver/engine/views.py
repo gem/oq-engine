@@ -170,6 +170,8 @@ def run_hazard_calc(request):
 
         _load_source_models(sorted(files.values()), job.owner, hc.id)
 
+        # Before running the calculation, clean up the temp dir.
+        shutil.rmtree(temp_dir)
         tasks.run_hazard_calc.apply_async((hc.id, ))
 
         base_url = _get_base_url(request)
@@ -364,6 +366,8 @@ def run_risk_calc(request):
         )
         rc = job.risk_calculation
 
+        # Before running the calculation, clean up the temp dir.
+        shutil.rmtree(temp_dir)
         tasks.run_risk_calc.apply_async((rc.id, ))
 
         base_url = _get_base_url(request)
