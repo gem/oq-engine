@@ -148,7 +148,7 @@ def run_hazard_calc(request):
         form = forms.HazardForm()
         return render(
             request,
-            'run_hazard_calc.html',
+            'run_calc.html',
             {'post_url': request.path, 'form': form}
         )
     else:
