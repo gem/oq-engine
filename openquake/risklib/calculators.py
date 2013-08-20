@@ -134,7 +134,7 @@ class LossMap(object):
 
         return numpy.array(
             [[single_map(curve, poe) for curve in curves]
-             for poe in self.poes])
+             for poe in self.poes]).reshape((len(self.poes), len(curves)))
 
 
 def exposure_statistics(
