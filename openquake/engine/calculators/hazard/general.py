@@ -482,8 +482,8 @@ class BaseHazardCalculator(base.Calculator):
             self.hc.id, input_type='source_model_logic_tree')
         [gsimlt] = models.inputs4hcalc(
             self.hc.id, input_type='gsim_logic_tree')
-        source_paths = logictree.read_logic_trees(
-            self.hc.base_path, smlt.path, gsimlt.path)
+
+        source_paths = logictree.read_logic_trees_from_db(self.hc.id)
 
         for src_path in source_paths:
             full_path = os.path.join(self.hc.base_path, src_path)
