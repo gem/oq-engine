@@ -313,18 +313,18 @@ GROUP BY site_id ORDER BY site_id;
             logs.LOG.info('Compute Ground motion field values on the fly')
             return self.compute_gmvs(hazard_output, site_assets, monitor)
 
-        for site_id, assets in site_assets:
-            n_assets = len(assets)
-            all_assets.extend(assets)
-            with monitor.copy('getting gmvs and ruptures'):
+        with monitor.copy('getting gmvs and ruptures'):
+            for site_id, assets in site_assets:
+                n_assets = len(assets)
+                all_assets.extend(assets)
                 gmvs, ruptures = self.get_gmvs_ruptures(hazard_output, site_id)
-            if ruptures:  # event based
-                site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
-                for r in ruptures:
-                    all_ruptures.add(r)
-            else:  # scenario
-                array = numpy.array(gmvs)
-                all_gmvs.extend([array] * n_assets)
+                if ruptures:  # event based
+                    site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
+                    for r in ruptures:
+                        all_ruptures.add(r)
+                else:  # scenario
+                    array = numpy.array(gmvs)
+                    all_gmvs.extend([array] * n_assets)
         if all_assets and not all_ruptures:  # scenario
             return all_assets, all_gmvs
 

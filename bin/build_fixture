@@ -28,7 +28,7 @@ if [ "$1" != "--reuse-db" ]; then
     . $(dirname $0)/oq_create_db
 fi
 
-for qa_test in $(find $QA_TESTS_DIR -iname job_haz.ini); do
+for qa_test in $(find $QA_TESTS_DIR -iname job_haz.ini | sort); do
 
     # Run the hazard
     $OPENQUAKE --run-hazard $qa_test
