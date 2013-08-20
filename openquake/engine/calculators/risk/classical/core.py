@@ -21,10 +21,10 @@ from openquake.risklib import workflows
 
 from django.db import transaction
 
-from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators import post_processing
-from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.calculators.risk import (
+    base, hazard_getters, validation, writers)
 
 
 @base.risk_task
@@ -35,7 +35,7 @@ def classical(job_id, units, containers, params):
     :param int job_id:
       ID of the currently running job
     :param list units:
-      A list of :class:`openquake.risklib.workflow.CalculationUnit` instances
+      A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
     :param containers:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
@@ -158,6 +158,12 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     #: celery task
     core_calc_task = classical
 
+    validators = base.RiskCalculator.validators + [
+        validation.RequireClassicalHazard]
+
+    output_builders = [writers.LossCurveMapBuilder,
+                       writers.ConditionalLossFractionBuilder]
+
     def calculation_unit(self, loss_type, assets):
         """
         :returns:
@@ -182,91 +188,6 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 assets,
                 self.rc.best_maximum_distance,
                 model.imt))
-
-    def validate_hazard(self):
-        """
-        Checks that the given hazard has hazard curves
-        """
-        super(ClassicalRiskCalculator, self).validate_hazard()
-        if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calculation_mode != 'classical':
-                raise RuntimeError(
-                    "The provided hazard calculation ID "
-                    "is not a classical calculation")
-        elif not self.rc.hazard_output.is_hazard_curve():
-            raise RuntimeError(
-                "The provided hazard output is not an hazard curve")
-
-    def create_outputs(self, hazard_output):
-        """
-        Create outputs container objects.
-
-        In classical risk, we finalize the output containers by adding
-        ids of loss_fractions
-        """
-        containers = super(ClassicalRiskCalculator, self).create_outputs(
-            hazard_output)
-
-        for loss_type in base.loss_types(self.risk_models):
-            for poe in self.rc.poes_disagg or []:
-                containers.set(models.LossFraction.objects.create(
-                    hazard_output_id=hazard_output.id,
-                    variable="taxonomy",
-                    loss_type=loss_type,
-                    output=models.Output.objects.create_output(
-                        self.job,
-                        "loss fractions. type=%s poe=%s hazard=%s" % (
-                            loss_type, poe, hazard_output.id),
-                        "loss_fraction"),
-                    poe=poe))
-            return containers
-
-    def create_statistical_outputs(self):
-        """
-        Create statistics output containers.
-
-        In classical risk we need also loss fraction ids for aggregate
-        results
-        """
-
-        containers = super(
-            ClassicalRiskCalculator, self).create_statistical_outputs()
-
-        if len(self.rc.hazard_outputs()) < 2:
-            return containers
-
-        for loss_type in base.loss_types(self.risk_models):
-            for poe in self.rc.poes_disagg or []:
-                name = "mean loss fractions. type=%s poe=%.4f" % (
-                    loss_type, poe)
-                containers.set(models.LossFraction.objects.create(
-                    variable="taxonomy",
-                    poe=poe,
-                    loss_type=loss_type,
-                    output=models.Output.objects.create_output(
-                        job=self.job,
-                        display_name=name,
-                        output_type="loss_fraction"),
-                    statistics="mean"))
-
-        for loss_type in base.loss_types(self.risk_models):
-            for quantile in self.rc.quantile_loss_curves or []:
-                for poe in self.rc.poes_disagg or []:
-                    name = ("quantile(%.4f) loss fractions "
-                            "loss_type=%s poe=%.4f" % (
-                                quantile, loss_type, poe))
-                    containers.set(models.LossFraction.objects.create(
-                        variable="taxonomy",
-                        poe=poe,
-                        loss_type=loss_type,
-                        output=models.Output.objects.create_output(
-                            job=self.job,
-                            display_name=name,
-                            output_type="loss_fraction"),
-                        statistics="quantile",
-                        quantile=quantile))
-
-        return containers
 
     @property
     def calculator_parameters(self):

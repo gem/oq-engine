@@ -19,7 +19,8 @@ Core functionality for the Event Based BCR Risk calculator.
 
 from openquake.risklib import workflows
 
-from openquake.engine.calculators.risk import base, hazard_getters, writers
+from openquake.engine.calculators.risk import (
+    base, hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.event_based import core as event_based
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.db import models
@@ -84,6 +85,11 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
     """
     core_calc_task = event_based_bcr
 
+    validators = event_based.EventBasedRiskCalculator.validators + [
+        validation.ExposureHasRetrofittedCosts]
+
+    output_builders = [writers.BCRMapBuilder]
+
     def __init__(self, job):
         super(EventBasedBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
@@ -125,21 +131,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
                     self.rc.best_maximum_distance,
                     model_retro.imt)))
 
-    def get_taxonomies(self):
-        """
-        Override the default get_taxonomies to provide more detailed
-        validation of the exposure.
-
-        Check that the reco value is present in the exposure
-        """
-        taxonomies = super(EventBasedBCRRiskCalculator, self).get_taxonomies()
-
-        if (self.rc.exposure_model.exposuredata_set.filter(
-                cost__converted_retrofitted_cost__isnull=True)).exists():
-            raise ValueError("Some assets do not have retrofitted costs")
-
-        return taxonomies
-
     def post_process(self):
         """
         No need to compute the aggregate loss curve in the BCR calculator.
@@ -150,41 +141,10 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         No need to update event loss tables in the BCR calculator
         """
 
-    def create_outputs(self, hazard_output):
-        """
-        Create BCR Distribution output container, i.e. a
-        :class:`openquake.engine.db.models.BCRDistribution` instance and its
-        :class:`openquake.engine.db.models.Output` container.
-
-        :returns: an instance of OutputDict.
-        """
-        ret = writers.OutputDict()
-        for loss_type in base.loss_types(self.risk_models):
-            name = "BCR Map. type=%s hazard=%s" % (loss_type, hazard_output)
-            ret.set(models.BCRDistribution.objects.create(
-                    hazard_output=hazard_output,
-                    loss_type=loss_type,
-                    output=models.Output.objects.create_output(
-                        self.job, name, "bcr_distribution")))
-
-        return ret
-
-    def create_statistical_outputs(self):
-        """
-        Override default behaviour as BCR and scenario calculators do
-        not compute mean/quantiles outputs"
-        """
-        return writers.OutputDict()
-
     def pre_execute(self):
         """
         Store both the risk model for the original asset configuration
         and the risk model for the retrofitted one.
         """
         super(EventBasedBCRRiskCalculator, self).pre_execute()
-        models_retro = super(
-            EventBasedBCRRiskCalculator, self).get_risk_models(
-                retrofitted=True)
-        self.check_taxonomies(models_retro)
-        self.check_imts(base.required_imts(models_retro))
-        self.risk_models_retrofitted = models_retro
+        self.risk_models_retrofitted = self.get_risk_models(retrofitted=True)
