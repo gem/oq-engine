@@ -19,15 +19,16 @@
 Tests for python logic tree processor.
 """
 
+import mock
 import numpy
 import os
 import os.path
+import shutil
+import tempfile
 import unittest
+
 from StringIO import StringIO
 from decimal import Decimal
-import tempfile
-import shutil
-
 from mock import Mock
 
 import openquake.hazardlib
@@ -42,9 +43,11 @@ from openquake.engine.input.source import nrml_to_hazardlib
 
 from tests.utils import helpers
 
+FAKE_CALC_ID = 7
+
 
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
-    def __init__(self, filename, files, basepath, validate=True):
+    def __init__(self, filename, files, basepath, calc_id, validate=True):
         self.files = files
         if not validate:
             self.validate_branchset = self.__fail
@@ -53,37 +56,28 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
             self.validate_uncertainty_value = self.__fail
         content = files[filename]
         super(_TestableSourceModelLogicTree, self).__init__(
-            content, basepath, filename, validate
+            content, basepath, filename, calc_id, validate
         )
 
     def __fail(self, *args, **kwargs):
         raise AssertionError("this method shouldn't be called")
 
-    def _open_file(self, filename):
-        if not filename in self.files:
-            return super(_TestableSourceModelLogicTree, self)._open_file(
-                filename
-            )
-        return StringIO(self.files[filename])
-
 
 class _TestableGMPELogicTree(logictree.GMPELogicTree):
     def __init__(self, filename, content, basepath, tectonic_region_types,
-                 validate=True):
+                 calc_id, validate=True):
         if not validate:
             self.validate_branchset = self.__fail
             self.validate_tree = self.__fail
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
         super(_TestableGMPELogicTree, self).__init__(
-            tectonic_region_types, content, basepath, filename, validate
+            tectonic_region_types, content, basepath, filename, calc_id,
+            validate
         )
 
     def __fail(self, *args, **kwargs):
         raise AssertionError("this method shouldn't be called")
-
-    def _open_file(self, filename):
-        return StringIO(self.content)
 
 
 def _make_nrml(content):
@@ -182,11 +176,26 @@ def _whatever_sourcemodel_lt(sourcemodel_filename):
 
 
 class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
+
+    def setUp(self):
+        sm = _whatever_sourcemodel()
+        self.gsm_patch = mock.patch('openquake.engine.input.logictree'
+                                    '.SourceModelLogicTree._get_source_model')
+        self.gsm_mock = self.gsm_patch.start()
+        ret_val = Mock()
+        ret_val.model_content.raw_content = sm
+        self.gsm_mock.return_value = ret_val
+
+    def tearDown(self):
+        self.gsm_mock.stop()
+        self.gsm_patch.stop()
+
     def _assert_logic_tree_error(self, filename, files, basepath,
                                  exc_class=logictree.LogicTreeError,
                                  exc_filename=None):
         with self.assertRaises(exc_class) as arc:
-            _TestableSourceModelLogicTree(filename, files, basepath)
+            _TestableSourceModelLogicTree(filename, files, basepath,
+                                          FAKE_CALC_ID)
         exc = arc.exception
         self.assertEqual(exc.filename, exc_filename or filename)
         self.assertEqual(exc.basepath, basepath)
@@ -213,28 +222,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         error = "'{http://openquake.org/xmlns/nrml/0.4}logicTreeSet': " \
                 "This element is not expected."
         self.assertTrue(error in str(exc),
-                        "wrong exception message: %s" % exc.message)
-
-    def test_missing_source_model_file(self):
-        source = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>source_model1.xml</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        exc = self._assert_logic_tree_error(
-            'logictree', {'logictree': source}, 'base',
-            logictree.ParsingError, exc_filename='source_model1.xml'
-        )
-        error = "[Errno 2] No such file or directory: 'base/source_model1.xml'"
-        self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
     def test_wrong_uncert_type_on_first_branching_level(self):
@@ -475,8 +462,11 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
+
         sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm},
+                                            'base',
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 16)
         error = "expected a pair of floats separated by space"
@@ -528,6 +518,11 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = """ololo"""
+
+        ret_val = Mock()
+        ret_val.model_content.raw_content = sm
+        self.gsm_mock.return_value = ret_val
+
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ParsingError,
                                             exc_filename='sm')
@@ -575,6 +570,10 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </simpleFaultSource>
         </sourceModel>
         """)
+        ret_val = Mock()
+        ret_val.model_content.raw_content = sm
+        self.gsm_mock.return_value = ret_val
+
         self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
                                       logictree.ParsingError,
                                       exc_filename='sm')
@@ -865,7 +864,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                  exc_class=logictree.LogicTreeError):
         with self.assertRaises(exc_class) as arc:
             _TestableGMPELogicTree(filename, content, basepath,
-                                    tectonic_region_types)
+                                    tectonic_region_types, FAKE_CALC_ID)
         exc = arc.exception
         self.assertEqual(exc.filename, filename)
         self.assertEqual(exc.basepath, basepath)
@@ -1132,8 +1131,8 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
-            'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm}, 'basepath',
-            validate=False
+            'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm},
+            'basepath', FAKE_CALC_ID, validate=False
         )
         self.assert_branchset_equal(lt.root_branchset, 'sourceModel', {},
                                     [('b1', '0.6', 'sm1'),
@@ -1167,8 +1166,10 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TestableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
-                                            '/base', validate=False)
+        lt = _TestableSourceModelLogicTree(
+            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
+            FAKE_CALC_ID, validate=False
+        )
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', 'sm',
@@ -1207,8 +1208,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         sm = _whatever_sourcemodel()
-        lt = _TestableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
-                                            '/base', validate=False)
+        lt = _TestableSourceModelLogicTree(
+            'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
+            FAKE_CALC_ID, validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', 'sm',
@@ -1262,7 +1264,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base',
-            validate=False
+            FAKE_CALC_ID, validate=False
         )
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1309,8 +1311,10 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         <!-- comment -->
         """)
         sm = _whatever_sourcemodel()
-        lt = _TestableSourceModelLogicTree('lt', {'lt': source_model_logic_tree, 'sm': sm},
-                                            '/base', validate=False)
+        lt = _TestableSourceModelLogicTree(
+            'lt', {'lt': source_model_logic_tree, 'sm': sm},
+            '/base', FAKE_CALC_ID, validate=False
+        )
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', 'sm')]
@@ -1392,7 +1396,7 @@ class GMPELogicTreeTestCase(unittest.TestCase):
         """)
         trts = ['Subduction Interface', 'Active Shallow Crust', 'Volcanic']
         gmpe_lt = _TestableGMPELogicTree('gmpe', gmpe, '/base', trts,
-                                          validate=False)
+                                         FAKE_CALC_ID, validate=False)
         self.assert_result(gmpe_lt, {
             'Subduction Interface': [
                 ('b1', '0.7', SadighEtAl1997),
@@ -1406,159 +1410,6 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                 ('b5', '0.9', SadighEtAl1997),
             ]
         })
-
-
-class ReadLogicTreesTestCase(unittest.TestCase):
-    def setUp(self):
-        self.base_path = tempfile.mkdtemp()
-        self.gmpelt_filename = 'gmpelt.xml'
-        self.gmpelt_path = os.path.join(self.base_path, self.gmpelt_filename)
-        self.smlt_filename = 'smlt.xml'
-        self.smlt_path = os.path.join(self.base_path, self.smlt_filename)
-        sm_path = os.path.basename(tempfile.mkdtemp(dir=self.base_path))
-        self.sm1_filename = os.path.join(sm_path, 'sm1.xml')
-        self.sm1_path = os.path.join(self.base_path, self.sm1_filename)
-        self.sm2_filename = os.path.join(sm_path, 'sm2.xml')
-        self.sm2_path = os.path.join(self.base_path, self.sm2_filename)
-
-        gmpelt = _make_nrml("""\
-        <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="gmpeModel"
-                            branchSetID="bs2"
-                            applyToTectonicRegionType="Active Shallow Crust">
-                    <logicTreeBranch branchID="b3">
-                        <uncertaintyModel>
-                            SadighEtAl1997
-                        </uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-            <logicTreeBranchingLevel branchingLevelID="bl3">
-                <logicTreeBranchSet uncertaintyType="gmpeModel"
-                            branchSetID="bs3"
-                            applyToTectonicRegionType="Volcanic">
-                    <logicTreeBranch branchID="b4">
-                        <uncertaintyModel>
-                            ChiouYoungs2008
-                        </uncertaintyModel>
-                        <uncertaintyWeight>0.4</uncertaintyWeight>
-                    </logicTreeBranch>
-                    <logicTreeBranch branchID="b5">
-                        <uncertaintyModel>
-                            SadighEtAl1997
-                        </uncertaintyModel>
-                        <uncertaintyWeight>0.6</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-        </logicTree>
-        """)
-        with open(self.gmpelt_path, 'w') as gmpef:
-            gmpef.write(gmpelt)
-
-        smlt = _make_nrml("""\
-        <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                    <logicTreeBranch branchID="sb1">
-                        <uncertaintyModel>%s</uncertaintyModel>
-                        <uncertaintyWeight>0.99</uncertaintyWeight>
-                    </logicTreeBranch>
-                    <logicTreeBranch branchID="sb2">
-                        <uncertaintyModel>%s</uncertaintyModel>
-                        <uncertaintyWeight>0.01</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-        </logicTree>
-        """) % (self.sm1_filename, self.sm2_filename)
-        with open(self.smlt_path, 'w') as smf:
-            smf.write(smlt)
-
-        sm1 = _make_nrml("""\
-        <sourceModel>
-            <simpleFaultSource id="src01" name="Mount Diablo Thrust"
-                               tectonicRegion="Active Shallow Crust">
-                <simpleFaultGeometry>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                        <gml:posList>
-                            -121.82290 37.73010  0.0
-                            -122.03880 37.87710  0.0
-                        </gml:posList>
-                    </gml:LineString>
-                    <dip>38</dip>
-                    <upperSeismoDepth>8.0</upperSeismoDepth>
-                    <lowerSeismoDepth>13.0</lowerSeismoDepth>
-                </simpleFaultGeometry>
-                <magScaleRel>WC1994</magScaleRel>
-                <ruptAspectRatio>1.5</ruptAspectRatio>
-                <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
-                                          minMag="5.0" maxMag="7.0" />
-                <rake>90.0</rake>
-            </simpleFaultSource>
-        </sourceModel>
-        """)
-        with open(self.sm1_path, 'w') as smf:
-            smf.write(sm1)
-
-        sm2 = _make_nrml("""\
-        <sourceModel>
-            <pointSource id="1" name="point" tectonicRegion="Volcanic">
-                <pointGeometry>
-                    <gml:Point>
-                        <gml:pos>-122.0 38.0</gml:pos>
-                    </gml:Point>
-                    <upperSeismoDepth>0.0</upperSeismoDepth>
-                    <lowerSeismoDepth>10.0</lowerSeismoDepth>
-                </pointGeometry>
-                <magScaleRel>WC1994</magScaleRel>
-                <ruptAspectRatio>0.5</ruptAspectRatio>
-                <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
-                                          minMag="5.0" maxMag="6.5" />
-                <nodalPlaneDist>
-                    <nodalPlane probability="0.3" strike="0.0"
-                                dip="90.0" rake="0.0" />
-                    <nodalPlane probability="0.7" strike="90.0"
-                                dip="45.0" rake="90.0" />
-                </nodalPlaneDist>
-                <hypoDepthDist>
-                    <hypoDepth probability="0.5" depth="4.0" />
-                    <hypoDepth probability="0.5" depth="8.0" />
-                </hypoDepthDist>
-            </pointSource>
-        </sourceModel>
-        """)
-        with open(self.sm2_path, 'w') as smf:
-            smf.write(sm2)
-
-    def tearDown(self):
-        shutil.rmtree(self.base_path)
-
-    def test(self):
-        sm_filenames = logictree.read_logic_trees(
-            self.base_path, self.smlt_filename, self.gmpelt_filename
-        )
-        self.assertEqual(sm_filenames, [self.sm1_filename, self.sm2_filename])
-
-    def test_nonexistent_logictree(self):
-        os.unlink(self.gmpelt_path)
-        with self.assertRaises(logictree.ParsingError) as ar:
-            logictree.read_logic_trees(self.base_path, self.smlt_filename,
-                                       self.gmpelt_filename)
-        error = "[Errno 2] No such file or directory: '%s'" % self.gmpelt_path
-        self.assertEqual(ar.exception.message, error,
-                         "wrong exception message: %s" % ar.exception.message)
-
-        os.unlink(self.smlt_path)
-        with self.assertRaises(logictree.ParsingError) as ar:
-            logictree.read_logic_trees(self.base_path, self.smlt_filename,
-                                       self.gmpelt_filename)
-        error = "[Errno 2] No such file or directory: '%s'" % self.smlt_path
-        self.assertEqual(ar.exception.message, error,
-                         "wrong exception message: %s" % ar.exception.message)
 
 
 class BranchSetSampleTestCase(unittest.TestCase):
