@@ -868,7 +868,6 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     job.risk_calculation = risk_calc
     job.save()
     error_message = validate(job, 'risk', params, files, [])
-
     # reload risk calculation to have all the types converted properly
     job.risk_calculation = models.RiskCalculation.objects.get(id=risk_calc.id)
     if error_message:
