@@ -111,8 +111,7 @@ def parse_config(source):
         File-like object containing the config parameters.
     :returns:
         A `dict` of the parameter keys and values parsed from the config file
-        and a `dict` of :class:`~openquake.engine.db.models.Input` objects,
-        keyed by the config file parameter.
+        and a `dict` of input model file paths keyed by input type.
 
         These dicts are return as a tuple/pair.
     """
@@ -150,9 +149,7 @@ def parse_config(source):
                     # It's a relative path.
                     path = os.path.join(base_path, path)
 
-                files[key] = get_input(
-                    path, input_type, prepare_user(getpass.getuser())
-                )
+                files[input_type] = path
             else:
                 params[key] = value
 
@@ -205,9 +202,83 @@ def _get_content_type(path):
         return ext[1:]
 
 
-def get_input(path, input_type, owner, name=None):
+def get_or_create_input(path, input_type, owner, name=None,
+                        haz_calc_id=None, risk_calc_id=None):
     """
-    Get (create) an :class:`~openquake.engine.db.models.Input` object for the
+    Get or create an :class:`~openquake.engine.db.models.Input` object for the
+    given file (``path``) associated with a particular calculation. You must
+    specify either ``haz_calc_id`` or ``risk_calc_id``.
+
+    :param str path:
+        Path to the input file.
+    :param str input_type:
+        The type of input. See :class:`openquake.engine.db.models.Input` for
+        a list of valid types.
+    :param owner:
+        The :class:`~openquake.engine.db.models.OqUser` who will own the input
+        that will be created.
+    :param str name:
+        Optional name to help idenfity this input.
+    :param haz_calc_id:
+        ID of a hazard calculation.
+    :param risk_calc_id:
+        ID of a risk calculation.
+    :returns:
+        :class:`openquake.engine.db.models.Input` object to represent the
+        input. As a side effect, this function will also store a full raw copy
+        of the input file
+        (see :class:`openquake.engine.db.models.ModelContent`)
+        and associate it to the `Input`.
+    """
+    assert not [haz_calc_id, risk_calc_id] == [None, None], (
+        "Must specify one of either `haz_calc_id` or `risk_calc_id`."
+    )
+
+    try:
+        # Try to get a preloaded model
+        if haz_calc_id is not None:
+            i2c = models.Input2hcalc.objects.get(
+                hazard_calculation=haz_calc_id,
+                input__path=path,
+                input__input_type=input_type,
+                input__owner=owner,
+            )
+            if name is not None:
+                i2c = i2c.filter(input__name=name)
+            inp = i2c.input
+        elif risk_calc_id is not None:
+            i2c = models.Input2rcalc.objects.get(
+                risk_calculation=risk_calc_id,
+                input__path=path,
+                input__input_type=input_type,
+                input__owner=owner,
+            )
+            if name is not None:
+                i2c = i2c.filter(input__name=name)
+            inp = i2c.input
+    except exceptions.ObjectDoesNotExist:
+        # It doesn't exist yet. Let's create it.
+        inp = create_input(path, input_type, owner, name=name)
+
+        # Now that the input is created, associate it with the specified
+        # calculation:
+        if haz_calc_id is not None:
+            hc = models.HazardCalculation.objects.get(id=haz_calc_id)
+            models.Input2hcalc.objects.create(
+                input=inp, hazard_calculation=hc
+            )
+        elif risk_calc_id is not None:
+            rc = models.RiskCalculation.objects.get(id=risk_calc_id)
+            models.Input2rcalc.objects.create(
+                input=inp, risk_calculation=rc
+            )
+
+    return inp
+
+
+def create_input(path, input_type, owner, name=None):
+    """
+    Create a :class:`~openquake.engine.db.models.Input` object from the
     given file (``path``).
 
     :param str path:
@@ -227,8 +298,6 @@ def get_input(path, input_type, owner, name=None):
         (see :class:`openquake.engine.db.models.ModelContent`)
         and associate it to the `Input`.
     """
-    inp = None
-
     digest = _file_digest(path)
 
     model_content = models.ModelContent()
@@ -244,7 +313,6 @@ def get_input(path, input_type, owner, name=None):
         model_content=model_content, name=name
     )
     inp.save()
-
     return inp
 
 
@@ -282,8 +350,10 @@ def create_hazard_calculation(username, params, files):
     hc.full_clean()
     hc.save()
 
-    for f in files:
-        models.Input2hcalc(input=f, hazard_calculation=hc).save()
+    # Load the other input files into the database.
+    # This also links the inputs to the calculation via the `input2hcalc` table.
+    for input_type, input_path in files.iteritems():
+        get_or_create_input(input_path, input_type, owner, haz_calc_id=hc.id)
 
     return hc
 
@@ -314,8 +384,8 @@ def create_risk_calculation(owner, params, files):
     rc.full_clean()
     rc.save()
 
-    for f in files:
-        models.Input2rcalc(input=f, risk_calculation=rc).save()
+    for input_type, input_path in files.iteritems():
+        get_or_create_input(input_path, input_type, owner, risk_calc_id=rc.id)
 
     return rc
 
@@ -605,7 +675,7 @@ def haz_job_from_file(cfg_file_path, username, log_level, exports):
     # read calculation params and create the calculation profile
     params, files = parse_config(open(cfg_file_path, 'r'))
     calculation = create_hazard_calculation(
-        username, params, files.values()
+        username, params, files
     )
     job.hazard_calculation = calculation
     job.save()
@@ -760,7 +830,7 @@ def risk_job_from_file(cfg_file_path, username, log_level, exports,
                        hazard_calculation_id=hazard_calculation_id))
 
     calculation = create_risk_calculation(
-        job.owner, params, files.values()
+        job.owner, params, files
     )
     job.risk_calculation = calculation
     job.save()
