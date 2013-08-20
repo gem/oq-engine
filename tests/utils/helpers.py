@@ -49,6 +49,7 @@ from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine.utils import config, get_calculator_class
+from openquake.engine.job.validation import validate
 
 
 CD = os.path.dirname(__file__)  # current directory
@@ -638,14 +639,7 @@ def get_hazard_job(cfg, username=None):
     """
     username = username if username is not None else default_user().user_name
 
-    job = engine.prepare_job(username)
-    params, files = engine.parse_config(open(cfg, 'r'))
-    haz_calc = engine.create_hazard_calculation(
-        job.owner.user_name, params, files)
-    haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
-    job.hazard_calculation = haz_calc
-    job.save()
-    return job
+    return engine.haz_job_from_file(cfg, username, 'error', [])
 
 
 def get_risk_job(cfg, username=None, hazard_calculation_id=None,
@@ -875,6 +869,9 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
     job.save()
+    error_message = validate(job, 'risk', params, files, [])
+    if error_message:
+        raise RuntimeError(error_message)
     return job, files
 
 
