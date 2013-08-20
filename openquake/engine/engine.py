@@ -110,10 +110,10 @@ def parse_config(source):
     :param source:
         File-like object containing the config parameters.
     :returns:
-        A `dict` of the parameter keys and values parsed from the config file
-        and a `dict` of input model file paths keyed by input type.
-
-        These dicts are return as a tuple/pair.
+        Two dictionaries (as a 2-tuple). The first contains all of the
+        parameters/values parsed from the job.ini file. The second contains
+        absolute paths to all of the files referenced in the job.ini, keyed by
+        the parameter name.
     """
     cp = ConfigParser.ConfigParser()
     cp.readfp(source)
@@ -149,7 +149,7 @@ def parse_config(source):
                     # It's a relative path.
                     path = os.path.join(base_path, path)
 
-                files[input_type] = path
+                files[key] = path
             else:
                 params[key] = value
 
@@ -352,7 +352,8 @@ def create_hazard_calculation(username, params, files):
 
     # Load the other input files into the database.
     # This also links the inputs to the calculation via the `input2hcalc` table.
-    for input_type, input_path in files.iteritems():
+    for file_key, input_path in files.iteritems():
+        input_type = file_key[:-5]
         get_or_create_input(input_path, input_type, owner, haz_calc_id=hc.id)
 
     return hc
@@ -384,7 +385,8 @@ def create_risk_calculation(owner, params, files):
     rc.full_clean()
     rc.save()
 
-    for input_type, input_path in files.iteritems():
+    for file_key, input_path in files.iteritems():
+        input_type = file_key[:-5]
         get_or_create_input(input_path, input_type, owner, risk_calc_id=rc.id)
 
     return rc
