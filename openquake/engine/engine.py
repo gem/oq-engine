@@ -243,9 +243,6 @@ def get_or_create_input(path, input_type, owner, name=None,
                 input__input_type=input_type,
                 input__owner=owner,
             )
-            if name is not None:
-                i2c = i2c.filter(input__name=name)
-            inp = i2c.input
         elif risk_calc_id is not None:
             i2c = models.Input2rcalc.objects.get(
                 risk_calculation=risk_calc_id,
@@ -253,9 +250,9 @@ def get_or_create_input(path, input_type, owner, name=None,
                 input__input_type=input_type,
                 input__owner=owner,
             )
-            if name is not None:
-                i2c = i2c.filter(input__name=name)
-            inp = i2c.input
+        if name is not None:
+            i2c = i2c.filter(input__name=name)
+        inp = i2c.input
     except exceptions.ObjectDoesNotExist:
         # It doesn't exist yet. Let's create it.
         inp = create_input(path, input_type, owner, name=name)
