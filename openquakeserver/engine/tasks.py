@@ -30,6 +30,7 @@ def run_risk_calc(calc_id):
     """
     job = oqe_models.OqJob.objects.get(risk_calculation=calc_id)
     exports = []
+    # TODO: Log to file somewhere. But where?
     log_file = None
     engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'risk')
     # TODO: Signal job completion somehow.
