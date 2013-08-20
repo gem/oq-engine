@@ -20,6 +20,6 @@ set -e
 ## Populate the database with test fixtures to be used for
 ## running the risk QA tests
 
-for i in $(find qa_tests/risk/ -iname fixtures.tar); do
+for i in $(find qa_tests/risk/ -iname fixtures.tar | sort); do
     python openquake/engine/tools/restore_hazards.py $i
 done
