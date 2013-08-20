@@ -20,6 +20,7 @@
 import mock
 import unittest
 import numpy
+import itertools
 from openquake.risklib import VulnerabilityFunction
 from openquake.risklib import calculators
 
@@ -212,7 +213,7 @@ class AssetStatisticsTestCase(unittest.TestCase):
             return AssetStatisticsTestCase.BASE_EXPECTED_POES * quantile
 
     def test_compute_stats_no_quantiles_no_poes(self):
-        (mean_curve, quantile_curves, mean_maps, quantile_maps) = (
+        (mean_curve, mean_maps, quantile_curves, quantile_maps) = (
             calculators.asset_statistics(
                 self.losses, mock.Mock(), [],
                 [None], [], self.post_processing))
@@ -225,7 +226,7 @@ class AssetStatisticsTestCase(unittest.TestCase):
         self.assertEqual(0, quantile_maps.size)
 
     def test_compute_stats_quantiles_weighted(self):
-        (mean_curve, quantile_curves, mean_maps, quantile_maps) = (
+        (mean_curve, mean_maps, quantile_curves, quantile_maps) = (
             calculators.asset_statistics(
                 self.losses, mock.Mock(),
                 quantiles=[0.1, 0.2],
@@ -246,7 +247,7 @@ class AssetStatisticsTestCase(unittest.TestCase):
         self.assertEqual(0, quantile_maps.size)
 
     def test_compute_stats_quantiles_montecarlo(self):
-        (mean_curve, quantile_curves, mean_maps, quantile_maps) = (
+        (mean_curve, mean_maps, quantile_curves, quantile_maps) = (
             calculators.asset_statistics(
                 self.losses, mock.Mock(),
                 quantiles=[0.1, 0.2],
@@ -267,7 +268,7 @@ class AssetStatisticsTestCase(unittest.TestCase):
         self.assertEqual(0, quantile_maps.size)
 
     def test_compute_stats_quantile_poes(self):
-        (mean_curve, quantile_curves, mean_map, quantile_maps) = (
+        (mean_curve, mean_map, quantile_curves, quantile_maps) = (
             calculators.asset_statistics(
                 self.losses, mock.Mock(),
                 quantiles=[0.1, 0.2],
@@ -289,28 +290,30 @@ class AssetStatisticsTestCase(unittest.TestCase):
 
     def test_exposure(self):
         resolution = 10
-        quantiles = 4
-        poes = 3
-        assets = 7
 
-        with mock.patch('openquake.risklib.calculators.asset_statistics') as m:
-            m.return_value = (numpy.empty((2, resolution)),
-                              numpy.empty((quantiles, 2, resolution)),
-                              numpy.empty(poes),
-                              numpy.empty((quantiles, poes)))
+        # testing exposure_statistics with arrays of different shapes
+        for quantile_nr, poe_nr, asset_nr in itertools.product(
+                range(3), range(3), range(1, 4)):
+            with mock.patch(
+                    'openquake.risklib.calculators.asset_statistics') as m:
+                m.return_value = (numpy.empty((2, resolution)),
+                                  numpy.empty(poe_nr),
+                                  numpy.empty((quantile_nr, 2, resolution)),
+                                  numpy.empty((quantile_nr, poe_nr)))
 
-            loss_curves = numpy.empty((assets, 2, resolution))
+                loss_curves = numpy.empty((asset_nr, 2, resolution))
 
-            (mean_curves, mean_maps,
-             quantile_curves, quantile_maps) = (
-                 calculators.exposure_statistics(loss_curves,
-                                                 numpy.empty(poes),
-                                                 numpy.empty(assets),
-                                                 numpy.empty(quantiles),
-                                                 mock.Mock()))
+                (mean_curves, mean_maps,
+                 quantile_curves, quantile_maps) = (
+                     calculators.exposure_statistics(loss_curves,
+                                                     numpy.empty(poe_nr),
+                                                     numpy.empty(asset_nr),
+                                                     numpy.empty(quantile_nr),
+                                                     mock.Mock()))
 
-            self.assertEqual((assets, 2, resolution), mean_curves.shape)
-            self.assertEqual((poes, assets), mean_maps.shape)
-            self.assertEqual((quantiles, assets, 2, resolution),
-                             quantile_curves.shape)
-            self.assertEqual((quantiles, poes, assets), quantile_maps.shape)
+                self.assertEqual((asset_nr, 2, resolution), mean_curves.shape)
+                self.assertEqual((poe_nr, asset_nr), mean_maps.shape)
+                self.assertEqual((quantile_nr, asset_nr, 2, resolution),
+                                 quantile_curves.shape)
+                self.assertEqual((quantile_nr, poe_nr, asset_nr),
+                                 quantile_maps.shape)

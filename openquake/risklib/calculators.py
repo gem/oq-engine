@@ -134,7 +134,7 @@ class LossMap(object):
 
         return numpy.array(
             [[single_map(curve, poe) for curve in curves]
-             for poe in self.poes])
+             for poe in self.poes]).reshape((len(self.poes), len(curves)))
 
 
 def exposure_statistics(
@@ -174,7 +174,7 @@ def exposure_statistics(
     quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
 
     for loss_ratios, curves_poes in loss_curves:
-        _mean_curve, _quantile_curves, _mean_maps, _quantile_maps = (
+        _mean_curve, _mean_maps, _quantile_curves, _quantile_maps = (
             asset_statistics(
                 loss_ratios, curves_poes,
                 quantiles, weights, map_poes, post_processing))
@@ -218,10 +218,10 @@ def asset_statistics(
     quantile_curves = numpy.array(
         [[losses, quantile_curve(post_processing, weights)(
           curves_poes, quantile)]
-         for quantile in quantiles])
+         for quantile in quantiles]).reshape((len(quantiles), 2, len(losses)))
     quantile_maps = LossMap(poes)(quantile_curves).transpose()
 
-    return (mean_curve, quantile_curves, mean_map, quantile_maps)
+    return (mean_curve, mean_map, quantile_curves, quantile_maps)
 
 
 def quantile_curve(post_processing, weights):
