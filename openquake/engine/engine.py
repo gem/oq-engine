@@ -110,10 +110,10 @@ def parse_config(source):
     :param source:
         File-like object containing the config parameters.
     :returns:
-        A `dict` of the parameter keys and values parsed from the config file
-        and a `dict` of input model file paths keyed by input type.
-
-        These dicts are return as a tuple/pair.
+        Two dictionaries (as a 2-tuple). The first contains all of the
+        parameters/values parsed from the job.ini file. The second contains
+        absolute paths to all of the files referenced in the job.ini, keyed by
+        the parameter name.
     """
     cp = ConfigParser.ConfigParser()
     cp.readfp(source)
