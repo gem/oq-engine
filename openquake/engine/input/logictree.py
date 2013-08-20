@@ -316,25 +316,6 @@ class BranchSet(object):
                                  % self.uncertainty_type)
 
 
-def _open_file(basepath, filename):
-    """
-    Open file named ``filename`` and return the file content.
-
-    :param basepath:
-        Path that ``filename`` is relative to.
-    :param fileame:
-        File name, relative to ``basepath``.
-    :returns:
-        File object to read from.
-    :raises ParsingError:
-        If file can not be opened.
-    """
-    try:
-        return open(os.path.join(basepath, filename))
-    except IOError as exc:
-        raise ParsingError(filename, basepath, str(exc))
-
-
 class BaseLogicTree(object):
     """
     Common code for logic tree readers, parsers and verifiers --
@@ -416,16 +397,6 @@ class BaseLogicTree(object):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
         if validate:
             self.validate_tree(tree_node, self.root_branchset)
-
-    def _open_file(self, filename):
-        """
-        Open file named ``filename`` and return the file object.
-
-        :param fileame:
-            String, should be relative to tree's base path.
-        """
-        # This was extracted to method mainly to simplify unittesting.
-        return _open_file(self.basepath, filename)
 
     def parse_branchinglevel(self, branchinglevel_node, depth, validate):
         """
