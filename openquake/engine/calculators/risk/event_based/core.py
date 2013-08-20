@@ -28,7 +28,8 @@ from openquake.hazardlib.geo import mesh
 from openquake.risklib import scientific, workflows
 
 from openquake.engine.calculators import post_processing
-from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.calculators.risk import (
+    base, hazard_getters, validation, writers)
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs, writer
@@ -231,9 +232,18 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     #: The core calculation celery task function
     core_calc_task = event_based
 
+    # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
+    validators = base.RiskCalculator.validators + [
+        validation.RequireEventBasedHazard,
+        validation.ExposureHasInsuranceBounds]
+
+    output_builders = [writers.LossCurveMapBuilder,
+                       writers.InsuredLossCurveBuilder,
+                       writers.LossFractionBuilder]
+
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)
-        self.event_loss_tables = dict()
+        self.event_loss_tables = collections.defaultdict(collections.Counter)
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
 
@@ -253,44 +263,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         Updates the event loss table
         """
-        for loss_type in base.loss_types(self.risk_models):
+        for loss_type in models.loss_types(self.risk_models):
             task_loss_table = message['event_loss_tables'][loss_type]
             self.event_loss_tables[loss_type] += task_loss_table
-
-    def validate_hazard(self):
-        """
-        Check that the given hazard comes from an event based calculation
-        """
-        super(EventBasedRiskCalculator, self).validate_hazard()
-        if self.rc.hazard_calculation:
-            if self.rc.hazard_calculation.calculation_mode != "event_based":
-                raise RuntimeError(
-                    "The provided hazard calculation ID "
-                    "is not an event based calculation")
-        elif not self.rc.hazard_output.output_type in ["gmf", "ses"]:
-            raise RuntimeError(
-                "The provided hazard output is not a gmf collection")
-
-    def get_taxonomies(self):
-        """
-        If insured losses are required we check for the presence of
-        the deductible and insurance limit
-        """
-        taxonomies = super(EventBasedRiskCalculator, self).get_taxonomies()
-
-        assets_without_limits = (
-            self.rc.exposure_model.exposuredata_set.filter(
-                (db.models.Q(cost__deductible_absolute__isnull=True) |
-                 db.models.Q(cost__insurance_limit_absolute__isnull=True))))
-
-        if self.rc.insured_losses and assets_without_limits.exists():
-            raise RuntimeError(
-                "Deductible or insured limit missing in exposure for "
-                "some assets")
-
-        # FIXME(lp). Validate sites_disagg to ensure non-empty outputs
-
-        return taxonomies
 
     def post_process(self):
         """
@@ -408,51 +383,3 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             mag_bin_width=self.rc.mag_bin_width,
             distance_bin_width=self.rc.distance_bin_width,
             coordinate_bin_width=self.rc.coordinate_bin_width)
-
-    def create_outputs(self, hazard_output):
-        """
-        Add Insured Curve output containers
-        """
-        # includes loss curves and loss maps
-        outputs = super(EventBasedRiskCalculator, self).create_outputs(
-            hazard_output)
-
-        for loss_type in base.loss_types(self.risk_models):
-            if loss_type != "fatalities":
-                if self.rc.insured_losses:
-                    name = "insured loss curves. type=%s hazard %s" % (
-                        loss_type, hazard_output),
-                    outputs.set(
-                        models.LossCurve.objects.create(
-                            insured=True,
-                            loss_type=loss_type,
-                            hazard_output=hazard_output,
-                            output=models.Output.objects.create_output(
-                                self.job, name, "loss_curve")))
-
-            if self.rc.sites_disagg:
-                name = ("loss fractions. type=%s variable=magnitude_distance "
-                        "hazard=%s" % (loss_type, hazard_output))
-                outputs.set(
-                    models.LossFraction.objects.create(
-                        output=models.Output.objects.create_output(
-                            self.job, name, "loss_fraction"),
-                        hazard_output=hazard_output,
-                        loss_type=loss_type,
-                        variable="magnitude_distance"))
-                name = ("loss fractions. type=%s variable=coordinates "
-                        "hazard=%s" % (loss_type, hazard_output))
-                outputs.set(models.LossFraction.objects.create(
-                    output=models.Output.objects.create_output(
-                        self.job, name, "loss_fraction"),
-                    hazard_output=hazard_output,
-                    loss_type=loss_type,
-                    variable="coordinate"))
-
-        return outputs
-
-    def create_statistical_outputs(self):
-        for loss_type in base.loss_types(self.risk_models):
-            self.event_loss_tables[loss_type] = collections.Counter()
-        return super(
-            EventBasedRiskCalculator, self).create_statistical_outputs()
