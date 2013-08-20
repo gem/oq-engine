@@ -1034,42 +1034,6 @@ class GMPELogicTree(BaseLogicTree):
             )
 
 
-def read_logic_trees_from_fs(basepath, source_model_logictree_path,
-                             gmpe_logictree_path, calc_id, validate=True):
-    """
-    Read, parse and validate both logic trees. Everything is read from the file
-    system.
-
-    :param basepath:
-        Base path for both logic tree files.
-    :param source_model_logictree_path:
-        Source model logic tree's filename, relative to ``basepath``.
-    :param gmpe_logictree_path:
-        GMPE logic tree's filename, relative to ``basepath``.
-    :param int calc_id:
-        ID of a :class:`openquake.engine.db.models.HazardCalculation`.
-    :param bool validate:
-        Defaults to `True`. If `True`, do a full validation when reading the
-        logic trees.
-    :returns:
-        A list of filenames (relative to ``basepath``) of source model files
-        that need to be read, parsed and saved into the database and thus
-        be available for :class:`LogicTreeProcessor`.
-    """
-    smlt_content = _open_file(basepath, source_model_logictree_path).read()
-    smlt = SourceModelLogicTree(
-        smlt_content, basepath, source_model_logictree_path, calc_id,
-        validate=validate
-    )
-    gmpelt_content = _open_file(basepath, gmpe_logictree_path).read()
-    GMPELogicTree(
-        smlt.tectonic_region_types, gmpelt_content, basepath,
-        gmpe_logictree_path, calc_id, validate=validate
-    )
-    return [branch.value for branch in smlt.root_branchset.branches]
-read_logic_trees = read_logic_trees_from_fs
-
-
 def read_logic_trees_from_db(calc_id, validate=True):
     """
     The same idea as :func:`read_logic_trees_from_fs`, except all input files
