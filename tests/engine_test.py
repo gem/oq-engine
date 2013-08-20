@@ -153,7 +153,7 @@ random_seed=0
 
             params, files = engine.parse_config(open(job_config, 'r'))
             self.assertEqual(expected_params, params)
-            self.assertEqual(['site_model'], files.keys())
+            self.assertEqual(['site_model_file'], files.keys())
             self.assertEqual([site_model_input], files.values())
         finally:
             shutil.rmtree(temp_dir)
@@ -238,8 +238,7 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         self.site_model = models.Input(digest='123', path='/foo/bar', size=0,
                                   input_type='site_model', owner=self.owner)
         self.site_model.save()
-        self.files = [self.site_model]
-        self.files = dict(site_model='/foo/bar')
+        self.files = dict(site_model_file='/foo/bar')
 
     def test_create_hazard_calculation(self):
         with mock.patch('openquake.engine.engine.get_or_create_input') as goci:
@@ -327,16 +326,19 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         exposure_file.save()
 
         files = [vuln_file, exposure_file]
-        files = dict(structural_vulnerability='/foo/bar', exposure='/foo/baz')
+        files = dict(
+            structural_vulnerability_file='/foo/bar',
+            exposure_file='/foo/baz',
+        )
 
         with mock.patch('openquake.engine.engine.get_or_create_input') as goci:
             rc = engine.create_risk_calculation(owner, params, files)
 
         self.assertEqual(2, goci.call_count)
         exp_args = [
-            (('/foo/bar', 'structural_vulnerability', owner),
-             {'risk_calc_id': rc.id}),
             (('/foo/baz', 'exposure', owner),
+             {'risk_calc_id': rc.id}),
+            (('/foo/bar', 'structural_vulnerability', owner),
              {'risk_calc_id': rc.id}),
         ]
         self.assertEqual(exp_args, goci.call_args_list)
