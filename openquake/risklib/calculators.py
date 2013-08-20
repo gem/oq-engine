@@ -174,7 +174,7 @@ def exposure_statistics(
     quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
 
     for loss_ratios, curves_poes in loss_curves:
-        _mean_curve, _quantile_curves, _mean_maps, _quantile_maps = (
+        _mean_curve, _mean_maps, _quantile_curves, _quantile_maps = (
             asset_statistics(
                 loss_ratios, curves_poes,
                 quantiles, weights, map_poes, post_processing))
@@ -221,7 +221,7 @@ def asset_statistics(
          for quantile in quantiles])
     quantile_maps = LossMap(poes)(quantile_curves).transpose()
 
-    return (mean_curve, quantile_curves, mean_map, quantile_maps)
+    return (mean_curve, mean_map, quantile_curves, quantile_maps)
 
 
 def quantile_curve(post_processing, weights):
