@@ -291,6 +291,7 @@ class AssetStatisticsTestCase(unittest.TestCase):
     def test_exposure(self):
         resolution = 10
 
+        # testing exposure_statistics with arrays of different shapes
         for quantile_nr, poe_nr, asset_nr in itertools.product(
                 range(3), range(3), range(1, 4)):
             with mock.patch(
