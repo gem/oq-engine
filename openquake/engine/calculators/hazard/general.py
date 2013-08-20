@@ -516,14 +516,14 @@ class BaseHazardCalculator(base.Calculator):
         is one) and the imt (and levels) will be extracted from the
         vulnerability model (if there is one)
         """
-        logs.LOG.progress("parsing risk models")
-
         hc = self.hc
         queryset = self.hc.inputs.filter(
             input_type__in=[vf_type
                             for vf_type, _desc
                             in models.Input.VULNERABILITY_TYPE_CHOICES])
         if queryset.exists():
+            logs.LOG.progress("parsing risk models")
+
             hc.intensity_measure_types_and_levels = dict()
             hc.intensity_measure_types = list()
 
