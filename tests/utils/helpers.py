@@ -641,7 +641,7 @@ def get_hazard_job(cfg, username=None):
     job = engine.prepare_job(username)
     params, files = engine.parse_config(open(cfg, 'r'))
     haz_calc = engine.create_hazard_calculation(
-        job.owner.user_name, params, files.values())
+        job.owner.user_name, params, files)
     haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
     job.hazard_calculation = haz_calc
     job.save()
@@ -671,7 +671,7 @@ def get_risk_job(cfg, username=None, hazard_calculation_id=None,
     )
 
     risk_calc = engine.create_risk_calculation(
-        job.owner, params, files.values())
+        job.owner, params, files)
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
     job.save()
@@ -871,7 +871,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     params.update(dict(hazard_output_id=hazard_output.output.id))
 
     risk_calc = engine.create_risk_calculation(
-        job.owner, params, files.values())
+        job.owner, params, files)
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
     job.save()

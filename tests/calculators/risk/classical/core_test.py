@@ -13,12 +13,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest
 
 from tests.utils import helpers
 from tests.calculators.risk import base_test
 
-from openquake.engine import engine
 from openquake.engine.calculators.risk.classical import core as classical
 from openquake.engine.db import models
 
