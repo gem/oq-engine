@@ -426,7 +426,7 @@ def create_risk_calculation(owner, params, files):
 
 
 # used by bin/openquake
-def run_calc(job, log_level, log_file, exports, job_type):
+def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
     """
     Run a calculation.
 
@@ -443,11 +443,11 @@ def run_calc(job, log_level, log_file, exports, job_type):
     :param list exports:
         A (potentially empty) list of export targets. Currently only "xml" is
         supported.
-    :param calc:
-        Calculator object, which must implement the interface of
-        :class:`openquake.engine.calculators.base.Calculator`.
     :param str job_type:
         'hazard' or 'risk'
+    :param bool supervised:
+        Defaults to `True`. If `True`, run OpenQuake with a supervisor process,
+        which monitors the job executor process and collects log messages.
     """
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
     calc = get_calculator_class(job_type, calc_mode)(job)
@@ -459,20 +459,43 @@ def run_calc(job, log_level, log_file, exports, job_type):
     # supervisor and job executor processes.
     # Otherwise, if one of them closes the connection it immediately becomes
     # unavailable for others.
-    close_connection()
+    if supervised:
+        close_connection()
 
-    job_pid = os.fork()
+        job_pid = os.fork()
 
-    if not job_pid:
-        # calculation executor process
+        if not job_pid:
+            # calculation executor process
+            try:
+                _job_exec(job, log_level, log_file, exports, job_type)
+            except Exception, ex:
+                logs.LOG.critical("Calculation failed with exception: '%s'"
+                                  % str(ex))
+                raise
+            finally:
+                job.is_running = False
+                job.save()
+            return
+
+        supervisor_pid = os.fork()
+        if not supervisor_pid:
+            # supervisor process
+            logs.set_logger_level(logs.logging.root, log_level)
+            # TODO: deal with KVS garbage collection
+            supervisor.supervise(job_pid, job.id, log_file=log_file)
+            return
+
+        # parent process
+
+        # ignore Ctrl-C as well as supervisor process does. thus only
+        # job executor terminates on SIGINT
+        supervisor.ignore_sigint()
+        # wait till both child processes are done
+        os.waitpid(job_pid, 0)
+        os.waitpid(supervisor_pid, 0)
+    else:
         try:
-            logs.init_logs_amqp_send(level=log_level, calc_domain=job_type,
-                                     calc_id=job.calculation.id)
-            # run the job
-            job.is_running = True
-            job.save()
-            kvs.mark_job_as_current(job.id)
-            _do_run_calc(job, exports, calc, job_type)
+            _job_exec(job, log_level, log_file, exports, job_type)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
                               % str(ex))
@@ -480,28 +503,29 @@ def run_calc(job, log_level, log_file, exports, job_type):
         finally:
             job.is_running = False
             job.save()
-        return
+            # Normally the supervisor process does this, but since we don't
+            # have one in this case, we have to call the cleanup manually.
+            supervisor.cleanup_after_job(job.id)
 
-    supervisor_pid = os.fork()
-    if not supervisor_pid:
-        # supervisor process
-        logs.set_logger_level(logs.logging.root, log_level)
-        # TODO: deal with KVS garbage collection
-        supervisor.supervise(job_pid, job.id, log_file=log_file)
-        return
-
-    # parent process
-
-    # ignore Ctrl-C as well as supervisor process does. thus only
-    # job executor terminates on SIGINT
-    supervisor.ignore_sigint()
-    # wait till both child processes are done
-    os.waitpid(job_pid, 0)
-    os.waitpid(supervisor_pid, 0)
-
-    # Refresh the job record, since the forked processes are going to modify
-    # job state.
+    # Refresh the job record, in case we are forking and another process has
+    # modified the job state.
     return models.OqJob.objects.get(id=job.id)
+
+
+def _job_exec(job, log_level, log_file, exports, job_type):
+    """
+    Abstraction of some general job execution procedures.
+
+    Parameters are the same as :func:`run_calc`, except for ``supervised``
+    which is not included.
+    """
+    logs.init_logs_amqp_send(level=log_level, calc_domain=job_type,
+                             calc_id=job.calculation.id)
+    # run the job
+    job.is_running = True
+    job.save()
+    kvs.mark_job_as_current(job.id)
+    _do_run_calc(job, exports, calc, job_type)
 
 
 def _switch_to_job_phase(job, ctype, status):
