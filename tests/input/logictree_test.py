@@ -184,6 +184,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.gsm_mock = self.gsm_patch.start()
         ret_val = Mock()
         ret_val.model_content.raw_content = sm
+        ret_val.model_content.raw_content_utf8 = sm
         self.gsm_mock.return_value = ret_val
 
     def tearDown(self):
@@ -520,14 +521,14 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = """ololo"""
 
         ret_val = Mock()
-        ret_val.model_content.raw_content = sm
+        ret_val.model_content.raw_content_utf8 = sm
         self.gsm_mock.return_value = ret_val
 
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ParsingError,
                                             exc_filename='sm')
         self.assertEqual(exc.message, "Document is empty, line 1, column 1",
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
 
     def test_source_model_schema_violation(self):
         lt = _make_nrml("""\
@@ -571,7 +572,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         </sourceModel>
         """)
         ret_val = Mock()
-        ret_val.model_content.raw_content = sm
+        ret_val.model_content.raw_content_utf8 = sm
         self.gsm_mock.return_value = ret_val
 
         self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
