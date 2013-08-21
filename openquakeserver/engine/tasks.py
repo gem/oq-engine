@@ -17,7 +17,10 @@ def run_hazard_calc(calc_id):
     exports = []
     # TODO: Log to file somewhere. But where?
     log_file = None
-    engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'hazard')
+    # NOTE: Supervision MUST be turned off, or else the celeryd cluster
+    # handling this task will leak processes!!!
+    engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'hazard',
+                    supervised=False)
     # TODO: Signal job completion somehow.
 
 
@@ -32,5 +35,8 @@ def run_risk_calc(calc_id):
     exports = []
     # TODO: Log to file somewhere. But where?
     log_file = None
-    engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'risk')
+    # NOTE: Supervision MUST be turned off, or else the celeryd cluster
+    # handling this task will leak processes!!!
+    engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'risk',
+                    supervised=False)
     # TODO: Signal job completion somehow.
