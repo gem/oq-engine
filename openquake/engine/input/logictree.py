@@ -857,10 +857,7 @@ class SourceModelLogicTree(BaseLogicTree):
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
 
         source_model = self._get_source_model(filename)
-        # Cast from unicode to string here, since lxml chokes on unicode.
-        fh = StringIO.StringIO(
-            source_model.model_content.raw_content.encode('utf-8')
-        )
+        fh = StringIO.StringIO(source_model.model_content.raw_content_utf8)
         eventstream = etree.iterparse(fh, tag='{%s}*' % self.NRML,
                                       schema=self.get_xmlschema())
         while True:
@@ -1028,8 +1025,8 @@ def read_logic_trees_from_db(calc_id, validate=True):
     [gsimlt] = models.inputs4hcalc(
         calc_id, input_type='gsim_logic_tree')
 
-    smlt_file = StringIO.StringIO(smlt.model_content.raw_content)
-    gsimlt_file = StringIO.StringIO(gsimlt.model_content.raw_content)
+    smlt_file = smlt.model_content.as_string_io
+    gsimlt_file = gsimlt.model_content.as_string_io
 
     smlt_content = smlt_file.read()
     smlt = SourceModelLogicTree(
@@ -1055,11 +1052,11 @@ class LogicTreeProcessor(object):
     def __init__(self, calc_id):
         [smlt_input] = models.inputs4hcalc(
             calc_id, input_type='source_model_logic_tree')
-        smlt_content = smlt_input.model_content.raw_content_ascii
+        smlt_content = smlt_input.model_content.raw_content_utf8
 
         [gmpelt_input] = models.inputs4hcalc(
             calc_id, input_type='gsim_logic_tree')
-        gmpelt_content = gmpelt_input.model_content.raw_content_ascii
+        gmpelt_content = gmpelt_input.model_content.raw_content_utf8
 
         self.source_model_lt = SourceModelLogicTree(
             smlt_content, basepath=None, filename=None, calc_id=calc_id,
