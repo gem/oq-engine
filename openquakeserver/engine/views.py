@@ -8,6 +8,7 @@ import urlparse
 
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from openquake import nrmllib
 from openquake.engine import engine as oq_engine
@@ -175,8 +176,7 @@ def run_hazard_calc(request):
         tasks.run_hazard_calc.apply_async((hc.id, ))
 
         base_url = _get_base_url(request)
-        return HttpResponse(content=json.dumps(_get_haz_calc_info(hc.id)),
-                            content_type=JSON)
+        return redirect('/v1/calc/hazard/%s' % hc.id)
 
 
 def _load_source_models(files, owner, hc_id):
@@ -371,8 +371,7 @@ def run_risk_calc(request):
         tasks.run_risk_calc.apply_async((rc.id, ))
 
         base_url = _get_base_url(request)
-        return HttpResponse(content=json.dumps(_get_risk_calc_info(rc.id)),
-                            content_type=JSON)
+        return redirect('/v1/calc/risk/%s' % rc.id)
 
 
 def _get_risk_calcs():
