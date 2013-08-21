@@ -79,9 +79,12 @@ def do_scenario_damage(unit, params, profile):
         logs.LOG.warn("Exit from task as no asset could be processed")
         return None, None
 
-    elif not len(ground_motion_values[0]):
-        logs.LOG.warn("Exit from task as no GMVs could be processed")
-        return None, None
+    elif not len(ground_motion_values):
+        # NB: this should not happen, but I saw it happens;
+        # should it happen again, to debug this situation you should run
+        # the query in GroundMotionValuesGetter.assets_gen and see
+        # it is possible that sites without gmvs are returned
+        raise RuntimeError("No GMVs for assets %s" % assets)
 
     with profile('computing risk'):
         fraction_matrix = unit.workflow(ground_motion_values)
