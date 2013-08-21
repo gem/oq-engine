@@ -80,10 +80,10 @@ def do_scenario_damage(unit, params, profile):
         return None, None
 
     elif not len(ground_motion_values):
-        # NB: this should not happen, but I saw it happens;
+        # NB: (MS) this should not happen, but I saw it happens;
         # should it happen again, to debug this situation you should run
         # the query in GroundMotionValuesGetter.assets_gen and see
-        # it is possible that sites without gmvs are returned
+        # how it is possible that sites without gmvs are returned
         raise RuntimeError("No GMVs for assets %s" % assets)
 
     with profile('computing risk'):
