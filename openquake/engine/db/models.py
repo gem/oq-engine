@@ -1243,7 +1243,7 @@ class RiskCalculation(djm.Model):
     ######################################
     # Scenario parameters:
     ######################################
-    time_event = djm.TextField(blank=True, null=True)
+    time_event = fields.NullTextField()
 
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
