@@ -424,7 +424,6 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             rmtree='shutil.rmtree',
             job_from_file='openquake.engine.engine.haz_job_from_file',
             load_sm='engine.views._load_source_models',
-            info='engine.views._get_haz_calc_info',
             run_hazard_task='engine.tasks.run_hazard_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
@@ -473,13 +472,8 @@ class RunHazardCalcTestCase(BaseViewTestCase):
                 )
                 multi_mock['job_from_file'].return_value = fake_job
 
-                multi_mock['info'].return_value = dict(id=666, fakeparam='foo')
-
                 # Call the function under test
-                response = views.run_hazard_calc(request)
-
-            self.assertEqual(dict(id=666, fakeparam='foo'),
-                             json.loads(response.content))
+                views.run_hazard_calc(request)
 
             self.assertEqual(1, multi_mock['mkdtemp'].call_count)
 
@@ -494,9 +488,6 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             self.assertEqual(1, multi_mock['job_from_file'].call_count)
             self.assertEqual(jff_exp_call_args,
                              multi_mock['job_from_file'].call_args)
-
-            self.assertEqual(1, multi_mock['info'].call_count)
-            self.assertEqual(((666, ), {}), multi_mock['info'].call_args)
 
             self.assertEqual(1, multi_mock['load_sm'].call_count)
             self.assertEqual(load_sm_exp_call_args,
@@ -541,7 +532,6 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             move='shutil.move',
             rmtree='shutil.rmtree',
             job_from_file='openquake.engine.engine.risk_job_from_file',
-            info='engine.views._get_risk_calc_info',
             run_risk_task='engine.tasks.run_risk_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
@@ -581,16 +571,8 @@ class RunRiskCalcTestCase(BaseViewTestCase):
                 )
                 multi_mock['job_from_file'].return_value = fake_job
 
-                multi_mock['info'].return_value = dict(id=777, fakeparam='foo')
-
                 # Call the function under test
-                response = views.run_risk_calc(self.request)
-
-            self.assertEqual(1, multi_mock['info'].call_count)
-            self.assertEqual(((777, ), {}), multi_mock['info'].call_args)
-
-            self.assertEqual(dict(id=777, fakeparam='foo'),
-                             json.loads(response.content))
+                views.run_risk_calc(self.request)
 
             self.assertEqual(1, multi_mock['mkdtemp'].call_count)
 
