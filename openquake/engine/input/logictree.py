@@ -858,7 +858,9 @@ class SourceModelLogicTree(BaseLogicTree):
 
         source_model = self._get_source_model(filename)
         # Cast from unicode to string here, since lxml chokes on unicode.
-        fh = StringIO.StringIO(str(source_model.model_content.raw_content))
+        fh = StringIO.StringIO(
+            source_model.model_content.raw_content.encode('utf-8')
+        )
         eventstream = etree.iterparse(fh, tag='{%s}*' % self.NRML,
                                       schema=self.get_xmlschema())
         while True:
