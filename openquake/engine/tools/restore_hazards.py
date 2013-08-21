@@ -102,7 +102,11 @@ def hazard_restore(conn, tar):
         with gzip.GzipFile(fname, fileobj=fileobj) as f:
             log.info('Importing %s...', fname)
             imported, total = safe_restore(curs, f, tname)
-            log.info('Imported %d/%d new rows', imported, total)
+            if imported != total:
+                log.warn('%s: could not import %d row(s), id(s) already taken',
+                         fname, total - imported)
+            else:
+                log.info('Imported %d/%d new rows', imported, total)
     log.info('Restored %s', tar)
 
 
@@ -112,7 +116,7 @@ def hazard_restore_remote(tar, host, dbname, user, password, port):
     hazard_restore(conn, tar)
 
 
-def hazard_restore_local(tar):
+def hazard_restore_local(*argv):
     """
     Use the current django settings to restore hazard
     """
@@ -120,32 +124,28 @@ def hazard_restore_local(tar):
     set_django_settings_module()
     from django.conf import settings
     default_cfg = settings.DATABASES['default']
+    host = default_cfg['HOST'] or 'localhost'
+    name = default_cfg['NAME']
+    user = default_cfg['USER']
+    pwd = default_cfg['PASSWORD']
+    port = str(default_cfg['PORT'] or 5432)
 
-    hazard_restore_remote(
-        tar,
-        default_cfg['HOST'],
-        default_cfg['NAME'],
-        default_cfg['USER'],
-        default_cfg['PASSWORD'],
-        # avoid passing an empty string to psycopg
-        default_cfg['PORT'] or None)
+    def h(dflt):
+        return 'default: %s' % dflt
+
+    p = argparse.ArgumentParser()
+    p.add_argument('tarfile', help='mandatory argument')
+    p.add_argument('host', nargs='?', default=host, help=h(host))
+    p.add_argument('dbname', nargs='?', default=name, help=h(name))
+    p.add_argument('user', nargs='?', default=user, help=h(user))
+    p.add_argument('password', nargs='?', default=pwd, help=h(pwd))
+    p.add_argument('port', nargs='?', default=port, help=h(port))
+    arg = p.parse_args(argv)
+
+    hazard_restore_remote(arg.tarfile, arg.host, arg.dbname,
+                          arg.user, arg.password, arg.port)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        hazard_restore_local(sys.argv[1])
-    else:
-        # not using the predefined Django connections here since
-        # we may want to restore the tarfile into a remote db
-        p = argparse.ArgumentParser()
-        p.add_argument('tarfile')
-        p.add_argument('host', nargs='?', default='localhost')
-        p.add_argument('dbname', nargs='?', default='openquake')
-        p.add_argument('user', nargs='?', default='oq_admin')
-        p.add_argument('password', nargs='?', default='')
-        p.add_argument('port', nargs='?', default='5432')
-        arg = p.parse_args()
-        logging.basicConfig(level=logging.INFO)
-        hazard_restore_remote(
-            arg.tarfile, arg.host, arg.dbname,
-            arg.user, arg.password, arg.port)
+    logging.basicConfig(level=logging.WARN)
+    hazard_restore_local(*sys.argv[1:])
