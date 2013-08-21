@@ -18,6 +18,11 @@ class TestCase(unittest.TestCase):
     15\td
     16\te''')
 
+    TO_IMPORT_4 = io.StringIO(u'''\
+    4\tc
+    5\td
+    6\te''')
+
     def setUp(self):
         self.curs = getcursor('job_init')
         self.curs.execute('create table _example('
@@ -46,6 +51,16 @@ class TestCase(unittest.TestCase):
         self.curs.execute("select currval('_example_id_seq')")
         currval = self.curs.fetchone()[0]
         self.assertEqual(currval, 16)
+
+        # restore ids=4, 5, 6
+        imported_total = safe_restore(
+            self.curs, self.TO_IMPORT_4, '_example', blocksize)
+        self.assertEqual(imported_total, (3, 3))
+        self.curs.execute("select currval('_example_id_seq')")
+        currval = self.curs.fetchone()[0]
+        self.assertEqual(currval, 16)  # the insertion routines contains
+        # a setval of the sequence id to the highest available value, so
+        # that some ids can be skipped; this behaviour avoids id clashes
 
     def tearDown(self):
         self.curs.execute('drop table _example')
