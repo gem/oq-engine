@@ -467,7 +467,7 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
         if not job_pid:
             # calculation executor process
             try:
-                _job_exec(job, log_level, log_file, exports, job_type)
+                _job_exec(job, log_level, log_file, exports, job_type, calc)
             except Exception, ex:
                 logs.LOG.critical("Calculation failed with exception: '%s'"
                                   % str(ex))
@@ -495,7 +495,7 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
         os.waitpid(supervisor_pid, 0)
     else:
         try:
-            _job_exec(job, log_level, log_file, exports, job_type)
+            _job_exec(job, log_level, log_file, exports, job_type, calc)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
                               % str(ex))
@@ -512,12 +512,13 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
     return models.OqJob.objects.get(id=job.id)
 
 
-def _job_exec(job, log_level, log_file, exports, job_type):
+def _job_exec(job, log_level, log_file, exports, job_type, calc):
     """
     Abstraction of some general job execution procedures.
 
     Parameters are the same as :func:`run_calc`, except for ``supervised``
-    which is not included.
+    which is not included. Also ``calc`` is an instance of the calculator class
+    which is passed to :func:`_do_run_calc`.
     """
     logs.init_logs_amqp_send(level=log_level, calc_domain=job_type,
                              calc_id=job.calculation.id)
