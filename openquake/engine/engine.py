@@ -27,7 +27,7 @@ import warnings
 import openquake.engine
 
 from django.core import exceptions
-from django.db import close_connection
+from django import db as django_db
 from lxml import etree
 
 from openquake.engine import kvs
@@ -425,6 +425,17 @@ def create_risk_calculation(owner, params, files):
     return rc
 
 
+def _create_job_stats(job):
+    """
+    Helper function to create job stats, which implicitly records the start
+    time for the job.
+
+    :param job:
+        :class:`openquake.engine.db.models.OqJob` instance.
+    """
+    models.JobStats.objects.create(oq_job=job)
+
+
 # used by bin/openquake
 def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
     """
@@ -453,14 +464,14 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
     calc = get_calculator_class(job_type, calc_mode)(job)
 
     # Create job stats, which implicitly records the start time for the job
-    models.JobStats.objects.create(oq_job=job)
+    _create_job_stats(job)
 
     # Closing all db connections to make sure they're not shared between
     # supervisor and job executor processes.
     # Otherwise, if one of them closes the connection it immediately becomes
     # unavailable for others.
     if supervised:
-        close_connection()
+        django_db.close_connection()
 
         job_pid = os.fork()
 
@@ -509,7 +520,14 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
 
     # Refresh the job record, in case we are forking and another process has
     # modified the job state.
-    return models.OqJob.objects.get(id=job.id)
+    return _get_job(job.id)
+
+
+def _get_job(job_id):
+    """
+    Helper function to get a job object by ID. Makes testing/mocking easier.
+    """
+    return model.OqJob.objects.get(id=job_id)
 
 
 def _job_exec(job, log_level, log_file, exports, job_type, calc):
