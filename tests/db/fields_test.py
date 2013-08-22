@@ -171,3 +171,12 @@ class NullFloatFieldTestCase(unittest.TestCase):
         self.assertIsNone(field.get_prep_value(''))
         self.assertIsNone(field.get_prep_value('  '))
         self.assertIsNone(field.get_prep_value('\t'))
+
+
+class NullCharFieldTestCase(unittest.TestCase):
+    def test_to_python(self):
+        field = fields.NullTextField().formfield()
+
+        self.assertEqual('', field.clean(''))
+        self.assertEqual('foo', field.clean('foo'))
+        self.assertIsNone(field.clean(None))

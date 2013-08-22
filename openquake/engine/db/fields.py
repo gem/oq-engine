@@ -17,18 +17,16 @@
 
 import numpy
 import re
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 
 import cPickle as pickle
 
+from django.utils.encoding import smart_unicode
 from django.contrib.gis import forms
 from django.contrib.gis.db import models as djm
 
 #: regex for splitting string lists on whitespace and/or commas
-ARRAY_RE = re.compile('[\s,]+')
+ARRAY_RE = re.compile(r'[\s,]+')
 
 # Disable pylint for 'Too many public methods'
 # pylint: disable=R0904
@@ -349,3 +347,27 @@ class NullFloatField(djm.FloatField):
                 return None
         else:
             return value
+
+
+class NullTextField(djm.TextField):
+    def __init__(self, **kwargs):
+        kwargs.update(dict(blank=True, null=True))
+        super(NullTextField, self).__init__(**kwargs)
+
+    def formfield(self, **kwargs):
+        """
+        Specify a custom form field type so forms know how to handle fields of
+        this type.
+        """
+        defaults = {'form_class': NullCharField}
+        defaults.update(kwargs)
+        return super(NullTextField, self).formfield(**defaults)
+
+
+class NullCharField(forms.CharField):
+    def to_python(self, value):
+        "Returns a Unicode object."
+        if value is None:
+            return None
+        else:
+            return smart_unicode(value)
