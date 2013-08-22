@@ -396,6 +396,25 @@ def supervise(pid, job_id, timeout=1, log_file=None):
                  % (calc_domain, calc_id, pid))
     ignore_sigint()
 
+    start_logging(calc_id, calc_domain, log_file)
+
+    supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
+
+    supervisor.run()
+
+
+def start_logging(calc_id, calc_domain, log_file):
+    """
+    Add logging handlers to begin collecting log messages.
+
+    :param int calc_id:
+        Hazard or Risk calculation ID.
+    :param str calc_domain:
+        'hazard' or 'risk'
+    :param str log_file:
+        Log file path location. Can be `None`. If a path is specified, we will
+        create a file handler for logging. Else, we just log to the console.
+    """
     if log_file is not None:
         logging.root.addHandler(
             SupervisorLogFileHandler(calc_domain, calc_id, log_file)
@@ -404,7 +423,3 @@ def supervise(pid, job_id, timeout=1, log_file=None):
         logging.root.addHandler(
             SupervisorLogStreamHandler(calc_domain, calc_id)
         )
-
-    supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
-
-    supervisor.run()
