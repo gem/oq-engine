@@ -28,6 +28,7 @@ import openquake.engine
 
 from django.core import exceptions
 from django.db import close_connection
+from lxml import etree
 
 from openquake.engine import kvs
 from openquake.engine import logs
@@ -348,12 +349,47 @@ def create_hazard_calculation(username, params, files):
     hc.save()
 
     # Load the other input files into the database.
-    # This also links the inputs to the calculation via the `input2hcalc` table.
+    # This also links the inputs to the calculation via the `input2hcalc`
+    # table.
     for file_key, input_path in files.iteritems():
         input_type = file_key[:-5]
         get_or_create_input(input_path, input_type, owner, haz_calc_id=hc.id)
 
+    smlt = files.get('source_model_logic_tree_file')
+    gsimlt = files.get('gsim_logic_tree_file')
+    if not None in (smlt, gsimlt):
+
+        src_paths = _collect_source_model_paths(smlt)
+
+        for src_path in src_paths:
+            get_or_create_input(
+                os.path.join(hc.base_path, src_path),
+                'source',
+                hc.owner,
+                haz_calc_id=hc.id
+            )
+
     return hc
+
+
+def _collect_source_model_paths(smlt):
+    """
+    Given a path to a source model logic tree or a file-like, collect all of
+    the soft-linked path names to the source models it contains and return them
+    as a uniquified list (no duplicates).
+    """
+    src_paths = []
+    schema = etree.XMLSchema(etree.parse(nrmllib.nrml_schema_file()))
+    tree = etree.parse(smlt)
+    for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
+                                 namespaces=nrmllib.PARSE_NS_MAP):
+
+        if branch_set.get('uncertaintyType') == 'sourceModel':
+            for branch in branch_set.xpath(
+                    './nrml:logicTreeBranch/nrml:uncertaintyModel',
+                    namespaces=nrmllib.PARSE_NS_MAP):
+                src_paths.append(branch.text)
+    return sorted(list(set(src_paths)))
 
 
 def create_risk_calculation(owner, params, files):

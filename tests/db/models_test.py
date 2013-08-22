@@ -44,7 +44,8 @@ class Inputs4HazCalcTestCase(unittest.TestCase):
         )
 
         inputs = models.inputs4hcalc(hc.id)
-        self.assertEqual(2, inputs.count())
+        # We expect 3: the two logic trees and one source model
+        self.assertEqual(3, inputs.count())
 
     def test_with_input_type(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
