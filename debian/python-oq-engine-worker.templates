@@ -1,10 +1,9 @@
-Template: python-oq-engine-standalone/override-psql-std-conf-str
+Template: python-oq-engine-worker/override-psql-std-conf-str
 Type: boolean
 Default: true
 Description: Set standard-conforming-strings = off in postgresql.conf ?
- python-oq-engine-standalone requires either
- standard-conforming-strings = off in the postgres configuration file
- or a patch.
+ python-oq-engine-worker requires either standard-conforming-strings = off
+ in the postgres configuration file or a patch.
  .
  Your postgresql configuration file currently has
  standard-conforming-strings = on.
@@ -19,3 +18,11 @@ Description: Set standard-conforming-strings = off in postgresql.conf ?
  otherwise we will leave your configuration file unchanged and continue
  installing the oq-engine; you must apply the patch or manually edit
  the configuration file before using the engine.
+
+Template: python-oq-engine-worker/master-address
+Type: string
+Default: 
+Description: The address of the master node.
+ This is the long description that maybe tomorrow we can use
+ as IP address or a host name.
+

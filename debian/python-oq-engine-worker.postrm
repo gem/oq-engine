@@ -13,27 +13,19 @@ set -e
 # the final step in the removal of this package, after the package's
 # conffiles have been removed.
 
-GEM_DEB_PACKAGE="python-oq-engine-master"
-
-PG_BASE="${GEM_FAKEROOT}/etc/postgresql/9.1/main"
-PG_CONF="${PG_BASE}/postgresql.conf"
-PG_HBA_CONF="${PG_BASE}/pg_hba.conf"
-
-revert_config () {
-    for file_cur in $PG_CONF $PG_HBA_CONF ${GEM_FAKEROOT}/etc/sysctl.d/*.conf ${GEM_FAKEROOT}/etc/sysctl.conf; do
-        # remove $GEM_DEB_PACKAGE blocks
-        sed -i '/^# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN.*/,/^# PYTHON-OQ-ENGINE: CONFIGURATION END.*/d' "$file_cur"
-        # reactivate previous disabled configurations
-        sed -i "s/^# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: //g' "$file_cur"
-    done
-}
-
+GEM_DEB_PACKAGE="python-oq-engine-worker"
 
 case "$1" in
   remove)
     # This package has been removed, but its configuration has not yet
     # been purged.
     :
+    if [ -f /etc/openquake/openquake.cfg ]; then
+        sed -i 's/host =.*/^host = localhost/g' /etc/openquake/openquake.cfg
+    fi
+    # for dir in /usr/share/doc/${GEM_DEB_PACKAGE}; do
+    #         rm -rf $dir
+    #     done
     ;;
   purge)
     if [ -e /usr/share/debconf/confmodule ]; then
@@ -42,15 +34,14 @@ case "$1" in
         # Remove my changes to the db.
         db_purge
     fi
-    revert_config
 
     # This package has previously been removed and is now having
     # its configuration purged from the system.
     :
-#    for dir in  /etc/openquake /usr/share/pyshared/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/share/pyshared/openquake.engine-*egg-info
-#    do
-#        rm -rf $dir
-#    done
+    # for dir in  /etc/openquake /usr/share/pyshared/openquake/engine /usr/share/doc/${GEM_DEB_PACKAGE} /usr/share/pyshared/openquake.engine-*egg-info
+    # do
+    # rm -rf $dir
+    # done
     ;;
 esac
 

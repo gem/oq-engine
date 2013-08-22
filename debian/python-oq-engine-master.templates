@@ -1,9 +1,10 @@
 Template: python-oq-engine-master/pg-conf-std-conf-str-override
 Type: boolean
-Default: yes
+Default: true
 Description: Set standard-conforming-strings = off in postgresql.conf ?
- python-oq-engine requires either standard-conforming-strings = off
- in the postgres configuration file or a patch.
+ python-oq-engine-master requires either
+ standard-conforming-strings = off in the postgres configuration
+ file or a patch.
  .
  Your postgresql configuration file currently has
  standard-conforming-strings = on.

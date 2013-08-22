@@ -3,8 +3,8 @@
 #
 # see: dh_installdeb(1)
 
-set -x
 set -e
+# set -x
 
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
@@ -71,7 +71,7 @@ gem_get_pg_vars () {
         fi
     else
         # if the var isn't defined try to retrieve its default value from the database directly
-        var_val="$(su - "psql -A -t -c \"SELECT setting FROM pg_settings WHERE name = '${var_name}';\" postgres postgres" postgres)"
+        var_val="$(su - -c "psql -A -t -c \"SELECT setting FROM pg_settings WHERE name = '${var_name}';\" postgres postgres" postgres)"
         if [ "$var_val" = "" ]; then
             return 1
         fi

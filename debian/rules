@@ -31,7 +31,7 @@ override_dh_quilt_patch:
 	dh_quilt_patch $@
 	cp openquake/__init__.py /tmp
 	cat /tmp/__init__.py | sed -e "s/0)  #.*$$/`date +'%s'`)/" > openquake/__init__.py
-	for i in celeryd.default celeryd.init config install postinst postrm; do  \
+	for i in celeryd.default celeryd.init install; do  \
 	  cp debian/python-oq-engine-standalone.$$i debian/python-oq-engine-worker.$$i ; \
 	  sed -i 's/python-oq-engine-standalone/python-oq-engine-worker/g' debian/python-oq-engine-worker.$$i ; \
 	done

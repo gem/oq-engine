@@ -35,7 +35,7 @@
 #
 
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+set -x
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
@@ -49,6 +49,8 @@ GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
 GEM_ALWAYS_YES=false
+
+GEM_NUMB_OF_WORKERS=1
 
 if [ "$GEM_EPHEM_CMD" = "" ]; then
     GEM_EPHEM_CMD="lxc-start-ephemeral"
@@ -68,16 +70,21 @@ TB="	"
 sig_hand () {
     trap ERR
     echo "signal trapped"
-    if [ "$lxc_name" != "" ]; then
-        set +e
-        echo "Destroying [$lxc_name] lxc"
-        upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
+
+read -p "prompoto" prompoto
+    set +e
+    for lname in "$lxc_name" "$lxc_master_name" "${lxc_worker_name[@]}"; do
+        if [ "$lname" == "" ]; then
+            continue
+        fi
+        echo "Destroying [$lname] lxc"
+        upper="$(mount | grep "${lname}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         if [ -f "${upper}.dsk" ]; then
             loop_dev="$(sudo losetup -a | grep "(${upper}.dsk)$" | cut -d ':' -f1)"
         fi
-        sudo lxc-stop -n $lxc_name
-        sudo umount /var/lib/lxc/$lxc_name/rootfs
-        sudo umount /var/lib/lxc/$lxc_name/ephemeralbind
+        sudo lxc-stop -n $lname
+        sudo umount /var/lib/lxc/$lname/rootfs
+        sudo umount /var/lib/lxc/$lname/ephemeralbind
         echo "$upper" | grep -q '^/tmp/'
         if [ $? -eq 0 ]; then
             sudo umount "$upper"
@@ -89,8 +96,8 @@ sig_hand () {
                 fi
             fi
         fi
-        sudo lxc-destroy -n $lxc_name
-    fi
+        sudo lxc-destroy -n $lname
+    done
     if [ -f /tmp/packager.eph.$$.log ]; then
         rm /tmp/packager.eph.$$.log
     fi
@@ -134,6 +141,32 @@ mksafedir () {
     rm -rf $dname
     mkdir -p $dname
 }
+
+master_debconf () {
+local master_ip="$1" master_net
+
+master_net="$(echo "$master_ip" | sed 's/\.[0-9]\+$/.0/g')"
+
+cat <<EOF
+python-oq-engine-master	python-oq-engine-master/pg-hba-allowed-hosts	string	${master_net}/24
+python-oq-engine-master	python-oq-engine-master/kernel-shmmax-override	boolean	true
+python-oq-engine-master	python-oq-engine-master/kernel-shmall-override	boolean	true
+python-oq-engine-master	python-oq-engine-master/pg-conf-max-conn-override	boolean	true
+python-oq-engine-master	python-oq-engine-master/pg-conf-std-conf-str-override	boolean	true
+python-oq-engine-master	python-oq-engine-master/workers-cores-number	string	1024
+EOF
+}
+
+
+worker_debconf () {
+local master_ip="$1" master_net
+
+cat <<EOF
+python-oq-engine-worker	python-oq-engine-worker/override-psql-std-conf-str	boolean	true
+python-oq-engine-worker	python-oq-engine-worker/master-address	string	${master_ip}
+EOF
+}
+
 
 #
 #  usage <exitcode> - show usage of the script
@@ -380,6 +413,136 @@ _pkgtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-standalone"
 
     # configure the machine to run tests
+#dis    ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
+#nella config    ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
+
+#dis    ssh $lxc_ip "sudo service postgresql restart"
+#dis     ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
+    ssh $lxc_ip "sudo -u postgres oq_create_db --yes --db-user=postgres --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
+
+    # copy demos file to $HOME
+    ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}-common/examples/demos ."
+
+    if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
+        # run all of the hazard and risk demos
+        ssh $lxc_ip "export GEM_PKGTEST_ONE_DEMO=$GEM_PKGTEST_ONE_DEMO ; cd demos
+        for ini in \$(find ./hazard -name job.ini); do
+            openquake --run-hazard  \$ini --exports xml
+            if [ -n \"$GEM_PKGTEST_ONE_DEMO\" ]; then
+                exit 0
+            fi 
+        done
+
+        for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d); do
+            cd \$demo_dir
+            echo \"Running demo in \$demo_dir\"
+            openquake --run-hazard job_hazard.ini
+            calculation_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
+            openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id
+            cd -
+        done"
+    fi
+
+    trap ERR
+
+    return
+}
+
+# _pkgclustest_innervm_run <master_ip> <worker1_ip> <worker2_ip> ... <workerN_ip>
+_pkgclustest_innervm_run () {
+    local lxc_master_ip="$1" old_ifs ip_cur
+    local -a lxc_worker_ip
+
+    shift 1
+    lxc_worker_ip=("$@")
+
+    trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
+    for ip_cur in $lxc_master_ip ${lxc_worker_ip[@]}; do
+        ssh $ip_cur "sudo apt-get update"
+        ssh $ip_cur "sudo apt-get -y upgrade"
+        gpg -a --export | ssh $ip_cur "sudo apt-key add -"
+        # install package to manage repository properly
+        ssh $ip_cur "sudo apt-get install -y python-software-properties"
+        
+        # create a remote "local repo" where place $GEM_DEB_PACKAGE package
+        ssh $ip_cur mkdir -p repo/${GEM_DEB_PACKAGE}
+        scp build-deb/${GEM_DEB_PACKAGE}-*_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
+            build-deb/${GEM_DEB_PACKAGE}_*.dsc build-deb/${GEM_DEB_PACKAGE}_*.tar.gz \
+            build-deb/Packages* build-deb/Sources*  build-deb/Release* $ip_cur:repo/${GEM_DEB_PACKAGE}
+        ssh $ip_cur "sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\""
+    done
+
+    if [ -f _jenkins_deps_info ]; then
+        source _jenkins_deps_info
+    fi
+
+    old_ifs="$IFS"
+    IFS=" $NL"
+    for dep in $GEM_GIT_DEPS; do
+        var_pfx="$(dep2var "$dep")"
+        var_repo="${var_pfx}_REPO"
+        var_branch="${var_pfx}_BRANCH"
+        if [ "${!var_repo}" != "" ]; then
+            repo="${!var_repo}"
+        else
+            repo="$GEM_GIT_REPO"
+        fi
+        if [ "${!var_branch}" != "" ]; then
+            branch="${!var_branch}"
+        else
+            branch="master"
+        fi
+
+        if [ "$repo" = "$GEM_GIT_REPO" -a "$branch" = "master" ]; then
+            GEM_DEB_SERIE="master"
+        else
+            GEM_DEB_SERIE="devel/$(echo "$repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${branch}"
+        fi
+
+        for ip_cur in "$lxc_master_ip" "${lxc_worker_ip[@]}"; do
+            scp -r ${GEM_DEB_REPO}/${GEM_DEB_SERIE}/python-${dep} $ip_cur:repo/
+            ssh $ip_cur "sudo apt-add-repository \"deb file:/home/ubuntu/repo/python-${dep} ./\""
+        done
+    done
+    IFS="$old_ifs"
+    for ip_cur in "$lxc_master_ip" "${lxc_worker_ip[@]}"; do
+        ssh $ip_cur "sudo apt-get update"
+    done
+
+
+    # packaging related tests (install, remove, purge, install, reinstall)
+    echo "PKGTEST: INSTALL master"
+    master_debconf $lxc_master_ip | ssh $lxc_master_ip "sudo debconf-set-selections"
+    ssh $lxc_master_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-master"
+
+    read -p "... pre loop" a
+
+    for ip_cur in "${lxc_worker_ip[@]}"; do
+        worker_debconf $lxc_master_ip | ssh $ip_cur "sudo debconf-set-selections"
+        ssh $ip_cur "sudo apt-get install -y ${GEM_DEB_PACKAGE}-worker"
+    done
+
+    read -p "... and now type enter to continue" a
+
+
+
+
+    echo "PKGTEST: REMOVE master"
+    sleep 5
+    ssh $lxc_master_ip "sudo service celeryd stop"
+    sleep 5
+    ssh $lxc_master_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}-master"
+
+    echo "PKGTEST: INSTALL AGAIN master"
+    ssh $lxc_master_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-master"
+
+    echo "PKGTEST: REINSTALL master"
+    sleep 5
+    ssh $lxc_master_ip "sudo service celeryd stop"
+    sleep 5
+    ssh $lxc_master_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-master"
+if [ 1 -eq 0 ]; then
+    # configure the machine to run tests
     ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
     ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
@@ -406,6 +569,7 @@ _pkgtest_innervm_run () {
             cd -
         done"
     fi
+fi
 
     trap ERR
 
@@ -582,11 +746,11 @@ devtest_run () {
 #
 pkgtest_run () {
     local i e branch_id="$1"
-
+    local -a lxc_worker_name lxc_worker_ip
     #
     #  run build of package
     if [ -d build-deb ]; then
-        if [ ! -f build-deb/${GEM_DEB_PACKAGE}-*_*.deb ]; then
+        if [ ls build-deb/${GEM_DEB_PACKAGE}-*_*.deb >/dev/null 2>&1 ]; then
             echo "'build-deb' directory already exists but .deb file package was not found"
             return 1
 
@@ -620,6 +784,8 @@ EOF
     gpg --armor --detach-sign --output Release.gpg Release
     cd -
 
+# FIXME - re-enable after tests
+if [ 1 -eq 0 ]; then
     sudo echo
     sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
@@ -630,13 +796,69 @@ EOF
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
-
+read -p "after inner" afterinner
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
 
     if [ $inner_ret -ne 0 ]; then
         return $inner_ret
     fi
+fi
+    
+    #
+    #  TEST CLUSTER
+    #
+
+    #
+    # create lxc master
+    sudo echo
+    sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+
+    lxc_master_name="$lxc_name"
+    lxc_master_ip="$lxc_ip"
+    lxc_name=""
+    lxc_ip=""
+
+    rm /tmp/packager.eph.$$.log
+    _wait_ssh $lxc_master_ip
+
+    #
+    # create lxc workers
+    for i in $(seq 1 $GEM_NUMB_OF_WORKERS) ; do
+        sudo echo
+        sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
+        _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+        
+        lxc_worker_name[$i]="$lxc_name"
+        lxc_worker_ip[$i]="$lxc_ip"
+        lxc_name=""
+        lxc_ip=""
+
+        rm /tmp/packager.eph.$$.log
+        _wait_ssh ${lxc_worker_ip[$i]}
+    done
+
+    echo "MASTER:  $lxc_master_ip"
+    for i in $(seq 1 $GEM_NUMB_OF_WORKERS) ; do
+        echo "WORKER $i: ${lxc_worker_ip[$i]}"
+    done
+    set +e
+    _pkgclustest_innervm_run $lxc_master_ip "${lxc_worker_ip[@]}"
+    inner_ret=$?
+
+    sudo lxc-shutdown -n $lxc_master_name -w -t 10
+    for i in $(seq 1 $GEM_NUMB_OF_WORKERS) ; do
+        sudo lxc-shutdown -n ${lxc_worker_name[$i]} -w -t 10
+    done
+    set -e
+
+    if [ $inner_ret -ne 0 ]; then
+        return $inner_ret
+    fi
+
+
+
 
     #
     # in build Ubuntu package each branch package is saved in a separated
@@ -671,6 +893,7 @@ EOF
 #
 #  MAIN
 #
+
 # echo "xx$(repo_id_get)yy"
 # exit 123
 BUILD_BINARIES=0
