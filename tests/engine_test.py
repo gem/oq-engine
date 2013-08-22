@@ -653,3 +653,96 @@ class RunRiskTestCase(RunHazardTestCase):
                             None)
 
             self.assertEqual(0, self.mocks['touch'].call_count)
+
+
+class RunCalcTestCase(unittest.TestCase):
+
+    def setUp(self):
+        class FakeCalc(object):
+            def __init__(self, job):
+                self.job = job
+
+            def __eq__(self, other):
+                return self.job.id == other.job.id
+
+        mocks = dict(
+            get_calc='openquake.engine.engine.get_calculator_class',
+            job_stats='openquake.engine.engine._create_job_stats',
+            job_exec='openquake.engine.engine._job_exec',
+            cleanup=('openquake.engine.supervising.supervisor'
+                     '.cleanup_after_job'),
+            supervise=('openquake.engine.supervising.supervisor'
+                       '.supervise'),
+            get_job='openquake.engine.engine._get_job',
+            fork='os.fork',
+        )
+        self.mm = helpers.MultiMock(**mocks)
+        self.job = mock.Mock()
+        self.job.id = 1984
+        self.job.hazard_calculation.calculation_mode = 'classical'
+
+        self.calc_class = FakeCalc
+        self.calc_instance = self.calc_class(self.job)
+
+    def test_supervised(self):
+        # Due to the way the executor/supervisor process/forking logic is
+        # defined, we can't really test the supervisor part of the workflow;
+        # we can only test the job executor.
+        mm = self.mm
+
+        with mm:
+            mm['get_job'].return_value = self.job
+            mm['get_calc'].return_value = self.calc_class
+
+            mm['fork'].return_value = 0
+
+            engine.run_calc(self.job, 'debug', 'oq.log', ['geojson'], 'hazard',
+                            supervised=True)
+
+        # Check the intermediate function calls and the flow of data:
+        self.assertEqual(1, mm['get_calc'].call_count)
+        self.assertEqual((('hazard', 'classical'), {}),
+                         mm['get_calc'].call_args)
+
+        self.assertEqual(1, mm['job_stats'].call_count)
+        self.assertEqual(((self.job, ), {}), mm['job_stats'].call_args)
+
+        self.assertEqual(1, mm['job_exec'].call_count)
+        self.assertEqual(
+            ((self.job, 'debug', 'oq.log', ['geojson'], 'hazard',
+              self.calc_instance),
+             {}),
+            mm['job_exec'].call_args
+        )
+
+    def test_unsupervised(self):
+        mm = self.mm
+
+        with mm:
+            mm['get_job'].return_value = self.job
+            mm['get_calc'].return_value = self.calc_class
+
+            engine.run_calc(self.job, 'debug', 'oq.log', ['geojson'], 'hazard',
+                            supervised=False)
+
+        # Check the intermediate function calls and the flow of data:
+        self.assertEqual(1, mm['get_calc'].call_count)
+        self.assertEqual((('hazard', 'classical'), {}),
+                         mm['get_calc'].call_args)
+
+        self.assertEqual(1, mm['job_stats'].call_count)
+        self.assertEqual(((self.job, ), {}), mm['job_stats'].call_args)
+
+        self.assertEqual(1, mm['job_exec'].call_count)
+        self.assertEqual(
+            ((self.job, 'debug', 'oq.log', ['geojson'], 'hazard',
+              self.calc_instance),
+             {}),
+            mm['job_exec'].call_args
+        )
+
+        self.assertEqual(1, mm['cleanup'].call_count)
+        self.assertEqual(((1984, ), {}), mm['cleanup'].call_args)
+
+        self.assertEqual(1, mm['get_job'].call_count)
+        self.assertEqual(((1984, ), {}), mm['get_job'].call_args)
