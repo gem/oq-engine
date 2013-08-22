@@ -44,7 +44,7 @@ def nrml_schema_file():
         'schema', _NRML_SCHEMA_FILE)
 
 
-def assert_valid(source):
+def assert_valid(source, parser=etree.ETCompatXMLParser()):
     """
     Raises a `lxml.etree.DocumentInvalid` error for invalid files.
 
@@ -53,7 +53,9 @@ def assert_valid(source):
     global _NRML_SCHEMA
     if _NRML_SCHEMA is None:  # the nrml schema is parsed only once
         _NRML_SCHEMA = etree.XMLSchema(etree.parse(nrml_schema_file()))
-    _NRML_SCHEMA.assertValid(etree.parse(source))
+    parsed = etree.parse(source, parser)
+    _NRML_SCHEMA.assertValid(parsed)
+    return parsed
 
 
 class NRMLFile(object):

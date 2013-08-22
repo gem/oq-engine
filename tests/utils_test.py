@@ -13,8 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-
-import numpy
+import cStringIO
 import unittest
 
 from openquake.nrmllib import utils
@@ -60,3 +59,196 @@ class UtilsTestCase(unittest.TestCase):
         actual = utils.coords_to_poly_wkt(coords, 3)
 
         self.assertEqual(expected, actual)
+
+
+class NodeTestCase(unittest.TestCase):
+    """Tests for the Node class and related facilities"""
+
+    def test_setitem(self):
+        root = utils.Node('root')
+        root['a'] = 'A'
+        self.assertEqual(root['a'], 'A')
+        self.assertEqual(root.attrib['a'], 'A')
+
+    def test_to_str_1(self):
+        # tests the methods .to_str with expandattrs and expandvals off
+        root = utils.Node('root')
+        a = utils.Node('a')
+        b = utils.Node('b')
+        x1 = utils.Node('x1')
+        x2 = utils.Node('x2')
+        root.append(a)
+        root.append(b)
+        root.a.append(x1)
+        root.a.append(x2)
+        self.assertEqual(root.to_str(), '''\
+root
+  a
+    x1
+    x2
+  b
+''')
+
+    def test_to_str_2(self):
+        # tests the methods .to_str with expandattrs and expandvals on
+        root = utils.Node('root')
+        a = utils.Node('a', dict(zz='ZZ'))
+        x1 = utils.Node('x1', dict(xx1='XX1'), value='1')
+        x2 = utils.Node('x2', value='2')
+        root.append(a)
+        root.a.append(x1)
+        root.a.append(x2)
+        self.assertEqual(root.to_str(expandattrs=True, expandvals=True), '''\
+root
+  a{zz=ZZ}
+    x1{xx1=XX1} 1
+    x2 2
+''')
+
+    def test_getitem(self):
+        # test the __getitem__ method
+        nodes = [utils.Node('a', dict(z='Z')), utils.Node('b')]
+        root = utils.Node('root', nodes=nodes)
+        self.assertEqual(root.a['z'], 'Z')
+        self.assertEqual(root[0], nodes[0])
+        self.assertEqual(root[1], nodes[1])
+        self.assertEqual(list(root), nodes)
+
+    def test_ini(self):
+        # can read and write a .ini file converted into a Node object
+        inifile = cStringIO.StringIO(u"""\
+[general]
+a = 1
+b = 2
+[section1]
+param = xxx
+[section2]
+param = yyy
+""")
+        node = utils.node_from_ini(inifile)
+        outfile = cStringIO.StringIO()
+        utils.node_to_ini(node, outfile)
+        self.assertEqual(outfile.getvalue(), '''
+[general]
+a=1
+b=2
+
+[section1]
+param=xxx
+
+[section2]
+param=yyy
+''')
+
+    def test_xml(self):
+        # can read and write a .xml file converted into a Node object
+        xmlfile = cStringIO.StringIO(u"""\
+<root>
+<general>
+<a>1</a>
+<b>2</b>
+</general>
+<section1 param="xxx" />
+<section2 param="yyy" />
+</root>
+""")
+        node = utils.node_from_xml(xmlfile)
+        outfile = cStringIO.StringIO()
+        utils.node_to_xml(node, outfile)
+        self.assertEqual(outfile.getvalue(), """\
+<?xml version="1.0" encoding="utf-8"?>
+
+<root>
+    <general>
+        <a>
+            1
+        </a>
+        <b>
+            2
+        </b>
+    </general>
+    <section1
+     param="xxx"
+    >
+    </section1>
+    <section2
+     param="yyy"
+    >
+    </section2>
+</root>
+""")
+
+    def test_nrml(self):
+        # can read and write a NRML file converted into a Node object
+        xmlfile = cStringIO.StringIO("""\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+  <exposureModel
+      id="my_exposure_model_for_population"
+      category="population"
+      taxonomySource="fake population datasource">
+
+    <description>
+      Sample population
+    </description>
+
+    <assets>
+      <asset id="asset_01" number="7" taxonomy="IT-PV">
+          <location lon="9.15000" lat="45.16667" />
+      </asset>
+
+      <asset id="asset_02" number="7" taxonomy="IT-CE">
+          <location lon="9.15333" lat="45.12200" />
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>
+""")
+        root = utils.node_from_nrml(xmlfile)
+        outfile = cStringIO.StringIO()
+        utils.node_to_xml(root, outfile)
+        self.assertEqual(outfile.getvalue(), """\
+<?xml version="1.0" encoding="utf-8"?>
+
+<nrml
+ xmlns="http://openquake.org/xmlns/nrml/0.4"
+ xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+     category="population"
+     taxonomySource="fake population datasource"
+     id="my_exposure_model_for_population"
+    >
+        <description>
+            
+      Sample population
+    
+        </description>
+        <assets>
+            <asset
+             taxonomy="IT-PV"
+             id="asset_01"
+             number="7"
+            >
+                <location
+                 lat="45.16667"
+                 lon="9.15000"
+                >
+                </location>
+            </asset>
+            <asset
+             taxonomy="IT-CE"
+             id="asset_02"
+             number="7"
+            >
+                <location
+                 lat="45.12200"
+                 lon="9.15333"
+                >
+                </location>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>
+""")
