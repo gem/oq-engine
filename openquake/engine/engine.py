@@ -376,7 +376,7 @@ def _collect_source_model_paths(smlt):
     """
     Given a path to a source model logic tree or a file-like, collect all of
     the soft-linked path names to the source models it contains and return them
-    as a list.
+    as a uniquified list (no duplicates).
     """
     src_paths = []
     schema = etree.XMLSchema(etree.parse(nrmllib.nrml_schema_file()))
@@ -389,7 +389,7 @@ def _collect_source_model_paths(smlt):
                     './nrml:logicTreeBranch/nrml:uncertaintyModel',
                     namespaces=nrmllib.PARSE_NS_MAP):
                 src_paths.append(branch.text)
-    return src_paths
+    return sorted(list(set(src_paths)))
 
 
 def create_risk_calculation(owner, params, files):
