@@ -22,7 +22,6 @@ I/O handling for risk calculators
 """
 
 import collections
-import StringIO
 from openquake.risklib import scientific
 
 from openquake.nrmllib.risk import parsers
@@ -39,8 +38,7 @@ def exposure(exposure_model_input):
         type `exposure`
     """
 
-    content = StringIO.StringIO(
-        exposure_model_input.model_content.raw_content_ascii)
+    content = exposure_model_input.model_content.as_string_io
     ExposureDBWriter(exposure_model_input).serialize(
         parsers.ExposureModelParser(content))
     return exposure_model_input.exposuremodel
@@ -48,7 +46,7 @@ def exposure(exposure_model_input):
 
 def vulnerability(vulnerability_input):
     return _parse_vulnerability(
-        StringIO.StringIO(vulnerability_input.model_content.raw_content_ascii))
+        vulnerability_input.model_content.as_string_io)
 
 
 def _parse_vulnerability(vuln_content):
@@ -97,7 +95,7 @@ def _parse_vulnerability(vuln_content):
 
 def fragility(risk_calculation, fragility_input):
     damage_states, risk_models = _parse_fragility(
-        StringIO.StringIO(fragility_input.model_content.raw_content_ascii))
+        fragility_input.model_content.as_string_io)
 
     for lsi, dstate in enumerate(damage_states):
         DmgState.objects.get_or_create(
