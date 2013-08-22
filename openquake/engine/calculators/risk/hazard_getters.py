@@ -304,7 +304,7 @@ GROUP BY site_id ORDER BY site_id;
                     site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
                     for r in ruptures:
                         all_ruptures.add(r)
-                else:  # scenario
+                elif gmvs:  # scenario
                     array = numpy.array(gmvs)
                     all_gmvs.extend([array] * n_assets)
         if all_assets and not all_ruptures:  # scenario

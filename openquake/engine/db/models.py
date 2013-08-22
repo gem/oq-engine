@@ -25,9 +25,10 @@
 Model representations of the OpenQuake DB tables.
 '''
 
-import operator
+import StringIO
 import collections
 import itertools
+import operator
 import os
 import re
 from datetime import datetime
@@ -515,11 +516,18 @@ class ModelContent(djm.Model):
         db_table = 'uiapi\".\"model_content'
 
     @property
-    def raw_content_ascii(self):
+    def raw_content_utf8(self):
         """
-        Returns raw_content in ASCII
+        Returns raw_content in UTF-8
         """
-        return str(self.raw_content)
+        return self.raw_content.encode('utf-8')
+
+    @property
+    def as_string_io(self):
+        """
+        Return a `StringIO` object containing the `raw_content` as utf-8 text.
+        """
+        return StringIO.StringIO(self.raw_content_utf8)
 
 
 class Input2job(djm.Model):
@@ -1243,7 +1251,7 @@ class RiskCalculation(djm.Model):
     ######################################
     # Scenario parameters:
     ######################################
-    time_event = djm.TextField(blank=True, null=True)
+    time_event = fields.NullTextField()
 
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'

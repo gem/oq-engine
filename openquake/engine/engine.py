@@ -27,7 +27,8 @@ import warnings
 import openquake.engine
 
 from django.core import exceptions
-from django.db import close_connection
+from django import db as django_db
+from lxml import etree
 
 from openquake.engine import kvs
 from openquake.engine import logs
@@ -348,12 +349,47 @@ def create_hazard_calculation(username, params, files):
     hc.save()
 
     # Load the other input files into the database.
-    # This also links the inputs to the calculation via the `input2hcalc` table.
+    # This also links the inputs to the calculation via the `input2hcalc`
+    # table.
     for file_key, input_path in files.iteritems():
         input_type = file_key[:-5]
         get_or_create_input(input_path, input_type, owner, haz_calc_id=hc.id)
 
+    smlt = files.get('source_model_logic_tree_file')
+    gsimlt = files.get('gsim_logic_tree_file')
+    if not None in (smlt, gsimlt):
+
+        src_paths = _collect_source_model_paths(smlt)
+
+        for src_path in src_paths:
+            get_or_create_input(
+                os.path.join(hc.base_path, src_path),
+                'source',
+                hc.owner,
+                haz_calc_id=hc.id
+            )
+
     return hc
+
+
+def _collect_source_model_paths(smlt):
+    """
+    Given a path to a source model logic tree or a file-like, collect all of
+    the soft-linked path names to the source models it contains and return them
+    as a uniquified list (no duplicates).
+    """
+    src_paths = []
+    schema = etree.XMLSchema(etree.parse(nrmllib.nrml_schema_file()))
+    tree = etree.parse(smlt)
+    for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
+                                 namespaces=nrmllib.PARSE_NS_MAP):
+
+        if branch_set.get('uncertaintyType') == 'sourceModel':
+            for branch in branch_set.xpath(
+                    './nrml:logicTreeBranch/nrml:uncertaintyModel',
+                    namespaces=nrmllib.PARSE_NS_MAP):
+                src_paths.append(branch.text)
+    return sorted(list(set(src_paths)))
 
 
 def create_risk_calculation(owner, params, files):
@@ -389,8 +425,19 @@ def create_risk_calculation(owner, params, files):
     return rc
 
 
+def _create_job_stats(job):
+    """
+    Helper function to create job stats, which implicitly records the start
+    time for the job.
+
+    :param job:
+        :class:`openquake.engine.db.models.OqJob` instance.
+    """
+    models.JobStats.objects.create(oq_job=job)
+
+
 # used by bin/openquake
-def run_calc(job, log_level, log_file, exports, job_type):
+def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
     """
     Run a calculation.
 
@@ -407,36 +454,59 @@ def run_calc(job, log_level, log_file, exports, job_type):
     :param list exports:
         A (potentially empty) list of export targets. Currently only "xml" is
         supported.
-    :param calc:
-        Calculator object, which must implement the interface of
-        :class:`openquake.engine.calculators.base.Calculator`.
     :param str job_type:
         'hazard' or 'risk'
+    :param bool supervised:
+        Defaults to `True`. If `True`, run OpenQuake with a supervisor process,
+        which monitors the job executor process and collects log messages.
     """
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
     calc = get_calculator_class(job_type, calc_mode)(job)
 
     # Create job stats, which implicitly records the start time for the job
-    models.JobStats.objects.create(oq_job=job)
+    _create_job_stats(job)
 
     # Closing all db connections to make sure they're not shared between
     # supervisor and job executor processes.
     # Otherwise, if one of them closes the connection it immediately becomes
     # unavailable for others.
-    close_connection()
+    if supervised:
+        django_db.close_connection()
 
-    job_pid = os.fork()
+        job_pid = os.fork()
 
-    if not job_pid:
-        # calculation executor process
+        if not job_pid:
+            # calculation executor process
+            try:
+                _job_exec(job, log_level, log_file, exports, job_type, calc)
+            except Exception, ex:
+                logs.LOG.critical("Calculation failed with exception: '%s'"
+                                  % str(ex))
+                raise
+            finally:
+                job.is_running = False
+                job.save()
+            return
+
+        supervisor_pid = os.fork()
+        if not supervisor_pid:
+            # supervisor process
+            logs.set_logger_level(logs.logging.root, log_level)
+            # TODO: deal with KVS garbage collection
+            supervisor.supervise(job_pid, job.id, log_file=log_file)
+            return
+
+        # parent process
+
+        # ignore Ctrl-C as well as supervisor process does. thus only
+        # job executor terminates on SIGINT
+        supervisor.ignore_sigint()
+        # wait till both child processes are done
+        os.waitpid(job_pid, 0)
+        os.waitpid(supervisor_pid, 0)
+    else:
         try:
-            logs.init_logs_amqp_send(level=log_level, calc_domain=job_type,
-                                     calc_id=job.calculation.id)
-            # run the job
-            job.is_running = True
-            job.save()
-            kvs.mark_job_as_current(job.id)
-            _do_run_calc(job, exports, calc, job_type)
+            _job_exec(job, log_level, log_file, exports, job_type, calc)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
                               % str(ex))
@@ -444,28 +514,37 @@ def run_calc(job, log_level, log_file, exports, job_type):
         finally:
             job.is_running = False
             job.save()
-        return
+            # Normally the supervisor process does this, but since we don't
+            # have one in this case, we have to call the cleanup manually.
+            supervisor.cleanup_after_job(job.id)
 
-    supervisor_pid = os.fork()
-    if not supervisor_pid:
-        # supervisor process
-        logs.set_logger_level(logs.logging.root, log_level)
-        # TODO: deal with KVS garbage collection
-        supervisor.supervise(job_pid, job.id, log_file=log_file)
-        return
+    # Refresh the job record, in case we are forking and another process has
+    # modified the job state.
+    return _get_job(job.id)
 
-    # parent process
 
-    # ignore Ctrl-C as well as supervisor process does. thus only
-    # job executor terminates on SIGINT
-    supervisor.ignore_sigint()
-    # wait till both child processes are done
-    os.waitpid(job_pid, 0)
-    os.waitpid(supervisor_pid, 0)
+def _get_job(job_id):
+    """
+    Helper function to get a job object by ID. Makes testing/mocking easier.
+    """
+    return model.OqJob.objects.get(id=job_id)
 
-    # Refresh the job record, since the forked processes are going to modify
-    # job state.
-    return models.OqJob.objects.get(id=job.id)
+
+def _job_exec(job, log_level, log_file, exports, job_type, calc):
+    """
+    Abstraction of some general job execution procedures.
+
+    Parameters are the same as :func:`run_calc`, except for ``supervised``
+    which is not included. Also ``calc`` is an instance of the calculator class
+    which is passed to :func:`_do_run_calc`.
+    """
+    logs.init_logs_amqp_send(level=log_level, calc_domain=job_type,
+                             calc_id=job.calculation.id)
+    # run the job
+    job.is_running = True
+    job.save()
+    kvs.mark_job_as_current(job.id)
+    _do_run_calc(job, exports, calc, job_type)
 
 
 def _switch_to_job_phase(job, ctype, status):
