@@ -90,7 +90,8 @@ class Copier(object):
         log.info('%s\n(-> %s)', query, fname)
         with gzip.open(fname, mode) as f:
             self._cursor.copy_expert(query, f)
-            self.filenames.append(fname)
+            if fname not in self.filenames:
+                self.filenames.append(fname)
 
 
 class HazardDumper(object):
