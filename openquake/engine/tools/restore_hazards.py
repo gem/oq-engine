@@ -103,10 +103,11 @@ def hazard_restore(conn, tar):
             log.info('Importing %s...', fname)
             imported, total = safe_restore(curs, f, tname)
             if imported != total:
-                log.warn('%s: could not import %d row(s), id(s) already taken',
-                         fname, total - imported)
+                log.warn(
+                    '%s:%s:\ncould not import %d row(s), id(s) already taken',
+                    tf.name, fname, total - imported)
             else:
-                log.info('Imported %d/%d new rows', imported, total)
+                log.info('Imported %d new rows', imported)
     log.info('Restored %s', tar)
 
 
