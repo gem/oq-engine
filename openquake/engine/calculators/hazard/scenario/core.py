@@ -18,7 +18,6 @@
 Scenario calculator core functionality
 """
 import random
-from cStringIO import StringIO
 from django.db import transaction
 import numpy
 
@@ -156,7 +155,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             input=inp, hazard_calculation=self.hc)
 
         # Store the ParsedRupture record
-        src_content = StringIO(inp.model_content.raw_content)
+        src_content = inp.model_content.as_string_io
         rupt_parser = RuptureModelParser(src_content)
         src_db_writer = source.RuptureDBWriter(inp, rupt_parser.parse())
         src_db_writer.serialize()
