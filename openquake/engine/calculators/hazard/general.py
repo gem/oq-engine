@@ -482,8 +482,8 @@ class BaseHazardCalculator(base.Calculator):
             self.hc.id, input_type='source_model_logic_tree')
         [gsimlt] = models.inputs4hcalc(
             self.hc.id, input_type='gsim_logic_tree')
-        source_paths = logictree.read_logic_trees(
-            self.hc.base_path, smlt.path, gsimlt.path)
+
+        source_paths = logictree.read_logic_trees_from_db(self.hc.id)
 
         for src_path in source_paths:
             full_path = os.path.join(self.hc.base_path, src_path)
@@ -495,8 +495,7 @@ class BaseHazardCalculator(base.Calculator):
 
             models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
                                             filename=src_path)
-            src_content = StringIO.StringIO(
-                inp.model_content.raw_content_ascii)
+            src_content = inp.model_content.as_string_io
             sm_parser = nrml_parsers.SourceModelParser(src_content)
 
             # Covert
@@ -528,8 +527,7 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types = list()
 
             for input_type in queryset:
-                content = StringIO.StringIO(
-                    input_type.model_content.raw_content_ascii)
+                content = input_type.model_content.as_string_io
                 intensity_measure_types_and_levels = dict(
                     (record['IMT'], record['IML']) for record in
                     parsers.VulnerabilityModelParser(content)
@@ -564,9 +562,11 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types_and_levels = dict()
             hc.intensity_measure_types = list()
 
-            parser = iter(parsers.FragilityModelParser(
-                StringIO.StringIO(
-                    queryset.all()[0].model_content.raw_content_ascii)))
+            parser = iter(
+                parsers.FragilityModelParser(
+                    queryset.all()[0].model_content.as_string_io
+                )
+            )
             hc = self.hc
 
             fragility_format, _limit_states = parser.next()
@@ -586,8 +586,7 @@ class BaseHazardCalculator(base.Calculator):
         queryset = self.hc.inputs.filter(input_type='exposure')
         if queryset.exists():
             exposure_model_input = queryset.all()[0]
-            content = StringIO.StringIO(
-                exposure_model_input.model_content.raw_content_ascii)
+            content = exposure_model_input.model_content.as_string_io
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
                     exposure_model_input).serialize(
@@ -606,20 +605,18 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing site model")
         site_model_inp = models.get_site_model(self.hc.id)
         if site_model_inp:
-            # explicit cast to `str` because the XML parser doesn't like
-            # unicode. (More specifically, lxml doesn't like unicode.)
-            site_model_content = site_model_inp.model_content.\
-                raw_content_ascii
-
             # Store `site_model` records:
             store_site_model(
-                site_model_inp, StringIO.StringIO(site_model_content))
+                site_model_inp, site_model_inp.model_content.as_string_io
+            )
 
             # Get the site model records we stored:
             site_model_data = models.SiteModel.objects.filter(
                 input=site_model_inp)
 
-            validate_site_model(site_model_data, self.hc.points_to_compute(save_sites=True))
+            validate_site_model(
+                site_model_data, self.hc.points_to_compute(save_sites=True)
+            )
         else:
             self.hc.points_to_compute(save_sites=True)
 
