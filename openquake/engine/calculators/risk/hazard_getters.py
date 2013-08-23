@@ -133,15 +133,7 @@ class HazardCurveGetterPerAsset(HazardGetter):
 
     :attr imls:
         The intensity measure levels of the curves we are going to get.
-
-    :attr dict _cache:
-        A cache of the computed hazard curve object on a per-location basis.
     """
-
-    def __init__(self, hazard, assets, max_distance, imt):
-        super(HazardCurveGetterPerAsset, self).__init__(
-            hazard, assets, max_distance, imt)
-        self._cache = {}
 
     def get_data(self, hazard_output, monitor):
         """
@@ -163,52 +155,42 @@ class HazardCurveGetterPerAsset(HazardGetter):
                 sa_damping=self.sa_damping)
             imls = hc.imls
 
-        hazard_assets = [
-            (asset.id, self.get_by_site(asset.site, hc.id, imls))
-            for asset in self.assets]
+        with monitor.copy('getting closest hazard curves'):
+            assets = []
+            curves = []
 
-        assets = []
-        curves = []
-        for asset_id, (hazard_curve, distance) in hazard_assets:
-            if distance < self.max_distance * KILOMETERS_TO_METERS:
-                assets.append(self.asset_dict[asset_id])
-                curves.append(hazard_curve)
+            for asset in self.assets:
+                queryset = self.get_by_site(asset.site, hc.id)
+                if queryset is not None:
+                    [poes] = queryset
+                    assets.append(asset)
+                    curves.append(zip(imls, poes))
 
         return assets, curves
 
-    def get_by_site(self, site, hazard_id, imls):
+    def get_by_site(self, site, hazard_id):
         """
         :param site:
             An instance of :class:`django.contrib.gis.geos.point.Point`
             corresponding to the location of an asset.
         """
-        if site.wkt in self._cache:
-            return self._cache[site.wkt]
-
         cursor = models.getcursor('job_init')
 
         query = """
-        SELECT
-            hzrdr.hazard_curve_data.poes,
-            min(ST_Distance(location::geography,
-                            ST_GeographyFromText(%s), false))
-                AS min_distance
+        SELECT hzrdr.hazard_curve_data.poes
         FROM hzrdr.hazard_curve_data
         WHERE hazard_curve_id = %s
-        GROUP BY id
-        ORDER BY min_distance
-        LIMIT 1;"""
+        AND ST_DWithin(ST_GeographyFromText(%s), location::geography, %s)
+        ORDER BY
+            ST_Distance(location::geography, ST_GeographyFromText(%s), false)
+        LIMIT 1
+        """
 
-        args = (site.wkt, hazard_id)
+        args = (hazard_id, site.wkt, self.max_distance * KILOMETERS_TO_METERS,
+                site.wkt)
 
         cursor.execute(query, args)
-        poes, distance = cursor.fetchone()
-
-        hazard = zip(imls, poes)
-
-        self._cache[site.wkt] = (hazard, distance)
-
-        return hazard, distance
+        return cursor.fetchone()
 
 
 class GroundMotionValuesGetter(HazardGetter):
