@@ -263,7 +263,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
 
-    ssh $lxc_ip "sudo su postgres -c \"cd oq-engine ; bin/create_oq_schema --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema\""
+    ssh $lxc_ip "sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema\""
 
     for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer; do
         ssh $lxc_ip "sudo su postgres -c \"psql -c \\\"ALTER ROLE $dbu WITH PASSWORD 'openquake'\\\"\""
@@ -846,8 +846,7 @@ mv README.txt      openquake/engine/README
 mv celeryconfig.py openquake/engine
 mv openquake.cfg   openquake/engine
 
-mv bin/openquake   bin/oqscript.py
-mv bin             openquake/engine/bin
+mv openquake/engine/bin/openquake   openquake/engine/bin/oqscript.py
 
 dpkg-buildpackage $DPBP_FLAG
 cd -
