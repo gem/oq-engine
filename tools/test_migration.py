@@ -115,13 +115,13 @@ def pg_dump(to_file):
             out.write(comment)
 
 
-# DB from create_oq_schema
-info('Creating a fresh database using create_oq_schema...')
+# DB from oq_create_db
+info('Creating a fresh database using oq_create_db...')
 
 psql('-c', "DROP DATABASE IF EXISTS %s" % original_db)
 psql('-c', "CREATE DATABASE %s" % original_db)
 
-quiet_check_call(['bin/create_oq_schema', '--yes', '--no-tab-spaces',
+quiet_check_call(['bin/oq_create_db', '--yes', '--no-tab-spaces',
                   '--db-name=%s' % original_db,
                   '--db-user=%s' % db_admin_user,
                   '--schema-path=%s' % 'openquake/db/schema'])
