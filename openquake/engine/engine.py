@@ -379,7 +379,6 @@ def _collect_source_model_paths(smlt):
     as a uniquified list (no duplicates).
     """
     src_paths = []
-    schema = etree.XMLSchema(etree.parse(nrmllib.nrml_schema_file()))
     tree = etree.parse(smlt)
     for branch_set in tree.xpath('//nrml:logicTreeBranchSet',
                                  namespaces=nrmllib.PARSE_NS_MAP):
@@ -527,7 +526,7 @@ def _get_job(job_id):
     """
     Helper function to get a job object by ID. Makes testing/mocking easier.
     """
-    return model.OqJob.objects.get(id=job_id)
+    return models.OqJob.objects.get(id=job_id)
 
 
 def _job_exec(job, log_level, log_file, exports, job_type, calc):
