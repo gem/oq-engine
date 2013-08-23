@@ -98,6 +98,7 @@ class VulnerabilityFunction(object):
 
         self.distribution.init(asset_count, sample_num, seed, correlation)
 
+    @utils.memoized
     def strictly_increasing(self):
         """
         :returns:
@@ -242,6 +243,7 @@ class VulnerabilityFunction(object):
                     loss_ratio, mean_loss_ratio, stddev)
         return loss_ratios, lrem
 
+    @utils.memoized
     def mean_imls(self):
         """
         Compute the mean IMLs (Intensity Measure Level)
