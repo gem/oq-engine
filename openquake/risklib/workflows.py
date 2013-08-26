@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/>.
 
 import collections
-import itertools
 import numpy
 from scipy import interpolate
 
@@ -109,6 +108,8 @@ class Classical(object):
       a numpy array of N loss curves. If the curve resolution is R, the final
       shape of the array will be (N, 2, R), where the `two` accounts for
       the losses/poes dimensions
+    :attr average_losses:
+      a numpy array of N average loss values
     :attr loss_maps:
       a numpy array of P elements holding N loss maps where P is the
       number of `conditional_loss_poes` considered. Shape: (P, N)
@@ -140,7 +141,7 @@ class Classical(object):
 
     Output = collections.namedtuple(
         'Output',
-        'assets loss_curves loss_maps loss_fractions')
+        'assets loss_curves average_losses loss_maps loss_fractions')
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
@@ -194,13 +195,17 @@ class Classical(object):
         for hid, assets, hazard_curves in data:
             with monitor:
                 curves = self.curves(hazard_curves)
+                average_losses = numpy.array(
+                    [scientific.average_loss(losses, poes)
+                     for losses, poes in curves])
                 maps = self.maps(curves)
                 fractions = self.fractions(curves)
 
                 self._loss_curves.append(curves)
                 self._assets = assets
 
-                yield hid, self.Output(assets, curves, maps, fractions)
+                yield hid, self.Output(
+                    assets, curves, average_losses, maps, fractions)
 
     def statistics(self, weights, quantiles, post_processing):
         """
@@ -262,6 +267,12 @@ class ProbabilisticEventBased(object):
       shape of the array will be (N, 2, R), where the `two` accounts for
       the losses/poes dimensions
 
+    :attr average_losses:
+      a numpy array of N average loss values
+
+    :attr stddev_losses:
+      a numpy array holding N standard deviation of losses
+
     :attr insured_curves:
       a numpy array of N insured loss curves, shaped (N, 2, R)
 
@@ -276,7 +287,8 @@ class ProbabilisticEventBased(object):
     """
     Output = collections.namedtuple(
         'Output',
-        'assets loss_matrix loss_curves insured_curves loss_maps')
+        "assets loss_matrix loss_curves average_losses stddev_losses "
+        "insured_curves loss_maps")
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
@@ -342,6 +354,12 @@ class ProbabilisticEventBased(object):
                 curves = self.curves(loss_matrix)
                 self._loss_curves.append(curves)
 
+                average_losses = numpy.array(
+                    [scientific.average_loss(losses, poes)
+                     for losses, poes in curves])
+
+                stddev_losses = numpy.std(loss_matrix, axis=1)
+
                 values = utils.numpy_map(lambda a: a.value(loss_type),
                                          assets)
                 maps = self.maps(curves)
@@ -363,7 +381,9 @@ class ProbabilisticEventBased(object):
                     insured_curves = None
 
             yield hid, self.Output(
-                assets, loss_matrix, curves, insured_curves, maps)
+                assets, loss_matrix, curves,
+                average_losses, stddev_losses,
+                insured_curves, maps)
 
     def statistics(self, weights, quantiles, post_processing):
         """
