@@ -532,30 +532,3 @@ class LossFractionTestCase(unittest.TestCase):
                          lf.display_value("7, 21", rc))
         self.assertEqual("0.0000,0.5000|0.0000,0.5000",
                          lf.display_value("0.0, 0.0", rc))
-
-
-class LossCurveCollectionTestCase(unittest.TestCase):
-    def test_iter_classical(self):
-        curves = numpy.empty((10, 2, 20))
-        cc = models.LossCurveCollection(curves)
-
-        with mock.patch('openquake.risklib.scientific.average_loss') as m:
-            m.return_value = 3
-            for i, (losses, poes, average, stddev) in enumerate(cc):
-                self.assertIsNone(stddev)
-                self.assertEqual(3, average)
-                numpy.testing.assert_equal(curves[i][0], losses)
-                numpy.testing.assert_equal(curves[i][1], poes)
-
-    def test_iter_event_based(self):
-        curves = numpy.empty((10, 2, 20))
-        stddevs = numpy.empty(10)
-        cc = models.LossCurveCollection(curves, stddevs)
-
-        with mock.patch('openquake.risklib.scientific.average_loss') as m:
-            m.return_value = 3
-            for i, (losses, poes, average, stddev) in enumerate(cc):
-                self.assertEqual(stddevs[i], stddev)
-                self.assertEqual(3, average)
-                numpy.testing.assert_equal(curves[i][0], losses)
-                numpy.testing.assert_equal(curves[i][1], poes)
