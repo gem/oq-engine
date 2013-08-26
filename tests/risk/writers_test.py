@@ -41,7 +41,8 @@ BCR_NODE = collections.namedtuple(
     "average_annual_loss_retrofitted")
 
 LOSS_CURVE = collections.namedtuple(
-    "LossCurve", "poes losses location asset_ref loss_ratios average_loss stddev_loss")
+    "LossCurve",
+    "poes losses location asset_ref loss_ratios average_loss stddev_loss")
 
 AGGREGATE_LOSS_CURVE = collections.namedtuple(
     "AggregateLossCurve", "poes losses average_loss stddev_loss")
@@ -128,7 +129,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       <poEs>1.0 0.3 0.2</poEs>
       <losses>20.0 30.0 40.0</losses>
       <averageLoss>3.0000e+00</averageLoss>
-      <stddevLoss>2.5000e+00</stddevLoss>
+      <stdDevLoss>2.5000e-01</stdDevLoss>
     </lossCurve>
   </lossCurves>
 </nrml>
@@ -170,7 +171,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       <poEs>1.0 0.5 0.1</poEs>
       <losses>10.0 20.0 30.0</losses>
       <averageLoss>1.0000e+00</averageLoss>
-      <stddevLoss>5.0000e+01</stddevLoss>
+      <stdDevLoss>5.0000e-01</stdDevLoss>
     </lossCurve>
     <lossCurve assetRef="asset_2">
       <gml:Point>
@@ -179,7 +180,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       <poEs>1.0 0.3 0.2</poEs>
       <losses>20.0 30.0 40.0</losses>
       <averageLoss>2.0000e+00</averageLoss>
-      <stddevLoss>1.0000e+01</stddevLoss>
+      <stdDevLoss>1.0000e-01</stdDevLoss>
     </lossCurve>
   </lossCurves>
 </nrml>
@@ -222,7 +223,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       <losses>10.0 20.0 30.0</losses>
       <lossRatios>0.4 0.6 1.8</lossRatios>
       <averageLoss>0.0000e+00</averageLoss>
-      <stddevLoss>9.0000e+01</stddevLoss>
+      <stdDevLoss>9.0000e-01</stdDevLoss>
     </lossCurve>
   </lossCurves>
 </nrml>
@@ -270,7 +271,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
     <poEs>1.0 0.5 0.1</poEs>
     <losses>10.0000 20.0000 30.0000</losses>
     <averageLoss>3.0000e+00</averageLoss>
-    <stddevLoss>5.0000e+01</stddevLoss>
+    <stdDevLoss>5.0000e-01</stdDevLoss>
   </aggregateLossCurve>
 </nrml>
 """)
@@ -302,7 +303,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
     <poEs>1.0 0.5 0.1</poEs>
     <losses>10.0000 20.0000 30.0000</losses>
     <averageLoss>2.0000e+00</averageLoss>
-    <stddevLoss>5.0000e+01</stddevLoss>
+    <stdDevLoss>5.0000e-01</stdDevLoss>
   </aggregateLossCurve>
 </nrml>
 """)
