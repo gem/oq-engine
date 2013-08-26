@@ -866,7 +866,7 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
     average_loss FLOAT NOT NULL,
 
     -- StdDev of losses
-    stddev_loss_ratio FLOAT
+    stddev_loss FLOAT
 ) TABLESPACE riskr_ts;
 
 -- Benefit-cost ratio distribution
