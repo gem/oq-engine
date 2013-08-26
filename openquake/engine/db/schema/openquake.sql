@@ -417,6 +417,7 @@ CREATE TABLE uiapi.output (
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
             'event_loss',
+            'event_loss_curve',
             'gmf',
             'gmf_scenario',
             'hazard_curve',
