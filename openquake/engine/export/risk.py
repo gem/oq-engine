@@ -178,8 +178,6 @@ def _export_loss_map(output, target, writer_class, file_ext):
     """
     General loss map export code.
     """
-    core.makedirs(target)
-
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.loss_map.loss_type)
 
@@ -195,6 +193,7 @@ def _export_loss_map(output, target, writer_class, file_ext):
     return dest
 
 
+@core.makedirsdeco
 def export_loss_map_xml(output, target):
     """
     Serialize a loss map to NRML/XML.
@@ -203,6 +202,7 @@ def export_loss_map_xml(output, target):
                             'xml')
 
 
+@core.makedirsdeco
 def export_loss_map_geojson(output, target):
     """
     Serialize a loss map to geojson.
