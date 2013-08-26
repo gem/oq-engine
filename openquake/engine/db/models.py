@@ -1511,6 +1511,7 @@ class Output(djm.Model):
         (u'dmg_dist_total', u'Total Damage Distribution'),
         (u'event_loss', u'Event Loss Table'),
         (u'loss_curve', u'Loss Curve'),
+        (u'event_loss_curve', u'Loss Curve'),
         (u'loss_fraction', u'Loss fractions'),
         (u'loss_map', u'Loss Map'),
     )
@@ -1537,7 +1538,7 @@ class Output(djm.Model):
         """
 
         # FIXME(lp). Remove the following outstanding exceptions
-        if self.output_type == 'agg_loss_curve':
+        if self.output_type in ['agg_loss_curve', 'event_loss_curve']:
             return self.loss_curve
         elif self.output_type == 'hazard_curve_multi':
             return self.hazard_curve
@@ -2816,25 +2817,6 @@ class LossCurveData(djm.Model):
             poes = numpy.zeros(len(data.poes))
 
         return risk_almost_equal(self.poes, poes)
-
-
-class LossCurveCollection(object):
-    """
-    An helper class useful for iterating over loss curves and
-    computing statistics on the curves
-    """
-    def __init__(self, curves, stddevs=None):
-        self.curves = curves
-        if stddevs is not None:
-            self.stddevs = stddevs
-        else:
-            self.stddevs = []
-
-    def __iter__(self):
-        for (losses, poes), stddev in itertools.izip_longest(
-                self.curves, self.stddevs):
-            average = scientific.average_loss(losses, poes)
-            yield losses, poes, average, stddev
 
 
 class AggregateLossCurveData(djm.Model):

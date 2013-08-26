@@ -20,6 +20,7 @@ Core functionality for the classical PSHA risk calculator.
 
 import random
 import collections
+import itertools
 import numpy
 
 from django import db
@@ -136,9 +137,8 @@ def save_individual_outputs(containers, outputs, disagg_outputs, params):
 
     containers.write(
         outputs.assets,
-        models.LossCurveCollection(
-            outputs.loss_curves, numpy.std(outputs.loss_matrix, axis=1)),
-        output_type="loss_curve")
+        (outputs.loss_curves, outputs.average_losses, outputs.stddev_losses),
+        output_type="event_loss_curve")
 
     containers.write_all(
         "poe", params.conditional_loss_poes,
@@ -161,7 +161,8 @@ def save_individual_outputs(containers, outputs, disagg_outputs, params):
 
     if outputs.insured_curves is not None:
         containers.write(
-            outputs.assets, models.LossCurveCollection(outputs.insured_curves),
+            outputs.assets,
+            (outputs.insured_curves, outputs.average_insured_losses),
             output_type="loss_curve", insured=True)
 
 
@@ -182,7 +183,7 @@ def save_statistical_output(containers, stats, params):
     """
 
     containers.write(
-        stats.assets, models.LossCurveCollection(stats.mean_curves),
+        stats.assets, (stats.mean_curves, stats.mean_average_losses),
         output_type="loss_curve", statistics="mean")
 
     containers.write_all(
@@ -192,8 +193,8 @@ def save_statistical_output(containers, stats, params):
     # quantile curves and maps
     containers.write_all(
         "quantile", params.quantiles,
-        [models.LossCurveCollection(curves)
-         for curves in stats.quantile_curves],
+        [(c, a) for c, a in itertools.izip(stats.quantile_curves,
+                                           stats.quantile_average_losses)],
         stats.assets, output_type="loss_curve", statistics="quantile")
 
     if params.quantiles:
@@ -275,7 +276,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         validation.RequireEventBasedHazard,
         validation.ExposureHasInsuranceBounds]
 
-    output_builders = [writers.LossCurveMapBuilder,
+    output_builders = [writers.EventLossCurveMapBuilder,
                        writers.InsuredLossCurveBuilder,
                        writers.LossFractionBuilder]
 
