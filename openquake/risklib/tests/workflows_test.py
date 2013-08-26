@@ -210,8 +210,9 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
     def test_normalize_one_trivial(self):
         trivial = [numpy.zeros(6), numpy.linspace(1, 0, 6)]
         curve = [numpy.linspace(0., 1., 6), numpy.linspace(1., 0., 6)]
-        exp_losses, (poes1, poes2) = self.workflow._normalize_curves(
-            [trivial, curve])
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            exp_losses, (poes1, poes2) = self.workflow._normalize_curves(
+                [trivial, curve])
 
         numpy.testing.assert_allclose(exp_losses, curve[0])
         numpy.testing.assert_allclose(poes1, [numpy.nan, 0., 0., 0., 0., 0.])

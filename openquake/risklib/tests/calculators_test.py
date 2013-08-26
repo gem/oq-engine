@@ -303,8 +303,8 @@ class AssetStatisticsTestCase(unittest.TestCase):
 
                 loss_curves = numpy.empty((asset_nr, 2, resolution))
 
-                (mean_curves, mean_maps,
-                 quantile_curves, quantile_maps) = (
+                (mean_curves, mean_average_losses, mean_maps,
+                 quantile_curves, quantile_average_losses, quantile_maps) = (
                      calculators.exposure_statistics(loss_curves,
                                                      numpy.empty(poe_nr),
                                                      numpy.empty(asset_nr),
@@ -312,8 +312,11 @@ class AssetStatisticsTestCase(unittest.TestCase):
                                                      mock.Mock()))
 
                 self.assertEqual((asset_nr, 2, resolution), mean_curves.shape)
+                self.assertEqual((asset_nr, ), mean_average_losses.shape)
                 self.assertEqual((poe_nr, asset_nr), mean_maps.shape)
                 self.assertEqual((quantile_nr, asset_nr, 2, resolution),
                                  quantile_curves.shape)
+                self.assertEqual((quantile_nr, asset_nr),
+                                 quantile_average_losses.shape)
                 self.assertEqual((quantile_nr, poe_nr, asset_nr),
                                  quantile_maps.shape)

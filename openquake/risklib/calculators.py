@@ -157,11 +157,13 @@ def exposure_statistics(
        #mean_curve
 
     :returns:
-        a tuple with four elements:
-            1) a numpy array with N mean loss curves
-            2) a numpy array with P x N mean map values
-            3) a numpy array with Q x N quantile loss curves
-            4) a numpy array with Q x P quantile map values
+        a tuple with six elements:
+            *) a numpy array with N mean loss curves
+            *) a numpy array with N mean average losses
+            *) a numpy array with P x N mean map values
+            *) a numpy array with Q x N quantile loss curves
+            *) a numpy array with Q x N quantile average loss values
+            *) a numpy array with Q x P quantile map values
     """
     curve_resolution = len(loss_curves[0][0])
     map_nr = len(map_poes)
@@ -169,8 +171,10 @@ def exposure_statistics(
     # Collect per-asset statistic along the last dimension of the
     # following arrays
     mean_curves = numpy.zeros((0, 2, curve_resolution))
+    mean_average_losses = numpy.array([])
     mean_maps = numpy.zeros((map_nr, 0))
     quantile_curves = numpy.zeros((len(quantiles), 0, 2, curve_resolution))
+    quantile_average_losses = numpy.zeros((len(quantiles), 0,))
     quantile_maps = numpy.zeros((len(quantiles), map_nr, 0))
 
     for loss_ratios, curves_poes in loss_curves:
@@ -181,13 +185,24 @@ def exposure_statistics(
 
         mean_curves = numpy.vstack(
             (mean_curves, _mean_curve[numpy.newaxis, :]))
+        mean_average_losses = numpy.append(
+            mean_average_losses, scientific.average_loss(*_mean_curve))
+
         mean_maps = numpy.hstack((mean_maps, _mean_maps[:, numpy.newaxis]))
         quantile_curves = numpy.hstack(
             (quantile_curves, _quantile_curves[:, numpy.newaxis]))
+
+        _quantile_average_losses = numpy.array(
+            [scientific.average_loss(losses, poes)
+             for losses, poes in _quantile_curves])
+        quantile_average_losses = numpy.hstack(
+            (quantile_average_losses,
+             _quantile_average_losses[:, numpy.newaxis]))
         quantile_maps = numpy.dstack(
             (quantile_maps, _quantile_maps[:, :, numpy.newaxis]))
 
-    return mean_curves, mean_maps, quantile_curves, quantile_maps
+    return (mean_curves, mean_average_losses, mean_maps,
+            quantile_curves, quantile_average_losses, quantile_maps)
 
 
 def asset_statistics(
