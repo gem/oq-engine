@@ -301,7 +301,8 @@ class ProbabilisticEventBased(object):
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
-        'assets mean_curves mean_maps quantile_curves quantile_maps')
+        'assets mean_curves mean_average_losses '
+        'mean_maps quantile_curves quantile_average_losses quantile_maps')
 
     def __init__(
             self,
@@ -418,14 +419,15 @@ class ProbabilisticEventBased(object):
             return
 
         curve_matrix = numpy.array(self._loss_curves).transpose(1, 0, 2, 3)
-        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
+        (mean_curves, mean_average_losses, mean_maps,
+         quantile_curves, quantile_average_losses, quantile_maps) = (
             calculators.exposure_statistics(
                 [self._normalize_curves(curves) for curves in curve_matrix],
                 self.maps.poes, weights, quantiles, post_processing))
 
         return self.StatisticalOutput(
-            self.assets, mean_curves, mean_maps,
-            quantile_curves, quantile_maps)
+            self.assets, mean_curves, mean_average_losses, mean_maps,
+            quantile_curves, quantile_average_losses, quantile_maps)
 
     def _normalize_curves(self, curves):
         non_trivial_curves = [(losses, poes)
