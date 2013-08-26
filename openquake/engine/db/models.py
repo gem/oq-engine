@@ -53,6 +53,8 @@ from shapely import wkt
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import source as hazardlib_source
 
+from openquake.risklib import scientific
+
 from openquake.engine.db import fields
 from openquake.engine import writer
 
@@ -2780,6 +2782,7 @@ class LossCurveData(djm.Model):
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
     average_loss_ratio = djm.FloatField()
+    stddev_loss_ratio = djm.FloatField(blank=True, null=True)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve_data'
@@ -2791,6 +2794,11 @@ class LossCurveData(djm.Model):
     @property
     def average_loss(self):
         return self.average_loss_ratio * self.asset_value
+
+    @property
+    def stddev_loss(self):
+        if self.stddev_loss_ratio is not None:
+            return self.stddev_loss_ratio * self.asset_value
 
     @property
     def data_hash(self):
@@ -2810,6 +2818,25 @@ class LossCurveData(djm.Model):
         return risk_almost_equal(self.poes, poes)
 
 
+class LossCurveCollection(object):
+    """
+    An helper class useful for iterating over loss curves and
+    computing statistics on the curves
+    """
+    def __init__(self, curves, stddevs=None):
+        self.curves = curves
+        if stddevs is not None:
+            self.stddevs = stddevs
+        else:
+            self.stddevs = []
+
+    def __iter__(self):
+        for (losses, poes), stddev in itertools.izip_longest(
+                self.curves, self.stddevs):
+            average = scientific.average_loss(losses, poes)
+            yield losses, poes, average, stddev
+
+
 class AggregateLossCurveData(djm.Model):
     '''
     Holds the probabilities of exceedance for the whole exposure model
@@ -2819,6 +2846,7 @@ class AggregateLossCurveData(djm.Model):
     losses = fields.FloatArrayField()
     poes = fields.FloatArrayField()
     average_loss = djm.FloatField()
+    stddev_loss = djm.FloatField(blank=True, null=True)
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss_curve_data'
