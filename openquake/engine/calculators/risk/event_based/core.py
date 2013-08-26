@@ -116,8 +116,29 @@ def do_event_based(unit, containers, params, profile):
 
 
 def save_individual_outputs(containers, outputs, disagg_outputs, params):
+    """
+    Save loss curves, loss maps and loss fractions associated with a
+    calculation unit
+
+    :param containers:
+        a :class:`openquake.engine.calculators.risk.writers.OutputDict`
+        instance holding the reference to the output container objects
+    :param outputs:
+        a :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
+        holding the output data for a calculation unit
+    :param disagg_outputs:
+        a :class:`.DisaggregationOutputs` holding the disaggreation
+        output data for a calculation unit
+    :param params:
+        a :class:`openquake.engine.calculators.risk.base.CalcParams`
+        holding the parameters for this calculation
+    """
+
     containers.write(
-        outputs.assets, outputs.loss_curves, output_type="loss_curve")
+        outputs.assets,
+        models.LossCurveCollection(
+            outputs.loss_curves, numpy.std(outputs.loss_matrix, axis=1)),
+        output_type="loss_curve")
 
     containers.write_all(
         "poe", params.conditional_loss_poes,
@@ -140,13 +161,28 @@ def save_individual_outputs(containers, outputs, disagg_outputs, params):
 
     if outputs.insured_curves is not None:
         containers.write(
-            outputs.assets, outputs.insured_curves,
+            outputs.assets, models.LossCurveCollection(outputs.insured_curves),
             output_type="loss_curve", insured=True)
 
 
 def save_statistical_output(containers, stats, params):
+    """
+    Save statistical outputs (mean and quantile loss curves, mean and
+    quantile loss maps) for the calculation.
+
+    :param containers:
+        a :class:`openquake.engine.calculators.risk.writers.OutputDict`
+        instance holding the reference to the output container objects
+    :param stats:
+        :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`
+        holding the statistical output data
+    :param params:
+        a :class:`openquake.engine.calculators.risk.base.CalcParams`
+        holding the parameters for this calculation
+    """
+
     containers.write(
-        stats.assets, stats.mean_curves,
+        stats.assets, models.LossCurveCollection(stats.mean_curves),
         output_type="loss_curve", statistics="mean")
 
     containers.write_all(
@@ -155,7 +191,9 @@ def save_statistical_output(containers, stats, params):
 
     # quantile curves and maps
     containers.write_all(
-        "quantile", params.quantiles, stats.quantile_curves,
+        "quantile", params.quantiles,
+        [models.LossCurveCollection(curves)
+         for curves in stats.quantile_curves],
         stats.assets, output_type="loss_curve", statistics="quantile")
 
     if params.quantiles:
@@ -328,7 +366,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             losses=aggregate_loss_losses,
                             poes=aggregate_loss_poes,
                             average_loss=scientific.average_loss(
-                                aggregate_loss_losses, aggregate_loss_poes))
+                                aggregate_loss_losses, aggregate_loss_poes),
+                            stddev_loss=numpy.std(aggregate_losses))
 
     def calculation_unit(self, loss_type, assets):
         """
