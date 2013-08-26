@@ -88,7 +88,7 @@ def _get_result_export_dest(target, output, file_ext='xml'):
 
     filename = None
 
-    if output_type in ('loss_curve', 'agg_loss_curve'):
+    if output_type in ('loss_curve', 'agg_loss_curve', 'event_loss_curve'):
         filename = LOSS_CURVE_FILENAME_FMT % dict(
             loss_curve_id=output.loss_curve.id,
         )
@@ -356,6 +356,7 @@ XML_EXPORTERS = {
     'dmg_dist_per_taxonomy': export_dmg_dist_per_taxonomy_xml,
     'dmg_dist_total': export_dmg_dist_total_xml,
     'loss_curve': export_loss_curve_xml,
+    'event_loss_curve': export_loss_curve_xml,
     'loss_fraction': export_loss_fraction_xml,
     'loss_map': export_loss_map_xml,
     # TODO(LB):

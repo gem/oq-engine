@@ -17,11 +17,11 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import itertools
 from openquake.risklib import workflows
 
 from django.db import transaction
 
-from openquake.engine.db.models import LossCurveCollection
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
@@ -112,7 +112,7 @@ def save_individual_outputs(containers, outs, params):
 
     containers.write(
         outs.assets,
-        LossCurveCollection(outs.loss_curves),
+        (outs.loss_curves, outs.average_losses),
         output_type="loss_curve")
 
     containers.write_all(
@@ -147,7 +147,7 @@ def save_statistical_output(containers, stats, params):
 
     # mean curves, maps and fractions
     containers.write(
-        stats.assets, LossCurveCollection(stats.mean_curves),
+        stats.assets, (stats.mean_curves, stats.mean_average_losses),
         output_type="loss_curve", statistics="mean")
 
     containers.write_all("poe", params.conditional_loss_poes,
@@ -164,8 +164,9 @@ def save_statistical_output(containers, stats, params):
 
     # quantile curves, maps and fractions
     containers.write_all(
-        "quantile", params.quantiles, [LossCurveCollection(curves)
-                                       for curves in stats.quantile_curves],
+        "quantile", params.quantiles,
+        [(c, a) for c, a in itertools.izip(
+            stats.quantile_curves, stats.quantile_average_losses)],
         stats.assets, output_type="loss_curve", statistics="quantile")
 
     for quantile, maps in zip(params.quantiles, stats.quantile_maps):
