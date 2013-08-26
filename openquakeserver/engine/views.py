@@ -6,9 +6,11 @@ import shutil
 import tempfile
 import urlparse
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.http import HttpResponseNotFound
 from django.shortcuts import redirect
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from openquake import nrmllib
@@ -92,6 +94,8 @@ def calc_hazard(request):
     base_url = _get_base_url(request)
 
     haz_calc_data = _get_haz_calcs()
+    if not haz_calc_data:
+        return HttpResponseNotFound()
 
     response_data = []
     for hc_id, status, desc in haz_calc_data:
@@ -226,7 +230,10 @@ def calc_hazard_info(request, calc_id):
     (specified by ``calc_id``). Also includes the current job status (
     executing, complete, etc.).
     """
-    response_data = _get_haz_calc_info(calc_id)
+    try:
+        response_data = _get_haz_calc_info(calc_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -262,6 +269,8 @@ def calc_hazard_results(request, calc_id):
     base_url = _get_base_url(request)
 
     results = oq_engine.get_hazard_outputs(calc_id)
+    if not results:
+        return HttpResponseNotFound()
 
     response_data = []
     for result in results:
@@ -300,6 +309,8 @@ def calc_risk(request):
     base_url = _get_base_url(request)
 
     risk_calc_data = _get_risk_calcs()
+    if not risk_calc_data:
+        return HttpResponseNotFound()
 
     response_data = []
     for hc_id, status, desc in risk_calc_data:
@@ -375,7 +386,10 @@ def calc_risk_info(request, calc_id):
     (specified by ``calc_id``). Also includes the current job status (
     executing, complete, etc.).
     """
-    response_data = _get_risk_calc_info(calc_id)
+    try:
+        response_data = _get_risk_calc_info(calc_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -411,6 +425,8 @@ def calc_risk_results(request, calc_id):
     base_url = _get_base_url(request)
 
     results = oq_engine.get_risk_outputs(calc_id)
+    if not results:
+        return HttpResponseNotFound()
 
     response_data = []
     for result in results:
