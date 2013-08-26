@@ -159,7 +159,6 @@ def run_hazard_calc(request):
         shutil.rmtree(temp_dir)
         tasks.run_hazard_calc.apply_async((hc.id, ))
 
-        base_url = _get_base_url(request)
         return redirect('/v1/calc/hazard/%s' % hc.id)
 
 
@@ -361,7 +360,6 @@ def run_risk_calc(request):
         shutil.rmtree(temp_dir)
         tasks.run_risk_calc.apply_async((rc.id, ))
 
-        base_url = _get_base_url(request)
         return redirect('/v1/calc/risk/%s' % rc.id)
 
 
