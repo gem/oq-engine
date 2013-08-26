@@ -50,19 +50,25 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         # specific method to write loss curves
 
         base_path = 'openquake.engine.calculators.risk.writers'
-        patch = helpers.patch('%s.loss_curve' % base_path)
+        patches = [
+            helpers.patch('%s.loss_curve' % base_path),
+            helpers.patch('%s.event_loss_curve' % base_path)]
 
-        mocked_loss_writer = patch.start()
+        try:
+            mocked_loss_writer, mocked_event_loss_writer = [
+                p.start() for p in patches]
 
-        event_based.event_based(
-            *self.calculator.task_arg_gen(
-                self.calculator.block_size()).next())
+            event_based.event_based(
+                *self.calculator.task_arg_gen(
+                    self.calculator.block_size()).next())
 
-        # we expect 1 asset being filtered out by the region
-        # constraint, so there are only four loss curves (2 of them
-        # are insured) to be written
-        self.assertEqual(2, mocked_loss_writer.call_count)
-        patch.stop()
+            # we expect 1 asset being filtered out by the region
+            # constraint, so there are only four loss curves (2 of them
+            # are insured) to be written
+            self.assertEqual(1, mocked_loss_writer.call_count)
+            self.assertEqual(1, mocked_event_loss_writer.call_count)
+        finally:
+            [p.stop() for p in patches]
 
     def test_complete_workflow(self):
         # Test the complete risk classical calculation workflow and test
