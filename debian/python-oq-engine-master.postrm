@@ -25,10 +25,9 @@ revert_config () {
         # remove $GEM_DEB_PACKAGE blocks
         sed -i '/^# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN.*/,/^# PYTHON-OQ-ENGINE: CONFIGURATION END.*/d' "$file_cur"
         # reactivate previous disabled configurations
-        sed -i "s/^# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: //g' "$file_cur"
+        sed -i "s/^# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: //g" "$file_cur"
     done
 }
-
 
 case "$1" in
   remove)
