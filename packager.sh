@@ -71,7 +71,6 @@ sig_hand () {
     trap ERR
     echo "signal trapped"
 
-read -p "prompoto" prompoto
     set +e
     for lname in "$lxc_name" "$lxc_master_name" "${lxc_worker_name[@]}"; do
         if [ "$lname" == "" ]; then
@@ -321,8 +320,6 @@ _devtest_innervm_run () {
     fi
 
     # TODO: version check
-#    echo "NOW PRESS ENTER TO CONTINUE"
-#    read aaa
     trap ERR
 
     return
@@ -515,17 +512,10 @@ _pkgclustest_innervm_run () {
     master_debconf $lxc_master_ip | ssh $lxc_master_ip "sudo debconf-set-selections"
     ssh $lxc_master_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-master"
 
-    read -p "... pre loop" a
-
     for ip_cur in "${lxc_worker_ip[@]}"; do
         worker_debconf $lxc_master_ip | ssh $ip_cur "sudo debconf-set-selections"
         ssh $ip_cur "sudo apt-get install -y ${GEM_DEB_PACKAGE}-worker"
     done
-
-    read -p "... and now type enter to continue" a
-
-
-
 
     echo "PKGTEST: REMOVE master"
     sleep 5
@@ -541,21 +531,16 @@ _pkgclustest_innervm_run () {
     ssh $lxc_master_ip "sudo service celeryd stop"
     sleep 5
     ssh $lxc_master_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-master"
-if [ 1 -eq 0 ]; then
-    # configure the machine to run tests
-    ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
-    ssh $lxc_ip "sudo sed -i 's/#standard_conforming_strings = on/standard_conforming_strings = off/g' /etc/postgresql/9.1/main/postgresql.conf"
 
-    ssh $lxc_ip "sudo service postgresql restart"
-    ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
-    ssh $lxc_ip "oq_create_db --yes --db-user=\$USER --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
+    ssh $lxc_master_ip "sudo service postgresql restart"
+    ssh $lxc_master_ip "sudo -u postgres oq_create_db --yes --db-user=postgres --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
 
     # copy demos file to $HOME
-    ssh $lxc_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}-common/examples/demos ."
+    ssh $lxc_master_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}-common/examples/demos ."
 
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
-        ssh $lxc_ip "cd demos
+        ssh $lxc_master_ip "export GEM_PKGTEST_ONE_DEMO=$GEM_PKGTEST_ONE_DEMO ; cd demos
         for ini in \$(find ./hazard -name job.ini); do
             openquake --run-hazard  \$ini --exports xml
         done
@@ -569,10 +554,8 @@ if [ 1 -eq 0 ]; then
             cd -
         done"
     fi
-fi
 
     trap ERR
-
     return
 }
 
@@ -796,7 +779,6 @@ if [ 1 -eq 0 ]; then
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
-read -p "after inner" afterinner
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
 
