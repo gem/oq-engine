@@ -242,9 +242,13 @@ class EventBasedExportTestCase(BaseExportTestCase):
             loss_curve_outputs = risk_outputs.filter(output_type='loss_curve')
             loss_map_outputs = risk_outputs.filter(output_type='loss_map')
 
-            # 16 logic tree realizations + 1 mean + 2 quantiles = 19
-            self.assertEqual(19, loss_curve_outputs.count())
+            # 1 mean + 2 quantiles
+            self.assertEqual(3, loss_curve_outputs.count())
 
+            # 16 rlzs
+            event_loss_curve_outputs = risk_outputs.filter(
+                output_type='event_loss_curve')
+            self.assertEqual(16, event_loss_curve_outputs.count())
             self.assertEqual(16, agg_loss_curve_outputs.count())
 
             # make sure the mean and quantile curve sets got created correctly
@@ -277,6 +281,8 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # exporter code:
             loss_curve_files = []
             for o in loss_curve_outputs:
+                loss_curve_files.append(risk.export(o.id, target_dir, 'xml'))
+            for o in event_loss_curve_outputs:
                 loss_curve_files.append(risk.export(o.id, target_dir, 'xml'))
 
             agg_loss_curve_files = []
