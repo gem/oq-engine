@@ -152,6 +152,7 @@ python-oq-engine-master	python-oq-engine-master/kernel-shmmax-override	boolean	t
 python-oq-engine-master	python-oq-engine-master/kernel-shmall-override	boolean	true
 python-oq-engine-master	python-oq-engine-master/pg-conf-max-conn-override	boolean	true
 python-oq-engine-master	python-oq-engine-master/pg-conf-std-conf-str-override	boolean	true
+python-oq-engine-master	python-oq-engine-master/pg-conf-listen-addresses-override	boolean	true
 python-oq-engine-master	python-oq-engine-master/workers-cores-number	string	4
 EOF
 }
