@@ -483,8 +483,8 @@ def _get_result(request, result_id, export_fn):
     try:
         content = export_fn(result_id, content, export_type=export_type)
     except NotImplementedError, err:
-        # Throw back a 501 if the exact export parameters are not supported
-        return HttpResponse(err.message, status=NOT_IMPLEMENTED)
+        # Throw back a 404 if the exact export parameters are not supported
+        return HttpResponseNotFound(err.message)
 
     # Just in case the original StringIO object was closed:
     resp_content = StringIO.StringIO()
