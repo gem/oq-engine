@@ -23,16 +23,24 @@ Description: Set standard-conforming-strings = off in postgresql.conf ?
 Template: python-oq-engine-master/pg-conf-listen-addresses-override
 Type: boolean
 Default: false
-Description: Currently postgresql is listening localhost interface only,
- to have a working cluster you need to listen the interface reachable
+Description: Do you want the package overrides it ?
+ Currently postgresql is not listening on all interfaces,
+ to have a working cluster it must listen to an interface reachable
  by workers.
- Do you want the package overrides it ?
 
 Template: python-oq-engine-master/pg-conf-max-conn-override
 Type: boolean
 Default: false
-Description: A max_connection entry in postgresql.conf is found.
- Do you want the package overrides it ?
+Description: Do you want the package overrides it ?
+ A max_connection entry in postgresql.conf is found.
+
+Template: python-oq-engine-master/redis-bind-override
+Type: boolean
+Default: false
+Description: Do you want the package overrides it ?
+ Currently redis is not listening on all interfaces,
+ to have a working cluster it must listen to an interface reachable
+ by workers.
 
 Template: python-oq-engine-master/pg-hba-allowed-hosts
 Type: string

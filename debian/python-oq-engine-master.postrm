@@ -18,9 +18,10 @@ GEM_DEB_PACKAGE="python-oq-engine-master"
 PG_BASE="${GEM_FAKEROOT}/etc/postgresql/9.1/main"
 PG_CONF="${PG_BASE}/postgresql.conf"
 PG_HBA_CONF="${PG_BASE}/pg_hba.conf"
+REDIS_CONF="${GEM_FAKEROOT}/etc/redis/redis.conf"
 
 revert_config () {
-    for file_cur in $PG_CONF $PG_HBA_CONF ${GEM_FAKEROOT}/etc/sysctl.d/*.conf ${GEM_FAKEROOT}/etc/sysctl.conf; do
+    for file_cur in $PG_CONF $PG_HBA_CONF $REDIS_CONF ${GEM_FAKEROOT}/etc/sysctl.d/*.conf ${GEM_FAKEROOT}/etc/sysctl.conf; do
         # remove $GEM_DEB_PACKAGE blocks
         sed -i '/^# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN.*/,/^# PYTHON-OQ-ENGINE: CONFIGURATION END.*/d' "$file_cur"
         # reactivate previous disabled configurations

@@ -34,6 +34,7 @@ GEM_TB="	"
 
 PG_BASE="${GEM_FAKEROOT}/etc/postgresql/9.1/main"
 PG_CONF="${PG_BASE}/postgresql.conf"
+REDIS_CONF="${GEM_FAKEROOT}/etc/redis/redis.conf"
 PG_HBA_CONF="${PG_BASE}/pg_hba.conf"
 
 OQ_BASE="${GEM_FAKEROOT}/etc/openquake"
@@ -411,6 +412,63 @@ cp "$PG_HBA_CONF" "${PG_HBA_CONF}.old"
 cp $tmpfile2 "$PG_HBA_CONF"
 
 rm $tmpfile $tmpfile2
+
+#
+#  redis.conf configuration
+#
+if [ ! -f "$REDIS_CONF" ]; then
+    echo "required configuration file $REDIS_CONF not exists"
+    db_stop
+    exit 1
+fi
+
+if ! begin_end_set "$REDIS_CONF"; then
+    db_stop
+    exit 1
+fi
+
+# save old oq-engine-related parameters values before refresh the OQ-ENGINE configuration block
+redis_bind_req="0.0.0.0"
+# here update with the function ===++===++++++==
+redis_bind_old="$(cat "$REDIS_CONF" | grep "^[ $GEM_TAB]*redis[ $GEM_TAB]*=" | \
+        sed "s/^[^=]*=[ $GEM_TB]//g;s/[ $GEM_TB]*\$//g" || true)"
+
+# redis.conf: remove the PYTHON-OQ-ENGINE configuration block
+tmpfile="$(mktemp)"
+strip_block $is_begin $is_end "$REDIS_CONF" "$REDIS_CONF" > $tmpfile
+redis_bind_set=1
+
+# redis.conf: bind attr management
+# does a bad explicit configuration of bind exists ?
+if grep -q "^[ $GEM_TAB]*bind[ $GEM_TAB]*=" "$tmpfile" ; then
+    if ! grep -q "^[ $GEM_TAB]*bind[ $GEM_TAB]*=[ $GEM_TAB]*0.0.0.0" "$tmpfile" ; then
+        db_get ${GEM_DEB_PACKAGE}/redis-bind-override || true
+        redis_bind_override="$RET"
+        if [ "$redis_bind_override" = "true" ]; then
+            sed -i "s/^\([ $GEM_TAB]*bind[ $GEM_TAB]*=.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
+            redis_bind_set=0
+        fi
+    fi
+else
+    redis_bind_set=0
+fi
+
+# redis.conf: if a modification is required a PYTHON-OQ-ENGINE configuration block is added
+if [ $redis_bind_set -eq 0 ]; then
+    tmpfile2="$(mktemp)"
+    cat ${tmpfile} | sed -n ":loop ; /^#.*/{p; n; bloop} ; q" > $tmpfile2
+
+    echo "# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN" >> $tmpfile2
+    if [ $redis_bind_set -eq 0 ]; then
+        echo "bind = 0.0.0.0" >> $tmpfile2
+    fi
+    echo "# PYTHON-OQ-ENGINE: CONFIGURATION END" >> $tmpfile2
+    cat ${tmpfile} | sed -n ":loop ; /^#.*/{   n; bloop} ; :rest ; p; n; brest" >>$tmpfile2
+    cp "$REDIS_CONF" "${REDIS_CONF}.old"
+    cp $tmpfile2 "$REDIS_CONF"
+    rm $tmpfile2
+fi
+rm $tmpfile
 
 #
 #  openquake.cfg settings

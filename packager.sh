@@ -148,11 +148,12 @@ master_net="$(echo "$master_ip" | sed 's/\.[0-9]\+$/.0/g')"
 
 cat <<EOF
 python-oq-engine-master	python-oq-engine-master/pg-hba-allowed-hosts	string	${master_net}/24
-python-oq-engine-master	python-oq-engine-master/kernel-shmmax-override	boolean	true
-python-oq-engine-master	python-oq-engine-master/kernel-shmall-override	boolean	true
 python-oq-engine-master	python-oq-engine-master/pg-conf-max-conn-override	boolean	true
 python-oq-engine-master	python-oq-engine-master/pg-conf-std-conf-str-override	boolean	true
 python-oq-engine-master	python-oq-engine-master/pg-conf-listen-addresses-override	boolean	true
+python-oq-engine-master	python-oq-engine-master/redis-bind-override	boolean	true
+python-oq-engine-master	python-oq-engine-master/kernel-shmmax-override	boolean	true
+python-oq-engine-master	python-oq-engine-master/kernel-shmall-override	boolean	true
 python-oq-engine-master	python-oq-engine-master/workers-cores-number	string	4
 EOF
 }
