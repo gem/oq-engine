@@ -433,7 +433,7 @@ fi
 # save old oq-engine-related parameters values before refresh the OQ-ENGINE configuration block
 redis_bind_req="0.0.0.0"
 # here update with the function ===++===++++++==
-redis_bind_old="$(cat "$REDIS_CONF" | grep "^[ $GEM_TAB]*redis[ $GEM_TAB]*" | \
+redis_bind_old="$(cat "$REDIS_CONF" | grep "^[ $GEM_TAB]*bind[ $GEM_TAB]*" | \
         sed "s/^[^ $GEM_TAB]\+[ $GEM_TB]\+//g;s/[ $GEM_TB]*\$//g" || true)"
 
 # redis.conf: remove the PYTHON-OQ-ENGINE configuration block
@@ -534,8 +534,8 @@ gem_shmmax_req=$(( gem_shmmax_req + (770 * 1024) ))
 # var < out of the block : if override, comment current set and create our config block
 # var = in of the block  : if override, recreation our config block
 # var > in of the block  : if override, recreation our config block
-# var = out of the block : fare nulla
-# var > out of the block : fare nulla
+# var = out of the block : do nothing
+# var > out of the block : do nothing
 
 gem_shmmax_cur="$(override_attribute 'kernel.shmmax' "$gem_shmmax_req" "$(cat ${GEM_FAKEROOT}/proc/sys/kernel/shmmax)" "${GEM_FAKEROOT}/etc/sysctl.d/30-postgresql-shm.conf" ${GEM_FAKEROOT}/etc/sysctl.d/*.conf ${GEM_FAKEROOT}/etc/sysctl.conf)"
 
@@ -573,9 +573,11 @@ if [ $gem_shmmax_req -gt $gem_shmmax_cur -o $gem_shmall_req -gt $gem_shmall_cur 
 fi
 
 
+# GEM DEVEL BEGIN
 if [ "$GEM_FAKEROOT" ]; then
     echo "mockpg stop" | nc -U /tmp/mockpg/.s.PGSQL.5432
 fi
+# GEM DEVEL END
 
 # postgres is installed by definition (depends), flatten and recreate the database.
 pgport=$(cat /etc/postgresql/9.1/main/postgresql.conf | perl -wane ' if ($_ =~ /^\s*port\s*=/) { s/^\s*port\s*=\s*(\d+).*$/$1/; print $_; }')

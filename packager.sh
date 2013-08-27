@@ -543,7 +543,6 @@ fi
 
     # copy demos file to $HOME
     ssh $lxc_master_ip "cp -a /usr/share/doc/${GEM_DEB_PACKAGE}-common/examples/demos ."
-
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run all of the hazard and risk demos
         ssh $lxc_master_ip "export GEM_PKGTEST_ONE_DEMO=$GEM_PKGTEST_ONE_DEMO ; cd demos
