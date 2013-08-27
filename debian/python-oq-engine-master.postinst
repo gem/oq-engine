@@ -26,11 +26,72 @@ GEM_DEB_PACKAGE="python-oq-engine-master"
 # a tab char to avoid C & P problems and to be more clear
 GEM_TB="	"
 
+# GEM DEVEL BEGIN
 #
-# To run this script for test you can use:
-# $ DEBCONF_DEBUG=developer DEBCONF_PACKAGE=python-oq-engine-master ./python-oq-engine-master.postinst
+# NOTE: this block of code and all "${GEM_FAKEROOT}" occurrencies are removed during the packaging phase
+#       because are development tools only (look debian/rules file for details).
 #
-# GEM_FAKEROOT: env var to be able to test script without superuser permissions
+if [ "$GEM_FAKEROOT" ]; then
+    #
+    # To run this script for test you can use:
+    # $ DEBCONF_DEBUG=developer DEBCONF_PACKAGE=python-oq-engine-master ./python-oq-engine-master.postinst
+    #
+    # GEM_FAKEROOT: env var to be able to test script without superuser permissions
+
+    /home/nastasi/git/mockpg/mockpg.py -t 5 \
+        "SELECT setting FROM pg_settings WHERE name = 'max_locks_per_transaction';" '[ [ "setting" ], [ "64" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'max_connections';" '[ [ "setting" ], [ "100" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'max_prepared_transactions';" '[ [ "setting" ], [ "0" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'autovacuum_max_workers';" '[ [ "setting" ], [ "3" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'block_size';" '[ [ "setting" ], [ "4096" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'shared_buffers';" '[ [ "setting" ], [ "3072" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'wal_block_size';" '[ [ "setting" ], [ "4096" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'wal_segment_size';" '[ [ "setting" ], [ "2048" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'wal_buffers';" '[ [ "setting" ], [ "-1" ] ]' \
+        &
+    mockpg_id=$!
+    sleep 1
+
+    GEM_FAKE_PG_ARGS="-h /tmp/mockpg"
+    # mock of chown function
+    chown_orig="$(which chown)"
+    chown() {
+        echo "MOCK: chown" "$@"
+        $chown_orig $@ || true
+    }
+
+    chmod_orig="$(which chmod)"
+    chmod() {
+        echo "MOCK: chmod" "$@"
+        $chmod_orig $@ || true
+    }
+
+    sysctl_orig="$(which sysctl)"
+    sysctl() {
+        echo "MOCK: sysctl" "$@"
+        $sysctl_orig $@ || true
+    }
+
+    su_orig="$(which su)"
+    su() {
+        if [ "$1" = "-" -a "$(echo "$2" | cut -c 1-5)" = "psql " ]; then
+            eval psql $GEM_FAKE_PG_ARGS "$(echo "$2" | cut -c 5-)"
+        else
+            echo "MOCK: su" "$@"
+            if [ "$1" = "-c" -a "$(echo "$2" | cut -c -21)" = "/usr/bin/oq_create_db" ]; then
+                mv "${GEM_LOGFILE}.orig" "${GEM_LOGFILE}"
+            fi
+        fi
+        return 0
+    }
+
+    service_orig="$(which service)"
+    service() {
+        echo "MOCK: service" "$@"
+        return 0
+    }
+fi
+# GEM DEVEL END
 
 PG_BASE="${GEM_FAKEROOT}/etc/postgresql/9.1/main"
 PG_CONF="${PG_BASE}/postgresql.conf"
@@ -112,8 +173,8 @@ begin_end_set ()
     fi
 }
 
-
-override_attribute () {
+override_attribute ()
+{
     local gem_var_name="$1" gem_var_value_req="$2" gem_var_value_def="$3"  gem_var_file_over="$4"
     local file_cur gem_var_name_search gem_var_name_orname gem_var_value_max=0
     GEM_OVERRIDE_ATTRIBUTE_GEMRET=0
@@ -157,69 +218,11 @@ override_attribute () {
     echo "$gem_var_value_max"
     eval ${gem_var_name_or}=\"$gem_var_override\"
     return 0
-    }
+}
 
-
-# GEM DEVEL BEGIN
 #
-# NOTE: this block of code and all "${GEM_FAKEROOT}" occurrencies are removed during the packaging phase
-#       because are development tools only (look debian/rules file for details).
+#  MAIN
 #
-if [ "$GEM_FAKEROOT" ]; then
-    /home/nastasi/git/mockpg/mockpg.py -t 5 \
-        "SELECT setting FROM pg_settings WHERE name = 'max_locks_per_transaction';" '[ [ "setting" ], [ "64" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'max_connections';" '[ [ "setting" ], [ "100" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'max_prepared_transactions';" '[ [ "setting" ], [ "0" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'autovacuum_max_workers';" '[ [ "setting" ], [ "3" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'block_size';" '[ [ "setting" ], [ "4096" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'shared_buffers';" '[ [ "setting" ], [ "3072" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'wal_block_size';" '[ [ "setting" ], [ "4096" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'wal_segment_size';" '[ [ "setting" ], [ "2048" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'wal_buffers';" '[ [ "setting" ], [ "-1" ] ]' \
-        &
-    mockpg_id=$!
-    sleep 1
-
-    GEM_FAKE_PG_ARGS="-h /tmp/mockpg"
-    # mock of chown function
-    chown_orig="$(which chown)"
-    chown() {
-        echo "MOCK: chown" "$@"
-        $chown_orig $@ || true
-    }
-
-    chmod_orig="$(which chmod)"
-    chmod() {
-        echo "MOCK: chmod" "$@"
-        $chmod_orig $@ || true
-    }
-
-    sysctl_orig="$(which sysctl)"
-    sysctl() {
-        echo "MOCK: sysctl" "$@"
-        $sysctl_orig $@ || true
-    }
-
-    su_orig="$(which su)"
-    su() {
-        if [ "$1" = "-" -a "$(echo "$2" | cut -c 1-5)" = "psql " ]; then
-            eval psql $GEM_FAKE_PG_ARGS "$(echo "$2" | cut -c 5-)"
-        else
-            echo "MOCK: su" "$@"
-            if [ "$1" = "-c" -a "$(echo "$2" | cut -c -21)" = "/usr/bin/oq_create_db" ]; then
-                mv "${GEM_LOGFILE}.orig" "${GEM_LOGFILE}"
-            fi
-        fi
-        return 0
-    }
-
-    service_orig="$(which service)"
-    service() {
-        echo "MOCK: service" "$@"
-        return 0
-    }
-fi
-# GEM DEVEL END
 chown -R root.openquake $OQ_BASE
 
 #
