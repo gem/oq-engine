@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.pezeshk_2011 import Pezeshk2011
+from openquake.hazardlib.gsim.pezeshk_2011 import PezeshkEtAl2011
 from tests.gsim.utils import BaseGSIMTestCase
 
 
-class Pezeshk2011TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = Pezeshk2011
+class Pezeshk2011EtAlTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = PezeshkEtAl2011
 
     # Test data were obtained from a tool given by the authors
     # The data of the values of the mean PGA and SA are in g's.
