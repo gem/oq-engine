@@ -166,3 +166,17 @@ class ExposureHasRetrofittedCosts(Validator):
     def get_error(self):
         if not self.calc.rc.exposure_model.has_retrofitted_costs():
             return "Some assets do not have retrofitted costs"
+
+
+class ExposureHasTimeEvent(Validator):
+    """
+    If fatalities are considered check that the exposure has the
+    proper time_event
+    """
+
+    def get_error(self):
+        if (self.calc.rc.vulnerability_input("occupants") is not None and
+            not self.calc.rc.exposure_model.has_time_event(
+                self.calc.rc.time_event)):
+            return ("Some assets are missing an "
+                    "occupancy with period=%s" % self.calc.rc.time_event)
