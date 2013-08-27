@@ -518,6 +518,7 @@ _pkgclustest_innervm_run () {
         ssh $ip_cur "sudo apt-get install -y ${GEM_DEB_PACKAGE}-worker"
     done
 
+if [ 0 -eq 1 ]; then
     echo "PKGTEST: REMOVE master"
     sleep 5
     ssh $lxc_master_ip "sudo service celeryd stop"
@@ -532,6 +533,7 @@ _pkgclustest_innervm_run () {
     ssh $lxc_master_ip "sudo service celeryd stop"
     sleep 5
     ssh $lxc_master_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-master"
+fi
 
     ssh $lxc_master_ip "sudo service postgresql restart"
     ssh $lxc_master_ip "sudo -u postgres oq_create_db --yes --db-user=postgres --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
@@ -543,6 +545,7 @@ _pkgclustest_innervm_run () {
         # run all of the hazard and risk demos
         ssh $lxc_master_ip "export GEM_PKGTEST_ONE_DEMO=$GEM_PKGTEST_ONE_DEMO ; cd demos
         for ini in \$(find ./hazard -name job.ini); do
+            echo \"Running demo \$ini\"
             openquake --run-hazard  \$ini --exports xml
             if [ -n \"$GEM_PKGTEST_ONE_DEMO\" ]; then
                 exit 0
