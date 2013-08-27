@@ -39,8 +39,8 @@ chown -R root.openquake $SDIR
 
 # update host configuration
 db_get ${GEM_DEB_PACKAGE}/master-address || true
-host_address="$RET"
-sed -s "s/^host[ $GEM_TB]*=.*/host = $host_address/g" /etc/openquake/openquake.cfg
+master_address="$RET"
+sed -i "s/^host[ $GEM_TB]*=.*/host = $master_address/g" /etc/openquake/openquake.cfg
 
 #
 # does a bad explicit configuration exist?

@@ -159,7 +159,7 @@ EOF
 
 
 worker_debconf () {
-local master_ip="$1" master_net
+local master_ip="$1"
 
 cat <<EOF
 python-oq-engine-worker	python-oq-engine-worker/override-psql-std-conf-str	boolean	true
@@ -308,7 +308,7 @@ _devtest_innervm_run () {
                  nosetests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
                  nosetests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
 
-                 python-coverage xml --include=\"openquake/*\" 
+                 python-coverage xml --include=\"openquake/*\"
                 "
 
         scp "${lxc_ip}:oq-engine/nosetests.xml" .
@@ -430,7 +430,7 @@ _pkgtest_innervm_run () {
             openquake --run-hazard  \$ini --exports xml
             if [ -n \"$GEM_PKGTEST_ONE_DEMO\" ]; then
                 exit 0
-            fi 
+            fi
         done
 
         for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d); do
@@ -463,7 +463,7 @@ _pkgclustest_innervm_run () {
         gpg -a --export | ssh $ip_cur "sudo apt-key add -"
         # install package to manage repository properly
         ssh $ip_cur "sudo apt-get install -y python-software-properties"
-        
+
         # create a remote "local repo" where place $GEM_DEB_PACKAGE package
         ssh $ip_cur mkdir -p repo/${GEM_DEB_PACKAGE}
         scp build-deb/${GEM_DEB_PACKAGE}-*_*.deb build-deb/${GEM_DEB_PACKAGE}_*.changes \
@@ -804,7 +804,7 @@ read -p "after inner" afterinner
         return $inner_ret
     fi
 fi
-    
+
     #
     #  TEST CLUSTER
     #
@@ -829,7 +829,7 @@ fi
         sudo echo
         sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
         _lxc_name_and_ip_get /tmp/packager.eph.$$.log
-        
+
         lxc_worker_name[$i]="$lxc_name"
         lxc_worker_ip[$i]="$lxc_ip"
         lxc_name=""
@@ -943,7 +943,7 @@ while [ $# -gt 0 ]; do
             break
             ;;
     esac
-    BUILD_FLAGS="$BUILD_FLAGS $1"    
+    BUILD_FLAGS="$BUILD_FLAGS $1"
     shift
 done
 
@@ -961,7 +961,7 @@ mksafedir "$GEM_BUILD_SRC"
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 
 # NOTE: if in the future we need modules we need to execute the following commands
-# 
+#
 # git submodule init
 # git submodule update
 ##  "submodule foreach" vars: $name, $path, $sha1 and $toplevel:
