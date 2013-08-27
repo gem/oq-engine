@@ -433,8 +433,8 @@ fi
 # save old oq-engine-related parameters values before refresh the OQ-ENGINE configuration block
 redis_bind_req="0.0.0.0"
 # here update with the function ===++===++++++==
-redis_bind_old="$(cat "$REDIS_CONF" | grep "^[ $GEM_TAB]*redis[ $GEM_TAB]*=" | \
-        sed "s/^[^=]*=[ $GEM_TB]//g;s/[ $GEM_TB]*\$//g" || true)"
+redis_bind_old="$(cat "$REDIS_CONF" | grep "^[ $GEM_TAB]*redis[ $GEM_TAB]*" | \
+        sed "s/^[^ $GEM_TAB]\+[ $GEM_TB]\+//g;s/[ $GEM_TB]*\$//g" || true)"
 
 # redis.conf: remove the PYTHON-OQ-ENGINE configuration block
 tmpfile="$(mktemp)"
@@ -448,7 +448,7 @@ if grep -q "^[ $GEM_TAB]*bind[ $GEM_TAB]*=" "$tmpfile" ; then
         db_get ${GEM_DEB_PACKAGE}/redis-bind-override || true
         redis_bind_override="$RET"
         if [ "$redis_bind_override" = "true" ]; then
-            sed -i "s/^\([ $GEM_TAB]*bind[ $GEM_TAB]*=.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
+            sed -i "s/^\([ $GEM_TAB]*bind[ $GEM_TAB]\+.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
             redis_bind_set=0
         fi
     fi
@@ -463,7 +463,7 @@ if [ $redis_bind_set -eq 0 ]; then
 
     echo "# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN" >> $tmpfile2
     if [ $redis_bind_set -eq 0 ]; then
-        echo "bind = 0.0.0.0" >> $tmpfile2
+        echo "bind 0.0.0.0" >> $tmpfile2
     fi
     echo "# PYTHON-OQ-ENGINE: CONFIGURATION END" >> $tmpfile2
     cat ${tmpfile} | sed -n ":loop ; /^#.*/{   n; bloop} ; :rest ; p; n; brest" >>$tmpfile2

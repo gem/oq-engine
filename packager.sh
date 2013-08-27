@@ -536,6 +536,8 @@ if [ 0 -eq 1 ]; then
     ssh $lxc_master_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-master"
 fi
 
+    ssh $lxc_master_ip "sudo service redis-server restart"
+
     ssh $lxc_master_ip "sudo service postgresql restart"
     ssh $lxc_master_ip "sudo -u postgres oq_create_db --yes --db-user=postgres --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
 
