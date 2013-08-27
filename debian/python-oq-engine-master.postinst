@@ -280,7 +280,7 @@ if ! grep -q "^[ $GEM_TB]*listen_addresses[ $GEM_TB]*=[ $GEM_TB]'*'" "$tmpfile" 
             pg_conf_list_addr_set=0
         fi
     fi
-
+fi
 
 
 # postgresql.conf: max_connections attribute management
