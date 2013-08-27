@@ -8,6 +8,7 @@ import urlparse
 
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from openquake import nrmllib
 from openquake.engine import engine as oq_engine
@@ -148,7 +149,7 @@ def run_hazard_calc(request):
         form = forms.HazardForm()
         return render(
             request,
-            'run_hazard_calc.html',
+            'run_calc.html',
             {'post_url': request.path, 'form': form}
         )
     else:
@@ -178,11 +179,12 @@ def run_hazard_calc(request):
         # See :func:`_load_source_models` for more details.
         _load_source_models(sorted(files.values()), job.owner, hc.id)
 
+        # Before running the calculation, clean up the temp dir.
+        shutil.rmtree(temp_dir)
         tasks.run_hazard_calc.apply_async((hc.id, ))
 
         base_url = _get_base_url(request)
-        return HttpResponse(content=json.dumps(_get_haz_calc_info(hc.id)),
-                            content_type=JSON)
+        return redirect('/v1/calc/hazard/%s' % hc.id)
 
 
 def _load_source_models(files, owner, hc_id):
@@ -336,6 +338,48 @@ def calc_risk(request):
 
     return HttpResponse(content=json.dumps(response_data),
                         content_type=JSON)
+
+
+@csrf_exempt
+@allowed_methods(('GET', 'POST'))
+def run_risk_calc(request):
+    """
+    Run a calculation.
+
+    Similar to :func:`run_hazard_calc`, except that an additional POST param
+    must be included. This param is either the `hazard_calc` or
+    `hazard_result`, the value of which must be the corresponding ID.
+    """
+    if request.method == 'GET':
+        form = forms.RiskForm()
+        return render(
+            request,
+            'run_calc.html',
+            {'post_url': request.path, 'form': form}
+        )
+    else:
+        # POST: run a new calculation
+        temp_dir = tempfile.mkdtemp()
+        files = {}
+        for key, each_file in request.FILES.iteritems():
+            new_path = os.path.join(temp_dir, each_file.name)
+            shutil.move(each_file.temporary_file_path(), new_path)
+            files[key] = new_path
+
+        job_file = files.pop('job_config')
+        job = oq_engine.risk_job_from_file(
+            job_file, request.user.username, DEFAULT_LOG_LEVEL, [],
+            hazard_calculation_id=request.POST.get('hazard_calc'),
+            hazard_output_id=request.POST.get('hazard_result'),
+        )
+        rc = job.risk_calculation
+
+        # Before running the calculation, clean up the temp dir.
+        shutil.rmtree(temp_dir)
+        tasks.run_risk_calc.apply_async((rc.id, ))
+
+        base_url = _get_base_url(request)
+        return redirect('/v1/calc/risk/%s' % rc.id)
 
 
 def _get_risk_calcs():

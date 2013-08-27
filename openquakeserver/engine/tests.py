@@ -421,6 +421,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         mocks = dict(
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
+            rmtree='shutil.rmtree',
             job_from_file='openquake.engine.engine.haz_job_from_file',
             load_sm='engine.views._load_source_models',
             run_hazard_task='engine.tasks.run_hazard_calc',
@@ -480,6 +481,10 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             self.assertEqual(move_exp_call_args,
                              multi_mock['move'].call_args_list)
 
+            self.assertEqual(1, multi_mock['rmtree'].call_count)
+            self.assertEqual(((temp_dir, ), {}),
+                             multi_mock['rmtree'].call_args)
+
             self.assertEqual(1, multi_mock['job_from_file'].call_count)
             self.assertEqual(jff_exp_call_args,
                              multi_mock['job_from_file'].call_args)
@@ -489,6 +494,101 @@ class RunHazardCalcTestCase(BaseViewTestCase):
                              multi_mock['load_sm'].call_args)
 
             self.assertEqual({'count': 1, 'args': ((666,),), 'kwargs': {}},
+                             aa_call_data)
+        finally:
+            shutil.rmtree(temp_dir)
+
+
+class RunRiskCalcTestCase(BaseViewTestCase):
+
+    def setUp(self):
+        # request = self.factory.post('/v1/calc/risk/run')
+        self.request = mock.Mock()
+        self.request.user.username = 'openquake'
+        self.request.method = 'POST'
+        self.request.POST = dict()
+        self.request.POST['hazard_calc'] = 666
+        self.request.META = dict()
+        self.request.META['HTTP_HOST'] = 'www.openquake.org'
+
+
+    def test(self):
+        # Test job file inputs:
+        fake_job_file = FakeTempUploadedFile('/foo/bar/tmpHfJv16tmp.upload',
+                                             'job.ini')
+        fake_model_1 = FakeTempUploadedFile('/foo/bar/tmpHmcdv2tmp.upload',
+                                            'vulnerability.xml')
+        fake_model_2 = FakeTempUploadedFile('/foo/bar/tmpI66zIGtmp.upload',
+                                            'exposure.xml')
+        self.request.FILES = OrderedDict([
+            ('job_config', fake_job_file),
+            ('input_model_1', fake_model_1),
+            ('input_model_2', fake_model_2),
+        ])
+
+        # Set up the mocks:
+        mocks = dict(
+            mkdtemp='tempfile.mkdtemp',
+            move='shutil.move',
+            rmtree='shutil.rmtree',
+            job_from_file='openquake.engine.engine.risk_job_from_file',
+            run_risk_task='engine.tasks.run_risk_calc',
+        )
+        multi_mock = utils.MultiMock(**mocks)
+
+        temp_dir = tempfile.mkdtemp()
+
+        # Set up expected test values:
+        pathjoin = os.path.join
+        move_exp_call_args = [
+            ((fake_job_file.path, pathjoin(temp_dir, fake_job_file.name)), {}),
+            ((fake_model_1.path, pathjoin(temp_dir, fake_model_1.name)), {}),
+            ((fake_model_2.path, pathjoin(temp_dir, fake_model_2.name)), {}),
+        ]
+        jff_exp_call_args = (
+            (pathjoin(temp_dir, fake_job_file.name), 'openquake', 'progress',
+             []),
+            {'hazard_calculation_id': 666, 'hazard_output_id': None}
+        )
+
+        try:
+            # For `apply_async` mock function. See below.
+            aa_call_data = dict(count=0, args=None, kwargs=None)
+
+            with multi_mock:
+                multi_mock['mkdtemp'].return_value = temp_dir
+
+                def apply_async(*args, **kwargs):
+                    aa_call_data['args'] = args
+                    aa_call_data['kwargs'] = kwargs
+                    aa_call_data['count'] += 1
+
+                multi_mock['run_risk_task'].apply_async = apply_async
+
+                fake_job = FakeJob(
+                    'pending', FakeUser(1), None,
+                    FakeCalc(777, 'Fake Calc Desc'),
+                )
+                multi_mock['job_from_file'].return_value = fake_job
+
+                # Call the function under test
+                views.run_risk_calc(self.request)
+
+            self.assertEqual(1, multi_mock['mkdtemp'].call_count)
+
+            self.assertEqual(3, multi_mock['move'].call_count)
+            self.assertEqual(move_exp_call_args,
+                             multi_mock['move'].call_args_list)
+
+            self.assertEqual(1, multi_mock['rmtree'].call_count)
+            self.assertEqual(((temp_dir, ), {}),
+                             multi_mock['rmtree'].call_args)
+
+            self.assertEqual(1, multi_mock['job_from_file'].call_count)
+            self.assertEqual(jff_exp_call_args,
+                             multi_mock['job_from_file'].call_args)
+
+            self.assertEqual({'count': 1, 'args': ((777,),), 'kwargs': {}},
                              aa_call_data)
         finally:
             shutil.rmtree(temp_dir)
