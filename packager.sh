@@ -793,8 +793,9 @@ EOF
     gpg --armor --detach-sign --output Release.gpg Release
     cd -
 
-# FIXME - re-enable after tests
-if [ 1 -eq 0 ]; then
+    #
+    # TEST STANDALONE
+    #
     sudo echo
     sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
@@ -811,7 +812,6 @@ if [ 1 -eq 0 ]; then
     if [ $inner_ret -ne 0 ]; then
         return $inner_ret
     fi
-fi
 
     #
     #  TEST CLUSTER
