@@ -228,6 +228,7 @@ workers_cores_number=$RET
 
 #
 #  postgresql.conf configuration
+#
 if [ ! -f "$PG_CONF" ]; then
     echo "required configuration file $PG_CONF not exists"
     db_stop
@@ -240,23 +241,22 @@ if ! begin_end_set "$PG_CONF"; then
 fi
 
 # save old oq-engine-related parameters values before refresh the OQ-ENGINE configuration block
-std_conf_str_req="on"
+pg_conf_std_conf_str_req="on"
 # here update with the function ===++===++++++==
-std_conf_str_old="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=" | \
+pg_conf_std_conf_str_old="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=" | \
         sed "s/^[^=]*=[ $GEM_TB]//g;s/[ $GEM_TB]*\$//g" || true)"
-list_addr_old="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=" | \
+pg_conf_list_addr_old="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=" | \
         sed "s/^[^=]*=[ $GEM_TB]//g;s/[ $GEM_TB]*\$//g" || true)"
-max_conn_old="$(cat "$PG_CONF" | grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" | \
+pg_conf_max_conn_old="$(cat "$PG_CONF" | grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" | \
         sed "s/^[^=]*=[ $GEM_TB]//g;s/[^0-9].*\$//g" || true)"
 
 # postgresql.conf: remove the PYTHON-OQ-ENGINE configuration block
 tmpfile="$(mktemp)"
 strip_block $is_begin $is_end "$PG_CONF" "$PG_CONF" > $tmpfile
-pg_conf_std_conf_str_set=1
-pg_conf_list_addr_set=1
 
 # postgresql.conf: standard_conforming_strings attr management
 # does a bad explicit configuration of standard_conforming_strings exists ?
+pg_conf_std_conf_str_set=1
 if grep -q "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=" "$tmpfile" ; then
     if grep -q "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=[ $GEM_TAB]*on" "$tmpfile" ; then
         db_get ${GEM_DEB_PACKAGE}/psql-conf-std-conf-str-override || true
@@ -270,10 +270,13 @@ else
 fi
 
 # postgresql.conf: listen_addresses attr management
+pg_conf_list_addr_set=1
+pg_conf_list_addr_req="'*'"
 if ! grep -q "^[ $GEM_TB]*listen_addresses[ $GEM_TB]*=[ $GEM_TB]'*'" "$tmpfile" ; then
     if ! grep -q "^[ $GEM_TB]*listen_addresses[ $GEM_TB]*=[ $GEM_TB]'0.0.0.0'" "$tmpfile" ; then
         db_get ${GEM_DEB_PACKAGE}/pg-conf-listen-addresses-override || true
-        if [ "$RET" = "true" ]; then
+        pg_conf_listen_address_override="$RET"
+        if [ "$pg_conf_listen_address_override" = "true" ]; then
             if grep -q "^[ $GEM_TB]*listen_addresses[ $GEM_TB]*=.*" "$tmpfile" ; then
                 sed -i "s/^\([ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
             fi
@@ -282,14 +285,13 @@ if ! grep -q "^[ $GEM_TB]*listen_addresses[ $GEM_TB]*=[ $GEM_TB]'*'" "$tmpfile" 
     fi
 fi
 
-
 # postgresql.conf: max_connections attribute management
 pg_conf_max_conn_set=1
-max_conn_req="$((workers_cores_number * 2))"
+pg_conf_max_conn_req="$((workers_cores_number * 2))"
 if grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" "$tmpfile" ; then
     # get the current value
-    max_conn_cur="$(grep "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" "$tmpfile" | sed "s/^[^=]*=[ $GEM_TAB]//g;s/[^0-9].*$//g;")"
-    if [ $max_conn_cur -lt $max_conn_req ]; then
+    pg_conf_max_conn_cur="$(grep "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" "$tmpfile" | sed "s/^[^=]*=[ $GEM_TAB]//g;s/[^0-9].*$//g;")"
+    if [ $pg_conf_max_conn_cur -lt $pg_conf_max_conn_req ]; then
         db_get ${GEM_DEB_PACKAGE}/pg-conf-max-conn-override || true
         pg_conf_max_conn_override="$RET"
         if [ "$pg_conf_max_conn_override" = "true" ]; then
@@ -298,7 +300,7 @@ if grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" "$tmpfile" ; then
         fi
     fi
 else
-    if [ $max_conn_cur -lt $max_conn_req ]; then
+    if [ $pg_conf_max_conn_cur -lt $pg_conf_max_conn_req ]; then
         pg_conf_max_conn_set=0
     fi
 fi
@@ -313,7 +315,7 @@ if [ $pg_conf_std_conf_str_set -eq 0 -o $pg_conf_max_conn_set -eq 0 -o $pg_conf_
         echo "standard_conforming_strings = off" >> $tmpfile2
     fi
     if [ $pg_conf_max_conn_set -eq 0 ]; then
-        echo "max_connections = $max_conn_req" >> $tmpfile2
+        echo "max_connections = $pg_conf_max_conn_req" >> $tmpfile2
     fi
     if [ $pg_conf_list_addr_set -eq 0 ]; then
         echo "listen_addresses = '*'" >> $tmpfile2
@@ -327,10 +329,11 @@ fi
 rm $tmpfile
 
 # print a message about what must be done to activate the new configuration
-if [ "$max_conn_old" != "$max_conn_req" -a "$max_conn_override" = "true" ]; then
+if [ \( "$pg_conf_max_conn_old" != "$pg_conf_max_conn_req" -a "$pg_conf_max_conn_override" = "true" \) -o \
+     \( "$pg_conf_list_addr_old" != "$pg_conf_list_addr_req" -a "$pg_conf_list_addr_override"  = "true" \)  ]; then
     gem_mesg "NOTE: to activate current postgresql configuration you must restart the postgresql service"
 else
-    if [ "$std_conf_str_old" != "$std_conf_str_req" -a "$std_conf_str_override" = "true" ]; then
+    if [ "$pg_conf_std_conf_str_old" != "$pg_conf_std_conf_str_req" -a "$std_conf_str_override" = "true" ]; then
         service postgresql reload 9.1
     fi
 fi
@@ -411,7 +414,8 @@ rm $tmpfile $tmpfile2
 
 #
 #  openquake.cfg settings
-concurrent_tasks_req="$max_conn_req"
+#
+concurrent_tasks_req="$pg_conf_max_conn_req"
 sed -i "s/^\([ $GEM_TB]*concurrent_tasks[ $GEM_TB]*=[ $GEM_TB]*\).*/\1$concurrent_tasks_req/g" $OQ_CONF
 
 #
