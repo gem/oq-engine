@@ -20,6 +20,20 @@ Description: Set standard-conforming-strings = off in postgresql.conf ?
  installing the oq-engine; you must apply the patch or manually edit
  the configuration file before using the engine.
 
+Template: python-oq-engine-master/pg-conf-listen-addresses-override
+Type: boolean
+Default: false
+Description: Currently postgresql is listening localhost interface only,
+ to have a working cluster you need to listen the interface reachable
+ by workers.
+ Do you want the package overrides it ?
+
+Template: python-oq-engine-master/pg-conf-max-conn-override
+Type: boolean
+Default: false
+Description: A max_connection entry in postgresql.conf is found.
+ Do you want the package overrides it ?
+
 Template: python-oq-engine-master/pg-hba-allowed-hosts
 Type: string
 Default:
@@ -27,12 +41,6 @@ Description: A space separated list of network-addresses/net-masks to
  configure network access to postgres database.
  .
  Local entries are already added.
-
-Template: python-oq-engine-master/pg-conf-max-conn-override
-Type: boolean
-Default: false
-Description: A max_connection entry in postgresql.conf is found.
- Do you want the package overrides it ?
 
 Template: python-oq-engine-master/workers-cores-number
 Type: string
