@@ -110,6 +110,10 @@ class Classical(object):
       the losses/poes dimensions
     :attr average_losses:
       a numpy array of N average loss values
+    :attr insured_curves:
+      a numpy array of N insured loss curves, shaped (N, 2, R)
+    :attr average_insured_losses:
+      a numpy array of N average insured loss values
     :attr loss_maps:
       a numpy array of P elements holding N loss maps where P is the
       number of `conditional_loss_poes` considered. Shape: (P, N)
@@ -145,7 +149,9 @@ class Classical(object):
 
     Output = collections.namedtuple(
         'Output',
-        'assets loss_curves average_losses loss_maps loss_fractions')
+        'assets loss_curves average_losses '
+        'insured_curves average_insured_losses '
+        'loss_maps loss_fractions')
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
@@ -157,11 +163,14 @@ class Classical(object):
                  vulnerability_function,
                  lrem_steps_per_interval,
                  conditional_loss_poes,
-                 poes_disagg):
+                 poes_disagg,
+                 insured_losses=False):
         """
         :param float poes_disagg:
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
+        :param bool insured_losses:
+            True if insured loss curves should be computed
 
         See :func:`openquake.risklib.scientific.classical` for a description
         of the other parameters.
@@ -174,11 +183,14 @@ class Classical(object):
         # needed to compute statistics
         self._loss_curves = []
         self._assets = None
+        self.insured_losses = insured_losses
 
-    def __call__(self, data, calc_monitor=None):
+    def __call__(self, loss_type, data, calc_monitor=None):
         """
         A generator of :class:`openquake.risklib.workflows.Classical.Output`
         instances.
+
+        :param str loss_type: the loss type considered
 
         :param data:
            an iterator over tuples with form (hid, assets, curves) where
@@ -206,11 +218,30 @@ class Classical(object):
                 maps = self.maps(curves)
                 fractions = self.fractions(curves)
 
+                if self.insured_losses and loss_type != 'fatalities':
+                    deductibles = map(lambda a: a.deductible(loss_type),
+                                      assets)
+                    limits = map(lambda a: a.insurance_limit(loss_type),
+                                 assets)
+
+                    insured_curves = utils.numpy_map(
+                        scientific.insured_loss_curve,
+                        curves, deductibles, limits)
+                    average_insured_losses = [
+                        scientific.average_loss(losses, poes)
+                        for losses, poes in insured_curves]
+                else:
+                    insured_curves = None
+                    average_insured_losses = None
+
                 self._loss_curves.append(curves)
                 self._assets = assets
 
                 yield hid, self.Output(
-                    assets, curves, average_losses, maps, fractions)
+                    assets,
+                    curves, average_losses,
+                    insured_curves, average_insured_losses,
+                    maps, fractions)
 
     def statistics(self, weights, quantiles, post_processing):
         """
@@ -284,6 +315,9 @@ class ProbabilisticEventBased(object):
 
     :attr average_insured_losses:
       a numpy array of N average insured loss values
+
+    :attr stddev_insured_losses:
+      a numpy array holding N standard deviation of losses
 
     :attr loss_maps:
       a numpy array of P elements holding N loss maps where P is the

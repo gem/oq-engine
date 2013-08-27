@@ -55,7 +55,7 @@ class ClassicalTest(unittest.TestCase):
         assets = [workflows.Asset(dict(structural=10))]
         curves = [mock.Mock()]
         data = ((1, assets, curves),)
-        ret = list(self.workflow(data))
+        ret = list(self.workflow("structural", data))
 
         self.assertEqual(1, len(ret))
         hid, output = ret[0]
@@ -88,7 +88,8 @@ class ClassicalTest(unittest.TestCase):
                 (3, assets, curves[2]),)
 
         i = 0
-        for i, (hid, output) in enumerate(self.workflow(data), 1):
+        for i, (hid, output) in enumerate(
+                self.workflow("structural", data), 1):
             self.assertEqual(assets, output.assets)
             self.assertEqual(i, hid)
 
