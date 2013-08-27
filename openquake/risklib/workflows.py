@@ -23,11 +23,23 @@ from scipy import interpolate
 from openquake.risklib import calculators, utils, scientific
 
 
-#: A calculation unit a risklib.workflow, a getter that
-#: retrieves the data to work on, and the type of losses we are considering
-CalculationUnit = collections.namedtuple(
-    'CalculationUnit',
-    'loss_type workflow getter')
+class CalculationUnit(object):
+    """
+    A calculation unit a risklib.workflow, a getter that
+    retrieves the data to work on, and the type of losses we are considering
+    """
+    def __init__(self, loss_type, workflow, getter):
+        self.loss_type = loss_type
+        self.workflow = workflow
+        self.getter = getter
+
+    def __call__(self, getter_monitor=None, calc_monitor=None):
+        getter_monitor = getter_monitor or DummyMonitor()
+        calc_monitor = calc_monitor or DummyMonitor()
+
+        for hid, assets, hazard_data in self.getter(getter_monitor):
+            with calc_monitor:
+                yield hid, self.workflow(self.loss_type, assets, hazard_data)
 
 
 class Asset(object):
@@ -185,63 +197,49 @@ class Classical(object):
         self._assets = None
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, data, calc_monitor=None):
+    def __call__(self, loss_type, assets, hazard_curves):
         """
         A generator of :class:`openquake.risklib.workflows.Classical.Output`
         instances.
 
         :param str loss_type: the loss type considered
 
-        :param data:
-           an iterator over tuples with form (hid, assets, curves) where
-           at each iteration a realization of hazard data is considered,
-           hid identifies the id of the hazard realization, assets is an
-           iterator over N assets, and curves is an iterator over N hazard
-           curves.
-
-        :param calc_monitor:
-           a context manager the user can provide to log/monitor each
-           single output computation.
+        :param assets:
+           assets is an iterator over N
+           :class:`openquake.risklib.workflows.Asset` instances
+        :param hazard_curves:
+           curves is an iterator over hazard curves (numpy array shaped 2xR).
 
         :NOTE: this function will collect all the loss curves as a
         side effect in the field `_loss_curves` (if the number of realizations
         is bigger than 1).
         """
-        monitor = calc_monitor or DummyMonitor()
+        curves = self.curves(hazard_curves)
+        average_losses = numpy.array([scientific.average_loss(losses, poes)
+                                      for losses, poes in curves])
+        maps = self.maps(curves)
+        fractions = self.fractions(curves)
 
-        for hid, assets, hazard_curves in data:
-            with monitor:
-                curves = self.curves(hazard_curves)
-                average_losses = numpy.array(
-                    [scientific.average_loss(losses, poes)
-                     for losses, poes in curves])
-                maps = self.maps(curves)
-                fractions = self.fractions(curves)
+        if self.insured_losses and loss_type != 'fatalities':
+            deductibles = [a.deductible(loss_type) for a in assets]
+            limits = [a.insurance_limit(loss_type) for a in assets]
 
-                if self.insured_losses and loss_type != 'fatalities':
-                    deductibles = map(lambda a: a.deductible(loss_type),
-                                      assets)
-                    limits = map(lambda a: a.insurance_limit(loss_type),
-                                 assets)
+            insured_curves = utils.numpy_map(
+                scientific.insured_loss_curve, curves, deductibles, limits)
+            average_insured_losses = [
+                scientific.average_loss(losses, poes)
+                for losses, poes in insured_curves]
+        else:
+            insured_curves = None
+            average_insured_losses = None
 
-                    insured_curves = utils.numpy_map(
-                        scientific.insured_loss_curve,
-                        curves, deductibles, limits)
-                    average_insured_losses = [
-                        scientific.average_loss(losses, poes)
-                        for losses, poes in insured_curves]
-                else:
-                    insured_curves = None
-                    average_insured_losses = None
+        self._loss_curves.append(curves)
+        self._assets = assets
 
-                self._loss_curves.append(curves)
-                self._assets = assets
-
-                yield hid, self.Output(
-                    assets,
-                    curves, average_losses,
-                    insured_curves, average_insured_losses,
-                    maps, fractions)
+        return self.Output(
+            assets,
+            curves, average_losses, insured_curves, average_insured_losses,
+            maps, fractions)
 
     def statistics(self, weights, quantiles, post_processing):
         """
@@ -363,7 +361,7 @@ class ProbabilisticEventBased(object):
 
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, data, monitor=None):
+    def __call__(self, loss_type, assets, (ground_motion_values, event_ids)):
         """
         A generator of
         :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
@@ -371,67 +369,58 @@ class ProbabilisticEventBased(object):
 
         :param str loss_type: the loss type considered
 
-        :param data:
-           an iterator over tuples with form (hid, assets, (gmvs, events))
-           where at each iteration a realization of hazard data is considered,
-           hid identifies the id of the hazard realization, assets is an
-           iterator over N assets, events is an array of E event ids,
-           gmvs is an array N x E ground motion values.
+        :param assets:
+           assets is an iterator over
+           :class:`openquake.risklib.workflows.Asset` instances
 
-        :param calc_monitor:
-           a context manager the user can provide to log/monitor each
-           single output computation.
+        :param ground_motion_values:
+           a numpy array with ground_motion_values shaped (N x R)
+
+        :param event_ids:
+           a numpy array of R event ID (integer)
 
         :NOTE: this function will collect all the loss curves as a
         side effect in the field `_loss_curves` (if the number of realizations
         is bigger than 1).
         """
 
-        monitor = monitor or DummyMonitor()
+        self.assets = assets
 
-        for hid, assets, (ground_motion_values, rupture_ids) in data:
-            self.assets = assets
+        loss_matrix = self.losses(ground_motion_values)
 
-            with monitor:
-                loss_matrix = self.losses(ground_motion_values)
+        curves = self.curves(loss_matrix)
+        self._loss_curves.append(curves)
 
-                curves = self.curves(loss_matrix)
-                self._loss_curves.append(curves)
+        average_losses = numpy.array([scientific.average_loss(losses, poes)
+                                      for losses, poes in curves])
 
-                average_losses = numpy.array(
-                    [scientific.average_loss(losses, poes)
-                     for losses, poes in curves])
+        stddev_losses = numpy.std(loss_matrix, axis=1)
 
-                stddev_losses = numpy.std(loss_matrix, axis=1)
-
-                values = utils.numpy_map(lambda a: a.value(loss_type),
-                                         assets)
-                maps = self.maps(curves)
-
-                self.event_loss_table += self.event_loss(
-                    loss_matrix.transpose() * values, rupture_ids)
-
-                if self.insured_losses and loss_type != 'fatalities':
-                    deductibles = map(lambda a: a.deductible(loss_type),
-                                      assets)
-                    limits = map(lambda a: a.insurance_limit(loss_type),
+        values = utils.numpy_map(lambda a: a.value(loss_type),
                                  assets)
+        maps = self.maps(curves)
 
-                    insured_curves = self.curves(
-                        utils.numpy_map(
-                            scientific.insured_losses,
-                            loss_matrix, deductibles, limits))
-                    average_insured_losses = [
-                        scientific.average_loss(losses, poes)
-                        for losses, poes in insured_curves]
-                else:
-                    insured_curves = None
-                    average_insured_losses = None
+        self.event_loss_table += self.event_loss(
+            loss_matrix.transpose() * values, event_ids)
 
-            yield hid, self.Output(
-                assets, loss_matrix, curves,
-                average_losses, stddev_losses,
-                insured_curves, average_insured_losses, maps)
+        if self.insured_losses and loss_type != 'fatalities':
+            deductibles = [a.deductible(loss_type) for a in assets]
+            limits = [a.insurance_limit(loss_type) for a in assets]
+
+            insured_curves = self.curves(
+                utils.numpy_map(scientific.insured_losses,
+                                loss_matrix, deductibles, limits))
+            average_insured_losses = [
+                scientific.average_loss(losses, poes)
+                for losses, poes in insured_curves]
+        else:
+            insured_curves = None
+            average_insured_losses = None
+
+        return self.Output(
+            assets, loss_matrix, curves,
+            average_losses, stddev_losses,
+            insured_curves, average_insured_losses, maps)
 
     def statistics(self, weights, quantiles, post_processing):
         """
@@ -579,36 +568,29 @@ class Scenario(object):
             vulnerability_function, seed, asset_correlation)
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, data, monitor=None):
-        hid, assets, gmvs = data.next()
+    def __call__(self, loss_type, assets, ground_motion_values):
         values = numpy.array([a.value(loss_type) for a in assets])
 
-        with monitor or DummyMonitor():
-            loss_ratio_matrix = self.losses(gmvs)
-            aggregate_losses = numpy.sum(
-                loss_ratio_matrix.transpose() * values, axis=1)
+        loss_ratio_matrix = self.losses(ground_motion_values)
+        aggregate_losses = numpy.sum(
+            loss_ratio_matrix.transpose() * values, axis=1)
 
-            if self.insured_losses and loss_type != "fatalities":
-                deductibles = utils.numpy_map(
-                    lambda a: a.deductible(loss_type), assets)
-                limits = utils.numpy_map(
-                    lambda a: a.insurance_limit(loss_type), assets)
-                insured_loss_ratio_matrix = utils.numpy_map(
-                    scientific.insured_losses,
-                    loss_ratio_matrix,
-                    deductibles,
-                    limits)
+        if self.insured_losses and loss_type != "fatalities":
+            deductibles = [a.deductible(loss_type) for a in assets]
+            limits = [a.insurance_limit(loss_type) for a in assets]
+            insured_loss_ratio_matrix = utils.numpy_map(
+                scientific.insured_losses,
+                loss_ratio_matrix, deductibles, limits)
 
-                # FIXME(lp): transpose the matrix back
-                insured_loss_matrix = (
-                    insured_loss_ratio_matrix.transpose() * values)
+            insured_loss_matrix = (
+                insured_loss_ratio_matrix.transpose() * values).transpose()
 
-                insured_losses = numpy.array(insured_loss_matrix).sum(axis=1)
-            else:
-                insured_loss_matrix = None
-                insured_losses = None
+            insured_losses = numpy.array(insured_loss_matrix).sum(axis=0)
+        else:
+            insured_loss_matrix = None
+            insured_losses = None
 
-        return (hid, assets, loss_ratio_matrix, aggregate_losses,
+        return (loss_ratio_matrix, aggregate_losses,
                 insured_loss_matrix, insured_losses)
 
 

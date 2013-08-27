@@ -54,14 +54,9 @@ class ClassicalTest(unittest.TestCase):
     def test_call_one_realization(self):
         assets = [workflows.Asset(dict(structural=10))]
         curves = [mock.Mock()]
-        data = ((1, assets, curves),)
-        ret = list(self.workflow("structural", data))
-
-        self.assertEqual(1, len(ret))
-        hid, output = ret[0]
+        output = self.workflow("structural", assets, curves)
 
         self.assertEqual(assets, output.assets)
-        self.assertEqual(1, hid)
         self.assertEqual(1, len(self.workflow._loss_curves))
 
         self.assertEqual(
@@ -83,17 +78,12 @@ class ClassicalTest(unittest.TestCase):
             m.__nonzero__.return_value = True
             curves.append(m)
 
-        data = ((1, assets, curves[0]),
-                (2, assets, curves[1]),
-                (3, assets, curves[2]),)
+        data = ((assets, curves[0]), (assets, curves[1]), (assets, curves[2]),)
 
-        i = 0
-        for i, (hid, output) in enumerate(
-                self.workflow("structural", data), 1):
+        for assets, curves in data:
+            output = self.workflow("structural", assets, curves)
             self.assertEqual(assets, output.assets)
-            self.assertEqual(i, hid)
 
-        self.assertEqual(3, i)
         self.assertIsNotNone(self.workflow._loss_curves)
 
         self.assertEqual(
@@ -132,17 +122,12 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                                   dict(structural=0.1),
                                   dict(structural=0.8))]
         hazard = (mock.Mock(), mock.Mock())
-        data = ((1, assets, hazard),)
         self.workflow.losses.return_value = numpy.empty((1, 100))
         self.workflow.event_loss.return_value = collections.Counter((1, 1))
 
-        ret = list(self.workflow("structural", data))
-
-        self.assertEqual(1, len(ret))
-        hid, output = ret[0]
+        output = self.workflow("structural", assets, hazard)
 
         self.assertEqual(assets, output.assets)
-        self.assertEqual(1, hid)
         self.assertEqual(1, len(self.workflow._loss_curves))
 
         self.assertEqual(
@@ -173,15 +158,11 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.workflow.event_loss.return_value = collections.Counter((1, 1))
         self.workflow.curves.return_value = numpy.empty((4, 2, 10))
 
-        data = ((1, assets, hazard[0]),
-                (2, assets, hazard[1]),
-                (3, assets, hazard[2]),)
+        data = ((assets, hazard[0]), (assets, hazard[1]), (assets, hazard[2]),)
 
-        i = 0
-        for i, (hid, output) in enumerate(
-                self.workflow("structural", data), 1):
+        for assets, hazard in data:
+            output = self.workflow("structural", assets, hazard)
             self.assertEqual(assets, output.assets)
-            self.assertEqual(i, hid)
 
             self.assertEqual(
                 [((self.vf, 1, 0.75), {})],
@@ -195,7 +176,6 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                 [((), {})],
                 self.calcs.EventLossTable.call_args_list)
 
-        self.assertEqual(3, i)
         self.assertIsNotNone(self.workflow._loss_curves)
 
     def test_normalize_all_trivial(self):
@@ -289,15 +269,13 @@ class ScenarioTestCase(unittest.TestCase):
         hazard = (mock.Mock(), mock.Mock())
         calc.losses = mock.Mock(return_value=numpy.empty((4, 2)))
 
-        (hid, ret_assets, loss_ratio_matrix, aggregate_losses,
+        (loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
-             calc("structural", iter(((1, assets, hazard),))))
+             calc("structural", assets, hazard))
 
-        self.assertEqual(1, hid)
-        self.assertEqual(assets, ret_assets)
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)
-        self.assertEqual((2, 4), insured_loss_matrix.shape)
+        self.assertEqual((4, 2), insured_loss_matrix.shape)
         self.assertEqual((2,), insured_losses.shape)
 
     def test_call_no_insured(self):
@@ -308,12 +286,10 @@ class ScenarioTestCase(unittest.TestCase):
         hazard = (mock.Mock(), mock.Mock())
         calc.losses = mock.Mock(return_value=numpy.empty((4, 2)))
 
-        (hid, ret_assets, loss_ratio_matrix, aggregate_losses,
+        (loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
-             calc("structural", iter(((1, assets, hazard),))))
+             calc("structural", assets, hazard))
 
-        self.assertEqual(1, hid)
-        self.assertEqual(assets, ret_assets)
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)
         self.assertIsNone(insured_loss_matrix)
