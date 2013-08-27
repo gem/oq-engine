@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/>.
 
 import collections
-import itertools
 import numpy
 from scipy import interpolate
 
@@ -109,6 +108,8 @@ class Classical(object):
       a numpy array of N loss curves. If the curve resolution is R, the final
       shape of the array will be (N, 2, R), where the `two` accounts for
       the losses/poes dimensions
+    :attr average_losses:
+      a numpy array of N average loss values
     :attr loss_maps:
       a numpy array of P elements holding N loss maps where P is the
       number of `conditional_loss_poes` considered. Shape: (P, N)
@@ -124,6 +125,8 @@ class Classical(object):
       an iterable of N assets the outputs refer to
     :attr mean_curves:
        A numpy array with N mean loss curves. Shape: (N, 2)
+    :attr mean_average_losses:
+       A numpy array with N mean average loss values
     :attr mean_maps:
        A numpy array with P mean loss maps. Shape: (P, N)
     :attr mean_fractions:
@@ -132,6 +135,8 @@ class Classical(object):
     :attr quantile_curves:
        A numpy array with Q quantile curves (Q = number of quantiles).
        Shape: (Q, N, 2, R)
+    :attr quantile_average_losses:
+       A numpy array shaped (Q, N) with average losses
     :attr quantile_maps:
        A numpy array with Q quantile maps shaped (Q, P, N)
     :attr quantile_fractions:
@@ -140,11 +145,12 @@ class Classical(object):
 
     Output = collections.namedtuple(
         'Output',
-        'assets loss_curves loss_maps loss_fractions')
+        'assets loss_curves average_losses loss_maps loss_fractions')
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
-        'assets mean_curves mean_maps mean_fractions quantile_curves '
+        'assets mean_curves mean_average_losses '
+        'mean_maps mean_fractions quantile_curves quantile_average_losses '
         'quantile_maps quantile_fractions')
 
     def __init__(self,
@@ -194,13 +200,17 @@ class Classical(object):
         for hid, assets, hazard_curves in data:
             with monitor:
                 curves = self.curves(hazard_curves)
+                average_losses = numpy.array(
+                    [scientific.average_loss(losses, poes)
+                     for losses, poes in curves])
                 maps = self.maps(curves)
                 fractions = self.fractions(curves)
 
                 self._loss_curves.append(curves)
                 self._assets = assets
 
-                yield hid, self.Output(assets, curves, maps, fractions)
+                yield hid, self.Output(
+                    assets, curves, average_losses, maps, fractions)
 
     def statistics(self, weights, quantiles, post_processing):
         """
@@ -225,20 +235,21 @@ class Classical(object):
             losses = curves[0][0]
             return [losses, [poes for _losses, poes in curves]]
 
-        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
-            calculators.exposure_statistics(
-                [normalize_curves(curves)
-                 for curves
-                 in numpy.array(self._loss_curves).transpose(1, 0, 2, 3)],
-                self.maps.poes + self.fractions.poes,
-                weights, quantiles, post_processing))
+        (mean_curves, mean_average_losses, mean_maps,
+         quantile_curves, quantile_average_losses, quantile_maps) = (
+             calculators.exposure_statistics(
+                 [normalize_curves(curves)
+                  for curves
+                  in numpy.array(self._loss_curves).transpose(1, 0, 2, 3)],
+                 self.maps.poes + self.fractions.poes,
+                 weights, quantiles, post_processing))
 
         return self.StatisticalOutput(
             self._assets,
-            mean_curves,
+            mean_curves, mean_average_losses,
             mean_maps[0:len(self.maps.poes)],
             mean_maps[len(self.maps.poes):],
-            quantile_curves,
+            quantile_curves, quantile_average_losses,
             quantile_maps[:, 0:len(self.maps.poes)],
             quantile_maps[:, len(self.maps.poes):])
 
@@ -262,8 +273,17 @@ class ProbabilisticEventBased(object):
       shape of the array will be (N, 2, R), where the `two` accounts for
       the losses/poes dimensions
 
+    :attr average_losses:
+      a numpy array of N average loss values
+
+    :attr stddev_losses:
+      a numpy array holding N standard deviation of losses
+
     :attr insured_curves:
       a numpy array of N insured loss curves, shaped (N, 2, R)
+
+    :attr average_insured_losses:
+      a numpy array of N average insured loss values
 
     :attr loss_maps:
       a numpy array of P elements holding N loss maps where P is the
@@ -276,11 +296,13 @@ class ProbabilisticEventBased(object):
     """
     Output = collections.namedtuple(
         'Output',
-        'assets loss_matrix loss_curves insured_curves loss_maps')
+        "assets loss_matrix loss_curves average_losses stddev_losses "
+        "insured_curves average_insured_losses loss_maps")
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
-        'assets mean_curves mean_maps quantile_curves quantile_maps')
+        'assets mean_curves mean_average_losses '
+        'mean_maps quantile_curves quantile_average_losses quantile_maps')
 
     def __init__(
             self,
@@ -342,6 +364,12 @@ class ProbabilisticEventBased(object):
                 curves = self.curves(loss_matrix)
                 self._loss_curves.append(curves)
 
+                average_losses = numpy.array(
+                    [scientific.average_loss(losses, poes)
+                     for losses, poes in curves])
+
+                stddev_losses = numpy.std(loss_matrix, axis=1)
+
                 values = utils.numpy_map(lambda a: a.value(loss_type),
                                          assets)
                 maps = self.maps(curves)
@@ -359,11 +387,17 @@ class ProbabilisticEventBased(object):
                         utils.numpy_map(
                             scientific.insured_losses,
                             loss_matrix, deductibles, limits))
+                    average_insured_losses = [
+                        scientific.average_loss(losses, poes)
+                        for losses, poes in insured_curves]
                 else:
                     insured_curves = None
+                    average_insured_losses = None
 
             yield hid, self.Output(
-                assets, loss_matrix, curves, insured_curves, maps)
+                assets, loss_matrix, curves,
+                average_losses, stddev_losses,
+                insured_curves, average_insured_losses, maps)
 
     def statistics(self, weights, quantiles, post_processing):
         """
@@ -385,14 +419,15 @@ class ProbabilisticEventBased(object):
             return
 
         curve_matrix = numpy.array(self._loss_curves).transpose(1, 0, 2, 3)
-        (mean_curves, mean_maps, quantile_curves, quantile_maps) = (
+        (mean_curves, mean_average_losses, mean_maps,
+         quantile_curves, quantile_average_losses, quantile_maps) = (
             calculators.exposure_statistics(
                 [self._normalize_curves(curves) for curves in curve_matrix],
                 self.maps.poes, weights, quantiles, post_processing))
 
         return self.StatisticalOutput(
-            self.assets, mean_curves, mean_maps,
-            quantile_curves, quantile_maps)
+            self.assets, mean_curves, mean_average_losses, mean_maps,
+            quantile_curves, quantile_average_losses, quantile_maps)
 
     def _normalize_curves(self, curves):
         non_trivial_curves = [(losses, poes)
