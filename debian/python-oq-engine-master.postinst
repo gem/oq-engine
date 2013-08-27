@@ -443,8 +443,8 @@ redis_bind_set=1
 
 # redis.conf: bind attr management
 # does a bad explicit configuration of bind exists ?
-if grep -q "^[ $GEM_TAB]*bind[ $GEM_TAB]*=" "$tmpfile" ; then
-    if ! grep -q "^[ $GEM_TAB]*bind[ $GEM_TAB]*=[ $GEM_TAB]*0.0.0.0" "$tmpfile" ; then
+if grep -q "^[ $GEM_TAB]*bind[ $GEM_TAB]\+" "$tmpfile" ; then
+    if ! grep -q "^[ $GEM_TAB]*bind[ $GEM_TAB]\+0.0.0.0" "$tmpfile" ; then
         db_get ${GEM_DEB_PACKAGE}/redis-bind-override || true
         redis_bind_override="$RET"
         if [ "$redis_bind_override" = "true" ]; then
