@@ -52,13 +52,11 @@ from shapely import wkt
 
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import source as hazardlib_source
-
-from openquake.risklib import scientific
+import openquake.hazardlib.site
 
 from openquake.engine.db import fields
 from openquake.engine import writer
 
-import openquake.hazardlib.site
 
 #: Default Spectral Acceleration damping. At the moment, this is not
 #: configurable.
