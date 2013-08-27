@@ -150,7 +150,7 @@ class Classical(object):
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
         'assets mean_curves mean_average_losses '
-        'mean_maps mean_fractions quantile_curves quantile_average_losses'
+        'mean_maps mean_fractions quantile_curves quantile_average_losses '
         'quantile_maps quantile_fractions')
 
     def __init__(self,
