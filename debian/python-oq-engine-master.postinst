@@ -473,6 +473,11 @@ if [ $redis_bind_set -eq 0 ]; then
 fi
 rm $tmpfile
 
+# print a message about what must be done to activate the new configuration
+if [ \( "$redis_bind_old" != "$redis_bind_req" -a "$redis_bind_override" = "true" \) ]; then
+    gem_mesg "NOTE: to activate current redis configuration you must restart the redis-server service"
+fi
+
 #
 #  openquake.cfg settings
 #
