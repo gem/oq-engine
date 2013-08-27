@@ -244,14 +244,15 @@ std_conf_str_req="on"
 # here update with the function ===++===++++++==
 std_conf_str_old="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=" | \
         sed "s/^[^=]*=[ $GEM_TB]//g;s/[ $GEM_TB]*\$//g" || true)"
+list_addr_old="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=" | \
+        sed "s/^[^=]*=[ $GEM_TB]//g;s/[ $GEM_TB]*\$//g" || true)"
 max_conn_old="$(cat "$PG_CONF" | grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" | \
         sed "s/^[^=]*=[ $GEM_TB]//g;s/[^0-9].*\$//g" || true)"
 
 # postgresql.conf: remove the PYTHON-OQ-ENGINE configuration block
 tmpfile="$(mktemp)"
 strip_block $is_begin $is_end "$PG_CONF" "$PG_CONF" > $tmpfile
-psql_conf_std_conf_str_set=1
-
+pg_conf_std_conf_str_set=1
 
 # postgresql.conf: standard_conforming_strings attr management
 # does a bad explicit configuration of standard_conforming_strings exists ?
@@ -260,11 +261,11 @@ if grep -q "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=" "$tmpfile" ; 
         db_get ${GEM_DEB_PACKAGE}/psql-conf-std-conf-str-override || true
         if [ "$RET" = "true" ]; then
             sed -i "s/^\([ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=[ $GEM_TAB]*on[ $GEM_TAB].*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
-            psql_conf_std_conf_str_set=0
+            pg_conf_std_conf_str_set=0
         fi
     fi
 else
-    psql_conf_std_conf_str_set=0
+    pg_conf_std_conf_str_set=0
 fi
 
 # postgresql.conf: max_connections attribute management
@@ -288,12 +289,12 @@ else
 fi
 
 # postgresql.conf: if a modification is required a PYTHON-OQ-ENGINE configuration block is added
-if [ $psql_conf_std_conf_str_set -eq 0 -o $pg_conf_max_conn_set -eq 0 ]; then
+if [ $pg_conf_std_conf_str_set -eq 0 -o $pg_conf_max_conn_set -eq 0 ]; then
     tmpfile2="$(mktemp)"
     cat ${tmpfile} | sed -n ":loop ; /^#.*/{p; n; bloop} ; q" > $tmpfile2
 
     echo "# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN" >> $tmpfile2
-    if [ $psql_conf_std_conf_str_set -eq 0 ]; then
+    if [ $pg_conf_std_conf_str_set -eq 0 ]; then
         echo "standard_conforming_strings = off" >> $tmpfile2
     fi
     if [ $pg_conf_max_conn_set -eq 0 ]; then
