@@ -644,8 +644,12 @@ _lxc_name_and_ip_get()
             lxc_name="$(grep "sudo lxc-console -n $GEM_EPHEM_NAME" $filename | sed "s/.*sudo lxc-console -n \($GEM_EPHEM_NAME\)/\1/g")"
             for e in $(seq 1 40); do
                 sleep 2
-                if grep -q "$lxc_name" /var/lib/misc/dnsmasq.leases ; then
-                    lxc_ip="$(grep " $lxc_name " /var/lib/misc/dnsmasq.leases | cut -d ' ' -f 3)"
+
+                # this is the syntax of a log line (is splited with a '\':
+                #Aug 27 16:40:47 pc-nastasi dnsmasq-dhcp[14357]: 1875896329 DHCPACK(lxcbr0) \
+                #172.16.9.33 00:16:3e:71:fc:aa ubuntu-lxc-eph-temp-g4zo86z
+                if grep -q ".*dnsmasq-dhcp.*DHCPACK.*${lxc_name}\$" /var/log/syslog ; then
+                    lxc_ip="$(grep ".*dnsmasq-dhcp.*DHCPACK.*${lxc_name}\$" /var/log/syslog | cut -d ' ' -f 8)"
                     break
                 fi
             done
