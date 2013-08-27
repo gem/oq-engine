@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2013 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:'Pezeshk2011'.
+Module exports :class:'PezeshkEtAl2011'.
 """
 from __future__ import division
 
@@ -25,7 +25,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class Pezeshk2011(GMPE):
+class PezeshkEtAl2011(GMPE):
     """
     Implements GMPE developed by Shahram Pezeshk, Arash Zandieh 
     and Behrooz Tavakoli. Published as "Hybrid Empirical Ground-Motion 
@@ -33,37 +33,36 @@ class Pezeshk2011(GMPE):
     Updated Seismological Parameters", 2011, Bulletin of the Seismological 
     Society of America, vol. 101, no. 4, 1859 - 1870. 
     """
-    #: Supported tectonic region type is 'stable continental region' because the
-    #: equations have been derived from data from Eastern North America (ENA)
+    #: Supported tectonic region type is 'stable continental region' 
+    #: equation has been derived from data from Eastern North America (ENA)
     # 'Instroduction', page 1859.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
 
-    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
-    #: this GSIM can calculate. A set should contain classes from module
-    #: :mod:`openquake.hazardlib.imt`.
+    #: Supported intensity measure types are spectral acceleration,
+    #: and peak ground acceleration. See Table 2 in page 1865
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         SA
     ])
 
-    #: geometric mean determined from the fiftieth percentile values of the 
+    #: Geometric mean determined from the fiftieth percentile values of the 
     #: geometric means computed for all nonredundant rotation angles and all 
     #: periods less than the maximum useable period, independent of 
     #: sensor orientation. See page 1864.
     #: :attr:'~openquake.hazardlib.const.IMC.GMRotI50'. 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
 
-    #: Supported standard deviation types are: standard deviation of the 
-    #: regression and total, see equation 6 and 7, page 1866.
+    #: Supported standard deviation types is total. 
+    #: See equation 6 and 7, page 1866.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL
     ]) 
 
-    #: Required site parameter is only Vs30 and only can be used for hard-rock
-    #: sites for ENA, Vs30 = 2880 m/s (abstract and page 1863)
-    REQUIRES_SITES_PARAMETERS = set(('vs30'))
+    #: No site parameters are needed. The GMPE was developed for hard-rock site
+    # with Vs30 >= 2000 m/s (NEHRP site class A) only. Page 1864. 
+    REQUIRES_SITES_PARAMETERS = set()
     
-    #: Required rupture parameters are magnitude and rake (eq. 4, page 1866).
+    #: Required rupture parameters are magnitude (eq. 4, page 1866).
     REQUIRES_RUPTURE_PARAMETERS = set(('mag'))
     
     #: Required distance measure is RRup, explained in page 1864 (eq. 2 page 
@@ -75,15 +74,7 @@ class Pezeshk2011(GMPE):
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
-        """
-        # Check Vs30 site condiction. The GMPE was developed for hard-rock site
-        # with Vs30 >= 2000 m/s (NEHRP site class A) only. Page 1864. 
-        
-        if sites.vs30 >= 2000.: 
-            sites.vs30
-        else:
-            raise ValueError('Site condiction with Vs30 < 2000 m/s, GMPE does not support this type of soil')
-            
+        """                    
         
         # Extracting dictionary of coefficients specific to required
         # intensity measure type.
@@ -109,13 +100,9 @@ class Pezeshk2011(GMPE):
         """
         stddevs = []
         for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                sigma_mean = self._compute_standard_dev(rup, imt, C)
-                sigma_tot = np.sqrt( (sigma_mean ** 2) + (C['SigmaReg'] ** 2) )
-                stddevs.append(sigma_tot + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.MEAN:
-                sigma_mean = self._compute_standard_dev(rup, imt, C)
-                stddevs.append(sigma_mean + np.zeros(num_sites))
+            sigma_mean = self._compute_standard_dev(rup, imt, C)
+            sigma_tot = np.sqrt( (sigma_mean ** 2) + (C['SigmaReg'] ** 2) )
+            stddevs.append(sigma_tot + np.zeros(num_sites))
         return stddevs
         
 
