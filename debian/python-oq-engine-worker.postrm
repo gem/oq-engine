@@ -21,7 +21,7 @@ case "$1" in
     # been purged.
     :
     if [ -f /etc/openquake/openquake.cfg ]; then
-        sed -i 's/host =.*/^host = localhost/g' /etc/openquake/openquake.cfg
+        sed -i 's/^host =.*/host = localhost/g' /etc/openquake/openquake.cfg
     fi
     # for dir in /usr/share/doc/${GEM_DEB_PACKAGE}; do
     #         rm -rf $dir
