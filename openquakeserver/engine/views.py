@@ -6,10 +6,13 @@ import shutil
 import tempfile
 import urlparse
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.http import HttpResponseNotFound
 from django.shortcuts import redirect
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from openquake import nrmllib
 from openquake.engine import engine as oq_engine
 from openquake.engine.db import models as oqe_models
@@ -40,35 +43,6 @@ EXPORT_CONTENT_TYPE_MAP = dict(xml='application/xml',
 DEFAULT_CONTENT_TYPE = 'text/plain'
 
 LOGGER = logging.getLogger('openquakeserver')
-
-
-class allowed_methods(object):
-    """
-    Use as a view decorator to strictly enforce HTTP request types.
-
-    It works like this:
-
-    .. code-block:: python
-
-        @allowed_methods(('GET', 'POST'))
-        def some_view(request):
-            # code goes here
-
-        @ allowed_methods(('DELETE', ))
-        def some_other_view(request):
-            # code goes here
-    """
-
-    def __init__(self, methods):
-        self.methods = methods
-
-    def __call__(self, func):
-        def wrapped(request, *args, **kwargs):
-            if not request.method in self.methods:
-                return HttpResponse(status=METHOD_NOT_ALLOWED)
-            else:
-                return func(request, *args, **kwargs)
-        return wrapped
 
 
 def _get_base_url(request):
@@ -109,7 +83,7 @@ def _calc_to_response_data(calc):
     return response_data
 
 
-@allowed_methods(('GET', ))
+@require_http_methods(['GET'])
 def calc_hazard(request):
     """
     Get a list of risk calculations and report their id, status, description,
@@ -120,6 +94,8 @@ def calc_hazard(request):
     base_url = _get_base_url(request)
 
     haz_calc_data = _get_haz_calcs()
+    if not haz_calc_data:
+        return HttpResponseNotFound()
 
     response_data = []
     for hc_id, status, desc in haz_calc_data:
@@ -134,7 +110,7 @@ def calc_hazard(request):
 
 # csrf_excempt so we post to the view without necessarily having a form
 @csrf_exempt
-@allowed_methods(('GET', 'POST'))
+@require_http_methods(['GET', 'POST'])
 def run_hazard_calc(request):
     """
     Run a calculation.
@@ -183,7 +159,6 @@ def run_hazard_calc(request):
         shutil.rmtree(temp_dir)
         tasks.run_hazard_calc.apply_async((hc.id, ))
 
-        base_url = _get_base_url(request)
         return redirect('/v1/calc/hazard/%s' % hc.id)
 
 
@@ -247,14 +222,17 @@ def _get_haz_calcs():
                      'hazard_calculation__description')
 
 
-@allowed_methods(('GET', ))
+@require_http_methods(['GET'])
 def calc_hazard_info(request, calc_id):
     """
     Get a JSON blob containing all of parameters for the given calculation
     (specified by ``calc_id``). Also includes the current job status (
     executing, complete, etc.).
     """
-    response_data = _get_haz_calc_info(calc_id)
+    try:
+        response_data = _get_haz_calc_info(calc_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -275,7 +253,7 @@ def _get_haz_calc_info(calc_id):
     return response_data
 
 
-@allowed_methods(('GET', ))
+@require_http_methods(['GET'])
 def calc_hazard_results(request, calc_id):
     """
     Get a summarized list of hazard calculation results for a given
@@ -290,6 +268,8 @@ def calc_hazard_results(request, calc_id):
     base_url = _get_base_url(request)
 
     results = oq_engine.get_hazard_outputs(calc_id)
+    if not results:
+        return HttpResponseNotFound()
 
     response_data = []
     for result in results:
@@ -306,7 +286,7 @@ def calc_hazard_results(request, calc_id):
     return HttpResponse(content=json.dumps(response_data))
 
 
-@allowed_methods(('GET', ))
+@require_http_methods(['GET'])
 def get_hazard_result(request, result_id):
     """
     Download a specific hazard result, by ``result_id``.
@@ -317,7 +297,7 @@ def get_hazard_result(request, result_id):
     return _get_result(request, result_id, hazard_export.export)
 
 
-@allowed_methods(('GET', ))
+@require_http_methods(['GET'])
 def calc_risk(request):
     """
     Get a list of risk calculations and report their id, status, description,
@@ -328,6 +308,8 @@ def calc_risk(request):
     base_url = _get_base_url(request)
 
     risk_calc_data = _get_risk_calcs()
+    if not risk_calc_data:
+        return HttpResponseNotFound()
 
     response_data = []
     for hc_id, status, desc in risk_calc_data:
@@ -341,7 +323,7 @@ def calc_risk(request):
 
 
 @csrf_exempt
-@allowed_methods(('GET', 'POST'))
+@require_http_methods(['GET', 'POST'])
 def run_risk_calc(request):
     """
     Run a calculation.
@@ -378,7 +360,6 @@ def run_risk_calc(request):
         shutil.rmtree(temp_dir)
         tasks.run_risk_calc.apply_async((rc.id, ))
 
-        base_url = _get_base_url(request)
         return redirect('/v1/calc/risk/%s' % rc.id)
 
 
@@ -396,14 +377,17 @@ def _get_risk_calcs():
                      'risk_calculation__description')
 
 
-@allowed_methods(('GET', ))
+@require_http_methods(['GET'])
 def calc_risk_info(request, calc_id):
     """
     Get a JSON blob containing all of parameters for the given calculation
     (specified by ``calc_id``). Also includes the current job status (
     executing, complete, etc.).
     """
-    response_data = _get_risk_calc_info(calc_id)
+    try:
+        response_data = _get_risk_calc_info(calc_id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
@@ -424,7 +408,7 @@ def _get_risk_calc_info(calc_id):
     return response_data
 
 
-@allowed_methods(('GET', ))
+@require_http_methods(['GET'])
 def calc_risk_results(request, calc_id):
     """
     Get a summarized list of risk calculation results for a given
@@ -439,6 +423,8 @@ def calc_risk_results(request, calc_id):
     base_url = _get_base_url(request)
 
     results = oq_engine.get_risk_outputs(calc_id)
+    if not results:
+        return HttpResponseNotFound()
 
     response_data = []
     for result in results:
@@ -455,7 +441,7 @@ def calc_risk_results(request, calc_id):
     return HttpResponse(content=json.dumps(response_data))
 
 
-@allowed_methods(('GET', ))
+@require_http_methods(['GET'])
 def get_risk_result(request, result_id):
     """
     Download a specific hazard result, by ``result_id``.
@@ -497,8 +483,8 @@ def _get_result(request, result_id, export_fn):
     try:
         content = export_fn(result_id, content, export_type=export_type)
     except NotImplementedError, err:
-        # Throw back a 501 if the exact export parameters are not supported
-        return HttpResponse(err.message, status=NOT_IMPLEMENTED)
+        # Throw back a 404 if the exact export parameters are not supported
+        return HttpResponseNotFound(err.message)
 
     # Just in case the original StringIO object was closed:
     resp_content = StringIO.StringIO()
