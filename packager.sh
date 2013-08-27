@@ -544,6 +544,9 @@ _pkgclustest_innervm_run () {
         ssh $lxc_master_ip "export GEM_PKGTEST_ONE_DEMO=$GEM_PKGTEST_ONE_DEMO ; cd demos
         for ini in \$(find ./hazard -name job.ini); do
             openquake --run-hazard  \$ini --exports xml
+            if [ -n \"$GEM_PKGTEST_ONE_DEMO\" ]; then
+                exit 0
+            fi
         done
 
         for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d); do
