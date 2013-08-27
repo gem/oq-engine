@@ -35,7 +35,7 @@
 #
 
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-set -x
+# set -x
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
@@ -443,7 +443,6 @@ _pkgtest_innervm_run () {
     fi
 
     trap ERR
-
     return
 }
 
@@ -508,21 +507,16 @@ _pkgclustest_innervm_run () {
         ssh $ip_cur "sudo apt-get update"
     done
 
-
-    # packaging related tests (install, remove, purge, install, reinstall)
-    echo "PKGTEST: INSTALL master"
+    # pre configure debconf database for master and workers
     master_debconf $lxc_master_ip | ssh $lxc_master_ip "sudo debconf-set-selections"
-    ssh $lxc_master_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-master"
-
     for ip_cur in "${lxc_worker_ip[@]}"; do
         worker_debconf $lxc_master_ip | ssh $ip_cur "sudo debconf-set-selections"
-        ssh $ip_cur "sudo apt-get install -y ${GEM_DEB_PACKAGE}-worker"
     done
+    # master: packaging related tests (install, remove, purge, install, reinstall)
+    echo "PKGTEST: INSTALL master"
+    ssh $lxc_master_ip "sudo apt-get install -y ${GEM_DEB_PACKAGE}-master"
 
-if [ 0 -eq 1 ]; then
     echo "PKGTEST: REMOVE master"
-    sleep 5
-    ssh $lxc_master_ip "sudo service celeryd stop"
     sleep 5
     ssh $lxc_master_ip "sudo apt-get remove -y ${GEM_DEB_PACKAGE}-master"
 
@@ -531,14 +525,33 @@ if [ 0 -eq 1 ]; then
 
     echo "PKGTEST: REINSTALL master"
     sleep 5
-    ssh $lxc_master_ip "sudo service celeryd stop"
-    sleep 5
     ssh $lxc_master_ip "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-master"
-fi
 
+    # worker: packaging related tests (install, remove, purge, install, reinstall)
+    echo "PKGTEST: INSTALL all workers"
+    for ip_cur in "${lxc_worker_ip[@]}"; do
+        ssh $ip_cur "sudo apt-get install -y ${GEM_DEB_PACKAGE}-worker"
+    done
+    echo "PKGTEST: REMOVE worker"
+    sleep 5
+    ssh ${lxc_worker_ip[0]} "sudo service celeryd stop"
+    sleep 5
+    ssh ${lxc_worker_ip[0]} "sudo apt-get remove -y ${GEM_DEB_PACKAGE}-worker"
+
+    echo "PKGTEST: INSTALL AGAIN worker"
+    ssh ${lxc_worker_ip[0]} "sudo apt-get install -y ${GEM_DEB_PACKAGE}-worker"
+
+    echo "PKGTEST: REINSTALL worker"
+    sleep 5
+    ssh ${lxc_worker_ip[0]} "sudo service celeryd stop"
+    sleep 5
+    ssh ${lxc_worker_ip[0]} "sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}-worker"
+
+    # restart redis and postgresql to reload all new configurations
+    sleep 5
     ssh $lxc_master_ip "sudo service redis-server restart"
-
     ssh $lxc_master_ip "sudo service postgresql restart"
+
     ssh $lxc_master_ip "sudo -u postgres oq_create_db --yes --db-user=postgres --db-name=openquake --no-tab-spaces --schema-path=/usr/share/pyshared/openquake/engine/db/schema"
 
     # copy demos file to $HOME

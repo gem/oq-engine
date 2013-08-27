@@ -21,7 +21,6 @@ set -e
 # load debconf suite
 . /usr/share/debconf/confmodule
 
-GEM_DEBUG=y
 GEM_DEB_PACKAGE="python-oq-engine-master"
 # a tab char to avoid C & P problems and to be more clear
 GEM_TB="	"
@@ -32,6 +31,7 @@ GEM_TB="	"
 #       because are development tools only (look debian/rules file for details).
 #
 if [ "$GEM_FAKEROOT" ]; then
+    GEM_DEBUG=y
     #
     # To run this script for test you can use:
     # $ DEBCONF_DEBUG=developer DEBCONF_PACKAGE=python-oq-engine-master ./python-oq-engine-master.postinst
