@@ -51,44 +51,22 @@ class ClassicalTest(unittest.TestCase):
         self.patch1.stop()
         self.patch2.stop()
 
-    def test_call_one_realization(self):
+    def test_call(self):
         assets = [workflows.Asset(dict(structural=10))]
         curves = [mock.Mock()]
         output = self.workflow("structural", assets, curves)
 
         self.assertEqual(assets, output.assets)
-        self.assertEqual(1, len(self.workflow._loss_curves))
 
         self.assertEqual(
             [((self.vf, 3), {})],
             self.calcs.ClassicalLossCurve.call_args_list)
         self.assertIsNone(
-            self.workflow.statistics(mock.Mock(), mock.Mock(), mock.Mock()))
+            self.workflow.statistics(
+                [], mock.Mock(), mock.Mock(), mock.Mock()))
 
         numpy.testing.assert_allclose(
             numpy.ones((4,)) * 3, output.average_losses)
-
-    def test_call_three_realizations(self):
-        assets = [workflows.Asset(dict(structural=10))] * 4
-
-        curves = []
-        for _ in range(0, 4):
-            m = mock.Mock()
-            m.__nonzero__ = mock.Mock()
-            m.__nonzero__.return_value = True
-            curves.append(m)
-
-        data = ((assets, curves[0]), (assets, curves[1]), (assets, curves[2]),)
-
-        for assets, curves in data:
-            output = self.workflow("structural", assets, curves)
-            self.assertEqual(assets, output.assets)
-
-        self.assertIsNotNone(self.workflow._loss_curves)
-
-        self.assertEqual(
-            [((self.vf, 3), {})],
-            self.calcs.ClassicalLossCurve.call_args_list)
 
 
 class ProbabilisticEventBasedTest(unittest.TestCase):
@@ -117,7 +95,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.patch2.stop()
         self.patch3.stop()
 
-    def test_call_one_realization(self):
+    def test_call(self):
         assets = [workflows.Asset(dict(structural=10),
                                   dict(structural=0.1),
                                   dict(structural=0.8))]
@@ -128,7 +106,6 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         output = self.workflow("structural", assets, hazard)
 
         self.assertEqual(assets, output.assets)
-        self.assertEqual(1, len(self.workflow._loss_curves))
 
         self.assertEqual(
             [((self.vf, 1, 0.75), {})],
@@ -147,36 +124,6 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
 
         numpy.testing.assert_allclose(
             numpy.ones((3,)) * 0.1, output.stddev_losses)
-
-    def test_call_three_realizations(self):
-        assets = [workflows.Asset(dict(structural=10),
-                                  dict(structural=0.1),
-                                  dict(structural=0.8))] * 4
-        hazard = [(mock.Mock(), mock.Mock())] * 3
-
-        self.workflow.losses.return_value = numpy.empty((4, 100))
-        self.workflow.event_loss.return_value = collections.Counter((1, 1))
-        self.workflow.curves.return_value = numpy.empty((4, 2, 10))
-
-        data = ((assets, hazard[0]), (assets, hazard[1]), (assets, hazard[2]),)
-
-        for assets, hazard in data:
-            output = self.workflow("structural", assets, hazard)
-            self.assertEqual(assets, output.assets)
-
-            self.assertEqual(
-                [((self.vf, 1, 0.75), {})],
-                self.calcs.ProbabilisticLoss.call_args_list)
-
-            self.assertEqual(
-                [((50, 1000, 20), {})],
-                self.calcs.EventBasedLossCurve.call_args_list)
-
-            self.assertEqual(
-                [((), {})],
-                self.calcs.EventLossTable.call_args_list)
-
-        self.assertIsNotNone(self.workflow._loss_curves)
 
     def test_normalize_all_trivial(self):
         poes = numpy.linspace(1, 0, 11)
@@ -214,45 +161,15 @@ class ClassicalBCRTest(unittest.TestCase):
     def tearDown(self):
         self.patch.stop()
 
-    def test_call_one_realization(self):
+    def test_call(self):
         assets = [workflows.Asset(dict(structural=10),
                                   retrofitting_values=dict(structural=10))]
         curves = [mock.Mock()]
         curves_retro = [mock.Mock()]
-        data = ((1, assets, curves, curves_retro),)
-        ret = list(self.workflow("structural", data))
-
-        self.assertEqual(1, len(ret))
-        hid, _output = ret[0]
-
-        self.assertEqual(1, hid)
+        self.workflow("structural", assets, curves, curves_retro)
 
         self.assertEqual(
             [((self.vf, 3), {}), ((self.vf_retro, 3), {})],
-            self.calcs.ClassicalLossCurve.call_args_list)
-
-    def test_call_three_realizations(self):
-        assets = [workflows.Asset(
-            dict(structural=10),
-            retrofitting_values=dict(structural=10))] * 4
-
-        curves = [mock.Mock()] * 4
-        curves_retro = [mock.Mock()] * 4
-
-        data = ((1, assets, curves[0], curves_retro[0]),
-                (2, assets, curves[1], curves_retro[1]),
-                (3, assets, curves[2], curves_retro[2]),)
-
-        i = 0
-        for i, (hid, _output) in enumerate(
-                self.workflow("structural", data), 1):
-            self.assertEqual(i, hid)
-
-        self.assertEqual(3, i)
-
-        self.assertEqual(
-            [((self.vf, 3), {}),
-             ((self.vf_retro, 3), {})],
             self.calcs.ClassicalLossCurve.call_args_list)
 
 
