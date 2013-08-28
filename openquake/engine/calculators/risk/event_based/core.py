@@ -20,6 +20,7 @@ Core functionality for the classical PSHA risk calculator.
 
 import random
 import collections
+import itertools
 import numpy
 
 from django import db
@@ -116,8 +117,28 @@ def do_event_based(unit, containers, params, profile):
 
 
 def save_individual_outputs(containers, outputs, disagg_outputs, params):
+    """
+    Save loss curves, loss maps and loss fractions associated with a
+    calculation unit
+
+    :param containers:
+        a :class:`openquake.engine.calculators.risk.writers.OutputDict`
+        instance holding the reference to the output container objects
+    :param outputs:
+        a :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
+        holding the output data for a calculation unit
+    :param disagg_outputs:
+        a :class:`.DisaggregationOutputs` holding the disaggreation
+        output data for a calculation unit
+    :param params:
+        a :class:`openquake.engine.calculators.risk.base.CalcParams`
+        holding the parameters for this calculation
+    """
+
     containers.write(
-        outputs.assets, outputs.loss_curves, output_type="loss_curve")
+        outputs.assets,
+        (outputs.loss_curves, outputs.average_losses, outputs.stddev_losses),
+        output_type="event_loss_curve")
 
     containers.write_all(
         "poe", params.conditional_loss_poes,
@@ -140,13 +161,29 @@ def save_individual_outputs(containers, outputs, disagg_outputs, params):
 
     if outputs.insured_curves is not None:
         containers.write(
-            outputs.assets, outputs.insured_curves,
+            outputs.assets,
+            (outputs.insured_curves, outputs.average_insured_losses),
             output_type="loss_curve", insured=True)
 
 
 def save_statistical_output(containers, stats, params):
+    """
+    Save statistical outputs (mean and quantile loss curves, mean and
+    quantile loss maps) for the calculation.
+
+    :param containers:
+        a :class:`openquake.engine.calculators.risk.writers.OutputDict`
+        instance holding the reference to the output container objects
+    :param stats:
+        :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`
+        holding the statistical output data
+    :param params:
+        a :class:`openquake.engine.calculators.risk.base.CalcParams`
+        holding the parameters for this calculation
+    """
+
     containers.write(
-        stats.assets, stats.mean_curves,
+        stats.assets, (stats.mean_curves, stats.mean_average_losses),
         output_type="loss_curve", statistics="mean")
 
     containers.write_all(
@@ -155,7 +192,9 @@ def save_statistical_output(containers, stats, params):
 
     # quantile curves and maps
     containers.write_all(
-        "quantile", params.quantiles, stats.quantile_curves,
+        "quantile", params.quantiles,
+        [(c, a) for c, a in itertools.izip(stats.quantile_curves,
+                                           stats.quantile_average_losses)],
         stats.assets, output_type="loss_curve", statistics="quantile")
 
     if params.quantiles:
@@ -237,7 +276,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         validation.RequireEventBasedHazard,
         validation.ExposureHasInsuranceBounds]
 
-    output_builders = [writers.LossCurveMapBuilder,
+    output_builders = [writers.EventLossCurveMapBuilder,
                        writers.InsuredLossCurveBuilder,
                        writers.LossFractionBuilder]
 
@@ -328,7 +367,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             losses=aggregate_loss_losses,
                             poes=aggregate_loss_poes,
                             average_loss=scientific.average_loss(
-                                aggregate_loss_losses, aggregate_loss_poes))
+                                aggregate_loss_losses, aggregate_loss_poes),
+                            stddev_loss=numpy.std(aggregate_losses))
 
     def calculation_unit(self, loss_type, assets):
         """
