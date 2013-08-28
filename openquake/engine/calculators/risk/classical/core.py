@@ -73,22 +73,16 @@ def do_classical(unit, containers, params, profile):
     compute mean and quantile artifacts.
     """
 
-    for hazard_output_id, outputs in unit.workflow(
-            unit.getter(profile('getting data')),
-            profile('computing individual risk')):
-        with profile('saving individual risk'):
+    outputs, stats = unit(profile('getting data'),
+                          profile('computing individual risk'),
+                          post_processing, params.quantiles)
+
+    with profile('saving risk'):
+        for out in outputs:
             save_individual_outputs(
-                containers.with_args(hazard_output_id=hazard_output_id),
-                outputs,
-                params)
+                containers.with_args(hazard_output_id=out.hid),
+                out.output, params)
 
-    with profile('computing risk statistics'):
-        stats = unit.workflow.statistics(
-            unit.getter.weights(),
-            params.quantiles,
-            post_processing)
-
-    with profile('saving risk statistics'):
         if stats is not None:
             save_statistical_output(
                 containers.with_args(hazard_output_id=None), stats, params)

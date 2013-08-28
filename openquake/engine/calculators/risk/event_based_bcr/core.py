@@ -65,17 +65,16 @@ def do_event_based_bcr(unit, containers, profile):
     """
     See `event_based_bcr` for docstring
     """
-    for hazard_output_id, outputs in unit.workflow(
-            unit.loss_type,
-            unit.getter(profile('getting hazard')),
-            profile('computing bcr')):
+    outputs, _stats = unit(profile('getting hazard'),
+                           profile('computing bcr'))
 
-        with profile('writing results'):
+    with profile('writing results'):
+        for out in outputs:
             containers.write(
                 unit.workflow.assets,
-                outputs,
+                out.output,
                 output_type="bcr_distribution",
-                hazard_output_id=hazard_output_id)
+                hazard_output_id=out.hid)
 
 
 class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
