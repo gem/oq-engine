@@ -28,9 +28,15 @@ from openquake.risklib import workflows
 
 class ClassicalTest(unittest.TestCase):
     def setUp(self):
-        self.patch = mock.patch('openquake.risklib.workflows.calculators')
-        self.calcs = self.patch.start()
+        self.patch1 = mock.patch('openquake.risklib.workflows.calculators')
+        self.calcs = self.patch1.start()
         self.calcs.LossMap = mock.MagicMock
+
+        self.patch2 = mock.patch(
+            'openquake.risklib.workflows.scientific.average_loss')
+        average_loss = self.patch2.start()
+        average_loss.return_value = 3
+
         self.vf = mock.MagicMock()
         self.poes = [0.1, 0.2]
         self.poes_disagg = [0.1, 0.2, 0.3]
@@ -42,7 +48,8 @@ class ClassicalTest(unittest.TestCase):
         self.workflow.curves.return_value = numpy.empty((4, 2, 10))
 
     def tearDown(self):
-        self.patch.stop()
+        self.patch1.stop()
+        self.patch2.stop()
 
     def test_call_one_realization(self):
         assets = [workflows.Asset(dict(structural=10))]
@@ -62,6 +69,9 @@ class ClassicalTest(unittest.TestCase):
             self.calcs.ClassicalLossCurve.call_args_list)
         self.assertIsNone(
             self.workflow.statistics(mock.Mock(), mock.Mock(), mock.Mock()))
+
+        numpy.testing.assert_allclose(
+            numpy.ones((4,)) * 3, output.average_losses)
 
     def test_call_three_realizations(self):
         assets = [workflows.Asset(dict(structural=10))] * 4
@@ -92,16 +102,29 @@ class ClassicalTest(unittest.TestCase):
 
 class ProbabilisticEventBasedTest(unittest.TestCase):
     def setUp(self):
-        self.patch = mock.patch('openquake.risklib.workflows.calculators')
-        self.calcs = self.patch.start()
+        self.patch1 = mock.patch('openquake.risklib.workflows.calculators')
+        self.calcs = self.patch1.start()
+
+        self.patch2 = mock.patch(
+            'openquake.risklib.workflows.scientific.average_loss')
+        average_loss = self.patch2.start()
+        average_loss.return_value = 3
+
+        self.patch3 = mock.patch('numpy.std')
+        std = self.patch3.start()
+        std.return_value = 0.1
+
         self.vf = mock.MagicMock()
         self.poes = [0.1, 0.2]
         self.workflow = workflows.ProbabilisticEventBased(
             self.vf, 1, 0.75, 50, 1000, 20, self.poes, True)
         self.workflow.maps.poes = self.poes
+        self.workflow.curves = mock.Mock(return_value=numpy.empty((3, 2, 20)))
 
     def tearDown(self):
-        self.patch.stop()
+        self.patch1.stop()
+        self.patch2.stop()
+        self.patch3.stop()
 
     def test_call_one_realization(self):
         assets = [workflows.Asset(dict(structural=10),
@@ -132,6 +155,12 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.assertEqual(
             [((), {})],
             self.calcs.EventLossTable.call_args_list)
+
+        numpy.testing.assert_allclose(
+            numpy.ones((3,)) * 3, output.average_losses)
+
+        numpy.testing.assert_allclose(
+            numpy.ones((3,)) * 0.1, output.stddev_losses)
 
     def test_call_three_realizations(self):
         assets = [workflows.Asset(dict(structural=10),
@@ -181,8 +210,9 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
     def test_normalize_one_trivial(self):
         trivial = [numpy.zeros(6), numpy.linspace(1, 0, 6)]
         curve = [numpy.linspace(0., 1., 6), numpy.linspace(1., 0., 6)]
-        exp_losses, (poes1, poes2) = self.workflow._normalize_curves(
-            [trivial, curve])
+        with numpy.errstate(invalid='ignore', divide='ignore'):
+            exp_losses, (poes1, poes2) = self.workflow._normalize_curves(
+                [trivial, curve])
 
         numpy.testing.assert_allclose(exp_losses, curve[0])
         numpy.testing.assert_allclose(poes1, [numpy.nan, 0., 0., 0., 0., 0.])
