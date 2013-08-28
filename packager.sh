@@ -662,7 +662,7 @@ _lxc_name_and_ip_get()
                 #Aug 27 16:40:47 pc-nastasi dnsmasq-dhcp[14357]: 1875896329 DHCPACK(lxcbr0) \
                 #172.16.9.33 00:16:3e:71:fc:aa ubuntu-lxc-eph-temp-g4zo86z
                 if grep -q ".*dnsmasq-dhcp.*DHCPACK.*${lxc_name}\$" /var/log/syslog ; then
-                    lxc_ip="$(grep ".*dnsmasq-dhcp.*DHCPACK.*${lxc_name}\$" /var/log/syslog | cut -d ' ' -f 8)"
+                    lxc_ip="$(grep ".*dnsmasq-dhcp.*DHCPACK.*${lxc_name}\$" /var/log/syslog | cut -d ' ' -f 7)"
                     break
                 fi
             done
@@ -792,7 +792,7 @@ EOF
         $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
     gpg --armor --detach-sign --output Release.gpg Release
     cd -
-
+if [ 0 -eq 1 ]; then
     #
     # TEST STANDALONE
     #
@@ -812,7 +812,7 @@ EOF
     if [ $inner_ret -ne 0 ]; then
         return $inner_ret
     fi
-
+fi
     #
     #  TEST CLUSTER
     #

@@ -1,0 +1,32 @@
+diff -r curr/rootfs.debconf02.step0/etc/openquake/openquake.cfg curr/rootfs/etc/openquake/openquake.cfg
+82c82
+< concurrent_tasks = 64
+---
+> concurrent_tasks = 2048
+93c93
+< concurrent_tasks = 64
+---
+> concurrent_tasks = 2048
+diff -r curr/rootfs.debconf02.step0/etc/postgresql/9.1/main/pg_hba.conf curr/rootfs/etc/postgresql/9.1/main/pg_hba.conf
+85a86,97
+> # PYTHON-OQ-ENGINE: CONFIGURATION BEGIN
+> local	openquake	oq_admin			md5
+> local	openquake	oq_job_init			md5
+> local	openquake	oq_job_superv			md5
+> local	openquake	oq_reslt_writer			md5
+> 
+> host	openquake	oq_admin	192.168.72.0/24	md5
+> host	openquake	oq_job_init	192.168.72.0/24	md5
+> host	openquake	oq_job_superv	192.168.72.0/24	md5
+> host	openquake	oq_reslt_writer	192.168.72.0/24	md5
+> 
+> # PYTHON-OQ-ENGINE: CONFIGURATION END
+Only in curr/rootfs/etc/postgresql/9.1/main: pg_hba.conf.old
+diff -r curr/rootfs.debconf02.step0/etc/postgresql/9.1/main/postgresql.conf curr/rootfs/etc/postgresql/9.1/main/postgresql.conf
+31a32,34
+> # PYTHON-OQ-ENGINE: CONFIGURATION BEGIN
+> standard_conforming_strings = off
+> # PYTHON-OQ-ENGINE: CONFIGURATION END
+Only in curr/rootfs/etc/postgresql/9.1/main: postgresql.conf.old
+Only in curr/rootfs/var/tmp: openquake-db-installation
+Only in curr/rootfs.debconf02.step0/var/tmp: openquake-db-installation.orig

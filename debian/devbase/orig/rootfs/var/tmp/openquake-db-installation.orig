@@ -1,0 +1,26 @@
+.. Dropping database openquake ..
+.. Dropping table space admin_ts ..
+ERROR:  tablespace "admin_ts" is not empty
+.. Dropping table space hzrdi_ts ..
+ERROR:  tablespace "hzrdi_ts" is not empty
+.. Dropping table space hzrdr_ts ..
+ERROR:  tablespace "hzrdr_ts" is not empty
+.. Dropping table space riski_ts ..
+.. Dropping table space riskr_ts ..
+.. Dropping table space uiapi_ts ..
+ERROR:  tablespace "uiapi_ts" is not empty
+.. Dropping table space htemp_ts ..
+.. Current table spaces: admin_ts default_ts eqcat_ts eqged_ts hzrdi_ts hzrdr_ts oqmif_ts pg_default pg_global pshai_ts temp_ts uiapi_ts
+.. Creating database openquake ..
+.. Loading postgis functions/data into openquake ..
+.. Running schema definition file: /usr/share/pyshared/openquake/engine/db/schema/openquake.sql ..
+.. Running functions file: /usr/share/pyshared/openquake/engine/db/schema/functions.sql ..
+.. Loading static data from: /usr/share/pyshared/openquake/engine/db/schema/load.sql ..
+.. Running comments file: /usr/share/pyshared/openquake/engine/db/schema/comments.sql ..
+.. Running security settings file: /usr/share/pyshared/openquake/engine/db/schema/security.sql ..
+.. Applying index definitions: /usr/share/pyshared/openquake/engine/db/schema/indexes.sql ..
+.. Done ..
+ALTER ROLE
+ALTER ROLE
+ALTER ROLE
+ALTER ROLE

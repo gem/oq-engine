@@ -1,0 +1,53 @@
+diff -r curr/rootfs.debconf01.step0/etc/openquake/openquake.cfg curr/rootfs/etc/openquake/openquake.cfg
+82c82
+< concurrent_tasks = 64
+---
+> concurrent_tasks = 2048
+93c93
+< concurrent_tasks = 64
+---
+> concurrent_tasks = 2048
+diff -r curr/rootfs.debconf01.step0/etc/postgresql/9.1/main/pg_hba.conf curr/rootfs/etc/postgresql/9.1/main/pg_hba.conf
+85a86,97
+> # PYTHON-OQ-ENGINE: CONFIGURATION BEGIN
+> local	openquake	oq_admin			md5
+> local	openquake	oq_job_init			md5
+> local	openquake	oq_job_superv			md5
+> local	openquake	oq_reslt_writer			md5
+> 
+> host	openquake	oq_admin	192.168.72.0/24	md5
+> host	openquake	oq_job_init	192.168.72.0/24	md5
+> host	openquake	oq_job_superv	192.168.72.0/24	md5
+> host	openquake	oq_reslt_writer	192.168.72.0/24	md5
+> 
+> # PYTHON-OQ-ENGINE: CONFIGURATION END
+Only in curr/rootfs/etc/postgresql/9.1/main: pg_hba.conf.old
+diff -r curr/rootfs.debconf01.step0/etc/postgresql/9.1/main/postgresql.conf curr/rootfs/etc/postgresql/9.1/main/postgresql.conf
+31a32,36
+> # PYTHON-OQ-ENGINE: CONFIGURATION BEGIN
+> standard_conforming_strings = off
+> max_connections = 2048
+> listen_addresses = '*'
+> # PYTHON-OQ-ENGINE: CONFIGURATION END
+64c69
+< max_connections = 100			# (change requires restart)
+---
+> # PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: max_connections = 100			# (change requires restart)
+Only in curr/rootfs/etc/postgresql/9.1/main: postgresql.conf.old
+diff -r curr/rootfs.debconf01.step0/etc/redis/redis.conf curr/rootfs/etc/redis/redis.conf
+1a2,4
+> # PYTHON-OQ-ENGINE: CONFIGURATION BEGIN
+> bind 0.0.0.0
+> # PYTHON-OQ-ENGINE: CONFIGURATION END
+30c33
+< bind 127.0.0.1
+---
+> # PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: bind 127.0.0.1
+Only in curr/rootfs/etc/redis: redis.conf.old
+diff -r curr/rootfs.debconf01.step0/etc/sysctl.d/30-postgresql-shm.conf curr/rootfs/etc/sysctl.d/30-postgresql-shm.conf
+11a12,14
+> # PYTHON-OQ-ENGINE: CONFIGURATION BEGIN
+> kernel.shmmax = 66381752
+> # PYTHON-OQ-ENGINE: CONFIGURATION END
+Only in curr/rootfs/var/tmp: openquake-db-installation
+Only in curr/rootfs.debconf01.step0/var/tmp: openquake-db-installation.orig

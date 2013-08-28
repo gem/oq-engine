@@ -73,9 +73,9 @@ if [ "$GEM_FAKEROOT" ]; then
     }
 
     su_orig="$(which su)"
-    su() {
-        if [ "$1" = "-" -a "$(echo "$2" | cut -c 1-5)" = "psql " ]; then
-            eval psql $GEM_FAKE_PG_ARGS "$(echo "$2" | cut -c 5-)"
+    su () {
+        if [ "$1" = "-" -a "$2" = "-c" -a "$(echo "$3" | cut -c 1-5)" = "psql " ]; then
+            eval psql $GEM_FAKE_PG_ARGS "$(echo "$3" | cut -c 5-)"
         else
             echo "MOCK: su" "$@"
             if [ "$1" = "-c" -a "$(echo "$2" | cut -c -21)" = "/usr/bin/oq_create_db" ]; then

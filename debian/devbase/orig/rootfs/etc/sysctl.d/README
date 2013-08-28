@@ -1,0 +1,9 @@
+This directory contains settings similar to those found in /etc/sysctl.conf.
+In general, files in the 10-*.conf range come from the procps package and
+serve as system defaults.  Other packages install their files in the
+30-*.conf range, to override system defaults.  End-users can use 60-*.conf
+and above, or use /etc/sysctl.conf directly, which overrides anything in
+this directory.
+
+After making any changes, please run "service procps start" (or, from
+a Debian package maintainer script "invoke-rc.d procps start").

@@ -106,12 +106,28 @@ EOF
     
 }
 
-perform_test () {
-    local pkgname="$1" scenario="$2" debconf="$3"
+checkpoint () {
+    local pkgname="$1" scenario="$2" debconf="$3" step="$4"
+    cd "${BDIR}"
+    df="$(diff -r curr/rootfs.${debconf}.step$((step - 1)) curr/rootfs || true)"
+    cd -
+    if ! echo "$df" | diff -q ${BDIR}/test/${pkgname}/${scenario}/step${step}_${debconf}.diff - >/dev/null 2>&1 ; then
+        diffname="${BDIR}/curr/${pkgname}__${scenario}__${debconf}__step${step}.diff"
+        echo "DIFFER in $diffname"
+        echo "$df" > "$diffname"
+        return 1
+    fi
+}
 
+perform_test () {
+    local is_auto="$1" pkgname="$2" scenario="$3" debconf="$4"
+
+    if [ "$is_auto" = "y" -a -f "${BDIR}/test/$pkgname/$scenario/$debconf/no_auto.cmd" ]; then
+        return 0
+    fi
     echo
     echo "Package: $pkgname  Scenario: $scenario  Debconf: $debconf"
-#return 0    
+
     if [ -d "${BDIR}/curr" ]; then
         rm -rf "${BDIR}/curr"
     fi
@@ -130,17 +146,6 @@ perform_test () {
 
     checkpoint "$pkgname" "$scenario" "$debconf" 1 
 
-checkpoint () {
-    local pkgname="$1" scenario="$2" debconf="$3" step="$4"
-    cd "${BDIR}"
-    df="$(diff -r curr/rootfs.${debconf}.step${step} curr/rootfs || true)"
-    cd -
-    if ! echo "$df" | diff -q ${BDIR}/test/${pkgname}/${scenario}/step0_${debconf}.diff - >/dev/null 2>&1 ; then        
-        echo "DIFFER"
-        echo "$df" > "${BDIR}/curr/${pkgname}__${scenario}__${debconf}__step$((step - 1))_step${step}.diff"
-        return 1
-    fi
-}
 
     curr_snapshot "$debconf" step1
 
@@ -160,7 +165,17 @@ checkpoint () {
     return 0
 }
 
+function skipy () {
+    local is_auto="$1" pkgname="$2" scenario="$3" debconf="$4"
 
+    echo "  $pkgname $scenario $debconf" | tr -d '\n'
+
+    if [  -f "${BDIR}/test/$pkgname/$scenario/$debconf/no_auto.cmd" ]; then
+        echo " (skipped when not interactive)"
+    else
+        echo
+    fi
+}
 
 #
 #  MAIN
@@ -168,15 +183,31 @@ checkpoint () {
 
 trap sig_hand SIGINT SIGTERM ERR
 export BDIR="$(echo "$(pwd)/$(dirname $0)/.." | sed 's@/\./@/@g')"
+cmd=perform_test
+while getopts ":l" opt; do
+  case $opt in
+    l)
+      cmd=skipy
+      shift
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      ;;
+  esac
+done
+
+
 
 if [ $# -eq 3 ]; then
     pkgname_target="$1"
     scenario_target="$2"
     debconf_target="$3"
+    is_auto="n"
 else
     pkgname_target=".*"
     scenario_target=".*"
     debconf_target=".*"
+    is_auto="y"
 fi
 
 # set the fakeroot for all tests
@@ -190,7 +221,7 @@ for pkgname in $(echo "python-oq-engine-master" | grep "$pkgname_target") ; do
     export DEBCONF_PACKAGE="$pkgname"
     for scenario in $(ls ${BDIR}/test/$pkgname | grep "$scenario_target"); do
         for debconf in $(ls ${BDIR}/test/$pkgname/$scenario | grep '^debconf.*$' | grep "$debconf_target"); do
-            perform_test "$pkgname" "$scenario" "$debconf"
+            $cmd "$is_auto" "$pkgname" "$scenario" "$debconf"
         done
     done
 done
