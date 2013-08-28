@@ -74,12 +74,11 @@ def do_scenario(unit, containers, profile):
     See `scenario` for a description of the input parameters
     """
 
-    (hid, assets, loss_ratio_matrix, aggregate_losses,
-     insured_loss_matrix, insured_losses) = (
-         unit.workflow(
-             unit.loss_type,
-             unit.getter(profile('getting data')),
-             profile('computing risk')))
+    ((hid, outputs),), _stats = unit(profile('getting data'),
+                                     profile('computing risk'))
+
+    (assets, loss_ratio_matrix, aggregate_losses,
+     insured_loss_matrix, insured_losses) = outputs
 
     with profile('saving risk outputs'):
         containers.write(
@@ -92,8 +91,8 @@ def do_scenario(unit, containers, profile):
         if insured_loss_matrix is not None:
             containers.write(
                 assets,
-                insured_loss_matrix.mean(axis=0),
-                insured_loss_matrix.std(ddof=1, axis=0),
+                insured_loss_matrix.mean(axis=1),
+                insured_loss_matrix.std(ddof=1, axis=1),
                 itertools.cycle([True]),
                 hazard_output_id=hid,
                 insured=True)
