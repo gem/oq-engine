@@ -19,7 +19,11 @@ class, together with a few convertion functions which are able to
 convert NRML files into a hierarchical Document Object Model (DOM).
 That makes it easier to read and write XML from Python. Such features
 are used in the PyQt user interface to the engine input files and in
-the command line convertion tools CSV<->XML.
+the command line convertion tools CSV<->XML. The Node class is
+kept intentionally similar to an Element class, however it overcomes
+the limitation of ElementTree: in particular a node can keep a lazy
+iterable of subnodes, whereas ElementTree wants to keep everything
+in memory.
 
 Examples
 ----------------------------
@@ -69,6 +73,12 @@ index:
 >>> root[0], root[1], root[2]
 (<a {} A1 []>, <b {'attrb': 'B'} B1 []>, <a {} A2 []>)
 
+The list of all subnodes with a given name can be retrieved
+as follows:
+
+>>> list(root.getnodes('a'))
+[<a {} A1 []>, <a {} A2 []>]
+
 It is also possible to delete a node given its index:
 
 >>> del root[2]
@@ -115,16 +125,8 @@ soon as you start iterating on the lazytree. In particular
 list(lazytree) would generated all of them. If your goal is to
 store the tree on the filesystem in XML format, you should use
 a saving routing converting a subnode at the time, without
-requiring the full list of them. For convenience, nrmllib.utils
-provide an xml_writer consumer just for that purpose. Here
-is an example of usage:
-
->>> out = open('/tmp/example.xml', 'w')
->>> writer = nrml_writer(out)
->>> writer.next()  # initialize the consumer
->>> for node in lazytree: writer.send(node)
->>> writer.next()
->>> out.close()
+requiring the full list of them. For convenience, nrmllib.writers
+provide an StreamingXMLWriter just for that purpose.
 
 For instance an exposure file like the following::
 
@@ -155,9 +157,7 @@ For instance an exposure file like the following::
 can be converted as follows:
 
 >> from openquake.nrmllib.utils import node_from_nrml
->> nrml, nsmap = node_from_nrml(<path_to_the_exposure_file.xml>)
->> nsmap
-{None: 'http://openquake.org/xmlns/nrml/0.4'}
+>> nrml = node_from_nrml(<path_to_the_exposure_file.xml>)
 
 
 Then nrml will be an instance of the Node class, which defines
@@ -180,11 +180,11 @@ For instance
 '45.16667'
 """
 
+import io
 import sys
-import operator
-import itertools
 import cStringIO
 import ConfigParser
+import json
 from openquake.hazardlib.slots import with_slots
 from openquake import nrmllib
 from openquake.nrmllib.writers import StreamingXMLWriter
@@ -196,8 +196,8 @@ from lxml import etree
 def strip_fqtag(tag):
     "Convert a (fully qualified) tag into a valid Python identifier"
     s = str(tag)
-    pieces = s.rsplit('}', 1)
-    if len(pieces) > 1:  # '}'
+    pieces = s.rsplit('}', 1)  # split on '}', to remove the namespace part
+    if len(pieces) == 2:
         s = pieces[1]
     return s
 
@@ -247,23 +247,23 @@ class Node(object):
     """
     __slots__ = ('tag', 'attrib', 'text', 'nodes')
 
-    def __init__(self, fulltag, attrib=None, value=None, nodes=None):
+    def __init__(self, fulltag, attrib=None, text=None, nodes=None):
         """
         :param str tag: the Node name
         :param dict attrib: the Node attributes
-        :param str value: the Node value (default None)
+        :param unicode text: the Node text (default None)
         :param nodes: an iterable of subnodes (default empty list)
         """
         self.tag = strip_fqtag(fulltag)
         self.attrib = {} if attrib is None else attrib
-        self.text = value
+        self.text = text
         self.nodes = [] if nodes is None else nodes
         if self.nodes and self.text is not None:
             raise ValueError(
                 'A branch node cannot have a value, got %r' % self.text)
 
     def __getattr__(self, name):
-        subnodes = self.getnodes(name)
+        subnodes = list(self.getnodes(name))
         if len(subnodes) == 0:
             raise NameError('No subnode named %r found in %r' %
                             (name, self.tag))
@@ -275,22 +275,15 @@ class Node(object):
 
     def getnodes(self, name):
         "Return the direct subnodes with name 'name'"
-        subnodes = []
         for node in self.nodes:
             if node.tag == name:
-                subnodes.append(node)
-        return subnodes
+                yield node
 
     def append(self, node):
         "Append a new subnode"
         if not isinstance(node, self.__class__):
             raise TypeError('Expected Node instance, got %r' % node)
         self.nodes.append(node)
-
-    def getgroups(self):
-        "Returns the direct subnodes grouped by tag"
-        gb = itertools.groupby(self.nodes, operator.attrgetter('tag'))
-        return [list(g) for k, g in gb]
 
     def to_str(self, expandattrs=False, expandvals=False):
         out = cStringIO.StringIO()
@@ -311,34 +304,58 @@ class Node(object):
         Retrieve a subnode, if i is an integer, or an attribute, if i
         is a string.
         """
-        if isinstance(i, int):
-            return self.nodes[i]
-        else:  # assume a string
+        if isinstance(i, basestring):
             return self.attrib[i]
+        else:  # assume an integer or a slice
+            return self.nodes[i]
 
     def __setitem__(self, i, value):
         """
         Update a subnode, if i is an integer, or an attribute, if i
         is a string.
         """
-        if isinstance(i, int):
-            self.nodes[i] = value
-        else:  # assume a string
+        if isinstance(i, basestring):
             self.attrib[i] = value
+        else:  # assume an integer or a slice
+            self.nodes[i] = value
 
     def __delitem__(self, i):
         """
         Remove a subnode, if i is an integer, or an attribute, if i
         is a string.
         """
-        if isinstance(i, int):
-            del self.nodes[i]
-        else:  # assume a string
+        if isinstance(i, basestring):
             del self.attrib[i]
+        else:  # assume an integer or a slice
+            del self.nodes[i]
 
     def __len__(self):
         """Return the number of subnodes"""
         return len(self.nodes)
+
+    @classmethod
+    def from_dict(cls, dic):
+        """
+        Convert a (nested) dictionary with attributes tag, attrib, text, nodes
+        into a Node object.
+        """
+        tag = dic['tag']
+        text = dic.get('text')
+        attrib = dic.get('attrib', {})
+        nodes = dic.get('nodes', [])
+        if not nodes:
+            return cls(tag, attrib, text)
+        return cls(tag, attrib, nodes=map(cls.from_dict, nodes))
+
+    def to_dict(self):
+        """
+        Convert a Node object into a (nested) dictionary
+        with attributes tag, attrib, text, nodes.
+        """
+        dic = dict(tag=self.tag, attrib=self.attrib, text=self.text)
+        if self.nodes:
+            dic['nodes'] = [n.to_dict() for n in self]
+        return dic
 
     @classmethod
     def from_elem(cls, elem):
@@ -377,10 +394,17 @@ class Node(object):
         return namespace["e1"]
 
 
-COMPATPARSER = etree.ETCompatXMLParser()
+def getbytes(serialize, node):
+    """
+    Given a streaming serialization function and a node, returns
+    the serialized byte string.
+    """
+    out = io.BytesIO()
+    serialize(node, out)
+    return out.getvalue()
 
 
-def node_from_xml(xmlfile, parser=None):
+def node_from_xml(xmlfile, parser=nrmllib.COMPATPARSER):
     """
     Convert a .xml file into a Node object.
     """
@@ -414,7 +438,14 @@ def node_from_nrml(xmlfile):
 
 def node_to_nrml(node, output=sys.stdout, nsmap=None):
     """
-    Convert a node into a NRML XML file
+    Convert a node into a NRML file. output must be a file
+    object open in write mode. If you want to perform a
+    consistency check, open it in read-write mode, then it will
+    be read after creation and checked against the NRML schema.
+
+    :params node: a Node object
+    :params output: a file-like object in write or read-write mode
+    :params nsmap: a dictionary with the XML namespaces (default the NRML ones)
     """
     nsmap = nsmap or nrmllib.SERIALIZE_NS_MAP
     root = Node('nrml', nodes=[node])
@@ -424,11 +455,17 @@ def node_to_nrml(node, output=sys.stdout, nsmap=None):
         else:
             root['xmlns:%s' % nsname] = nsvalue
     node_to_xml(root, output)
+    if hasattr(output, 'mode') and '+' in output.mode:  # read-write mode
+        output.seek(0)
+        nrmllib.assert_valid(output)
 
 
 def node_from_ini(ini_file, root_name='ini'):
     """
     Convert a .ini file into a Node object.
+
+    :params ini_file: a filename or a file like object in read mode
+
     """
     fileobj = open(ini_file) if isinstance(ini_file, basestring) else ini_file
     cfp = ConfigParser.RawConfigParser()
@@ -444,12 +481,25 @@ def node_from_ini(ini_file, root_name='ini'):
 def node_to_ini(node, output=sys.stdout):
     """
     Convert a Node object with the right structure into a .ini file.
+
+    :params node: a Node object
+    :params output: a file-like object opened in write mode
     """
     for subnode in node:
         output.write(u'\n[%s]\n' % subnode.tag)
         for name, value in sorted(subnode.attrib.iteritems()):
             output.write(u'%s=%s\n' % (name, value))
     output.flush()
+
+
+def node_from_json_string(string):
+    """Convert a JSON string into a Node object"""
+    return Node.from_dict(json.loads(string))
+
+
+def node_to_json_string(node):
+    """Convert a Node object into a JSON string"""
+    return json.dumps(node.to_dict())
 
 
 ################### string manipulation routines for NRML ####################

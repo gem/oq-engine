@@ -43,8 +43,10 @@ def nrml_schema_file():
         os.path.abspath(os.path.dirname(__file__)),
         'schema', _NRML_SCHEMA_FILE)
 
+COMPATPARSER = etree.ETCompatXMLParser()
 
-def assert_valid(source, parser=etree.ETCompatXMLParser()):
+
+def assert_valid(source, parser=COMPATPARSER):
     """
     Raises a `lxml.etree.DocumentInvalid` error for invalid files.
 

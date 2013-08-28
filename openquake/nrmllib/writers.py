@@ -14,7 +14,7 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import cStringIO
-from xml.sax.saxutils import XMLGenerator
+from xml.sax.saxutils import XMLGenerator, quoteattr
 
 
 class _PrettyXMLGenerator(XMLGenerator):
@@ -36,6 +36,11 @@ class _PrettyXMLGenerator(XMLGenerator):
             self._write('<%s>' % name)
         else:
             XMLGenerator.startElement(self, name, attrs)
+
+    def emptyElement(self, name, attrs):
+        attr = ' '.join('%s=%s' % (n, quoteattr(v))
+                        for n, v in sorted(attrs.iteritems()))
+        self._write('<%s %s/>' % (name, attr))
 
 
 class StreamingXMLWriter(object):
@@ -77,10 +82,12 @@ class StreamingXMLWriter(object):
 
     def serialize(self, node):
         """Serialize a node object (typically an ElementTree object)"""
-        if node.text:  # leaf node
-            self.tag(node.tag, node.attrib, node.text)
+        if not node.text and not node.nodes:
+            self._xgen.emptyElement(node.tag, node.attrib)
             return
         self.start_tag(node.tag, node.attrib)
+        if node.text:
+            self._xgen.characters(node.text)
         for subnode in node:
             self.serialize(subnode)
         self.end_tag(node.tag)

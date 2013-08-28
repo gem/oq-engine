@@ -93,8 +93,8 @@ root
         # tests the methods .to_str with expandattrs and expandvals on
         root = utils.Node('root')
         a = utils.Node('a', dict(zz='ZZ'))
-        x1 = utils.Node('x1', dict(xx1='XX1'), value='1')
-        x2 = utils.Node('x2', value='2')
+        x1 = utils.Node('x1', dict(xx1='XX1'), text='1')
+        x2 = utils.Node('x2', text='2')
         root.append(a)
         root.a.append(x1)
         root.a.append(x2)
@@ -167,14 +167,8 @@ param=yyy
             2
         </b>
     </general>
-    <section1
-     param="xxx"
-    >
-    </section1>
-    <section2
-     param="yyy"
-    >
-    </section2>
+    <section1 param="xxx"/>
+    <section2 param="yyy"/>
 </root>
 """)
 
@@ -231,24 +225,31 @@ param=yyy
              id="asset_01"
              number="7"
             >
-                <location
-                 lat="45.16667"
-                 lon="9.15000"
-                >
-                </location>
+                <location lat="45.16667" lon="9.15000"/>
             </asset>
             <asset
              taxonomy="IT-CE"
              id="asset_02"
              number="7"
             >
-                <location
-                 lat="45.12200"
-                 lon="9.15333"
-                >
-                </location>
+                <location lat="45.12200" lon="9.15333"/>
             </asset>
         </assets>
     </exposureModel>
 </nrml>
 """)
+
+    def test_reserved_name(self):
+        # there are four reserved names: tag, attrib, text, nodes
+        # this is an example of what happens for 'tag'
+        node = utils.Node('tag')
+        root = utils.Node('root', nodes=[node])
+        self.assertEqual(root.tag, 'root')  # not node, use __getattr__
+        self.assertEqual(root.__getattr__('tag'), node)
+
+    def test_json(self):
+        # convertion to and from JSON strings
+        json = '{"text": null, "attrib": {}, "tag": "root", "nodes": [{"text": "A", "attrib": {}, "tag": "a"}]}'
+        node = utils.node_from_json_string(json)
+        string = utils.node_to_json_string(node)
+        self.assertEqual(string, json)
