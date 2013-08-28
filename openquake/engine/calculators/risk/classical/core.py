@@ -186,7 +186,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     core_calc_task = classical
 
     validators = base.RiskCalculator.validators + [
-        validation.RequireClassicalHazard]
+        validation.RequireClassicalHazard,
+        validation.ExposureHasInsuranceBounds]
 
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
@@ -209,7 +210,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 model.vulnerability_function,
                 self.rc.lrem_steps_per_interval,
                 self.rc.conditional_loss_poes,
-                self.rc.poes_disagg),
+                self.rc.poes_disagg,
+                self.rc.insured_losses),
             hazard_getters.HazardCurveGetterPerAsset(
                 self.rc.hazard_outputs(),
                 assets,
