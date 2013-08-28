@@ -98,6 +98,10 @@ class LossCurveXMLWriter(object):
               describing the loss ratios.
             * define an attribute `average_loss`, which is a float
               describing the average loss associated to the loss curve
+            * define an attribute `stddev_loss`, which is a float
+              describing the standard deviation of losses if the loss curve
+              has been computed with an event based approach. Otherwise,
+              it is None
 
             All attributes must be defined, except for `loss_ratios` that
             can be `None` since it is optional in the schema.
@@ -137,6 +141,10 @@ class LossCurveXMLWriter(object):
 
                 losses = etree.SubElement(loss_curve, "averageLoss")
                 losses.text = "%.4e" % curve.average_loss
+
+                if curve.stddev_loss is not None:
+                    losses = etree.SubElement(loss_curve, "stdDevLoss")
+                    losses.text = "%.4e" % curve.stddev_loss
 
             output.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
@@ -229,6 +237,10 @@ class AggregateLossCurveXMLWriter(object):
               describing the losses.
             * define an attribute `average_loss`, which is a float
               describing the average loss associated to the loss curve
+            * define an attribute `stddev_loss`, which is a float
+              describing the standard deviation of losses if the loss curve
+              has been computed with an event based approach. Otherwise, it
+              is None
 
             Also, `poes`, `losses` values must be indexed coherently,
             i.e.: the loss at index zero is related to the probability
@@ -273,6 +285,10 @@ class AggregateLossCurveXMLWriter(object):
 
             losses = etree.SubElement(aggregate_loss_curve, "averageLoss")
             losses.text = "%.4e" % data.average_loss
+
+            if data.stddev_loss is not None:
+                losses = etree.SubElement(aggregate_loss_curve, "stdDevLoss")
+                losses.text = "%.4e" % data.stddev_loss
 
             output.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
