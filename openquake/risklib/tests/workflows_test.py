@@ -163,7 +163,7 @@ class ClassicalBCRTest(unittest.TestCase):
                                   retrofitting_values=dict(structural=10))]
         curves = [mock.Mock()]
         curves_retro = [mock.Mock()]
-        self.workflow("structural", assets, curves, curves_retro)
+        self.workflow("structural", assets, (curves, curves_retro))
 
         self.assertEqual(
             [((self.vf, 3), {}), ((self.vf_retro, 3), {})],
@@ -183,7 +183,7 @@ class ScenarioTestCase(unittest.TestCase):
         hazard = (mock.Mock(), mock.Mock())
         calc.losses = mock.Mock(return_value=numpy.empty((4, 2)))
 
-        (loss_ratio_matrix, aggregate_losses,
+        (_assets, loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
              calc("structural", assets, hazard))
 
@@ -200,7 +200,7 @@ class ScenarioTestCase(unittest.TestCase):
         hazard = (mock.Mock(), mock.Mock())
         calc.losses = mock.Mock(return_value=numpy.empty((4, 2)))
 
-        (loss_ratio_matrix, aggregate_losses,
+        (assets, loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
              calc("structural", assets, hazard))
 
@@ -216,7 +216,7 @@ class CalculationUnitTestCase(unittest.TestCase):
 
         c.getter.return_value = [(mock.Mock(), mock.Mock(), mock.Mock())] * 3
         outputs, stats = c()
-        self.assertIsNone(stats)
+        self.assertIsNotNone(stats)
         self.assertEqual(3, len(outputs))
         outputs, stats = c(post_processing=mock.Mock())
         self.assertIsNotNone(stats)
