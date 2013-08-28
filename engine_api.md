@@ -8,7 +8,7 @@ All responses are JSON, unless otherwise noted.
 
 #### GET /v1/calc/hazard
 
-List a summary of hazard calculations.
+List a summary of hazard calculations. The [url](#get-v1calchazardcalc_id) in each item of the response can be followed to retrieve complete calculation details.
 
 Parameters: None
 
@@ -29,7 +29,7 @@ Response:
 
 #### GET /v1/calc/risk
 
-List a summary of risk calculations.
+List a summary of risk calculations. The [url](#get-v1calcriskcalc_id) in each item of the response can be followed to retrieve complete calculation details.
 
 Parameters: None
 
@@ -99,3 +99,54 @@ Response:
      "region_constraint": {"type": "Polygon", "coordinates": [[[-78.181, 15.614], [-78.153, 15.614], [-78.153, 15.566], [-78.181, 15.566], [-78.181, 15.614]]]},
      "asset_correlation": 0.0,
      "id": 2}
+
+#### GET /v1/calc/hazard/:calc_id/results
+
+List a summary of results for the given `calc_id`. The [url](#get-v1calchazardresultresult_id) in each response item can be followed to retrieve the full result artifact.
+
+Parameters: None
+
+Response:
+
+    [{"url": "http://localhost:8000/v1/calc/hazard/result/12", "type": "hazard_curve", "name": "hc-rlz-22", "id": 12},
+     {"url": "http://localhost:8000/v1/calc/hazard/result/14", "type": "hazard_curve", "name": "hc-rlz-23", "id": 14},
+     {"url": "http://localhost:8000/v1/calc/hazard/result/16", "type": "hazard_curve", "name": "hc-rlz-24", "id": 16},
+     {"url": "http://localhost:8000/v1/calc/hazard/result/18", "type": "hazard_curve", "name": "hc-rlz-25", "id": 18}]
+
+#### GET /v1/calc/risk/:calc_id/results
+
+List a summary of results for the given `calc_id`. The [url](#get-v1calcriskresultresult_id) in each response item can be followed to retrieve the full result artifact.
+
+Parameters: None
+
+Response:
+
+    [{"url": "http://localhost:8000/v1/calc/risk/result/138", "type": "loss_curve", "name": "mean loss curves. type=structural", "id": 138},
+     {"url": "http://localhost:8000/v1/calc/risk/result/139", "type": "loss_curve", "name": "quantile(0.1) loss curves. type=structural", "id": 139},
+     {"url": "http://localhost:8000/v1/calc/risk/result/140", "type": "loss_curve", "name": "quantile(0.9) loss curves. type=structural", "id": 140},
+     {"url": "http://localhost:8000/v1/calc/risk/result/141", "type": "loss_map", "name": "mean loss map type=structural poe=0.1000", "id": 141},
+     {"url": "http://localhost:8000/v1/calc/risk/result/142", "type": "loss_map", "name": "quantile(0.1000) loss map type=structural poe=0.1000", "id": 142}]
+
+#### GET /v1/calc/hazard/result/:result_id
+
+Get the full content of a hazard calculation result for the given `result_id`.
+
+Parameters:
+
+    * export_type: the desired format for the result (`xml`, `geojson`, etc.)
+
+Response:
+
+The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
+
+#### GET /v1/calc/risk/result/:result_id
+
+Get the full content of a risk calculation result for the given `result_id`.
+
+Parameters:
+
+    * export_type: the desired format for the result (`xml`, `geojson`, etc.)
+
+Response:
+
+The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
