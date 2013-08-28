@@ -227,9 +227,6 @@ class Classical(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        if len(outputs) < 2:
-            return
-
         loss_curves = [out.loss_curves for out in outputs]
 
         def normalize_curves(curves):
@@ -401,9 +398,6 @@ class ProbabilisticEventBased(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        if len(outputs) < 2:
-            return
-
         loss_curves = [out.loss_curves for out in outputs]
         curve_matrix = numpy.array(loss_curves).transpose(1, 0, 2, 3)
 
@@ -578,7 +572,7 @@ class CalculationUnit(object):
                 output = self.workflow(self.loss_type, assets, hazard_data)
                 outputs.append(self.UnitOutput(hid, output))
 
-        if post_processing is not None:
+        if post_processing is not None and len(outputs) > 1:
             return ([out.output for out in outputs],
                     self.workflow.statistics(
                         self.getter.weights(),

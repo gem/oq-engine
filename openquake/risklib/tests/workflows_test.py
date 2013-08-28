@@ -61,9 +61,6 @@ class ClassicalTest(unittest.TestCase):
         self.assertEqual(
             [((self.vf, 3), {})],
             self.calcs.ClassicalLossCurve.call_args_list)
-        self.assertIsNone(
-            self.workflow.statistics(
-                [], mock.Mock(), mock.Mock(), mock.Mock()))
 
         numpy.testing.assert_allclose(
             numpy.ones((4,)) * 3, output.average_losses)
@@ -211,3 +208,23 @@ class ScenarioTestCase(unittest.TestCase):
         self.assertEqual((2,), aggregate_losses.shape)
         self.assertIsNone(insured_loss_matrix)
         self.assertIsNone(insured_losses)
+
+
+class CalculationUnitTestCase(unittest.TestCase):
+    def test_call_three_realizations(self):
+        c = workflows.CalculationUnit(mock.Mock(), mock.Mock(), mock.Mock())
+
+        c.getter.return_value = [(mock.Mock(), mock.Mock(), mock.Mock())] * 3
+        outputs, stats = c()
+        self.assertIsNone(stats)
+        self.assertEqual(3, len(outputs))
+        outputs, stats = c(post_processing=mock.Mock())
+        self.assertIsNotNone(stats)
+
+    def test_call_one_realizations(self):
+        c = workflows.CalculationUnit(mock.Mock(), mock.Mock(), mock.Mock())
+
+        c.getter.return_value = [(mock.Mock(), mock.Mock(), mock.Mock())]
+        outputs, stats = c(post_processing=mock.Mock())
+        self.assertIsNone(stats)
+        self.assertEqual(1, len(outputs))
