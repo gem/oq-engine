@@ -157,7 +157,19 @@ def run_hazard_calc(request):
 
         # Before running the calculation, clean up the temp dir.
         shutil.rmtree(temp_dir)
-        tasks.run_hazard_calc.apply_async((hc.id, ))
+
+        migration_callback_url = request.POST.get('migration_callback_url')
+        owner_user = request.POST.get('owner_user')
+
+        base_url = _get_base_url(request)
+        tasks.run_hazard_calc.apply_async(
+            (hc.id, ),
+            dict(migration_callback_url=migration_callback_url,
+                 owner_user=owner_user,
+                 results_url=urlparse.urljoin(
+                     base_url, 'v1/calc/hazard/%s/results' % hc.id
+                 ))
+        )
 
         return redirect('/v1/calc/hazard/%s' % hc.id)
 
@@ -358,7 +370,19 @@ def run_risk_calc(request):
 
         # Before running the calculation, clean up the temp dir.
         shutil.rmtree(temp_dir)
-        tasks.run_risk_calc.apply_async((rc.id, ))
+
+        migration_callback_url = request.POST.get('migration_callback_url')
+        owner_user = request.POST.get('owner_user')
+
+        base_url = _get_base_url(request)
+        tasks.run_risk_calc.apply_async(
+            (rc.id, ),
+            dict(migration_callback_url=migration_callback_url,
+                 owner_user=owner_user,
+                 results_url=urlparse.urljoin(
+                     base_url, 'v1/calc/risk/%s/results' % rc.id
+                 ))
+        )
 
         return redirect('/v1/calc/risk/%s' % rc.id)
 
