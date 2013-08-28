@@ -111,7 +111,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     validators = base.RiskCalculator.validators + [
         validation.RequireScenarioHazard,
-        validation.ExposureHasInsuranceBounds]
+        validation.ExposureHasInsuranceBounds,
+        validation.ExposureHasTimeEvent]
 
     output_builders = [writers.LossMapBuilder]
 
