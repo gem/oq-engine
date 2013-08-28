@@ -547,6 +547,8 @@ def _get_result(request, result_id, export_fn):
     # TODO(LB): A possible necessary optimization--in the future--would be to
     # iteratively stream large files.
     # TODO(LB): Large files could pose a memory consumption problem.
+    # TODO(LB): We also may want to limit the maximum file size of results sent
+    # via http.
     resp_value = resp_content.getvalue()
     resp_content.close()
     # TODO: Need to look at `content_type`, otherwise XML gets treated at HTML
