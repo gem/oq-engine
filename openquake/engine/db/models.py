@@ -1354,14 +1354,20 @@ class RiskCalculation(djm.Model):
     def vulnerability_inputs(self, retrofitted):
         for loss_type in LOSS_TYPES:
             ctype = cost_type(loss_type)
-            if retrofitted:
-                input_type = "%s_vulnerability_retrofitted" % ctype
-            else:
-                input_type = "%s_vulnerability" % ctype
 
-            queryset = self.inputs.filter(input_type=input_type)
-            if queryset.exists():
-                yield queryset[0], loss_type
+            vulnerability_input = self.vulnerability_input(ctype, retrofitted)
+            if vulnerability_input is not None:
+                yield vulnerability_input, loss_type
+
+    def vulnerability_input(self, ctype, retrofitted=False):
+        if retrofitted:
+            input_type = "%s_vulnerability_retrofitted" % ctype
+        else:
+            input_type = "%s_vulnerability" % ctype
+
+        queryset = self.inputs.filter(input_type=input_type)
+        if queryset.exists():
+            return queryset[0]
 
 
 def _prep_geometry(kwargs):
@@ -3126,6 +3132,12 @@ class ExposureModel(djm.Model):
         return not (
             self.exposuredata_set.filter(
                 cost__converted_retrofitted_cost__isnull=True)).exists()
+
+    def has_time_event(self, time_event):
+        return (
+            self.exposuredata_set.filter(occupancy__period=time_event).count()
+            ==
+            self.exposuredata_set.count())
 
     def supports_loss_type(self, loss_type):
         """
