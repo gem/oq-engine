@@ -277,6 +277,15 @@ def calc_hazard_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
+    # If the specified calculation doesn't exist OR is not yet complete,
+    # throw back a 404.
+    try:
+        calc = oqe_models.HazardCalculation.objects.get(id=calc_id)
+        if not calc.oqjob.status == 'complete':
+            return HttpResponseNotFound()
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
     base_url = _get_base_url(request)
 
     results = oq_engine.get_hazard_outputs(calc_id)
@@ -444,6 +453,15 @@ def calc_risk_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
+    # If the specified calculation doesn't exist OR is not yet complete,
+    # throw back a 404.
+    try:
+        calc = oqe_models.RiskCalculation.objects.get(id=calc_id)
+        if not calc.oqjob.status == 'complete':
+            return HttpResponseNotFound()
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
     base_url = _get_base_url(request)
 
     results = oq_engine.get_risk_outputs(calc_id)
@@ -501,6 +519,17 @@ def _get_result(request, result_id, export_fn):
         Otherwise, return a `django.http.HttpResponse` containing the content
         of the requested artifact.
     """
+    # If the result for the requested ID doesn't exist, OR
+    # the job which it is related too is not complete,
+    # throw back a 404.
+    try:
+        output = oqe_models.Output.objects.get(id=result_id)
+        job = output.oq_job
+        if not job.status == 'complete':
+            return HttpResponseNotFound()
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
     export_type = request.GET.get('export_type', DEFAULT_EXPORT_TYPE)
 
     content = StringIO.StringIO()
