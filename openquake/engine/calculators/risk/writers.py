@@ -89,26 +89,28 @@ def bcr_distribution(loss_type, bcr_distribution_id, assets, bcr_data):
             location=asset.site)
 
 
-def loss_curve(loss_type, loss_curve_id, assets, curves):
+def loss_curve(loss_type, loss_curve_id, assets, curve_data):
     """
-    Stores and returns a :class:`openquake.engine.db.models.LossCurveData`
-    where the data are got by `asset_output` and the
+    Store :class:`openquake.engine.db.models.LossCurveData`
+    where the
     :class:`openquake.engine.db.models.LossCurve` output container is
-    identified by `loss_curve_id`.
+    identified by `loss_curve_id` and has type `loss_curve` (produced by
+    a classical calculation).
 
+    :param str loss_type:
+        The loss type of the curve
     :param int loss_curve_id:
         The ID of the output container.
-    :param asset:
-        An instance of :class:`openquake.engine.db.models.ExposureData`.
-    :param loss_ratios:
-        A list of loss ratios.
-    :param poes:
-        A list of poes associated to `loss_ratios`.
-    :param float average_loss_ratio:
-        The average loss ratio of the curve.
+    :param assets:
+        A list of N :class:`openquake.engine.db.models.ExposureData` instances
+    :param tuple curve_data:
+        A tuple of the form (curves, averages) holding a numpy array with N
+        loss curve data and N average loss value associated with the curve
     """
 
-    for asset, (losses, poes) in itertools.izip(assets, curves):
+    curves, averages = curve_data
+    for asset, (losses, poes), average in itertools.izip(
+            assets, curves, averages):
         models.LossCurveData.objects.create(
             loss_curve_id=loss_curve_id,
             asset_ref=asset.asset_ref,
@@ -116,7 +118,41 @@ def loss_curve(loss_type, loss_curve_id, assets, curves):
             poes=poes,
             loss_ratios=losses,
             asset_value=asset.value(loss_type),
-            average_loss_ratio=scientific.average_loss(losses, poes))
+            average_loss_ratio=average,
+            stddev_loss_ratio=None)
+
+
+def event_loss_curve(loss_type, loss_curve_id, assets, curve_data):
+    """
+    Store :class:`openquake.engine.db.models.LossCurveData`
+    where the
+    :class:`openquake.engine.db.models.LossCurve` output container is
+    identified by `loss_curve_id` and the output type is `event_loss_curve`
+    .
+
+    :param str loss_type:
+        The loss type of the curve
+    :param int loss_curve_id:
+        The ID of the output container.
+    :param assets:
+        A list of N :class:`openquake.engine.db.models.ExposureData` instances
+    :param tuple curve_data:
+        A tuple of the form (curves, averages, stddevs) holding a numpy array
+        loss curve data and N average loss value associated with the curve
+    """
+
+    curves, averages, stddevs = curve_data
+    for asset, (losses, poes), average, stddev in itertools.izip(
+            assets, curves, averages, stddevs):
+        models.LossCurveData.objects.create(
+            loss_curve_id=loss_curve_id,
+            asset_ref=asset.asset_ref,
+            location=asset.site,
+            poes=poes,
+            loss_ratios=losses,
+            asset_value=asset.value(loss_type),
+            average_loss_ratio=average,
+            stddev_loss_ratio=stddev)
 
 
 def loss_fraction(loss_type, loss_fraction_id, assets, values, fractions):
@@ -370,6 +406,8 @@ def combine_builders(builders):
 
 
 class LossCurveMapBuilder(OutputBuilder):
+    LOSS_CURVE_TYPE = "loss_curve"
+
     def individual_outputs(self, loss_type, hazard_output):
         lc = [models.LossCurve.objects.create(
             hazard_output_id=hazard_output.id,
@@ -377,7 +415,7 @@ class LossCurveMapBuilder(OutputBuilder):
             output=models.Output.objects.create_output(
                 self.calc.job,
                 "loss curves. type=%s, hazard=%s" % (
-                    loss_type, hazard_output.id), "loss_curve"))]
+                    loss_type, hazard_output.id), self.LOSS_CURVE_TYPE))]
 
         maps = [models.LossMap.objects.create(
             hazard_output_id=hazard_output.id,
@@ -441,6 +479,10 @@ class LossCurveMapBuilder(OutputBuilder):
 
         return (mean_loss_curve + quantile_loss_curves +
                 mean_loss_maps + quantile_loss_maps)
+
+
+class EventLossCurveMapBuilder(LossCurveMapBuilder):
+    LOSS_CURVE_TYPE = "event_loss_curve"
 
 
 class LossMapBuilder(OutputBuilder):

@@ -52,11 +52,11 @@ from shapely import wkt
 
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import source as hazardlib_source
+import openquake.hazardlib.site
 
 from openquake.engine.db import fields
 from openquake.engine import writer
 
-import openquake.hazardlib.site
 
 #: Default Spectral Acceleration damping. At the moment, this is not
 #: configurable.
@@ -1515,6 +1515,7 @@ class Output(djm.Model):
         (u'dmg_dist_total', u'Total Damage Distribution'),
         (u'event_loss', u'Event Loss Table'),
         (u'loss_curve', u'Loss Curve'),
+        (u'event_loss_curve', u'Loss Curve'),
         (u'loss_fraction', u'Loss fractions'),
         (u'loss_map', u'Loss Map'),
     )
@@ -1541,7 +1542,7 @@ class Output(djm.Model):
         """
 
         # FIXME(lp). Remove the following outstanding exceptions
-        if self.output_type == 'agg_loss_curve':
+        if self.output_type in ['agg_loss_curve', 'event_loss_curve']:
             return self.loss_curve
         elif self.output_type == 'hazard_curve_multi':
             return self.hazard_curve
@@ -2786,6 +2787,7 @@ class LossCurveData(djm.Model):
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
     average_loss_ratio = djm.FloatField()
+    stddev_loss_ratio = djm.FloatField(blank=True, null=True)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve_data'
@@ -2797,6 +2799,11 @@ class LossCurveData(djm.Model):
     @property
     def average_loss(self):
         return self.average_loss_ratio * self.asset_value
+
+    @property
+    def stddev_loss(self):
+        if self.stddev_loss_ratio is not None:
+            return self.stddev_loss_ratio * self.asset_value
 
     @property
     def data_hash(self):
@@ -2825,6 +2832,7 @@ class AggregateLossCurveData(djm.Model):
     losses = fields.FloatArrayField()
     poes = fields.FloatArrayField()
     average_loss = djm.FloatField()
+    stddev_loss = djm.FloatField(blank=True, null=True)
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss_curve_data'

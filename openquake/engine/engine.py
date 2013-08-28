@@ -814,7 +814,8 @@ def print_outputs_summary(outputs):
     if len(outputs) > 0:
         print 'id | output_type | name'
         for o in outputs.order_by('output_type'):
-            print '%s | %s | %s' % (o.id, o.output_type, o.display_name)
+            print '%s | %s | %s' % (
+                o.id, o.get_output_type_display(), o.display_name)
 
 
 def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
