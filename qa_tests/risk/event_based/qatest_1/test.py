@@ -46,7 +46,7 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
                     csv_name = "%s_%s" % (branch, cost)
                     data = self._csv(csv_name)
                     for i, asset in enumerate(assets):
-                        descriptor = (u'loss_curve', metadata, None,
+                        descriptor = (u'event_loss_curve', metadata, None,
                                       None, False, False, cost, asset)
                         asset_value = data[i * 2 + 1, 0]
                         curve = models.LossCurveData(
