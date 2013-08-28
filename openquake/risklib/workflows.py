@@ -375,6 +375,7 @@ class ProbabilisticEventBased(object):
         else:
             insured_curves = None
             average_insured_losses = None
+            stddev_insured_losses = None
 
         return self.Output(
             assets, loss_matrix, curves,
