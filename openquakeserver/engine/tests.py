@@ -7,8 +7,9 @@ import tempfile
 
 from collections import namedtuple
 from collections import OrderedDict
-from django.utils import unittest
+from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import RequestFactory
+from django.utils import unittest
 
 from engine import views
 from engine import _test_utils as utils
@@ -43,6 +44,10 @@ class UtilsTestCase(BaseViewTestCase):
 
 class CalcHazardTestCase(BaseViewTestCase):
 
+    def setUp(self):
+        self.request = self.factory.get('/v1/calc/hazard/')
+        self.request.META['HTTP_HOST'] = 'www.openquake.org'
+
     def test_get(self):
         expected_content = [
             {u'url': u'http://www.openquake.org/v1/calc/hazard/1',
@@ -64,12 +69,17 @@ class CalcHazardTestCase(BaseViewTestCase):
                 (2, 'pre_executing', 'description 2'),
                 (3, 'complete', 'description e'),
             ]
-            request = self.factory.get('/v1/calc/hazard/')
-            request.META['HTTP_HOST'] = 'www.openquake.org'
-            response = views.calc_hazard(request)
+            response = views.calc_hazard(self.request)
 
             self.assertEqual(200, response.status_code)
             self.assertEqual(expected_content, json.loads(response.content))
+
+    def test_404_no_calcs(self):
+        with mock.patch('engine.views._get_haz_calcs') as ghc:
+            ghc.return_value = []
+            response = views.calc_hazard(self.request)
+
+        self.assertEqual(404, response.status_code)
 
 
 class CalcRiskTestCase(BaseViewTestCase):
@@ -179,6 +189,11 @@ class CalcToResponseDataTestCase(unittest.TestCase):
 
 class CalcHazardResultsTestCase(BaseViewTestCase):
 
+    def setUp(self):
+        self.request = self.factory.get('/v1/calc/hazard/1/results')
+        self.request.META['HTTP_HOST'] = 'www.openquake.org'
+
+
     def test(self):
         expected_content = [
             {'id': 1, 'name': 'output1', 'type': 'hazard_curve',
@@ -189,22 +204,57 @@ class CalcHazardResultsTestCase(BaseViewTestCase):
              'url': 'http://www.openquake.org/v1/calc/hazard/result/3'},
         ]
         with mock.patch('openquake.engine.engine.get_hazard_outputs') as gho:
-            gho.return_value = [
-                FakeOutput(1, 'output1', 'hazard_curve'),
-                FakeOutput(2, 'output2', 'hazard_curve'),
-                FakeOutput(3, 'output3', 'hazard_map'),
-            ]
-            request = self.factory.get('/v1/calc/hazard/1/results')
-            request.META['HTTP_HOST'] = 'www.openquake.org'
-            response = views.calc_hazard_results(request, 7)
+            with mock.patch('openquake.engine.db.models'
+                            '.HazardCalculation.objects.get') as hc_get:
+                hc_get.return_value.oqjob.status = 'complete'
+                gho.return_value = [
+                    FakeOutput(1, 'output1', 'hazard_curve'),
+                    FakeOutput(2, 'output2', 'hazard_curve'),
+                    FakeOutput(3, 'output3', 'hazard_map'),
+                ]
+                self.request = self.factory.get('/v1/calc/hazard/1/results')
+                self.request.META['HTTP_HOST'] = 'www.openquake.org'
+                response = views.calc_hazard_results(self.request, 7)
 
-            self.assertEqual(1, gho.call_count)
-            self.assertEqual(((7, ), {}), gho.call_args)
-            self.assertEqual(200, response.status_code)
-            self.assertEqual(expected_content, json.loads(response.content))
+                self.assertEqual(1, gho.call_count)
+                self.assertEqual(((7, ), {}), gho.call_args)
+                self.assertEqual(200, response.status_code)
+                self.assertEqual(expected_content,
+                                 json.loads(response.content))
+
+    def test_404_no_outputs(self):
+        with mock.patch('openquake.engine.engine.get_hazard_outputs') as gho:
+            with mock.patch('openquake.engine.db.models'
+                            '.HazardCalculation.objects.get') as hc_get:
+                hc_get.return_value.oqjob.status = 'complete'
+                gho.return_value = []
+                response = views.calc_hazard_results(self.request, 7)
+
+        self.assertEqual(404, response.status_code)
+
+    def test_404_calc_not_exists(self):
+        with mock.patch('openquake.engine.db.models'
+                        '.HazardCalculation.objects.get') as hc_get:
+            hc_get.side_effect = ObjectDoesNotExist
+            response = views.calc_hazard_results(self.request, 7)
+
+        self.assertEqual(404, response.status_code)
+
+
+    def test_404_calc_not_complete(self):
+        with mock.patch('openquake.engine.db.models'
+                        '.HazardCalculation.objects.get') as hc_get:
+            hc_get.return_value.oqjob.status = 'pre_executing'
+            response = views.calc_hazard_results(self.request, 7)
+
+        self.assertEqual(404, response.status_code)
 
 
 class CalcRiskResultsTestCase(BaseViewTestCase):
+
+    def setUp(self):
+        self.request = self.factory.get('/v1/calc/risk/1/results')
+        self.request.META['HTTP_HOST'] = 'www.openquake.org'
 
     def test(self):
         expected_content = [
@@ -216,98 +266,144 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
              'url': 'http://www.openquake.org/v1/calc/risk/result/3'},
         ]
         with mock.patch('openquake.engine.engine.get_risk_outputs') as gro:
-            gro.return_value = [
-                FakeOutput(1, 'output1', 'loss_curve'),
-                FakeOutput(2, 'output2', 'loss_curve'),
-                FakeOutput(3, 'output3', 'loss_map'),
-            ]
-            request = self.factory.get('/v1/calc/risk/1/results')
-            request.META['HTTP_HOST'] = 'www.openquake.org'
-            response = views.calc_risk_results(request, 1)
+            with mock.patch('openquake.engine.db.models'
+                                        '.RiskCalculation.objects.get') as rc_get:
+                rc_get.return_value.oqjob.status = 'complete'
+
+                gro.return_value = [
+                    FakeOutput(1, 'output1', 'loss_curve'),
+                    FakeOutput(2, 'output2', 'loss_curve'),
+                    FakeOutput(3, 'output3', 'loss_map'),
+                ]
+                response = views.calc_risk_results(self.request, 1)
 
             self.assertEqual(200, response.status_code)
             self.assertEqual(expected_content, json.loads(response.content))
 
+    def test_404_no_outputs(self):
+        with mock.patch('openquake.engine.engine.get_risk_outputs') as gro:
+            with mock.patch('openquake.engine.db.models'
+                            '.RiskCalculation.objects.get') as rc_get:
+                rc_get.return_value.oqjob.status = 'complete'
+                gro.return_value = []
+                response = views.calc_risk_results(self.request, 1)
+
+        self.assertEqual(404, response.status_code)
+
+    def test_404_calc_not_exists(self):
+        with mock.patch('openquake.engine.db.models'
+                        '.RiskCalculation.objects.get') as hc_get:
+            hc_get.side_effect = ObjectDoesNotExist
+            response = views.calc_risk_results(self.request, 1)
+
+        self.assertEqual(404, response.status_code)
+
+
+    def test_404_calc_not_complete(self):
+        with mock.patch('openquake.engine.db.models'
+                        '.RiskCalculation.objects.get') as hc_get:
+            hc_get.return_value.oqjob.status = 'pre_executing'
+            response = views.calc_risk_results(self.request, 1)
+
+        self.assertEqual(404, response.status_code)
+
+
 
 class GetResultTestCase(BaseViewTestCase):
     """
-    Tests for :func:`engine.views.get_hazard_result` and
-    :func:`engine.views.get_risk_result`.
+    Tests for :func:`engine.views.get_hazard_result`,
+    :func:`engine.views.get_risk_result`, and the helper function
+    :func:`engine.views._get_result`.
     """
 
     def test_hazard_default_export_type(self):
         with mock.patch('openquake.engine.export.hazard.export') as export:
-            ret_val = StringIO.StringIO()
-            ret_val.write('Fake result file content')
-            ret_val.close()
-            export.return_value = ret_val
+            with mock.patch('openquake.engine.db.models'
+                            '.Output.objects.get') as output_get:
+                output_get.return_value.oq_job.status = 'complete'
+                ret_val = StringIO.StringIO()
+                ret_val.write('Fake result file content')
+                ret_val.close()
+                export.return_value = ret_val
 
-            request = self.factory.get('/v1/calc/hazard/result/37')
-            response = views.get_hazard_result(request, 37)
+                request = self.factory.get('/v1/calc/hazard/result/37')
+                response = views.get_hazard_result(request, 37)
 
-            self.assertEqual(200, response.status_code)
-            self.assertEqual('Fake result file content', response.content)
+                self.assertEqual(200, response.status_code)
+                self.assertEqual('Fake result file content', response.content)
 
-            # Test the call to the export function, including the handling for
-            # the default export type:
-            self.assertEqual(1, export.call_count)
-            self.assertEqual(37, export.call_args[0][0])
-            self.assertEqual('xml', export.call_args[1]['export_type'])
+                # Test the call to the export function, including the handling for
+                # the default export type:
+                self.assertEqual(1, export.call_count)
+                self.assertEqual(37, export.call_args[0][0])
+                self.assertEqual('xml', export.call_args[1]['export_type'])
 
     def test_hazard(self):
         with mock.patch('openquake.engine.export.hazard.export') as export:
-            ret_val = StringIO.StringIO()
-            ret_val.write('Fake result file content')
-            ret_val.close()
-            export.return_value = ret_val
+            with mock.patch('openquake.engine.db.models'
+                            '.Output.objects.get') as output_get:
+                output_get.return_value.oq_job.status = 'complete'
 
-            request = self.factory.get(
-                '/v1/calc/hazard/result/37?export_type=csv'
-            )
-            response = views.get_hazard_result(request, 37)
+                ret_val = StringIO.StringIO()
+                ret_val.write('Fake result file content')
+                ret_val.close()
+                export.return_value = ret_val
 
-            self.assertEqual(200, response.status_code)
-            self.assertEqual('Fake result file content', response.content)
+                request = self.factory.get(
+                    '/v1/calc/hazard/result/37?export_type=csv'
+                )
+                response = views.get_hazard_result(request, 37)
 
-            self.assertEqual(1, export.call_count)
-            self.assertEqual(37, export.call_args[0][0])
-            self.assertEqual('csv', export.call_args[1]['export_type'])
+                self.assertEqual(200, response.status_code)
+                self.assertEqual('Fake result file content', response.content)
+
+                self.assertEqual(1, export.call_count)
+                self.assertEqual(37, export.call_args[0][0])
+                self.assertEqual('csv', export.call_args[1]['export_type'])
 
     def test_risk_default_export_type(self):
         with mock.patch('openquake.engine.export.risk.export') as export:
-            ret_val = StringIO.StringIO()
-            ret_val.write('Fake result file content')
-            ret_val.close()
-            export.return_value = ret_val
+            with mock.patch('openquake.engine.db.models'
+                            '.Output.objects.get') as output_get:
+                output_get.return_value.oq_job.status = 'complete'
 
-            request = self.factory.get('/v1/calc/risk/result/37')
-            response = views.get_risk_result(request, 37)
+                ret_val = StringIO.StringIO()
+                ret_val.write('Fake result file content')
+                ret_val.close()
+                export.return_value = ret_val
 
-            self.assertEqual(200, response.status_code)
-            self.assertEqual('Fake result file content', response.content)
+                request = self.factory.get('/v1/calc/risk/result/37')
+                response = views.get_risk_result(request, 37)
 
-            self.assertEqual(1, export.call_count)
-            self.assertEqual(37, export.call_args[0][0])
-            self.assertEqual('xml', export.call_args[1]['export_type'])
+                self.assertEqual(200, response.status_code)
+                self.assertEqual('Fake result file content', response.content)
+
+                self.assertEqual(1, export.call_count)
+                self.assertEqual(37, export.call_args[0][0])
+                self.assertEqual('xml', export.call_args[1]['export_type'])
 
     def test_risk(self):
         with mock.patch('openquake.engine.export.risk.export') as export:
-            ret_val = StringIO.StringIO()
-            ret_val.write('Fake result file content')
-            ret_val.close()
-            export.return_value = ret_val
+            with mock.patch('openquake.engine.db.models'
+                            '.Output.objects.get') as output_get:
+                output_get.return_value.oq_job.status = 'complete'
 
-            request = self.factory.get(
-                '/v1/calc/risk/result/37?export_type=csv'
-            )
-            response = views.get_risk_result(request, 37)
+                ret_val = StringIO.StringIO()
+                ret_val.write('Fake result file content')
+                ret_val.close()
+                export.return_value = ret_val
 
-            self.assertEqual(200, response.status_code)
-            self.assertEqual('Fake result file content', response.content)
+                request = self.factory.get(
+                    '/v1/calc/risk/result/37?export_type=csv'
+                )
+                response = views.get_risk_result(request, 37)
 
-            self.assertEqual(1, export.call_count)
-            self.assertEqual(37, export.call_args[0][0])
-            self.assertEqual('csv', export.call_args[1]['export_type'])
+                self.assertEqual(200, response.status_code)
+                self.assertEqual('Fake result file content', response.content)
+
+                self.assertEqual(1, export.call_count)
+                self.assertEqual(37, export.call_args[0][0])
+                self.assertEqual('csv', export.call_args[1]['export_type'])
 
 
 class IsSourceModelTestCase(unittest.TestCase):
@@ -415,7 +511,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             ('input_model_2', fake_model_2),
             ('input_model_3', fake_model_3),
         ])
-        request.META['HTTP_HOST'] = 'www.openquake.org'
+        request.META = dict(HTTP_HOST='www.openquake.org')
 
         # Set up the mocks:
         mocks = dict(
@@ -454,14 +550,13 @@ class RunHazardCalcTestCase(BaseViewTestCase):
 
         try:
             # For `apply_async` mock function. See below.
-            aa_call_data = dict(count=0, args=None, kwargs=None)
+            aa_call_data = dict(count=0, args=None)
 
             with multi_mock:
                 multi_mock['mkdtemp'].return_value = temp_dir
 
-                def apply_async(*args, **kwargs):
+                def apply_async(*args):
                     aa_call_data['args'] = args
-                    aa_call_data['kwargs'] = kwargs
                     aa_call_data['count'] += 1
 
                 multi_mock['run_hazard_task'].apply_async = apply_async
@@ -493,8 +588,17 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             self.assertEqual(load_sm_exp_call_args,
                              multi_mock['load_sm'].call_args)
 
-            self.assertEqual({'count': 1, 'args': ((666,),), 'kwargs': {}},
-                             aa_call_data)
+            self.assertEqual(
+                {'count': 1,
+                 'args': (
+                     (666, ),
+                     {'migration_callback_url': None,
+                      'owner_user': None,
+                      'results_url': ('http://www.openquake.org/'
+                                      'v1/calc/hazard/666/results')})},
+                aa_call_data
+            )
+
         finally:
             shutil.rmtree(temp_dir)
 
@@ -510,7 +614,6 @@ class RunRiskCalcTestCase(BaseViewTestCase):
         self.request.POST['hazard_calc'] = 666
         self.request.META = dict()
         self.request.META['HTTP_HOST'] = 'www.openquake.org'
-
 
     def test(self):
         # Test job file inputs:
@@ -553,14 +656,13 @@ class RunRiskCalcTestCase(BaseViewTestCase):
 
         try:
             # For `apply_async` mock function. See below.
-            aa_call_data = dict(count=0, args=None, kwargs=None)
+            aa_call_data = dict(count=0, args=None)
 
             with multi_mock:
                 multi_mock['mkdtemp'].return_value = temp_dir
 
-                def apply_async(*args, **kwargs):
+                def apply_async(*args):
                     aa_call_data['args'] = args
-                    aa_call_data['kwargs'] = kwargs
                     aa_call_data['count'] += 1
 
                 multi_mock['run_risk_task'].apply_async = apply_async
@@ -588,7 +690,15 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             self.assertEqual(jff_exp_call_args,
                              multi_mock['job_from_file'].call_args)
 
-            self.assertEqual({'count': 1, 'args': ((777,),), 'kwargs': {}},
-                             aa_call_data)
+            self.assertEqual(
+                {'count': 1,
+                 'args': (
+                     (777,),
+                     {'migration_callback_url': None,
+                      'owner_user': None,
+                      'results_url': ('https://www.openquake.org/'
+                                      'v1/calc/risk/777/results')})},
+                aa_call_data
+            )
         finally:
             shutil.rmtree(temp_dir)
