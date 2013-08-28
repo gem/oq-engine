@@ -82,7 +82,7 @@ class StreamingXMLWriter(object):
 
     def serialize(self, node):
         """Serialize a node object (typically an ElementTree object)"""
-        if not node.text and not node.nodes:
+        if not node and not node.text:
             self._xgen.emptyElement(node.tag, node.attrib)
             return
         self.start_tag(node.tag, node.attrib)

@@ -19,48 +19,6 @@ import unittest
 from openquake.nrmllib import utils
 
 
-class UtilsTestCase(unittest.TestCase):
-    """Tests for general NRML util functions."""
-
-    def test_coords_to_linestr_wkt_2d(self):
-        expected = 'LINESTRING(1.0 1.0, 2.0 2.0, 3.0 3.0)'
-
-        # Mixed input types for robustness testing
-        coords = [1.0, '1.0', '2.0', 2.0, 3.0, '3.0']
-
-        actual = utils.coords_to_linestr_wkt(coords, 2)
-
-        self.assertEqual(expected, actual)
-
-    def test_coords_to_linestr_wkt_3d(self):
-        expected = 'LINESTRING(1.0 1.0 2.0, 2.0 3.0 3.0)'
-
-        coords = [1.0, '1.0', '2.0', 2.0, 3.0, '3.0']
-
-        actual = utils.coords_to_linestr_wkt(coords, 3)
-
-        self.assertEqual(expected, actual)
-
-    def test_coords_to_poly_wkt_2d(self):
-        expected = 'POLYGON((1.0 1.0, 2.0 2.0, 3.0 3.0, 1.0 1.0))'
-
-        coords = [1.0, '1.0', '2.0', 2.0, 3.0, '3.0']
-
-        actual = utils.coords_to_poly_wkt(coords, 2)
-
-        self.assertEqual(expected, actual)
-
-    def test_coords_to_poly_wkt_3d(self):
-        expected = (
-            'POLYGON((1.0 1.0 0.1, 2.0 2.0 0.2, 3.0 3.0 0.3, 1.0 1.0 0.1))')
-
-        coords = [1.0, '1.0', 0.1, '2.0', 2.0, '0.2', 3.0, '3.0', 0.3]
-
-        actual = utils.coords_to_poly_wkt(coords, 3)
-
-        self.assertEqual(expected, actual)
-
-
 class NodeTestCase(unittest.TestCase):
     """Tests for the Node class and related facilities"""
 
@@ -253,3 +211,45 @@ param=yyy
         node = utils.node_from_json_string(json)
         string = utils.node_to_json_string(node)
         self.assertEqual(string, json)
+
+
+class UtilsTestCase(unittest.TestCase):
+    """Tests for general NRML util functions."""
+
+    def test_coords_to_linestr_wkt_2d(self):
+        expected = 'LINESTRING(1.0 1.0, 2.0 2.0, 3.0 3.0)'
+
+        # Mixed input types for robustness testing
+        coords = [1.0, '1.0', '2.0', 2.0, 3.0, '3.0']
+
+        actual = utils.coords_to_linestr_wkt(coords, 2)
+
+        self.assertEqual(expected, actual)
+
+    def test_coords_to_linestr_wkt_3d(self):
+        expected = 'LINESTRING(1.0 1.0 2.0, 2.0 3.0 3.0)'
+
+        coords = [1.0, '1.0', '2.0', 2.0, 3.0, '3.0']
+
+        actual = utils.coords_to_linestr_wkt(coords, 3)
+
+        self.assertEqual(expected, actual)
+
+    def test_coords_to_poly_wkt_2d(self):
+        expected = 'POLYGON((1.0 1.0, 2.0 2.0, 3.0 3.0, 1.0 1.0))'
+
+        coords = [1.0, '1.0', '2.0', 2.0, 3.0, '3.0']
+
+        actual = utils.coords_to_poly_wkt(coords, 2)
+
+        self.assertEqual(expected, actual)
+
+    def test_coords_to_poly_wkt_3d(self):
+        expected = (
+            'POLYGON((1.0 1.0 0.1, 2.0 2.0 0.2, 3.0 3.0 0.3, 1.0 1.0 0.1))')
+
+        coords = [1.0, '1.0', 0.1, '2.0', 2.0, '0.2', 3.0, '3.0', 0.3]
+
+        actual = utils.coords_to_poly_wkt(coords, 3)
+
+        self.assertEqual(expected, actual)

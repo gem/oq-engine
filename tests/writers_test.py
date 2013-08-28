@@ -39,8 +39,7 @@ class StreamingXMLWriterTestCase(unittest.TestCase):
         <description>
             Sample population
         </description>
-        <assets>
-        </assets>
+        <assets />
     </exposureModel>
 </nrml>
 ''')

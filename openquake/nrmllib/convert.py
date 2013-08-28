@@ -300,7 +300,7 @@ def parse_exposuremodel(em):
     yield metadata, data
 
 
-def assetgen(rows, costtypes):
+def assetgenerator(rows, costtypes):
     """
     Convert rows into asset nodes.
 
@@ -367,7 +367,7 @@ def exposuremodel_from(md_list):
                 Node('conversions', {},
                      nodes=[area, costtypes, deductible, ilimit]))
         subnodes.append(Node('assets', {},
-                             nodes=assetgen(md['reader'], costtypes)))
+                             nodes=assetgenerator(md['reader'], costtypes)))
         return Node('exposureModel',
                     dict(id=md['id'],
                          category=md['category'],

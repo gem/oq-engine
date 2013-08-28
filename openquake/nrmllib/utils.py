@@ -333,6 +333,14 @@ class Node(object):
         """Return the number of subnodes"""
         return len(self.nodes)
 
+    def __nonzero__(self):
+        """
+        Return True if there are subnodes; it does not iter on the
+        subnodes, so for lazy nodes it returns True even if the
+        generator is empty.
+        """
+        return bool(self.nodes)
+
     @classmethod
     def from_dict(cls, dic):
         """
