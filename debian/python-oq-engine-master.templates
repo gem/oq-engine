@@ -3,7 +3,7 @@ Type: boolean
 Default: true
 Description: Set standard-conforming-strings = off in postgresql.conf ?
  python-oq-engine-master requires either
- standard-conforming-strings = off in the postgres configuration
+ standard-conforming-strings = off in the postgresql configuration
  file or a patch.
  .
  Your postgresql configuration file currently has
@@ -23,8 +23,8 @@ Description: Set standard-conforming-strings = off in postgresql.conf ?
 Template: python-oq-engine-master/pg-conf-listen-addresses-override
 Type: boolean
 Default: false
-Description: Do you want the package overrides it ?
- Currently postgresql is not listening on all interfaces,
+Description: Can package overrides postgresql 'listen_addresses' conf entry ?
+ Currently postgresql is not listening to all interfaces,
  to have a working cluster it must listen to an interface reachable
  by workers.
 
@@ -33,37 +33,38 @@ Type: boolean
 Default: false
 Description: Do you want the package overrides it ?
  A max_connection entry in postgresql.conf is found.
+ izzo
 
 Template: python-oq-engine-master/redis-bind-override
 Type: boolean
 Default: false
-Description: Do you want the package overrides it ?
- Currently redis is not listening on all interfaces,
+Description: Can package overrides redis 'bind' conf entry ?
+ Currently redis is not listening to all interfaces,
  to have a working cluster it must listen to an interface reachable
  by workers.
 
 Template: python-oq-engine-master/pg-hba-allowed-hosts
 Type: string
-Default:
-Description: A space separated list of network-addresses/net-masks to
- configure network access to postgres database.
- .
- Local entries are already added.
+Default: 192.168.0.0/24
+Description: Postgresql allowed addresses in the form <IP address>/<number of bits>
+ A space separated list of network-addresses/net-masks to
+ configure network access to postgresql database.
+ Local access rules are also added.
 
 Template: python-oq-engine-master/workers-cores-number
 Type: string
-Default:
-Description: The total number of cores dedicated to openquake calculations.
- Here we are
+Default: 16
+Description: Number of workers CPU cores.
+ Insert the sum of all workers CPU cores dedicated to openquake.
 
 Template: python-oq-engine-master/kernel-shmmax-override
 Type: boolean
 Default: false
-Description: This package could require a more large shmmax value.
- Is it possible to override the system shmmax value if required ?
+Description: Could the package overrides the system 'shmmax' value if required ?
+ This package could require a more large kernel 'shmmax' value.
 
 Template: python-oq-engine-master/kernel-shmall-override
 Type: boolean
 Default: false
-Description: This package could require a more large shmall value.
- Is it possible to override the system shmall value if required ?
+Description: Could the package overrides the system 'shmall' value if required ?
+ This package could require a more large kernel 'shmall' value.
