@@ -100,13 +100,13 @@ It is possible to add and remove attributes freely:
 
 Node objects can be easily converted into ElementTree objects:
 
->>> root.to_elem()
+>>> node_to_elem(root)
 <Element root at 0x1d80c80>
 
 Thus it is trivial to generate the XML representation of a node:
 
 >>> from lxml import etree
->>> print etree.tostring(root.to_elem())
+>>> print etree.tostring(node_to_elem(root))
 <root><a>A1</a><b attrb="B">B1</b></root>
 
 Generating large XML files is not an issue: the trick is to use a
@@ -180,7 +180,6 @@ For instance
 '45.16667'
 """
 
-import io
 import sys
 import cStringIO
 import ConfigParser
@@ -341,75 +340,67 @@ class Node(object):
         """
         return bool(self.nodes)
 
-    @classmethod
-    def from_dict(cls, dic):
-        """
-        Convert a (nested) dictionary with attributes tag, attrib, text, nodes
-        into a Node object.
-        """
-        tag = dic['tag']
-        text = dic.get('text')
-        attrib = dic.get('attrib', {})
-        nodes = dic.get('nodes', [])
-        if not nodes:
-            return cls(tag, attrib, text)
-        return cls(tag, attrib, nodes=map(cls.from_dict, nodes))
 
-    def to_dict(self):
-        """
-        Convert a Node object into a (nested) dictionary
-        with attributes tag, attrib, text, nodes.
-        """
-        dic = dict(tag=self.tag, attrib=self.attrib, text=self.text)
-        if self.nodes:
-            dic['nodes'] = [n.to_dict() for n in self]
-        return dic
-
-    @classmethod
-    def from_elem(cls, elem):
-        """
-        Convert (recursively) an ElementTree object into a Node object.
-        """
-        children = list(elem)
-        if not children:
-            return cls(elem.tag, dict(elem.attrib), elem.text)
-        return cls(elem.tag, dict(elem.attrib),
-                   nodes=map(cls.from_elem, children))
-
-    # taken from https://gist.github.com/651801, which comes for the effbot
-    def to_elem(self):
-        """
-        Convert (recursively) a Node object into an ElementTree object.
-        """
-        def generate_elem(append, node, level):
-            var = "e" + str(level)
-            arg = repr(node.tag)
-            if node.attrib:
-                arg += ", **%r" % node.attrib
-            if level == 1:
-                append("e1 = Element(%s)" % arg)
-            else:
-                append("%s = SubElement(e%d, %s)" % (var, level - 1, arg))
-            if not node.nodes:
-                append("%s.text = %r" % (var, node.text))
-            for x in node:
-                generate_elem(append, x, level + 1)
-        # generate code to create a tree
-        output = []
-        generate_elem(output.append, self, 1)  # print "\n".join(output)
-        namespace = {"Element": etree.Element, "SubElement": etree.SubElement}
-        exec "\n".join(output) in namespace
-        return namespace["e1"]
-
-
-def getbytes(serialize, node):
+def node_from_dict(dic):
     """
-    Given a streaming serialization function and a node, returns
-    the serialized byte string.
+    Convert a (nested) dictionary with attributes tag, attrib, text, nodes
+    into a Node object.
     """
-    out = io.BytesIO()
-    serialize(node, out)
-    return out.getvalue()
+    tag = dic['tag']
+    text = dic.get('text')
+    attrib = dic.get('attrib', {})
+    nodes = dic.get('nodes', [])
+    if not nodes:
+        return Node(tag, attrib, text)
+    return Node(tag, attrib, nodes=map(node_from_dict, nodes))
+
+
+def node_to_dict(self):
+    """
+    Convert a Node object into a (nested) dictionary
+    with attributes tag, attrib, text, nodes.
+    """
+    dic = dict(tag=self.tag, attrib=self.attrib, text=self.text)
+    if self.nodes:
+        dic['nodes'] = [node_to_dict(n) for n in self]
+    return dic
+
+
+def node_from_elem(elem):
+    """
+    Convert (recursively) an ElementTree object into a Node object.
+    """
+    children = list(elem)
+    if not children:
+        return Node(elem.tag, dict(elem.attrib), elem.text)
+    return Node(elem.tag, dict(elem.attrib),
+                nodes=map(node_from_elem, children))
+
+
+# taken from https://gist.github.com/651801, which comes for the effbot
+def node_to_elem(self):
+    """
+    Convert (recursively) a Node object into an ElementTree object.
+    """
+    def generate_elem(append, node, level):
+        var = "e" + str(level)
+        arg = repr(node.tag)
+        if node.attrib:
+            arg += ", **%r" % node.attrib
+        if level == 1:
+            append("e1 = Element(%s)" % arg)
+        else:
+            append("%s = SubElement(e%d, %s)" % (var, level - 1, arg))
+        if not node.nodes:
+            append("%s.text = %r" % (var, node.text))
+        for x in node:
+            generate_elem(append, x, level + 1)
+    # generate code to create a tree
+    output = []
+    generate_elem(output.append, self, 1)  # print "\n".join(output)
+    namespace = {"Element": etree.Element, "SubElement": etree.SubElement}
+    exec "\n".join(output) in namespace
+    return namespace["e1"]
 
 
 def node_from_xml(xmlfile, parser=nrmllib.COMPATPARSER):
@@ -417,14 +408,14 @@ def node_from_xml(xmlfile, parser=nrmllib.COMPATPARSER):
     Convert a .xml file into a Node object.
     """
     root = etree.parse(xmlfile, parser).getroot()
-    return Node.from_elem(root)
+    return node_from_elem(root)
 
 
 def node_to_xml(node, output=sys.stdout):
     """
     Convert a Node object into a pretty .xml file without keeping
     everything in memory. If you just want the string representation
-    of a small tree use etree.tostring(node.to_elem()).
+    of a small tree use etree.tostring(node_to_elem(root)).
     """
     with StreamingXMLWriter(output, indent='    ') as w:
         w.serialize(node)
@@ -435,7 +426,7 @@ def node_from_nrml(xmlfile):
     Convert a NRML file into a Node object.
     """
     root = nrmllib.assert_valid(xmlfile).getroot()
-    node = Node.from_elem(root)
+    node = node_from_elem(root)
     for nsname, nsvalue in root.nsmap.iteritems():
         if nsname is None:
             node['xmlns'] = nsvalue
@@ -502,12 +493,12 @@ def node_to_ini(node, output=sys.stdout):
 
 def node_from_json_string(string):
     """Convert a JSON string into a Node object"""
-    return Node.from_dict(json.loads(string))
+    return node_from_dict(json.loads(string))
 
 
 def node_to_json_string(node):
-    """Convert a Node object into a JSON string"""
-    return json.dumps(node.to_dict())
+    """Convert a Node object into an indented JSON string"""
+    return json.dumps(node_to_dict(node), sort_keys=True, indent=2)
 
 
 ################### string manipulation routines for NRML ####################

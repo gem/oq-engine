@@ -27,17 +27,20 @@ class _PrettyXMLGenerator(XMLGenerator):
     indent = '  '
 
     def _write(self, text):
+        """Write text by respecting the current indentlevel"""
         if not isinstance(text, str):
             text = text.encode(self._encoding, 'xmlcharrefreplace')
         self._out.write(self.indent * self.indentlevel + text + '\n')
 
     def startElement(self, name, attrs):
+        """Start an element"""
         if not attrs:
             self._write('<%s>' % name)
         else:
             XMLGenerator.startElement(self, name, attrs)
 
     def emptyElement(self, name, attrs):
+        """Add an empty element (may have attributes)"""
         attr = ' '.join('%s=%s' % (n, quoteattr(v))
                         for n, v in sorted(attrs.iteritems()))
         self._write('<%s %s/>' % (name, attr))

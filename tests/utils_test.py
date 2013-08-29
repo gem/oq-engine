@@ -207,7 +207,19 @@ param=yyy
 
     def test_json(self):
         # convertion to and from JSON strings
-        json = '{"text": null, "attrib": {}, "tag": "root", "nodes": [{"text": "A", "attrib": {}, "tag": "a"}]}'
+        json = '''\
+{
+  "attrib": {}, 
+  "nodes": [
+    {
+      "attrib": {}, 
+      "tag": "a", 
+      "text": "A"
+    }
+  ], 
+  "tag": "root", 
+  "text": null
+}'''
         node = utils.node_from_json_string(json)
         string = utils.node_to_json_string(node)
         self.assertEqual(string, json)
