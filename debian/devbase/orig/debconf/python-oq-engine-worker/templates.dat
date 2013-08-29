@@ -1,0 +1,42 @@
+Name: python-oq-engine-master/kernel-shmall-override
+Default: false
+Description: This package could require a more large shmall value.
+Extended_description: Is it possible to override the system shmall value if required ?
+Type: boolean
+Owners: python-oq-engine-master/kernel-shmall-override
+
+Name: python-oq-engine-master/kernel-shmmax-override
+Default: false
+Description: This package could require a more large shmmax value.
+Extended_description: Is it possible to override the system shmmax value if required ?
+Type: boolean
+Owners: python-oq-engine-master/kernel-shmmax-override
+
+Name: python-oq-engine-master/pg-conf-max-conn-override
+Default: false
+Description: A max_connection entry in postgresql.conf is found.
+Extended_description: Do you want the package overrides it ?
+Type: boolean
+Owners: python-oq-engine-master/pg-conf-max-conn-override
+
+Name: python-oq-engine-master/pg-conf-std-conf-str-override
+Default: yes
+Description: Set standard-conforming-strings = off in postgresql.conf ?
+Extended_description: python-oq-engine requires either standard-conforming-strings = off in the postgres configuration file or a patch.\n\nYour postgresql configuration file currently has standard-conforming-strings = on.\n\nIf you need to keep standard-conforming-strings = on then you must apply a patch to python-django otherwise python-oq-engine will not work. See https://github.com/gem/oq-engine/wiki/ubuntu-python-django-patch for instructions.\n\nIf you choose 'Yes' now, this installation script will set standard-conforming-strings = off in the postgres configuration file otherwise we will leave your configuration file unchanged and continue installing the oq-engine; you must apply the patch or manually edit the configuration file before using the engine.
+Type: boolean
+Owners: python-oq-engine-master/pg-conf-std-conf-str-override
+
+Name: python-oq-engine-master/pg-hba-allowed-hosts
+Default: 
+Description: A space separated list of network-addresses/net-masks to
+Extended_description: configure network access to postgres database.\n\nLocal entries are already added.
+Type: string
+Owners: python-oq-engine-master/pg-hba-allowed-hosts
+
+Name: python-oq-engine-master/workers-cores-number
+Default: 
+Description: The total number of cores dedicated to openquake calculations.
+Extended_description: Here we are
+Type: string
+Owners: python-oq-engine-master/workers-cores-number
+

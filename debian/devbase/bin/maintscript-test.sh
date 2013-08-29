@@ -217,7 +217,7 @@ export GEM_FAKEROOT="${BDIR}/curr/rootfs"
 
 custom_debconfrc "${BDIR}/curr/debconf"
 
-for pkgname in $(echo "python-oq-engine-master" | grep "$pkgname_target") ; do
+for pkgname in $(echo -e "python-oq-engine-master\npython-oq-engine-worker" | grep "$pkgname_target") ; do
     export DPKG_MAINTSCRIPT_PACKAGE="$pkgname"
     export DEBCONF_DEBUG=developer 
     export DEBCONF_PACKAGE="$pkgname"
@@ -226,6 +226,7 @@ for pkgname in $(echo "python-oq-engine-master" | grep "$pkgname_target") ; do
             $cmd "$is_auto" "$pkgname" "$scenario" "$debconf"
         done
     done
+    echo
 done
 
 

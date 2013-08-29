@@ -1,0 +1,34 @@
+Name: python-oq-engine-master/kernel-shmall-override
+Template: python-oq-engine-master/kernel-shmall-override
+Value: true
+Owners: python-oq-engine-master
+Flags: seen
+
+Name: python-oq-engine-master/kernel-shmmax-override
+Template: python-oq-engine-master/kernel-shmmax-override
+Value: true
+Owners: python-oq-engine-master
+Flags: seen
+
+Name: python-oq-engine-master/pg-conf-max-conn-override
+Template: python-oq-engine-master/pg-conf-max-conn-override
+Value: true
+Owners: python-oq-engine-master
+Flags: seen
+
+Name: python-oq-engine-master/pg-conf-std-conf-str-override
+Template: python-oq-engine-master/pg-conf-std-conf-str-override
+Owners: python-oq-engine-master
+
+Name: python-oq-engine-master/pg-hba-allowed-hosts
+Template: python-oq-engine-master/pg-hba-allowed-hosts
+Value: 192.168.72.0/24
+Owners: python-oq-engine-master
+Flags: seen
+
+Name: python-oq-engine-master/workers-cores-number
+Template: python-oq-engine-master/workers-cores-number
+Value: 1024
+Owners: python-oq-engine-master
+Flags: seen
+

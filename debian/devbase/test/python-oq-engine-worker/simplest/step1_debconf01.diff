@@ -1,0 +1,13 @@
+diff -r curr/rootfs.debconf01.step0/etc/openquake/openquake.cfg curr/rootfs/etc/openquake/openquake.cfg
+19c19
+< host = localhost
+---
+> host = 192.168.0.1
+25c25
+< host = localhost
+---
+> host = 192.168.0.1
+41c41
+< host = localhost
+---
+> host = 192.168.0.1

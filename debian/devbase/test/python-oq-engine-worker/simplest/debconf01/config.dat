@@ -1,0 +1,6 @@
+Name: python-oq-engine-worker/master-address
+Template: python-oq-engine-worker/master-address
+Value: 192.168.0.1
+Owners: python-oq-engine-worker
+Flags: seen
+
