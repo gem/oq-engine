@@ -10,6 +10,12 @@ Value: false
 Owners: python-oq-engine-master
 Flags: seen
 
+Name: python-oq-engine-master/pg-conf-listen-addresses-override
+Template: python-oq-engine-master/pg-conf-listen-addresses-override
+Value: true
+Owners: python-oq-engine-master
+Flags: seen
+
 Name: python-oq-engine-master/pg-conf-max-conn-override
 Template: python-oq-engine-master/pg-conf-max-conn-override
 Value: false
@@ -25,6 +31,12 @@ Flags: seen
 Name: python-oq-engine-master/pg-hba-allowed-hosts
 Template: python-oq-engine-master/pg-hba-allowed-hosts
 Value: 192.168.72.0/24
+Owners: python-oq-engine-master
+Flags: seen
+
+Name: python-oq-engine-master/redis-bind-override
+Template: python-oq-engine-master/redis-bind-override
+Value: true
 Owners: python-oq-engine-master
 Flags: seen
 
