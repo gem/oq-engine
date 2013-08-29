@@ -259,21 +259,21 @@ strip_block $is_begin $is_end "$PG_CONF" "$PG_CONF" > $tmpfile
 
 # postgresql.conf: standard_conforming_strings attr management
 # does a bad explicit configuration of standard_conforming_strings exists ?
-pg_conf_std_conf_str_set=1
+pg_conf_std_conf_str_set="n"
 if grep -q "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=" "$tmpfile" ; then
     if grep -q "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=[ $GEM_TAB]*on" "$tmpfile" ; then
         db_get ${GEM_DEB_PACKAGE}/psql-conf-std-conf-str-override || true
         if [ "$RET" = "true" ]; then
             sed -i "s/^\([ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=[ $GEM_TAB]*on[ $GEM_TAB].*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
-            pg_conf_std_conf_str_set=0
+            pg_conf_std_conf_str_set="y"
         fi
     fi
 else
-    pg_conf_std_conf_str_set=0
+    pg_conf_std_conf_str_set="y"
 fi
 
 # postgresql.conf: listen_addresses attr management
-pg_conf_list_addr_set=1
+pg_conf_list_addr_set="n"
 pg_conf_list_addr_req="'*'"
 if grep -q "^[ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=" "$tmpfile" ; then
     # get the current value
@@ -287,24 +287,21 @@ if grep -q "^[ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=" "$tmpfile" ; then
         pg_conf_list_addr_override="$RET"
         if [ "$pg_conf_list_addr_override" = "true" ]; then
             sed -i "s/^\([ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
-            pg_conf_list_addr_set=0
+            pg_conf_list_addr_set="y"
         fi
     fi
 else
-    if [ $pg_conf_list_addr_cur -lt $pg_conf_list_addr_req ]; then
+    if [ "$pg_conf_list_addr_cur" != "$pg_conf_list_addr_req" ]; then
         db_get ${GEM_DEB_PACKAGE}/pg-conf-listen-adddresses-override || true
         pg_conf_list_addr_override="$RET"
         if [ "$pg_conf_list_addr_override" = "true" ]; then
-            pg_conf__set=0
+            pg_conf_list_addr_set="y"
         fi
     fi
 fi
 
-
-
-
 # postgresql.conf: max_connections attribute management
-pg_conf_max_conn_set=1
+pg_conf_max_conn_set="n"
 pg_conf_max_conn_req="$((workers_cores_number * 2))"
 if grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" "$tmpfile" ; then
     # get the current value
@@ -314,7 +311,7 @@ if grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" "$tmpfile" ; then
         pg_conf_max_conn_override="$RET"
         if [ "$pg_conf_max_conn_override" = "true" ]; then
             sed -i "s/^\([ $GEM_TAB]*max_connections[ $GEM_TAB]*=.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
-            pg_conf_max_conn_set=0
+            pg_conf_max_conn_set="y"
         fi
     fi
 else
@@ -322,24 +319,24 @@ else
         db_get ${GEM_DEB_PACKAGE}/pg-conf-max-conn-override || true
         pg_conf_max_conn_override="$RET"
         if [ "$pg_conf_max_conn_override" = "true" ]; then
-            pg_conf_max_conn_set=0
+            pg_conf_max_conn_set="y"
         fi
     fi
 fi
 
 # postgresql.conf: if a modification is required a PYTHON-OQ-ENGINE configuration block is added
-if [ $pg_conf_std_conf_str_set -eq 0 -o $pg_conf_max_conn_set -eq 0 -o $pg_conf_list_addr_set -eq 0 ]; then
+if [ $pg_conf_std_conf_str_set = "y" -o $pg_conf_max_conn_set = "y" -o $pg_conf_list_addr_set = "y" ]; then
     tmpfile2="$(mktemp)"
     cat ${tmpfile} | sed -n ":loop ; /^#.*/{p; n; bloop} ; q" > $tmpfile2
 
     echo "# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN" >> $tmpfile2
-    if [ $pg_conf_std_conf_str_set -eq 0 ]; then
+    if [ $pg_conf_std_conf_str_set = "y" ]; then
         echo "standard_conforming_strings = off" >> $tmpfile2
     fi
-    if [ $pg_conf_max_conn_set -eq 0 ]; then
+    if [ $pg_conf_max_conn_set = "y" ]; then
         echo "max_connections = $pg_conf_max_conn_req" >> $tmpfile2
     fi
-    if [ $pg_conf_list_addr_set -eq 0 ]; then
+    if [ $pg_conf_list_addr_set = "y" ]; then
         echo "listen_addresses = '*'" >> $tmpfile2
     fi
     echo "# PYTHON-OQ-ENGINE: CONFIGURATION END" >> $tmpfile2
@@ -457,7 +454,7 @@ redis_bind_old="$(cat "$REDIS_CONF" | grep "^[ $GEM_TAB]*bind[ $GEM_TAB]*" | \
 # redis.conf: remove the PYTHON-OQ-ENGINE configuration block
 tmpfile="$(mktemp)"
 strip_block $is_begin $is_end "$REDIS_CONF" "$REDIS_CONF" > $tmpfile
-redis_bind_set=1
+redis_bind_set="n"
 
 # redis.conf: bind attr management
 # does a bad explicit configuration of bind exists ?
@@ -467,20 +464,20 @@ if grep -q "^[ $GEM_TAB]*bind[ $GEM_TAB]\+" "$tmpfile" ; then
         redis_bind_override="$RET"
         if [ "$redis_bind_override" = "true" ]; then
             sed -i "s/^\([ $GEM_TAB]*bind[ $GEM_TAB]\+.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
-            redis_bind_set=0
+            redis_bind_set="y"
         fi
     fi
 else
-    redis_bind_set=0
+    redis_bind_set="y"
 fi
 
 # redis.conf: if a modification is required a PYTHON-OQ-ENGINE configuration block is added
-if [ $redis_bind_set -eq 0 ]; then
+if [ $redis_bind_set = "y" ]; then
     tmpfile2="$(mktemp)"
     cat ${tmpfile} | sed -n ":loop ; /^#.*/{p; n; bloop} ; q" > $tmpfile2
 
     echo "# PYTHON-OQ-ENGINE: CONFIGURATION BEGIN" >> $tmpfile2
-    if [ $redis_bind_set -eq 0 ]; then
+    if [ $redis_bind_set = "y" ]; then # this is redundant because we have just one modified entry, keep it
         echo "bind 0.0.0.0" >> $tmpfile2
     fi
     echo "# PYTHON-OQ-ENGINE: CONFIGURATION END" >> $tmpfile2
