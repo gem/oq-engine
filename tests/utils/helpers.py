@@ -36,7 +36,6 @@ import sys
 import tempfile
 import textwrap
 import time
-import shapely
 
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
 from openquake.hazardlib.geo import Point
@@ -127,10 +126,6 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
-# this function is used in various tests to run a computation in-process;
-# task distribution is disabled by default to make it possible to debug and
-# profile the tests; notice however that in the QA tests (see
-# BaseQATestCase.run_hazard) the distribution is enabled
 def run_hazard_job(cfg, exports=None):
     """
     Given the path to job config file, run the job and assert that it was
