@@ -143,13 +143,12 @@ perform_test () {
     debian/${pkgname}.postinst configure
 
     curr_snapshot "$debconf" step1
+    checkpoint "$pkgname" "$scenario" "$debconf" 1
 
-    checkpoint "$pkgname" "$scenario" "$debconf" 1 
+    debian/${pkgname}.postrm
 
-
-    curr_snapshot "$debconf" step1
-
-#    debian/${pkgname}.postrm
+#    curr_snapshot "$debconf" step2
+#    checkpoint "$pkgname" "$scenario" "$debconf" 2
 
 #    curr_snapshot "$debconf" step2
 
@@ -157,7 +156,7 @@ perform_test () {
 
 #    curr_snapshot "$debconf" step3
 
-    debian/${pkgname}.postrm purge
+#    debian/${pkgname}.postrm purge
 
     curr_snapshot "$debconf" step4
 
@@ -171,7 +170,7 @@ function skipy () {
     echo "  $pkgname $scenario $debconf" | tr -d '\n'
 
     if [  -f "${BDIR}/test/$pkgname/$scenario/$debconf/no_auto.cmd" ]; then
-        echo " (skipped when not interactive)"
+        echo " (no_auto.cmd found, skipped when not interactive)"
     else
         echo
     fi
@@ -197,17 +196,20 @@ while getopts ":l" opt; do
 done
 
 
+pkgname_target=".*"
+scenario_target=".*"
+debconf_target=".*"
+is_auto="y"
 
-if [ $# -eq 3 ]; then
+if [ $# -ge 1 ]; then
     pkgname_target="$1"
+fi
+if [ $# -ge 2 ]; then
     scenario_target="$2"
+fi
+if [ $# -ge 3 ]; then
     debconf_target="$3"
     is_auto="n"
-else
-    pkgname_target=".*"
-    scenario_target=".*"
-    debconf_target=".*"
-    is_auto="y"
 fi
 
 # set the fakeroot for all tests
