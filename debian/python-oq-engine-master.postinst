@@ -38,7 +38,7 @@ if [ "$GEM_FAKEROOT" ]; then
     #
     # GEM_FAKEROOT: env var to be able to test script without superuser permissions
 
-    /home/nastasi/git/mockpg/mockpg.py -t 5 \
+    mockpg.py -t 5 \
         "SELECT setting FROM pg_settings WHERE name = 'standard_conforming_strings';" '[ [ "setting" ], [ "off" ], ]' \
         "SELECT setting FROM pg_settings WHERE name = 'listen_addresses';"            '[ [ "setting" ], [ "localhost" ], ]' \
         "SELECT setting FROM pg_settings WHERE name = 'max_connections';"             '[ [ "setting" ], [ "100" ] ]' \
