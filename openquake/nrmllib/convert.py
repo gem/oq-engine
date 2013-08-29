@@ -1,53 +1,153 @@
+import io
 import os
 import csv
 import json
 import zipfile
 import itertools
 from openquake.nrmllib.utils import node_from_nrml, node_to_nrml, Node
+from openquake.nrmllib import InvalidFile
 
 
-class InvalidFile(Exception):
-    pass
+def _make_readers(cls, container, fnames):
+    def getprefix(f):
+        return f.rsplit('.', 1)[0]
+    fnames = sorted(f for f in fnames if f.endswith(('.csv', '.json')))
+    readers = []
+    for name, group in itertools.groupby(fnames, getprefix):
+        gr = list(group)
+        if len(gr) == 2:  # pair (.json, .csv)
+            readers.append(cls(container, name))
+    return readers
 
 
-def build_node(files, output=None):
+class Reader(object):
     """
-    Build a NRML node from a consistent set of .csv and .json files.
+    Base class of FSReader and ZipReader.
+    """
+
+    def __init__(self, container, name):
+        self.container = container
+        self.name = name
+        with self.openjson() as j:
+            self.load_metadata(j)
+        with self.opencsv() as c:
+            self.check_fieldnames(c)
+
+    def load_metadata(self, fileobj):
+        try:
+            self.metadata = json.load(fileobj)
+        except ValueError:
+            raise InvalidFile(fileobj.name)
+        self.fieldnames = self.metadata['fieldnames']
+
+    def check_fieldnames(self, fileobj):
+        try:
+            fieldnames = csv.DictReader(fileobj).fieldnames
+        except ValueError:
+            raise InvalidFile(self.name + '.csv')
+        if fieldnames is None or any(
+                f1.lower() != f2.lower()
+                for f1, f2 in zip(fieldnames, self.fieldnames)):
+            raise ValueError(
+                'According to %s.json the field names should be '
+                '%s, but the header in %s.csv says %s' % (
+                    self.name, self.fieldnames,
+                    self.name, fieldnames))
+
+    def __getitem__(self, index):
+        with self.opencsv() as f:
+            reader = csv.DictReader(f)
+            if isinstance(index, int):
+                for i in xrange(index):
+                    f.readline()
+                return next(reader)
+            else:  # slice object
+                for i in xrange(index.start):
+                    f.readline()
+                rows = []
+                for i in xrange(index.stop - index.start):
+                    rows.append(next(reader))
+                return rows
+
+    def __iter__(self):
+        with self.opencsv() as f:
+            for row in csv.DictReader(f):
+                yield row
+
+    def __len__(self):
+        return sum(1 for line in self.opencsv()) - 1  # skip header
+
+
+class FileReader(Reader):
+    @classmethod
+    def getall(cls, directory, fnames=None):
+        if fnames is None:
+            fnames = os.listdir(directory)
+        return _make_readers(cls, directory, fnames)
+
+    def opencsv(self):
+        return open(os.path.join(self.container, self.name + '.csv'))
+
+    def openjson(self):
+        return open(os.path.join(self.container, self.name + '.json'))
+
+
+class ZipReader(Reader):
+    @classmethod
+    def getall(cls, archive, fnames=None):
+        if fnames is None:
+            fnames = [i.filename for i in archive.infolist()]
+        return _make_readers(cls, archive, fnames)
+
+    def opencsv(self):
+        return self.container.open(self.name + '.csv')
+
+    def openjson(self):
+        return self.container.open(self.name + '.json')
+
+
+class FakeReader(Reader):
+    def __init__(self, name, json_str, csv_str):
+        self.name = name
+        self.json_str = json_str
+        self.csv_str = csv_str
+        Reader.__init__(self, None, name)
+
+    def opencsv(self):
+        fileobj = io.StringIO(unicode(self.csv_str))
+        fileobj.name = self.name + '.csv'
+        return fileobj
+
+    def openjson(self):
+        fileobj = io.StringIO(unicode(self.json_str))
+        fileobj.name = self.name + '.json'
+        return fileobj
+
+
+def build_node(readers, output=None):
+    """
+    Build a NRML node from a consistent set of .json and .csv files.
     If output is not None, it should be a file-like object where to
     save the corresponding NRML file.
     """
-    def prefix(fileobj):
-        return os.path.basename(fileobj.name).rsplit('.', 1)[0]
-    sorted_files = sorted(files, key=lambda f: f.name)
-
+    assert readers
     all_md = []
     tag = None
     # group pairs of .csv and .json files and build a list of metadata
-    for name, group in itertools.groupby(sorted_files, prefix):
-        file_csv, file_json = group
-        try:
-            metadata = json.load(file_json)
-        except ValueError:
-            raise InvalidFile(file_json.name)
-        if tag and tag != metadata['tag']:
-            raise ValueError('Found tag=%s in %s, expected %s' % (
-                             metadata['tag'], file_json.name, tag))
+    for reader in readers:
+        md = reader.metadata
+        if tag and tag != md['tag']:
+            raise ValueError('Found tag=%s in %s.json, expected %s' % (
+                             md['tag'], reader.name, tag))
         else:
-            tag = metadata['tag']
+            tag = md['tag']
         try:
-            metadata['filecsv'] = file_csv
-            metadata['reader'] = csv.DictReader(file_csv)
+            md['reader'] = reader
         except ValueError:
-            raise InvalidFile(file_csv.name)
-        if metadata['reader'].fieldnames != metadata['fieldnames']:
-            raise ValueError(
-                'According to %s the field names should be '
-                '%s, but the header in %s says %s' % (
-                    file_json.name, metadata['fieldnames'],
-                    file_csv.name, metadata['reader'].fieldnames))
-        all_md.append(metadata)
+            raise InvalidFile(reader.name + '.csv')
+        all_md.append(md)
 
-    nodebuilder = globals()['%s_from' % metadata['tag'].lower()]
+    nodebuilder = globals()['%s_from' % md['tag'].lower()]
     node = nodebuilder(all_md)
     if output is not None:
         node_to_nrml(node, output)
@@ -97,7 +197,7 @@ def parse_vulnerabilitymodel(vm):
         yield metadata, zip(*matrix)
 
 
-def _mknode(filecsv, colname, attrib, rows):
+def _mknode(reader, colname, attrib, rows):
     """
     A convenience function for reading vulnerability XML models.
     """
@@ -112,7 +212,7 @@ def _mknode(filecsv, colname, attrib, rows):
             float(col)
         except (ValueError, TypeError) as e:
             raise InvalidFile('%s:row #%d:%s:%s' % (
-                              filecsv.name, i, colname, e))
+                              reader.name, i, colname, e))
         floats.append(col)
     return Node(name, attrib, text=' ' .join(floats))
 
@@ -123,21 +223,21 @@ def vulnerabilitymodel_from(md_list):
     """
     vsets = []
     for md in md_list:
-        filecsv = md['filecsv']
-        rows = list(md['reader'])
+        reader = md['reader']
+        rows = list(reader)
         vfs = []  # vulnerability function nodes
         for vf_id, probdist in zip(
                 md['vulnerabilityfunctionids'],
                 md['probabilitydistributions']):
             nodes = [
-                _mknode(filecsv, '%s.lossRatio' % vf_id, {}, rows),
-                _mknode(filecsv, '%s.coefficientsVariation' % vf_id, {}, rows)]
+                _mknode(reader, '%s.lossRatio' % vf_id, {}, rows),
+                _mknode(reader, '%s.coefficientsVariation' % vf_id, {}, rows)]
             vfs.append(
                 Node('discreteVulnerability',
                      dict(vulnerabilityFunctionID=vf_id,
                           probabilisticDistribution=probdist),
                      nodes=nodes))
-        nodes = [_mknode(filecsv, 'IML', dict(IMT=md['imt']), rows)] + vfs
+        nodes = [_mknode(reader, 'IML', dict(IMT=md['imt']), rows)] + vfs
         vsets.append(Node('discreteVulnerabilitySet',
                           dict(vulnerabilitySetID=md["vulnerabilitysetid"],
                                assetCategory=md['assetcategory'],
@@ -424,7 +524,7 @@ def convert_nrml_to_zip(fname, outfname=None):
     Convert a NRML file into a zip archive.
 
     :param fname: path to a NRML file of kind <path>.xml
-    :param outfname: output path; if None <path>.zip is used instead
+    :param outfname: output path; if None, <path>.zip is used instead
     """
     outname = outfname or fname[:-4] + '.zip'
     assert outname.endswith('.zip'), outname
@@ -433,4 +533,20 @@ def convert_nrml_to_zip(fname, outfname=None):
         for fname in tozip:
             z.write(fname, os.path.basename(fname))
             os.remove(fname)
+    return outname
+
+
+def convert_zip_to_nrml(fname, outfname=None):
+    """
+    Convert a zip archive into a NRML file.
+
+    :param fname: path to a zip archive
+    :param outfname: output path; if None, <path>.xml is used instead
+    """
+    outname = outfname or fname[:-4] + '.xml'
+    assert outname.endswith(('.xml', '.xml~')), outname
+    z = zipfile.ZipFile(fname)
+    readers = ZipReader.getall(z)
+    with open(outname, 'wb+') as out:
+        build_node(readers, out)
     return outname

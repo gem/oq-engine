@@ -18,8 +18,8 @@ import os
 import unittest
 import StringIO
 
-from lxml.etree import DocumentInvalid
 from openquake.nrmllib.risk import parsers
+from openquake.nrmllib import InvalidFile
 
 
 EXAMPLES_DIR = os.path.join(
@@ -42,7 +42,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
 </nrml>
 """
 
-        self.assertRaises(DocumentInvalid, parsers.ExposureModelParser,
+        self.assertRaises(InvalidFile, parsers.ExposureModelParser,
                           StringIO.StringIO(invalid_exposure))
 
     def test_parsing(self):
@@ -167,7 +167,7 @@ class VulnerabilityModelParserTestCase(unittest.TestCase):
 </nrml>
 """
 
-        self.assertRaises(DocumentInvalid, parsers.VulnerabilityModelParser,
+        self.assertRaises(InvalidFile, parsers.VulnerabilityModelParser,
                           StringIO.StringIO(invalid_vulnerability_model))
 
     def test_parsing(self):
