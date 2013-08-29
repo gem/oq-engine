@@ -39,15 +39,17 @@ if [ "$GEM_FAKEROOT" ]; then
     # GEM_FAKEROOT: env var to be able to test script without superuser permissions
 
     /home/nastasi/git/mockpg/mockpg.py -t 5 \
-        "SELECT setting FROM pg_settings WHERE name = 'max_locks_per_transaction';" '[ [ "setting" ], [ "64" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'max_connections';" '[ [ "setting" ], [ "100" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'max_prepared_transactions';" '[ [ "setting" ], [ "0" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'autovacuum_max_workers';" '[ [ "setting" ], [ "3" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'block_size';" '[ [ "setting" ], [ "4096" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'shared_buffers';" '[ [ "setting" ], [ "3072" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'wal_block_size';" '[ [ "setting" ], [ "4096" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'wal_segment_size';" '[ [ "setting" ], [ "2048" ] ]' \
-        "SELECT setting FROM pg_settings WHERE name = 'wal_buffers';" '[ [ "setting" ], [ "-1" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'standard_conforming_strings';" '[ [ "setting" ], [ "off" ], ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'listen_addresses';"            '[ [ "setting" ], [ "localhost" ], ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'max_connections';"             '[ [ "setting" ], [ "100" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'max_locks_per_transaction';"   '[ [ "setting" ], [ "64" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'max_prepared_transactions';"   '[ [ "setting" ], [ "0" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'autovacuum_max_workers';"      '[ [ "setting" ], [ "3" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'block_size';"                  '[ [ "setting" ], [ "4096" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'shared_buffers';"              '[ [ "setting" ], [ "3072" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'wal_block_size';"              '[ [ "setting" ], [ "4096" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'wal_segment_size';"            '[ [ "setting" ], [ "2048" ] ]' \
+        "SELECT setting FROM pg_settings WHERE name = 'wal_buffers';"                 '[ [ "setting" ], [ "-1" ] ]' \
         &
     mockpg_id=$!
     sleep 1
