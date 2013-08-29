@@ -510,7 +510,7 @@ def convert_nrml_to_flat(fname, outfname):
     for i, (metadata, data) in enumerate(parse_nrml(fname)):
         with open(outfname[:-4] + '-%d.json' % i, 'w') as jsonfile:
             with open(outfname[:-4] + '-%d.csv' % i, 'w') as csvfile:
-                json.dump(metadata, jsonfile)
+                json.dump(metadata, jsonfile, sort_keys=True, indent=2)
                 tozip.append(jsonfile.name)
                 cw = csv.writer(csvfile)
                 cw.writerow(metadata['fieldnames'])
