@@ -3,7 +3,8 @@ import unittest
 import tempfile
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.convert import (
-    convert_nrml_to_zip, convert_zip_to_nrml, build_node, FakeReader)
+    convert_nrml_to_zip, convert_zip_to_nrml, build_node)
+from openquake.nrmllib.readers import FakeReader
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
