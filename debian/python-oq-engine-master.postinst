@@ -248,13 +248,10 @@ fi
 
 # save old oq-engine-related parameters values before refresh the OQ-ENGINE configuration block
 pg_conf_std_conf_str_req="on"
-# here update with the function ===++===++++++==
-pg_conf_std_conf_str_old="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*standard_conforming_strings[ $GEM_TAB]*=" | \
-        sed "s/^[^=]*=[ $GEM_TB]//g;s/[ $GEM_TB]*\$//g" || true)"
-pg_conf_list_addr_old="$(cat "$PG_CONF" | grep "^[ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=" | \
-        sed "s/^[^=]*=[ $GEM_TB]//g;s/[ $GEM_TB]*\$//g" || true)"
-pg_conf_max_conn_old="$(cat "$PG_CONF" | grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" | \
-        sed "s/^[^=]*=[ $GEM_TB]//g;s/[^0-9].*\$//g" || true)"
+# here update with the function
+pg_conf_std_conf_str_old="$(gem_get_pg_vars "standard_conforming_strings")"
+pg_conf_list_addr_old="$(gem_get_pg_vars "listen_addresses")"
+pg_conf_max_conn_old="$(gem_get_pg_vars "max_connections")"
 
 # postgresql.conf: remove the PYTHON-OQ-ENGINE configuration block
 tmpfile="$(mktemp)"
@@ -278,18 +275,33 @@ fi
 # postgresql.conf: listen_addresses attr management
 pg_conf_list_addr_set=1
 pg_conf_list_addr_req="'*'"
-if ! grep -q "^[ $GEM_TB]*listen_addresses[ $GEM_TB]*=[ $GEM_TB]'*'" "$tmpfile" ; then
-    if ! grep -q "^[ $GEM_TB]*listen_addresses[ $GEM_TB]*=[ $GEM_TB]'0.0.0.0'" "$tmpfile" ; then
+if grep -q "^[ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=" "$tmpfile" ; then
+    # get the current value
+    pg_conf_list_addr_cur="$(grep "^[ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=" "$tmpfile" | sed "s/^[^=]*=[ $GEM_TAB]//g;s/[^0-9].*$//g;")"
+    # '*' and '0.0.0.0' are equivalent so, to keep simple the rest of the code in this case we substitute the value
+    if [ "$pg_conf_list_addr_cur" != "'0.0.0.0'" ]; then
+        pg_conf_list_addr_cur="'*'";
+    fi
+    if [ "$pg_conf_list_addr_cur" != "$pg_conf_list_addr_req" ]; then
         db_get ${GEM_DEB_PACKAGE}/pg-conf-listen-addresses-override || true
-        pg_conf_listen_address_override="$RET"
-        if [ "$pg_conf_listen_address_override" = "true" ]; then
-            if grep -q "^[ $GEM_TB]*listen_addresses[ $GEM_TB]*=.*" "$tmpfile" ; then
-                sed -i "s/^\([ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
-            fi
+        pg_conf_list_addr_override="$RET"
+        if [ "$pg_conf_list_addr_override" = "true" ]; then
+            sed -i "s/^\([ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=.*\)/# PYTHON-OQ-ENGINE DISABLED ENTRY, DON'T REMOVE: \1/g" "$tmpfile"
             pg_conf_list_addr_set=0
         fi
     fi
+else
+    if [ $pg_conf_list_addr_cur -lt $pg_conf_list_addr_req ]; then
+        db_get ${GEM_DEB_PACKAGE}/pg-conf-listen-adddresses-override || true
+        pg_conf_list_addr_override="$RET"
+        if [ "$pg_conf_list_addr_override" = "true" ]; then
+            pg_conf__set=0
+        fi
+    fi
 fi
+
+
+
 
 # postgresql.conf: max_connections attribute management
 pg_conf_max_conn_set=1
@@ -307,7 +319,11 @@ if grep -q "^[ $GEM_TAB]*max_connections[ $GEM_TAB]*=" "$tmpfile" ; then
     fi
 else
     if [ $pg_conf_max_conn_cur -lt $pg_conf_max_conn_req ]; then
-        pg_conf_max_conn_set=0
+        db_get ${GEM_DEB_PACKAGE}/pg-conf-max-conn-override || true
+        pg_conf_max_conn_override="$RET"
+        if [ "$pg_conf_max_conn_override" = "true" ]; then
+            pg_conf_max_conn_set=0
+        fi
     fi
 fi
 
