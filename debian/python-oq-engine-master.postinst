@@ -292,7 +292,7 @@ if grep -q "^[ $GEM_TAB]*listen_addresses[ $GEM_TAB]*=" "$tmpfile" ; then
     fi
 else
     if [ "$pg_conf_list_addr_cur" != "$pg_conf_list_addr_req" ]; then
-        db_get ${GEM_DEB_PACKAGE}/pg-conf-listen-adddresses-override || true
+        db_get ${GEM_DEB_PACKAGE}/pg-conf-listen-addresses-override || true
         pg_conf_list_addr_override="$RET"
         if [ "$pg_conf_list_addr_override" = "true" ]; then
             pg_conf_list_addr_set="y"
