@@ -792,7 +792,7 @@ EOF
         $(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1) >> Release
     gpg --armor --detach-sign --output Release.gpg Release
     cd -
-if [ 0 -eq 1 ]; then
+
     #
     # TEST STANDALONE
     #
@@ -812,7 +812,7 @@ if [ 0 -eq 1 ]; then
     if [ $inner_ret -ne 0 ]; then
         return $inner_ret
     fi
-fi
+
     #
     #  TEST CLUSTER
     #
