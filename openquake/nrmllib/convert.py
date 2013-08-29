@@ -4,11 +4,16 @@ import csv
 import json
 import zipfile
 import itertools
+import warnings
 from openquake.nrmllib.utils import node_from_nrml, node_to_nrml, Node
 from openquake.nrmllib import InvalidFile
 
 
 def _make_readers(cls, container, fnames):
+    """
+    Given a list of filenames instantiate a list of readers.
+    Raise a warning for invalid files.
+    """
     def getprefix(f):
         return f.rsplit('.', 1)[0]
     fnames = sorted(f for f in fnames if f.endswith(('.csv', '.json')))
@@ -16,7 +21,11 @@ def _make_readers(cls, container, fnames):
     for name, group in itertools.groupby(fnames, getprefix):
         gr = list(group)
         if len(gr) == 2:  # pair (.json, .csv)
-            readers.append(cls(container, name))
+            try:
+                readers.append(cls(container, name))
+            except Exception as e:
+                # the reader could not be instantiated, due to an invalid file
+                warnings.warn(str(e))
     return readers
 
 
@@ -38,7 +47,10 @@ class Reader(object):
             self.metadata = json.load(fileobj)
         except ValueError:
             raise InvalidFile(fileobj.name)
-        self.fieldnames = self.metadata['fieldnames']
+        try:
+            self.fieldnames = self.metadata['fieldnames']
+        except KeyError:
+            raise InvalidFile('%s: missing fieldnames' % fileobj.name)
 
     def check_fieldnames(self, fileobj):
         try:
@@ -76,6 +88,9 @@ class Reader(object):
 
     def __len__(self):
         return sum(1 for line in self.opencsv()) - 1  # skip header
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, self.name)
 
 
 class FileReader(Reader):
@@ -508,8 +523,8 @@ def convert_nrml_to_flat(fname, outfname):
     """
     tozip = []
     for i, (metadata, data) in enumerate(parse_nrml(fname)):
-        with open(outfname[:-4] + '-%d.json' % i, 'w') as jsonfile:
-            with open(outfname[:-4] + '-%d.csv' % i, 'w') as csvfile:
+        with open(outfname[:-4] + '__%d.json' % i, 'w') as jsonfile:
+            with open(outfname[:-4] + '__%d.csv' % i, 'w') as csvfile:
                 json.dump(metadata, jsonfile, sort_keys=True, indent=2)
                 tozip.append(jsonfile.name)
                 cw = csv.writer(csvfile)
