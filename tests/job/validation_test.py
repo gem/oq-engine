@@ -930,14 +930,14 @@ class ScenarioRiskValidationTestCase(unittest.TestCase):
 
         form = validation.ScenarioRiskForm(
             instance=rc,
-            files=dict(occupancy_vulnerability_file=object())
+            files=dict(occupants_vulnerability_file=object())
         )
 
         expected_errors = {
             'asset_correlation': [u'Enter a number.',
                                   u'Asset Correlation must be >= 0 and <= 1'],
              'time_event': ['Scenario Risk requires time_event when an '
-                            'occupancy vulnerability model is given'],
+                            'occupants vulnerability model is given'],
         }
         self.assertFalse(form.is_valid())
         self.assertEqual(expected_errors, dict(form.errors))
