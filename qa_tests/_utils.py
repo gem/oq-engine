@@ -105,4 +105,4 @@ def count(gmf_value, gmfs_site_one, gmfs_site_two,
         if ((lower_bound <= v1 <= upper_bound) and
                 (lower_bound <= v2 <= upper_bound)):
             i += 1
-    return count
+    return i
