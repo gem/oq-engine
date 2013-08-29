@@ -35,6 +35,10 @@ _NRML_SCHEMA_FILE = 'nrml.xsd'
 _NRML_SCHEMA = None  # defined in assert_valid
 
 
+class InvalidFile(Exception):
+    pass
+
+
 def nrml_schema_file():
     """
     Returns the absolute path to the NRML schema file
@@ -43,17 +47,30 @@ def nrml_schema_file():
         os.path.abspath(os.path.dirname(__file__)),
         'schema', _NRML_SCHEMA_FILE)
 
+COMPATPARSER = etree.ETCompatXMLParser()
 
-def assert_valid(source):
+
+def assert_valid(source, parser=COMPATPARSER):
     """
     Raises a `lxml.etree.DocumentInvalid` error for invalid files.
 
     :param source: a filename or a file-like object.
     """
     global _NRML_SCHEMA
+    if isinstance(source, basestring):
+        fname = source
+        if not os.path.exists(fname):
+            raise IOError('[Errno 2] No such file or directory: %r' % fname)
+    else:
+        fname = getattr(source, 'name', '<%s>' % source.__class__.__name__)
     if _NRML_SCHEMA is None:  # the nrml schema is parsed only once
         _NRML_SCHEMA = etree.XMLSchema(etree.parse(nrml_schema_file()))
-    _NRML_SCHEMA.assertValid(etree.parse(source))
+    try:
+        parsed = etree.parse(source, parser)
+        _NRML_SCHEMA.assertValid(parsed)
+    except Exception as e:
+        raise InvalidFile('%s:%s' % (fname, e))
+    return parsed
 
 
 class NRMLFile(object):
