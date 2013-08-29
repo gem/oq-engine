@@ -15,6 +15,7 @@ Built-in GSIMs
     akkar_2013
     akkar_bommer_2010
     akkar_cagnan_2010
+    allen_2012
     atkinson_boore_2003
     atkinson_boore_2006
     boore_atkinson_2008

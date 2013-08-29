@@ -55,6 +55,8 @@ class IMC(ConstantContainer):
     """
     #: The horizontal component.
     HORIZONTAL = 'Horizontal'
+    #: The median horizontal component.
+    MEDIAN_HORIZONTAL = 'Median horizontal'
     #: Usually defined as the geometric average of the maximum
     #: of the two horizontal components (which may not occur
     #: at the same time).
