@@ -426,6 +426,7 @@ _pkgtest_innervm_run () {
         # run all of the hazard and risk demos
         ssh $lxc_ip "export GEM_PKGTEST_ONE_DEMO=$GEM_PKGTEST_ONE_DEMO ; cd demos
         for ini in \$(find ./hazard -name job.ini); do
+            echo \"Running demo \$ini\"
             openquake --run-hazard  \$ini --exports xml
             if [ -n \"$GEM_PKGTEST_ONE_DEMO\" ]; then
                 exit 0
