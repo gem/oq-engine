@@ -25,9 +25,10 @@
 Model representations of the OpenQuake DB tables.
 '''
 
-import operator
+import StringIO
 import collections
 import itertools
+import operator
 import os
 import re
 from datetime import datetime
@@ -51,11 +52,11 @@ from shapely import wkt
 
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import source as hazardlib_source
+import openquake.hazardlib.site
 
 from openquake.engine.db import fields
 from openquake.engine import writer
 
-import openquake.hazardlib.site
 
 #: Default Spectral Acceleration damping. At the moment, this is not
 #: configurable.
@@ -515,11 +516,18 @@ class ModelContent(djm.Model):
         db_table = 'uiapi\".\"model_content'
 
     @property
-    def raw_content_ascii(self):
+    def raw_content_utf8(self):
         """
-        Returns raw_content in ASCII
+        Returns raw_content in UTF-8
         """
-        return str(self.raw_content)
+        return self.raw_content.encode('utf-8')
+
+    @property
+    def as_string_io(self):
+        """
+        Return a `StringIO` object containing the `raw_content` as utf-8 text.
+        """
+        return StringIO.StringIO(self.raw_content_utf8)
 
 
 class Input2job(djm.Model):
@@ -1243,7 +1251,7 @@ class RiskCalculation(djm.Model):
     ######################################
     # Scenario parameters:
     ######################################
-    time_event = djm.TextField(blank=True, null=True)
+    time_event = fields.NullTextField()
 
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
@@ -1346,14 +1354,20 @@ class RiskCalculation(djm.Model):
     def vulnerability_inputs(self, retrofitted):
         for loss_type in LOSS_TYPES:
             ctype = cost_type(loss_type)
-            if retrofitted:
-                input_type = "%s_vulnerability_retrofitted" % ctype
-            else:
-                input_type = "%s_vulnerability" % ctype
 
-            queryset = self.inputs.filter(input_type=input_type)
-            if queryset.exists():
-                yield queryset[0], loss_type
+            vulnerability_input = self.vulnerability_input(ctype, retrofitted)
+            if vulnerability_input is not None:
+                yield vulnerability_input, loss_type
+
+    def vulnerability_input(self, ctype, retrofitted=False):
+        if retrofitted:
+            input_type = "%s_vulnerability_retrofitted" % ctype
+        else:
+            input_type = "%s_vulnerability" % ctype
+
+        queryset = self.inputs.filter(input_type=input_type)
+        if queryset.exists():
+            return queryset[0]
 
 
 def _prep_geometry(kwargs):
@@ -1501,6 +1515,7 @@ class Output(djm.Model):
         (u'dmg_dist_total', u'Total Damage Distribution'),
         (u'event_loss', u'Event Loss Table'),
         (u'loss_curve', u'Loss Curve'),
+        (u'event_loss_curve', u'Loss Curve'),
         (u'loss_fraction', u'Loss fractions'),
         (u'loss_map', u'Loss Map'),
     )
@@ -1527,7 +1542,7 @@ class Output(djm.Model):
         """
 
         # FIXME(lp). Remove the following outstanding exceptions
-        if self.output_type == 'agg_loss_curve':
+        if self.output_type in ['agg_loss_curve', 'event_loss_curve']:
             return self.loss_curve
         elif self.output_type == 'hazard_curve_multi':
             return self.hazard_curve
@@ -2772,6 +2787,7 @@ class LossCurveData(djm.Model):
     poes = fields.FloatArrayField()
     location = djm.PointField(srid=DEFAULT_SRID)
     average_loss_ratio = djm.FloatField()
+    stddev_loss_ratio = djm.FloatField(blank=True, null=True)
 
     class Meta:
         db_table = 'riskr\".\"loss_curve_data'
@@ -2783,6 +2799,11 @@ class LossCurveData(djm.Model):
     @property
     def average_loss(self):
         return self.average_loss_ratio * self.asset_value
+
+    @property
+    def stddev_loss(self):
+        if self.stddev_loss_ratio is not None:
+            return self.stddev_loss_ratio * self.asset_value
 
     @property
     def data_hash(self):
@@ -2811,6 +2832,7 @@ class AggregateLossCurveData(djm.Model):
     losses = fields.FloatArrayField()
     poes = fields.FloatArrayField()
     average_loss = djm.FloatField()
+    stddev_loss = djm.FloatField(blank=True, null=True)
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss_curve_data'
@@ -3118,6 +3140,12 @@ class ExposureModel(djm.Model):
         return not (
             self.exposuredata_set.filter(
                 cost__converted_retrofitted_cost__isnull=True)).exists()
+
+    def has_time_event(self, time_event):
+        return (
+            self.exposuredata_set.filter(occupancy__period=time_event).count()
+            ==
+            self.exposuredata_set.count())
 
     def supports_loss_type(self, loss_type):
         """
