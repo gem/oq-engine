@@ -222,3 +222,20 @@ class ExposureHasRetrofittedCostsTestCase(unittest.TestCase):
             return_value=False)
         self.assertEqual("Some assets do not have retrofitted costs",
                          val.get_error())
+
+
+class ExposureHasTimeEventTestCase(unittest.TestCase):
+    def test_get_error(self):
+        calc = mock.Mock()
+        val = validation.ExposureHasTimeEvent(calc)
+
+        calc.rc.time_event = "night"
+
+        calc.rc.exposure_model.has_time_event = mock.Mock(
+            return_value=True)
+        self.assertIsNone(val.get_error())
+
+        calc.rc.exposure_model.has_time_event = mock.Mock(
+            return_value=False)
+        self.assertEqual("Some assets are missing an "
+                         "occupancy with period=night", val.get_error())
