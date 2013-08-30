@@ -44,17 +44,19 @@ For instance, here is an example of instantiating a root node
 with two subnodes a and b:
 
 >>> from openquake.nrmllib.utils import Node
->>> a = Node('a', {}, value='A1')
+>>> a = Node('a', {}, text='A1')
 >>> b = Node('b', {'attrb': 'B'}, 'B1')
 >>> root = Node('root', nodes=[a, b])
+>>> print root.to_str()
 root
-  a
-  b{attrb}
+  a A1
+  b{attrb=B} B1
+<BLANKLINE>
 
 The subnodes can be retrieved with the dot notation:
 
 >>> root.a
-<a {} A1 []>
+<a {} A1 >
 
 It is possible to have multiple subnodes with the same name:
 
@@ -71,13 +73,13 @@ However it is possible to retrieve the node from its ordinal
 index:
 
 >>> root[0], root[1], root[2]
-(<a {} A1 []>, <b {'attrb': 'B'} B1 []>, <a {} A2 []>)
+(<a {} A1 >, <b {'attrb': 'B'} B1 >, <a {} A2 >)
 
 The list of all subnodes with a given name can be retrieved
 as follows:
 
 >>> list(root.getnodes('a'))
-[<a {} A1 []>, <a {} A2 []>]
+[<a {} A1 >, <a {} A2 >]
 
 It is also possible to delete a node given its index:
 
@@ -86,7 +88,7 @@ It is also possible to delete a node given its index:
 A node is an iterable object yielding its subnodes:
 
 >>> list(root)
-[<a {} A1 []>, <b {'attrb': 'B'} B1 []>]
+[<a {} A1 >, <b {'attrb': 'B'} B1 >]
 
 The attributes of a node can be retrieved with the square bracket notation:
 
@@ -100,8 +102,8 @@ It is possible to add and remove attributes freely:
 
 Node objects can be easily converted into ElementTree objects:
 
->>> node_to_elem(root)
-<Element root at 0x1d80c80>
+>>> node_to_elem(root)  #doctest: +ELLIPSIS
+<Element root at ...>
 
 Thus it is trivial to generate the XML representation of a node:
 
@@ -115,7 +117,7 @@ tree in memory. Here is an example:
 
 >>> def gen_many_nodes(N):
 ...     for i in xrange(N):
-...         yield Node('a', {}, value=str(i))
+...         yield Node('a', {}, text=str(i))
 
 >>> lazytree = Node('lazytree', {}, nodes=gen_many_nodes(10))
 
@@ -183,7 +185,6 @@ For instance
 import sys
 import cStringIO
 import ConfigParser
-import json
 from openquake.hazardlib.slots import with_slots
 from openquake import nrmllib
 from openquake.nrmllib.writers import StreamingXMLWriter
@@ -284,7 +285,15 @@ class Node(object):
             raise TypeError('Expected Node instance, got %r' % node)
         self.nodes.append(node)
 
-    def to_str(self, expandattrs=False, expandvals=False):
+    def to_str(self, expandattrs=True, expandvals=True):
+        """
+        Convert the node into a string, intended for testing/debugging purposes
+
+        :param expandattrs:
+          print the values of the attributes if True, else print only the names
+        :param expandvals:
+          print the values if True, else print only the tag names
+        """
         out = cStringIO.StringIO()
         node_display(self, expandattrs, expandvals, out)
         return out.getvalue()
@@ -296,7 +305,7 @@ class Node(object):
     def __repr__(self):
         """A condensed representation for debugging purposes"""
         return '<%s %s %s %s>' % (self.tag, self.attrib, self.text,
-                                  self.nodes)
+                                  '' if not self.nodes else '...')
 
     def __getitem__(self, i):
         """
@@ -341,7 +350,7 @@ class Node(object):
         return bool(self.nodes)
 
 
-def node_from_dict(dic):
+def node_from_dict(dic, nodecls=Node):
     """
     Convert a (nested) dictionary with attributes tag, attrib, text, nodes
     into a Node object.
@@ -351,8 +360,8 @@ def node_from_dict(dic):
     attrib = dic.get('attrib', {})
     nodes = dic.get('nodes', [])
     if not nodes:
-        return Node(tag, attrib, text)
-    return Node(tag, attrib, nodes=map(node_from_dict, nodes))
+        return nodecls(tag, attrib, text)
+    return nodecls(tag, attrib, nodes=map(node_from_dict, nodes))
 
 
 def node_to_dict(self):
@@ -366,15 +375,15 @@ def node_to_dict(self):
     return dic
 
 
-def node_from_elem(elem):
+def node_from_elem(elem, nodecls=Node):
     """
     Convert (recursively) an ElementTree object into a Node object.
     """
     children = list(elem)
     if not children:
-        return Node(elem.tag, dict(elem.attrib), elem.text)
-    return Node(elem.tag, dict(elem.attrib),
-                nodes=map(node_from_elem, children))
+        return nodecls(elem.tag, dict(elem.attrib), elem.text)
+    return nodecls(elem.tag, dict(elem.attrib),
+                   nodes=map(node_from_elem, children))
 
 
 # taken from https://gist.github.com/651801, which comes for the effbot
@@ -403,12 +412,12 @@ def node_to_elem(self):
     return namespace["e1"]
 
 
-def node_from_xml(xmlfile, parser=nrmllib.COMPATPARSER):
+def node_from_xml(xmlfile, nodecls=Node, parser=nrmllib.COMPATPARSER):
     """
     Convert a .xml file into a Node object.
     """
     root = etree.parse(xmlfile, parser).getroot()
-    return node_from_elem(root)
+    return node_from_elem(root, nodecls)
 
 
 def node_to_xml(node, output=sys.stdout):
@@ -421,12 +430,12 @@ def node_to_xml(node, output=sys.stdout):
         w.serialize(node)
 
 
-def node_from_nrml(xmlfile):
+def node_from_nrml(xmlfile, nodecls=Node):
     """
     Convert a NRML file into a Node object.
     """
     root = nrmllib.assert_valid(xmlfile).getroot()
-    node = node_from_elem(root)
+    node = node_from_elem(root, nodecls)
     for nsname, nsvalue in root.nsmap.iteritems():
         if nsname is None:
             node['xmlns'] = nsvalue
@@ -459,7 +468,7 @@ def node_to_nrml(node, output=sys.stdout, nsmap=None):
         nrmllib.assert_valid(output)
 
 
-def node_from_ini(ini_file, root_name='ini'):
+def node_from_ini(ini_file, nodecls=Node, root_name='ini'):
     """
     Convert a .ini file into a Node object.
 
@@ -469,7 +478,7 @@ def node_from_ini(ini_file, root_name='ini'):
     fileobj = open(ini_file) if isinstance(ini_file, basestring) else ini_file
     cfp = ConfigParser.RawConfigParser()
     cfp.readfp(fileobj)
-    root = Node(root_name)
+    root = nodecls(root_name)
     sections = cfp.sections()
     for section in sections:
         params = dict(cfp.items(section))
@@ -489,16 +498,6 @@ def node_to_ini(node, output=sys.stdout):
         for name, value in sorted(subnode.attrib.iteritems()):
             output.write(u'%s=%s\n' % (name, value))
     output.flush()
-
-
-def node_from_json_string(string):
-    """Convert a JSON string into a Node object"""
-    return node_from_dict(json.loads(string))
-
-
-def node_to_json_string(node):
-    """Convert a Node object into an indented JSON string"""
-    return json.dumps(node_to_dict(node), sort_keys=True, indent=2)
 
 
 ################### string manipulation routines for NRML ####################

@@ -28,10 +28,10 @@ class NodeTestCase(unittest.TestCase):
         self.assertEqual(root['a'], 'A')
         self.assertEqual(root.attrib['a'], 'A')
 
-    def test_to_str_1(self):
+    def test_to_str(self):
         # tests the methods .to_str with expandattrs and expandvals off
         root = utils.Node('root')
-        a = utils.Node('a')
+        a = utils.Node('a', dict(zz='ZZ'), text="A")
         b = utils.Node('b')
         x1 = utils.Node('x1')
         x2 = utils.Node('x2')
@@ -39,28 +39,29 @@ class NodeTestCase(unittest.TestCase):
         root.append(b)
         root.a.append(x1)
         root.a.append(x2)
-        self.assertEqual(root.to_str(), '''\
+        self.assertEqual(
+            root.to_str(expandvals=False, expandattrs=False), '''\
 root
-  a
+  a{zz}
+    x1
+    x2
+  b
+''')
+        self.assertEqual(
+            root.to_str(expandvals=True, expandattrs=False), '''\
+root
+  a{zz} A
     x1
     x2
   b
 ''')
 
-    def test_to_str_2(self):
-        # tests the methods .to_str with expandattrs and expandvals on
-        root = utils.Node('root')
-        a = utils.Node('a', dict(zz='ZZ'))
-        x1 = utils.Node('x1', dict(xx1='XX1'), text='1')
-        x2 = utils.Node('x2', text='2')
-        root.append(a)
-        root.a.append(x1)
-        root.a.append(x2)
-        self.assertEqual(root.to_str(expandattrs=True, expandvals=True), '''\
+        self.assertEqual(root.to_str(), '''\
 root
-  a{zz=ZZ}
-    x1{xx1=XX1} 1
-    x2 2
+  a{zz=ZZ} A
+    x1
+    x2
+  b
 ''')
 
     def test_getitem(self):
@@ -205,24 +206,23 @@ param=yyy
         self.assertEqual(root.tag, 'root')  # not node, use __getattr__
         self.assertEqual(root.__getattr__('tag'), node)
 
-    def test_json(self):
+    def test_dict(self):
         # convertion to and from JSON strings
-        json = '''\
-{
-  "attrib": {}, 
-  "nodes": [
-    {
-      "attrib": {}, 
-      "tag": "a", 
-      "text": "A"
-    }
-  ], 
-  "tag": "root", 
-  "text": null
-}'''
-        node = utils.node_from_json_string(json)
-        string = utils.node_to_json_string(node)
-        self.assertEqual(string, json)
+        input_dict = {
+            "attrib": {},
+            "nodes": [
+                {
+                    "attrib": {},
+                    "tag": "a",
+                    "text": "A"
+                    }
+                ],
+            "tag": "root",
+            "text": None
+            }
+        node = utils.node_from_dict(input_dict)
+        output_dict = utils.node_to_dict(node)
+        self.assertEqual(input_dict, output_dict)
 
 
 class UtilsTestCase(unittest.TestCase):
