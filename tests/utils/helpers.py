@@ -36,7 +36,6 @@ import sys
 import tempfile
 import textwrap
 import time
-import shapely
 
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
 from openquake.hazardlib.geo import Point
@@ -127,10 +126,6 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
-# this function is used in various tests to run a computation in-process;
-# task distribution is disabled by default to make it possible to debug and
-# profile the tests; notice however that in the QA tests (see
-# BaseQATestCase.run_hazard) the distribution is enabled
 def run_hazard_job(cfg, exports=None):
     """
     Given the path to job config file, run the job and assert that it was
@@ -449,19 +444,6 @@ def touch(content=None, dir=None, prefix="tmp", suffix="tmp"):
     return path
 
 
-class DbTestCase(object):
-    """Class which contains various db-related testing helpers."""
-
-    IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
-            0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
-
-    @classmethod
-    def teardown_inputs(cls, inputs, filesystem_only):
-        if filesystem_only:
-            return
-        [input.delete() for input in inputs]
-
-
 class ConfigTestCase(object):
     """Class which contains various configuration- and environment-related
     testing helpers."""
@@ -520,24 +502,6 @@ def random_string(length=16):
     while len(result) < length:
         result += random.choice(string.letters + string.digits)
     return result
-
-
-def prepare_cli_output(raw_output, discard_header=True):
-    """Given a huge string of output from a `subprocess.check_output` call,
-    split on newlines, strip, and discard empty lines.
-
-    If ``discard_header`` is `True`, drop the first row in the output.
-
-    Returns a `list` of strings, 1 for each row in the CLI output.
-    """
-    lines = raw_output.split('\n')
-    # strip and drop empty lines
-    lines = [x.strip() for x in lines if len(x.strip()) > 0]
-
-    if discard_header:
-        lines.pop(0)
-
-    return lines
 
 
 def deep_eq(a, b, decimal=7, exclude=None):
@@ -910,12 +874,6 @@ def get_ruptures(job, ses_collection, num):
                 temporal_occurrence_model=PoissonTOM(10),
                 source_typology=object()))
         for i in range(num)]
-
-
-def random_location_generator(min_x=-180, max_x=180, min_y=-90, max_y=90):
-    return shapely.geometry.Point(
-        (min_x + random.random() * (max_x - min_x),
-         min_y + random.random() * (max_y - min_y)))
 
 
 class MultiMock(object):

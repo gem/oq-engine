@@ -47,7 +47,17 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
                 loss_curve__output__oq_job=job,
                 loss_curve__aggregate=False,
                 loss_curve__insured=True).order_by('asset_ref')] +
+                [curve.stddev_loss_ratio
+                 for curve in models.LossCurveData.objects.filter(
+                loss_curve__output__oq_job=job,
+                loss_curve__aggregate=False,
+                loss_curve__insured=False).order_by('asset_ref')] +
                 [curve.average_loss
+                 for curve in models.AggregateLossCurveData.objects.filter(
+                loss_curve__output__oq_job=job,
+                loss_curve__aggregate=True,
+                loss_curve__insured=False)] +
+                [curve.stddev_loss
                  for curve in models.AggregateLossCurveData.objects.filter(
                 loss_curve__output__oq_job=job,
                 loss_curve__aggregate=True,
@@ -72,7 +82,9 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
         return [
             [0.07021910798], [0.015239297], [0.04549904],
             [0.07021910797], [0.015239291], [0.03423366],
+            [0.0059876], [0.0022866], [0.0053434],
             [278.904436],
+            [46.0207855534291],
             [263.37280611, 262.51974659, 261.66668707,
              30.96750422, 30.89424056, 30.82097689, 49.45179882, 49.29162539,
              49.13145195],

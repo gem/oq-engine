@@ -24,7 +24,7 @@ from collections import namedtuple
 from collections import OrderedDict
 
 from openquake.hazardlib.calc import disagg
-from openquake.nrmllib import writers as nrml
+from openquake.nrmllib.hazard import writers
 
 from openquake.engine.db import models
 from openquake.engine.export import core
@@ -203,7 +203,7 @@ def export_hazard_curve_xml(output, target):
 
     hcd = _curve_data(hc)
     metadata, dest = _curve_metadata(output, target)
-    nrml.HazardCurveXMLWriter(dest, **metadata).serialize(hcd)
+    writers.HazardCurveXMLWriter(dest, **metadata).serialize(hcd)
 
     return dest
 
@@ -220,7 +220,7 @@ def export_hazard_curve_multi_xml(output, target):
         metadata_set.append(metadata)
     assert(dest is not None)
 
-    writer = nrml.MultiHazardCurveXMLWriter(dest, metadata_set)
+    writer = writers.MultiHazardCurveXMLWriter(dest, metadata_set)
     writer.serialize(data)
 
     return dest
@@ -294,7 +294,7 @@ def export_gmf_xml(output, target):
 
     dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
 
-    writer = nrml.EventBasedGMFXMLWriter(
+    writer = writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path, gsim_lt_path)
     writer.serialize(gmf_coll)
 
@@ -320,7 +320,7 @@ def export_gmf_scenario_xml(output, target):
     haz_calc = output.oq_job.hazard_calculation
     dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
     gmfs = models.get_gmfs_scenario(output)
-    writer = nrml.ScenarioGMFXMLWriter(dest)
+    writer = writers.ScenarioGMFXMLWriter(dest)
     writer.serialize(gmfs)
     return dest
 
@@ -355,7 +355,7 @@ def export_ses_xml(output, target):
     dest = _get_result_export_dest(haz_calc.id, target,
                                    output.ses)
 
-    writer = nrml.SESXMLWriter(dest, sm_lt_path, gsim_lt_path)
+    writer = writers.SESXMLWriter(dest, sm_lt_path, gsim_lt_path)
     writer.serialize(ses_coll)
 
     return dest
@@ -416,7 +416,7 @@ def export_hazard_map_xml(output, target):
         A list of exported file name (including the absolute path to each
         file).
     """
-    return _export_hazard_map(output, target, nrml.HazardMapXMLWriter,
+    return _export_hazard_map(output, target, writers.HazardMapXMLWriter,
                               'xml')
 
 
@@ -426,7 +426,7 @@ def export_hazard_map_geojson(output, target):
     in GeoJSON format.
     """
     return _export_hazard_map(output, target,
-                              nrml.HazardMapGeoJSONWriter, 'geojson')
+                              writers.HazardMapGeoJSONWriter, 'geojson')
 
 
 class _DisaggMatrix(object):
@@ -520,7 +520,7 @@ def export_disagg_matrix_xml(output, target):
         gsimlt_path=core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path),
     )
 
-    writer = nrml.DisaggXMLWriter(dest, **writer_kwargs)
+    writer = writers.DisaggXMLWriter(dest, **writer_kwargs)
 
     data = (_DisaggMatrix(pmf_fn(disagg_result.matrix), dim_labels,
                           disagg_result.poe, disagg_result.iml)
@@ -568,7 +568,7 @@ def export_uh_spectra_xml(output, target):
         'investigation_time': uhs.investigation_time,
     }
 
-    writer = nrml.UHSXMLWriter(dest, **metadata)
+    writer = writers.UHSXMLWriter(dest, **metadata)
     writer.serialize(uhs)
 
     return dest

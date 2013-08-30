@@ -263,7 +263,7 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo service postgresql restart"
     ssh $lxc_ip "sudo -u postgres  createuser -d -e -i -l -s -w \$USER"
 
-    ssh $lxc_ip "sudo su postgres -c \"cd oq-engine ; bin/create_oq_schema --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema\""
+    ssh $lxc_ip "sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema\""
 
     for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer; do
         ssh $lxc_ip "sudo su postgres -c \"psql -c \\\"ALTER ROLE $dbu WITH PASSWORD 'openquake'\\\"\""
@@ -278,7 +278,7 @@ _devtest_innervm_run () {
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         # load test fixtures
-        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; 
+        ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ;
                  for i in \$(find qa_tests/risk/ -iname fixtures.tar); do
                    python openquake/engine/tools/restore_hazards.py \$i
                  done"
@@ -302,7 +302,7 @@ _devtest_innervm_run () {
                  nosetests  -a 'qa,risk,scenario_damage' -v --with-xunit --xunit-file=xunit-qa-risk-scenario-damage.xml
                  nosetests  -a 'qa,risk,scenario' -v --with-xunit --xunit-file=xunit-qa-risk-scenario.xml
 
-                 python-coverage xml --include=\"openquake/*\" 
+                 python-coverage xml --include=\"openquake/*\"
                 "
 
         scp "${lxc_ip}:oq-engine/nosetests.xml" .
@@ -742,7 +742,7 @@ while [ $# -gt 0 ]; do
             break
             ;;
     esac
-    BUILD_FLAGS="$BUILD_FLAGS $1"    
+    BUILD_FLAGS="$BUILD_FLAGS $1"
     shift
 done
 
@@ -760,7 +760,7 @@ mksafedir "$GEM_BUILD_SRC"
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 
 # NOTE: if in the future we need modules we need to execute the following commands
-# 
+#
 # git submodule init
 # git submodule update
 ##  "submodule foreach" vars: $name, $path, $sha1 and $toplevel:
@@ -845,9 +845,6 @@ mv LICENSE         openquake/engine
 mv README.txt      openquake/engine/README
 mv celeryconfig.py openquake/engine
 mv openquake.cfg   openquake/engine
-
-mv bin/openquake   bin/oqscript.py
-mv bin             openquake/engine/bin
 
 dpkg-buildpackage $DPBP_FLAG
 cd -

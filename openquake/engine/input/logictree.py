@@ -20,12 +20,13 @@ Logic tree parser, verifier and processor. See specs
 at https://blueprints.launchpad.net/openquake/+spec/openquake-logic-tree-module
 """
 
-import os
-import re
-import random
-from decimal import Decimal
 import abc
+import StringIO
+import os
+import random
+import re
 
+from decimal import Decimal
 from lxml import etree
 
 import openquake.nrmllib
@@ -315,25 +316,6 @@ class BranchSet(object):
                                  % self.uncertainty_type)
 
 
-def _open_file(basepath, filename):
-    """
-    Open file named ``filename`` and return the file content.
-
-    :param basepath:
-        Path that ``filename`` is relative to.
-    :param fileame:
-        File name, relative to ``basepath``.
-    :returns:
-        File object to read from.
-    :raises ParsingError:
-        If file can not be opened.
-    """
-    try:
-        return open(os.path.join(basepath, filename))
-    except IOError as exc:
-        raise ParsingError(filename, basepath, str(exc))
-
-
 class BaseLogicTree(object):
     """
     Common code for logic tree readers, parsers and verifiers --
@@ -347,6 +329,8 @@ class BaseLogicTree(object):
         Name of logic tree file, supposed to be relative to ``basepath``.
         That filename together with ``basepath`` are only used for reporting
         errors, the actual data is read from ``content``.
+    :param int calc_id:
+        ID of a :class:`openquake.engine.db.models.HazardCalculation`.
     :param validate:
         Boolean indicating whether or not the tree should be validated
         while parsed. This should be set to ``True`` on initial load
@@ -382,9 +366,10 @@ class BaseLogicTree(object):
                 file=openquake.nrmllib.nrml_schema_file())
         return cls._xmlschema
 
-    def __init__(self, content, basepath, filename, validate=True):
+    def __init__(self, content, basepath, filename, calc_id, validate=True):
         self.basepath = basepath
         self.filename = filename
+        self.calc_id = calc_id
         parser = etree.XMLParser(schema=self.get_xmlschema())
         self.branches = {}
         self.open_ends = set()
@@ -412,16 +397,6 @@ class BaseLogicTree(object):
             self.parse_branchinglevel(branchinglevel_node, depth, validate)
         if validate:
             self.validate_tree(tree_node, self.root_branchset)
-
-    def _open_file(self, filename):
-        """
-        Open file named ``filename`` and return the file object.
-
-        :param fileame:
-            String, should be relative to tree's base path.
-        """
-        # This was extracted to method mainly to simplify unittesting.
-        return _open_file(self.basepath, filename)
 
     def parse_branchinglevel(self, branchinglevel_node, depth, validate):
         """
@@ -859,6 +834,17 @@ class SourceModelLogicTree(BaseLogicTree):
             super(SourceModelLogicTree, self).apply_branchset(branchset_node,
                                                               branchset)
 
+    def _get_source_model(self, filename):
+        """
+        Helper function to get a source model `Input` object from the database,
+        for the given calculation and ``filename``.
+        """
+        source_model = models.inputs4hcalc(self.calc_id, 'source')
+        [source_model] = source_model.filter(
+            path=os.path.join(self.basepath, filename)
+        )
+        return source_model
+
     def collect_source_model_data(self, filename):
         """
         Parse source model file and collect information about source ids,
@@ -869,8 +855,10 @@ class SourceModelLogicTree(BaseLogicTree):
         all_source_types = set('{%s}%sSource' % (self.NRML, tagname)
                                for tagname in self.SOURCE_TYPES)
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
-        eventstream = etree.iterparse(self._open_file(filename),
-                                      tag='{%s}*' % self.NRML,
+
+        source_model = self._get_source_model(filename)
+        fh = StringIO.StringIO(source_model.model_content.raw_content_utf8)
+        eventstream = etree.iterparse(fh, tag='{%s}*' % self.NRML,
                                       schema=self.get_xmlschema())
         while True:
             try:
@@ -1016,29 +1004,40 @@ class GMPELogicTree(BaseLogicTree):
             )
 
 
-def read_logic_trees(basepath, source_model_logictree_path,
-                     gmpe_logictree_path):
+def read_logic_trees_from_db(calc_id, validate=True):
     """
-    Read, parse and validate both logic trees.
+    The same idea as :func:`read_logic_trees_from_fs`, except all input files
+    are expected to be preloaded in the database first. Nothing should touch
+    the file system.
 
-    :param basepath:
-        Base path for both logic tree files.
-    :param source_model_logictree_path:
-        Source model logic tree's filename, relative to ``basepath``.
-    :param gmpe_logictree_path:
-        GMPE logic tree's filename, relative to ``basepath``.
-    :returns:
-        A list of filenames (relative to ``basepath``) of source model files
-        that need to be read, parsed and saved into the database and thus
-        be available for :class:`LogicTreeProcessor`.
+    NOTE: This was kind of added a hack in order to decouple logic trees from
+    the file system.
+
+    :param bool validate:
+        Defaults to `True`. If `True`, do a full validation when reading the
+        logic trees.
+    :param int calc_id:
+        ID of a :class:`openquake.engine.db.models.HazardCalculation`.
     """
-    smlt_content = _open_file(basepath, source_model_logictree_path).read()
+    hc = models.HazardCalculation.objects.get(id=calc_id)
+    [smlt] = models.inputs4hcalc(
+        calc_id, input_type='source_model_logic_tree')
+    [gsimlt] = models.inputs4hcalc(
+        calc_id, input_type='gsim_logic_tree')
+
+    smlt_file = smlt.model_content.as_string_io
+    gsimlt_file = gsimlt.model_content.as_string_io
+
+    smlt_content = smlt_file.read()
     smlt = SourceModelLogicTree(
-        smlt_content, basepath, source_model_logictree_path, validate=True
+        smlt_content, hc.base_path, smlt.path, calc_id,
+        validate=validate
     )
-    gmpelt_content = _open_file(basepath, gmpe_logictree_path).read()
-    GMPELogicTree(smlt.tectonic_region_types, gmpelt_content, basepath,
-                  gmpe_logictree_path, validate=True)
+    gsimlt_content = gsimlt_file.read()
+    GMPELogicTree(
+        smlt.tectonic_region_types, gsimlt_content, hc.base_path,
+        gsimlt.path, calc_id, validate=validate
+    )
     return [branch.value for branch in smlt.root_branchset.branches]
 
 
@@ -1053,18 +1052,19 @@ class LogicTreeProcessor(object):
     def __init__(self, calc_id):
         [smlt_input] = models.inputs4hcalc(
             calc_id, input_type='source_model_logic_tree')
-        smlt_content = smlt_input.model_content.raw_content_ascii
+        smlt_content = smlt_input.model_content.raw_content_utf8
 
         [gmpelt_input] = models.inputs4hcalc(
             calc_id, input_type='gsim_logic_tree')
-        gmpelt_content = gmpelt_input.model_content.raw_content_ascii
+        gmpelt_content = gmpelt_input.model_content.raw_content_utf8
 
         self.source_model_lt = SourceModelLogicTree(
-            smlt_content, basepath=None, filename=None, validate=False
+            smlt_content, basepath=None, filename=None, calc_id=calc_id,
+            validate=False
         )
         self.gmpe_lt = GMPELogicTree(
             tectonic_region_types=[], content=gmpelt_content,
-            basepath=None, filename=None, validate=False
+            basepath=None, filename=None, calc_id=calc_id, validate=False
         )
 
     def sample_source_model_logictree(self, random_seed):

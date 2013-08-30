@@ -417,6 +417,7 @@ CREATE TABLE uiapi.output (
             'dmg_dist_per_taxonomy',
             'dmg_dist_total',
             'event_loss',
+            'event_loss_curve',
             'gmf',
             'gmf_scenario',
             'hazard_curve',
@@ -840,7 +841,10 @@ CREATE TABLE riskr.loss_curve_data (
     poes float[] NOT NULL,
 
     -- Average Loss ratio
-    average_loss_ratio FLOAT NOT NULL
+    average_loss_ratio FLOAT NOT NULL,
+
+    -- Average Loss ratio
+    stddev_loss_ratio FLOAT
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_curve_data', 'location', 4326, 'POINT',
                          2);
@@ -859,7 +863,10 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
     poes float[] NOT NULL,
 
     -- Absolute Loss
-    average_loss FLOAT NOT NULL
+    average_loss FLOAT NOT NULL,
+
+    -- StdDev of losses
+    stddev_loss FLOAT
 ) TABLESPACE riskr_ts;
 
 -- Benefit-cost ratio distribution

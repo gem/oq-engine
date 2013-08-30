@@ -88,7 +88,7 @@ def _get_result_export_dest(target, output, file_ext='xml'):
 
     filename = None
 
-    if output_type in ('loss_curve', 'agg_loss_curve'):
+    if output_type in ('loss_curve', 'agg_loss_curve', 'event_loss_curve'):
         filename = LOSS_CURVE_FILENAME_FMT % dict(
             loss_curve_id=output.loss_curve.id,
         )
@@ -178,8 +178,6 @@ def _export_loss_map(output, target, writer_class, file_ext):
     """
     General loss map export code.
     """
-    core.makedirs(target)
-
     risk_calculation = output.oq_job.risk_calculation
     args = _export_common(output, output.loss_map.loss_type)
 
@@ -195,6 +193,7 @@ def _export_loss_map(output, target, writer_class, file_ext):
     return dest
 
 
+@core.makedirsdeco
 def export_loss_map_xml(output, target):
     """
     Serialize a loss map to NRML/XML.
@@ -203,6 +202,7 @@ def export_loss_map_xml(output, target):
                             'xml')
 
 
+@core.makedirsdeco
 def export_loss_map_geojson(output, target):
     """
     Serialize a loss map to geojson.
@@ -356,6 +356,7 @@ XML_EXPORTERS = {
     'dmg_dist_per_taxonomy': export_dmg_dist_per_taxonomy_xml,
     'dmg_dist_total': export_dmg_dist_total_xml,
     'loss_curve': export_loss_curve_xml,
+    'event_loss_curve': export_loss_curve_xml,
     'loss_fraction': export_loss_fraction_xml,
     'loss_map': export_loss_map_xml,
     # TODO(LB):
