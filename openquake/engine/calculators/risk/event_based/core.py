@@ -202,6 +202,21 @@ def save_statistical_output(containers, stats, params):
                 stats.assets, output_type="loss_map",
                 statistics="quantile", quantile=quantile)
 
+    # mean and quantile insured curves
+    if stats.mean_insured_curves is not None:
+        containers.write(
+            stats.assets, (stats.mean_insured_curves,
+                           stats.mean_average_insured_losses),
+            output_type="loss_curve", statistics="mean", insured=True)
+
+        containers.write_all(
+            "quantile", params.quantiles,
+            [(c, a) for c, a in itertools.izip(
+                stats.quantile_insured_curves,
+                stats.quantile_average_insured_losses)],
+            stats.assets,
+            output_type="loss_curve", statistics="quantile", insured=True)
+
 
 class DisaggregationOutputs(object):
     def __init__(self, assets_disagg, magnitude_distance,
