@@ -124,6 +124,34 @@ class GetResultExportDestTestCase(unittest.TestCase):
                 hazard._get_result_export_dest(7, self.target_dir, curve)
             )
 
+    def test_hazard_curve_multi(self):
+        output = self.FakeOutput('hazard_curve_multi')
+
+        curves = [
+            self.FakeHazardCurve(output, self.ltr_mc, None, None, None, None),
+            self.FakeHazardCurve(output, self.ltr_enum, None, None, None,
+                                 None),
+            self.FakeHazardCurve(output, None, None, None, 'mean', None),
+            self.FakeHazardCurve(output, None, None, None, 'quantile', 0.85),
+        ]
+        expected_paths = [
+            '%s/calc_7/hazard_curve_multi/'
+            'hazard_curve_multi-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            '%s/calc_7/hazard_curve_multi/'
+            'hazard_curve_multi-smltp_B10_B9-gsimltp_B7_B8.xml',
+            '%s/calc_7/hazard_curve_multi/'
+            'hazard_curve_multi-mean.xml',
+            '%s/calc_7/hazard_curve_multi/'
+            'hazard_curve_multi-quantile_0.85.xml',
+        ]
+        expected_paths = [x % self.target_dir for x in expected_paths]
+
+        for i, curve in enumerate(curves):
+            self.assertEqual(
+                expected_paths[i],
+                hazard._get_result_export_dest(7, self.target_dir, curve)
+            )
+
     def test_hazard_map(self):
         output = self.FakeOutput('hazard_map')
 
