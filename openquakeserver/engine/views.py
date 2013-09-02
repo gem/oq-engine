@@ -541,6 +541,13 @@ def _get_result(request, result_id, export_fn):
 
     # Just in case the original StringIO object was closed:
     resp_content = StringIO.StringIO()
+    # NOTE(LB): We assume that `content` was written to by using normal
+    # file-like `write` calls; thus, the buflist should be populated with all
+    # of the content. The exporter/writer might have closed the file object (if
+    # so, we cannot read from it normally) so instead we should look at the
+    # buflist.
+    # NOTE(LB): This might be a really stupid implementation, but it's the best
+    # I could come up with so far.
     resp_content.writelines(content.buflist)
     del content
 
