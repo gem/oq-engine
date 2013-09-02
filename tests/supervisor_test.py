@@ -26,14 +26,13 @@ from openquake.engine.db.models import JobStats
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import stats
 
-from tests.utils.helpers import DbTestCase
 from tests.utils.helpers import cleanup_loggers
 from tests.utils.helpers import get_data_path
 from tests.utils.helpers import get_hazard_job
 from tests.utils.helpers import patch
 
 
-class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
+class SupervisorHelpersTestCase(unittest.TestCase):
 
     def setUp(self):
         self.job = engine.prepare_job()
