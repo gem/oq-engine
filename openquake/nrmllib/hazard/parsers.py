@@ -21,6 +21,7 @@ See :module:`openquake.nrmllib.models`.
 """
 
 import decimal
+import warnings
 from collections import OrderedDict
 
 from lxml import etree
@@ -600,7 +601,7 @@ class GMFScenarioParser(object):
             yield imt, '{%s}' % ','.join(gmvs), location
 
 
-class HazardCurveParser(object):
+class HazardCurveXMLParser(object):
     _CURVES_TAG = '{%s}hazardCurves' % openquake.nrmllib.NAMESPACE
     _CURVE_TAG = '{%s}hazardCurve' % openquake.nrmllib.NAMESPACE
 
@@ -639,3 +640,11 @@ class HazardCurveParser(object):
                 location = models.Location(x, y)
                 poes_array = map(float, poes.text.split())
                 yield models.HazardCurveData(location, poes_array)
+
+
+def HazardCurveParser(*args, **kwargs):
+    warnings.warn(
+        'HazardCurveParser is deprecated, use HazardCurveXMLParser instead',
+        RuntimeWarning
+    )
+    return HazardCurveXMLParser(*args, **kwargs)
