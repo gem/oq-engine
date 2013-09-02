@@ -14,9 +14,14 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import cStringIO
+import cPickle
 import unittest
 
 from openquake.nrmllib import utils
+
+
+class NodeSubclass(utils.Node):
+    pass
 
 
 class NodeTestCase(unittest.TestCase):
@@ -223,6 +228,10 @@ param=yyy
         node = utils.node_from_dict(input_dict)
         output_dict = utils.node_to_dict(node)
         self.assertEqual(input_dict, output_dict)
+
+    def test_can_pickle(self):
+        node = utils.Node('tag')
+        self.assertEqual(cPickle.loads(cPickle.dumps(node)), node)
 
 
 class UtilsTestCase(unittest.TestCase):

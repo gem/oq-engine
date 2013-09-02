@@ -58,18 +58,12 @@ The subnodes can be retrieved with the dot notation:
 >>> root.a
 <a {} A1 >
 
-It is possible to have multiple subnodes with the same name:
+If there are multiple subnodes with the same name
 
 >>> root.append(Node('a', {}, 'A2'))  # add another 'a' node
 
-Now the dot notation will not work anymore:
-
->>> root.a
-Traceback (most recent call last):
-   ...
-ValueError: There are several subnodes named 'a' in 'root'
-
-However it is possible to retrieve the node from its ordinal
+the dot notation will retrieve the first node.
+It is possible to retrieve the other nodes from the ordinal
 index:
 
 >>> root[0], root[1], root[2]
@@ -263,15 +257,11 @@ class Node(object):
                 'A branch node cannot have a value, got %r' % self.text)
 
     def __getattr__(self, name):
-        subnodes = list(self.getnodes(name))
-        if len(subnodes) == 0:
-            raise NameError('No subnode named %r found in %r' %
-                            (name, self.tag))
-        elif len(subnodes) > 1:
-            raise ValueError(
-                'There are several subnodes named %r in %r' %
-                (name, self.tag))
-        return subnodes[0]
+        for node in self.nodes:
+            if node.tag == name:
+                return node
+        raise NameError('No subnode named %r found in %r' %
+                        (name, self.tag))
 
     def getnodes(self, name):
         "Return the direct subnodes with name 'name'"

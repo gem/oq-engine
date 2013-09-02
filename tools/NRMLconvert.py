@@ -42,17 +42,13 @@ def main(*fnames):
     for zipfile in zipfiles:
         create(convert_zip_to_nrml, zipfile)
 
-    readers = FileReader.getall('.', csvjsonfiles)
-
-    basename = lambda reader: reader.name.rsplit('__', 1)[0]
-
-    for name, group in itertools.groupby(readers, basename):
+    for name, group in FileReader.getall('.', csvjsonfiles):
         def convert_to_nrml(out):
             build_node(group, open(out, 'wb+'))
             return out
         create(convert_to_nrml, name + '.xml')
 
-    if not xmlfiles and not zipfiles and not readers:
+    if not xmlfiles and not zipfiles:
         sys.exit('Could not convert %s' % ' '.join(csvjsonfiles + otherfiles))
 
 

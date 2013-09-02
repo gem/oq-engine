@@ -30,8 +30,8 @@ from openquake.nrmllib import InvalidFile
 
 def _make_readers(cls, container, fnames):
     """
-    Given a list of filenames instantiate a list of readers.
-    Raise a warning for invalid files.
+    Given a list of filenames, instantiates several readers and yields
+    them in groups. Raise a warning for invalid files.
     """
     def getprefix(f):
         return f.rsplit('.', 1)[0]
@@ -45,7 +45,12 @@ def _make_readers(cls, container, fnames):
             except Exception as e:
                 # the reader could not be instantiated, due to an invalid file
                 warnings.warn(str(e))
-    return readers
+
+    def getgroupname(reader):
+        """Extract the groupname for readers named <groupname>__<subname>"""
+        return reader.name.rsplit('__', 1)[0]
+    for name, readergroup in itertools.groupby(readers, getgroupname):
+        yield name, readergroup
 
 
 class Reader(object):

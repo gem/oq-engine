@@ -19,7 +19,8 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
     def check_round_trip(self, name):
         fname = os.path.join(DATADIR, name)
         z = convert_nrml_to_zip(fname)
-        outname = convert_zip_to_nrml(z, fname + '~')
+        tmp = tempfile.gettempdir()
+        [outname] = convert_zip_to_nrml(z, tmp)
         if open(fname).read() != open(outname).read():
             raise ValueError('Files %s and %s are different' %
                              (fname, outname))

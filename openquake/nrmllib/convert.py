@@ -437,17 +437,19 @@ def convert_nrml_to_zip(fname, outfname=None):
     return outname
 
 
-def convert_zip_to_nrml(fname, outfname=None):
+def convert_zip_to_nrml(fname, outdir=None):
     """
-    Convert a zip archive into a NRML file.
+    Convert a zip archive into one or more NRML files.
 
     :param fname: path to a zip archive
-    :param outfname: output path; if None, <path>.xml is used instead
+    :param outdir: output directory; if None the input directory is used
     """
-    outname = outfname or fname[:-4] + '.xml'
-    assert outname.endswith(('.xml', '.xml~')), outname
+    outdir = outdir or os.path.dirname(fname)
     z = zipfile.ZipFile(fname)
-    readers = ZipReader.getall(z)
-    with open(outname, 'wb+') as out:
-        build_node(readers, out)
-    return outname
+    outputs = []
+    for name, readers in ZipReader.getall(z):
+        outname = os.path.join(outdir, name + '.xml')
+        with open(outname, 'wb+') as out:
+            build_node(readers, out)
+        outputs.append(outname)
+    return outputs
