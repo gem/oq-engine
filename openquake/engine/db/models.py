@@ -25,6 +25,7 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import zlib
 import StringIO
 import collections
 import itertools
@@ -506,7 +507,7 @@ class ModelContent(djm.Model):
     '''
 
     # contains the raw text of an input file
-    raw_content = djm.TextField()
+    raw_content = fields.GzippedField()
     # `content_type` should be used to indicate the file format
     # (xml, csv, etc.)
     content_type = djm.TextField()
@@ -520,7 +521,7 @@ class ModelContent(djm.Model):
         """
         Returns raw_content in UTF-8
         """
-        return self.raw_content.encode('utf-8')
+        return zlib.decompress(self.raw_content).encode('utf-8')
 
     @property
     def as_string_io(self):
