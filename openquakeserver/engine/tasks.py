@@ -77,6 +77,7 @@ def _trigger_migration(callback_url, owner, import_url):
         # post to an external service, asking it to pull calculation results
         url = urllib2.urlopen(callback_url, params)
     except urllib2.HTTPError:
-        pass  # TODO: what to do with this?
+        # TODO: better logging/signalling of such an error?
+        raise
     else:
         url.close()
