@@ -428,11 +428,7 @@ class SourceModelParser(FaultGeometryParserMixin):
         """
         src_model = models.SourceModel()
 
-        schema = etree.XMLSchema(
-            etree.parse(openquake.nrmllib.nrml_schema_file()))
-
-        tree = etree.iterparse(self.source, events=('start', 'end'),
-                               schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source)
 
         for event, element in tree:
             # Find the <sourceModel> element and get the 'name' attr.
@@ -467,10 +463,8 @@ class SiteModelParser(object):
         :returns:
             A iterable of :class:`openquake.nrmllib.model.SiteModel` objects.
         """
-        schema = etree.XMLSchema(
-            etree.parse(openquake.nrmllib.nrml_schema_file()))
-        tree = etree.iterparse(self.source, events=('start',),
-                               schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source,
+                                                events=('start', ))
 
         for _, element in tree:
             if element.tag == '{%s}site' % openquake.nrmllib.NAMESPACE:
@@ -555,9 +549,7 @@ class RuptureModelParser(FaultGeometryParserMixin):
             instance or
             :class:`openquake.nrmllib.models.ComplexFaultRuptureModel` instance
         """
-        schema = etree.XMLSchema(etree.parse(
-            openquake.nrmllib.nrml_schema_file()))
-        tree = etree.iterparse(self.source, schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source)
         for _, element in tree:
             parse_fn = self._parse_fn_map.get(element.tag)
             if parse_fn:
@@ -582,9 +574,7 @@ class GMFScenarioParser(object):
         :returns:
             an iterable over triples (imt, gmvs, location)
         """
-        schema = etree.XMLSchema(etree.parse(
-            openquake.nrmllib.nrml_schema_file()))
-        tree = etree.iterparse(self.source, schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source, events=('end',))
         gmf = OrderedDict()  # (imt, location) -> gmvs
         point_value_list = []
         for _, element in tree:
@@ -623,10 +613,7 @@ class HazardCurveParser(object):
         :returns:
             Populated :class:`openquake.nrmllib.models.HazardCurveModel` object
         """
-        schema = etree.XMLSchema(etree.parse(
-            openquake.nrmllib.nrml_schema_file()))
-        tree = etree.iterparse(
-            self.source, events=('start', 'end'), schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source)
         hc_iter = self._parse(tree)
         header = hc_iter.next()
         return models.HazardCurveModel(data_iter=hc_iter, **header)
