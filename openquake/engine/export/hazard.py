@@ -116,7 +116,8 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
     directory = os.path.join(target, calc_dir, type_dir, imt_dir)
     core.makedirs(directory)
 
-    if output_type in ('hazard_curve', 'hazard_map', 'uh_spectra'):
+    if output_type in ('hazard_curve', 'hazard_curve_multi', 'hazard_map',
+                       'uh_spectra'):
         # include the poe in hazard map and uhs file names
         if output_type in ('hazard_map', 'uh_spectra'):
             output_type = '%s-poe_%s' % (output_type, result.poe)
