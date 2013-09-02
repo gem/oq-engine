@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import mock
 import os
 import shutil
 import tempfile
@@ -537,3 +538,38 @@ class DisaggExportTestCase(BaseExportTestCase):
                 self._test_exported_file(f)
         finally:
             shutil.rmtree(target_dir)
+
+
+class Bug1202290TestCase(unittest.TestCase):
+    """
+    Tests to specifically address
+    https://bugs.launchpad.net/oq-engine/+bug/1202290.
+    """
+
+    def test(self):
+        output = mock.Mock()
+        output.oq_job.hazard_calculation.id = 1202290
+        output.hazard_curve = mock.Mock()
+        output.hazard_curve.__iter__ = lambda x: iter([])
+        target = mock.Mock()
+
+        with mock.patch('openquake.engine.export.hazard'
+                        '._get_result_export_dest') as gred:
+            with mock.patch('openquake.nrmllib.hazard.writers'
+                            '.MultiHazardCurveXMLWriter') as mhcxw:
+                mhcxw.return_value
+                mhcxw.serialize = mock.Mock()
+                hazard.export_hazard_curve_multi_xml(output, target)
+
+        self.assertEqual(1, gred.call_count)
+        self.assertEqual(
+            ((1202290, target, output.hazard_curve), {}),
+            gred.call_args
+        )
+        self.assertEqual(1, mhcxw.call_count)
+        self.assertEqual(1, mhcxw.return_value.serialize.call_count)
+
+        self.assertEqual(
+            ((gred.return_value, []), {}),
+            mhcxw.call_args
+        )
