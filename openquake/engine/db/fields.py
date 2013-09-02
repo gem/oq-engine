@@ -17,8 +17,8 @@
 
 import numpy
 import re
+import zlib
 import json
-
 import cPickle as pickle
 
 from django.utils.encoding import smart_unicode
@@ -237,6 +237,17 @@ class PickleField(djm.Field):
         defaults = {'form_class': PickleFormField}
         defaults.update(kwargs)
         return super(PickleField, self).formfield(**defaults)
+
+
+class GzippedField(djm.Field):
+    """
+    Automatically stores gzipped text as a bytearray
+    """
+    def db_type(self, _connection):
+        return 'bytea'
+
+    def get_prep_value(self, value):
+        return bytearray(zlib.compress(value))
 
 
 class DictField(PickleField):
