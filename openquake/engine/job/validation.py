@@ -671,10 +671,10 @@ class ScenarioRiskForm(BaseOQModelForm):
         super_valid = super(ScenarioRiskForm, self).is_valid()
         rc = self.instance          # RiskCalculation instance
 
-        if 'occupancy_vulnerability_file' in self.files:
+        if 'occupants_vulnerability_file' in self.files:
             if not rc.time_event:
                 self._add_error('time_event', "Scenario Risk requires "
-                                "time_event when an occupancy vulnerability "
+                                "time_event when an occupants vulnerability "
                                 "model is given")
 
                 return False
