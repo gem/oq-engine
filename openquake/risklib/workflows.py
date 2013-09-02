@@ -138,6 +138,15 @@ class Classical(object):
        A numpy array with Q quantile maps shaped (Q, P, N)
     :attr quantile_fractions:
        A numpy array with Q quantile maps shaped (Q, F, N)
+    :attr mean_insured_curves:
+       A numpy array with N mean insured loss curves. Shape: (N, 2)
+    :attr mean_average_insured_losses:
+       A numpy array with N mean average insured loss values
+    :attr quantile_insured_curves:
+       A numpy array with Q quantile insured curves (Q = number of quantiles).
+       Shape: (Q, N, 2, R)
+    :attr quantile_average_insured_losses:
+       A numpy array shaped (Q, N) with average insured losses
     """
 
     Output = collections.namedtuple(
@@ -150,7 +159,9 @@ class Classical(object):
         'StatisticalOutput',
         'assets mean_curves mean_average_losses '
         'mean_maps mean_fractions quantile_curves quantile_average_losses '
-        'quantile_maps quantile_fractions')
+        'quantile_maps quantile_fractions '
+        'mean_insured_curves mean_average_insured_losses '
+        'quantile_insured_curves quantile_average_insured_losses')
 
     def __init__(self,
                  vulnerability_function,
@@ -242,6 +253,21 @@ class Classical(object):
                  self.maps.poes + self.fractions.poes,
                  weights, quantiles, post_processing))
 
+        if self.insured_losses:
+            loss_curves = [out.insured_loss_curves for out in outputs]
+            (mean_insured_curves, mean_average_insured_losses, _,
+             quantile_insured_curves, quantile_average_insured_losses, _) = (
+                 calculators.exposure_statistics(
+                     [normalize_curves(curves)
+                      for curves
+                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                     [], weights, quantiles, post_processing))
+        else:
+            mean_insured_curves = None
+            mean_average_insured_losses = None
+            quantile_insured_curves = None
+            quantile_average_insured_losses = None
+
         return self.StatisticalOutput(
             outputs[0].assets,
             mean_curves, mean_average_losses,
@@ -249,7 +275,9 @@ class Classical(object):
             mean_maps[len(self.maps.poes):],
             quantile_curves, quantile_average_losses,
             quantile_maps[:, 0:len(self.maps.poes)],
-            quantile_maps[:, len(self.maps.poes):])
+            quantile_maps[:, len(self.maps.poes):],
+            mean_insured_curves, mean_average_insured_losses,
+            quantile_insured_curves, quantile_average_insured_losses)
 
 
 class ProbabilisticEventBased(object):
@@ -308,6 +336,8 @@ class ProbabilisticEventBased(object):
         'StatisticalOutput',
         'assets mean_curves mean_average_losses '
         'mean_maps quantile_curves quantile_average_losses quantile_maps '
+        'mean_insured_curves mean_average_insured_losses '
+        'quantile_insured_curves quantile_average_insured_losses '
         'event_loss_table')
 
     def __init__(
@@ -410,9 +440,27 @@ class ProbabilisticEventBased(object):
         elt = sum((out.event_loss_table for out in outputs),
                   collections.Counter())
 
+        if self.insured_losses:
+            loss_curves = [out.insured_loss_curves for out in outputs]
+            (mean_insured_curves, mean_average_insured_losses, _,
+             quantile_insured_curves, quantile_average_insured_losses, _) = (
+                 calculators.exposure_statistics(
+                     [self._normalize_curves(curves)
+                      for curves
+                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                     [], weights, quantiles, post_processing))
+        else:
+            mean_insured_curves = None
+            mean_average_insured_losses = None
+            quantile_insured_curves = None
+            quantile_average_insured_losses = None
+
         return self.StatisticalOutput(
             outputs[0].assets, mean_curves, mean_average_losses, mean_maps,
-            quantile_curves, quantile_average_losses, quantile_maps, elt)
+            quantile_curves, quantile_average_losses, quantile_maps,
+            mean_insured_curves, mean_average_insured_losses,
+            quantile_insured_curves, quantile_average_insured_losses,
+            elt)
 
     def _normalize_curves(self, curves):
         non_trivial_curves = [(losses, poes)
