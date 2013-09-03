@@ -157,7 +157,19 @@ def run_hazard_calc(request):
 
         # Before running the calculation, clean up the temp dir.
         shutil.rmtree(temp_dir)
-        tasks.run_hazard_calc.apply_async((hc.id, ))
+
+        migration_callback_url = request.POST.get('migration_callback_url')
+        owner_user = request.POST.get('owner_user')
+
+        base_url = _get_base_url(request)
+        tasks.run_hazard_calc.apply_async(
+            (hc.id, ),
+            dict(migration_callback_url=migration_callback_url,
+                 owner_user=owner_user,
+                 results_url=urlparse.urljoin(
+                     base_url, 'v1/calc/hazard/%s/results' % hc.id
+                 ))
+        )
 
         return redirect('/v1/calc/hazard/%s' % hc.id)
 
@@ -265,6 +277,15 @@ def calc_hazard_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
+    # If the specified calculation doesn't exist OR is not yet complete,
+    # throw back a 404.
+    try:
+        calc = oqe_models.HazardCalculation.objects.get(id=calc_id)
+        if not calc.oqjob.status == 'complete':
+            return HttpResponseNotFound()
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
     base_url = _get_base_url(request)
 
     results = oq_engine.get_hazard_outputs(calc_id)
@@ -358,7 +379,19 @@ def run_risk_calc(request):
 
         # Before running the calculation, clean up the temp dir.
         shutil.rmtree(temp_dir)
-        tasks.run_risk_calc.apply_async((rc.id, ))
+
+        migration_callback_url = request.POST.get('migration_callback_url')
+        owner_user = request.POST.get('owner_user')
+
+        base_url = _get_base_url(request)
+        tasks.run_risk_calc.apply_async(
+            (rc.id, ),
+            dict(migration_callback_url=migration_callback_url,
+                 owner_user=owner_user,
+                 results_url=urlparse.urljoin(
+                     base_url, 'v1/calc/risk/%s/results' % rc.id
+                 ))
+        )
 
         return redirect('/v1/calc/risk/%s' % rc.id)
 
@@ -420,6 +453,15 @@ def calc_risk_results(request, calc_id):
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
+    # If the specified calculation doesn't exist OR is not yet complete,
+    # throw back a 404.
+    try:
+        calc = oqe_models.RiskCalculation.objects.get(id=calc_id)
+        if not calc.oqjob.status == 'complete':
+            return HttpResponseNotFound()
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
     base_url = _get_base_url(request)
 
     results = oq_engine.get_risk_outputs(calc_id)
@@ -477,6 +519,17 @@ def _get_result(request, result_id, export_fn):
         Otherwise, return a `django.http.HttpResponse` containing the content
         of the requested artifact.
     """
+    # If the result for the requested ID doesn't exist, OR
+    # the job which it is related too is not complete,
+    # throw back a 404.
+    try:
+        output = oqe_models.Output.objects.get(id=result_id)
+        job = output.oq_job
+        if not job.status == 'complete':
+            return HttpResponseNotFound()
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
     export_type = request.GET.get('export_type', DEFAULT_EXPORT_TYPE)
 
     content = StringIO.StringIO()
@@ -488,12 +541,21 @@ def _get_result(request, result_id, export_fn):
 
     # Just in case the original StringIO object was closed:
     resp_content = StringIO.StringIO()
+    # NOTE(LB): We assume that `content` was written to by using normal
+    # file-like `write` calls; thus, the buflist should be populated with all
+    # of the content. The exporter/writer might have closed the file object (if
+    # so, we cannot read from it normally) so instead we should look at the
+    # buflist.
+    # NOTE(LB): This might be a really stupid implementation, but it's the best
+    # I could come up with so far.
     resp_content.writelines(content.buflist)
     del content
 
     # TODO(LB): A possible necessary optimization--in the future--would be to
     # iteratively stream large files.
     # TODO(LB): Large files could pose a memory consumption problem.
+    # TODO(LB): We also may want to limit the maximum file size of results sent
+    # via http.
     resp_value = resp_content.getvalue()
     resp_content.close()
     # TODO: Need to look at `content_type`, otherwise XML gets treated at HTML

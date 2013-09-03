@@ -10,6 +10,8 @@ Using Django's manage.py:
 
     $ python manage.py test --settings=test_db_settings
 
+    Note: You need to install Django South for this to work.
+
 Using nosetests:
 
-    $ (export DJANGO_SETTINGS_MODULE="openquakeserver.settings"; nosetests -v --with-coverage --cover-package=engine --cover-package=openquakeserver)
+    $ (export DJANGO_SETTINGS_MODULE="openquakeserver.settings"; nosetests -v --with-coverage --cover-package=openquakeserver)
