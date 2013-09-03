@@ -61,7 +61,7 @@ class ClassicalTestCase(unittest.TestCase):
 
         numpy.testing.assert_allclose(
             scientific.conditional_loss_ratio(loss_ratios1, poes1, 0.1),
-        scientific.conditional_loss_ratio(loss_ratios2, poes2, 0.1))
+            scientific.conditional_loss_ratio(loss_ratios2, poes2, 0.1))
 
     def test_conditional_loss_second(self):
         loss_ratios1, poes1 = zip(*[
