@@ -243,11 +243,18 @@ class GzippedField(djm.Field):
     """
     Automatically stores gzipped text as a bytearray
     """
+    __metaclass__ = djm.SubfieldBase
+
     def db_type(self, _connection):
         return 'bytea'
 
     def get_prep_value(self, value):
+        """Compress the value"""
         return bytearray(zlib.compress(value))
+
+    def to_python(self, value):
+        """Decompress the value"""
+        return zlib.decompress(value)
 
 
 class DictField(PickleField):
