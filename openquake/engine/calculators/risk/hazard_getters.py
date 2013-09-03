@@ -392,7 +392,7 @@ class BCRGetter(object):
             while 1:
                 hid, assets, orig = orig_gen.next()
                 _hid, _assets, retro = retro_gen.next()
-                yield hid, assets, orig, retro
+                yield hid, assets, (orig, retro)
         except StopIteration:
             pass
 

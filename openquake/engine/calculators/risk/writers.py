@@ -406,6 +406,10 @@ def combine_builders(builders):
 
 
 class LossCurveMapBuilder(OutputBuilder):
+    """
+    Create output containers for Loss Curves, Insured Loss Curves and
+    Loss Maps
+    """
     LOSS_CURVE_TYPE = "loss_curve"
 
     def individual_outputs(self, loss_type, hazard_output):
@@ -427,7 +431,21 @@ class LossCurveMapBuilder(OutputBuilder):
                 "loss_map"), poe=poe)
                 for poe in self.calc.rc.conditional_loss_poes or []]
 
-        return lc + maps
+        if loss_type != "fatalities" and self.calc.rc.insured_losses:
+            ins = [
+                models.LossCurve.objects.create(
+                    insured=True,
+                    loss_type=loss_type,
+                    hazard_output=hazard_output,
+                    output=models.Output.objects.create_output(
+                        self.calc.job,
+                        "insured loss curves. type=%s hazard %s" % (
+                            loss_type, hazard_output),
+                        self.LOSS_CURVE_TYPE))]
+        else:
+            ins = []
+
+        return lc + maps + ins
 
     def statistical_outputs(self, loss_type):
         mean_loss_curve = [models.LossCurve.objects.create(
@@ -513,23 +531,6 @@ class BCRMapBuilder(OutputBuilder):
                     self.calc.job,
                     "BCR Map. type=%s hazard=%s" % (loss_type, hazard_output),
                     "bcr_distribution"))]
-
-
-class InsuredLossCurveBuilder(OutputBuilder):
-    def individual_outputs(self, loss_type, hazard_output):
-        if loss_type != "fatalities" and self.calc.rc.insured_losses:
-            return [
-                models.LossCurve.objects.create(
-                    insured=True,
-                    loss_type=loss_type,
-                    hazard_output=hazard_output,
-                    output=models.Output.objects.create_output(
-                        self.calc.job,
-                        "insured loss curves. type=%s hazard %s" % (
-                            loss_type, hazard_output),
-                        "loss_curve"))]
-        else:
-            return []
 
 
 class LossFractionBuilder(OutputBuilder):

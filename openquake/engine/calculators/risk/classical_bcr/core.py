@@ -62,17 +62,15 @@ def classical_bcr(job_id, units, containers, _params):
 
 
 def do_classical_bcr(unit, containers, profile):
-    for hazard_output_id, outputs in unit.workflow(
-            unit.loss_type,
-            unit.getter(profile('getting hazard')),
-            profile('computing bcr')):
+    outputs, _stats = unit(profile('getting hazard'), profile('computing bcr'))
 
-        with profile('writing results'):
+    with profile('writing results'):
+        for out in outputs:
             containers.write(
                 unit.workflow.assets,
-                outputs,
+                out.output,
                 output_type="bcr_distribution",
-                hazard_output_id=hazard_output_id)
+                hazard_output_id=out.hid)
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
