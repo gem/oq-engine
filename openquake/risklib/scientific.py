@@ -375,7 +375,7 @@ class Distribution(object):
         that indicates the correlation between samples across
         different assets.
         """
-        assert correlation >=0 and correlation <= 1
+        assert correlation >= 0 and correlation <= 1
 
     @abc.abstractmethod
     def sample(self, means, covs, stddevs):
@@ -663,14 +663,33 @@ def insured_losses(losses, deductible, insured_limit):
     """
     Compute insured losses for the given asset and losses
 
-    :param asset: an :class:`openquake.risklib.scientific.Asset` instance
-    :param array loss_ratios: an array of loss ratios
+    :param losses: an array of ground-up loss ratios
+    :param float deductible: the deductible limit in fraction form
+    :param float insured_limit: the insured limit in fraction form
     """
 
-    return numpy.where(
-        losses < insured_limit,
-        numpy.where(losses < deductible, numpy.zeros(losses.shape), losses),
-        numpy.ones(losses.shape) * insured_limit)
+    return numpy.piecewise(
+        losses,
+        [losses < deductible, losses > insured_limit],
+        [0, insured_limit - deductible, lambda x: x - deductible])
+
+
+def insured_loss_curve(curve, deductible, insured_limit):
+    """
+    Compute an insured loss ratio curve given a loss ratio curve
+
+    :param curve: an array 2 x R (where R is the curve resolution)
+    :param float deductible: the deductible limit in fraction form
+    :param float insured_limit: the insured limit in fraction form
+    """
+    losses, poes = curve[:, curve[0] <= insured_limit]
+    limit_poe = interpolate.interp1d(
+        losses, poes,
+        bounds_error=False, fill_value=1)(deductible)
+    return numpy.array([
+        losses,
+        numpy.piecewise(poes, [poes > limit_poe], [limit_poe, lambda x: x])])
+
 
 ##
 ## Benefit Cost Ratio Analysis

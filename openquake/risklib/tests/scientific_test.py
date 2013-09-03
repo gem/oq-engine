@@ -43,6 +43,14 @@ class DegenerateDistributionTest(unittest.TestCase):
             1, self.distribution.survival(loss_ratio, mean, None))
 
 
+class BetaDistributionTestCase(unittest.TestCase):
+    def test_sample_one(self):
+        numpy.random.seed(0)
+        numpy.testing.assert_allclose(
+            [0.057241368], scientific.BetaDistribution().sample(
+                numpy.array([0.1]), None, numpy.array([0.1])))
+
+
 class TestMemoize(unittest.TestCase):
     def test_cache(self):
         m = mock.Mock(return_value=3)
@@ -196,9 +204,9 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # this LR are 0.
         # If LR = 0 and CoV = 0, the PoE will be 0.
         curve = scientific.VulnerabilityFunction(
-            [0.1, 0.2, 0.3, 0.45, 0.6],# IMLs
-            [0.0, 0.1, 0.2, 0.4, 1.2],  # loss ratios
-            [0.0, 0.0, 0.3, 0.2, 0.1],  # CoVs
+            [0.1, 0.2, 0.3, 0.45, 0.6],  # IMLs
+            [0.0, 0.1, 0.2, 0.4, 1.2],   # loss ratios
+            [0.0, 0.0, 0.3, 0.2, 0.1],   # CoVs
             'LN'
         )
         loss_ratios, lrem = curve.loss_ratio_exceedance_matrix(5)
@@ -413,3 +421,54 @@ class FragilityFunctionTestCase(unittest.TestCase):
         ffd2 = scientific.FragilityFunctionDiscrete([0.1], [0.1])
 
         self.assertTrue(ffd1 != ffd2)
+
+
+class InsuredLossesTestCase(unittest.TestCase):
+    def test_below_deductible(self):
+        numpy.testing.assert_allclose(
+            [0],
+            scientific.insured_losses(numpy.array([0.05]), 0.1, 1))
+        numpy.testing.assert_allclose(
+            [0, 0],
+            scientific.insured_losses(numpy.array([0.05, 0.1]), 0.1, 1))
+
+    def test_above_limit(self):
+        numpy.testing.assert_allclose(
+            [0.4],
+            scientific.insured_losses(numpy.array([0.6]), 0.1, 0.5))
+        numpy.testing.assert_allclose(
+            [0.4, 0.4],
+            scientific.insured_losses(numpy.array([0.6, 0.7]), 0.1, 0.5))
+
+    def test_in_range(self):
+        numpy.testing.assert_allclose(
+            [0.2],
+            scientific.insured_losses(numpy.array([0.3]), 0.1, 0.5))
+        numpy.testing.assert_allclose(
+            [0.2, 0.3],
+            scientific.insured_losses(numpy.array([0.3, 0.4]), 0.1, 0.5))
+
+    def test_mixed(self):
+        numpy.testing.assert_allclose(
+            [0, 0.1, 0.4],
+            scientific.insured_losses(numpy.array([0.05, 0.2, 0.6]), 0.1, 0.5))
+
+
+class InsuredLossCurveTestCase(unittest.TestCase):
+    def test_curve(self):
+        curve = numpy.array(
+            [numpy.linspace(0, 1, 11), numpy.linspace(1, 0, 11)])
+
+        numpy.testing.assert_allclose(
+            numpy.array([[0., 0.1, 0.2, 0.3, 0.4, 0.5],
+                         [0.8, 0.8, 0.8, 0.7, 0.6, 0.5]]),
+            scientific.insured_loss_curve(curve, 0.2, 0.5))
+
+    def test_trivial_curve(self):
+        curve = numpy.array(
+            [numpy.linspace(0, 1, 11), numpy.zeros(11)])
+
+        numpy.testing.assert_allclose(
+            [[0, 0.1, 0.2, 0.3, 0.4, 0.5],
+             [0, 0, 0, 0, 0, 0]],
+            scientific.insured_loss_curve(curve, 0.1, 0.5))

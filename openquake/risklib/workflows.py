@@ -23,13 +23,6 @@ from scipy import interpolate
 from openquake.risklib import calculators, utils, scientific
 
 
-#: A calculation unit a risklib.workflow, a getter that
-#: retrieves the data to work on, and the type of losses we are considering
-CalculationUnit = collections.namedtuple(
-    'CalculationUnit',
-    'loss_type workflow getter')
-
-
 class Asset(object):
     """
     Describe an Asset as a collection of several values. A value can
@@ -110,6 +103,10 @@ class Classical(object):
       the losses/poes dimensions
     :attr average_losses:
       a numpy array of N average loss values
+    :attr insured_curves:
+      a numpy array of N insured loss curves, shaped (N, 2, R)
+    :attr average_insured_losses:
+      a numpy array of N average insured loss values
     :attr loss_maps:
       a numpy array of P elements holding N loss maps where P is the
       number of `conditional_loss_poes` considered. Shape: (P, N)
@@ -145,7 +142,9 @@ class Classical(object):
 
     Output = collections.namedtuple(
         'Output',
-        'assets loss_curves average_losses loss_maps loss_fractions')
+        'assets loss_curves average_losses '
+        'insured_curves average_insured_losses '
+        'loss_maps loss_fractions')
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
@@ -157,11 +156,14 @@ class Classical(object):
                  vulnerability_function,
                  lrem_steps_per_interval,
                  conditional_loss_poes,
-                 poes_disagg):
+                 poes_disagg,
+                 insured_losses=False):
         """
         :param float poes_disagg:
             Probability of Exceedance levels used for disaggregate losses by
             taxonomy.
+        :param bool insured_losses:
+            True if insured loss curves should be computed
 
         See :func:`openquake.risklib.scientific.classical` for a description
         of the other parameters.
@@ -170,49 +172,46 @@ class Classical(object):
             vulnerability_function, lrem_steps_per_interval)
         self.maps = calculators.LossMap(conditional_loss_poes)
         self.fractions = calculators.LossMap(poes_disagg)
+        self.insured_losses = insured_losses
 
-        # needed to compute statistics
-        self._loss_curves = []
-        self._assets = None
-
-    def __call__(self, data, calc_monitor=None):
+    def __call__(self, loss_type, assets, hazard_curves):
         """
-        A generator of :class:`openquake.risklib.workflows.Classical.Output`
-        instances.
+        :returns:
+            a :class:`openquake.risklib.workflows.Classical.Output` instance.
 
-        :param data:
-           an iterator over tuples with form (hid, assets, curves) where
-           at each iteration a realization of hazard data is considered,
-           hid identifies the id of the hazard realization, assets is an
-           iterator over N assets, and curves is an iterator over N hazard
-           curves.
+        :param str loss_type: the loss type considered
 
-        :param calc_monitor:
-           a context manager the user can provide to log/monitor each
-           single output computation.
-
-        :NOTE: this function will collect all the loss curves as a
-        side effect in the field `_loss_curves` (if the number of realizations
-        is bigger than 1).
+        :param assets:
+           assets is an iterator over N
+           :class:`openquake.risklib.workflows.Asset` instances
+        :param hazard_curves:
+           curves is an iterator over hazard curves (numpy array shaped 2xR).
         """
-        monitor = calc_monitor or DummyMonitor()
+        curves = self.curves(hazard_curves)
+        average_losses = numpy.array([scientific.average_loss(losses, poes)
+                                      for losses, poes in curves])
+        maps = self.maps(curves)
+        fractions = self.fractions(curves)
 
-        for hid, assets, hazard_curves in data:
-            with monitor:
-                curves = self.curves(hazard_curves)
-                average_losses = numpy.array(
-                    [scientific.average_loss(losses, poes)
-                     for losses, poes in curves])
-                maps = self.maps(curves)
-                fractions = self.fractions(curves)
+        if self.insured_losses and loss_type != 'fatalities':
+            deductibles = [a.deductible(loss_type) for a in assets]
+            limits = [a.insurance_limit(loss_type) for a in assets]
 
-                self._loss_curves.append(curves)
-                self._assets = assets
+            insured_curves = utils.numpy_map(
+                scientific.insured_loss_curve, curves, deductibles, limits)
+            average_insured_losses = [
+                scientific.average_loss(losses, poes)
+                for losses, poes in insured_curves]
+        else:
+            insured_curves = None
+            average_insured_losses = None
 
-                yield hid, self.Output(
-                    assets, curves, average_losses, maps, fractions)
+        return self.Output(
+            assets,
+            curves, average_losses, insured_curves, average_insured_losses,
+            maps, fractions)
 
-    def statistics(self, weights, quantiles, post_processing):
+    def statistics(self, outputs, weights, quantiles, post_processing):
         """
         :returns:
             a :class:`openquake.risklib.workflows.Classical.StatisticalOutput`
@@ -228,8 +227,7 @@ class Classical(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        if len(self._loss_curves) < 2:
-            return
+        loss_curves = [out.loss_curves for out in outputs]
 
         def normalize_curves(curves):
             losses = curves[0][0]
@@ -240,12 +238,12 @@ class Classical(object):
              calculators.exposure_statistics(
                  [normalize_curves(curves)
                   for curves
-                  in numpy.array(self._loss_curves).transpose(1, 0, 2, 3)],
+                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
                  self.maps.poes + self.fractions.poes,
                  weights, quantiles, post_processing))
 
         return self.StatisticalOutput(
-            self._assets,
+            outputs[0].assets,
             mean_curves, mean_average_losses,
             mean_maps[0:len(self.maps.poes)],
             mean_maps[len(self.maps.poes):],
@@ -285,9 +283,15 @@ class ProbabilisticEventBased(object):
     :attr average_insured_losses:
       a numpy array of N average insured loss values
 
+    :attr stddev_insured_losses:
+      a numpy array holding N standard deviation of losses
+
     :attr loss_maps:
       a numpy array of P elements holding N loss maps where P is the
       number of `conditional_loss_poes` considered. Shape: (P, N)
+
+    :attr dict event_loss_table:
+      a dictionary mapping event ids to aggregate loss values
 
     The statistical outputs are stored into
     :class:`.ProbabilisticEventBased.StatisticalOutput`.
@@ -297,12 +301,14 @@ class ProbabilisticEventBased(object):
     Output = collections.namedtuple(
         'Output',
         "assets loss_matrix loss_curves average_losses stddev_losses "
-        "insured_curves average_insured_losses loss_maps")
+        "insured_curves average_insured_losses stddev_insured_losses "
+        "loss_maps event_loss_table")
 
     StatisticalOutput = collections.namedtuple(
         'StatisticalOutput',
         'assets mean_curves mean_average_losses '
-        'mean_maps quantile_curves quantile_average_losses quantile_maps')
+        'mean_maps quantile_curves quantile_average_losses quantile_maps '
+        'event_loss_table')
 
     def __init__(
             self,
@@ -316,90 +322,68 @@ class ProbabilisticEventBased(object):
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters
         """
-        self.assets = None
-        self._loss_curves = []
-        self.event_loss_table = collections.Counter()
-
         self.losses = calculators.ProbabilisticLoss(
             vulnerability_function, seed, asset_correlation)
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
         self.event_loss = calculators.EventLossTable()
-
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, data, monitor=None):
+    def __call__(self, loss_type, assets, (ground_motion_values, event_ids)):
         """
-        A generator of
-        :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
-        instances.
+        :returns:
+            a
+            :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
+            instance.
 
         :param str loss_type: the loss type considered
 
-        :param data:
-           an iterator over tuples with form (hid, assets, (gmvs, events))
-           where at each iteration a realization of hazard data is considered,
-           hid identifies the id of the hazard realization, assets is an
-           iterator over N assets, events is an array of E event ids,
-           gmvs is an array N x E ground motion values.
+        :param assets:
+           assets is an iterator over
+           :class:`openquake.risklib.workflows.Asset` instances
 
-        :param calc_monitor:
-           a context manager the user can provide to log/monitor each
-           single output computation.
+        :param ground_motion_values:
+           a numpy array with ground_motion_values shaped (N x R)
 
-        :NOTE: this function will collect all the loss curves as a
-        side effect in the field `_loss_curves` (if the number of realizations
-        is bigger than 1).
+        :param event_ids:
+           a numpy array of R event ID (integer)
         """
 
-        monitor = monitor or DummyMonitor()
+        loss_matrix = self.losses(ground_motion_values)
 
-        for hid, assets, (ground_motion_values, rupture_ids) in data:
-            self.assets = assets
+        curves = self.curves(loss_matrix)
+        average_losses = numpy.array([scientific.average_loss(losses, poes)
+                                      for losses, poes in curves])
+        stddev_losses = numpy.std(loss_matrix, axis=1)
 
-            with monitor:
-                loss_matrix = self.losses(ground_motion_values)
+        values = utils.numpy_map(lambda a: a.value(loss_type), assets)
+        maps = self.maps(curves)
+        elt = self.event_loss(loss_matrix.transpose() * values, event_ids)
 
-                curves = self.curves(loss_matrix)
-                self._loss_curves.append(curves)
+        if self.insured_losses and loss_type != 'fatalities':
+            deductibles = [a.deductible(loss_type) for a in assets]
+            limits = [a.insurance_limit(loss_type) for a in assets]
 
-                average_losses = numpy.array(
-                    [scientific.average_loss(losses, poes)
-                     for losses, poes in curves])
+            insured_loss_matrix = utils.numpy_map(
+                scientific.insured_losses, loss_matrix, deductibles, limits)
+            insured_curves = self.curves(insured_loss_matrix)
+            average_insured_losses = [
+                scientific.average_loss(losses, poes)
+                for losses, poes in insured_curves]
+            stddev_insured_losses = numpy.std(insured_loss_matrix, axis=1)
+        else:
+            insured_curves = None
+            average_insured_losses = None
+            stddev_insured_losses = None
 
-                stddev_losses = numpy.std(loss_matrix, axis=1)
+        return self.Output(
+            assets, loss_matrix, curves,
+            average_losses, stddev_losses,
+            insured_curves, average_insured_losses, stddev_insured_losses,
+            maps, elt)
 
-                values = utils.numpy_map(lambda a: a.value(loss_type),
-                                         assets)
-                maps = self.maps(curves)
-
-                self.event_loss_table += self.event_loss(
-                    loss_matrix.transpose() * values, rupture_ids)
-
-                if self.insured_losses and loss_type != 'fatalities':
-                    deductibles = map(lambda a: a.deductible(loss_type),
-                                      assets)
-                    limits = map(lambda a: a.insurance_limit(loss_type),
-                                 assets)
-
-                    insured_curves = self.curves(
-                        utils.numpy_map(
-                            scientific.insured_losses,
-                            loss_matrix, deductibles, limits))
-                    average_insured_losses = [
-                        scientific.average_loss(losses, poes)
-                        for losses, poes in insured_curves]
-                else:
-                    insured_curves = None
-                    average_insured_losses = None
-
-            yield hid, self.Output(
-                assets, loss_matrix, curves,
-                average_losses, stddev_losses,
-                insured_curves, average_insured_losses, maps)
-
-    def statistics(self, weights, quantiles, post_processing):
+    def statistics(self, outputs, weights, quantiles, post_processing):
         """
         :returns:
             a :class:`.ProbabilisticEventBased.StatisticalOutput`
@@ -415,19 +399,20 @@ class ProbabilisticEventBased(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        if len(self._loss_curves) < 2:
-            return
+        loss_curves = [out.loss_curves for out in outputs]
+        curve_matrix = numpy.array(loss_curves).transpose(1, 0, 2, 3)
 
-        curve_matrix = numpy.array(self._loss_curves).transpose(1, 0, 2, 3)
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
-            calculators.exposure_statistics(
-                [self._normalize_curves(curves) for curves in curve_matrix],
-                self.maps.poes, weights, quantiles, post_processing))
+             calculators.exposure_statistics(
+                 [self._normalize_curves(curves) for curves in curve_matrix],
+                 self.maps.poes, weights, quantiles, post_processing))
+        elt = sum((out.event_loss_table for out in outputs),
+                  collections.Counter())
 
         return self.StatisticalOutput(
-            self.assets, mean_curves, mean_average_losses, mean_maps,
-            quantile_curves, quantile_average_losses, quantile_maps)
+            outputs[0].assets, mean_curves, mean_average_losses, mean_maps,
+            quantile_curves, quantile_average_losses, quantile_maps, elt)
 
     def _normalize_curves(self, curves):
         non_trivial_curves = [(losses, poes)
@@ -461,30 +446,27 @@ class ClassicalBCR(object):
             vulnerability_function_retro,
             lrem_steps_per_interval)
 
-    def __call__(self, loss_type, data, monitor=None):
-        monitor = monitor or DummyMonitor()
-        for hid, assets, orig, retro in data:
-            self.assets = assets
-            with monitor:
-                original_loss_curves = self.curves_orig(orig)
-                retrofitted_loss_curves = self.curves_retro(retro)
+    def __call__(self, loss_type, assets, (orig, retro)):
+        self.assets = assets
+        original_loss_curves = self.curves_orig(orig)
+        retrofitted_loss_curves = self.curves_retro(retro)
 
-                eal_original = [
-                    scientific.average_loss(losses, poes)
-                    for losses, poes in original_loss_curves]
+        eal_original = [
+            scientific.average_loss(losses, poes)
+            for losses, poes in original_loss_curves]
 
-                eal_retrofitted = [
-                    scientific.average_loss(losses, poes)
-                    for losses, poes in retrofitted_loss_curves]
+        eal_retrofitted = [
+            scientific.average_loss(losses, poes)
+            for losses, poes in retrofitted_loss_curves]
 
-                bcr_results = [
-                    scientific.bcr(
-                        eal_original[i], eal_retrofitted[i],
-                        self.interest_rate, self.asset_life_expectancy,
-                        asset.value(loss_type), asset.retrofitted(loss_type))
-                    for i, asset in enumerate(assets)]
+        bcr_results = [
+            scientific.bcr(
+                eal_original[i], eal_retrofitted[i],
+                self.interest_rate, self.asset_life_expectancy,
+                asset.value(loss_type), asset.retrofitted(loss_type))
+            for i, asset in enumerate(assets)]
 
-            yield hid, zip(eal_original, eal_retrofitted, bcr_results)
+        return zip(eal_original, eal_retrofitted, bcr_results)
 
 
 class ProbabilisticEventBasedBCR(object):
@@ -510,30 +492,28 @@ class ProbabilisticEventBasedBCR(object):
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
 
-    def __call__(self, loss_type, data, monitor=None):
-        monitor = monitor or DummyMonitor()
-        for hid, assets, (orig, _), (retro, __) in data:
-            self.assets = assets
-            with monitor:
-                original_loss_curves = self.curves(self.losses_orig(orig))
-                retrofitted_loss_curves = self.curves(self.losses_retro(retro))
+    def __call__(self, loss_type, assets, ((orig, _), (retro, __))):
+        self.assets = assets
 
-                eal_original = [
-                    scientific.average_loss(losses, poes)
-                    for losses, poes in original_loss_curves]
+        original_loss_curves = self.curves(self.losses_orig(orig))
+        retrofitted_loss_curves = self.curves(self.losses_retro(retro))
 
-                eal_retrofitted = [
-                    scientific.average_loss(losses, poes)
-                    for losses, poes in retrofitted_loss_curves]
+        eal_original = [
+            scientific.average_loss(losses, poes)
+            for losses, poes in original_loss_curves]
 
-                bcr_results = [
-                    scientific.bcr(
-                        eal_original[i], eal_retrofitted[i],
-                        self.interest_rate, self.asset_life_expectancy,
-                        asset.value(loss_type), asset.retrofitted(loss_type))
-                    for i, asset in enumerate(assets)]
+        eal_retrofitted = [
+            scientific.average_loss(losses, poes)
+            for losses, poes in retrofitted_loss_curves]
 
-            yield hid, zip(eal_original, eal_retrofitted, bcr_results)
+        bcr_results = [
+            scientific.bcr(
+                eal_original[i], eal_retrofitted[i],
+                self.interest_rate, self.asset_life_expectancy,
+                asset.value(loss_type), asset.retrofitted(loss_type))
+            for i, asset in enumerate(assets)]
+
+        return zip(eal_original, eal_retrofitted, bcr_results)
 
 
 class Scenario(object):
@@ -545,37 +525,64 @@ class Scenario(object):
             vulnerability_function, seed, asset_correlation)
         self.insured_losses = insured_losses
 
-    def __call__(self, loss_type, data, monitor=None):
-        hid, assets, gmvs = data.next()
+    def __call__(self, loss_type, assets, ground_motion_values):
         values = numpy.array([a.value(loss_type) for a in assets])
 
-        with monitor or DummyMonitor():
-            loss_ratio_matrix = self.losses(gmvs)
-            aggregate_losses = numpy.sum(
-                loss_ratio_matrix.transpose() * values, axis=1)
+        loss_ratio_matrix = self.losses(ground_motion_values)
+        aggregate_losses = numpy.sum(
+            loss_ratio_matrix.transpose() * values, axis=1)
 
-            if self.insured_losses and loss_type != "fatalities":
-                deductibles = utils.numpy_map(
-                    lambda a: a.deductible(loss_type), assets)
-                limits = utils.numpy_map(
-                    lambda a: a.insurance_limit(loss_type), assets)
-                insured_loss_ratio_matrix = utils.numpy_map(
-                    scientific.insured_losses,
-                    loss_ratio_matrix,
-                    deductibles,
-                    limits)
+        if self.insured_losses and loss_type != "fatalities":
+            deductibles = [a.deductible(loss_type) for a in assets]
+            limits = [a.insurance_limit(loss_type) for a in assets]
+            insured_loss_ratio_matrix = utils.numpy_map(
+                scientific.insured_losses,
+                loss_ratio_matrix, deductibles, limits)
 
-                # FIXME(lp): transpose the matrix back
-                insured_loss_matrix = (
-                    insured_loss_ratio_matrix.transpose() * values)
+            insured_loss_matrix = (
+                insured_loss_ratio_matrix.transpose() * values).transpose()
 
-                insured_losses = numpy.array(insured_loss_matrix).sum(axis=1)
-            else:
-                insured_loss_matrix = None
-                insured_losses = None
+            insured_losses = numpy.array(insured_loss_matrix).sum(axis=0)
+        else:
+            insured_loss_matrix = None
+            insured_losses = None
 
-        return (hid, assets, loss_ratio_matrix, aggregate_losses,
+        return (assets, loss_ratio_matrix, aggregate_losses,
                 insured_loss_matrix, insured_losses)
+
+
+class CalculationUnit(object):
+    """
+    A calculation unit a risklib.workflow, a getter that
+    retrieves the data to work on, and the type of losses we are considering
+    """
+    UnitOutput = collections.namedtuple('RealizationOutput', 'hid output')
+
+    def __init__(self, loss_type, workflow, getter):
+        self.loss_type = loss_type
+        self.workflow = workflow
+        self.getter = getter
+
+    # FIXME(lp). move quantiles into a Calculator
+    def __call__(self, getter_monitor=None, calc_monitor=None,
+                 post_processing=None, quantiles=None):
+        getter_monitor = getter_monitor or DummyMonitor()
+        calc_monitor = calc_monitor or DummyMonitor()
+
+        outputs = []
+        for hid, assets, hazard_data in self.getter(getter_monitor):
+            with calc_monitor:
+                output = self.workflow(self.loss_type, assets, hazard_data)
+            outputs.append(self.UnitOutput(hid, output))
+
+        if len(outputs) > 1 and hasattr(self.workflow, 'statistics'):
+            return outputs, self.workflow.statistics(
+                [out.output for out in outputs],
+                self.getter.weights(),
+                quantiles,
+                post_processing)
+        else:
+            return outputs, None
 
 
 class DummyMonitor(object):
