@@ -14,15 +14,16 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-This module defines a Node class, together with a few convertion
+This module defines a Node class, together with a few conversion
 functions which are able to convert NRML files into a hierarchical
-Document Object Model (DOM).  That makes it easier to read and write
-XML from Python. Such features are used in the command line convertion tools
-CSV<->XML. The Node class is kept intentionally similar to an Element
-class, however it overcomes the limitation of ElementTree: in
-particular a node can manage a lazy iterable of subnodes, whereas
-ElementTree wants to keep everything in memory. Moreover the Node
-class provides a convenient dot notation to access subnodes.
+Document Object Model (DOM). That makes it easier to read and write
+XML from Python and viceversa. Such features are used in the command
+line conversion tools CSV<->XML. The Node class is kept intentionally
+similar to an Element class, however it overcomes the limitation of
+ElementTree: in particular a node can manage a lazy iterable of
+subnodes, whereas ElementTree wants to keep everything in
+memory. Moreover the Node class provides a convenient dot notation to
+access subnodes.
 
 The Node class is instantiated with four arguments:
 
@@ -36,7 +37,7 @@ If a node has subnodes, its value must be None.
 For instance, here is an example of instantiating a root node
 with two subnodes a and b:
 
->>> from openquake.nrmllib.utils import Node
+>>> from openquake.nrmllib.node import Node
 >>> a = Node('a', {}, text='A1')
 >>> b = Node('b', {'attrb': 'B'}, 'B1')
 >>> root = Node('root', nodes=[a, b])
@@ -114,9 +115,9 @@ tree in memory. Here is an example:
 The lazytree object defined here consumes no memory, because the
 nodes are not created a instantiation time. They are created as
 soon as you start iterating on the lazytree. In particular
-list(lazytree) would generated all of them. If your goal is to
-store the tree on the filesystem in XML format, you should use
-a saving routing converting a subnode at the time, without
+list(lazytree) will generated all of them. If your goal is to
+store the tree on the filesystem in XML format you should use
+a writing routing converting a subnode at the time, without
 requiring the full list of them. For convenience, nrmllib.writers
 provide an StreamingXMLWriter just for that purpose.
 
@@ -124,10 +125,20 @@ Lazy trees should *not* be used unless it is necessary to save
 memory; the problem is that if you use a lazy tree the slice
 notation will not work (the underlying generator will not accept
 it); moreover it will not be possible to iterate twice on the
-subnodes, since the generator will be exhausted, as usual.
+subnodes, since the generator will be exhausted.
 
 From Node objects to NRML files and viceversa
 ------------------------------------------------------
+
+It is possible to save a Node object into a NRML file
+by using the function ``node_to_nrml(node, output)``
+where output is a file object. If you want to make
+sure that the generated file is valid according to the NRML
+schema just open it in 'w+' mode. It is also possible
+to convert a NRML file into a Node object with the
+routine ``node_from_nrml(node, input)`` where input is
+the path name of the NRML file or a file object opened
+for reading. The file will be validated as soon as opened.
 
 For instance an exposure file like the following::
 
@@ -160,10 +171,8 @@ can be converted as follows:
 >> from openquake.nrmllib.utils import node_from_nrml
 >> nrml = node_from_nrml(<path_to_the_exposure_file.xml>)
 
->> nrml.exposureModel.description
-<description {} 
-      Sample population
-     []>
+Then subnodes and attributes can be conveniently accessed:
+
 >> nrml.exposureModel.assets[0]['taxonomy']
 'IT-PV'
 >> nrml.exposureModel.assets[0]['id']
@@ -186,7 +195,7 @@ from lxml import etree
 ######################## Node management ##############################
 
 def strip_fqtag(tag):
-    "Convert a (fully qualified) tag into a valid Python identifier"
+    """Get the short representation of a fully qualified tag"""
     s = str(tag)
     pieces = s.rsplit('}', 1)  # split on '}', to remove the namespace part
     if len(pieces) == 2:
@@ -200,7 +209,7 @@ def _displayattrs(attrib, expandattrs):
         return ''
     if expandattrs:
         alist = ['%s=%s' % (strip_fqtag(k), v)
-                 for (k, v) in attrib.iteritems()]
+                 for (k, v) in sorted(attrib.iteritems())]
     else:
         alist = map(strip_fqtag, attrib)
     return '{%s}' % ', '.join(alist)
@@ -486,70 +495,3 @@ def node_to_ini(node, output=sys.stdout):
         for name, value in sorted(subnode.attrib.iteritems()):
             output.write(u'%s=%s\n' % (name, value))
     output.flush()
-
-
-################### string manipulation routines for NRML ####################
-
-_LINESTRING_FMT = 'LINESTRING(%s)'
-_POLYGON_FMT = 'POLYGON((%s))'
-
-
-def _group_point_coords(coords, dims):
-    """
-    Given a 1D `list` of coordinates, group them into blocks of points with a
-    block size equal to ``dims``, return a 2D `list`.
-
-    :param list coords:
-        `list` of coords, as `str` or `float` values.
-    :param int dims:
-        Number of dimensions for the geometry (typically 2 or 3).
-    """
-    coords = [str(x) for x in coords]
-    return [coords[i:i + dims] for i in xrange(0, len(coords), dims)]
-
-
-def _make_wkt(fmt, points):
-    """
-    Given a format string and a `list` of point pairs or triples, generate a
-    WKT representation of the geometry.
-
-    :param str fmt:
-        Format string for the desired type of geometry to represent with WKT.
-    :param points:
-        Sequence of point pairs or triples, as `list` or `tuple` objects.
-    """
-    wkt = fmt % ', '.join(
-        [' '.join(pt) for pt in points])
-    return wkt
-
-
-def coords_to_poly_wkt(coords, dims):
-    """
-    Given a 1D list of coordinates and the desired number of dimensions,
-    generate POLYGON WKT.
-
-    :param list coords:
-        `list` of coords, as `str` or `float` values.
-    :param int dims:
-        Number of dimensions for the geometry (typically 2 or 3).
-    """
-    points = _group_point_coords(coords, dims)
-    # Form a closed loop:
-    points.append(points[0])
-
-    return _make_wkt(_POLYGON_FMT, points)
-
-
-def coords_to_linestr_wkt(coords, dims):
-    """
-    Given a 1D list of coordinates and the desired number of dimensions,
-    generate LINESTRING WKT.
-
-    :param list coords:
-        `list` of coords, as `str` or `float` values.
-    :param int dims:
-        Number of dimensions for the geometry (typically 2 or 3).
-    """
-    points = _group_point_coords(coords, dims)
-
-    return _make_wkt(_LINESTRING_FMT, points)
