@@ -186,13 +186,58 @@ Then subnodes and attributes can be conveniently accessed:
 import sys
 import cStringIO
 import ConfigParser
-from openquake.hazardlib.slots import with_slots
 from openquake import nrmllib
 from openquake.nrmllib.writers import StreamingXMLWriter
 from lxml import etree
 
 
-######################## Node management ##############################
+## this is duplicated from hazardlib to avoid a dependency
+def with_slots(cls):
+    """
+    Decorator for a class with __slots__. It automatically defines
+    the methods __eq__, __ne__, assert_equal, __getstate__ and __setstate__
+    """
+    def _compare(self, other):
+        for slot in self.__class__.__slots__:
+            source = getattr(self, slot)
+            target = getattr(other, slot)
+            yield slot, source, target, source == target
+
+    def __eq__(self, other):
+        """True if self and other have the same slots"""
+        return all(eq for slot, source, target, eq in _compare(self, other))
+
+    def __ne__(self, other):
+        """True if self and other have different slots"""
+        return not self.__eq__(other)
+
+    def assert_equal(self, other):
+        """Check if self and other have the same slots"""
+        for slot, source, target, eq in _compare(self, other):
+            if not eq:
+                raise AssertionError('slot %s: %s is different from %s' %
+                                     (slot, source, target))
+
+    def __getstate__(self):
+        """Return a dictionary with the slots"""
+        return dict((slot, getattr(self, slot))
+                    for slot in self.__class__.__slots__)
+
+    def __setstate__(self, state):
+        """Set the slots"""
+        for slot in self.__class__.__slots__:
+            setattr(self, slot, state[slot])
+
+    cls.__slots__  # raise an AttributeError for missing slots
+    cls.__eq__ = __eq__
+    cls.__ne__ = __ne__
+    cls.assert_equal = assert_equal
+    cls.__getstate__ = __getstate__
+    cls.__setstate__ = __setstate__
+    return cls
+
+
+######################## utilities for the Node class #########################
 
 def strip_fqtag(tag):
     """Get the short representation of a fully qualified tag"""
