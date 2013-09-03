@@ -20,6 +20,8 @@ import os
 import csv
 import json
 import zipfile
+import itertools
+from operator import itemgetter
 from openquake.nrmllib.utils import node_from_nrml, node_to_nrml, Node
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.readers import ZipReader
@@ -57,15 +59,15 @@ def build_node(readers, output=None):
 
 def parse_nrml(fname):
     """
-    Parse a NRML file and yields metadata, data.
+    Parse a NRML file and yields metadata dictionaries.
 
     :param fname: filename or file object
     """
     model = node_from_nrml(fname)[0]
     parser = globals()['parse_%s' % model.tag.lower()]
-    for metadata, data in parser(model):
+    for metadata in parser(model):
         metadata['tag'] = model.tag
-        yield metadata, data
+        yield metadata
 
 
 ############################# vulnerability #################################
@@ -95,7 +97,8 @@ def parse_vulnerabilitymodel(vm):
             fieldnames.append('%s.coefficientsVariation' % vf_id)
             matrix.append(vf.lossRatio.text.split())
             matrix.append(vf.coefficientsVariation.text.split())
-        yield metadata, zip(*matrix)
+        metadata['data'] = zip(*matrix)
+        yield metadata
 
 
 def _mknode(reader, colname, attrib, rows):
@@ -175,7 +178,6 @@ def parse_fragilitymodel(fm):
                 assert ls == ffd['ls'], 'Expected %s, got %s' % (
                     ls, ffd['ls'])
                 matrix.append(ffd.poEs.text.split())
-            yield metadata, zip(*matrix)
         elif format == 'continuous':
             metadata['fieldnames'] = ['param'] + limitStates
             metadata['type'] = ffs.attrib.get('type')
@@ -186,7 +188,8 @@ def parse_fragilitymodel(fm):
                 assert ls == ffc['ls'], 'Expected %s, got %s' % (
                     ls, ffc['ls'])
                 matrix.append([ffc.params['mean'], ffc.params['stddev']])
-            yield metadata, zip(*matrix)
+        metadata['data'] = zip(*matrix)
+        yield metadata
 
 
 def fragilitymodel_from(md_list):
@@ -297,8 +300,8 @@ def parse_exposuremodel(em):
                 + getcosts(asset, costcolumns)
                 + getoccupancies(asset)
                 for asset in em.assets)
-
-    yield metadata, data
+    metadata['data'] = data
+    yield metadata
 
 
 def assetgenerator(rows, costtypes):
@@ -378,39 +381,107 @@ def exposuremodel_from(md_list):
 
 ################################# gmf ##################################
 
-# lon,lat,gmv.PGA,gmv.PGV,gmv.SA(0.1)
-def parse_gmf(gmfset):
+def copyIMT(attrib, metadata):
+    md = metadata.copy()
+    md['IMT'] = attrib['IMT']
+    saPeriod = attrib.get('saPeriod')
+    saDamping = attrib.get('saDamping')
+    if saPeriod:
+        md['saPeriod'] = saPeriod
+    if saDamping:
+        md['saDamping'] = saDamping
+    return md
+
+
+def parse_gmfset(gmfset):
     """
-    A parser for GMF yielding pairs (metadata, data)
+    A parser for GMF scenario yielding pairs (metadata, data)
+    for each node <gmf>.
     """
     for gmf in gmfset.getnodes('gmf'):
-        imt = gmf['IMT']
-        period = gmf.attrib.get('saPeriod', '')
-        if period:
-            imt += '(%s)' % period
-        metadata = dict(imt=imt, fieldnames=['lon', 'lat'])
-        data = [(n['gmv'], n['lon'], n['lat']) for n in gmf]
-        yield metadata, data
+        metadata = copyIMT(gmf.attrib, {})
+        metadata['fieldnames'] = ['lon', 'lat', 'gmv']
+        metadata['data'] = [(n['lon'], n['lat'], n['gmv']) for n in gmf]
+        yield metadata
 
 
-def gmf_from(md_list):
-    raise NotImplementedError
+def parse_gmfcollection(gmfcoll):
+    """
+    A parser for GMF event based yielding pairs (metadata, data)
+    for each node <gmf> corresponding to a given rupture and IMT.
+    """
+    metadata = dict(sourceModelTreePath=gmfcoll['sourceModelTreePath'],
+                    gsimTreePath=gmfcoll['gsimTreePath'])
+    for gmfset in gmfcoll.getnodes('gmfSet'):
+        md = metadata.copy()
+        md['investigationTime'] = gmfset['investigationTime']
+        md['stochasticEventSetId'] = gmfset['stochasticEventSetId']
+        for gmf in gmfset.getnodes('gmf'):
+            mdata = copyIMT(gmf.attrib, md)
+            mdata['ruptureId'] = gmf['ruptureId']
+            mdata['fieldnames'] = ['lon', 'lat', 'gmv']
+            mdata['data'] = [(n['lon'], n['lat'], n['gmv']) for n in gmf]
+            yield mdata
+
+
+def gmfcollection_from(md_list):
+    """
+    Build a node from a list of metadata dictionaries with readers
+    """
+    assert len(md_list) > 1
+    md = md_list[0]
+    gmfcoll = Node('gmfCollection', dict(
+        sourceModelTreePath=md['sourceModelTreePath'],
+        gsimTreePath=md['gsimTreePath']))
+    for ses_id, md_group in itertools.groupby(
+            md_list, itemgetter('stochasticEventSetId')):
+        mds = list(md_group)
+        gmfset = Node('gmfSet', dict(
+            investigationTime=mds[0]['investigationTime'],
+            stochasticEventSetId=ses_id))
+        for md in mds:  # metadatas for the same ses
+            attrib = copyIMT(md, {})
+            attrib['ruptureId'] = md['ruptureId']
+            gmf = Node('gmf', attrib)
+            for row in md['reader']:
+                lon, lat, gmv = [row[f] for f in md['fieldnames']]
+                gmf.append(Node('node', dict(gmv=gmv, lon=lon, lat=lat)))
+            gmfset.append(gmf)
+        gmfcoll.append(gmfset)
+    return gmfcoll
+
+
+def gmfset_from(md_list):
+    """
+    Build a node from a list of metadata dictionaries with readers
+    """
+    assert len(md_list) > 1
+    gmfcoll = Node('gmfSet')
+    for md in md_list:
+        attrib = copyIMT(md, {})
+        gmf = Node('gmf', attrib)
+        for row in md['reader']:
+            lon, lat, gmv = [row[f] for f in md['fieldnames']]
+            gmf.append(Node('node', dict(gmv=gmv, lon=lon, lat=lat)))
+        gmfcoll.append(gmf)
+    return gmfcoll
 
 
 ################################# generic #####################################
 
 def convert_nrml_to_flat(fname, outfname):
     """
-    Convert a NRML file into .csv and .json files. Returns the pathnames
+    Convert a NRML file into .csv and .json files. Returns the path names
     of the generated files.
 
     :param fname: path to a NRML file of kind <path>.xml
     :param outfname: output path, for instance <path>.csv
     """
     tozip = []
-    for i, (metadata, data) in enumerate(parse_nrml(fname)):
+    for i, metadata in enumerate(parse_nrml(fname)):
         with open(outfname[:-4] + '__%d.json' % i, 'w') as jsonfile:
             with open(outfname[:-4] + '__%d.csv' % i, 'w') as csvfile:
+                data = metadata.pop('data')
                 json.dump(metadata, jsonfile, sort_keys=True, indent=2)
                 tozip.append(jsonfile.name)
                 cw = csv.writer(csvfile)

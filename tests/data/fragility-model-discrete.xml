@@ -20,8 +20,8 @@
                 RC/DMRF-D/LR
             </taxonomy>
             <IML
-             imlUnit="g"
              IMT="MMI"
+             imlUnit="g"
             >
                 7 8 9 10 11
             </IML>
@@ -59,8 +59,8 @@
                 RC/DMRF-D/HR
             </taxonomy>
             <IML
-             imlUnit="g"
              IMT="MMI"
+             imlUnit="g"
             >
                 7 8 9 10 11
             </IML>

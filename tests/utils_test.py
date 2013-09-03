@@ -175,8 +175,8 @@ param=yyy
 >
     <exposureModel
      category="population"
-     taxonomySource="fake population datasource"
      id="my_exposure_model_for_population"
+     taxonomySource="fake population datasource"
     >
         <description>
             
@@ -185,16 +185,16 @@ param=yyy
         </description>
         <assets>
             <asset
-             taxonomy="IT-PV"
              id="asset_01"
              number="7"
+             taxonomy="IT-PV"
             >
                 <location lat="45.16667" lon="9.15000"/>
             </asset>
             <asset
-             taxonomy="IT-CE"
              id="asset_02"
              number="7"
+             taxonomy="IT-CE"
             >
                 <location lat="45.12200" lon="9.15333"/>
             </asset>

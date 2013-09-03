@@ -37,7 +37,10 @@ class _PrettyXMLGenerator(XMLGenerator):
         if not attrs:
             self._write('<%s>' % name)
         else:
-            XMLGenerator.startElement(self, name, attrs)
+            self._write('<' + name)
+            for (name, value) in sorted(attrs.items()):
+                self._write(' %s=%s' % (name, quoteattr(value)))
+            self._write('>')
 
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""

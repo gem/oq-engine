@@ -6,8 +6,8 @@
 >
     <exposureModel
      category="buildings"
-     taxonomySource="PAGER"
      id="my_exposure_model"
+     taxonomySource="PAGER"
     >
         <description>
             Sample buildings
@@ -25,10 +25,10 @@
         </conversions>
         <assets>
             <asset
-             taxonomy="RC/DMRF-D/LR"
              area="120"
-             number="7"
              id="asset_01"
+             number="7"
+             taxonomy="RC/DMRF-D/LR"
             >
                 <location lat="45.16667" lon="9.15000"/>
                 <costs>
@@ -44,10 +44,10 @@
                 </occupancies>
             </asset>
             <asset
-             taxonomy="RC/DMRF-D/HR"
              area="119"
-             number="7"
              id="asset_02"
+             number="7"
+             taxonomy="RC/DMRF-D/HR"
             >
                 <location lat="45.12200" lon="9.15333"/>
                 <costs>
@@ -63,10 +63,10 @@
                 </occupancies>
             </asset>
             <asset
-             taxonomy="RC/DMRF-D/LR"
              area="118"
-             number="5"
              id="asset_03"
+             number="5"
+             taxonomy="RC/DMRF-D/LR"
             >
                 <location lat="45.17999" lon="9.14777"/>
                 <costs>
