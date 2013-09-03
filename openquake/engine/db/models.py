@@ -506,7 +506,7 @@ class ModelContent(djm.Model):
     Stores raw content for the various input model files.
     '''
 
-    # contains the raw text of an input file
+    # contains the raw text of a gzipped UTF-8 input file
     raw_content = fields.GzippedField()
     # `content_type` should be used to indicate the file format
     # (xml, csv, etc.)
@@ -521,7 +521,7 @@ class ModelContent(djm.Model):
         """
         Returns raw_content in UTF-8
         """
-        return zlib.decompress(self.raw_content).encode('utf-8')
+        return zlib.decompress(self.raw_content)
 
     @property
     def as_string_io(self):
