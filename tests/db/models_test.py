@@ -539,7 +539,8 @@ class ModelContentTestCase(unittest.TestCase):
     def test_compress_decompress(self):
         # test the gzip functionality for the raw_content field
         xml = u'<nrml>così</nrml>'.encode('utf-8')
-        mc = models.ModelContent(raw_content=xml, content_type='text/xml')
+        mc = models.ModelContent(
+            raw_content=zlib.compress(xml), content_type='text/xml')
         mc.save()  # calls GzippedField.get_prep_value
         saved = models.ModelContent.objects.get(pk=mc.id)
-        self.assertEqual(saved.raw_content_utf8, xml)
+        self.assertEqual(saved.raw_content, xml)
