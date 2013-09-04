@@ -46,7 +46,7 @@ class PerformanceMonitor(object):
         2) there is an attribute self.job.id
         """
         def newmeth(self):
-            with cls(method.__name__, self.job.id):
+            with cls(method.__name__, self.job.id, flush=True):
                 return method(self)
         newmeth.__name__ = method.__name__
         return newmeth
