@@ -15,32 +15,33 @@
 
 """
 This module defines a Node class, together with a few conversion
-functions which are able to convert NRML files into a hierarchical
-Document Object Model (DOM). That makes it easier to read and write
-XML from Python and viceversa. Such features are used in the command
-line conversion tools CSV<->XML. The Node class is kept intentionally
-similar to an Element class, however it overcomes the limitation of
-ElementTree: in particular a node can manage a lazy iterable of
-subnodes, whereas ElementTree wants to keep everything in
-memory. Moreover the Node class provides a convenient dot notation to
-access subnodes.
+functions which are able to convert NRML files into hierarchical
+objects (DOM). That makes it easier to read and write XML from Python
+and viceversa. Such features are used in the command-line conversion
+tools. The Node class is kept intentionally similar to an
+Element class, however it overcomes the limitation of ElementTree: in
+particular a node can manage a lazy iterable of subnodes, whereas
+ElementTree wants to keep everything in memory. Moreover the Node
+class provides a convenient dot notation to access subnodes.
 
 The Node class is instantiated with four arguments:
 
 1. the node tag (a mandatory string)
-2. the node attributes (a mandatory dictionary)
+2. the node attributes (a dictionary)
 3. the node value (a string or None)
 4. the subnodes (an iterable over nodes)
 
-If a node has subnodes, its value must be None.
+If a node has subnodes, its value should be None.
 
 For instance, here is an example of instantiating a root node
 with two subnodes a and b:
 
 >>> from openquake.nrmllib.node import Node
->>> a = Node('a', {}, text='A1')
+>>> a = Node('a', {}, 'A1')
 >>> b = Node('b', {'attrb': 'B'}, 'B1')
 >>> root = Node('root', nodes=[a, b])
+>>> root
+<root {} None ...>
 
 Node objects can be converted into nicely indented strings:
 
@@ -96,19 +97,19 @@ Node objects can be easily converted into ElementTree objects:
 >>> node_to_elem(root)  #doctest: +ELLIPSIS
 <Element root at ...>
 
-Thus it is trivial to generate the XML representation of a node:
+Then is trivial to generate the XML representation of a node:
 
 >>> from lxml import etree
 >>> print etree.tostring(node_to_elem(root))
 <root><a>A1</a><b attrb="B">B1</b></root>
 
-Generating large XML files is not an issue: the trick is to use a
-node generator, such that it is not necessary to keep the entire
-tree in memory. Here is an example:
+Generating XML files larger than the available memory require some
+care. The trick is to use a node generator, such that it is not
+necessary to keep the entire tree in memory. Here is an example:
 
 >>> def gen_many_nodes(N):
 ...     for i in xrange(N):
-...         yield Node('a', {}, text=str(i))
+...         yield Node('a', {}, 'Text for node %d' % i)
 
 >>> lazytree = Node('lazytree', {}, nodes=gen_many_nodes(10))
 
@@ -118,27 +119,30 @@ soon as you start iterating on the lazytree. In particular
 list(lazytree) will generated all of them. If your goal is to
 store the tree on the filesystem in XML format you should use
 a writing routing converting a subnode at the time, without
-requiring the full list of them. For convenience, nrmllib.writers
+requiring the full list of them. The routines provided by lxml
+and ElementTree are no good, however nrmllib.writers
 provide an StreamingXMLWriter just for that purpose.
 
 Lazy trees should *not* be used unless it is necessary to save
 memory; the problem is that if you use a lazy tree the slice
 notation will not work (the underlying generator will not accept
 it); moreover it will not be possible to iterate twice on the
-subnodes, since the generator will be exhausted.
+subnodes, since the generator will be exhausted. Notice that
+even accessing a subnode with the dot notation will avance the
+generator.
 
 From Node objects to NRML files and viceversa
 ------------------------------------------------------
 
-It is possible to save a Node object into a NRML file
-by using the function ``node_to_nrml(node, output)``
-where output is a file object. If you want to make
-sure that the generated file is valid according to the NRML
-schema just open it in 'w+' mode. It is also possible
-to convert a NRML file into a Node object with the
-routine ``node_from_nrml(node, input)`` where input is
-the path name of the NRML file or a file object opened
-for reading. The file will be validated as soon as opened.
+It is possible to save a Node object into a NRML file by using the
+function ``node_to_nrml(node, output)`` where output is a file
+object. If you want to make sure that the generated file is valid
+according to the NRML schema just open it in 'w+' mode: immediately
+after writing it will be read and validated. It is also possible to
+convert a NRML file into a Node object with the routine
+``node_from_nrml(node, input)`` where input is the path name of the
+NRML file or a file object opened for reading. The file will be
+validated as soon as opened.
 
 For instance an exposure file like the following::
 
@@ -181,6 +185,10 @@ Then subnodes and attributes can be conveniently accessed:
 '9.15000'
 >> nrml.exposureModel.assets[0].location['lat']
 '45.16667'
+
+The Node class provides no facility to cast strings into Python types;
+this is a job for a separate library which should be able to
+understand the types defined in the XSD schema.
 """
 
 import sys
@@ -192,10 +200,14 @@ from openquake.nrmllib.writers import StreamingXMLWriter
 from lxml import etree
 
 
-######################## Node management ##############################
+########################## various utilities ##############################
 
 def strip_fqtag(tag):
-    """Get the short representation of a fully qualified tag"""
+    """
+    Get the short representation of a fully qualified tag
+
+    :param str tag: a (fully qualified or not) XML tag
+    """
     s = str(tag)
     pieces = s.rsplit('}', 1)  # split on '}', to remove the namespace part
     if len(pieces) == 2:
@@ -204,14 +216,19 @@ def strip_fqtag(tag):
 
 
 def _displayattrs(attrib, expandattrs):
-    """Helper function to display the attributes of a Node object"""
+    """
+    Helper function to display the attributes of a Node object in lexicographic
+    order.
+
+    :param attrib: dictionary with the attributes
+    :param expandattrs: if True also displays the value of the attributes
+    """
     if not attrib:
         return ''
     if expandattrs:
-        alist = ['%s=%s' % (strip_fqtag(k), v)
-                 for (k, v) in sorted(attrib.iteritems())]
+        alist = ['%s=%s' % item for item in sorted(attrib.iteritems())]
     else:
-        alist = map(strip_fqtag, attrib)
+        alist = attrib.keys()
     return '{%s}' % ', '.join(alist)
 
 
@@ -227,10 +244,14 @@ def _display(node, indent, expandattrs, expandvals, output):
 def node_display(root, expandattrs=False, expandvals=False, output=sys.stdout):
     """
     Write an indented representation of the Node object on the output;
-    this is intended for debugging purposes. If expandattrs is True,
-    the values of the attributes are also printed, not only the names;
-    if expandvals is true, the values of the tags are also printed,
-    not only the names.
+    this is intended for testing/debugging purposes.
+
+    :param root: a Node object
+    :param bool expandattrs: if True, the values of the attributes are
+                             also printed, not only the names
+    :param bool expandvals: if True, the values of the tags are also printed,
+                            not only the names.
+    :param output: stream where to write the string representation of the node
     """
     _display(root, '', expandattrs, expandvals, output)
 
@@ -242,9 +263,8 @@ class Node(object):
     such as XML files. Node objects must be pickleable and must consume as
     little memory as possible. Moreover they must be easily converted from
     and to ElementTree objects. The advantage over ElementTree objects
-    is that subnodes can be accessed with the dot notation (if their name
-    is unique) or the square notation (if there are multiple nodes with
-    the same name).
+    is that subnodes can be lazily generated and that they can be accessed
+    with the dot notation.
     """
     __slots__ = ('tag', 'attrib', 'text', 'nodes')
 
@@ -361,14 +381,16 @@ def node_from_dict(dic, nodecls=Node):
     return nodecls(tag, attrib, nodes=map(node_from_dict, nodes))
 
 
-def node_to_dict(self):
+def node_to_dict(node):
     """
     Convert a Node object into a (nested) dictionary
     with attributes tag, attrib, text, nodes.
+
+    :param node: a Node-compatible object
     """
-    dic = dict(tag=self.tag, attrib=self.attrib, text=self.text)
-    if self.nodes:
-        dic['nodes'] = [node_to_dict(n) for n in self]
+    dic = dict(tag=node.tag, attrib=node.attrib, text=node.text)
+    if node.nodes:
+        dic['nodes'] = [node_to_dict(n) for n in node]
     return dic
 
 
@@ -412,6 +434,8 @@ def node_to_elem(self):
 def node_from_xml(xmlfile, nodecls=Node, parser=nrmllib.COMPATPARSER):
     """
     Convert a .xml file into a Node object.
+
+    :param xmlfile: a file name or file object open for reading
     """
     root = etree.parse(xmlfile, parser).getroot()
     return node_from_elem(root, nodecls)
@@ -421,7 +445,11 @@ def node_to_xml(node, output=sys.stdout):
     """
     Convert a Node object into a pretty .xml file without keeping
     everything in memory. If you just want the string representation
-    of a small tree use etree.tostring(node_to_elem(root)).
+    use nrml.writers.tostring(node).
+
+    :param node: a Node-compatible object
+                 (lxml nodes and ElementTree nodes are fine)
+
     """
     with StreamingXMLWriter(output) as w:
         w.serialize(node)
@@ -430,6 +458,8 @@ def node_to_xml(node, output=sys.stdout):
 def node_from_nrml(xmlfile, nodecls=Node):
     """
     Convert a NRML file into a Node object.
+
+    :param xmlfile: a file name or file object open for reading
     """
     root = nrmllib.assert_valid(xmlfile).getroot()
     node = node_from_elem(root, nodecls)
@@ -469,8 +499,7 @@ def node_from_ini(ini_file, nodecls=Node, root_name='ini'):
     """
     Convert a .ini file into a Node object.
 
-    :params ini_file: a filename or a file like object in read mode
-
+    :param ini_file: a filename or a file like object in read mode
     """
     fileobj = open(ini_file) if isinstance(ini_file, basestring) else ini_file
     cfp = ConfigParser.RawConfigParser()
