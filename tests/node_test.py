@@ -20,10 +20,6 @@ import unittest
 from openquake.nrmllib import node as n
 
 
-class NodeSubclass(n.Node):
-    pass
-
-
 class NodeTestCase(unittest.TestCase):
     """Tests for the Node class and related facilities"""
 
