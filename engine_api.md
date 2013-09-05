@@ -177,7 +177,7 @@ Response: Redirects to [/v1/calc/hazard/:calc_id](#get-v1calchazardcalc_id), whe
 
 #### GET /v1/calc/risk/run
 
-Get an HTML for posting new hazard calculations.
+Get an HTML form for posting new hazard calculations.
 
 Parameters: None
 
