@@ -73,22 +73,16 @@ def do_classical(unit, containers, params, profile):
     compute mean and quantile artifacts.
     """
 
-    for hazard_output_id, outputs in unit.workflow(
-            unit.getter(profile('getting data')),
-            profile('computing individual risk')):
-        with profile('saving individual risk'):
+    outputs, stats = unit(profile('getting data'),
+                          profile('computing individual risk'),
+                          post_processing, params.quantiles)
+
+    with profile('saving risk'):
+        for out in outputs:
             save_individual_outputs(
-                containers.with_args(hazard_output_id=hazard_output_id),
-                outputs,
-                params)
+                containers.with_args(hazard_output_id=out.hid),
+                out.output, params)
 
-    with profile('computing risk statistics'):
-        stats = unit.workflow.statistics(
-            unit.getter.weights(),
-            params.quantiles,
-            post_processing)
-
-    with profile('saving risk statistics'):
         if stats is not None:
             save_statistical_output(
                 containers.with_args(hazard_output_id=None), stats, params)
@@ -192,7 +186,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     core_calc_task = classical
 
     validators = base.RiskCalculator.validators + [
-        validation.RequireClassicalHazard]
+        validation.RequireClassicalHazard,
+        validation.ExposureHasInsuranceBounds]
 
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
@@ -215,7 +210,8 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 model.vulnerability_function,
                 self.rc.lrem_steps_per_interval,
                 self.rc.conditional_loss_poes,
-                self.rc.poes_disagg),
+                self.rc.poes_disagg,
+                self.rc.insured_losses),
             hazard_getters.HazardCurveGetterPerAsset(
                 self.rc.hazard_outputs(),
                 assets,
