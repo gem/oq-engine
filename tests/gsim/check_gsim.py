@@ -29,7 +29,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, PGV, PGD, SA
 
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
@@ -251,6 +251,8 @@ def _parse_csv_line(headers, values):
                 imt = PGA()
             elif param == 'pgv':
                 imt = PGV()
+            elif param == 'pgd':
+                imt = PGD()
             else:
                 period = float(param)
                 assert damping is not None

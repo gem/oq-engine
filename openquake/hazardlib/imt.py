@@ -20,7 +20,7 @@ types.
 import operator
 
 
-__all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')
+__all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CSV', 'RSD', 'MMI')
 
 
 class _IMT(tuple):
@@ -100,6 +100,12 @@ class IA(_IMT):
     the acceleration of transient seismic waves. Units are ``m/s``.
     """
 
+
+class CAV(_IMT):
+    """
+    Cumulative Absolute Velocity. Defins the integral of the absolute
+    acceleration time series. Units are "g-sec"
+    """
 
 class RSD(_IMT):
     """
