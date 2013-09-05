@@ -153,7 +153,7 @@ The requested result as a blob of text. If the desired `export_type` is not supp
 
 #### GET /v1/calc/hazard/run
 
-Get an HTML for posting new hazard calculations.
+Get an HTML form for posting new hazard calculations.
 
 Parameters: None
 
