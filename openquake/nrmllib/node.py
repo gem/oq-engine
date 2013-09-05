@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2013, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -280,7 +280,7 @@ def _displayattrs(attrib, expandattrs):
 def _display(node, indent, expandattrs, expandvals, output):
     """Core function to display a Node object"""
     attrs = _displayattrs(node.attrib, expandattrs)
-    val = ' ' + node.text if expandvals and node.text else ''
+    val = ' %s' % node.text if expandvals and node.text else ''
     output.write(indent + node.tag + attrs + val + '\n')
     for sub_node in node:
         _display(sub_node, indent + '  ', expandattrs, expandvals, output)
@@ -451,7 +451,7 @@ def node_from_elem(elem, nodecls=Node):
 
 
 # taken from https://gist.github.com/651801, which comes for the effbot
-def node_to_elem(self):
+def node_to_elem(root):
     """
     Convert (recursively) a Node object into an ElementTree object.
     """
@@ -470,7 +470,7 @@ def node_to_elem(self):
             generate_elem(append, x, level + 1)
     # generate code to create a tree
     output = []
-    generate_elem(output.append, self, 1)  # print "\n".join(output)
+    generate_elem(output.append, root, 1)  # print "\n".join(output)
     namespace = {"Element": etree.Element, "SubElement": etree.SubElement}
     exec "\n".join(output) in namespace
     return namespace["e1"]
