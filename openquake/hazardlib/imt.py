@@ -20,7 +20,7 @@ types.
 import operator
 
 
-__all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CSV', 'RSD', 'MMI')
+__all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI')
 
 
 class _IMT(tuple):
