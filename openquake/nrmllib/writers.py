@@ -24,13 +24,13 @@ class _PrettyXMLGenerator(XMLGenerator):
     indentation level.
     """
     indentlevel = 0
-    indent = '  '
+    indent = 2
 
     def _write(self, text):
         """Write text by respecting the current indentlevel"""
         if not isinstance(text, str):
             text = text.encode(self._encoding, 'xmlcharrefreplace')
-        self._out.write(self.indent * self.indentlevel + text + '\n')
+        self._out.write(' ' * self.indent * self.indentlevel + text + '\n')
 
     def startElement(self, name, attrs):
         """Start an element"""
@@ -59,10 +59,10 @@ class StreamingXMLWriter(object):
                 writer.serialize(node)
             writer.end_tag('root')
     """
-    def __init__(self, stream, indent='    '):
+    def __init__(self, stream, indent=4):
         """
         :param stream: the stream or a file where to write the XML
-        :param indent: the indentation to use in the XML (default 4 spaces)
+        :param int indent: the indentation to use in the XML (default 4 spaces)
         """
         self.stream = stream
         self._xgen = _PrettyXMLGenerator(stream, 'utf-8')
@@ -108,7 +108,7 @@ class StreamingXMLWriter(object):
         self._xgen.endDocument()
 
 
-def tostring(node, indent='    '):
+def tostring(node, indent=4):
     """
     Convert a node into an XML string by using the StreamingXMLWriter.
     This is useful for testing purposes.
