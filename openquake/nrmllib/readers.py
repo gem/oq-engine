@@ -19,13 +19,13 @@
 A library of Reader classes to read flat data from .csv + .json files
 """
 
-import io
 import os
 import csv
-import json
 import itertools
 import warnings
+import cStringIO
 from openquake.nrmllib import InvalidFile
+from openquake.nrmllib.node import node_from_xml
 
 
 def _make_readers(cls, container, fnames):
@@ -67,11 +67,11 @@ class Reader(object):
 
     def load_metadata(self, fileobj):
         try:
-            self.metadata = json.load(fileobj)
-        except ValueError:
-            raise InvalidFile(fileobj.name)
+            self.metadata = node_from_xml(fileobj)
+        except Exception as e:
+            raise InvalidFile('%s:%s' % (fileobj.name, e))
         try:
-            self.fieldnames = self.metadata['fieldnames']
+            self.fieldnames = self.metadata.fieldnames.text.split()
         except KeyError:
             raise InvalidFile('%s: missing fieldnames' % fileobj.name)
 
@@ -153,7 +153,29 @@ class ZipReader(Reader):
         return self.container.open(self.name + '.json')
 
 
-class FakeReader(Reader):
+class FileObject(object):
+    """A named cStringIO for reading"""
+    def __init__(self, name, bytestring):
+        self.name = name
+        self.io = cStringIO.StringIO(bytestring)
+
+    def __iter__(self):
+        return iter(self.io)
+
+    def readline(self):
+        return self.io.readline()
+
+    def read(self, n=-1):
+        return self.io.read(n)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        pass
+
+
+class StringReader(Reader):
     def __init__(self, name, json_str, csv_str):
         self.name = name
         self.json_str = json_str
@@ -161,11 +183,17 @@ class FakeReader(Reader):
         Reader.__init__(self, None, name)
 
     def opencsv(self):
-        fileobj = io.StringIO(unicode(self.csv_str))
-        fileobj.name = self.name + '.csv'
-        return fileobj
+        return FileObject(self.name + '.csv', self.csv_str)
 
     def openjson(self):
-        fileobj = io.StringIO(unicode(self.json_str))
-        fileobj.name = self.name + '.json'
-        return fileobj
+        return FileObject(self.name + '.json', self.json_str)
+
+
+class FakeReader(object):
+    def __init__(self, metadata, rows):
+        self.metadata = metadata
+        self.fieldnames = metadata.fieldnames.text.split()
+        self.rows = rows
+
+    def __iter__(self):
+        return iter(self.rows)

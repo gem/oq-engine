@@ -18,13 +18,14 @@
 
 import os
 import csv
-import json
+import warnings
 import zipfile
 import itertools
 from operator import itemgetter
-from openquake.nrmllib.utils import node_from_nrml, node_to_nrml, Node
+from openquake.nrmllib.node import (
+    node_from_nrml, node_to_nrml, node_to_xml, Node)
 from openquake.nrmllib import InvalidFile
-from openquake.nrmllib.readers import ZipReader
+from openquake.nrmllib.readers import ZipReader, FakeReader
 
 
 def build_node(readers, output=None):
@@ -34,7 +35,7 @@ def build_node(readers, output=None):
     save the corresponding NRML file.
     """
     assert readers
-    all_md = []
+    all_readers = []
     tag = None
     # group pairs of .csv and .json files and build a list of metadata
     for reader in readers:
@@ -44,14 +45,10 @@ def build_node(readers, output=None):
                              md['tag'], reader.name, tag))
         else:
             tag = md['tag']
-        try:
-            md['reader'] = reader
-        except ValueError:
-            raise InvalidFile(reader.name + '.csv')
-        all_md.append(md)
+        all_readers.append(reader)
 
     nodebuilder = globals()['%s_from' % md['tag'].lower()]
-    node = nodebuilder(all_md)
+    node = nodebuilder(all_readers)
     if output is not None:
         node_to_nrml(node, output)
     return node
@@ -64,51 +61,39 @@ def parse_nrml(fname):
     :param fname: filename or file object
     """
     model = node_from_nrml(fname)[0]
-    parser = globals()['parse_%s' % model.tag.lower()]
-    for metadata in parser(model):
-        metadata['tag'] = model.tag
-        yield metadata
+    parse = globals()['parse_%s' % model.tag.lower()]
+    for reader in parse(model):
+        reader.metadata['tag'] = model.tag
+        yield reader
 
 
 ############################# vulnerability #################################
 
 def parse_vulnerabilitymodel(vm):
     """
-    A parser for vulnerability models yielding pairs (metadata, data)
+    A parser for vulnerability models yielding readers
     """
     for vset in vm.getnodes('discreteVulnerabilitySet'):
-        metadata = dict(losscategory=vset['lossCategory'],
-                        assetcategory=vset['assetCategory'],
-                        vulnerabilitysetid=vset['vulnerabilitySetID'],
-                        imt=vset.IML['IMT'],
-                        probabilitydistributions=[],
-                        vulnerabilityfunctionids=[],
-                        fieldnames=['IML'])
-        probabilitydistributions = metadata['probabilitydistributions']
-        vulnerabilityfunctionids = metadata['vulnerabilityfunctionids']
-
-        fieldnames = metadata['fieldnames']
+        metadata = Node('metadata', nodes=[Node('fieldnames'), vset])
+        fieldnames = ['IML']
         matrix = [vset.IML.text.split()]  # data in transposed form
+        vset.IMT.text = None
         for vf in vset.getnodes('discreteVulnerability'):
-            vf_id = vf['vulnerabilityFunctionID']
-            probabilitydistributions.append(vf['probabilisticDistribution'])
-            vulnerabilityfunctionids.append(vf_id)
+            vf_id = vf.attrib['vulnerabilityFunctionID']
             fieldnames.append('%s.lossRatio' % vf_id)
             fieldnames.append('%s.coefficientsVariation' % vf_id)
             matrix.append(vf.lossRatio.text.split())
             matrix.append(vf.coefficientsVariation.text.split())
-        metadata['data'] = zip(*matrix)
-        yield metadata
+            vf.lossRatio.text = None
+            vf.coefficientsVariation.text = None
+        metadata.fieldnames.text = '\n'.join(fieldnames)
+        yield FakeReader(metadata, zip(*matrix))
 
 
-def _mknode(reader, colname, attrib, rows):
+def _readfloats(fname, colname, rows):
     """
-    A convenience function for reading vulnerability XML models.
+    A convenience function for reading vulnerability models.
     """
-    try:
-        func, name = colname.split('.')
-    except ValueError:  # no dot
-        name = colname
     floats = []
     for i, r in enumerate(rows, 1):
         col = r[colname]
@@ -116,37 +101,31 @@ def _mknode(reader, colname, attrib, rows):
             float(col)
         except (ValueError, TypeError) as e:
             raise InvalidFile('%s:row #%d:%s:%s' % (
-                              reader.name, i, colname, e))
+                              fname, i, colname, e))
         floats.append(col)
-    return Node(name, attrib, text=' ' .join(floats))
+    return ' ' .join(floats)
 
 
-def vulnerabilitymodel_from(md_list):
+def vulnerabilitymodel_from(readers):
     """
     Build a vulnerability Node from a group of metadata dictionaries.
     """
     vsets = []
-    for md in md_list:
-        reader = md['reader']
+    for reader in readers:
+        md = reader.metadata
+        fname = reader.name
         rows = list(reader)
-        vfs = []  # vulnerability function nodes
-        for vf_id, probdist in zip(
-                md['vulnerabilityfunctionids'],
-                md['probabilitydistributions']):
-            nodes = [
-                _mknode(reader, '%s.lossRatio' % vf_id, {}, rows),
-                _mknode(reader, '%s.coefficientsVariation' % vf_id, {}, rows)]
-            vfs.append(
-                Node('discreteVulnerability',
-                     dict(vulnerabilityFunctionID=vf_id,
-                          probabilisticDistribution=probdist),
-                     nodes=nodes))
-        nodes = [_mknode(reader, 'IML', dict(IMT=md['imt']), rows)] + vfs
-        vsets.append(Node('discreteVulnerabilitySet',
-                          dict(vulnerabilitySetID=md["vulnerabilitysetid"],
-                               assetCategory=md['assetcategory'],
-                               lossCategory=md['losscategory']),
-                          None, nodes))
+        if not rows:
+            warnings.warn('No data in %s' % reader.name)
+        vset = md.discreteVulnerabilitySet
+        for vf in vset.getnodes('discreteVulnerability'):
+            vf_id = vf.attrib['vulnerabilityFunctionID']
+            vf.lossRatio.text = _readfloats(
+                fname, '%s.lossRatio' % vf_id, rows)
+            vf.coefficientsVariation.text = _readfloats(
+                fname, '%s.coefficientsVariation' % vf_id,  rows)
+        vset.IML.text = _readfloats(fname, 'IML', rows)
+        vsets.append(vset)
     # nodes=[Node('config', {})] + vsets
     return Node('vulnerabilityModel', nodes=vsets)
 
@@ -192,14 +171,14 @@ def parse_fragilitymodel(fm):
         yield metadata
 
 
-def fragilitymodel_from(md_list):
+def fragilitymodel_from(readers):
     """
     Build Node objects for the fragility sets.
     """
-    md = md_list[0]
+    md = readers[0]
     nodes = [Node('description', {}, md['description']),
              Node('limitStates', {}, ' '.join(md['limitStates']))]
-    for md in md_list:
+    for md in readers:
         ffs_attrib = dict(noDamageLimit=md['noDamageLimit']) \
             if md['noDamageLimit'] else {}
         if 'type' in md and md['type']:
@@ -346,15 +325,15 @@ def assetgenerator(rows, costtypes):
         yield Node('asset', attr, nodes=nodes)
 
 
-def exposuremodel_from(md_list):
+def exposuremodel_from(readers):
     """
     Build a Node object containing a full exposure. The assets are
     lazily read from the associated reader.
 
-    :param md_list: a non-empty list of metadata dictionaries
+    :param readers: a non-empty list of metadata dictionaries
     """
-    assert len(md_list) == 1, 'Exposure files must contain a single node'
-    for md in md_list:
+    assert len(readers) == 1, 'Exposure files must contain a single node'
+    for md in readers:
         costtypes = []
         subnodes = [Node('description', {}, md['description'])]
         conversions = md.get('conversions')
@@ -424,17 +403,17 @@ def parse_gmfcollection(gmfcoll):
             yield mdata
 
 
-def gmfcollection_from(md_list):
+def gmfcollection_from(readers):
     """
     Build a node from a list of metadata dictionaries with readers
     """
-    assert len(md_list) > 1
-    md = md_list[0]
+    assert len(readers) > 1
+    md = readers[0]
     gmfcoll = Node('gmfCollection', dict(
         sourceModelTreePath=md['sourceModelTreePath'],
         gsimTreePath=md['gsimTreePath']))
     for ses_id, md_group in itertools.groupby(
-            md_list, itemgetter('stochasticEventSetId')):
+            readers, itemgetter('stochasticEventSetId')):
         mds = list(md_group)
         gmfset = Node('gmfSet', dict(
             investigationTime=mds[0]['investigationTime'],
@@ -451,13 +430,13 @@ def gmfcollection_from(md_list):
     return gmfcoll
 
 
-def gmfset_from(md_list):
+def gmfset_from(readers):
     """
     Build a node from a list of metadata dictionaries with readers
     """
-    assert len(md_list) > 1
+    assert len(readers) > 1
     gmfcoll = Node('gmfSet')
-    for md in md_list:
+    for md in readers:
         attrib = copyIMT(md, {})
         gmf = Node('gmf', attrib)
         for row in md['reader']:
@@ -478,15 +457,14 @@ def convert_nrml_to_flat(fname, outfname):
     :param outfname: output path, for instance <path>.csv
     """
     tozip = []
-    for i, metadata in enumerate(parse_nrml(fname)):
+    for i, reader in enumerate(parse_nrml(fname)):
         with open(outfname[:-4] + '__%d.json' % i, 'w') as jsonfile:
             with open(outfname[:-4] + '__%d.csv' % i, 'w') as csvfile:
-                data = metadata.pop('data')
-                json.dump(metadata, jsonfile, sort_keys=True, indent=2)
+                node_to_xml(reader.metadata, jsonfile)
                 tozip.append(jsonfile.name)
                 cw = csv.writer(csvfile)
-                cw.writerow(metadata['fieldnames'])
-                cw.writerows(data)
+                cw.writerow(reader.fieldnames)
+                cw.writerows(reader)
                 tozip.append(csvfile.name)
     return tozip
 

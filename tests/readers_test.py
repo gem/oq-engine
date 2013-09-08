@@ -1,9 +1,9 @@
 import unittest
-from openquake.nrmllib.readers import FakeReader
+from openquake.nrmllib.readers import StringReader
 
 
 class ReaderTestCase(unittest.TestCase):
-    fake = FakeReader('fake', '{"fieldnames": ["a", "b"]}', '''\
+    fake = StringReader('fake', '{"fieldnames": ["a", "b"]}', '''\
 a,b
 1,2
 3,4
