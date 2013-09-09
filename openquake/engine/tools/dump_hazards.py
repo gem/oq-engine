@@ -19,8 +19,8 @@
 """
 A script to dump hazard outputs. If you launch it with a given
 hazard_calculation_id, it will dump all the hazard outputs relevant for
-risk calculations in a tarfile named hc<hazard-calculation-id>.tar.
-The tar file can then be moved around and restored in a different
+risk calculations in a directory named hc<hazard-calculation-id>.
+The directory can then be moved around and restored in a different
 database with the companion script restore_hazards.py.
 Internally the dump and restore procedures are based on
 COPY TO and COPY FROM commands, so they are quite performant
@@ -29,7 +29,7 @@ binary dump/restore since the geography type has no binary form in
 PostGIS 1.5.
 
 To restore a hazard computation and all of its outputs into a new database
-run ``python restore_hazards.py <tarfile> <host> <dbname> <user> <password>``
+run ``python restore_hazards.py <directory> <host> <dbname> <user> <password>``
 
 The <user> must have sufficient permissions to write on <dbname>.  If
 your database already contains a hazard calculation with the same id,
@@ -111,7 +111,7 @@ class HazardDumper(object):
         # there is no binary format for geography in postgis 1.5,
         # this is why we are requiring text format
         assert format == 'text', format
-        if outdir:
+        if outdir and not os.path.exists(outdir):
             os.mkdir(outdir)
         else:
             outdir = tempfile.mkdtemp(prefix='hazard_calculation-')
@@ -313,17 +313,21 @@ class HazardDumper(object):
                 self.gmf(ids)
             elif output_type == 'ses':
                 self.ses(ids)
+        # save FILENAMES.txt
+        filenames = os.path.join(
+            self.outdir, 'FILENAMES.txt')
+        with open(filenames, 'w') as f:
+            f.write('\n'.join(map(os.path.basename, self.curs.filenames)))
 
+    # this is not used right now; the functionality could be restored in
+    # the future (optionally)
     def mktar(self):
         """
         Tar the contents of outdir into a tarfile and remove the directory
         """
-        # save FILENAMES.txt
-        with open(os.path.join(self.outdir, 'FILENAMES.txt'), 'w') as f:
-            f.write('\n'.join(map(os.path.basename, self.curs.filenames)))
         # tar outdir
         with tarfile.open(self.outdir + '.tar', 'w') as t:
-            t.add(self.outdir, 'hazard_calculation')
+            t.add(self.outdir)
         shutil.rmtree(self.outdir)
         # return pathname of the generated tarfile
         tarname = self.outdir + '.tar'
@@ -344,7 +348,7 @@ def main(hazard_calculation_id, outdir=None,
         host=host, database=dbname, user=user, password=password, port=port)
     hc = HazardDumper(conn, outdir)
     hc.dump(hazard_calculation_id)
-    log.info('Written %s' % hc.mktar())
+    log.info('Written %s' % hc.outdir)
 
 
 if __name__ == '__main__':
