@@ -569,3 +569,9 @@ def node_to_ini(node, output=sys.stdout):
         for name, value in sorted(subnode.attrib.iteritems()):
             output.write(u'%s=%s\n' % (name, value))
     output.flush()
+
+
+def node_copy(node, nodecls=Node):
+    """Make a deep copy of the node"""
+    return nodecls(node.tag, node.attrib.copy(), node.text,
+                   [node_copy(n, nodecls) for n in node])

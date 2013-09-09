@@ -60,6 +60,7 @@ class Reader(object):
     def __init__(self, container, name):
         self.container = container
         self.name = name
+        self.fieldnames = None  # set in read_fieldnames
         with self.openjson() as j:
             self.load_metadata(j)
         with self.opencsv() as c:
@@ -71,9 +72,16 @@ class Reader(object):
         except Exception as e:
             raise InvalidFile('%s:%s' % (fileobj.name, e))
         try:
-            self.fieldnames = self.metadata.fieldnames.text.split()
-        except KeyError:
-            raise InvalidFile('%s: missing fieldnames' % fileobj.name)
+            self.read_fieldnames()
+        except Exception as e:
+            raise InvalidFile('%s: could not extract fieldnames: %s' %
+                              (fileobj.name, e))
+
+    def read_fieldnames(self):
+        from openquake.nrmllib import convert  # avoid cyclic imports
+        getfields = getattr(convert, '%s_fieldnames' %
+                            self.metadata.tag.lower())
+        self.fieldnames = getfields(self.metadata)
 
     def check_fieldnames(self, fileobj):
         try:
@@ -176,6 +184,11 @@ class FileObject(object):
 
 
 class StringReader(Reader):
+    """
+    Read data from the given strings, not from the file system.
+    Assume the strings are UTF-8 encoded. The intended usage is
+    for unittests.
+    """
     def __init__(self, name, json_str, csv_str):
         self.name = name
         self.json_str = json_str
@@ -189,11 +202,12 @@ class StringReader(Reader):
         return FileObject(self.name + '.json', self.json_str)
 
 
-class FakeReader(object):
+class RowReader(Reader):
     def __init__(self, metadata, rows):
         self.metadata = metadata
-        self.fieldnames = metadata.fieldnames.text.split()
+        self.read_fieldnames()
         self.rows = rows
 
     def __iter__(self):
-        return iter(self.rows)
+        for row in self.rows:
+            yield dict(zip(self.fieldnames, row))

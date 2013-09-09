@@ -51,14 +51,7 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
 class ConvertBadFilesTestCase(unittest.TestCase):
     JSON = '''\
 <?xml version='1.0' encoding='utf-8'?>
-<metadata tag="vulnerabilityModel">
-<fieldnames>
-  IML
-  IR.lossRatio
-  IR.coefficientsVariation
-  PK.lossRatio
-  PK.coefficientsVariation
-</fieldnames>
+<vulnerabilityModel>
 <discreteVulnerabilitySet
  assetCategory="population"
  lossCategory="fatalities"
@@ -77,7 +70,7 @@ class ConvertBadFilesTestCase(unittest.TestCase):
       <coefficientsVariation/>
     </discreteVulnerability>
 </discreteVulnerabilitySet>
-</metadata>
+</vulnerabilityModel>
 '''
 
     def test_empty(self):

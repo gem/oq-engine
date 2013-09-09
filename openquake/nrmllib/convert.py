@@ -23,9 +23,9 @@ import zipfile
 import itertools
 from operator import itemgetter
 from openquake.nrmllib.node import (
-    node_from_nrml, node_to_nrml, node_to_xml, Node)
+    node_copy, node_from_nrml, node_to_nrml, node_to_xml, Node)
 from openquake.nrmllib import InvalidFile
-from openquake.nrmllib.readers import ZipReader, FakeReader
+from openquake.nrmllib.readers import ZipReader, RowReader
 
 
 def build_node(readers, output=None):
@@ -40,18 +40,23 @@ def build_node(readers, output=None):
     # group pairs of .csv and .json files and build a list of metadata
     for reader in readers:
         md = reader.metadata
-        if tag and tag != md['tag']:
+        if tag and tag != md.tag:
             raise ValueError('Found tag=%s in %s.json, expected %s' % (
-                             md['tag'], reader.name, tag))
+                             md.tag, reader.name, tag))
         else:
-            tag = md['tag']
+            tag = md.tag
         all_readers.append(reader)
 
-    nodebuilder = globals()['%s_from' % md['tag'].lower()]
+    nodebuilder = globals()['%s_from' % md.tag.lower()]
     node = nodebuilder(all_readers)
     if output is not None:
         node_to_nrml(node, output)
     return node
+
+
+def getfieldnames(md):
+    getfields = globals()['%s_fieldnames' % md.tag.lower()]
+    return getfields(md)
 
 
 def parse_nrml(fname):
@@ -61,36 +66,37 @@ def parse_nrml(fname):
     :param fname: filename or file object
     """
     model = node_from_nrml(fname)[0]
-    parse = globals()['parse_%s' % model.tag.lower()]
-    for reader in parse(model):
-        reader.metadata['tag'] = model.tag
-        yield reader
+    parse = globals()['%s_parse' % model.tag.lower()]
+    return parse(model)
 
 
 ############################# vulnerability #################################
 
-def parse_vulnerabilitymodel(vm):
+def vulnerabilitymodel_fieldnames(md):
+    fieldnames = ['IML']
+    for vf in md.discreteVulnerabilitySet.getnodes('discreteVulnerability'):
+        vf_id = vf.attrib['vulnerabilityFunctionID']
+        for node in vf:  # lossRatio and coefficientsVariation
+            fieldnames.append('%s.%s' % (vf_id, node.tag))
+    return fieldnames
+
+
+def vulnerabilitymodel_parse(vm):
     """
     A parser for vulnerability models yielding readers
     """
-    for vset in vm.getnodes('discreteVulnerabilitySet'):
-        metadata = Node('metadata', nodes=[Node('fieldnames'), vset])
-        fieldnames = ['IML']
+    for vset in node_copy(vm.getnodes('discreteVulnerabilitySet')):
         matrix = [vset.IML.text.split()]  # data in transposed form
         vset.IMT.text = None
         for vf in vset.getnodes('discreteVulnerability'):
-            vf_id = vf.attrib['vulnerabilityFunctionID']
-            fieldnames.append('%s.lossRatio' % vf_id)
-            fieldnames.append('%s.coefficientsVariation' % vf_id)
             matrix.append(vf.lossRatio.text.split())
             matrix.append(vf.coefficientsVariation.text.split())
             vf.lossRatio.text = None
             vf.coefficientsVariation.text = None
-        metadata.fieldnames.text = '\n'.join(fieldnames)
-        yield FakeReader(metadata, zip(*matrix))
+        yield RowReader(vset, zip(*matrix))
 
 
-def _readfloats(fname, colname, rows):
+def _floats_to_text(fname, colname, rows):
     """
     A convenience function for reading vulnerability models.
     """
@@ -108,7 +114,7 @@ def _readfloats(fname, colname, rows):
 
 def vulnerabilitymodel_from(readers):
     """
-    Build a vulnerability Node from a group of metadata dictionaries.
+    Build a vulnerability Node from a group of readers
     """
     vsets = []
     for reader in readers:
@@ -120,11 +126,10 @@ def vulnerabilitymodel_from(readers):
         vset = md.discreteVulnerabilitySet
         for vf in vset.getnodes('discreteVulnerability'):
             vf_id = vf.attrib['vulnerabilityFunctionID']
-            vf.lossRatio.text = _readfloats(
-                fname, '%s.lossRatio' % vf_id, rows)
-            vf.coefficientsVariation.text = _readfloats(
-                fname, '%s.coefficientsVariation' % vf_id,  rows)
-        vset.IML.text = _readfloats(fname, 'IML', rows)
+            for node in vf:  # lossRatio, coefficientsVariation
+                node.text = _floats_to_text(
+                    fname, '%s.%s' % (vf_id, node.tag),  rows)
+        vset.IML.text = _floats_to_text(fname, 'IML', rows)
         vsets.append(vset)
     # nodes=[Node('config', {})] + vsets
     return Node('vulnerabilityModel', nodes=vsets)
@@ -132,78 +137,57 @@ def vulnerabilitymodel_from(readers):
 
 ############################# fragility #################################
 
-def parse_fragilitymodel(fm):
-    """
-    A parser for fragility models yielding pairs (metadata, data)
-    """
-    format = fm['format']
-    limitStates = fm.limitStates.text.split()
-    description = fm.description.text.strip()
+def fragilitymodel_fieldnames(md):
+    if md['format'] == 'discrete':
+        return ['IML'] + md.limitStates.text.split()
+    elif md['format'] == 'continuous':
+        return ['param'] + md.limitStates.text.split()
 
+
+def fragilitymodel_parse(fm):
+    """
+    A parser for fragility models yielding readers
+    """
+    metadata = node_copy(fm)
+    limitStates = fm.limitStates.text.split()
     for ffs in fm.getnodes('ffs'):
-        metadata = dict(
-            format=format,
-            limitStates=limitStates,
-            description=description,
-            noDamageLimit=ffs.attrib.get('noDamageLimit'),
-            taxonomy=ffs.taxonomy.text.strip(),
-            IMT=ffs.IML['IMT'],
-            IML=ffs.IML.text.split() if ffs.IML.text else [],
-            imlUnit=ffs.IML['imlUnit'])
         if format == 'discrete':
-            metadata['fieldnames'] = ['IML'] + limitStates
             matrix = [metadata['IML']]  # data in transposed form
             for ls, ffd in zip(limitStates, ffs.getnodes('ffd')):
                 assert ls == ffd['ls'], 'Expected %s, got %s' % (
                     ls, ffd['ls'])
                 matrix.append(ffd.poEs.text.split())
         elif format == 'continuous':
-            metadata['fieldnames'] = ['param'] + limitStates
-            metadata['type'] = ffs.attrib.get('type')
-            metadata['minIML'] = ffs.IML['minIML']
-            metadata['maxIML'] = ffs.IML['maxIML']
             matrix = ['mean stddev'.split()]
             for ls, ffc in zip(limitStates, ffs.getnodes('ffc')):
                 assert ls == ffc['ls'], 'Expected %s, got %s' % (
                     ls, ffc['ls'])
                 matrix.append([ffc.params['mean'], ffc.params['stddev']])
-        metadata['data'] = zip(*matrix)
-        yield metadata
+        ffs.nodes = []  # removed ffd and ffc nodes
+        yield RowReader(metadata, zip(*matrix))
 
 
 def fragilitymodel_from(readers):
     """
-    Build Node objects for the fragility sets.
+    Build Node objects from readers
     """
-    md = readers[0]
-    nodes = [Node('description', {}, md['description']),
-             Node('limitStates', {}, ' '.join(md['limitStates']))]
-    for md in readers:
-        ffs_attrib = dict(noDamageLimit=md['noDamageLimit']) \
-            if md['noDamageLimit'] else {}
-        if 'type' in md and md['type']:
-            ffs_attrib['type'] = md['type']
-        iml = Node('IML', dict(IMT=md['IMT'], imlUnit=md['imlUnit']),
-                   ' '.join(md['IML']))
-        if md['format'] == 'continuous':
-            iml['minIML'] = md['minIML']
-            iml['maxIML'] = md['maxIML']
-        ffs_nodes = [Node('taxonomy', {}, md['taxonomy']), iml]
-        rows = list(md['reader'])
-        for ls in md['limitStates']:
+    fm = node_copy(readers[0].metadata)
+    for reader in readers:
+        md = reader.metadata
+        rows = list(reader)
+        ffs = md.ffs
+        for ls in md.limitStates:
             if md['format'] == 'discrete':
                 poes = ' '.join(row[ls] for row in rows)
-                ffs_nodes.append(Node('ffd', dict(ls=ls),
-                                      nodes=[Node('poEs', {}, poes)]))
+                ffs.append(Node('ffd', dict(ls=ls),
+                                nodes=[Node('poEs', {}, poes)]))
             elif md['format'] == 'continuous':
                 mean, stddev = rows  # there are exactly two rows
                 params = dict(mean=mean[ls], stddev=stddev[ls])
-                ffs_nodes.append(Node('ffc', dict(ls=ls),
-                                      nodes=[Node('params', params)]))
-        ffs = Node('ffs', ffs_attrib, nodes=ffs_nodes)
-        nodes.append(ffs)
-    return Node('fragilityModel', dict(format=md['format']),
-                nodes=nodes)
+                ffs.append(Node('ffc', dict(ls=ls),
+                                nodes=[Node('params', params)]))
+        fm.append(ffs)
+    return fm
 
 ############################# exposure #################################
 
@@ -247,40 +231,38 @@ def getoccupancies(asset):
     return [dic.get('occupancy.%s' % period, '') for period in PERIODS]
 
 
-def parse_exposuremodel(em):
+def exposuremodel_fieldnames(md):
+    fieldnames = ['id', 'taxonomy', 'lon', 'lat', 'number']
+    if md['category'] == 'buildings':
+        fieldnames.append('area')
+        costcolumns = getcostcolumns(md.conversions.costTypes)
+        fieldnames.extend(
+            costcolumns + ['occupancy.%s' % period for period in PERIODS])
+    return fieldnames
+
+
+def exposuremodel_parse(em):
     """
-    A parser for exposure models yielding a pair (metadata, data)
+    A parser for exposure models yielding readers
     """
-    metadata = dict(id=em['id'], category=em['category'],
-                    taxonomysource=em['taxonomySource'],
-                    description=em.description.text.strip(),
-                    fieldnames=['id', 'taxonomy', 'lon', 'lat'])
+    metadata = Node('exposureModel', em.attrib, nodes=[em.description])
+    em.description.text = em.description.text.strip()
     if em['category'] == 'population':
-        metadata['fieldnames'].append('number')
         data = ([asset['id'], asset['taxonomy'],
                  asset.location['lon'], asset.location['lat'],
                  asset['number']]
                 for asset in em.assets)
     elif em['category'] == 'buildings':
-        metadata['fieldnames'].extend(['number', 'area'])
-        metadata['conversions'] = dict(
-            area=em.conversions.area.attrib,
-            costTypes=[ct.attrib for ct in
-                       em.conversions.costTypes.getnodes('costType')],
-            deductible=em.conversions.deductible.attrib,
-            insuranceLimit=em.conversions.insuranceLimit.attrib,
-        )
-        costcolumns = getcostcolumns(metadata['conversions']['costTypes'])
-        metadata['fieldnames'].extend(
-            costcolumns + ['occupancy.%s' % period for period in PERIODS])
+        metadata.append(em.conversions)
+        metadata.append(Node('assets'))
+        costcolumns = getcostcolumns(em.conversions.costTypes)
         data = ([asset['id'], asset['taxonomy'],
                  asset.location['lon'], asset.location['lat'],
                  asset['number'], asset['area']]
                 + getcosts(asset, costcolumns)
                 + getoccupancies(asset)
                 for asset in em.assets)
-    metadata['data'] = data
-    yield metadata
+    yield RowReader(metadata, data)
 
 
 def assetgenerator(rows, costtypes):
@@ -333,74 +315,46 @@ def exposuremodel_from(readers):
     :param readers: a non-empty list of metadata dictionaries
     """
     assert len(readers) == 1, 'Exposure files must contain a single node'
-    for md in readers:
-        costtypes = []
-        subnodes = [Node('description', {}, md['description'])]
-        conversions = md.get('conversions')
-        if conversions:
-            area = Node('area', conversions['area'])
-            deductible = Node('deductible', conversions['deductible'])
-            ilimit = Node('insuranceLimit', conversions['insuranceLimit'])
-            ct = []
-            for dic in conversions['costTypes']:
-                ct.append(Node('costType', dic))
-                costtypes.append(dic['name'])
-            costtypes = Node('costTypes', {}, nodes=ct)
-            subnodes.append(
-                Node('conversions', {},
-                     nodes=[area, costtypes, deductible, ilimit]))
-        subnodes.append(Node('assets', {},
-                             nodes=assetgenerator(md['reader'], costtypes)))
-        return Node('exposureModel',
-                    dict(id=md['id'],
-                         category=md['category'],
-                         taxonomySource=md['taxonomysource']),
-                    nodes=subnodes)
+    reader = readers[0]
+    em = node_copy(reader.metadata)
+    em.assets.nodes = assetgenerator(reader, em.conversions.costTypes)
+    return em
 
 
 ################################# gmf ##################################
 
-def copyIMT(attrib, metadata):
-    md = metadata.copy()
-    md['IMT'] = attrib['IMT']
-    saPeriod = attrib.get('saPeriod')
-    saDamping = attrib.get('saDamping')
-    if saPeriod:
-        md['saPeriod'] = saPeriod
-    if saDamping:
-        md['saDamping'] = saDamping
-    return md
+def gmfset_fieldnames(md):
+    return ['lon', 'lat', 'gmv']
 
 
-def parse_gmfset(gmfset):
+def gmfset_parse(gmfset):
     """
-    A parser for GMF scenario yielding pairs (metadata, data)
+    A parser for GMF scenario yielding a reader
     for each node <gmf>.
     """
     for gmf in gmfset.getnodes('gmf'):
-        metadata = copyIMT(gmf.attrib, {})
-        metadata['fieldnames'] = ['lon', 'lat', 'gmv']
-        metadata['data'] = [(n['lon'], n['lat'], n['gmv']) for n in gmf]
-        yield metadata
+        metadata = Node('gmfSet', gmfset.attrib,
+                        nodes=[Node('gmf', gmf.attrib)])
+        data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
+        yield RowReader(metadata, data)
 
 
-def parse_gmfcollection(gmfcoll):
+def gmfcollection_parse(gmfcoll):
     """
-    A parser for GMF event based yielding pairs (metadata, data)
-    for each node <gmf> corresponding to a given rupture and IMT.
+    A parser for GMF event based yielding a reader
+    for each node <gmf>.
     """
-    metadata = dict(sourceModelTreePath=gmfcoll['sourceModelTreePath'],
-                    gsimTreePath=gmfcoll['gsimTreePath'])
     for gmfset in gmfcoll.getnodes('gmfSet'):
-        md = metadata.copy()
-        md['investigationTime'] = gmfset['investigationTime']
-        md['stochasticEventSetId'] = gmfset['stochasticEventSetId']
         for gmf in gmfset.getnodes('gmf'):
-            mdata = copyIMT(gmf.attrib, md)
-            mdata['ruptureId'] = gmf['ruptureId']
-            mdata['fieldnames'] = ['lon', 'lat', 'gmv']
-            mdata['data'] = [(n['lon'], n['lat'], n['gmv']) for n in gmf]
-            yield mdata
+            metadata = Node('gmfCollection', gmfcoll.attrib)
+            gs = Node('gmfSet', gmfset.attrib, nodes=[Node('gmf', gmf.attrib)])
+            metadata.append(gs)
+            data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
+            yield RowReader(metadata, data)
+
+
+def gmfcollection_fieldnames(md):
+    return ['lon', 'lat', 'gmv']
 
 
 def gmfcollection_from(readers):
@@ -415,13 +369,9 @@ def gmfcollection_from(readers):
     for ses_id, md_group in itertools.groupby(
             readers, itemgetter('stochasticEventSetId')):
         mds = list(md_group)
-        gmfset = Node('gmfSet', dict(
-            investigationTime=mds[0]['investigationTime'],
-            stochasticEventSetId=ses_id))
+        gmfset = md.gmfSet
         for md in mds:  # metadatas for the same ses
-            attrib = copyIMT(md, {})
-            attrib['ruptureId'] = md['ruptureId']
-            gmf = Node('gmf', attrib)
+            gmf = node_copy(gmfset.gmf)
             for row in md['reader']:
                 lon, lat, gmv = [row[f] for f in md['fieldnames']]
                 gmf.append(Node('node', dict(gmv=gmv, lon=lon, lat=lat)))
@@ -436,10 +386,10 @@ def gmfset_from(readers):
     """
     assert len(readers) > 1
     gmfcoll = Node('gmfSet')
-    for md in readers:
-        attrib = copyIMT(md, {})
-        gmf = Node('gmf', attrib)
-        for row in md['reader']:
+    for reader in readers:
+        md = reader.metadata
+        gmf = node_copy(md.gmf)
+        for row in reader:
             lon, lat, gmv = [row[f] for f in md['fieldnames']]
             gmf.append(Node('node', dict(gmv=gmv, lon=lon, lat=lat)))
         gmfcoll.append(gmf)
@@ -464,7 +414,7 @@ def convert_nrml_to_flat(fname, outfname):
                 tozip.append(jsonfile.name)
                 cw = csv.writer(csvfile)
                 cw.writerow(reader.fieldnames)
-                cw.writerows(reader)
+                cw.writerows(reader.rows)
                 tozip.append(csvfile.name)
     return tozip
 

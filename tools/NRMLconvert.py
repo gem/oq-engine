@@ -1,6 +1,5 @@
 import sys
 import time
-import itertools
 from openquake.nrmllib.convert import (
     convert_nrml_to_zip, convert_zip_to_nrml, build_node)
 from openquake.nrmllib.readers import FileReader
