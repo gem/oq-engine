@@ -50,7 +50,7 @@ def _make_readers(cls, container, fnames):
         """Extract the groupname for readers named <groupname>__<subname>"""
         return reader.name.rsplit('__', 1)[0]
     for name, readergroup in itertools.groupby(readers, getgroupname):
-        yield name, readergroup
+        yield name, list(readergroup)
 
 
 class Reader(object):

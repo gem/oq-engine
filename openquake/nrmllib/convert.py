@@ -246,7 +246,6 @@ def exposuremodel_parse(em):
     A parser for exposure models yielding readers
     """
     metadata = Node('exposureModel', em.attrib, nodes=[em.description])
-    em.description.text = em.description.text.strip()
     if em['category'] == 'population':
         data = ([asset['id'], asset['taxonomy'],
                  asset.location['lon'], asset.location['lat'],
