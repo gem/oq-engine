@@ -39,7 +39,7 @@ for qa_test in $(find $QA_TESTS_DIR -iname job_haz.ini | sort); do
     fixture_file_prefix=$(dirname $qa_test)/fixtures
 
     # remove the old fixture
-    rm -f "$fixture_file_prefix".tar
+    rm -f "$fixture_file_prefix"
 
     # dump the new one
     python $(dirname $0)/../openquake/engine/tools/dump_hazards.py $calculation_id $fixture_file_prefix
