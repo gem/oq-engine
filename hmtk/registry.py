@@ -45,7 +45,7 @@
 
 import collections
 import functools
-from decorator import decorator
+from hmtk.decorator import decorator
 
 
 class Registry(collections.OrderedDict):
@@ -96,21 +96,31 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
                 config[field] = default_value
 
     def add(self, method_name, **fields):
+        """
+        Decorate `method_name` by adding a call to `set_defaults` and
+        `check_config`. Then, save into the registry a callable
+        function with the same signature of the original method
+
+        :param str method_name:
+            the method to decorate
+        :param **fields:
+            a dictionary of field spec, e.g.
+            time_bin=numpy.float,
+            b_value=1E-6
+        """
         def class_decorator(class_obj):
-            self[class_obj.__name__] = (class_obj, method_name, fields)
             original_method = getattr(class_obj, method_name)
 
-            def method(obj, catalogue, config=None, *args, **kwargs):
+            def caller(fn, obj, catalogue, config=None, *args, **kwargs):
                 config = config or {}
                 self.set_defaults(config, fields)
                 self.check_config(config, fields)
-                return original_method(obj, catalogue, config, *args, **kwargs)
-            setattr(class_obj, method_name, method)
+                return fn(obj, catalogue, config, *args, **kwargs)
+            new_method = decorator(caller, original_method.im_func)
+            setattr(class_obj, method_name, new_method)
+            new_method.fields = fields
+            new_method.class_obj = class_obj
+            self[class_obj.__name__] = functools.partial(
+                new_method, class_obj())
             return class_obj
         return class_decorator
-
-    def __getitem__(self, key):
-        class_obj, method_name, _ = super(
-            CatalogueFunctionRegistry, self).__getitem__(key)
-        method = getattr(class_obj, method_name)
-        return functools.partial(method, class_obj())
