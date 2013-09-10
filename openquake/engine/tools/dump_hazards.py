@@ -88,10 +88,13 @@ class Copier(object):
         """
         fname = os.path.join(dest, name + '.gz')
         log.info('%s\n(-> %s)', query, fname)
-        with gzip.open(fname, mode) as f:
-            self._cursor.copy_expert(query, f)
-            if fname not in self.filenames:
-                self.filenames.append(fname)
+        TIMESTAMP = 1378800715.0  # some fake timestamp
+        # here is some trick to avoid storing filename and timestamp info
+        with open(fname, mode) as fileobj:
+            with gzip.GzipFile('', fileobj=fileobj, mtime=TIMESTAMP) as z:
+                self._cursor.copy_expert(query, z)
+                if fname not in self.filenames:
+                    self.filenames.append(fname)
 
 
 class HazardDumper(object):
