@@ -124,8 +124,10 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
                 return fn(obj, catalogue, config, *args, **kwargs)
             new_method = decorator(caller, original_method.im_func)
             setattr(class_obj, method_name, new_method)
-            func = functools.partial(new_method, class_obj())
+            instance = class_obj()
+            func = functools.partial(new_method, instance)
             func.fields = fields
+            func.model = instance
             functools.update_wrapper(func, new_method)
             self[class_obj.__name__] = func
             return class_obj
