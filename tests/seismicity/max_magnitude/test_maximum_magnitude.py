@@ -199,9 +199,9 @@ class TestCumulativeMoment(unittest.TestCase):
 
         # Test 3: Ordinary test case with uncertainty - seeded random generator
         self.config['number_bootstraps'] = 1000
-        mmax, sigma_mmax = self.model.get_mmax(self.catalogue, 
-                                           self.config,
-                                           seed=123456)
+                # Can fix the seed (used for testing!)
+        np.random.seed(123456)
+        mmax, sigma_mmax = self.model.get_mmax(self.catalogue, self.config)
 
         self.assertAlmostEqual(7.518906927, mmax)
         self.assertAlmostEqual(0.058204597, sigma_mmax)

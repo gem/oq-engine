@@ -3,22 +3,22 @@
 #
 # Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
-# The Hazard Modeller's Toolkit (hmtk) is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public License 
-# as published by the Free Software Foundation, either version 3 of the 
+# The Hazard Modeller's Toolkit (hmtk) is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public License
+# as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein is released as 
-# a prototype implementation on behalf of scientists and engineers working 
+#
+# The software Hazard Modeller's Toolkit (hmtk) provided herein is released as
+# a prototype implementation on behalf of scientists and engineers working
 # within the GEM Foundation (Global Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the hope that 
-# it will be useful to the scientific, engineering, disaster risk and software 
+# It is distributed for the purpose of open collaboration and in the hope that
+# it will be useful to the scientific, engineering, disaster risk and software
 # design communities.
 #
 # The software is NOT distributed as part of GEM's OpenQuake suite
@@ -28,20 +28,20 @@
 # subject to same level of critical review by professional software developers,
 # as GEM's OpenQuake software suite.
 #
-# Feedback and contribution to the software is welcome, and can be directed to 
+# Feedback and contribution to the software is welcome, and can be directed to
 # the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
 #
-# The GEM Foundation, and the authors of the software, assume no liability for 
-# use of the software. 
+# The GEM Foundation, and the authors of the software, assume no liability for
+# use of the software.
 
 '''
-Module :mod: 'hmtk.seismicity.max_magnitude.kijko_sellevol defines the 
+Module :mod: 'hmtk.seismicity.max_magnitude.kijko_sellevol defines the
 Kijko & Sellevol algorithm for maximum magnitude
 '''
 
@@ -49,13 +49,14 @@ import warnings
 import numpy as np
 from math import fabs
 from scipy.integrate import quadrature
-from hmtk.seismicity.max_magnitude.base import (BaseMaximumMagnitude,
+from hmtk.seismicity.max_magnitude.base import (
+    BaseMaximumMagnitude, MAX_MAGNITUDE_METHODS,
     _get_observed_mmax, _get_magnitude_vector_properties)
 
 
 def check_config(config, data):
     '''Checks that the config file contains all required parameters
-    
+
     :param dict config:
         Configuration file
 
@@ -79,49 +80,55 @@ def check_config(config, data):
 
     return config
 
+
+@MAX_MAGNITUDE_METHODS.add(
+    "get_mmax",
+    **{"input_mmin": np.float,
+       "b-value": 1E-7,
+       "maximum_iterations": 1000,
+       "tolerance": 1E-5})
 class KijkoSellevolFixedb(BaseMaximumMagnitude):
     '''
     Implements Kijko and Sellevol estimator for maximim magnitude assuming
     a fixed b-value. Coded from description in Kijko (2004):
 
-    Kijko, A. (2004), ..., Pure & Applied Geophysics, 
+    Kijko, A. (2004), ..., Pure & Applied Geophysics,
     '''
-    
     def get_mmax(self, catalogue, config):
         '''
         Calculates Maximum magnitude
 
         :param catalogue:
-            Earthquake catalogue as instance of :class: 
+            Earthquake catalogue as instance of :class:
             hmtk.seismicity.catalogue.Catalogue
 
         :param dict config:
             Configuration file for algorithm, contains the attributes:
             * 'b-value': b-value (positive float)
-            * 'input_mmin': Minimum magnitude for integral (if less than 
+            * 'input_mmin': Minimum magnitude for integral (if less than
                             minimum observed magnitude, will be overwritten by
                             minimum observed magnitude)
             * 'tolerance': Tolerance of stabilising of iterator
             * 'maximum_interations': Maximum number of iterations
-        
+
         :returns: **mmax** Maximum magnitude and **mmax_sig** corresponding
                     uncertainty
         '''
         config = check_config(config, catalogue.data)
 
         obsmax, obsmaxsig = _get_observed_mmax(catalogue.data, config)
-        
+
         mmin = config['input_mmin']
         beta = config['b-value'] * np.log(10.)
-       
+
         neq, mmin = _get_magnitude_vector_properties(catalogue.data, config)
-        
-        mmax = np.copy(obsmax) 
+
+        mmax = np.copy(obsmax)
         d_t = np.inf
         iterator = 0
-        
+
         while d_t > config['tolerance']:
-            delta = quadrature(self._ks_intfunc, mmin, mmax, 
+            delta = quadrature(self._ks_intfunc, mmin, mmax,
                                args = (neq, mmax, mmin, beta))[0]
             #print mmin, neq, delta, mmax
             tmmax = obsmax + delta
@@ -131,30 +138,30 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
             if iterator > config['maximum_iterations']:
                 print 'Kijko-Sellevol estimator reached maximum # of iterations'
                 d_t = -np.inf
-        return mmax.item(), np.sqrt(obsmaxsig ** 2. + delta ** 2.)      
-    
-    
+        return mmax.item(), np.sqrt(obsmaxsig ** 2. + delta ** 2.)
+
+
     def _ks_intfunc(self, mval, neq, mmax, mmin, beta):
-        '''Integral function inside Kijko-Sellevol estimator 
+        '''Integral function inside Kijko-Sellevol estimator
         (Eq. 6 in Kijko, 2004)
-        :param float mval: 
+        :param float mval:
             Magnitude value
-        :param float neq: 
+        :param float neq:
             Number of earthquakes
-        :param float mmax: 
+        :param float mmax:
             Maximum Magnitude
-        :param float mmin: 
+        :param float mmin:
             Minimum Magnitude
-        :param float beta: 
+        :param float beta:
             Beta-value of the distribution
-        :returns: 
+        :returns:
             Integrand of Kijko-Sellevol estimator
         '''
         if mmin >= mmax:
             raise ValueError('Maximum magnitude smaller than minimum magnitude'
                              ' in Kijko & Sellevol (Fixed-b) integral')
-                             
-        func1 = 1. - np.exp(-beta * (mval - mmin)) 
+
+        func1 = 1. - np.exp(-beta * (mval - mmin))
         if np.fabs(beta) > 1e-3:
             func1 = (func1 / (1. - np.exp(-beta * (mmax - mmin)))) ** neq
         else:

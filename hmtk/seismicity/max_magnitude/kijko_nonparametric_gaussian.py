@@ -3,22 +3,22 @@
 #
 # Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
-# The Hazard Modeller's Toolkit (hmtk) is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public License 
-# as published by the Free Software Foundation, either version 3 of the 
+# The Hazard Modeller's Toolkit (hmtk) is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public License
+# as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein is released as 
-# a prototype implementation on behalf of scientists and engineers working 
+#
+# The software Hazard Modeller's Toolkit (hmtk) provided herein is released as
+# a prototype implementation on behalf of scientists and engineers working
 # within the GEM Foundation (Global Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the hope that 
-# it will be useful to the scientific, engineering, disaster risk and software 
+# It is distributed for the purpose of open collaboration and in the hope that
+# it will be useful to the scientific, engineering, disaster risk and software
 # design communities.
 #
 # The software is NOT distributed as part of GEM's OpenQuake suite
@@ -28,29 +28,28 @@
 # subject to same level of critical review by professional software developers,
 # as GEM's OpenQuake software suite.
 #
-# Feedback and contribution to the software is welcome, and can be directed to 
+# Feedback and contribution to the software is welcome, and can be directed to
 # the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
 #
-# The GEM Foundation, and the authors of the software, assume no liability for 
-# use of the software. 
+# The GEM Foundation, and the authors of the software, assume no liability for
+# use of the software.
 
 '''
 Module :mod: 'hmtk.seismicity.max_magnitude.kijko_nonparametric_gaussian'
-implements the Non-Parametric Gaussian estimator of maximum magnitude 
+implements the Non-Parametric Gaussian estimator of maximum magnitude
 proposed by Kijko (2004)
 '''
 import numpy as np
 from scipy.integrate import quadrature
 from scipy.stats.mstats import mquantiles
-from hmtk.seismicity.max_magnitude.base import (BaseMaximumMagnitude,
-    _get_observed_mmax, _get_magnitude_vector_properties)
-
+from hmtk.seismicity.max_magnitude.base import (
+    BaseMaximumMagnitude, MAX_MAGNITUDE_METHODS)
 
 
 def check_config(config):
@@ -61,7 +60,7 @@ def check_config(config):
         if not key in config.keys():
             raise ValueError('For Kijko Nonparametric Gaussian the key %s '
                               'needs to be set in the configuation' % key)
-    
+
     if 'tolerance' not in config.keys() or not config['tolerance'] or \
         config['tolerance'] <= 0.0:
         config['tolerance'] = 0.05
@@ -76,6 +75,7 @@ def check_config(config):
         config['number_samples'] = 51
 
     return config
+
 
 def _get_exponential_spaced_values(mmin, mmax, number_samples):
     '''
@@ -97,6 +97,12 @@ def _get_exponential_spaced_values(mmin, mmax, number_samples):
     return np.log(magval)
 
 
+@MAX_MAGNITUDE_METHODS.add(
+    "get_mmax",
+    number_earthquakes=np.float,
+    number_samples=51,
+    maximum_iterations=100,
+    tolerance=0.05)
 class KijkoNonParametricGaussian(BaseMaximumMagnitude):
     '''
     Class to implement non-parametric Gaussian methodology of Kijko (2004)
@@ -110,11 +116,11 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         :param dict config:
             Configuration parameters - including:
             * 'number_earthquakes': Number of largest magnitudes to consider
-            * 'number_samples' [optional]: Number of samples for integral 
+            * 'number_samples' [optional]: Number of samples for integral
                                            {default=51}
             * 'maximum_iterations' [optional]: Maximum number of iterations
                                            {default=100}
-            * 'tolerance' [optional]: Magnitude difference threshold for 
+            * 'tolerance' [optional]: Magnitude difference threshold for
                                       iterstor stability {default=0.05}
 
         :returns:
@@ -123,7 +129,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         '''
         config = check_config(config)
 
-        # Unlike the exponential distributions, if the input mmax is 
+        # Unlike the exponential distributions, if the input mmax is
         # greater than the observed mmax the integral expands rapidly.
         # Therefore, only observed mmax is considered
         max_loc = np.argmax(catalogue.data['magnitude'])
@@ -141,8 +147,8 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
             mag = np.sort(catalogue.data['magnitude'], kind='quicksort')
             mag = mag[-config['number_earthquakes']:]
             neq = float(config['number_earthquakes'])
-        
-        mmin = np.min(mag)   
+
+        mmin = np.min(mag)
         # Get smoothing factor
         hfact = self.h_smooth(mag)
         mmax = np.copy(obsmax)
@@ -150,11 +156,11 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         iterator = 0
         while d_t > config['tolerance']:
             # Generate exponentially spaced samples
-            magval = _get_exponential_spaced_values(mmin, mmax.item(), 
+            magval = _get_exponential_spaced_values(mmin, mmax.item(),
                                                     config['number_samples'])
 
             # Evaluate integral function using Simpson's method
-            delta = self._kijko_npg_intfunc_simps(magval, mag, mmax.item(), 
+            delta = self._kijko_npg_intfunc_simps(magval, mag, mmax.item(),
                                                   hfact, neq)
             tmmax = obsmax + delta
             d_t  = np.abs(tmmax - mmax.item())
@@ -164,23 +170,23 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
                 print 'Kijko-Non-Parametric Gaussian estimator reached'
                 print 'maximum # of iterations'
                 d_t = -np.inf
-        return mmax.item(), np.sqrt(obsmaxsig ** 2. + 
+        return mmax.item(), np.sqrt(obsmaxsig ** 2. +
                                     (mmax.item() - obsmax) ** 2.)
-    
-    
+
+
     def h_smooth(self, mag):
         '''
         Function to calculate smoothing coefficient (h) for Gaussian
         Kernel estimation - based on Silverman (1986) formula
-        
-        :param numpy.ndarray mag: 
+
+        :param numpy.ndarray mag:
             Magnitude vector
-        
-        :returns: 
+
+        :returns:
             Smoothing coefficient (h) (float)
         '''
         neq = np.float(len(mag))
-        
+
         # Calculate inter-quartile range
         qtiles = mquantiles(mag, prob = [0.25, 0.75])
         iqr = qtiles[1] - qtiles[0]
@@ -194,13 +200,13 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         '''Function to implement Hasting's approximation of the normalised
         cumulative normal function - this is taken from Kijko's own code
         so I don't really know why this is here!!!!!
-        :param np.ndarray xval: 
+        :param np.ndarray xval:
             x variate
-        :param float barx: 
+        :param float barx:
             Mean of the distribution
-        :param float sigx: 
+        :param float sigx:
             Standard Deviation
-        :return float yval: 
+        :return float yval:
             Gaussian Cumulative Distribution
         '''
         x_norm = (xval - barx) / sigx
@@ -211,45 +217,45 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         a_3 = 0.000344
         a_4 = 0.019527
         x_a = np.abs(x_norm)
-        yval = 1.0 - 0.5 * (1. + a_1 * x_a + (a_2 * (x_a ** 2.)) + 
+        yval = 1.0 - 0.5 * (1. + a_1 * x_a + (a_2 * (x_a ** 2.)) +
                             (a_3 * (x_a ** 3.)) + (a_4 * (x_a ** 4.))) ** (-4.)
-        
+
         # Finally to normalise
         yval[x_norm < 0.] = 1. - yval[x_norm < 0.]
         # To deal with precision errors for tail ends
         yval[x_norm < -5.] = 0.
         yval[x_norm > 5.] = 1.
         return yval
-        
+
     def _kijko_npg_intfunc_simps(self, mval, mag, mmax, hfact, neq):
         '''Integral function for non-parametric Gaussuan assuming that
         Simpson's rule has been invoked for exponentially spaced samples
-        :param numpy.ndarray mval: 
+        :param numpy.ndarray mval:
             Target Magnitudes
-        :param numpy.ndarray mag: 
+        :param numpy.ndarray mag:
             Observed Magnitude values
         :param float mmax:
             Maximum magnitude for integral
-        :param float hfact: 
+        :param float hfact:
             Smoothing coefficient (output of h_smooth)
-        :param float neq: 
+        :param float neq:
             Number of earthquakes (effectively the length of mag)
-        :return float intfunc: 
+        :return float intfunc:
             Integral of non-Parametric Gaussian function
         '''
         nmval = len(mval)
-        # Mmin and Mmax must be arrays to allow for indexing in 
+        # Mmin and Mmax must be arrays to allow for indexing in
         # _gauss_cdf_hastings
         mmin = np.min(mag)
 
         p_min = self._gauss_cdf_hastings((mmin - mag) / hfact)
         p_max = self._gauss_cdf_hastings((mmax - mag) / hfact)
-        
+
         cdf_func = np.zeros(nmval)
         for ival, target_mag in enumerate(mval):
             # Calculate normalised magnitudes
             p_mag = self._gauss_cdf_hastings((target_mag - mag) / hfact)
-            cdf_func[ival] = ((np.sum(p_mag) - np.sum(p_min))/ 
+            cdf_func[ival] = ((np.sum(p_mag) - np.sum(p_min))/
                               (np.sum(p_max) - np.sum(p_min))) ** neq
         # Now to perform integration via mid-point rule
         intfunc = 0.5 * cdf_func[0] * (mval[1] - mval[0])

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
 # 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -14,36 +14,36 @@
 #
 # DISCLAIMER
 # 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM’s OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM’s OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
+#
+# The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 # -*- coding: utf-8 -*-
 '''
-Module :mod: hmtk.seismicity.smoothing.smoothed_seismicity implements the 
+Module :mod: hmtk.seismicity.smoothing.smoothed_seismicity implements the
 :class: hmtk.seismicity.smoothing.smoothed_seismicity.SmoothedSeismicity,
 a general class for implementing seismicity smoothing algorithms
 '''
@@ -57,6 +57,8 @@ from hmtk.seismicity.utils import haversine
 from hmtk.seismicity.smoothing import utils
 from hmtk.seismicity.smoothing.kernels.isotropic_gaussian import \
     IsotropicGaussian
+from hmtk.registry import CatalogueFunctionRegistry
+
 
 def _get_adjustment(mag, year, mmin, completeness_year, t_f, mag_inc=0.1):
     '''
@@ -66,16 +68,16 @@ def _get_adjustment(mag, year, mmin, completeness_year, t_f, mag_inc=0.1):
 
     :param float mag:
         Magnitude of an earthquake
-    
+
     :param float year:
         Year of earthquake
-    
+
     :param np.ndarray completeness_table:
         Completeness table
-    
+
     :param float mag_inc:
         Magnitude increment
-    
+
     :param float t_f:
         Weichert adjustment factor
 
@@ -101,7 +103,7 @@ def _get_adjustment(mag, year, mmin, completeness_year, t_f, mag_inc=0.1):
 
 def get_catalogue_bounding_polygon(catalogue):
     '''
-    Returns a polygon containing the bounding box of the catalogue 
+    Returns a polygon containing the bounding box of the catalogue
     '''
     upper_lon = np.max(catalogue.data['longitude'])
     upper_lat = np.max(catalogue.data['latitude'])
@@ -111,9 +113,10 @@ def get_catalogue_bounding_polygon(catalogue):
     return Polygon([Point(lower_lon, upper_lat), Point(upper_lon, upper_lat),
                     Point(upper_lon, lower_lat), Point(lower_lon, lower_lat)])
 
+
 class SmoothedSeismicity(object):
     '''
-    Class to implement an analysis of Smoothed Seismicity, including the 
+    Class to implement an analysis of Smoothed Seismicity, including the
     grid counting of data and the smoothing.
 
     :param np.ndarray grid:
@@ -142,14 +145,14 @@ class SmoothedSeismicity(object):
     def __init__(self, grid_limits, use_3d=False, bvalue=None):
         '''
         Instatiate class with a set of grid limits
-        :param list grid_limits: 
-            Limits of the grid as 
+        :param list grid_limits:
+            Limits of the grid as
             [xmin, xmax, spcx, ymin, ymax, spcy, zmin, spcz]
-        
+
         :param bool use_3d:
             Choose whether to use hypocentral distances for smoothing or only
             epicentral
-        
+
         :param float bval:
             b-value for analysis
         '''
@@ -185,35 +188,34 @@ class SmoothedSeismicity(object):
             self.grid_limits = None
         self.kernel = None
 
-
-    def run_analysis(self, catalogue, config, completeness_table=None, 
+    def run_analysis(self, catalogue, config, completeness_table=None,
         smoothing_kernel=None, end_year=None):
         '''
         Runs an analysis of smoothed seismicity in the manner
         originally implemented by Frankel (1995)
 
-        :param catalogue: 
+        :param catalogue:
             Instance of the hmtk.seismicity.catalogue.Catalogue class
-            catalogue.data dictionary containing the following - 
+            catalogue.data dictionary containing the following -
             'year' - numpy.ndarray vector of years
             'longitude' - numpy.ndarray vector of longitudes
             'latitude' - numpy.ndarray vector of latitudes
             'depth' - numpy.ndarray vector of depths
-        
+
         :param dict config:
             Configuration settings of the algorithm:
-            * 'Length_Limit' - Maximum number of bandwidths for use in 
+            * 'Length_Limit' - Maximum number of bandwidths for use in
                                smoothing (Float)
             * 'BandWidth' - Bandwidth (km) of the Smoothing Kernel (Float)
             * 'increment' - Output incremental (True) or cumulative a-value
                             (False)
 
-        :param np.ndarray completeness_table: 
-            Completeness of the catalogue assuming evenly spaced magnitudes 
+        :param np.ndarray completeness_table:
+            Completeness of the catalogue assuming evenly spaced magnitudes
             from most recent bin to oldest bin [year, magnitude]
 
         :param smoothing_kernel:
-            Smoothing kernel as instance of :class: 
+            Smoothing kernel as instance of :class:
                 hmtk.seismicity.smoothing.kernels.base.BaseSmoothingKernel
 
         :param float end_year:
@@ -221,16 +223,16 @@ class SmoothedSeismicity(object):
             the program will automatically take the last year in the catalogue.
 
         :returns:
-            Full smoothed seismicity data as np.ndarray, of the form 
+            Full smoothed seismicity data as np.ndarray, of the form
             [Longitude, Latitude, Depth, Observed, Smoothed]
         '''
-        
+
         self.catalogue = catalogue
         if smoothing_kernel:
             self.kernel = smoothing_kernel
         else:
             self.kernel = IsotropicGaussian()
-        
+
 
         # If no grid limits are specified then take from catalogue
         if not isinstance(self.grid_limits, dict):
@@ -239,7 +241,7 @@ class SmoothedSeismicity(object):
         completeness_table, mag_inc = utils.get_even_magnitude_completeness(
             completeness_table,
             self.catalogue)
-        
+
         if not end_year:
             end_year = np.max(self.catalogue.data['year'])
 
@@ -249,7 +251,7 @@ class SmoothedSeismicity(object):
                                            completeness_table[:, 0],
                                            end_year)
         # Get the grid
-        self.create_3D_grid(self.catalogue, completeness_table, t_f, mag_inc)           
+        self.create_3D_grid(self.catalogue, completeness_table, t_f, mag_inc)
         if config['increment']:
             # Get Hermann adjustment factors
             fval, fival = utils.hermann_adjustment_factors(self.bval,
@@ -264,35 +266,33 @@ class SmoothedSeismicity(object):
         self.data = np.column_stack([self.data, smoothed_data])
         return self.data
 
-        
-
-    def create_2D_grid_simple(self, longitude, latitude, year, magnitude, 
+    def create_2D_grid_simple(self, longitude, latitude, year, magnitude,
                               completeness_table, t_f=1., mag_inc=0.1):
         '''
-        Generates the grid from the limits using an approach closer to that of 
+        Generates the grid from the limits using an approach closer to that of
         Frankel (1995)
         :param numpy.ndarray longitude:
             Vector of earthquake longitudes
-        
+
         :param numpy.ndarray latitude:
             Vector of earthquake latitudes
 
         :param numpy.ndarray year:
             Vector of earthquake years
-        
+
         :param numpy.ndarray magnitude:
             Vector of earthquake magnitudes
 
         :param numpy.ndarray completeness_table:
             Completeness table
-        
+
         :param float t_f:
             Weichert adjustment factor
 
-        
+
         :returns:
            Two-dimensional spatial grid of observed rates
-        
+
         '''
         assert mag_inc > 0.
 
@@ -319,74 +319,74 @@ class SmoothedSeismicity(object):
                 # Earthquake outside latitude limits
                 continue
             ycol = int(dlat) # Correct for floating precision
-            if ycol == ncoly: 
+            if ycol == ncoly:
                 # If latitude is directly on upper grid line then retain
                 ycol = ncoly - 1
             kmarker = (ycol * int(xlim)) + xcol
-            adjust = _get_adjustment(magnitude[iloc],  
-                                     year[iloc], 
+            adjust = _get_adjustment(magnitude[iloc],
+                                     year[iloc],
                                      completeness_table[0, 1],
                                      completeness_table[:, 0],
-                                     t_f, 
+                                     t_f,
                                      mag_inc)
             if adjust:
                 grid_count[kmarker] = grid_count[kmarker] + adjust
         return grid_count
-    
 
-    def create_3D_grid(self, catalogue, completeness_table, t_f=1.0, 
+
+    def create_3D_grid(self, catalogue, completeness_table, t_f=1.0,
                        mag_inc=0.1):
         '''
         Counts the earthquakes observed in a three dimensional grid
 
 
-        :param catalogue: 
+        :param catalogue:
             Instance of the hmtk.seismicity.catalogue.Catalogue class
-            catalogue.data dictionary containing the following - 
+            catalogue.data dictionary containing the following -
             'year' - numpy.ndarray vector of years
             'longitude' - numpy.ndarray vector of longitudes
             'latitude' - numpy.ndarray vector of latitudes
             'depth' - numpy.ndarray vector of depths
 
-        :param np.ndarray completeness_table: 
-            Completeness of the catalogue assuming evenly spaced magnitudes 
+        :param np.ndarray completeness_table:
+            Completeness of the catalogue assuming evenly spaced magnitudes
             from most recent bin to oldest bin [year, magnitude]
-    
+
         :param float t_f:
             Weichert adjustment factor
-        
+
         :param float mag_inc:
             Increment of the completeness magnitude (rendered 0.1)
 
         :returns:
            Three-dimensional spatial grid of observed rates (or two dimensional
            if only one depth layer is considered)
-            
+
         '''
-        x_bins = np.arange(self.grid_limits['xmin'], 
-                           self.grid_limits['xmax'], 
+        x_bins = np.arange(self.grid_limits['xmin'],
+                           self.grid_limits['xmax'],
                            self.grid_limits['xspc'])
         if x_bins[-1] < self.grid_limits['xmax']:
             x_bins = np.hstack([x_bins, x_bins[-1] + self.grid_limits['xspc']])
             self.grid_limits['xmax'] = np.round(x_bins[-1], 5)
-        
-        y_bins = np.arange(self.grid_limits['ymin'], 
-                           self.grid_limits['ymax'], 
+
+        y_bins = np.arange(self.grid_limits['ymin'],
+                           self.grid_limits['ymax'],
                            self.grid_limits['yspc'])
         if y_bins[-1] < self.grid_limits['ymax']:
             y_bins = np.hstack([y_bins, y_bins[-1] + self.grid_limits['yspc']])
             self.grid_limits['ymax'] = np.round(y_bins[-1], 5)
 
 
-        z_bins = np.arange(self.grid_limits['zmin'], 
-                           self.grid_limits['zmax'] + self.grid_limits['zspc'], 
+        z_bins = np.arange(self.grid_limits['zmin'],
+                           self.grid_limits['zmax'] + self.grid_limits['zspc'],
                            self.grid_limits['zspc'])
 
         if z_bins[-1] < self.grid_limits['zmax']:
             z_bins = np.hstack([z_bins, z_bins[-1] + self.grid_limits['zspc']])
             self.grid_limits['zmax'] = np.round(z_bins[-1], 5)
         # Define centre points of grid cells
-        gridx, gridy = np.meshgrid((x_bins[1:] + x_bins[:-1]) / 2., 
+        gridx, gridy = np.meshgrid((x_bins[1:] + x_bins[:-1]) / 2.,
                                     (y_bins[1:] + y_bins[:-1]) / 2.)
 
         n_x, n_y = np.shape(gridx)
@@ -397,9 +397,9 @@ class SmoothedSeismicity(object):
         idx = np.logical_and(catalogue.data['depth'] >= z_bins[0],
                              catalogue.data['depth'] < z_bins[1])
         mid_depth = (z_bins[0] + z_bins[1]) / 2.
-        
+
         data_grid =  np.column_stack([
-            gridx, 
+            gridx,
             gridy,
             mid_depth * np.ones(n_x * n_y, dtype=float),
             self.create_2D_grid_simple(catalogue.data['longitude'][idx],
@@ -409,12 +409,12 @@ class SmoothedSeismicity(object):
                                        completeness_table,
                                        t_f,
                                        mag_inc)])
-        
+
         if len(z_bins) < 3:
             # Only one depth range
             self.data = data_grid
             return
-        
+
         # Multiple depth layers - append to grid
         for iloc in range(1, len(z_bins) - 1):
             idx = np.logical_and(catalogue.data['depth'] >= z_bins[iloc],
@@ -422,8 +422,8 @@ class SmoothedSeismicity(object):
             mid_depth = (z_bins[iloc] + z_bins[iloc + 1]) / 2.
 
             temp_grid = np.column_stack([
-                gridx, 
-                gridy, 
+                gridx,
+                gridy,
                 mid_depth * np.ones(n_x * n_y, dtype=float),
                 self.create_2D_grid_simple(catalogue.data['longitude'][idx],
                                            catalogue.data['latitude'][idx],
@@ -432,10 +432,10 @@ class SmoothedSeismicity(object):
                                            completeness_table,
                                            t_f,
                                            mag_inc)])
-            
+
             data_grid =  np.vstack([data_grid, temp_grid])
         self.data = data_grid
-            
+
     def get_grid_from_catalogue(self, config):
         '''
         Defines the grid on the basis of the catalogue
@@ -443,7 +443,7 @@ class SmoothedSeismicity(object):
         # Get catalogue bounding box
         cat_bbox = get_catalogue_bounding_polygon(self.catalogue)
         # Dilate polygon by bandwidth * length_limit
-        cat_bbox = cat_bbox.dilate(config['BandWidth'] * 
+        cat_bbox = cat_bbox.dilate(config['BandWidth'] *
                                    config['Length_Limit'])
         # Define Grid spacing
         self.grid_limits = {'xmin': np.min(cat_bbox.lons),
@@ -465,18 +465,37 @@ class SmoothedSeismicity(object):
         '''
         fid = open(filename, 'wt')
         # Create header list
-        header_info = ['Longitude', 'Latitude', 'Depth', 'Observed Count', 
+        header_info = ['Longitude', 'Latitude', 'Depth', 'Observed Count',
                        'Smoothed Rate', 'b-value']
         writer = csv.DictWriter(fid, fieldnames=header_info)
         headers = dict((name0, name0) for name0 in header_info)
         # Write to file
         writer.writerow(headers)
         for row in self.data:
-            row_dict = {'Longitude': '%.5f' % row[0], 
-                        'Latitude': '%.5f' % row[1], 
+            row_dict = {'Longitude': '%.5f' % row[0],
+                        'Latitude': '%.5f' % row[1],
                         'Depth': '%.3f' % row[2],
-                        'Observed Count': '%.5e' % row[3], 
-                        'Smoothed Rate': '%.5e' % row[4], 
+                        'Observed Count': '%.5e' % row[3],
+                        'Smoothed Rate': '%.5e' % row[4],
                         'b-value': '%.4f' % self.bval}
             writer.writerow(row_dict)
         fid.close()
+
+
+SMOOTHED_SEISMICITY_METHODS = CatalogueFunctionRegistry()
+
+
+@SMOOTHED_SEISMICITY_METHODS.add(
+    "run",
+    b_value=np.float,
+    use_3d=bool,
+    grid_limits=list,
+    Length_Limit=np.float,
+    BandWidth=np.float,
+    increment=bool)
+class IsotropicGaussianMethod(object):
+    def run(self, catalogue, config):
+        ss = SmoothedSeismicity(config['grid_limits'],
+                                config['b_value'],
+                                config['use_3d'])
+        return ss.run_analysis(catalogue, config)
