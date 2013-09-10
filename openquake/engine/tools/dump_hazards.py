@@ -111,8 +111,9 @@ class HazardDumper(object):
         # there is no binary format for geography in postgis 1.5,
         # this is why we are requiring text format
         assert format == 'text', format
-        if outdir and not os.path.exists(outdir):
-            os.mkdir(outdir)
+        if outdir:
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
         else:
             outdir = tempfile.mkdtemp(prefix='hazard_calculation-')
         self.outdir = outdir
