@@ -85,15 +85,17 @@ def vulnerabilitymodel_parse(vm):
     """
     A parser for vulnerability models yielding readers
     """
-    for vset in node_copy(vm.getnodes('discreteVulnerabilitySet')):
+    for vset in vm.getnodes('discreteVulnerabilitySet'):
+        vset = node_copy(vset)
+        metadata = Node(vm.tag, vm.attrib, nodes=[vset])
         matrix = [vset.IML.text.split()]  # data in transposed form
-        vset.IMT.text = None
+        vset.IML.text = None
         for vf in vset.getnodes('discreteVulnerability'):
             matrix.append(vf.lossRatio.text.split())
             matrix.append(vf.coefficientsVariation.text.split())
             vf.lossRatio.text = None
             vf.coefficientsVariation.text = None
-        yield RowReader(vset, zip(*matrix))
+        yield RowReader('vset', metadata, zip(*matrix))
 
 
 def _floats_to_text(fname, colname, rows):
@@ -148,11 +150,13 @@ def fragilitymodel_parse(fm):
     """
     A parser for fragility models yielding readers
     """
-    metadata = node_copy(fm)
+    format = fm.attrib['format']
     limitStates = fm.limitStates.text.split()
     for ffs in fm.getnodes('ffs'):
+        md = Node('fragilityModel', fm.attrib,
+                  nodes=[fm.description, fm.limitStates])
         if format == 'discrete':
-            matrix = [metadata['IML']]  # data in transposed form
+            matrix = [ffs.IML.text.split()]  # data in transposed form
             for ls, ffd in zip(limitStates, ffs.getnodes('ffd')):
                 assert ls == ffd['ls'], 'Expected %s, got %s' % (
                     ls, ffd['ls'])
@@ -163,8 +167,11 @@ def fragilitymodel_parse(fm):
                 assert ls == ffc['ls'], 'Expected %s, got %s' % (
                     ls, ffc['ls'])
                 matrix.append([ffc.params['mean'], ffc.params['stddev']])
-        ffs.nodes = []  # removed ffd and ffc nodes
-        yield RowReader(metadata, zip(*matrix))
+        else:
+            raise ValueError('Invalid format %r' % format)
+        md.append(Node('ffs', ffs.attrib, nodes=ffs.nodes[:2]))
+        # append the two nodes taxonomy and IML
+        yield RowReader('ffs', md, zip(*matrix))
 
 
 def fragilitymodel_from(readers):
@@ -172,16 +179,16 @@ def fragilitymodel_from(readers):
     Build Node objects from readers
     """
     fm = node_copy(readers[0].metadata)
+    del fm[2]  # ffs node
     for reader in readers:
-        md = reader.metadata
         rows = list(reader)
-        ffs = md.ffs
-        for ls in md.limitStates:
-            if md['format'] == 'discrete':
+        ffs = node_copy(reader.metadata.ffs)
+        for ls in fm.limitStates.text.split():
+            if fm.attrib['format'] == 'discrete':
                 poes = ' '.join(row[ls] for row in rows)
                 ffs.append(Node('ffd', dict(ls=ls),
                                 nodes=[Node('poEs', {}, poes)]))
-            elif md['format'] == 'continuous':
+            elif fm.attrib['format'] == 'continuous':
                 mean, stddev = rows  # there are exactly two rows
                 params = dict(mean=mean[ls], stddev=stddev[ls])
                 ffs.append(Node('ffc', dict(ls=ls),
@@ -253,7 +260,6 @@ def exposuremodel_parse(em):
                 for asset in em.assets)
     elif em['category'] == 'buildings':
         metadata.append(em.conversions)
-        metadata.append(Node('assets'))
         costcolumns = getcostcolumns(em.conversions.costTypes)
         data = ([asset['id'], asset['taxonomy'],
                  asset.location['lon'], asset.location['lat'],
@@ -261,7 +267,8 @@ def exposuremodel_parse(em):
                 + getcosts(asset, costcolumns)
                 + getoccupancies(asset)
                 for asset in em.assets)
-    yield RowReader(metadata, data)
+    metadata.append(Node('assets'))
+    yield RowReader('exposure', metadata, data)
 
 
 def assetgenerator(rows, costtypes):
@@ -316,7 +323,9 @@ def exposuremodel_from(readers):
     assert len(readers) == 1, 'Exposure files must contain a single node'
     reader = readers[0]
     em = node_copy(reader.metadata)
-    em.assets.nodes = assetgenerator(reader, em.conversions.costTypes)
+    ctypes = em.conversions.costTypes if em.attrib['category'] == 'buildings' \
+        else []
+    em.assets.nodes = assetgenerator(reader, ctypes)
     return em
 
 
@@ -335,7 +344,7 @@ def gmfset_parse(gmfset):
         metadata = Node('gmfSet', gmfset.attrib,
                         nodes=[Node('gmf', gmf.attrib)])
         data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
-        yield RowReader(metadata, data)
+        yield RowReader('gmf', metadata, data)
 
 
 def gmfcollection_parse(gmfcoll):
@@ -349,7 +358,7 @@ def gmfcollection_parse(gmfcoll):
             gs = Node('gmfSet', gmfset.attrib, nodes=[Node('gmf', gmf.attrib)])
             metadata.append(gs)
             data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
-            yield RowReader(metadata, data)
+            yield RowReader('gmf', metadata, data)
 
 
 def gmfcollection_fieldnames(md):
@@ -360,20 +369,20 @@ def gmfcollection_from(readers):
     """
     Build a node from a list of metadata dictionaries with readers
     """
-    assert len(readers) > 1
-    md = readers[0]
+    assert len(readers) >= 1
+    md = readers[0].metadata
     gmfcoll = Node('gmfCollection', dict(
-        sourceModelTreePath=md['sourceModelTreePath'],
-        gsimTreePath=md['gsimTreePath']))
-    for ses_id, md_group in itertools.groupby(
-            readers, itemgetter('stochasticEventSetId')):
-        mds = list(md_group)
-        gmfset = md.gmfSet
-        for md in mds:  # metadatas for the same ses
-            gmf = node_copy(gmfset.gmf)
-            for row in md['reader']:
-                lon, lat, gmv = [row[f] for f in md['fieldnames']]
-                gmf.append(Node('node', dict(gmv=gmv, lon=lon, lat=lat)))
+        sourceModelTreePath=md.attrib['sourceModelTreePath'],
+        gsimTreePath=md.attrib['gsimTreePath']))
+
+    def get_ses_id(reader):
+        return reader.metadata.gmfSet.attrib['stochasticEventSetId']
+    for ses_id, readergroup in itertools.groupby(readers, get_ses_id):
+        readerlist = list(readergroup)
+        gmfset = Node('gmfSet', readerlist[0].metadata.gmfSet.attrib)
+        for reader in readerlist:
+            gmf = Node('gmf', reader.metadata.gmfSet.gmf.attrib,
+                       nodes=[Node('node', row) for row in reader])
             gmfset.append(gmf)
         gmfcoll.append(gmfset)
     return gmfcoll
@@ -389,8 +398,7 @@ def gmfset_from(readers):
         md = reader.metadata
         gmf = node_copy(md.gmf)
         for row in reader:
-            lon, lat, gmv = [row[f] for f in md['fieldnames']]
-            gmf.append(Node('node', dict(gmv=gmv, lon=lon, lat=lat)))
+            gmf.append(Node('node', row))
         gmfcoll.append(gmf)
     return gmfcoll
 

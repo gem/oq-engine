@@ -203,7 +203,8 @@ class StringReader(Reader):
 
 
 class RowReader(Reader):
-    def __init__(self, metadata, rows):
+    def __init__(self, name, metadata, rows):
+        self.name = name
         self.metadata = metadata
         self.read_fieldnames()
         self.rows = rows
