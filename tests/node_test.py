@@ -117,7 +117,6 @@ param=yyy
         n.node_to_xml(node, outfile)
         self.assertEqual(outfile.getvalue(), """\
 <?xml version="1.0" encoding="utf-8"?>
-
 <root>
     <general>
         <a>
@@ -164,33 +163,30 @@ param=yyy
         n.node_to_xml(root, outfile)
         self.assertEqual(outfile.getvalue(), """\
 <?xml version="1.0" encoding="utf-8"?>
-
 <nrml
- xmlns="http://openquake.org/xmlns/nrml/0.4"
- xmlns:gml="http://www.opengis.net/gml"
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
 >
     <exposureModel
-     category="population"
-     id="my_exposure_model_for_population"
-     taxonomySource="fake population datasource"
+    category="population"
+    id="my_exposure_model_for_population"
+    taxonomySource="fake population datasource"
     >
         <description>
-            
-      Sample population
-    
+            Sample population
         </description>
         <assets>
             <asset
-             id="asset_01"
-             number="7"
-             taxonomy="IT-PV"
+            id="asset_01"
+            number="7"
+            taxonomy="IT-PV"
             >
                 <location lat="45.16667" lon="9.15000"/>
             </asset>
             <asset
-             id="asset_02"
-             number="7"
-             taxonomy="IT-CE"
+            id="asset_02"
+            number="7"
+            taxonomy="IT-CE"
             >
                 <location lat="45.12200" lon="9.15333"/>
             </asset>

@@ -1,10 +1,11 @@
+# -*- encoding: utf-8 -*-
 import os
 import unittest
 import tempfile
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.convert import (
     convert_nrml_to_zip, convert_zip_to_nrml, build_node)
-from openquake.nrmllib.readers import FakeReader
+from openquake.nrmllib.readers import StringReader
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -49,38 +50,46 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
 
 class ConvertBadFilesTestCase(unittest.TestCase):
     JSON = '''\
-{"tag": "vulnerabilityModel",
- "vulnerabilitysetid": "PAGER",
- "assetcategory": "population",
- "losscategory": "fatalities",
- "vulnerabilityfunctionids": ["IR", "PK"],
- "probabilitydistributions": ["LN", "LN"],
- "fieldnames": ["IML", "IR.lossRatio", "IR.coefficientsVariation",
-                "PK.lossRatio", "PK.coefficientsVariation"],
- "imt": "MMI"}
+<?xml version='1.0' encoding='utf-8'?>
+<vulnerabilityModel>
+<discreteVulnerabilitySet
+ assetCategory="population"
+ lossCategory="fatalities"
+ vulnerabilitySetID="PAGER"
+>       
+    <IML
+     IMT="MMI"
+    >
+    </IML>
+    <discreteVulnerability probabilisticDistribution="LN" vulnerabilityFunctionID="IR">
+      <lossRatio/>
+      <coefficientsVariation/>
+    </discreteVulnerability>
+    <discreteVulnerability probabilisticDistribution="LN" vulnerabilityFunctionID="PK">
+      <lossRatio/>
+      <coefficientsVariation/>
+    </discreteVulnerability>
+</discreteVulnerabilitySet>
+</vulnerabilityModel>
 '''
 
     def test_empty(self):
         with self.assertRaises(InvalidFile):
-            build_node([FakeReader('empty', '', '')])
+            build_node([StringReader('empty', '', '')])
 
     def test_no_header(self):
         with self.assertRaises(ValueError):
-            FakeReader('some', '''{"tag": "vulnerabilityModel",
- "fieldnames": ["a","b"]}''', '')
+            StringReader('some', self.JSON, '')
 
     def test_no_data(self):
-        reader = FakeReader('some', '''{"tag": "vulnerabilityModel",
- "fieldnames": ["a","b"], "vulnerabilityfunctionids": [],
- "probabilitydistributions": [], "imt": "PGA", "vulnerabilitysetid": "PAGER",
- "assetcategory": "category", "losscategory": "category"
-}''', 'a,b')
-        with self.assertRaises(InvalidFile):
-            with tempfile.TemporaryFile() as out:
-                build_node([reader], out)
+        reader = StringReader('some', self.JSON,
+                            'IML,IR.lossRatio,IR.coefficientsVariation,'
+                            'PK.lossRatio,PK.coefficientsVariation')
+        with tempfile.NamedTemporaryFile('w+') as out:
+            build_node([reader], out)
 
     def test_bad_data_1(self):
-        reader = FakeReader('vm', self.JSON, '''\
+        reader = StringReader('vm', self.JSON, '''\
 IML,IR.lossRatio,IR.coefficientsVariation,PK.lossRatio,PK.coefficientsVariation
 5.00,0.00,0.30,0.00,0.30
 5.50,0.00,0.30,0.00,0.30
@@ -91,7 +100,7 @@ IML,IR.lossRatio,IR.coefficientsVariation,PK.lossRatio,PK.coefficientsVariation
                 build_node([reader], out)
 
     def test_bad_data_2(self):
-        reader = FakeReader('vm', self.JSON, '''\
+        reader = StringReader('vm', self.JSON, '''\
 IML,IR.lossRatio,IR.coefficientsVariation,PK.lossRatio,PK.coefficientsVariation
 5.00,0.00,0.30,0.00,0.30
 5.50,0.00,0.30,0.00,0.30

@@ -30,7 +30,8 @@ class _PrettyXMLGenerator(XMLGenerator):
         """Write text by respecting the current indentlevel"""
         if not isinstance(text, str):
             text = text.encode(self._encoding, 'xmlcharrefreplace')
-        self._out.write(' ' * self.indent * self.indentlevel + text + '\n')
+        spaces = ' ' * (self.indent * self.indentlevel)
+        self._out.write(spaces + text.strip() + '\n')
 
     def startElement(self, name, attrs):
         """Start an element"""
