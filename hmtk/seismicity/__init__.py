@@ -70,5 +70,5 @@ from hmtk.seismicity.max_magnitude.kijko_sellevol_fixed_b import (
     KijkoSellevolFixedb)
 from hmtk.seismicity.max_magnitude.base import MAX_MAGNITUDE_METHODS
 
-from hmtk.seismicity.smoothed_seismicity import (
+from hmtk.seismicity.smoothing.smoothed_seismicity import (
     IsotropicGaussianMethod, SMOOTHED_SEISMICITY_METHODS)
