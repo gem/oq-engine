@@ -169,7 +169,9 @@ def fragilitymodel_parse(fm):
                 matrix.append([ffc.params['mean'], ffc.params['stddev']])
         else:
             raise ValueError('Invalid format %r' % format)
-        md.append(Node('ffs', ffs.attrib, nodes=ffs.nodes[:2]))
+        md.append(Node('ffs', ffs.attrib))
+        md.ffs.append(ffs.taxonomy)
+        md.ffs.append(Node('IML', ffs.IML.attrib))
         # append the two nodes taxonomy and IML
         yield RowReader('ffs', md, zip(*matrix))
 
@@ -180,15 +182,18 @@ def fragilitymodel_from(readers):
     """
     fm = node_copy(readers[0].metadata)
     del fm[2]  # ffs node
+    discrete = fm.attrib['format'] == 'discrete'
     for reader in readers:
         rows = list(reader)
         ffs = node_copy(reader.metadata.ffs)
+        if discrete:
+            ffs.IML.text = ' '.join(row['IML'] for row in rows)
         for ls in fm.limitStates.text.split():
-            if fm.attrib['format'] == 'discrete':
+            if discrete:
                 poes = ' '.join(row[ls] for row in rows)
                 ffs.append(Node('ffd', dict(ls=ls),
                                 nodes=[Node('poEs', {}, poes)]))
-            elif fm.attrib['format'] == 'continuous':
+            else:
                 mean, stddev = rows  # there are exactly two rows
                 params = dict(mean=mean[ls], stddev=stddev[ls])
                 ffs.append(Node('ffc', dict(ls=ls),
