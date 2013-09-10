@@ -118,9 +118,26 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
                 return fn(obj, catalogue, config, *args, **kwargs)
             new_method = decorator(caller, original_method.im_func)
             setattr(class_obj, method_name, new_method)
-            new_method.fields = fields
-            new_method.class_obj = class_obj
-            self[class_obj.__name__] = functools.partial(
-                new_method, class_obj())
+            func = functools.partial(new_method, class_obj())
+            func.fields = fields
+            functools.update_wrapper(func, new_method)
+            self[class_obj.__name__] = func
             return class_obj
         return class_decorator
+
+    def add_function(self, **fields):
+        """
+        Decorate a function by adding a call to `set_defaults` and
+        `check_config`. Then, save into the registry a callable
+        function with the same signature of the original method
+
+        :param **fields:
+            a dictionary of field spec, e.g.
+            time_bin=numpy.float,
+            b_value=1E-6
+        """
+        def dec(fn):
+            fn.fields = fields
+            self[fn.__name__] = fn
+            return fn
+        return dec

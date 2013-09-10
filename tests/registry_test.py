@@ -54,6 +54,10 @@ class Calculator(object):
         return catalogue, config
 
 
+def simple_calc(catalogue, param1, param2):
+    return param1 + param2
+
+
 class RegistryTestCase(unittest.TestCase):
 
     def test(self):
@@ -76,3 +80,9 @@ class RegistryTestCase(unittest.TestCase):
         config = {'a_field': 3, 'b_field': 1.0}
         self.assertEqual((catalogue, config),
                          reg['Calculator'](catalogue, config))
+
+    def test_add_function(self):
+        reg = registry.CatalogueFunctionRegistry()
+        decorated = reg.add_function(param1=float, param2=int)(simple_calc)
+        self.assertEqual(3, decorated(mock.Mock(), 1, 2))
+        self.assertEqual(dict(param1=float, param2=int), decorated.fields)
