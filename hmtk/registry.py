@@ -71,16 +71,16 @@ class Registry(collections.OrderedDict):
 
 class CatalogueFunctionRegistry(collections.OrderedDict):
     """
-    A collection of instance methods working on catalogues.
+    A collection of methods/functions working on catalogues.
 
-    We assume that each instance method takes in input also a config
-    object.
-
-    The registry also holds the expected keys of the config object and
-    their type information.
+    The registry also holds information about the type of the input arguments
     """
 
     def check_config(self, config, fields_spec):
+        """
+        Check that `config` has each field in `fields_spec` if a default
+        has not been provided.
+        """
         for field, type_info in fields_spec.items():
             has_default = not isinstance(type_info, type)
             if field not in config and not has_default:
@@ -88,6 +88,10 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
                     "Configuration not complete. %s missing" % field)
 
     def set_defaults(self, config, fields_spec):
+        """
+        Set default values got from `fields_spec` into the `config`
+        dictionary
+        """
         defaults = dict([(f, d)
                          for f, d in fields_spec.items()
                          if not isinstance(d, type)])
@@ -97,9 +101,11 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
 
     def add(self, method_name, **fields):
         """
+        Class decorator.
+
         Decorate `method_name` by adding a call to `set_defaults` and
         `check_config`. Then, save into the registry a callable
-        function with the same signature of the original method
+        function with the same signature of the original method.
 
         :param str method_name:
             the method to decorate
@@ -127,6 +133,8 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
 
     def add_function(self, **fields):
         """
+        Function decorator.
+
         Decorate a function by adding a call to `set_defaults` and
         `check_config`. Then, save into the registry a callable
         function with the same signature of the original method
