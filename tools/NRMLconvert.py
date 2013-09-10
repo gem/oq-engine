@@ -6,17 +6,17 @@ from openquake.nrmllib.readers import FileReader
 
 
 def collect(fnames):
-    xmlfiles, zipfiles, csvjsonfiles, otherfiles = [], [],  [], []
+    xmlfiles, zipfiles, csvmdatafiles, otherfiles = [], [],  [], []
     for fname in sorted(fnames):
         if fname.endswith('.xml'):
             xmlfiles.append(fname)
         elif fname.endswith('.zip'):
             zipfiles.append(fname)
-        elif fname.endswith(('.csv', '.json')):
-            csvjsonfiles.append(fname)
+        elif fname.endswith(('.csv', '.mdata')):
+            csvmdatafiles.append(fname)
         else:
             otherfiles.append(fname)
-    return xmlfiles, zipfiles, csvjsonfiles, otherfiles
+    return xmlfiles, zipfiles, csvmdatafiles, otherfiles
 
 
 def create(factory, fname):
@@ -34,21 +34,21 @@ def main(*fnames):
     if not fnames:
         sys.exit('Please provide some input files')
 
-    xmlfiles, zipfiles, csvjsonfiles, otherfiles = collect(fnames)
+    xmlfiles, zipfiles, csvmdatafiles, otherfiles = collect(fnames)
     for xmlfile in xmlfiles:
         create(convert_nrml_to_zip, xmlfile)
 
     for zipfile in zipfiles:
         create(convert_zip_to_nrml, zipfile)
 
-    for name, group in FileReader.getall('.', csvjsonfiles):
+    for name, group in FileReader.getall('.', csvmdatafiles):
         def convert_to_nrml(out):
             build_node(group, open(out, 'wb+'))
             return out
         create(convert_to_nrml, name + '.xml')
 
     if not xmlfiles and not zipfiles:
-        sys.exit('Could not convert %s' % ' '.join(csvjsonfiles + otherfiles))
+        sys.exit('Could not convert %s' % ' '.join(csvmdatafiles + otherfiles))
 
 
 if __name__ == '__main__':

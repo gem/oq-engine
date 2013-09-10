@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-A library of Reader classes to read flat data from .csv + .json files
+A library of Reader classes to read flat data from .csv + .mdata files
 """
 
 import os
@@ -35,11 +35,11 @@ def _make_readers(cls, container, fnames):
     """
     def getprefix(f):
         return f.rsplit('.', 1)[0]
-    fnames = sorted(f for f in fnames if f.endswith(('.csv', '.json')))
+    fnames = sorted(f for f in fnames if f.endswith(('.csv', '.mdata')))
     readers = []
     for name, group in itertools.groupby(fnames, getprefix):
         gr = list(group)
-        if len(gr) == 2:  # pair (.json, .csv)
+        if len(gr) == 2:  # pair (.mdata, .csv)
             try:
                 readers.append(cls(container, name))
             except Exception as e:
@@ -61,7 +61,7 @@ class Reader(object):
         self.container = container
         self.name = name
         self.fieldnames = None  # set in read_fieldnames
-        with self.openjson() as j:
+        with self.openmdata() as j:
             self.load_metadata(j)
         with self.opencsv() as c:
             self.check_fieldnames(c)
@@ -92,7 +92,7 @@ class Reader(object):
                 f1.lower() != f2.lower()
                 for f1, f2 in zip(fieldnames, self.fieldnames)):
             raise ValueError(
-                'According to %s.json the field names should be '
+                'According to %s.mdata the field names should be '
                 '%s, but the header in %s.csv says %s' % (
                     self.name, self.fieldnames,
                     self.name, fieldnames))
@@ -129,7 +129,7 @@ class Reader(object):
 
 class FileReader(Reader):
     """
-    Read from a couple of files .json and .csv
+    Read from a couple of files .mdata and .csv
     """
     @classmethod
     def getall(cls, directory, fnames=None):
@@ -140,8 +140,8 @@ class FileReader(Reader):
     def opencsv(self):
         return open(os.path.join(self.container, self.name + '.csv'))
 
-    def openjson(self):
-        return open(os.path.join(self.container, self.name + '.json'))
+    def openmdata(self):
+        return open(os.path.join(self.container, self.name + '.mdata'))
 
 
 class ZipReader(Reader):
@@ -157,8 +157,8 @@ class ZipReader(Reader):
     def opencsv(self):
         return self.container.open(self.name + '.csv')
 
-    def openjson(self):
-        return self.container.open(self.name + '.json')
+    def openmdata(self):
+        return self.container.open(self.name + '.mdata')
 
 
 class FileObject(object):
@@ -168,7 +168,10 @@ class FileObject(object):
         self.io = cStringIO.StringIO(bytestring)
 
     def __iter__(self):
-        return iter(self.io)
+        return self
+
+    def next(self):
+        return self.io.next()
 
     def readline(self):
         return self.io.readline()
@@ -191,15 +194,15 @@ class StringReader(Reader):
     """
     def __init__(self, name, json_str, csv_str):
         self.name = name
-        self.json_str = json_str
+        self.mdata_str = json_str
         self.csv_str = csv_str
         Reader.__init__(self, None, name)
 
     def opencsv(self):
         return FileObject(self.name + '.csv', self.csv_str)
 
-    def openjson(self):
-        return FileObject(self.name + '.json', self.json_str)
+    def openmdata(self):
+        return FileObject(self.name + '.mdata', self.mdata_str)
 
 
 class RowReader(Reader):

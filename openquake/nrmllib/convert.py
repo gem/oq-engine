@@ -30,18 +30,18 @@ from openquake.nrmllib.readers import ZipReader, RowReader
 
 def build_node(readers, output=None):
     """
-    Build a NRML node from a consistent set of .json and .csv files.
+    Build a NRML node from a consistent set of .mdata and .csv files.
     If output is not None, it should be a file-like object where to
     save the corresponding NRML file.
     """
     assert readers
     all_readers = []
     tag = None
-    # group pairs of .csv and .json files and build a list of metadata
+    # group pairs of .csv and .mdata files and build a list of metadata
     for reader in readers:
         md = reader.metadata
         if tag and tag != md.tag:
-            raise ValueError('Found tag=%s in %s.json, expected %s' % (
+            raise ValueError('Found tag=%s in %s.mdata, expected %s' % (
                              md.tag, reader.name, tag))
         else:
             tag = md.tag
@@ -407,7 +407,7 @@ def gmfset_from(readers):
 
 def convert_nrml_to_flat(fname, outfname):
     """
-    Convert a NRML file into .csv and .json files. Returns the path names
+    Convert a NRML file into .csv and .mdata files. Returns the path names
     of the generated files.
 
     :param fname: path to a NRML file of kind <path>.xml
@@ -415,10 +415,10 @@ def convert_nrml_to_flat(fname, outfname):
     """
     tozip = []
     for i, reader in enumerate(parse_nrml(fname)):
-        with open(outfname[:-4] + '__%d.json' % i, 'w') as jsonfile:
+        with open(outfname[:-4] + '__%d.mdata' % i, 'w') as mdatafile:
             with open(outfname[:-4] + '__%d.csv' % i, 'w') as csvfile:
-                node_to_xml(reader.metadata, jsonfile)
-                tozip.append(jsonfile.name)
+                node_to_xml(reader.metadata, mdatafile)
+                tozip.append(mdatafile.name)
                 cw = csv.writer(csvfile)
                 cw.writerow(reader.fieldnames)
                 cw.writerows(reader.rows)
