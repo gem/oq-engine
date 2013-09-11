@@ -55,6 +55,7 @@ from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
 
 @OCCURRENCE_METHODS.add(
     'calculate',
+    accepts_completeness=True,
     reference_magnitude=0.0,
     magnitude_interval=0.1)
 class KijkoSmit(SeismicityOccurrence):

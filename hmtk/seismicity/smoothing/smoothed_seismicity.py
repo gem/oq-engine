@@ -487,6 +487,7 @@ SMOOTHED_SEISMICITY_METHODS = CatalogueFunctionRegistry()
 
 @SMOOTHED_SEISMICITY_METHODS.add(
     "run",
+    accepts_completeness=True,
     b_value=np.float,
     use_3d=bool,
     grid_limits=list,
@@ -494,8 +495,9 @@ SMOOTHED_SEISMICITY_METHODS = CatalogueFunctionRegistry()
     BandWidth=np.float,
     increment=bool)
 class IsotropicGaussianMethod(object):
-    def run(self, catalogue, config):
+    def run(self, catalogue, config, completeness=None):
         ss = SmoothedSeismicity(config['grid_limits'],
                                 config['use_3d'],
                                 config['b_value'])
-        return ss.run_analysis(catalogue, config)
+        return ss.run_analysis(
+            catalogue, config, completeness_table=completeness)

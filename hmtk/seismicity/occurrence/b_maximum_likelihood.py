@@ -57,9 +57,11 @@ from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
 
 
 @OCCURRENCE_METHODS.add(
-    'calculate', **{'reference_magnitude': 0.0,
-                    'magnitude_interval': 0.1,
-                    'Average Type': ['Weighted','Harmonic']})
+    'calculate', **{
+        'accepts_completeness': True,
+        'reference_magnitude': 0.0,
+        'magnitude_interval': 0.1,
+        'Average Type': ['Weighted','Harmonic']})
 class BMaxLikelihood(SeismicityOccurrence):
     """ Implements maximum likelihood calculations taking into account time
     variation in completeness"

@@ -99,7 +99,7 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
             if field not in config:
                 config[field] = default_value
 
-    def add(self, method_name, **fields):
+    def add(self, method_name, accept_completeness=False, **fields):
         """
         Class decorator.
 
@@ -109,8 +109,13 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
 
         :param str method_name:
             the method to decorate
+        :param bool accept_completeness:
+            True if the method accepts in input an optional parameter
+            for the completeness table
         :param **fields:
-            a dictionary of field spec, e.g.
+            a dictionary of field spec corresponding to the
+            keys expected to be present in the config dictionary
+            for the decorated method, e.g.
             time_bin=numpy.float,
             b_value=1E-6
         """
@@ -128,12 +133,13 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
             func = functools.partial(new_method, instance)
             func.fields = fields
             func.model = instance
+            func.accepts_completeness = accept_completeness
             functools.update_wrapper(func, new_method)
             self[class_obj.__name__] = func
             return class_obj
         return class_decorator
 
-    def add_function(self, **fields):
+    def add_function(self, accepts_completeness=False, **fields):
         """
         Function decorator.
 
@@ -147,9 +153,14 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
             b_value=1E-6
         """
         def dec(fn):
-            def fn_with_config(catalogue, config):
-                return fn(catalogue, **config)
+            if accepts_completeness:
+                def fn_with_config(catalogue, config, completeness_table=None):
+                    return fn(catalogue, completeness_table, **config)
+            else:
+                def fn_with_config(catalogue, config):
+                    return fn(catalogue, **config)
             fn_with_config.fields = fields
+            fn_with_config.accepts_completeness = accepts_completeness
             self[fn.__name__] = fn_with_config
             return fn
         return dec
