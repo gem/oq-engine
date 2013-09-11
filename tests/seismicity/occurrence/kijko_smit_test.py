@@ -55,7 +55,9 @@ seismicity occurrence parameters.
 import unittest
 import numpy as np
 
+from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.occurrence.kijko_smit import KijkoSmit
+
 
 class KijkoSmitTest(unittest.TestCase):
     
@@ -92,7 +94,8 @@ class KijkoSmitTest(unittest.TestCase):
                     (2000-year_low))
             lidx = uidx 
 
-        self.catalogue = {'magnitude' : magnitude, 'year' : year}
+        self.catalogue = Catalogue.make_from_dict(
+            {'magnitude' : magnitude, 'year' : year})
         self.ks_ml = KijkoSmit()
         self.config = {'Average Type' : 'Weighted'}
         
@@ -108,7 +111,7 @@ class KijkoSmitTest(unittest.TestCase):
 
     def test_kijko_smith_set_reference_magnitude(self):
         completeness_table = np.array([[1900, 1.0]])
-        catalogue = {'magnitude': np.array([5.0, 6.0]), 
-                     'year': np.array([2000, 2000])}
+        catalogue = Catalogue.make_from_dict(
+            {'magnitude': np.array([5.0, 6.0]), 'year': np.array([2000, 2000])})
         config = {'reference_magnitude' : 0.0}
         self.ks_ml.calculate(catalogue, config, completeness_table)

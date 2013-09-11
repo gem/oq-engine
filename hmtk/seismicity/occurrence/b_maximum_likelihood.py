@@ -67,11 +67,11 @@ class BMaxLikelihood(SeismicityOccurrence):
     variation in completeness"
     """
 
-    def calculate(self, catalogue, config, completeness=None, end_year=None):
+    def calculate(self, catalogue, config, completeness=None):
         """ Calculates recurrence parameters a_value and b_value, and their
         respective uncertainties
 
-        :param dict catalogue: Earthquake Catalogue
+        :param catalogue: Earthquake Catalogue
             An instance of :class:`hmtk.seismicity.catalogue`
         :param dict config:
             A configuration dictionary; the only parameter that can be
@@ -79,29 +79,21 @@ class BMaxLikelihood(SeismicityOccurrence):
             in the calculation
         :param list or numpy.ndarray completeness:
             Completeness table
-        :param int end_year:
-            Catalogue termination year
         """
 
         # Input checks
         cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
-                                                    completeness)
-
-        # Fix the end year
-        if end_year is None:
-            end_year = np.max(catalogue['year'])
+                                                  completeness)
 
         # Check the configuration
         if not config['Average Type'] in ['Weighted','Harmonic']:
-            raise ValueError('Average type not recognised in bMaxLiklihood!')
+            raise ValueError('Average type not recognised in bMaxLikelihood!')
 
-        return self._b_ml(catalogue, config, cmag, ctime, ref_mag,
-                dmag, end_year)
+        return self._b_ml(catalogue, config, cmag, ctime, ref_mag, dmag)
 
-    def _b_ml(self, catalogue, config, cmag, ctime, ref_mag, dmag, end_year):
-        """
-        """
-
+    def _b_ml(self, catalogue, config, cmag, ctime, ref_mag, dmag):
+        end_year = catalogue.end_year
+        catalogue = catalogue.data
         ival = 0
         mag_eq_tolerance = 1E-5
         aki_ml = AkiMaxLikelihood()

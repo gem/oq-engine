@@ -50,6 +50,7 @@
 import os
 import unittest
 import numpy as np
+from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.occurrence.aki_maximum_likelihood import \
     AkiMaxLikelihood
 import hmtk.seismicity.occurrence.utils as rec_utils
@@ -69,16 +70,16 @@ class RecurrenceTableTestCase(unittest.TestCase):
                                 'completeness_test_cat.csv')
         test_data = np.genfromtxt(filename, delimiter=',', skip_header=1)
         # Create the catalogue A
-        self.catalogueA = {'year': test_data[:,3], 
-                          'magnitude': test_data[:,17]}
+        self.catalogueA = Catalogue.make_from_dict(
+            {'year': test_data[:,3], 'magnitude': test_data[:,17]})
 
         # Read initial dataset  
         filename = os.path.join(self.BASE_DATA_PATH, 
                                 'recurrence_test_cat_B.csv')
         test_data = np.genfromtxt(filename, delimiter=',', skip_header=1)
         # Create the catalogue A
-        self.catalogueB = {'year': test_data[:,3], 
-                          'magnitude': test_data[:,17]}
+        self.catalogueB = Catalogue.make_from_dict(
+            {'year': test_data[:,3], 'magnitude': test_data[:,17]})
 
         # Read the verification table A
         filename = os.path.join(self.BASE_DATA_PATH, 
@@ -96,9 +97,9 @@ class RecurrenceTableTestCase(unittest.TestCase):
         """
         magnitude_interval = 0.1
         self.assertTrue( np.allclose(self.true_tableA, 
-            rec_utils.recurrence_table(self.catalogueA['magnitude'], 
+            rec_utils.recurrence_table(self.catalogueA.data['magnitude'], 
                                        magnitude_interval,
-                                       self.catalogueA['year'])) )
+                                       self.catalogueA.data['year'])) )
 
     def test_recurrence_table_B(self):
         """
@@ -106,9 +107,9 @@ class RecurrenceTableTestCase(unittest.TestCase):
         """
         magnitude_interval = 0.1
         self.assertTrue( np.allclose(self.true_tableB, 
-            rec_utils.recurrence_table(self.catalogueB['magnitude'], 
+            rec_utils.recurrence_table(self.catalogueB.data['magnitude'], 
                                        magnitude_interval,
-                                       self.catalogueB['year'])) )
+                                       self.catalogueB.data['year'])) )
 
     def test_input_checks_raise_error(self):
         fake_completeness_table = np.zeros((10,10))
@@ -119,19 +120,20 @@ class RecurrenceTableTestCase(unittest.TestCase):
 
     def test_input_checks_simple_input(self):
         completeness_table = [[1900, 2.0]]
-        catalogue = {'magnitude': [5.0, 6.0], 'year': [2000, 2000]}
+        catalogue = Catalogue.make_from_dict(
+            {'magnitude': [5.0, 6.0], 'year': [2000, 2000]})
         config = {}
         rec_utils.input_checks(catalogue, config, completeness_table)
 
     def test_input_checks_use_a_float_for_completeness(self):
         fake_completeness_table = 0.0
-        catalogue = {'year': [1900]}
+        catalogue = Catalogue.make_from_dict({'year': [1900]})
         config = {}
         rec_utils.input_checks(catalogue, config, fake_completeness_table)
 
     def test_input_checks_use_reference_magnitude(self):
         fake_completeness_table = 0.0
-        catalogue = {'year': [1900]}
+        catalogue = Catalogue.make_from_dict({'year': [1900]})
         config = {'reference_magnitude' : 3.0}
         cmag, ctime, ref_mag, dmag = rec_utils.input_checks(catalogue, 
                 config, fake_completeness_table)
@@ -139,11 +141,12 @@ class RecurrenceTableTestCase(unittest.TestCase):
 
     def test_input_checks_sets_magnitude_interval(self):
         fake_completeness_table = 0.0
-        catalogue = {'year': [1900]}
+        catalogue = Catalogue.make_from_dict({'year': [1900]})
         config = {'magnitude_interval' : 0.1}
         cmag, ctime, ref_mag, dmag = rec_utils.input_checks(catalogue, 
                 config, fake_completeness_table)
         self.assertEqual(0.1, dmag)
+
 
 class TestSyntheticCatalogues(unittest.TestCase):
     '''
@@ -161,10 +164,12 @@ class TestSyntheticCatalogues(unittest.TestCase):
         '''
         bvals = []
         # Generate set of synthetic catalogues
-        for i in range(0, 100):
+        for _ in range(0, 100):
             mags = rec_utils.generate_trunc_gr_magnitudes(1.0, 4.0, 8.0, 1000)
-            bvals.append(self.occur.calculate({'magnitude': mags, 
-                'year': np.zeros(len(mags), dtype=int)})[0])
+            cat = Catalogue.make_from_dict(
+                {'magnitude': mags,
+                 'year': np.zeros(len(mags), dtype=int)})
+            bvals.append(self.occur.calculate(cat)[0])
         bvals = np.array(bvals)
         self.assertAlmostEqual(np.mean(bvals), 1.0, 1)
 
@@ -178,6 +183,7 @@ class TestSyntheticCatalogues(unittest.TestCase):
         for i in range(0, 100):
             cat1 = rec_utils.generate_synthetic_magnitudes(4.5, 1.0, 4.0, 8.0,
                                                            1000)
-            bvals.append(self.occur.calculate(cat1)[0])
+            bvals.append(self.occur.calculate(
+                Catalogue.make_from_dict(cat1))[0])
         bvals = np.array(bvals)
         self.assertAlmostEqual(np.mean(bvals), 1.0, 1)

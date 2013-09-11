@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
 # 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,36 +17,36 @@
 #
 # DISCLAIMER
 # 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM’s OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM’s OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 """
-Module :mod:`hmtk.parsers.catalogue.csv_catalogue_parser` 
+Module :mod:`hmtk.parsers.catalogue.csv_catalogue_parser`
 implements :class:`CsvCatalogueParser`.
 """
 import csv
@@ -54,6 +54,7 @@ import numpy as np
 from copy import deepcopy
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.parsers.catalogue.base import BaseCatalogueParser, BaseCatalogueWriter
+
 
 class CsvCatalogueParser(BaseCatalogueParser):
     """CSV Catalogue Parser Class
@@ -69,12 +70,12 @@ class CsvCatalogueParser(BaseCatalogueParser):
         # Parsing the data content
         for irow, row in enumerate(data):
             if irow == 0:
-                valid_key_list = self._header_check(row.keys(), 
+                valid_key_list = self._header_check(row.keys(),
                     catalogue.TOTAL_ATTRIBUTE_LIST)
             for key in valid_key_list:
                 if key in catalogue.FLOAT_ATTRIBUTE_LIST:
                     catalogue.data[key] = self._float_check(
-                                                        catalogue.data[key], 
+                                                        catalogue.data[key],
                                                         row[key])
                 elif key in catalogue.INT_ATTRIBUTE_LIST:
                     catalogue.data[key] = self._int_check(
@@ -82,6 +83,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
                                                         row[key])
                 else:
                     catalogue.data[key].append(row[key])
+        catalogue.update_end_year()
         return catalogue
 
     def _header_check(self, input_keys, catalogue_keys):
@@ -100,7 +102,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
         value = value.strip(' ')
         if value:
             attribute_array = np.hstack([attribute_array, float(value)])
-        else:    
+        else:
             attribute_array = np.hstack([attribute_array, np.nan])
         return attribute_array
 
@@ -110,19 +112,19 @@ class CsvCatalogueParser(BaseCatalogueParser):
         value = value.strip(' ')
         if value:
             attribute_array = np.hstack([attribute_array, int(value)])
-        else:    
+        else:
             attribute_array = np.hstack([attribute_array, np.nan])
         return attribute_array
-        
+
 class CsvCatalogueWriter(BaseCatalogueWriter):
         '''
         Writes catalogue to csv file
         '''
-        # Because the catalogues TOTAL_ATTRIBUTE_LIST is randomly ordered, 
+        # Because the catalogues TOTAL_ATTRIBUTE_LIST is randomly ordered,
         # the preferred output order is given as a list here
         OUTPUT_LIST = ['eventID', 'Agency', 'year', 'month', 'day', 'hour',
-                       'minute', 'second', 'timeError', 'longitude', 
-                       'latitude', 'SemiMajor90', 'SemiMinor90', 'ErrorStrike', 
+                       'minute', 'second', 'timeError', 'longitude',
+                       'latitude', 'SemiMajor90', 'SemiMinor90', 'ErrorStrike',
                        'depth', 'depthError', 'magnitude', 'sigmaMagnitude',
                        'magnitudeType']
         def write_file(self, catalogue, flag_vector=None, magnitude_table=None):
@@ -135,12 +137,12 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
                 Boolean vector specifying whether each event is valid (therefore
                 written) or otherwise
             :param numpy.ndarray magnitude_table:
-                Magnitude-time table specifying the year and magnitudes of 
+                Magnitude-time table specifying the year and magnitudes of
                 completeness
             '''
             # First apply purging conditions
-            output_catalogue = self.apply_purging(catalogue, 
-                                                  flag_vector, 
+            output_catalogue = self.apply_purging(catalogue,
+                                                  flag_vector,
                                                   magnitude_table)
             outfile = open(self.output_file, 'wt')
             writer = csv.DictWriter(outfile, fieldnames=self.OUTPUT_LIST)
@@ -161,8 +163,8 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
                         row_dict[key] = ''
                 writer.writerow(row_dict)
             outfile.close()
-            
-            
+
+
         def apply_purging(self, catalogue, flag_vector, magnitude_table):
             '''
             Apply all the various purging conditions (if specified)
@@ -173,7 +175,7 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
                 Boolean vector specifying whether each event is valid (therefore
                 written) or otherwise
             :param numpy.ndarray magnitude_table:
-                Magnitude-time table specifying the year and magnitudes of 
+                Magnitude-time table specifying the year and magnitudes of
                 completeness
             '''
             output_catalogue = deepcopy(catalogue)
@@ -186,12 +188,12 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
                     output_catalogue.catalogue_mt_filter(
                         magnitude_table)
                     return output_catalogue
-            
+
             if flag_vector is not None:
                 output_catalogue.purge_catalogue(flag_vector)
             return output_catalogue
-            
-            
+
+
 #            if flag_vector is not None:
 #                    magtime_flag = output_catalogue.catalogue_mt_filter(
 #                        magnitude_table)

@@ -386,7 +386,7 @@ class TestSmoothedSeismicity(unittest.TestCase):
         self.catalogue.data['latitude'] = frankel_catalogue[:, 2]
         self.catalogue.data['depth'] = frankel_catalogue[:, 3]
         self.catalogue.data['year'] = frankel_catalogue[:, 4]
-        
+        self.catalogue.end_year = 2006
         frankel_results = np.genfromtxt(os.path.join(BASE_PATH, 
                                                      FRANKEL_OUTPUT_FILE))
         # Run analysis
@@ -394,8 +394,7 @@ class TestSmoothedSeismicity(unittest.TestCase):
             self.catalogue, 
             config,
             completeness_table=comp_table,
-            smoothing_kernel = IsotropicGaussian(),
-            end_year=2006)
+            smoothing_kernel = IsotropicGaussian())
 
         self.assertTrue(fabs(np.sum(output_data[:, -1]) - 
                              np.sum(output_data[:, -2])) < 1.0)

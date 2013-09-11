@@ -53,7 +53,9 @@ seismicity occurrence parameters.
 import unittest
 import numpy as np
 
+from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.occurrence.weichert import Weichert
+
 
 class WeichertTestCase(unittest.TestCase):
     
@@ -91,7 +93,8 @@ class WeichertTestCase(unittest.TestCase):
                     (2000-year_low))
             lidx = uidx 
         # Fix the parameters that later will be used for the testing 
-        self.catalogue = {'magnitude' : magnitude, 'year' : year}
+        self.catalogue = Catalogue.make_from_dict(
+            {'magnitude' : magnitude, 'year' : year})
         self.wei = Weichert()
         self.config = {'Average Type' : 'Weighted'}
         

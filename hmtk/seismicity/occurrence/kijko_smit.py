@@ -77,15 +77,13 @@ class KijkoSmit(SeismicityOccurrence):
             id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
             m_c = np.min(cmag[id0])
             if ival == number_intervals - 1:
-                id1 = np.logical_and(catalogue['year'] >= ctime[ival],
-                    catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
+                id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
+                    catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
             else:
-                id1 = np.logical_and(catalogue['year'] >= ctime[ival],
-                                     catalogue['year'] < ctime[ival + 1])
+                id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
+                                     catalogue.data['year'] < ctime[ival + 1])
                 id1 = np.logical_and(id1,
-                    catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
-
-
+                    catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
 
 #        while ival < number_intervals:
 #            id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
@@ -96,13 +94,13 @@ class KijkoSmit(SeismicityOccurrence):
 #            # differences.
 #            id1 = np.logical_and(catalogue['year'] >= ctime[ival],
 #                catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
-            nyr[ival] = np.float(np.max(catalogue['year'][id1]) -
-                                 np.min(catalogue['year'][id1]) + 1)
+            nyr[ival] = np.float(np.max(catalogue.data['year'][id1]) -
+                                 np.min(catalogue.data['year'][id1]) + 1)
             neq[ival] = np.sum(id1)
             # Get a- and b- value for the selected events
-            temp_rec_table = recurrence_table(catalogue['magnitude'][id1],
+            temp_rec_table = recurrence_table(catalogue.data['magnitude'][id1],
                                               dmag,
-                                              catalogue['year'][id1])
+                                              catalogue.data['year'][id1])
 
             aki_ml = AkiMaxLikelihood()
             b_est[ival]= aki_ml._aki_ml(temp_rec_table[:, 0],

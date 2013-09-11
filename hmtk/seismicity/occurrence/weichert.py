@@ -69,9 +69,10 @@ class Weichert(SeismicityOccurrence):
         cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
                                                    completeness)
         # Apply Weichert preparation
-        cent_mag, t_per, n_obs = self._weichert_prep(catalogue['year'],
-                                                     catalogue['magnitude'],
-                                                     ctime, cmag, dmag)
+        cent_mag, t_per, n_obs = self._weichert_prep(
+            catalogue.data['year'],
+            catalogue.data['magnitude'],
+            ctime, cmag, dmag)
 
         # A few more Weichert checks
         key_list = config.keys()

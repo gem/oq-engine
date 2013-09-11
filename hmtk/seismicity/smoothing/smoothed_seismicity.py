@@ -48,16 +48,51 @@ Module :mod: hmtk.seismicity.smoothing.smoothed_seismicity implements the
 a general class for implementing seismicity smoothing algorithms
 '''
 import csv
-import abc
-from math import fabs, log, floor
+import collections
+
+from math import fabs, log
 import numpy as np
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.polygon import Polygon
-from hmtk.seismicity.utils import haversine
 from hmtk.seismicity.smoothing import utils
 from hmtk.seismicity.smoothing.kernels.isotropic_gaussian import \
     IsotropicGaussian
 from hmtk.registry import CatalogueFunctionRegistry
+
+
+class Grid(collections.OrderedDict):
+    @classmethod
+    def make_from_list(cls, grid_limits):
+        new = cls()
+        new.update({'xmin': grid_limits[0],
+                    'xmax': grid_limits[1],
+                    'xspc': grid_limits[2],
+                    'ymin': grid_limits[3],
+                    'ymax': grid_limits[4],
+                    'yspc': grid_limits[5],
+                    'zmin': grid_limits[6],
+                    'zmax': grid_limits[7],
+                    'zspc': grid_limits[8]})
+        return new
+
+    @classmethod
+    def make_from_catalogue(cls, catalogue, spacing, dilate):
+        '''
+        Defines the grid on the basis of the catalogue
+        '''
+        new = cls()
+        cat_bbox = get_catalogue_bounding_polygon(catalogue).dilate(dilate)
+        # Define Grid spacing
+        new.update({'xmin': np.min(cat_bbox.lons),
+                    'xmax': np.max(cat_bbox.lons),
+                    'xspc': spacing,
+                    'ymin': np.min(cat_bbox.lats),
+                    'ymax': np.max(cat_bbox.lats),
+                    'yspc': spacing,
+                    'zmin': 0.,
+                    'zmax': np.max(catalogue['depth']) + 1E-5,
+                    'zspc': np.max(catalogue['depth'])})
+        return new
 
 
 def _get_adjustment(mag, year, mmin, completeness_year, t_f, mag_inc=0.1):
@@ -145,8 +180,11 @@ class SmoothedSeismicity(object):
     def __init__(self, grid_limits, use_3d=False, bvalue=None):
         '''
         Instatiate class with a set of grid limits
-        :param list grid_limits:
-            Limits of the grid as
+        :param grid_limits:
+            It could be a float (in that case the grid is computed from the
+            catalogue with the given spacing).
+
+            Or an array of the form:
             [xmin, xmax, spcx, ymin, ymax, spcy, zmin, spcz]
 
         :param bool use_3d:
@@ -166,30 +204,11 @@ class SmoothedSeismicity(object):
             self.beta = None
         self.data = None
 
-        if isinstance(grid_limits, list) and len(grid_limits) == 9:
-            self.grid_limits = {'xmin': grid_limits[0],
-                                'xmax': grid_limits[1],
-                                'xspc': grid_limits[2],
-                                'ymin': grid_limits[3],
-                                'ymax': grid_limits[4],
-                                'yspc': grid_limits[5],
-                                'zmin': grid_limits[6],
-                                'zmax': grid_limits[7],
-                                'zspc': grid_limits[8]}
-
-            assert self.grid_limits['xmax'] >= self.grid_limits['xmin']
-            assert self.grid_limits['xspc'] > 0.0
-            assert self.grid_limits['ymax'] >= self.grid_limits['ymin']
-            assert self.grid_limits['yspc'] > 0.0
-        elif isinstance(grid_limits, float):
-            # Only the spacing (in degrees) is entered
-            self.grid_limits = grid_limits
-        else:
-            self.grid_limits = None
+        self.grid_limits = grid_limits
         self.kernel = None
 
     def run_analysis(self, catalogue, config, completeness_table=None,
-        smoothing_kernel=None, end_year=None):
+                     smoothing_kernel=None):
         '''
         Runs an analysis of smoothed seismicity in the manner
         originally implemented by Frankel (1995)
@@ -218,10 +237,6 @@ class SmoothedSeismicity(object):
             Smoothing kernel as instance of :class:
                 hmtk.seismicity.smoothing.kernels.base.BaseSmoothingKernel
 
-        :param float end_year:
-            Year considered as the final year for the analysis. If not given
-            the program will automatically take the last year in the catalogue.
-
         :returns:
             Full smoothed seismicity data as np.ndarray, of the form
             [Longitude, Latitude, Depth, Observed, Smoothed]
@@ -233,17 +248,23 @@ class SmoothedSeismicity(object):
         else:
             self.kernel = IsotropicGaussian()
 
-
         # If no grid limits are specified then take from catalogue
-        if not isinstance(self.grid_limits, dict):
-            self.get_grid_from_catalogue(config)
+        if isinstance(self.grid_limits, list):
+            self.grid_limits = Grid.make_from_list(self.grid_limits)
+            assert self.grid_limits['xmax'] >= self.grid_limits['xmin']
+            assert self.grid_limits['xspc'] > 0.0
+            assert self.grid_limits['ymax'] >= self.grid_limits['ymin']
+            assert self.grid_limits['yspc'] > 0.0
+        elif isinstance(self.grid_limits, float):
+            self.grid_limits = Grid.make_from_catalogue(
+                self.catalogue, self.grid_limits,
+                config['Length_Limit'] * config['BandWidth'])
 
         completeness_table, mag_inc = utils.get_even_magnitude_completeness(
             completeness_table,
             self.catalogue)
 
-        if not end_year:
-            end_year = np.max(self.catalogue.data['year'])
+        end_year = self.catalogue.end_year
 
         # Get Weichert factor
         t_f, _ = utils.get_weichert_factor(self.beta,
@@ -332,7 +353,6 @@ class SmoothedSeismicity(object):
             if adjust:
                 grid_count[kmarker] = grid_count[kmarker] + adjust
         return grid_count
-
 
     def create_3D_grid(self, catalogue, completeness_table, t_f=1.0,
                        mag_inc=0.1):
@@ -436,27 +456,6 @@ class SmoothedSeismicity(object):
             data_grid =  np.vstack([data_grid, temp_grid])
         self.data = data_grid
 
-    def get_grid_from_catalogue(self, config):
-        '''
-        Defines the grid on the basis of the catalogue
-        '''
-        # Get catalogue bounding box
-        cat_bbox = get_catalogue_bounding_polygon(self.catalogue)
-        # Dilate polygon by bandwidth * length_limit
-        cat_bbox = cat_bbox.dilate(config['BandWidth'] *
-                                   config['Length_Limit'])
-        # Define Grid spacing
-        self.grid_limits = {'xmin': np.min(cat_bbox.lons),
-                            'xmax': np.max(cat_bbox.lons),
-                            'xspc': self.grid_limits,
-                            'ymin': np.min(cat_bbox.lats),
-                            'ymax': np.max(cat_bbox.lats),
-                            'yspc': self.grid_limits}
-        if self.use_3d:
-            self.grid_limits['zmin'] = 0.
-            self.grid_limits['zmax'] = np.max(self.catalogue['depth']) + 1E-5
-            self.grid_limits['zspc'] = np.max(self.catalogue['depth'])
-
     def write_to_csv(self, filename):
         '''
         Exports to simple csv
@@ -490,7 +489,7 @@ SMOOTHED_SEISMICITY_METHODS = CatalogueFunctionRegistry()
     completeness=True,
     b_value=np.float,
     use_3d=bool,
-    grid_limits=list,
+    grid_limits=Grid,
     Length_Limit=np.float,
     BandWidth=np.float,
     increment=bool)

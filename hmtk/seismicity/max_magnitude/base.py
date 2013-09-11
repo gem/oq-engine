@@ -73,13 +73,8 @@ def _get_magnitude_vector_properties(catalogue, config):
     '''If an input minimum magnitude is given then consider catalogue
     only above the minimum magnitude - returns corresponding properties'''
 
-    if config['input_mmin']:
-        neq = np.float(np.sum(catalogue['magnitude'] >=
-                              config['input_mmin'] - 1.E-7))
-        mmin = config['input_mmin']
-    else:
-        neq = np.float(len(catalogue['magnitude']))
-        mmin = np.min(catalogue['magnitude'])
+    mmin = config.get('input_mmin', np.min(catalogue['magnitude']))
+    neq = np.float(np.sum(catalogue['magnitude'] >= mmin - 1.E-7))
     return neq, mmin
 
 
