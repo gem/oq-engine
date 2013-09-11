@@ -332,13 +332,3 @@ class TestBootstrapHistograms(unittest.TestCase):
         array_diff = expected_array - hist_values
         self.assertTrue(np.all(np.fabs(array_diff) < 0.02))
 
-
-
-
-
-        
-
-
-#    def test_histogram_1D_no_bootstraps_no_normalisation(self):
-
-
