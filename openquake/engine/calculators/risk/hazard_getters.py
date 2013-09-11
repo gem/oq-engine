@@ -372,13 +372,10 @@ GROUP BY site_id ORDER BY site_id;
             self.imt, hc.site_collection, site_assets,
             truncation_level, gsims, model)
 
-        r_objs, r_seeds, r_ids = [r_objs[0]], [r_seeds[0]], [r_ids[0]]
         with monitor.copy('computing gmvs'):
             all_assets, gmvs = calc_getter.compute(
                 r_objs, r_seeds, r_ids, hc.maximum_distance)
 
-        print r_objs, r_seeds, r_ids, hc.maximum_distance
-        print '***', gmvs[0]
         return all_assets, (gmvs, r_ids)
 
 
