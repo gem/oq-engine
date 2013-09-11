@@ -1,0 +1,12 @@
+admin.organization.csv.gz
+admin.oq_user.csv.gz
+uiapi.hazard_calculation.csv.gz
+hzrdr.lt_realization.csv.gz
+hzrdi.hazard_site.csv.gz
+uiapi.model_content.csv.gz
+uiapi.input.csv.gz
+uiapi.input2hcalc.csv.gz
+uiapi.oq_job.csv.gz
+uiapi.output.csv.gz
+hzrdr.hazard_curve.csv.gz
+hzrdr.hazard_curve_data.csv.gz
