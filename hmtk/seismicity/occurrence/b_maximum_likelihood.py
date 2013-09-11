@@ -58,7 +58,7 @@ from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
 
 @OCCURRENCE_METHODS.add(
     'calculate', **{
-        'accepts_completeness': True,
+        'completeness': True,
         'reference_magnitude': 0.0,
         'magnitude_interval': 0.1,
         'Average Type': ['Weighted','Harmonic']})
@@ -106,6 +106,8 @@ class BMaxLikelihood(SeismicityOccurrence):
         mag_eq_tolerance = 1E-5
         aki_ml = AkiMaxLikelihood()
 
+        print "ctime.....", ctime
+
         while ival < np.shape(ctime)[0]:
 
             id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
@@ -146,6 +148,8 @@ class BMaxLikelihood(SeismicityOccurrence):
                 neq = np.hstack([neq, np.sum(id1)])
             ival = ival + np.sum(id0)
 
+        print "gr_pars", gr_pars
+        print "neq", neq
         # Get average GR parameters
         bval, sigma_b, aval, sigma_a = self._average_parameters(gr_pars, neq,
                 config['Average Type'])

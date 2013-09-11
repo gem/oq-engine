@@ -487,7 +487,7 @@ SMOOTHED_SEISMICITY_METHODS = CatalogueFunctionRegistry()
 
 @SMOOTHED_SEISMICITY_METHODS.add(
     "run",
-    accepts_completeness=True,
+    completeness=True,
     b_value=np.float,
     use_3d=bool,
     grid_limits=list,

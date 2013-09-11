@@ -54,7 +54,7 @@ from hmtk.seismicity.occurrence.utils import input_checks
 
 @OCCURRENCE_METHODS.add(
     'calculate',
-    accepts_completeness=True,
+    completeness=True,
     reference_magnitude=0.0,
     magnitude_interval=0.1,
     bvalue=1.0,

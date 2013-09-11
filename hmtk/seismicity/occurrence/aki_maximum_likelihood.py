@@ -53,7 +53,7 @@ from hmtk.seismicity.occurrence.base import (
 from hmtk.seismicity.occurrence.utils import recurrence_table, input_checks
 
 
-@OCCURRENCE_METHODS.add('calculate', accepts_completeness=True)
+@OCCURRENCE_METHODS.add('calculate', completeness=True)
 class AkiMaxLikelihood(SeismicityOccurrence):
 
     def calculate(self, catalogue, config=None, completeness=None):
