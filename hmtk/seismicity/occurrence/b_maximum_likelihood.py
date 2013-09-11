@@ -106,8 +106,6 @@ class BMaxLikelihood(SeismicityOccurrence):
         mag_eq_tolerance = 1E-5
         aki_ml = AkiMaxLikelihood()
 
-        print "ctime.....", ctime
-
         while ival < np.shape(ctime)[0]:
 
             id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
@@ -141,15 +139,13 @@ class BMaxLikelihood(SeismicityOccurrence):
                 np.log10(rate))
             if ival == 0:
                 gr_pars = np.array([np.hstack([bval, sigma_b, rate, sigrate])])
-                neq = np.sum(id1)  # Number of events
+                neq = np.array(np.sum(id1))  # Number of events
             else:
                 gr_pars = np.vstack([gr_pars, np.hstack([bval, sigma_b, rate,
                                                          sigrate])])
                 neq = np.hstack([neq, np.sum(id1)])
             ival = ival + np.sum(id0)
 
-        print "gr_pars", gr_pars
-        print "neq", neq
         # Get average GR parameters
         bval, sigma_b, aval, sigma_a = self._average_parameters(gr_pars, neq,
                 config['Average Type'])
@@ -170,7 +166,7 @@ class BMaxLikelihood(SeismicityOccurrence):
         :param numpy.ndarray neq:
 
         """
-        if np.shape(gr_params)[0] != np.shape(neq)[0]:
+        if np.shape(gr_params)[0] != neq.size:
             raise ValueError('Number of weights does not correspond'
                              ' to number of parameters')
 
@@ -200,11 +196,11 @@ class BMaxLikelihood(SeismicityOccurrence):
     def _harmonic_mean(self, parameters, neq):
         '''Harmonic mean'''
         weight = neq.astype(float) / np.sum(neq)
-        if np.shape(parameters)[0] != np.shape(weight)[0]:
+        if np.shape(parameters)[0] != weight.size:
                 raise ValueError('Parameter vector not same shape as weights')
-        else:
-            average_value = np.zeros(np.shape(parameters)[1], dtype=float)
-            for iloc in range(0, np.shape(parameters)[1]):
-                average_value[iloc] = 1. / np.sum(
-                    (weight * (1. / parameters[:, iloc])))
+
+        average_value = np.zeros(np.shape(parameters)[1], dtype=float)
+        for iloc in range(0, np.shape(parameters)[1]):
+            average_value[iloc] = 1. / np.sum(
+                (weight * (1. / parameters[:, iloc])))
         return average_value
