@@ -94,7 +94,6 @@ class Catalogue(object):
                 self.data[attribute] = np.array([], dtype=int)
             else:
                 self.data[attribute] = []
-
         # Consider removing
 #        self.data['xyz'] = None
 #        self.data['flag_vector'] = None
@@ -136,6 +135,7 @@ class Catalogue(object):
             A list of keys explaining the content of the columns in the array
         :type list:
         """
+
         if len(keys) != np.shape(data_array)[1]:
             raise ValueError('Key list does not match shape of array!')
 
@@ -147,21 +147,35 @@ class Catalogue(object):
             if not key in self.TOTAL_ATTRIBUTE_LIST:
                 print 'Key %s not a recognised catalogue attribute' % key
 
-    def catalogue_mt_filter(self, mt_table):
+#    def catalogue_mt_filter(self, mt_table):
+#        if not 'eventID' in keys:
+#            self.data['eventID'] = np.array(range(0, np.shape(data_array)[0]),
+#                                            dtype=int)
+#
+#        for i, key in enumerate(keys):
+#            self.data[key] = data_array[:, i]
+    
+    def catalogue_mt_filter(self, mt_table, flag=None):
         """
         Filter the catalogue using a magnitude-time table. The table has 
-        two columns and n-rows. The first column contains the magnitude 
-        the second years.
-        """
-        flag = np.ones(np.shape(self.data['magnitude'])[0], dtype=bool)
-        for comp_val in mt_table:
-            id0 = np.logical_and(self.data['year'] < comp_val[0],
-                                 self.data['magnitude'] < comp_val[1])
-            flag[id0] = False
-        for key in self.data.keys():
-            if len(self.data[key]):
-                self.data[key] = self.data[key][np.nonzero(flag)]
+        two columns and n-rows. 
+        :param nump.ndarray mt_table:
+            Magnitude time table with n-rows where column 1 is year and column
+            2 is magnitude
 
+        """
+        if flag is None:
+            # No flag defined, therefore all events are initially valid
+            flag = np.ones(self.get_number_events(), dtype=bool)
+        
+        for comp_val in mt_table:
+            id0 = np.logical_and(self.data['year'].astype(float) < comp_val[0],
+                                 self.data['magnitude'] < comp_val[1])
+            print id0
+            flag[id0] = False
+        if not np.all(flag):
+            self.purge_catalogue(flag)
+    
 
     def get_decimal_time(self):                                                 
         '''                                                                     
@@ -211,8 +225,7 @@ class Catalogue(object):
         :param numpy.ndarray flag_vector:                                           
             Boolean vector showing if events are selected (True) or not (False)     
                                                                                     
-        '''                                                                         
-        
+        '''                                                                                 
         id0 = np.where(flag_vector)[0]                                          
         self.select_catalogue_events(id0)
         self.get_number_events()
@@ -236,14 +249,26 @@ class Catalogue(object):
             else:
                 continue
 
-
-
     def get_depth_distribution(self, depth_bins, normalisation=False,
                                bootstrap=None):
         '''
         Gets the depth distribution of the earthquake catalogue to return a 
         single histogram. Depths may be normalised. If uncertainties are found
         in the catalogue the distrbution may be bootstrap sampled
+        
+        :param numpy.ndarray depth_bins:
+            Bin edges for the depths
+        
+        :param bool normalisation:
+            Choose to normalise the results such that the total contributions
+            sum to 1.0 (True) or not (False)
+        
+        :param int bootstrap:
+            Number of bootstrap samples
+
+        :returns:
+            Histogram of depth values
+         
         '''
         if len(self.data['depth']) == 0:
             # If depth information is missing
@@ -260,12 +285,26 @@ class Catalogue(object):
                                       number_bootstraps=bootstrap,
                                       boundaries=(0., None))
 
-
-
     def get_magnitude_depth_distribution(self, magnitude_bins, depth_bins,
         normalisation=False, bootstrap=None):
         '''
         Returns a 2-D magnitude-depth histogram for the catalogue
+
+        :param numpy.ndarray magnitude_bins:
+             Bin edges for the magnitudes
+
+        :param numpy.ndarray depth_bins:
+            Bin edges for the depths
+        
+        :param bool normalisation:
+            Choose to normalise the results such that the total contributions
+            sum to 1.0 (True) or not (False)
+        
+        :param int bootstrap:
+            Number of bootstrap samples
+
+        :returns:
+            2D histogram of events in magnitude-depth bins
         '''
         if len(self.data['depth']) == 0:
             # If depth information is missing
@@ -278,7 +317,6 @@ class Catalogue(object):
         if len(self.data['sigmaMagnitude']) == 0:
             self.data['sigmaMagnitude'] = np.zeros(self.get_number_events(), 
                                                    dtype=float)
-
 
         return bootstrap_histogram_2D(self.data['magnitude'],
                                       self.data['depth'],
@@ -295,6 +333,22 @@ class Catalogue(object):
         '''
         Returns a 2-D histogram indicating the number of earthquakes in a
         set of time-magnitude bins. Time is in decimal years!
+        
+        :param numpy.ndarray magnitude_bins:
+             Bin edges for the magnitudes
+
+        :param numpy.ndarray time_bins:
+            Bin edges for the times
+        
+        :param bool normalisation:
+            Choose to normalise the results such that the total contributions
+            sum to 1.0 (True) or not (False)
+        
+        :param int bootstrap:
+            Number of bootstrap samples
+
+        :returns:
+            2D histogram of events in magnitude-year bins
         '''
         return bootstrap_histogram_2D(self.get_decimal_time(),
             self.data['magnitude'],

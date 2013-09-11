@@ -175,9 +175,7 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         self.assertAlmostEqual(model1.mfd.min_mag, 6.9)
         np.testing.assert_array_almost_equal(
             np.log10(np.array(model1.mfd.occurrence_rates)),
-            np.log10(np.array([3.7126015094340933e-10, 
-                      9.485094568718566e-10, 
-                      3.712601509434094e-10])))
+            np.array([-2.95320041, -2.54583708, -2.953200413]))
 
         # Second source should be an instance of a mtkSimpleFaultSource
         model2 = self.model.source_model.sources[1]
@@ -186,9 +184,7 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         self.assertAlmostEqual(model2.mfd.min_mag, 7.4)
         np.testing.assert_array_almost_equal(
             np.log10(np.array(model2.mfd.occurrence_rates)),
-            np.log10(np.array([6.602042821906074e-11, 
-                               1.6867148373824242e-10, 
-                               6.602042821906075e-11])))
+            np.array([-3.70320041, -3.29583708, -3.70320041]))
 
         # Third source should be an instance of a mtkComplexFaultSource
         model3 = self.model.source_model.sources[2]
@@ -197,9 +193,7 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         self.assertAlmostEqual(model3.mfd.min_mag, 6.9)
         np.testing.assert_array_almost_equal(
             np.log10(np.array(model3.mfd.occurrence_rates)),
-            np.log10(np.array([8.561401806251138e-10, 
-                               2.1872992715953526e-09, 
-                               8.561401806251139e-10])))
+            np.array([-2.59033387, -2.18297054, -2.59033387]))
                                              
         # Fourth source should be an instance of a mtkComplexFaultSource
         model4 = self.model.source_model.sources[3]
@@ -208,6 +202,4 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         self.assertAlmostEqual(model4.mfd.min_mag, 7.4)
         np.testing.assert_array_almost_equal(
             np.log10(np.array(model4.mfd.occurrence_rates)),
-            np.log10(np.array([1.5224564553126443e-10, 
-                               3.889629258271149e-10, 
-                               1.5224564553126446e-10])))
+            np.array([-3.34033387, -2.93297054, -3.34033387]))

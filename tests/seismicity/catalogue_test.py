@@ -85,7 +85,8 @@ class CatalogueTestCase(unittest.TestCase):
         cat = Catalogue()
         cat.load_from_array(['year','magnitude'], self.data_array)
         self.assertTrue(np.allclose(cat.data['magnitude'],self.data_array[:,1]))
-        self.assertTrue(np.allclose(cat.data['year'],self.data_array[:,0]))
+        self.assertTrue(np.allclose(cat.data['year'],
+                                    self.data_array[:,0].astype(int)))
         
     def test_load_to_array(self):
         """
@@ -94,7 +95,7 @@ class CatalogueTestCase(unittest.TestCase):
         cat = Catalogue()
         cat.load_from_array(['year','magnitude'], self.data_array)
         data = cat.load_to_array(['year','magnitude'])
-        self.assertTrue(np.allclose(data,self.data_array))
+        self.assertTrue(np.allclose(data, self.data_array))
     
     def test_catalogue_mt_filter(self):
         """
@@ -102,6 +103,7 @@ class CatalogueTestCase(unittest.TestCase):
         """
         cat = Catalogue()
         cat.load_from_array(['year','magnitude'], self.data_array)
+        cat.data['eventID'] = np.arange(0, 7)
         cat.catalogue_mt_filter(self.mt_table)
         mag = np.array([7.0, 5.5, 5.01, 6.99])
         yea = np.array([1920, 1970, 1960, 1960])

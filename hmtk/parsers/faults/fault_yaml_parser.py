@@ -56,7 +56,7 @@ import numpy as np
 from math import fabs
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib import scalerel
+from openquake.hazardlib.scalerel import get_available_scalerel
 from hmtk.faults.fault_geometries import (SimpleFaultGeometry,
                                           ComplexFaultGeometry)
 from hmtk.faults.fault_models import mtkActiveFault 
@@ -65,9 +65,7 @@ from hmtk.faults.tectonic_regionalisation import (TectonicRegionalisation,
                                                   _check_list_weights)
 
 
-
-SCALE_REL_MAP = {'WC1994': scalerel.wc1994.WC1994,
-                 'PeerMSR': scalerel.peer.PeerMSR}
+SCALE_REL_MAP = get_available_scalerel()
 
 def weight_list_to_tuple(data, attr_name):
     '''
@@ -116,7 +114,7 @@ def get_scaling_relation_tuple(msr_dict):
     for iloc, value in enumerate(msr_dict['Value']):
         if not value in SCALE_REL_MAP.keys():
             raise ValueError('Scaling relation %s not supported!' % value)
-        msr_dict['Value'][iloc] = SCALE_REL_MAP[value]
+        msr_dict['Value'][iloc] = SCALE_REL_MAP[value]()
     return weight_list_to_tuple(msr_dict,
                                 'Magnitude Scaling Relation')
 
@@ -164,9 +162,9 @@ class FaultYmltoSource(object):
                 fault['Fault_Name'],
                 fault_geometry,
                 weight_list_to_tuple(fault['Slip'], '%s - Slip' % fault['ID']),
-                fault['Rake'],
+                float(fault['Rake']),
                 fault['Tectonic_Region'],
-                fault['Aseismic'],
+                float(fault['Aseismic']),
                 weight_list_to_tuple(
                     fault['Scaling_Relation_Sigma'], 
                     '%s Scaling_Relation_Sigma' % fault['ID']),

@@ -101,7 +101,7 @@ class ReadStrainCsv(object):
         else:
             self.strain.data_variables = STRAIN_VARIABLES
 
-        datafile = open(self.filename, 'rt')
+        datafile = open(self.filename, 'rU')
         reader = csv.DictReader(datafile)
         self.strain.data = OrderedDict([(name, []) 
                                        for name in reader.fieldnames])

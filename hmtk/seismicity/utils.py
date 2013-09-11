@@ -289,14 +289,16 @@ def bootstrap_histogram_1D(values, intervals, uncertainties=None,
     Bootstrap samples a set of vectors
     :param numpy.ndarray values:
         The data values
-    :param numpy.ndarray uncertainties:
-        The standard deviations of each observation
     :param numpy.ndarray intervals:
         The bin edges
+    :param numpy.ndarray uncertainties:
+        The standard deviations of each observation
     :param bool normalisation:
         If True then returns the histogram as a density function
     :param int number_bootstraps:
         Number of bootstraps
+    :param tuple boundaries:
+        (Lower, Upper) bounds on the data
 
     :param returns:
         1-D histogram of data
@@ -333,9 +335,31 @@ def bootstrap_histogram_2D(xvalues, yvalues, xbins, ybins,
     '''
     Calculates a 2D histogram of data, allowing for normalisation and 
     bootstrap sampling
+    :param numpy.ndarray xvalues:
+        Data values of the first variable
+
+    :param numpy.ndarray yvalues:
+        Data values of the second variable
+
+    :param numpy.ndarray xbins:
+        Bin edges for the first variable
+
+    :param numpy.ndarray ybins:
+        Bin edges for the second variable
+
+    :param list boundaries:
+        List of (Lower, Upper) tuples corresponding to the bounds of the 
+        two data sets
+
+    :param numpy.ndarray xsigma:
+        Error values (standard deviatons) on first variable
+
+    :param numpy.ndarray ysigma:
+        Error values (standard deviatons) on second variable
 
     :param bool normalisation:
         If True then returns the histogram as a density function
+    
     :param int number_bootstraps:
         Number of bootstraps
 
@@ -363,16 +387,9 @@ def bootstrap_histogram_2D(xvalues, yvalues, xbins, ybins,
             ysample = sample_truncated_gaussian_vector(yvalues, ysigma,
                                                        boundaries[0])
 
-            #xsample = xvalues + xsigma * np.random.normal(0., 1., len(xvalues))
-            #ysample = yvalues + ysigma * np.random.normal(0., 1., len(yvalues))
             temp_hist[:, :, iloc] = np.histogram2d(xsample, 
                                                    ysample, 
                                                    bins=[xbins, ybins])[0]
-#            if normalisation:
-#                temp_hist[:, :, iloc] = output.astype(float) / \
-#                    float(np.sum(output))
-#            else:
-#                temp_hist[:, :, iloc] = output.astype(float)
         if normalisation:
             output = np.sum(temp_hist, axis=2)
             output = output / np.sum(output)

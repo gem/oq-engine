@@ -118,13 +118,29 @@ class TestYamlParserPeripherals(unittest.TestCase):
         self.data = {
             'Shear_Modulus': {'Value': [30.], 'Weight': [1.0]},
             'Displacement_Length_Ratio': {'Value': [1.25E-5], 'Weight': [1.0]},
-            'Magnitude_Scaling_Relation': {'Value': [WC1994], 
+            'Magnitude_Scaling_Relation': {'Value': [WC1994()], 
                                            'Weight': [1.0]}}
         expected_output = {'Shear_Modulus': [(30., 1.0)],
                            'Displacement_Length_Ratio': [(1.25E-5, 1.0)],
-                           'Magnitude_Scaling_Relation': [(WC1994, 1.0)]}
-        self.assertDictEqual(expected_output, 
-                             parse_tect_region_dict_to_tuples([self.data])[0])
+                           'Magnitude_Scaling_Relation': [(WC1994(), 1.0)]}
+        output = parse_tect_region_dict_to_tuples([self.data])
+        self.assertAlmostEqual(expected_output['Shear_Modulus'][0][0],
+                                output[0]['Shear_Modulus'][0][0])
+        self.assertAlmostEqual(expected_output['Shear_Modulus'][0][1],
+                                output[0]['Shear_Modulus'][0][1])
+        self.assertAlmostEqual(
+            expected_output['Displacement_Length_Ratio'][0][0],
+            output[0]['Displacement_Length_Ratio'][0][0])
+        self.assertAlmostEqual(
+            expected_output['Displacement_Length_Ratio'][0][1],
+            output[0]['Displacement_Length_Ratio'][0][1])
+        
+        self.assertTrue(isinstance(
+            output[0]['Magnitude_Scaling_Relation'][0][0],
+            WC1994))
+        self.assertAlmostEqual(
+            expected_output['Magnitude_Scaling_Relation'][0][1],
+            output[0]['Shear_Modulus'][0][1])
 
        
     def test_get_scaling_relation_tuple(self):
@@ -142,9 +158,11 @@ class TestYamlParserPeripherals(unittest.TestCase):
         # Test with both supported MSRs
         self.data = {'Value': ['WC1994', 'PeerMSR'],
                      'Weight': [0.5, 0.5]}
-        expected_result = [(WC1994, 0.5), (PeerMSR, 0.5)]
-        self.assertListEqual(expected_result,
-            get_scaling_relation_tuple(self.data))
+        result = get_scaling_relation_tuple(self.data)
+        self.assertTrue(isinstance(result[0][0], WC1994))
+        self.assertTrue(isinstance(result[1][0], PeerMSR))
+        self.assertAlmostEqual(result[0][1], 0.5)
+        self.assertAlmostEqual(result[1][1], 0.5)
 
 
 class TestFaultYamlParser(unittest.TestCase):

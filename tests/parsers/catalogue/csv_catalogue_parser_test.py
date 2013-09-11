@@ -47,8 +47,12 @@
 
 import unittest
 import os
+import numpy as np
+from hmtk.seismicity.catalogue import Catalogue
+from hmtk.parsers.catalogue.csv_catalogue_parser import (CsvCatalogueParser,
+                                                         CsvCatalogueWriter)
 
-from hmtk.parsers.catalogue.csv_catalogue_parser import CsvCatalogueParser
+
 
 class CsvCatalogueParserTestCase(unittest.TestCase):
     """ 
@@ -81,3 +85,110 @@ class CsvCatalogueParserTestCase(unittest.TestCase):
         correct
         """
         self.assertEqual(self.cat.get_number_events(),8)
+
+
+class TestCsvCatalogueWriter(unittest.TestCase):
+    '''
+    Tests the catalogue csv writer
+    '''
+    def setUp(self):
+        '''
+        '''
+        self.output_filename = os.path.join(os.path.dirname(__file__), 
+                                            'TEST_OUTPUT_CATALOGUE.csv')
+        print self.output_filename
+        self.catalogue = Catalogue()
+        self.catalogue.data['eventID'] = np.array([1, 2, 3, 4, 5])
+        self.catalogue.data['magnitude'] = np.array([5.6, 5.4, 4.8, 4.3, 5.])
+        self.catalogue.data['year'] = np.array([1960, 1965, 1970, 1980, 1990])
+        self.catalogue.data['ErrorStrike'] = np.array([np.nan, np.nan, np.nan, 
+                                                       np.nan, np.nan])
+        self.magnitude_table =  np.array([[1990., 4.5], [1970., 5.5]])
+        self.flag = np.array([1, 1, 1, 1, 0], dtype=bool)
+
+
+    def check_catalogues_are_equal(self, cat1, cat2):
+        '''
+        Compares two catalogues
+        '''
+        np.testing.assert_array_equal(cat1.data['eventID'],
+                                      cat2.data['eventID'])
+        np.testing.assert_array_equal(cat1.data['year'],
+                                      cat2.data['year'])
+
+        np.testing.assert_array_almost_equal(cat1.data['magnitude'],
+                                             cat2.data['magnitude'])
+
+    def test_catalogue_writer_no_purging(self):
+        '''
+        Tests the writer without any purging
+        '''
+        # Write to file
+        writer = CsvCatalogueWriter(self.output_filename)
+        writer.write_file(self.catalogue)
+        parser = CsvCatalogueParser(self.output_filename)
+        cat2 = parser.read_file()
+        self.check_catalogues_are_equal(self.catalogue, cat2)
+
+    def test_catalogue_writer_only_flag_purging(self):
+        '''
+        Tests the writer only purging according to the flag
+        '''
+        # Write to file
+        writer = CsvCatalogueWriter(self.output_filename)
+        writer.write_file(self.catalogue, flag_vector=self.flag)
+        parser = CsvCatalogueParser(self.output_filename)
+        cat2 = parser.read_file()
+
+        expected_catalogue = Catalogue()
+        expected_catalogue.data['eventID'] = np.array([1, 2, 3, 4])
+        expected_catalogue.data['magnitude'] = np.array([5.6, 5.4, 4.8, 4.3])
+        expected_catalogue.data['year'] = np.array([1960, 1965, 1970, 1980])
+        expected_catalogue.data['ErrorStrike'] = np.array([np.nan, np.nan, 
+                                                           np.nan, np.nan])
+        self.check_catalogues_are_equal(expected_catalogue, cat2)
+
+    def test_catalogue_writer_only_mag_table_purging(self):
+        '''
+        Tests the writer only purging according to the magnitude table
+        '''
+        # Write to file
+        writer = CsvCatalogueWriter(self.output_filename)
+        writer.write_file(self.catalogue, magnitude_table=self.magnitude_table)
+        parser = CsvCatalogueParser(self.output_filename)
+        cat2 = parser.read_file()
+
+        expected_catalogue = Catalogue()
+        expected_catalogue.data['eventID'] = np.array([1, 3, 5])
+        expected_catalogue.data['magnitude'] = np.array([5.6, 4.8, 5.0])
+        expected_catalogue.data['year'] = np.array([1960, 1970, 1990])
+        expected_catalogue.data['ErrorStrike'] =np.array([np.nan, np.nan, 
+                                                          np.nan])
+        self.check_catalogues_are_equal(expected_catalogue, cat2)
+
+    def test_catalogue_writer_both_purging(self):
+        '''
+        Tests the writer only purging according to the magnitude table and
+        the flag vector
+        '''
+        # Write to file
+        writer = CsvCatalogueWriter(self.output_filename)
+        writer.write_file(self.catalogue, 
+                          flag_vector=self.flag,
+                          magnitude_table=self.magnitude_table)
+        parser = CsvCatalogueParser(self.output_filename)
+        cat2 = parser.read_file()
+
+        expected_catalogue = Catalogue()
+        expected_catalogue.data['eventID'] =  np.array([1, 3])
+        expected_catalogue.data['magnitude'] = np.array([5.6, 4.8])
+        expected_catalogue.data['year'] = np.array([1960, 1970])
+        expected_catalogue.data['ErrorStrike'] = np.array([np.nan, np.nan])
+        self.check_catalogues_are_equal(expected_catalogue, cat2)
+       
+       
+    def tearDown(self):
+        '''
+        Remove the test file
+        '''
+        os.system('rm %s' % self.output_filename)

@@ -293,6 +293,7 @@ class Shift(object):
             activity rate
         '''
         self.strain = strain_data
+        self.strain.target_magnitudes = self.target_magnitudes
         # Adjust strain rates from annual to seconds (SI)
         for key in STRAIN_VARIABLES:
                 self.strain.data[key] = self.strain.data[key] / SECS_PER_YEAR
@@ -361,6 +362,9 @@ class Shift(object):
             self.strain.seismicity_rate  = self.strain.seismicity_rate * \
                 SECS_PER_YEAR
 
+            for key in STRAIN_VARIABLES:
+                    self.strain.data[key] = self.strain.data[key] *\
+                        SECS_PER_YEAR
 
     def get_rate_osr_normal_transform(self, threshold_moment, id0):
         '''

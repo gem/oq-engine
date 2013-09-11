@@ -45,7 +45,7 @@
 # The GEM Foundation, and the authors of the software, assume no 
 # liability for use of the software. 
 
-
+import warnings
 import numpy as np
 from hmtk.seismicity.occurrence.base import SeismicityOccurrence
 from hmtk.seismicity.occurrence.utils import input_checks
@@ -189,7 +189,9 @@ class Weichert(SeismicityOccurrence):
             stm2x = np.sum(fmag * tmexp)
             dldb = stmex / sumtex
             if np.isnan(stmex) or np.isnan(sumtex):
-                raise ValueError('NaN occers in Weichert iteration')
+                warnings.warn('NaN occurs in Weichert iteration')
+                return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
+                #raise ValueError('NaN occers in Weichert iteration')
 
             d2ldb2 = nkount * ((dldb ** 2.0) - (stm2x / sumtex))
             dldb = (dldb * nkount) - snm
@@ -215,6 +217,6 @@ class Weichert(SeismicityOccurrence):
             else:
                 iteration += 1
                 if iteration > maxiter:
-                    raise RuntimeError('Maximum Number of Iterations reached')
-                continue
+                    warnings.warn('Maximum Number of Iterations reached')
+                    return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
         return bval, sigb, a_m, siga_m, fn0, stdfn0

@@ -48,7 +48,7 @@
 #!/usr/bin/env/python
 
 '''Tests for revised Stepp (1971) completeness analysis procedure'''
-
+import os
 import unittest
 import numpy as np
 from math import fabs
@@ -57,7 +57,12 @@ from hmtk.seismicity.completeness.comp_stepp_1971 import (
     get_bilinear_residuals_stepp, Stepp1971)
 from hmtk.parsers.catalogue import CsvCatalogueParser
 
-INPUT_FILE_1 = 'tests/seismicity/completeness/data/completeness_test_cat.csv'
+
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
+
+INPUT_FILE_1 = os.path.join(BASE_DATA_PATH, 'completeness_test_cat.csv')
+
+#INPUT_FILE_1 = 'tests/seismicity/completeness/data/completeness_test_cat.csv'
 
 class TestBilinearResiduals(unittest.TestCase):
     '''
@@ -283,18 +288,18 @@ class TestSteppCompleteness(unittest.TestCase):
                        'increment_lock': True,
                        'filename': None}
         
-        expected_completeness_table = np.array([[1990., 4.25], 
-                                                [1962., 4.75], 
-                                                [1959., 5.25], 
-                                                [1906., 5.75], 
-                                                [1906., 6.25], 
-                                                [1904., 6.75], 
-                                                [1904., 7.25]])
+        expected_completeness_table = np.array([[1990., 4.0], 
+                                                [1962., 4.5], 
+                                                [1959., 5.0], 
+                                                [1906., 5.5], 
+                                                [1906., 6.0], 
+                                                [1904., 6.5], 
+                                                [1904., 7.0]])
+        
 
-        self.assertTrue(np.allclose(
+        np.testing.assert_array_almost_equal(
             expected_completeness_table,
-            self.process.completeness(self.catalogue, self.config)
-            ))
+            self.process.completeness(self.catalogue, self.config))
 
 
 

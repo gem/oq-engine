@@ -31,7 +31,7 @@ Fault_Model:
           Fault_Typology: Simple,
           # For simple typology, defines the trace in terms of Long., Lat.
           Fault_Trace: [30.0, 30.0,
-                        30.0, 31.5],
+                        30.0, 31.0],
 
           # Upper Seismogenic Depth (km)
           Upper_Depth:      0.0,
@@ -39,15 +39,15 @@ Fault_Model:
           Lower_Depth:     20.0,
           Strike: ,
           # Dip (degrees)
-          Dip:     60.}
+          Dip:     30.}
       Rake: -90.0
       Slip_Type: Thrust
       Slip_Completeness_Factor: 1
       #slip [value_1, value_2, ... value_n]
       #     [weight_1, weight_2, ... weight_n]
       Slip: {
-          Value: [18., 20.0, 23.],
-          Weight: [0.3, 0.5, 0.2]}
+          Value: [5., 7.],
+          Weight: [0.5, 0.5]}
       #Aseismic Slip Factor 
       Aseismic: 0.0
       MFD_Model: 
@@ -56,9 +56,9 @@ Fault_Model:
           # Spacing (magnitude units) of the magnitude frequency distribution
           MFD_spacing: 0.1
           # Weight of the model
-          Model_Weight: 0.7
+          Model_Weight: 0.5
           # Magnitude of the Characteristic Earthquake
-          Maximum_Magnitude:
+          Maximum_Magnitude: 7.0
           # Uncertainty on Characteristic Magnitude (in magnitude units)
           Sigma: 0.12
           # Lower bound truncation (in number of standard deviations)
@@ -71,23 +71,23 @@ Fault_Model:
           # Type - chooses between type 1 ('First'), type 2 ('Second') or type 3 ('Third')
           Model_Type: First
           MFD_spacing: 0.1
-          Model_Weight: 0.3
+          Model_Weight: 0.5
           # Maximum Magnitude of the exponential distribution
-          Maximum_Magnitude: 
+          Maximum_Magnitude: 7.0
           Minimum_Magnitude: 4.5
           # b-value of the exponential distribution as [expected, uncertainty]
           b_value: [0.8, 0.05]
       Megazone: 
       Shear_Modulus: {
-          Value: [30., 35.0],
-          Weight: [0.8, 0.2]}
+          Value: [30.],
+          Weight: [1.0]}
       Magnitude_Scaling_Relation: {
           Value: [WC1994],
           Weight: [1.0]}
       Scaling_Relation_Sigma: {
-          Value: [-1.5, 0.0, 1.5], 
-          Weight: [0.15, 0.7, 0.15]}
+          Value: [0.0], 
+          Weight: [1.0]}
       Aspect_Ratio: 1.5
       Displacement_Length_Ratio: {
-          Value: [1.25E-5, 1.5E-5],
-          Weight:[0.5, 0.5]}
+          Value: [1.25E-5],
+          Weight:[1.0]}

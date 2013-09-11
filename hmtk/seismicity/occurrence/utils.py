@@ -119,14 +119,78 @@ def input_checks(catalogue, config, completeness):
         ctime = np.array(np.min(catalogue['year']))
      
     # Set reference magnitude - if not in config then default to M = 0.
-    if config is None or not 'reference_magnitude' in config:
+    if not config:
+        # use default reference magnitude of 0.0 and magnitude interval of 0.1
         ref_mag = 0.0
-    else:
-        ref_mag = config['reference_magnitude']
-
-    if config is None or not 'magnitude_interval' in config:
         dmag = 0.1
     else:
-        dmag = config['magnitude_interval']
+        if (not 'reference_magnitude' in config.keys()) or \
+            not config['reference_magnitude']:
+            ref_mag = 0.0
+        else:
+            ref_mag = config['reference_magnitude']
+            
+        if (not 'magnitude_interval' in config.keys()) or \
+            not config['magnitude_interval']:
+            dmag = 0.1
+        else:
+            dmag = config['magnitude_interval']
+
+#    if config is None or not 'reference_magnitude' in config:
+#        ref_mag = 0.0
+#    else:
+#        ref_mag = config['reference_magnitude']
+#
+#    if config is None or not 'magnitude_interval' in config:
+#        dmag = 0.1
+#    else:
+#        dmag = config['magnitude_interval']
     
     return cmag, ctime, ref_mag, dmag
+
+
+def generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples):
+    '''
+    Generate a random list of magnitudes distributed according to a 
+    truncated Gutenberg-Richter model
+    :param float bval:
+        b-value
+    :param float mmin:
+        Minimum Magnitude
+    :param float mmax:
+        Maximum Magnitude
+    :param int nsamples:
+        Number of samples
+
+    :returns:
+        Vector of generated magnitudes
+    '''
+    sampler = np.random.uniform(0., 1., nsamples)
+    beta = bval * np.log(10.)
+    return (-1. / beta) * (np.log(1. - sampler * (1 - np.exp(-beta * (mmax - 
+        mmin))))) + mmin
+
+def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
+    '''
+    Generates a synthetic catalogue for a specified number of years, with
+    magnitudes distributed according to a truncated Gutenberg-Richter 
+    distribution
+    :param float aval:
+        a-value
+    :param float bval:
+        b-value
+    :param float mmin:
+        Minimum Magnitude
+    :param float mmax:
+        Maximum Magnitude
+    :param int nyears:
+        Number of years
+    :returns:
+        Synthetic catalogue (dict) with year and magnitude attributes
+    '''
+    nsamples = np.round(nyears * (10. ** (aval - bval * mmin)), 0)
+    year = np.random.randint(0, nyears, nsamples)
+    # Get magnitudes
+    mags = generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples)
+    return {'magnitude': mags, 'year': np.sort(year)}
+

@@ -54,7 +54,7 @@ import abc
 import numpy as np
 from math import fabs
 from shapely import wkt
-from openquake.hazardlib import scalerel
+from openquake.hazardlib.scalerel import get_available_scalerel
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
@@ -68,14 +68,9 @@ from hmtk.faults import mfd
 
 
 MFD_MAP = mfd.get_available_mfds()
-
-# TODO Cannot be generalised until this is done in openquake.hazardlib!
-SCALE_REL_MAP = {
-           'WC1994': scalerel.wc1994.WC1994,
-           'PeerMSR': scalerel.peer.PeerMSR
-           }
-
+SCALE_REL_MAP = get_available_scalerel()
 DEFAULT_MSR_SIGMA = [(0., 1.0)]
+
 
 def _update_slip_rates_with_aseismic(slip_rate, aseismic):
     '''
@@ -162,7 +157,6 @@ class RecurrenceBranch(object):
         '''
         model = MFD_MAP[config['Model_Name']]()
         model.setUp(config)
-
         model.get_mmax(config, self.msr, self.rake, self.area)
         model.mmax = model.mmax + (self.msr_sigma * model.mmax_sigma)
         # As the Anderson & Luco arbitrary model requires the input of the 
@@ -428,6 +422,7 @@ class mtkActiveFault(object):
             model = RecurrenceBranch(self.area,
                                      tuple_list[0][0],
                                      tuple_list[1][0],
+                                     self.rake,
                                      tuple_list[2][0],
                                      tuple_list[3][0],
                                      tuple_list[4][0],
@@ -507,7 +502,7 @@ class mtkActiveFault(object):
             
             if isinstance(self.geometry, ComplexFaultGeometry):
                 # Complex fault class
-                source_model.append(mtkComplexFaultSource(
+                source = mtkComplexFaultSource(
                     self.id, 
                     self.name,
                     self.trt,
@@ -515,22 +510,24 @@ class mtkActiveFault(object):
                     self.mfd[2][iloc],
                     self.rupt_aspect_ratio,
                     model_mfd,
-                    self.rake))
-            
+                    self.rake)
+                source.fault_edges = self.geometry.trace
             else:
                 # Simple Fault source
-                source_model.append(mtkSimpleFaultSource(
+                source = mtkSimpleFaultSource(
                     self.id,
                     self.name,
                     self.trt,
                     self.geometry.surface,
+                    self.geometry.dip,
                     self.geometry.upper_depth,
                     self.geometry.lower_depth,
-                    self.geometry.dip,
                     self.mfd[2][iloc],
                     self.rupt_aspect_ratio,
                     model_mfd,
-                    self.rake))
+                    self.rake)
+                source.fault_trace = self.geometry.trace
+            source_model.append(source)
             model_weight.append(self.mfd[1][iloc])
         return source_model, model_weight              
 
