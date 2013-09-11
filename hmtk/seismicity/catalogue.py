@@ -52,9 +52,11 @@ Prototype of a 'Catalogue' class
 """
 
 import numpy as np
-from hmtk.seismicity.utils import decimal_time
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
+from hmtk.seismicity.utils import (decimal_time, bootstrap_histogram_1D,
+                                   bootstrap_histogram_2D)
+
 
 class Catalogue(object):
     """
@@ -122,7 +124,7 @@ class Catalogue(object):
         # Preallocate the numpy array
         data = np.empty( (len(self.data[keys[0]]), len(keys)) )
         for i in range(0, len(self.data[keys[0]]) ):
-            for j,key in enumerate(keys):
+            for j, key in enumerate(keys):
                 data[i,j] = self.data[key][i]
         return data  
     
@@ -134,9 +136,17 @@ class Catalogue(object):
             A list of keys explaining the content of the columns in the array
         :type list:
         """
+        if len(keys) != np.shape(data_array)[1]:
+            raise ValueError('Key list does not match shape of array!')
+
         for i,key in enumerate(keys):
-            self.data[key] = data_array[:,i]
-    
+            if key in self.INT_ATTRIBUTE_LIST:
+                self.data[key] = data_array[:, i].astype(int)
+            else:
+                self.data[key] = data_array[:, i]
+            if not key in self.TOTAL_ATTRIBUTE_LIST:
+                print 'Key %s not a recognised catalogue attribute' % key
+
     def catalogue_mt_filter(self, mt_table):
         """
         Filter the catalogue using a magnitude-time table. The table has 
@@ -182,6 +192,18 @@ class Catalogue(object):
                                         self.data['depth'])
 
 
+    def sort_catalogue_chronologically(self):
+        '''
+        Sorts the catalogue into chronological order
+        '''
+        neqs = self.get_number_events()
+        dec_time = self.get_decimal_time()
+        idx = np.argsort(dec_time)
+        if np.all((idx[1:] - idx[:-1]) > 0.):
+            # Catalogue was already in chronological order
+            return
+        self.select_catalogue_events(idx)
+
     def purge_catalogue(self, flag_vector):            
         '''                                                                         
         Purges present catalogue with invalid events defined by flag_vector
@@ -192,7 +214,16 @@ class Catalogue(object):
         '''                                                                         
         
         id0 = np.where(flag_vector)[0]                                          
-                                                                                 
+        self.select_catalogue_events(id0)
+        self.get_number_events()
+
+
+    def select_catalogue_events(self, id0):
+        '''
+        Orders the events in the catalogue according to an indexing vector
+        :param np.ndarray id0:
+            Pointer array indicating the locations of selected events
+        '''
         for key in self.data.keys():
             if isinstance(self.data[key], np.ndarray) and \
                 len(self.data[key]) > 0:
@@ -204,4 +235,74 @@ class Catalogue(object):
                 self.data[key] = [self.data[key][iloc] for iloc in id0]
             else:
                 continue
-        self.get_number_events()
+
+
+
+    def get_depth_distribution(self, depth_bins, normalisation=False,
+                               bootstrap=None):
+        '''
+        Gets the depth distribution of the earthquake catalogue to return a 
+        single histogram. Depths may be normalised. If uncertainties are found
+        in the catalogue the distrbution may be bootstrap sampled
+        '''
+        if len(self.data['depth']) == 0:
+            # If depth information is missing
+            raise ValueError('Depths missing in catalogue')
+
+        if len(self.data['depthError']) == 0:
+            self.data['depthError'] = np.zeros(self.get_number_events(), 
+                                               dtype=float)
+
+        return bootstrap_histogram_1D(self.data['depth'], 
+                                      depth_bins, 
+                                      self.data['depthError'],
+                                      normalisation=normalisation,
+                                      number_bootstraps=bootstrap,
+                                      boundaries=(0., None))
+
+
+
+    def get_magnitude_depth_distribution(self, magnitude_bins, depth_bins,
+        normalisation=False, bootstrap=None):
+        '''
+        Returns a 2-D magnitude-depth histogram for the catalogue
+        '''
+        if len(self.data['depth']) == 0:
+            # If depth information is missing
+            raise ValueError('Depths missing in catalogue')
+
+        if len(self.data['depthError']) == 0:
+            self.data['depthError'] = np.zeros(self.get_number_events(), 
+                                               dtype=float)
+        
+        if len(self.data['sigmaMagnitude']) == 0:
+            self.data['sigmaMagnitude'] = np.zeros(self.get_number_events(), 
+                                                   dtype=float)
+
+
+        return bootstrap_histogram_2D(self.data['magnitude'],
+                                      self.data['depth'],
+                                      magnitude_bins,
+                                      depth_bins,
+                                      boundaries=[(0., None), (None, None)],
+                                      xsigma=self.data['sigmaMagnitude'],
+                                      ysigma=self.data['depthError'],
+                                      normalisation=normalisation,
+                                      number_bootstraps=bootstrap)
+
+    def get_magnitude_time_distribution(self, magnitude_bins, time_bins,
+        normalisation=False, bootstrap=None):
+        '''
+        Returns a 2-D histogram indicating the number of earthquakes in a
+        set of time-magnitude bins. Time is in decimal years!
+        '''
+        return bootstrap_histogram_2D(self.get_decimal_time(),
+            self.data['magnitude'],
+            time_bins,
+            magnitude_bins,
+            xsigma=np.zeros(self.get_number_events()),
+            ysigma=self.data['sigmaMagnitude'],
+            normalisation=normalisation,
+            number_bootstraps=bootstrap)
+        
+
