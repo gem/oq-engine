@@ -21,7 +21,6 @@ import csv
 import warnings
 import zipfile
 import itertools
-from operator import itemgetter
 from openquake.nrmllib.node import (
     node_copy, node_from_nrml, node_to_nrml, node_to_xml, Node)
 from openquake.nrmllib import InvalidFile
@@ -61,13 +60,14 @@ def getfieldnames(md):
 
 def parse_nrml(fname):
     """
-    Parse a NRML file and yields metadata dictionaries.
+    Parse a NRML file and yield row readers
 
     :param fname: filename or file object
     """
     model = node_from_nrml(fname)[0]
     parse = globals()['%s_parse' % model.tag.lower()]
-    return parse(model)
+    for metadata, data in parse(model):
+        yield RowReader(model.tag, metadata, data)
 
 
 ############################# vulnerability #################################
@@ -83,7 +83,7 @@ def vulnerabilitymodel_fieldnames(md):
 
 def vulnerabilitymodel_parse(vm):
     """
-    A parser for vulnerability models yielding readers
+    A parser for vulnerability models yielding pairs (metadata, data)
     """
     for vset in vm.getnodes('discreteVulnerabilitySet'):
         vset = node_copy(vset)
@@ -95,7 +95,7 @@ def vulnerabilitymodel_parse(vm):
             matrix.append(vf.coefficientsVariation.text.split())
             vf.lossRatio.text = None
             vf.coefficientsVariation.text = None
-        yield RowReader('vset', metadata, zip(*matrix))
+        yield metadata, zip(*matrix)
 
 
 def _floats_to_text(fname, colname, rows):
@@ -148,7 +148,7 @@ def fragilitymodel_fieldnames(md):
 
 def fragilitymodel_parse(fm):
     """
-    A parser for fragility models yielding readers
+    A parser for fragility models yielding pairs (metadata, data)
     """
     format = fm.attrib['format']
     limitStates = fm.limitStates.text.split()
@@ -173,7 +173,7 @@ def fragilitymodel_parse(fm):
         md.ffs.append(ffs.taxonomy)
         md.ffs.append(Node('IML', ffs.IML.attrib))
         # append the two nodes taxonomy and IML
-        yield RowReader('ffs', md, zip(*matrix))
+        yield md, zip(*matrix)
 
 
 def fragilitymodel_from(readers):
@@ -255,7 +255,7 @@ def exposuremodel_fieldnames(md):
 
 def exposuremodel_parse(em):
     """
-    A parser for exposure models yielding readers
+    A parser for exposure models yielding a pair (metadata, data)
     """
     metadata = Node('exposureModel', em.attrib, nodes=[em.description])
     if em['category'] == 'population':
@@ -273,7 +273,7 @@ def exposuremodel_parse(em):
                 + getoccupancies(asset)
                 for asset in em.assets)
     metadata.append(Node('assets'))
-    yield RowReader('exposure', metadata, data)
+    yield metadata, data
 
 
 def assetgenerator(rows, costtypes):
@@ -342,19 +342,19 @@ def gmfset_fieldnames(md):
 
 def gmfset_parse(gmfset):
     """
-    A parser for GMF scenario yielding a reader
+    A parser for GMF scenario yielding a pair (metadata, data)
     for each node <gmf>.
     """
     for gmf in gmfset.getnodes('gmf'):
         metadata = Node('gmfSet', gmfset.attrib,
                         nodes=[Node('gmf', gmf.attrib)])
         data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
-        yield RowReader('gmf', metadata, data)
+        yield metadata, data
 
 
 def gmfcollection_parse(gmfcoll):
     """
-    A parser for GMF event based yielding a reader
+    A parser for GMF event based yielding a pair (metadata, data)
     for each node <gmf>.
     """
     for gmfset in gmfcoll.getnodes('gmfSet'):
@@ -363,7 +363,7 @@ def gmfcollection_parse(gmfcoll):
             gs = Node('gmfSet', gmfset.attrib, nodes=[Node('gmf', gmf.attrib)])
             metadata.append(gs)
             data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
-            yield RowReader('gmf', metadata, data)
+            yield metadata, data
 
 
 def gmfcollection_fieldnames(md):
