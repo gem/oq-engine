@@ -147,7 +147,9 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
             b_value=1E-6
         """
         def dec(fn):
-            fn.fields = fields
-            self[fn.__name__] = fn
+            def fn_with_config(catalogue, config):
+                return fn(catalogue, **config)
+            fn_with_config.fields = fields
+            self[fn.__name__] = fn_with_config
             return fn
         return dec

@@ -496,6 +496,6 @@ SMOOTHED_SEISMICITY_METHODS = CatalogueFunctionRegistry()
 class IsotropicGaussianMethod(object):
     def run(self, catalogue, config):
         ss = SmoothedSeismicity(config['grid_limits'],
-                                config['b_value'],
-                                config['use_3d'])
+                                config['use_3d'],
+                                config['b_value'])
         return ss.run_analysis(catalogue, config)
