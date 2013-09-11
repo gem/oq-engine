@@ -174,3 +174,161 @@ class TestSeismicityUtilities(unittest.TestCase):
             self.assertAlmostEqual(expected[iloc], 
                                    utils.piecewise_linear_scalar(params, xval))
 
+
+    def _tester_for_truncated_gaussian(self, data, uncertainties, low_limit, 
+                                       high_limit, number_samples=1000):
+        """
+        Tests that for a given data set and uncertainties that no values
+        exceed the data limits
+        """
+        xlow = []
+        xhigh = []
+        for iloc in range(0, number_samples):
+            xval = utils.sample_truncated_gaussian_vector(
+                data, 
+                uncertainties,
+                (low_limit, high_limit))
+            xlow.append(np.min(xval))
+            xhigh.append(np.max(xval))
+        
+        self.assertTrue(np.max(np.array(xhigh)) <= high_limit)
+        self.assertTrue(np.min(np.array(xlow)) >= low_limit)
+
+
+    def test_sample_truncated_gaussian_distribution_with_bounds(self):
+        """
+        Tests the function to sample a truncated Gaussian distribution
+        """
+        data = 10.0 * np.ones(100)
+        uncertainties = np.random.uniform(0., 2., 100)
+        # Add bounds between 5.0 and 15.0
+        self._tester_for_truncated_gaussian(data, uncertainties, 5., 15.)
+
+        # Test case with infinite bounds
+        self._tester_for_truncated_gaussian(data, 
+                                            uncertainties, 
+                                            -np.inf, 
+                                            np.inf)
+        
+
+
+
+class TestBootstrapHistograms(unittest.TestCase):
+    """
+    Class to test bootstrapped histogram functions
+    hmtk.seismicity.utils.bootstrap_histogram_1D
+    hmtk.seismicity.utils.bootstrap_histogram_2D
+    """
+    def setUp(self):
+        """
+        """
+        [x, y] = np.meshgrid(np.arange(5., 50., 5.),
+                             np.arange(5.5, 9.0, 0.5))
+        nx, ny = np.shape(x)
+        x.reshape([nx * ny, 1])
+        y.reshape([nx * ny, 1])
+        self.x = x.flatten()
+        self.y = y.flatten()
+        self.x_sigma = None
+        self.y_sigma = None
+
+    def test_1D_bootstrap_no_uncertainty(self):
+        """
+        Tests the bootstrap 1D histrogram function with no uncertainties
+        """
+        # Without normalisation
+        x_range = np.arange(0., 60., 10.)
+        expected_array = np.array([7., 14., 14., 14., 14.])
+        np.testing.assert_array_almost_equal(expected_array,
+            utils.bootstrap_histogram_1D(self.x, x_range))
+
+        # Now with normalisaton
+        expected_array = expected_array / np.sum(expected_array)
+        np.testing.assert_array_almost_equal(expected_array,
+            utils.bootstrap_histogram_1D(self.x, x_range, normalisation=True))
+        
+
+    def test_1D_bootstrap_with_uncertainty(self):
+        """
+        Tests the bootstrap 1D histrogram function with uncertainties
+        """
+        self.x_sigma = 1.0 * np.ones(len(self.x), dtype=float)
+        expected_array = np.array([0.17, 0.22, 0.22, 0.22, 0.17])
+        x_range = np.arange(0., 60., 10.)
+        hist_values = utils.bootstrap_histogram_1D(
+            self.x, 
+            x_range, 
+            uncertainties=self.x_sigma,
+            number_bootstraps=1000,
+            normalisation=True)
+        np.testing.assert_array_almost_equal(np.round(hist_values, 2),
+                                             expected_array)
+
+
+
+    def test_2D_bootstrap_no_uncertainty(self):
+        """
+        Tests the bootstrap 1D histrogram function with no uncertainties
+        """
+        # Without normalisation
+        x_range = np.arange(0., 60., 10.)
+        y_range = np.arange(5., 10., 1.0)
+        expected_array = np.array([[1., 2., 2., 2.],
+                                   [2., 4., 4., 4.],
+                                   [2., 4., 4., 4.],
+                                   [2., 4., 4., 4.],
+                                   [2., 4., 4., 4.]])
+        np.testing.assert_array_almost_equal(expected_array,
+            utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range))
+        # With normalisation
+        expected_array = expected_array / np.sum(expected_array)
+        np.testing.assert_array_almost_equal(expected_array,
+            utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range, 
+                                         normalisation=True))
+
+    def test_2D_bootstrap_with_uncertainty(self):
+        """
+        Tests the bootstrap 1D histrogram function with uncertainties
+        """
+        # Without normalisation
+        self.y_sigma = 0.1 * np.ones(len(self.y), dtype=float)
+        x_range = np.arange(0., 60., 10.)
+        y_range = np.arange(5., 10., 1.0)
+        expected_array = np.array([[1.5, 2.0, 2.0, 1.5],
+                                   [3.0, 4.0, 4.0, 3.0],
+                                   [3.0, 4.0, 4.0, 3.0],
+                                   [3.0, 4.0, 4.0, 3.0],
+                                   [3.0, 4.0, 4.0, 3.0]])
+        
+        hist_values = utils.bootstrap_histogram_2D(
+            self.x,
+            self.y,
+            x_range,
+            y_range,
+            normalisation=False,
+            xsigma=self.x_sigma,
+            ysigma=self.y_sigma,
+            number_bootstraps=1000)
+
+        array_diff = expected_array - np.round(hist_values, 1)
+        print expected_array, hist_values, array_diff
+        self.assertTrue(np.all(np.fabs(array_diff) < 0.2))
+        # With normalisation
+        expected_array = np.array([[0.04, 0.05, 0.05, 0.04],
+                                  [0.05, 0.06, 0.06, 0.05],
+                                  [0.05, 0.06, 0.06, 0.05],
+                                  [0.05, 0.06, 0.06, 0.05],
+                                  [0.04, 0.05, 0.05, 0.04]])
+       
+        hist_values = utils.bootstrap_histogram_2D(
+            self.x,
+            self.y,
+            x_range,
+            y_range,
+            normalisation=True,
+            xsigma=self.x_sigma,
+            ysigma=self.y_sigma,
+            number_bootstraps=1000)
+        array_diff = expected_array - hist_values
+        self.assertTrue(np.all(np.fabs(array_diff) < 0.02))
+
