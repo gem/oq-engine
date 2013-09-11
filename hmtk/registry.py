@@ -161,6 +161,7 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
                     return fn(catalogue, **config)
             fn_with_config.fields = fields
             fn_with_config.completeness = completeness
+            fn.fields = fields
             self[fn.__name__] = fn_with_config
             return fn
         return dec
