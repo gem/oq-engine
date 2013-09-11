@@ -48,8 +48,9 @@
 #!/usr/bin/env/python
 
 '''Utility functions for seismicity calculations'''
-from math import fabs
 import numpy as np
+from math import fabs
+from scipy.stats import truncnorm
 
 MARKER_NORMAL = np.array([0, 31, 59, 90, 120, 151, 181,
                           212, 243, 273, 304, 334])
@@ -246,3 +247,158 @@ def piecewise_linear_scalar(params, xval):
     else:
         select = np.nonzero(turning_points <= xval)[0][-1] + 1
     return gradients[select] * xval + c_val[select]
+
+
+def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
+    '''
+    Samples a Gaussian distribution subject to boundaries on the data
+    :param numpy.ndarray data:
+        Vector of N data values
+    :param numpy.ndarray uncertainties:
+        Vector of N data uncertainties
+    :param int number_bootstraps:
+        Number of bootstrap samples
+    :param tuple bounds:
+        (Lower, Upper) bound of data space
+    '''
+    nvals = len(data)
+    if bounds:
+        #if bounds[0] or (fabs(bounds[0]) < 1E-12):
+        if bounds[0] is not None:
+            lower_bound = (bounds[0] - data) / uncertainties
+        else:
+            lower_bound = -np.inf
+        
+        #if bounds[1] or (fabs(bounds[1]) < 1E-12):
+        if bounds[1] is not None:
+            upper_bound = (bounds[1] - data) / uncertainties
+        else:
+            upper_bound = np.inf
+        sample = truncnorm.rvs(lower_bound, upper_bound, size=nvals)
+    
+    else:
+        sample = np.random.normal(0., 1., nvals)
+    return data + uncertainties * sample
+        
+
+
+
+def bootstrap_histogram_1D(values, intervals, uncertainties=None, 
+        normalisation=False, number_bootstraps=None, boundaries=None):
+    '''
+    Bootstrap samples a set of vectors
+    :param numpy.ndarray values:
+        The data values
+    :param numpy.ndarray intervals:
+        The bin edges
+    :param numpy.ndarray uncertainties:
+        The standard deviations of each observation
+    :param bool normalisation:
+        If True then returns the histogram as a density function
+    :param int number_bootstraps:
+        Number of bootstraps
+    :param tuple boundaries:
+        (Lower, Upper) bounds on the data
+
+    :param returns:
+        1-D histogram of data
+
+    '''
+    if not number_bootstraps or np.all(np.fabs(uncertainties < 1E-12)):
+        # No bootstraps or all uncertaintes are zero - return ordinary 
+        # histogram
+        output = np.histogram(values, intervals)[0]
+        if normalisation:
+            output = output.astype(float) / float(np.sum(output))
+        else:
+            output = output.astype(float)
+        return output
+    else:
+        temp_hist = np.zeros([len(intervals) - 1, number_bootstraps], 
+                             dtype=float)
+        for iloc in range(0, number_bootstraps):
+            sample = sample_truncated_gaussian_vector(values,
+                                                      uncertainties,
+                                                      boundaries)
+            output = np.histogram(sample, intervals)[0]
+            temp_hist[:, iloc] = output
+        output = np.sum(temp_hist, axis=1)
+        if normalisation:
+            output = output.astype(float) / float(np.sum(output))
+        else:
+            output = output.astype(float) / float(number_bootstraps)
+        return output
+
+def bootstrap_histogram_2D(xvalues, yvalues, xbins, ybins, 
+        boundaries=[None, None], xsigma=None, ysigma=None, 
+        normalisation=False, number_bootstraps=None):
+    '''
+    Calculates a 2D histogram of data, allowing for normalisation and 
+    bootstrap sampling
+    :param numpy.ndarray xvalues:
+        Data values of the first variable
+
+    :param numpy.ndarray yvalues:
+        Data values of the second variable
+
+    :param numpy.ndarray xbins:
+        Bin edges for the first variable
+
+    :param numpy.ndarray ybins:
+        Bin edges for the second variable
+
+    :param list boundaries:
+        List of (Lower, Upper) tuples corresponding to the bounds of the 
+        two data sets
+
+    :param numpy.ndarray xsigma:
+        Error values (standard deviatons) on first variable
+
+    :param numpy.ndarray ysigma:
+        Error values (standard deviatons) on second variable
+
+    :param bool normalisation:
+        If True then returns the histogram as a density function
+    
+    :param int number_bootstraps:
+        Number of bootstraps
+
+    :param returns:
+        2-D histogram of data
+    '''
+    if (xsigma is None and ysigma is None) or not number_bootstraps:
+        # No sampling - return simple 2-D histrogram
+        output = np.histogram2d(xvalues, yvalues, bins=[xbins, ybins])[0]
+        if normalisation:
+            output = output.astype(float) / float(np.sum(output))
+        return output
+
+    else:
+        if xsigma is None:
+            xsigma = np.zeros(len(xvalues), dtype=float)
+        if ysigma is None:
+            ysigma = np.zeros(len(yvalues), dtype=float)
+        temp_hist = np.zeros(
+            [len(xbins) - 1, len(ybins) - 1, number_bootstraps],
+            dtype=float)
+        for iloc in range(0, number_bootstraps):
+            xsample = sample_truncated_gaussian_vector(xvalues, xsigma,
+                                                       boundaries[0])
+            ysample = sample_truncated_gaussian_vector(yvalues, ysigma,
+                                                       boundaries[0])
+
+            temp_hist[:, :, iloc] = np.histogram2d(xsample, 
+                                                   ysample, 
+                                                   bins=[xbins, ybins])[0]
+        if normalisation:
+            output = np.sum(temp_hist, axis=2)
+            output = output / np.sum(output)
+        else:
+            output = np.sum(temp_hist, axis=2) / float(number_bootstraps)
+        return output
+
+
+
+
+
+

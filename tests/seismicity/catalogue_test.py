@@ -85,9 +85,8 @@ class CatalogueTestCase(unittest.TestCase):
         cat = Catalogue()
         cat.load_from_array(['year','magnitude'], self.data_array)
         self.assertTrue(np.allclose(cat.data['magnitude'],self.data_array[:,1]))
-        self.assertTrue(np.allclose(cat.data['year'],self.data_array[:,0]))
-        self.assertTrue(np.allclose(cat.data['eventID'], 
-                                    np.array(range(0, 7), dtype=int)))
+        self.assertTrue(np.allclose(cat.data['year'],
+                                    self.data_array[:,0].astype(int)))
         
     def test_load_to_array(self):
         """
@@ -96,33 +95,18 @@ class CatalogueTestCase(unittest.TestCase):
         cat = Catalogue()
         cat.load_from_array(['year','magnitude'], self.data_array)
         data = cat.load_to_array(['year','magnitude'])
-        self.assertTrue(np.allclose(data,self.data_array))
+        self.assertTrue(np.allclose(data, self.data_array))
     
-    def test_catalogue_mt_filter_no_flag(self):
+    def test_catalogue_mt_filter(self):
         """
         Tests the catalogue magnitude-time filter
         """
         cat = Catalogue()
         cat.load_from_array(['year','magnitude'], self.data_array)
-        cat.data['eventID'] = np.arange(0, len(cat.data['magnitude']), 1)
+        cat.data['eventID'] = np.arange(0, 7)
         cat.catalogue_mt_filter(self.mt_table)
         mag = np.array([7.0, 5.5, 5.01, 6.99])
         yea = np.array([1920, 1970, 1960, 1960])
-        self.assertTrue(np.allclose(cat.data['magnitude'],mag))
-        self.assertTrue(np.allclose(cat.data['year'],yea))
-
-    def test_catalogue_mt_filter_with_flag(self):
-        '''
-        Tests the catalogue magnitude-time filter when an input boolean vector
-        is also defined
-        '''
-        cat = Catalogue()
-        cat.load_from_array(['year','magnitude'], self.data_array)
-        cat.data['eventID'] = np.arange(0, len(cat.data['magnitude']), 1)
-        flag = np.array([1, 1, 1, 1, 1, 0, 1], dtype=bool)
-        cat.catalogue_mt_filter(self.mt_table, flag)
-        mag = np.array([7.0, 5.5, 6.99])
-        yea = np.array([1920, 1970, 1960])
         self.assertTrue(np.allclose(cat.data['magnitude'],mag))
         self.assertTrue(np.allclose(cat.data['year'],yea))
        
@@ -197,6 +181,183 @@ class CatalogueTestCase(unittest.TestCase):
         np.testing.assert_array_equal(cat1.data['eventID'], 
                                              np.array([101]))
         self.assertListEqual(cat1.data['Agency'], ['YYY'])
+
+
+class TestGetDistributions(unittest.TestCase):
+    """
+    Class to test the hmtk.seismicity.catalogue.Catalogue methods to 
+    determine depth distribution, magnitude-depth distribution, 
+    and magnitude-time distribution
+    """
+    def setUp(self):
+        """
+        """
+        self.catalogue = Catalogue()
+
+
+    def test_depth_distribution_no_depth_error(self):
+        """
+        Checks to ensure error is raised when no depths are found in catalogue
+        """
+        depth_bins = np.arange(0., 60., 10.)
+        self.catalogue.data['depth'] = np.array([])
+        with self.assertRaises(ValueError) as ae:
+            self.catalogue.get_depth_distribution(depth_bins)
+        self.assertEqual(ae.exception.message,
+                         'Depths missing in catalogue')
+
+    def test_depth_distribution_simple(self):
+        """
+        Tests the calculation of the depth histogram with no uncertainties
+        """
+        # Without normalisation
+        self.catalogue.data['depth'] = np.arange(5., 50., 5.)
+        depth_bins = np.arange(0., 60., 10.)
+        expected_array = np.array([1., 2., 2., 2., 2.])
+        np.testing.assert_array_almost_equal(
+            expected_array,
+            self.catalogue.get_depth_distribution(depth_bins))
+        # With normalisation
+        np.testing.assert_array_almost_equal(
+            expected_array / np.sum(expected_array),
+            self.catalogue.get_depth_distribution(depth_bins, 
+                                                  normalisation=True))
+
+    def test_depth_distribution_uncertainties(self):
+        """
+        Tests the depth distribution with uncertainties
+        """
+        # Without normalisation
+        self.catalogue.data['depth'] = np.arange(5., 50., 5.)
+        self.catalogue.data['depthError'] = 3. * np.ones_like(
+            self.catalogue.data['depth'])
+        depth_bins = np.arange(-10., 70., 10.)
+        expected_array = np.array([0., 1.5, 2., 2., 2., 1.5, 0.])
+        hist_array = self.catalogue.get_depth_distribution(depth_bins,
+                                                           bootstrap=1000)
+        array_diff = np.round(hist_array, 1) - expected_array
+        self.assertTrue(np.all(np.fabs(array_diff) < 0.2))
+        # With normalisation
+        expected_array = np.array([0., 0.16, 0.22, 0.22, 0.22, 0.16, 0.01])
+        hist_array = self.catalogue.get_depth_distribution(depth_bins,
+                                                           normalisation=True,
+                                                           bootstrap=1000)
+        array_diff = np.round(hist_array, 2) - expected_array
+        self.assertTrue(np.all(np.fabs(array_diff) < 0.03))
+
+
+
+class TestMagnitudeDepthDistribution(unittest.TestCase):
+    """
+    Tests the method for generating the magnitude depth distribution
+    """
+    def setUp(self):
+        """
+        """
+        self.catalogue = Catalogue()
+        x, y = np.meshgrid(np.arange(5., 50., 10.), np.arange(5.5, 9.0, 1.))
+        nx, ny = np.shape(x)
+        self.catalogue.data['depth'] = (x.reshape([nx * ny, 1])).flatten()
+        self.catalogue.data['magnitude'] = (y.reshape([nx * ny, 1])).flatten()
+        
+    def test_depth_distribution_no_depth_error(self):
+        """
+        Checks to ensure error is raised when no depths are found in catalogue
+        """
+        depth_bins = np.arange(0., 60., 10.)
+        self.catalogue.data['depth'] = np.array([])
+        with self.assertRaises(ValueError) as ae:
+            self.catalogue.get_depth_distribution(depth_bins)
+        self.assertEqual(ae.exception.message,
+                         'Depths missing in catalogue')
+
+    def test_distribution_no_uncertainties(self):
+        """
+        Tests the magnitude-depth distribution without uncertainties
+        """
+        # Without normalisation
+        depth_bins = np.arange(0., 60., 10.)
+        mag_bins = np.arange(5., 10., 1.)
+        expected_array = np.ones([len(mag_bins) - 1, len(depth_bins) - 1],
+                                 dtype=float)
+        np.testing.assert_array_almost_equal(
+            expected_array,
+            self.catalogue.get_magnitude_depth_distribution(mag_bins, 
+                                                            depth_bins))
+        # With normalisation
+        np.testing.assert_array_almost_equal(
+            expected_array / np.sum(expected_array),
+            self.catalogue.get_magnitude_depth_distribution(mag_bins, 
+                depth_bins, normalisation=True))
+
+    def test_mag_depth_distribution_uncertainties(self):
+        """
+        Tests the magnitude depth distribution with uncertainties
+        """
+        self.catalogue.data['depthError'] = 3.0 * np.ones_like(
+            self.catalogue.data['depth'])
+        self.catalogue.data['sigmaMagnitude'] = 0.1 * np.ones_like(
+            self.catalogue.data['sigmaMagnitude'])
+        
+        # Extend depth bins to test that no negative depths are being returned
+        depth_bins = np.arange(-10., 70., 10.)
+        mag_bins = np.arange(5., 10., 1.)
+        expected_array = np.array([[0., 1., 1., 1., 1., 1., 0.],
+                                   [0., 1., 1., 1., 1., 1., 0.],
+                                   [0., 1., 1., 1., 1., 1., 0.],
+                                   [0., 1., 1., 1., 1., 1., 0.]])
+        test_array = self.catalogue.get_magnitude_depth_distribution(
+            mag_bins, depth_bins)
+        array_diff = expected_array - np.round(test_array, 1)
+        self.assertTrue(np.all(np.fabs(array_diff) < 0.2))
+        # Check to make sure first columns is all zeros
+        np.testing.assert_array_almost_equal(test_array[:, 0], 
+                                             np.zeros(4, dtype=float))
+
+
+class TestMagnitudeTimeDistribution(unittest.TestCase):
+    """
+    Simple class to test the magnitude time density distribution
+    """
+    def setUp(self):
+        """
+        """
+        self.catalogue = Catalogue()
+        x, y = np.meshgrid(np.arange(1915., 2010., 10.),
+                           np.arange(5.5, 9.0, 1.0))
+
+
+        nx, ny = np.shape(x)
+        self.catalogue.data['magnitude'] = (y.reshape([nx * ny, 1])).flatten()
+        x = (x.reshape([nx * ny, 1])).flatten()
+        self.catalogue.data['year'] = x.astype(int)
+        self.catalogue.data['month'] = np.ones_like(x, dtype=int)
+        self.catalogue.data['day'] = np.ones_like(x, dtype=int)
+        self.catalogue.data['hour'] = np.ones_like(x, dtype=int)
+        self.catalogue.data['minute'] = np.ones_like(x, dtype=int)
+        self.catalogue.data['second'] = np.ones_like(x, dtype=float)
+
+
+    def test_magnitide_time_distribution_no_uncertainties(self):
+        """
+        Tests the magnitude-depth distribution without uncertainties
+        """
+        mag_range = np.arange(5., 10., 1.)
+        time_range = np.arange(1910., 2020., 10.)
+        # Without normalisation
+        expected_array = np.ones([len(time_range) - 1, len(mag_range) - 1],
+                                 dtype=float)
+        np.testing.assert_array_almost_equal(expected_array,
+            self.catalogue.get_magnitude_time_distribution(mag_range,
+                                                           time_range))
+        # With Normalisation
+        np.testing.assert_array_almost_equal(
+            expected_array / np.sum(expected_array),
+            self.catalogue.get_magnitude_time_distribution(mag_range,
+                                                           time_range,
+                                                           normalisation=True))
+
+
 
 
 
