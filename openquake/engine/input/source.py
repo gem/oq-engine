@@ -401,7 +401,7 @@ def _simple_rupture_to_hazardlib(src, mesh_spacing):
     rupture = HazardlibRupture(
         mag=src.magnitude, rake=src.rake,
         tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
-        surface=surface, source_typology=geo.SimpleFaultSurface)
+        surface=surface, source=object.__new__(geo.SimpleFaultSurface))
 
     return rupture
 
@@ -436,7 +436,7 @@ def _complex_rupture_to_hazardlib(src, mesh_spacing):
     rupture = HazardlibRupture(
         mag=src.magnitude, rake=src.rake,
         tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
-        surface=surface, source_typology=geo.ComplexFaultSurface)
+        surface=surface, source=object.__new__(geo.ComplexFaultSurface))
 
     return rupture
 
