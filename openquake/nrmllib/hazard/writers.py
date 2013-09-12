@@ -720,14 +720,14 @@ class HazardMapGeoJSONWriter(HazardMapWriter):
             if value is not None:
                 oqmetadata[_ATTR_MAP.get(key)] = str(value)
 
+        features = []
         feature_coll = {
             'type': 'FeatureCollection',
-            'features': [],
+            'features': features,
             'oqtype': 'HazardMap',
             'oqnrmlversion': '0.4',
             'oqmetadata': oqmetadata,
         }
-        features = feature_coll['features']
 
         for lon, lat, iml in data:
             feature = {
