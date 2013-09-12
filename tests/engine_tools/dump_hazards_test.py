@@ -1,4 +1,4 @@
-import os
+import shutil
 from io import StringIO
 import unittest
 
@@ -34,19 +34,18 @@ class DumperTestCase(unittest.TestCase):
         cls.output.save()
 
     def test_dump_and_restore(self):
-        # dump the Gmf generated in setUpClass into a tarfile
+        # dump the Gmf generated in setUpClass into a directory
         hd = HazardDumper(self.conn)
         hd.dump(self.hc.id)
-        tar = hd.mktar()
         curs = self.conn.cursor()
         try:
             # delete the original hazard calculation
             curs.execute('DELETE FROM uiapi.hazard_calculation '
                          'WHERE id=%s', (self.hc.id,))
             # restore the deleted Gmf
-            hazard_restore(self.conn, tar)
+            hazard_restore(self.conn, hd.outdir)
             curs.execute('SELECT 1 FROM uiapi.hazard_calculation WHERE id=%s',
                          (self.hc.id,))
             self.assertEqual(curs.fetchall(), [(1,)])
         finally:
-            os.remove(tar)
+            shutil.rmtree(hd.outdir)
