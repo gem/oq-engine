@@ -125,12 +125,12 @@ def _set_metadata(element, metadata, attr_map, transform=str):
             element.set(attr, transform(value))
 
 
-class BaseCurveXMLWriter(object):
+class BaseCurveWriter(object):
     """
     Base class for curve writers.
 
     :param dest:
-        File path (including filename) or file-like object for XML results to
+        File path (including filename) or file-like object for results to
         be saved to.
     :param metadata:
         The following keyword args are required:
@@ -161,9 +161,9 @@ class BaseCurveXMLWriter(object):
         raise NotImplementedError
 
 
-class HazardCurveXMLWriter(BaseCurveXMLWriter):
+class HazardCurveXMLWriter(BaseCurveWriter):
     """
-    Hazard Curve XML writer. See :class:`BaseCurveXMLWriter` for a list of
+    Hazard Curve XML writer. See :class:`BaseCurveWriter` for a list of
     general constructor inputs.
 
     The following additional metadata params are required:
@@ -866,9 +866,9 @@ class ScenarioGMFXMLWriter(object):
                 encoding='UTF-8'))
 
 
-class UHSXMLWriter(BaseCurveXMLWriter):
+class UHSXMLWriter(BaseCurveWriter):
     """
-    UHS curve XML writer. See :class:`BaseCurveXMLWriter` for a list of general
+    UHS curve XML writer. See :class:`BaseCurveWriter` for a list of general
     constructor inputs.
 
     The following additional metadata params are required:
