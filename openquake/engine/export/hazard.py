@@ -116,7 +116,8 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
     directory = os.path.join(target, calc_dir, type_dir, imt_dir)
     core.makedirs(directory)
 
-    if output_type in ('hazard_curve', 'hazard_map', 'uh_spectra'):
+    if output_type in ('hazard_curve', 'hazard_curve_multi', 'hazard_map',
+                       'uh_spectra'):
         # include the poe in hazard map and uhs file names
         if output_type in ('hazard_map', 'uh_spectra'):
             output_type = '%s-poe_%s' % (output_type, result.poe)
@@ -202,7 +203,9 @@ def export_hazard_curve_xml(output, target):
     hc = models.HazardCurve.objects.get(output=output.id)
 
     hcd = _curve_data(hc)
-    metadata, dest = _curve_metadata(output, target)
+    metadata = _curve_metadata(output, target)
+    haz_calc = output.oq_job.hazard_calculation
+    dest = _get_result_export_dest(haz_calc.id, target, hc)
     writers.HazardCurveXMLWriter(dest, **metadata).serialize(hcd)
 
     return dest
@@ -216,9 +219,11 @@ def export_hazard_curve_multi_xml(output, target):
 
     metadata_set = []
     for hc in hcs:
-        metadata, dest = _curve_metadata(hc.output, target)
+        metadata = _curve_metadata(hc.output, target)
         metadata_set.append(metadata)
-    assert(dest is not None)
+
+    haz_calc = output.oq_job.hazard_calculation
+    dest = _get_result_export_dest(haz_calc.id, target, hcs)
 
     writer = writers.MultiHazardCurveXMLWriter(dest, metadata_set)
     writer.serialize(data)
@@ -239,10 +244,6 @@ def _curve_metadata(output, target):
         smlt_path = None
         gsimlt_path = None
 
-    haz_calc = output.oq_job.hazard_calculation
-    dest = _get_result_export_dest(
-        haz_calc.id, target, output.hazard_curve)
-
     return {
         'quantile_value': hc.quantile,
         'statistics': hc.statistics,
@@ -253,7 +254,7 @@ def _curve_metadata(output, target):
         'investigation_time': hc.investigation_time,
         'imt': hc.imt,
         'imls': hc.imls,
-    }, dest
+    }
 
 
 def _curve_data(hc):
