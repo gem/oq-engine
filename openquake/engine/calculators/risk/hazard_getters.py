@@ -328,7 +328,7 @@ GROUP BY site_id ORDER BY site_id;
         truncation_level = hc.truncation_level
         gsims = logictree.LogicTreeProcessor(
             hc.id).parse_gmpe_logictree_path(
-                hazard_output.lt_realization.gsim_lt_path)
+            hazard_output.lt_realization.gsim_lt_path)
         if hc.ground_motion_correlation_model is not None:
             model = general.get_correl_model(hc)
         else:
@@ -363,7 +363,7 @@ GROUP BY site_id ORDER BY site_id;
                 cursor.execute(query, (hazard_output.id, limit, offset))
                 for (rupture_data,) in cursor.fetchall():
                     yield pickle.loads(str(rupture_data))
-        r_objs = ruptures()
+        r_objs = list(ruptures())
 
         r_seeds = numpy.random.randint(0, models.MAX_SINT_32, count)
         r_ids = queryset.values_list('id', flat=True)
@@ -375,6 +375,7 @@ GROUP BY site_id ORDER BY site_id;
         with monitor.copy('computing gmvs'):
             all_assets, gmvs = calc_getter.compute(
                 r_objs, r_seeds, r_ids, hc.maximum_distance)
+
         return all_assets, (gmvs, r_ids)
 
 
@@ -576,7 +577,8 @@ class GroundMotionValuesCalcGetter(object):
                 (total, inter, intra) = self.epsilons(
                     rupture_seed, mask, tstddev)
 
-            with LightMonitor(performance_dict, 'compute ground motion fields'):
+            with LightMonitor(
+                    performance_dict, 'compute ground motion fields'):
                 gmf = ground_motion_field_with_residuals(
                     rupture, sites_of_interest,
                     self.imt, gsim, self.truncation_level,
