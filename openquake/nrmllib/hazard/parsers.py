@@ -21,6 +21,7 @@ See :module:`openquake.nrmllib.models`.
 """
 
 import decimal
+import json
 import warnings
 from collections import OrderedDict
 
@@ -648,3 +649,45 @@ def HazardCurveParser(*args, **kwargs):
         RuntimeWarning
     )
     return HazardCurveXMLParser(*args, **kwargs)
+
+
+class HazardCurveGeoJSONParser(object):
+    """
+    Parser for reading hazard curve data from a GeoJSON.
+    Has the same interface and output as the :class:`HazardCurveXMLParser`.
+    """
+
+    def __init__(self, source):
+        self.source = source
+
+    def parse(self):
+        """
+        Read hazard curve data from a GeoJSON source into a
+        :class:`openquake.nrmllib.models.HazardCurveModel`.
+        """
+        metadata = OrderedDict()
+        with openquake.nrmllib.NRMLFile(self.source) as fh:
+            data = json.load(fh)
+
+        oqmetadata = data['oqmetadata']
+        metadata = {}
+        metadata['statistics'] = oqmetadata.get('statistics')
+        metadata['quantile_value'] = oqmetadata.get('quantileValue')
+        metadata['smlt_path'] = oqmetadata.get('sourceModelTreePath')
+        metadata['gsimlt_path'] = oqmetadata.get('gsimTreePath')
+        metadata['imt'] = oqmetadata.get('IMT')
+        metadata['investigation_time'] = oqmetadata.get('investigationTime')
+        metadata['sa_period'] = oqmetadata.get('saPeriod')
+        metadata['sa_damping'] = oqmetadata.get('saDamping')
+        metadata['imls'] = oqmetadata.get('IMLs')
+
+        features = data['features']
+
+        data_iter = []
+        for feature in features:
+            lon, lat = feature['geometry']['coordinates']
+            loc = models.Location(lon, lat)
+            curve = models.HazardCurveData(loc, feature['properties']['poEs'])
+            data_iter.append(curve)
+
+        return models.HazardCurveModel(data_iter=data_iter, **metadata)
