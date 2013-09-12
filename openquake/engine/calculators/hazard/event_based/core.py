@@ -130,6 +130,10 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
         if not ruptures:
             return
 
+        for i, r in enumerate(ruptures):
+            r.tag = 'rlz=%02d,ses=%04d,src=%s,i=%d' % (
+                lt_rlz.ordinal, ses.ordinal, 'SRC', i)
+
     with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
         rupture_ids = _save_ses_ruptures(ses, ruptures, cmplt_lt_ses)
 
@@ -206,8 +210,9 @@ def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
     # TODO: Possible future optimiztion:
     # Refactor this to do bulk insertion of ruptures
     with transaction.commit_on_success(using='reslt_writer'):
-        rupture_ids = [models.SESRupture.objects.create(ses=ses, rupture=r).id
-                       for r in ruptures]
+        rupture_ids = [models.SESRupture.objects.create(
+            ses=ses, rupture=r, tag=r.tag).id
+            for r in ruptures]
 
         if complete_logic_tree_ses is not None:
             for rupture in ruptures:
