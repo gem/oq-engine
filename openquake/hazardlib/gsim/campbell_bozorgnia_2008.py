@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`CampbellBozorgnia2008`.
+Module exports :class:`CampbellBozorgnia2008`, and 
+:class:'CampbellBozorgnia2008Arbitrary'
 """
 from __future__ import division
 
