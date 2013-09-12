@@ -177,7 +177,7 @@ class BMaxLikelihood(SeismicityOccurrence):
     def _weighted_mean(self, parameters, neq):
         '''Simple weighted mean'''
         weight = neq.astype(float) / np.sum(neq)
-        if np.shape(parameters)[0] != np.shape(weight)[0]:
+        if np.shape(parameters)[0] != weight.size:
             raise ValueError('Parameter vector not same shape as weights')
         else:
             average_value = np.zeros(np.shape(parameters)[1], dtype=float)

@@ -81,7 +81,11 @@ class Grid(collections.OrderedDict):
         Defines the grid on the basis of the catalogue
         '''
         new = cls()
-        cat_bbox = get_catalogue_bounding_polygon(catalogue).dilate(dilate)
+        cat_bbox = get_catalogue_bounding_polygon(catalogue)
+
+        if dilate > 0:
+            cat_bbox = cat_bbox.dilate(dilate)
+
         # Define Grid spacing
         new.update({'xmin': np.min(cat_bbox.lons),
                     'xmax': np.max(cat_bbox.lons),
@@ -92,7 +96,32 @@ class Grid(collections.OrderedDict):
                     'zmin': 0.,
                     'zmax': np.max(catalogue.data['depth']),
                     'zspc': np.max(catalogue.data['depth'])})
+
+        if new['zmin'] == new['zmax'] == new['zspc'] == 0:
+            new['zmax'] = new['zspc'] = 1
+
         return new
+
+    def as_list(self):
+        return [self['xmin'], self['xmax'], self['xspc'],
+                self['ymin'], self['ymax'], self['yspc'],
+                self['zmin'], self['zmax'], self['zspc']]
+
+    def as_polygon(self):
+        return Polygon([
+            Point(self['xmin'], self['ymax']),
+            Point(self['xmax'], self['ymax']),
+            Point(self['xmax'], self['ymin']),
+            Point(self['xmin'], self['ymin'])])
+
+    def dilate(self, width):
+        polygon = self.as_polygon().dilate(width)
+
+        self.update({'xmin': np.min(polygon.lons),
+                     'xmax': np.max(polygon.lons),
+                     'ymin': np.min(polygon.lats),
+                     'ymax': np.max(polygon.lats)})
+        return self
 
 
 def _get_adjustment(mag, year, mmin, completeness_year, t_f, mag_inc=0.1):
@@ -317,10 +346,12 @@ class SmoothedSeismicity(object):
         '''
         assert mag_inc > 0.
 
-        xlim = (self.grid_limits['xmax'] - self.grid_limits['xmin']) /\
-            self.grid_limits['xspc']
-        ylim = (self.grid_limits['ymax'] - self.grid_limits['ymin']) /\
-            self.grid_limits['yspc']
+        xlim = np.ceil(
+            (self.grid_limits['xmax'] - self.grid_limits['xmin']) /
+            self.grid_limits['xspc'])
+        ylim = np.ceil(
+            (self.grid_limits['ymax'] - self.grid_limits['ymin']) /
+            self.grid_limits['yspc'])
         ncolx = int(xlim)
         ncoly = int(ylim)
         grid_count = np.zeros(ncolx * ncoly, dtype=float)
@@ -388,15 +419,12 @@ class SmoothedSeismicity(object):
                            self.grid_limits['xspc'])
         if x_bins[-1] < self.grid_limits['xmax']:
             x_bins = np.hstack([x_bins, x_bins[-1] + self.grid_limits['xspc']])
-            self.grid_limits['xmax'] = np.round(x_bins[-1], 5)
 
         y_bins = np.arange(self.grid_limits['ymin'],
                            self.grid_limits['ymax'],
                            self.grid_limits['yspc'])
         if y_bins[-1] < self.grid_limits['ymax']:
             y_bins = np.hstack([y_bins, y_bins[-1] + self.grid_limits['yspc']])
-            self.grid_limits['ymax'] = np.round(y_bins[-1], 5)
-
 
         z_bins = np.arange(self.grid_limits['zmin'],
                            self.grid_limits['zmax'] + self.grid_limits['zspc'],
@@ -404,7 +432,7 @@ class SmoothedSeismicity(object):
 
         if z_bins[-1] < self.grid_limits['zmax']:
             z_bins = np.hstack([z_bins, z_bins[-1] + self.grid_limits['zspc']])
-            self.grid_limits['zmax'] = np.round(z_bins[-1], 5)
+
         # Define centre points of grid cells
         gridx, gridy = np.meshgrid((x_bins[1:] + x_bins[:-1]) / 2.,
                                     (y_bins[1:] + y_bins[:-1]) / 2.)
