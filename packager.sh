@@ -279,7 +279,7 @@ _devtest_innervm_run () {
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         # load test fixtures
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ;
-                 for i in \$(find qa_tests/risk/ -iname fixtures.tar); do
+                 for i in \$(find qa_tests/risk/ -iname fixtures); do
                    python openquake/engine/tools/restore_hazards.py \$i
                  done"
 
