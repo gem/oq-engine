@@ -3,22 +3,22 @@
 #
 # Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
-# The Hazard Modeller's Toolkit (hmtk) is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public License 
-# as published by the Free Software Foundation, either version 3 of the 
+# The Hazard Modeller's Toolkit (hmtk) is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public License
+# as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein is released as 
-# a prototype implementation on behalf of scientists and engineers working 
+#
+# The software Hazard Modeller's Toolkit (hmtk) provided herein is released as
+# a prototype implementation on behalf of scientists and engineers working
 # within the GEM Foundation (Global Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the hope that 
-# it will be useful to the scientific, engineering, disaster risk and software 
+# It is distributed for the purpose of open collaboration and in the hope that
+# it will be useful to the scientific, engineering, disaster risk and software
 # design communities.
 #
 # The software is NOT distributed as part of GEM's OpenQuake suite
@@ -28,17 +28,17 @@
 # subject to same level of critical review by professional software developers,
 # as GEM's OpenQuake software suite.
 #
-# Feedback and contribution to the software is welcome, and can be directed to 
+# Feedback and contribution to the software is welcome, and can be directed to
 # the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
 #
-# The GEM Foundation, and the authors of the software, assume no liability for 
-# use of the software. 
+# The GEM Foundation, and the authors of the software, assume no liability for
+# use of the software.
 '''
 Module :class: hmtk.seismicity.max_magnitude.cumulative_moment.CumulativeMoment
 implements cumulative moment estimator of maximum magnitude from instrumental
@@ -46,16 +46,17 @@ seismicity
 '''
 from math import fabs
 import numpy as np
-from hmtk.seismicity.max_magnitude.base import (BaseMaximumMagnitude,
-    _get_observed_mmax, _get_magnitude_vector_properties)
+from hmtk.seismicity.max_magnitude.base import (
+    BaseMaximumMagnitude, MAX_MAGNITUDE_METHODS)
 
 
+@MAX_MAGNITUDE_METHODS.add("get_mmax", number_bootstraps=np.float)
 class CumulativeMoment(BaseMaximumMagnitude):
     '''Class to implement the bootstrapped cumulative moment estimator of
-    maximum magnitude. Adapted by G. Weatherill from the Cumulative Strain 
+    maximum magnitude. Adapted by G. Weatherill from the Cumulative Strain
     Energy approach originally suggested by Makropoulos & Burton (1983)'''
 
-    def get_mmax(self, catalogue, config, seed=None):
+    def get_mmax(self, catalogue, config):
         '''
         Calculates Maximum magnitude and its uncertainty
         :param catalogue:
@@ -64,30 +65,25 @@ class CumulativeMoment(BaseMaximumMagnitude):
             * 'year' - Year of event
             * 'magnitude' - Magnitude of event
             * 'sigmaMagnitude' - Uncertainty on magnitude (optional)
-        
+
         :param dict config:
-            Configuration file for algorithm, containing thw following - 
-            * 'number_bootstraps' - Number of bootstraps for uncertainty 
-        
+            Configuration file for algorithm, containing thw following -
+            * 'number_bootstraps' - Number of bootstraps for uncertainty
+
         :param int seed:
             Seed for random number generator (must be positive)
 
-        :returns: 
+        :returns:
             * Maximum magnitude (float)
             * Uncertainty on maximum magnituse (float)
         '''
-        # Can fix the seed (used for testing!)
-        if not seed:
-            seed = np.random.randint(100000, 999999, 1)
-        
-        np.random.seed(seed)
-        
-        # If no bootstraps no uncertainty on magnitudes then simply calculate 
+
+        # If no bootstraps no uncertainty on magnitudes then simply calculate
         # Mmax without uncertainty
         self.check_config(config)
         if config['number_bootstraps'] == 1 or \
             not isinstance(catalogue.data['sigmaMagnitude'], np.ndarray):
-            return self.cumulative_moment(catalogue.data['year'], 
+            return self.cumulative_moment(catalogue.data['year'],
                                           catalogue.data['magnitude']), 0.0
 
         neq = len(catalogue.data['magnitude'])
@@ -96,22 +92,22 @@ class CumulativeMoment(BaseMaximumMagnitude):
         # Sample magnitudes from catalogue and calculate MMax from sample
         for iloc in range(0, config['number_bootstraps']):
             mw_sample = catalogue.data['magnitude'] + \
-                catalogue.data['sigmaMagnitude'] * np.random.normal(0., 1., 
+                catalogue.data['sigmaMagnitude'] * np.random.normal(0., 1.,
                                                                     neq)
-            mmax_samp[iloc] = self.cumulative_moment(catalogue.data['year'], 
+            mmax_samp[iloc] = self.cumulative_moment(catalogue.data['year'],
                                                      mw_sample)
         # Return mean and standard deviation of samples
         return np.mean(mmax_samp), np.std(mmax_samp, ddof=1)
 
     def check_config(self, config):
         '''
-        Checks the configuration file for the number of bootstraps. 
+        Checks the configuration file for the number of bootstraps.
         Returns 1 if not found or invalid (i.e. < 0)
         '''
         if not config['number_bootstraps'] or\
             (config['number_bootstraps'] < 1):
             config['number_bootstraps'] = 1
-        return config        
+        return config
 
     def cumulative_moment(self, year, mag):
         '''Calculation of Mmax using aCumulative Moment approach, adapted from
@@ -147,4 +143,3 @@ class CumulativeMoment(BaseMaximumMagnitude):
             return -np.inf
         mmax = (2./ 3.) * (np.log10(modiff) - 9.05)
         return mmax
-    

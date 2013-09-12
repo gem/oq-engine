@@ -52,6 +52,11 @@
 
 import abc
 import numpy as np
+from hmtk.registry import Registry
+
+
+TIME_DISTANCE_WINDOW_FUNCTIONS = Registry()
+
 
 class BaseDistanceTimeWindow(object):
     """
@@ -73,11 +78,13 @@ class BaseDistanceTimeWindow(object):
         """
         return
 
+
+@TIME_DISTANCE_WINDOW_FUNCTIONS.add('GardnerKnopoff')
 class GardnerKnopoffWindow(BaseDistanceTimeWindow):
     """
     Gardner Knopoff method for calculating distance and time windows
     """
-    
+
     def calc(self, magnitude):
         sw_space = np.power(10.0, 0.1238 * magnitude + 0.983)
         sw_time = np.power(10.0, 0.032 * magnitude + 2.7389) / 364.75
@@ -86,6 +93,7 @@ class GardnerKnopoffWindow(BaseDistanceTimeWindow):
         return sw_space, sw_time
 
 
+@TIME_DISTANCE_WINDOW_FUNCTIONS.add('Gruenthal')
 class GruenthalWindow(BaseDistanceTimeWindow):
     """
     Gruenthal method for calculating distance and time windows
@@ -100,6 +108,7 @@ class GruenthalWindow(BaseDistanceTimeWindow):
         return sw_space, sw_time
 
 
+@TIME_DISTANCE_WINDOW_FUNCTIONS.add('UrhammerWindow')
 class UhrhammerWindow(BaseDistanceTimeWindow):
     """
     Uhrhammer method for calculating distance and time windows

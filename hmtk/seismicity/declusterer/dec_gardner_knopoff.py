@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
 # 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,105 +17,98 @@
 #
 # DISCLAIMER
 # 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM’s OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM’s OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 # -*- coding: utf-8 -*-:
 
 """
-Module :mod:`hmtk.seismicity.declusterer.dec_gardner_knopoff' defines the 
-Gardner and Knopoff declustering algorithm 
+Module :mod:`hmtk.seismicity.declusterer.dec_gardner_knopoff' defines the
+Gardner and Knopoff declustering algorithm
 """
 
 import numpy as np
 
-from hmtk.seismicity.declusterer.base import BaseCatalogueDecluster
+from hmtk.seismicity.declusterer.base import (
+    BaseCatalogueDecluster, DECLUSTERER_METHODS)
 from hmtk.seismicity.utils import decimal_year, haversine
+from hmtk.seismicity.declusterer.distance_time_windows import (
+    TIME_DISTANCE_WINDOW_FUNCTIONS)
 
+
+@DECLUSTERER_METHODS.add(
+    "decluster",
+    time_distance_window=TIME_DISTANCE_WINDOW_FUNCTIONS,
+    fs_time_prop=np.float)
 class GardnerKnopoffType1(BaseCatalogueDecluster):
     """
-    This class implements the Gardner Knopoff algorithm as described in 
+    This class implements the Gardner Knopoff algorithm as described in
     this paper:
-    Gardner, J. K. and Knopoff, L. (1974). Is the sequence of aftershocks 
+    Gardner, J. K. and Knopoff, L. (1974). Is the sequence of aftershocks
     in Southern California, with aftershocks removed, poissonian?. Bull.
     Seism. Soc. Am., 64(5): 1363-1367.
     """
-    
-    def _check_config(self, config):
-        """
-        Check that the configuration dictionary contains the necessary 
-        information
-        """
-        if not config.has_key('time_distance_window'):
-            raise RuntimeError('Declustering configuration not complete: ' +
-                               'time_distance_window missing')
-        if not config.has_key('fs_time_prop'):
-            raise RuntimeError('Declustering configuration not complete: ' +
-                               'fs_time_prop missing')
-        
+
     def decluster(self, catalogue, config):
         """
-        The configuration of this declustering algorithm requires two 
+        The configuration of this declustering algorithm requires two
         objects:
         - A time-distance window object (key is 'time_distance_window')
-        - A value in the interval [0,1] expressing the fraction of the 
+        - A value in the interval [0,1] expressing the fraction of the
         time window used for aftershocks (key is 'fs_time_prop')
-        
-        :param catalogue: 
+
+        :param catalogue:
             Catalogue of earthquakes
         :type catalogue: Dictionary
-        :param config: 
+        :param config:
             Configuration parameters
         :type config: Dictionary
 
-        :returns: 
-          **vcl vector** indicating cluster number, 
+        :returns:
+          **vcl vector** indicating cluster number,
           **flagvector** indicating which eq events belong to a cluster
         :rtype: numpy.ndarray
         """
-        
-        # Check declustering configuration
-        self._check_config(config)
         # Get relevant parameters
         neq = len(catalogue.data['magnitude'])  # Number of earthquakes
         # Get decimal year (needed for time windows)
         year_dec = decimal_year(
-             catalogue.data['year'], catalogue.data['month'], 
+             catalogue.data['year'], catalogue.data['month'],
                 catalogue.data['day'])
         # Get space and time windows corresponding to each event
         sw_space, sw_time = (
             config['time_distance_window'].calc(catalogue.data['magnitude']))
         # Initial Position Identifier
-        eqid = np.arange(0, neq, 1)  
+        eqid = np.arange(0, neq, 1)
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int)
         # Sort magnitudes into descending order
-        id0 = np.flipud(np.argsort(catalogue.data['magnitude'], 
+        id0 = np.flipud(np.argsort(catalogue.data['magnitude'],
                                    kind='heapsort'))
         longitude = catalogue.data['longitude'][id0]
         latitude = catalogue.data['latitude'][id0]
@@ -134,12 +127,12 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                     vcl == 0,
                     np.logical_and(
                          dt >= (-sw_time[i] * config['fs_time_prop']),
-                         dt <= sw_time[i])) 
-                # Of those events inside time window, 
+                         dt <= sw_time[i]))
+                # Of those events inside time window,
                 # find those inside distance window
-                vsel1 = haversine(longitude[vsel], 
-                                  latitude[vsel], 
-                                  longitude[i], 
+                vsel1 = haversine(longitude[vsel],
+                                  latitude[vsel],
+                                  longitude[i],
                                   latitude[i]) <= sw_space[i]
                 vsel[vsel] = vsel1
                 temp_vsel = np.copy(vsel)
@@ -160,5 +153,5 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
         eqid = eqid[id1]
         vcl = vcl[id1]
         flagvector = flagvector[id1]
-        
+
         return vcl, flagvector

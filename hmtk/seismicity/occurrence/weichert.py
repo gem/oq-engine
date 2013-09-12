@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
 # 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,39 +17,48 @@
 #
 # DISCLAIMER
 # 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM’s OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM’s OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 import warnings
 import numpy as np
-from hmtk.seismicity.occurrence.base import SeismicityOccurrence
+from hmtk.seismicity.occurrence.base import (
+    SeismicityOccurrence, OCCURRENCE_METHODS)
 from hmtk.seismicity.occurrence.utils import input_checks
 
+
+@OCCURRENCE_METHODS.add(
+    'calculate',
+    reference_magnitude=0.0,
+    magnitude_interval=0.1,
+    bvalue=1.0,
+    itstab=1E-5,
+    maxiter=1000)
 class Weichert(SeismicityOccurrence):
     '''Class to Implement Weichert Algorithm'''
 
@@ -73,7 +82,7 @@ class Weichert(SeismicityOccurrence):
             config['maxiter'] = 1000
 
         bval, sigma_b, rate, sigma_rate, aval, sigma_a = \
-            self.weichert_algorithm(t_per, cent_mag, n_obs, ref_mag, 
+            self.weichert_algorithm(t_per, cent_mag, n_obs, ref_mag,
             config['bvalue'], config['itstab'], config['maxiter'])
 
         if not 'reference_magnitude' in config:
@@ -97,7 +106,7 @@ class Weichert(SeismicityOccurrence):
         :param dmag: magnitude bin size (config file)
         :type dmag: positive float
         :param dtime: time bin size from config file)
-        
+
         :type dtime: float
         :returns: central magnitude, tper length of observation period,
                   n_obs number of events in magnitude increment
@@ -115,28 +124,28 @@ class Weichert(SeismicityOccurrence):
         time_tolerance = dtime / 1.E7
 
         for iloc, mag in enumerate(cmag):
-            index0 = np.logical_and(magnitude < (mag - mag_eq_tolerance), 
+            index0 = np.logical_and(magnitude < (mag - mag_eq_tolerance),
                                     year < (ctime[iloc] - time_tolerance))
             valid_events[index0] = False
-      
-           
+
+
         year = year[valid_events]
         magnitude = magnitude[valid_events]
         for iloc, yr in enumerate(year):
             dum = np.hstack([iloc, yr, magnitude[iloc]])
 
-        mag_range = np.arange(np.min(magnitude) - dmag / 2., 
+        mag_range = np.arange(np.min(magnitude) - dmag / 2.,
                               np.max(magnitude) + (2.0 * dmag), dmag)
         time_range = np.arange(np.min(year) - dtime / 2.,
-                               np.max(year) + (2.0 * dtime), 
+                               np.max(year) + (2.0 * dtime),
                                dtime)
-        
+
         # Histogram data
-        fullcount1 = np.histogram2d(year, magnitude, 
+        fullcount1 = np.histogram2d(year, magnitude,
                                     bins = [time_range, mag_range])[0]
         n_y = np.shape(fullcount1)[1] - 1
         cent_mag = ((mag_range[:-1] + mag_range[1:]) / 2.)[:-1]
-        
+
         n_obs = np.sum(fullcount1, axis=0)[:-1]
         t_per = np.zeros(n_y)
         for iloc, mag in enumerate(cmag):
@@ -148,10 +157,10 @@ class Weichert(SeismicityOccurrence):
         cent_mag = cent_mag[valid_location:]
         t_per = t_per[valid_location:]
         n_obs = n_obs[valid_location:]
-        
+
         return cent_mag, t_per, n_obs
 
-    def weichert_algorithm(self, tper, fmag, nobs, mrate=0.0, bval=1.0, 
+    def weichert_algorithm(self, tper, fmag, nobs, mrate=0.0, bval=1.0,
                            itstab=1E-5, maxiter=1000):
         """
         Weichert algorithm

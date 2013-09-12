@@ -50,6 +50,8 @@ Module :mod:`hmtk.parsers.catalogue.base` defines an abstract base class
 for :class:`CatalogueParser <BaseCatalogueDecluster>`.
 """
 import abc
+from hmtk.registry import CatalogueFunctionRegistry
+
 
 class BaseCatalogueDecluster(object):
     """
@@ -61,13 +63,16 @@ class BaseCatalogueDecluster(object):
     def decluster(self, catalogue, config):
         """
         Implements declustering algorithms
-        :param catalogue: 
+        :param catalogue:
             Catalogue of earthquakes
-        :type catalogue: 
-        :param config: 
+        :type catalogue:
+        :param config:
             Declustering configuration dictionary
         :type config: Dictionary
-        
-        Returns two vectors 
+
+        Returns two vectors
         """
         return
+
+
+DECLUSTERER_METHODS = CatalogueFunctionRegistry()

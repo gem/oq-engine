@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
 # 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,33 +17,33 @@
 #
 # DISCLAIMER
 # 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM’s OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM’s OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 # -*- coding: utf-8 -*-
 """
@@ -51,28 +51,32 @@
 
 import numpy as np
 from hmtk.seismicity.occurrence.utils import input_checks, recurrence_table
-from hmtk.seismicity.occurrence.base import SeismicityOccurrence
+from hmtk.seismicity.occurrence.base import (
+    SeismicityOccurrence, OCCURRENCE_METHODS)
 from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
 
+
+@OCCURRENCE_METHODS.add(
+    'calculate', reference_magnitude=0.0, magnitude_interval=0.1)
 class BMaxLikelihood(SeismicityOccurrence):
     """ Implements maximum likelihood calculations taking into account time
     variation in completeness"
     """
-   
+
     def calculate(self, catalogue, config, completeness=None, end_year=None):
-        """ Calculates recurrence parameters a_value and b_value, and their 
+        """ Calculates recurrence parameters a_value and b_value, and their
         respective uncertainties
 
-        :param dict catalogue: Earthquake Catalogue 
+        :param dict catalogue: Earthquake Catalogue
             An instance of :class:`hmtk.seismicity.catalogue`
-        :param dict config: 
-            A configuration dictionary; the only parameter that can be 
-            defined in this case if the type of average to be applied 
+        :param dict config:
+            A configuration dictionary; the only parameter that can be
+            defined in this case if the type of average to be applied
             in the calculation
-        :param list or numpy.ndarray completeness: 
+        :param list or numpy.ndarray completeness:
             Completeness table
-        :param int end_year: 
-            Catalogue termination year 
+        :param int end_year:
+            Catalogue termination year
         """
 
         # Input checks
@@ -87,7 +91,7 @@ class BMaxLikelihood(SeismicityOccurrence):
         if not config['Average Type'] in ['Weighted','Harmonic']:
             raise ValueError('Average type not recognised in bMaxLiklihood!')
 
-        return self._b_ml(catalogue, config, cmag, ctime, ref_mag, 
+        return self._b_ml(catalogue, config, cmag, ctime, ref_mag,
                 dmag, end_year)
 
     def _b_ml(self, catalogue, config, cmag, ctime, ref_mag, dmag, end_year):
@@ -113,11 +117,11 @@ class BMaxLikelihood(SeismicityOccurrence):
                 catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
             nyr = np.float(np.max(catalogue['year'][id1])) - ctime[ival] + 1.
             # Get a- and b- value for the selected events
-            temp_rec_table = recurrence_table(catalogue['magnitude'][id1], 
-                                              dmag, 
+            temp_rec_table = recurrence_table(catalogue['magnitude'][id1],
+                                              dmag,
                                               catalogue['year'][id1],
                                               end_year-ctime[ival]+1)
-            
+
             bval, sigma_b = aki_ml._aki_ml(temp_rec_table[:, 0],
                                              temp_rec_table[:, 1], dmag, m_c)
 
@@ -139,7 +143,7 @@ class BMaxLikelihood(SeismicityOccurrence):
             ival = ival + np.sum(id0)
 
         # Get average GR parameters
-        bval, sigma_b, aval, sigma_a = self._average_parameters(gr_pars, neq, 
+        bval, sigma_b, aval, sigma_a = self._average_parameters(gr_pars, neq,
                 config['Average Type'])
 
         if not 'reference_magnitude' in config:
@@ -148,20 +152,20 @@ class BMaxLikelihood(SeismicityOccurrence):
             sigma_a = aval - np.log10(d_aval)
 
         return bval, sigma_b, aval, sigma_a
-    
+
     def _average_parameters(self, gr_params, neq, average_type='Weighted'):
         """Calculates the average of a set of Gutenberg-Richter parameters
         depending on the average type
 
-        :param numpy.ndarray gr_params: 
+        :param numpy.ndarray gr_params:
             Gutenberg-Richter parameters [b, sigma_b, a, sigma_a]
         :param numpy.ndarray neq:
-            
-        """ 
+
+        """
         if np.shape(gr_params)[0] != np.shape(neq)[0]:
             raise ValueError('Number of weights does not correspond'
                              ' to number of parameters')
-        
+
         #neq = neq.astype(float)
         if 'Harmonic' in average_type:
             average_parameters = self._harmonic_mean(gr_params, neq)
@@ -171,8 +175,8 @@ class BMaxLikelihood(SeismicityOccurrence):
         sigma_b = average_parameters[1]
         aval = average_parameters[2]
         sigma_a = average_parameters[3]
-        return bval, sigma_b, aval, sigma_a 
-        
+        return bval, sigma_b, aval, sigma_a
+
 
     def _weighted_mean(self, parameters, neq):
         '''Simple weighted mean'''

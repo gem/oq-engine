@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
 # 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,54 +17,57 @@
 #
 # DISCLAIMER
 # 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM’s OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM’s OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 # -*- coding: utf-8 -*-
 import warnings
 import numpy as np
-from hmtk.seismicity.occurrence.base import SeismicityOccurrence
-from hmtk.seismicity.occurrence.utils import recurrence_table, input_checks 
+from hmtk.seismicity.occurrence.base import (
+    SeismicityOccurrence, OCCURRENCE_METHODS)
+from hmtk.seismicity.occurrence.utils import recurrence_table, input_checks
 
+
+@OCCURRENCE_METHODS.add('calculate')
 class AkiMaxLikelihood(SeismicityOccurrence):
 
     def calculate(self, catalogue, config=None, completeness=None):
-        """ Calculation of b-value and its uncertainty for a given 
-        catalogue, using the maximum likelihood method of Aki (1965), 
+        """ Calculation of b-value and its uncertainty for a given
+        catalogue, using the maximum likelihood method of Aki (1965),
         with a correction for discrete bin width (Bender, 1983).
 
         :param catalogue:
-            See :class:`hmtk.seismicity.occurrence.base.py' for further 
+            See :class:`hmtk.seismicity.occurrence.base.py' for further
             explanation
         :param config:
-            The configuration in this case do not contains specific 
+            The configuration in this case do not contains specific
             information
-        :keyword float completeness: 
+        :keyword float completeness:
             Completeness magnitude
 
         :return float bval:
@@ -77,19 +80,19 @@ class AkiMaxLikelihood(SeismicityOccurrence):
                                                   completeness)
         rt = recurrence_table(catalogue['magnitude'], dmag, catalogue['year'])
         bval, sigma_b = self._aki_ml(rt[:,0], rt[:,1])
-        return bval, sigma_b 
+        return bval, sigma_b
 
     def _aki_ml(self, mval, number_obs, dmag=0.1, m_c=0.0):
         """
-        :param numpy.ndarray mval: 
-            array of reference magnitudes (column 0 from recurrence 
+        :param numpy.ndarray mval:
+            array of reference magnitudes (column 0 from recurrence
             table)
-        :param numpy.ndarray number_obs: 
-            number of observations in magnitude bin (column 1 from 
+        :param numpy.ndarray number_obs:
+            number of observations in magnitude bin (column 1 from
             recurrence table)
-        :keyword float dmag: 
+        :keyword float dmag:
             magnitude interval
-        :keyword float m_c: 
+        :keyword float m_c:
             completeness magnitude
 
         :return float bval:
