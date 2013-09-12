@@ -595,3 +595,27 @@ class HazardCurveParserTestCase(unittest.TestCase):
                 _utils.assert_xml_equal(infile, outfile)
             finally:
                 os.unlink(outfile)
+
+    def test_geojson_parsing(self):
+        # Test geojson parsing by comparing the
+        # parsed values from the xml and geojson parsers.
+        # The xml parser is already well tested, so this should
+        # be sufficient.
+        example_xml = [
+            'examples/hazard-curves-pga.xml',
+            'examples/hazard-curves-sa.xml',
+            'examples/hazard-curves-quantile.xml',
+            'examples/hazard-curves-mean.xml',
+        ]
+        example_geojson = [
+            'examples/hazard-curves-pga.geojson',
+            'examples/hazard-curves-sa.geojson',
+            'examples/hazard-curves-quantile.geojson',
+            'examples/hazard-curves-mean.geojson',
+        ]
+        for xml, geo in zip(example_xml, example_geojson):
+            xp = parsers.HazardCurveXMLParser(xml)
+            gp = parsers.HazardCurveGeoJSONParser(geo)
+
+            equal, err = _utils.deep_eq(xp.parse(), gp.parse())
+            self.assertTrue(equal, err)
