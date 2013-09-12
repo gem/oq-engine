@@ -90,8 +90,8 @@ class Grid(collections.OrderedDict):
                     'ymax': np.max(cat_bbox.lats),
                     'yspc': spacing,
                     'zmin': 0.,
-                    'zmax': np.max(catalogue['depth']) + 1E-5,
-                    'zspc': np.max(catalogue['depth'])})
+                    'zmax': np.max(catalogue.data['depth']),
+                    'zspc': np.max(catalogue.data['depth'])})
         return new
 
 
