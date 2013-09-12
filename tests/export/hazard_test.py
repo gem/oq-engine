@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import mock
 import os
 import shutil
 import tempfile
@@ -114,6 +115,34 @@ class GetResultExportDestTestCase(unittest.TestCase):
             'hazard_curve-mean.xml',
             '%s/calc_7/hazard_curve/SA-0.025/'
             'hazard_curve-quantile_0.85.xml',
+        ]
+        expected_paths = [x % self.target_dir for x in expected_paths]
+
+        for i, curve in enumerate(curves):
+            self.assertEqual(
+                expected_paths[i],
+                hazard._get_result_export_dest(7, self.target_dir, curve)
+            )
+
+    def test_hazard_curve_multi(self):
+        output = self.FakeOutput('hazard_curve_multi')
+
+        curves = [
+            self.FakeHazardCurve(output, self.ltr_mc, None, None, None, None),
+            self.FakeHazardCurve(output, self.ltr_enum, None, None, None,
+                                 None),
+            self.FakeHazardCurve(output, None, None, None, 'mean', None),
+            self.FakeHazardCurve(output, None, None, None, 'quantile', 0.85),
+        ]
+        expected_paths = [
+            '%s/calc_7/hazard_curve_multi/'
+            'hazard_curve_multi-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml',
+            '%s/calc_7/hazard_curve_multi/'
+            'hazard_curve_multi-smltp_B10_B9-gsimltp_B7_B8.xml',
+            '%s/calc_7/hazard_curve_multi/'
+            'hazard_curve_multi-mean.xml',
+            '%s/calc_7/hazard_curve_multi/'
+            'hazard_curve_multi-quantile_0.85.xml',
         ]
         expected_paths = [x % self.target_dir for x in expected_paths]
 
@@ -537,3 +566,38 @@ class DisaggExportTestCase(BaseExportTestCase):
                 self._test_exported_file(f)
         finally:
             shutil.rmtree(target_dir)
+
+
+class Bug1202290TestCase(unittest.TestCase):
+    """
+    Tests to specifically address
+    https://bugs.launchpad.net/oq-engine/+bug/1202290.
+    """
+
+    def test(self):
+        output = mock.Mock()
+        output.oq_job.hazard_calculation.id = 1202290
+        output.hazard_curve = mock.Mock()
+        output.hazard_curve.__iter__ = lambda x: iter([])
+        target = mock.Mock()
+
+        with mock.patch('openquake.engine.export.hazard'
+                        '._get_result_export_dest') as gred:
+            with mock.patch('openquake.nrmllib.hazard.writers'
+                            '.MultiHazardCurveXMLWriter') as mhcxw:
+                mhcxw.return_value
+                mhcxw.serialize = mock.Mock()
+                hazard.export_hazard_curve_multi_xml(output, target)
+
+        self.assertEqual(1, gred.call_count)
+        self.assertEqual(
+            ((1202290, target, output.hazard_curve), {}),
+            gred.call_args
+        )
+        self.assertEqual(1, mhcxw.call_count)
+        self.assertEqual(1, mhcxw.return_value.serialize.call_count)
+
+        self.assertEqual(
+            ((gred.return_value, []), {}),
+            mhcxw.call_args
+        )
