@@ -520,64 +520,61 @@ class HazardCurveParserTestCase(unittest.TestCase):
     )
 
     EXPECTED = {
-        'examples/hazard-curves-pga.xml': [
-            {'imls': [0.005, 0.007, 0.0137],
-             'imt': 'PGA',
-             'investigation_time': '50.0',
-             'quantile_value': None,
-             'sa_damping': None,
-             'sa_period': None,
-             'statistics': None},
-             EXPECTED_CURVE_1,
-             EXPECTED_CURVE_2,
-        ],
-        'examples/hazard-curves-sa.xml': [
-            {'imls': [0.005, 0.007, 0.0137],
-             'imt': 'SA',
-             'investigation_time': '50.0',
-             'quantile_value': None,
-             'sa_damping': '5.0',
-             'sa_period': '0.025',
-             'statistics': None},
-             EXPECTED_CURVE_1,
-             EXPECTED_CURVE_2,
-        ],
-        'examples/hazard-curves-quantile.xml': [
-            {'imls': [0.005, 0.007, 0.0137],
-             'imt': 'PGD',
-             'investigation_time': '50.0',
-             'quantile_value': '0.6',
-             'sa_damping': None,
-             'sa_period': None,
-             'statistics': 'quantile'},
-             EXPECTED_CURVE_1,
-             EXPECTED_CURVE_2,
-        ],
-        'examples/hazard-curves-mean.xml': [
-            {'imls': [0.005, 0.007, 0.0137],
-             'imt': 'PGD',
-             'investigation_time': '50.0',
-             'quantile_value': None,
-             'sa_damping': None,
-             'sa_period': None,
-             'statistics': 'mean'},
-             EXPECTED_CURVE_1,
-             EXPECTED_CURVE_2,
-        ],
+        'examples/hazard-curves-pga.xml': models.HazardCurveModel(
+            **{'imls': [0.005, 0.007, 0.0137],
+               'imt': 'PGA',
+               'investigation_time': '50.0',
+               'quantile_value': None,
+               'sa_damping': None,
+               'sa_period': None,
+               'statistics': None,
+               'gsimlt_path': 'b1_b7',
+               'smlt_path': 'b1_b2_b3',
+               'data_iter': iter([EXPECTED_CURVE_1, EXPECTED_CURVE_2])}
+        ),
+        'examples/hazard-curves-sa.xml': models.HazardCurveModel(
+            **{'imls': [0.005, 0.007, 0.0137],
+               'imt': 'SA',
+               'investigation_time': '50.0',
+               'quantile_value': None,
+               'sa_damping': '5.0',
+               'sa_period': '0.025',
+               'statistics': None,
+               'gsimlt_path': 'b1_b2',
+               'smlt_path': 'b1_b2_b4',
+               'data_iter': iter([EXPECTED_CURVE_1, EXPECTED_CURVE_2])}
+        ),
+        'examples/hazard-curves-quantile.xml': models.HazardCurveModel(
+            **{'imls': [0.005, 0.007, 0.0137],
+               'imt': 'PGD',
+               'investigation_time': '50.0',
+               'quantile_value': '0.6',
+               'sa_damping': None,
+               'sa_period': None,
+               'statistics': 'quantile',
+               'gsimlt_path': None,
+               'smlt_path': None,
+               'data_iter': iter([EXPECTED_CURVE_1, EXPECTED_CURVE_2])}
+        ),
+        'examples/hazard-curves-mean.xml': models.HazardCurveModel(
+            **{'imls': [0.005, 0.007, 0.0137],
+               'imt': 'PGD',
+               'investigation_time': '50.0',
+               'quantile_value': None,
+               'sa_damping': None,
+               'sa_period': None,
+               'statistics': 'mean',
+               'gsimlt_path': None,
+               'smlt_path': None,
+               'data_iter': iter([EXPECTED_CURVE_1, EXPECTED_CURVE_2])}
+        ),
     }
 
     def test_parse(self):
         for curve, expected in self.EXPECTED.iteritems():
             parser = parsers.HazardCurveParser(curve)
             model = parser.parse()
-            got = [{'imls': model.imls,
-                    'imt': model.imt,
-                    'investigation_time': model.investigation_time,
-                    'quantile_value': model.quantile_value,
-                    'sa_damping': model.sa_damping,
-                    'sa_period': model.sa_period,
-                    'statistics': model.statistics}] + list(model)
-            equal, err = _utils.deep_eq(expected, got)
+            equal, err = _utils.deep_eq(expected, model)
             self.assertTrue(equal, err)
 
     def test_chain_parse_serialize(self):
@@ -591,7 +588,7 @@ class HazardCurveParserTestCase(unittest.TestCase):
             _, outfile = tempfile.mkstemp()
             try:
                 hcw = writers.HazardCurveXMLWriter(
-                    outfile, **parsed_model.__dict__
+                    outfile, **parsed_model.metadata
                 )
                 hcw.serialize(parsed_model)
 
