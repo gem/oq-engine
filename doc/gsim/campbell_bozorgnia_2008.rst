@@ -1,6 +1,6 @@
-=======================
+===========================
 Campbell and Bozorgnia 2008
-=======================
+===========================
 
 .. module:: openquake.hazardlib.gsim.campbell_bozorgnia_2008
 
