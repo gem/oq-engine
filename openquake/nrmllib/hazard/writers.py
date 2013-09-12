@@ -221,6 +221,56 @@ class HazardCurveXMLWriter(BaseCurveWriter):
             poes_elem.text = ' '.join([str(x) for x in hc.poes])
 
 
+class HazardCurveGeoJSONWriter(BaseCurveWriter):
+    """
+    Writes hazard curves to GeoJSON. Has the same constructor and interface as
+    :class:`HazardCurveXMLWriter`.
+    """
+
+    def serialize(self, data):
+        """
+        Write the hazard curves to the given as GeoJSON. The GeoJSON format
+        is customized to contain various bits of metadata.
+
+        See :meth:`HazardCurveXMLWriter.serialize` for expected input.
+        """
+        oqmetadata = {}
+        for key, value in self.metadata.iteritems():
+            if key == 'imls':
+                oqmetadata['IMLs'] = value
+            if value is not None:
+                if key == 'imls':
+                    oqmetadata['IMLs'] = value
+                else:
+                    oqmetadata[_ATTR_MAP.get(key)] = str(value)
+
+        features = []
+        feature_coll = {
+            'type': 'FeatureCollection',
+            'features': features,
+            'oqtype': 'HazardCurve',
+            'oqnrmlversion': '0.4',
+            'oqmetadata': oqmetadata,
+        }
+        for hc in data:
+            poes = list(hc.poes)
+            lon = hc.location.x
+            lat = hc.location.y
+
+            feature = {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Point',
+                    'coordinates': [float(lon), float(lat)],
+                },
+                'properties': {'poEs': list(poes)},
+            }
+            features.append(feature)
+
+        with NRMLFile(self.dest, 'w') as fh:
+            json.dump(feature_coll, fh)
+
+
 class MultiHazardCurveXMLWriter(object):
     """
     A serializer of multiple hazard curve set having multiple
