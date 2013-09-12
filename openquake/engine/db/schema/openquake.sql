@@ -587,7 +587,8 @@ CREATE TABLE hzrdr.ses_rupture (
     old_lats BYTEA NULL,
     old_depths BYTEA NULL,
     old_surface BYTEA NULL,
-    rupture BYTEA NOT NULL DEFAULT 'not computed'
+    rupture BYTEA NOT NULL DEFAULT 'not computed',
+    tag VARCHAR
 ) TABLESPACE hzrdr_ts;
 
 

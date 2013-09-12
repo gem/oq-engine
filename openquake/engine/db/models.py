@@ -1841,7 +1841,8 @@ class SESCollection(djm.Model):
         """
         Iterator for walking through all child :class:`SES` objects.
         """
-        return SES.objects.filter(ses_collection=self.id).iterator()
+        return SES.objects.filter(ses_collection=self.id).order_by('ordinal') \
+            .iterator()
 
 
 class SES(djm.Model):
@@ -1865,7 +1866,8 @@ class SES(djm.Model):
         """
         Iterator for walking through all child :class:`SESRupture` objects.
         """
-        return SESRupture.objects.filter(ses=self.id).iterator()
+        return SESRupture.objects.filter(ses=self.id).order_by('tag') \
+            .iterator()
 
 
 def old_field_property(prop):
@@ -1887,6 +1889,9 @@ class SESRupture(djm.Model):
     #: :class:`openquake.hazardlib.source.rupture.ProbabilisticRupture`
     #: instance
     rupture = fields.PickleField()
+
+    # a tag with rlz, ses, src and ordinal info
+    tag = djm.TextField()
 
     old_magnitude = djm.FloatField(null=True)
     old_strike = djm.FloatField(null=True)
