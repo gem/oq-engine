@@ -572,7 +572,7 @@ class HazardCurveParserTestCase(unittest.TestCase):
 
     def test_parse(self):
         for curve, expected in self.EXPECTED.iteritems():
-            parser = parsers.HazardCurveParser(curve)
+            parser = parsers.HazardCurveXMLParser(curve)
             model = parser.parse()
             equal, err = _utils.deep_eq(expected, model)
             self.assertTrue(equal, err)
@@ -583,7 +583,7 @@ class HazardCurveParserTestCase(unittest.TestCase):
         for example in ('hazard-curves-mean.xml', 'hazard-curves-pga.xml',
                         'hazard-curves-quantile.xml', 'hazard-curves-sa.xml'):
             infile = os.path.join('tests/data', example)
-            hcp = parsers.HazardCurveParser(infile)
+            hcp = parsers.HazardCurveXMLParser(infile)
             parsed_model = hcp.parse()
             _, outfile = tempfile.mkstemp()
             try:
