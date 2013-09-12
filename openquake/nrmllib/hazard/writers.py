@@ -458,7 +458,7 @@ class SESXMLWriter(object):
 
                 for rupture in ses:
                     rup_elem = etree.SubElement(ses_elem, 'rupture')
-                    rup_elem.set('id', str(rupture.id))
+                    rup_elem.set('id', str(rupture.tag))
                     rup_elem.set('magnitude', str(rupture.magnitude))
                     rup_elem.set('strike', str(rupture.strike))
                     rup_elem.set('dip', str(rupture.dip))
