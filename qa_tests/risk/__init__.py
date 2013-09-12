@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import tempfile
+import pprint
 import os
 import sys
 import warnings
@@ -197,7 +198,7 @@ class CompleteTestCase(object):
                 found = filter(lambda o: o[0] == data_hash[0], outputs)
                 raise AssertionError(
                     "The output with hash %s is missing. Found %s" % (
-                        str(data_hash), found))
+                        str(data_hash), pprint.pformat(found)))
             actual_output = outputs[data_hash]
             try:
                 expected_output.assertAlmostEqual(actual_output)
