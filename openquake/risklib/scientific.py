@@ -375,7 +375,7 @@ class Distribution(object):
         that indicates the correlation between samples across
         different assets.
         """
-        assert correlation >=0 and correlation <= 1
+        assert correlation >= 0 and correlation <= 1
 
     @abc.abstractmethod
     def sample(self, means, covs, stddevs):

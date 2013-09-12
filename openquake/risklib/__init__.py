@@ -20,3 +20,6 @@ __version__ = '0.3.0'
 
 from openquake.risklib.scientific import (
     VulnerabilityFunction, DegenerateDistribution, classical)
+
+
+__all__ = ["VulnerabilityFunction", "DegenerateDistribution", "classical"]

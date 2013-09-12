@@ -43,6 +43,14 @@ class DegenerateDistributionTest(unittest.TestCase):
             1, self.distribution.survival(loss_ratio, mean, None))
 
 
+class BetaDistributionTestCase(unittest.TestCase):
+    def test_sample_one(self):
+        numpy.random.seed(0)
+        numpy.testing.assert_allclose(
+            [0.057241368], scientific.BetaDistribution().sample(
+                numpy.array([0.1]), None, numpy.array([0.1])))
+
+
 class TestMemoize(unittest.TestCase):
     def test_cache(self):
         m = mock.Mock(return_value=3)
@@ -196,9 +204,9 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # this LR are 0.
         # If LR = 0 and CoV = 0, the PoE will be 0.
         curve = scientific.VulnerabilityFunction(
-            [0.1, 0.2, 0.3, 0.45, 0.6],# IMLs
-            [0.0, 0.1, 0.2, 0.4, 1.2],  # loss ratios
-            [0.0, 0.0, 0.3, 0.2, 0.1],  # CoVs
+            [0.1, 0.2, 0.3, 0.45, 0.6],  # IMLs
+            [0.0, 0.1, 0.2, 0.4, 1.2],   # loss ratios
+            [0.0, 0.0, 0.3, 0.2, 0.1],   # CoVs
             'LN'
         )
         loss_ratios, lrem = curve.loss_ratio_exceedance_matrix(5)
