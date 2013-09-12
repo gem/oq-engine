@@ -268,7 +268,8 @@ class HazardCurveGeoJSONWriter(BaseCurveWriter):
             features.append(feature)
 
         with NRMLFile(self.dest, 'w') as fh:
-            json.dump(feature_coll, fh)
+            json.dump(feature_coll, fh, sort_keys=True, indent=4,
+                      separators=(',', ': '))
 
 
 class MultiHazardCurveXMLWriter(object):
@@ -741,7 +742,8 @@ class HazardMapGeoJSONWriter(HazardMapWriter):
             features.append(feature)
 
         with NRMLFile(self.dest, 'w') as fh:
-            json.dump(feature_coll, fh)
+            json.dump(feature_coll, fh, sort_keys=True, indent=4,
+                      separators=(',', ': '))
 
 
 class DisaggXMLWriter(object):
