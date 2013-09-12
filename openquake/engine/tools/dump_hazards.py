@@ -19,8 +19,8 @@
 """
 A script to dump hazard outputs. If you launch it with a given
 hazard_calculation_id, it will dump all the hazard outputs relevant for
-risk calculations in a tarfile named hc<hazard-calculation-id>.tar.
-The tar file can then be moved around and restored in a different
+risk calculations in a directory named hc<hazard-calculation-id>.
+The directory can then be moved around and restored in a different
 database with the companion script restore_hazards.py.
 Internally the dump and restore procedures are based on
 COPY TO and COPY FROM commands, so they are quite performant
@@ -29,7 +29,7 @@ binary dump/restore since the geography type has no binary form in
 PostGIS 1.5.
 
 To restore a hazard computation and all of its outputs into a new database
-run ``python restore_hazards.py <tarfile> <host> <dbname> <user> <password>``
+run ``python restore_hazards.py <directory> <host> <dbname> <user> <password>``
 
 The <user> must have sufficient permissions to write on <dbname>.  If
 your database already contains a hazard calculation with the same id,
@@ -88,10 +88,13 @@ class Copier(object):
         """
         fname = os.path.join(dest, name + '.gz')
         log.info('%s\n(-> %s)', query, fname)
-        with gzip.open(fname, mode) as f:
-            self._cursor.copy_expert(query, f)
-            if fname not in self.filenames:
-                self.filenames.append(fname)
+        TIMESTAMP = 1378800715.0  # some fake timestamp
+        # here is some trick to avoid storing filename and timestamp info
+        with open(fname, mode) as fileobj:
+            with gzip.GzipFile('', fileobj=fileobj, mtime=TIMESTAMP) as z:
+                self._cursor.copy_expert(query, z)
+                if fname not in self.filenames:
+                    self.filenames.append(fname)
 
 
 class HazardDumper(object):
@@ -112,7 +115,8 @@ class HazardDumper(object):
         # this is why we are requiring text format
         assert format == 'text', format
         if outdir:
-            os.mkdir(outdir)
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
         else:
             outdir = tempfile.mkdtemp(prefix='hazard_calculation-')
         self.outdir = outdir
@@ -209,14 +213,14 @@ class HazardDumper(object):
         self.curs.copy(
             """copy (select * from uiapi.output where id in %s)
                   to stdout with (format '%s')""" % (ids, self.format),
-            self.outdir, 'uiapi.output.csv', 'a')
+            self.outdir, 'uiapi.output.csv', 'w')
 
     def hazard_curve(self, output):
         """Dump hazard_curve, hazard_curve_data"""
         self.curs.copy(
             """copy (select * from hzrdr.hazard_curve where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
-            self.outdir, 'hzrdr.hazard_curve.csv', 'a')
+            self.outdir, 'hzrdr.hazard_curve.csv', 'w')
 
         ids = self.curs.tuplestr(
             'select id from hzrdr.hazard_curve where output_id in %s' % output)
@@ -225,7 +229,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.hazard_curve_data
                   where hazard_curve_id in {})
                   to stdout with (format '{}')""".format(ids, self.format),
-            self.outdir, 'hzrdr.hazard_curve_data.csv', 'a')
+            self.outdir, 'hzrdr.hazard_curve_data.csv', 'w')
 
     def gmf(self, output):
         """Dump gmf, gmf_data"""
@@ -233,7 +237,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.gmf
                   where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
-            self.outdir, 'hzrdr.gmf.csv', 'a')
+            self.outdir, 'hzrdr.gmf.csv', 'w')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.gmf '
                                       'where output_id in %s' % output)
@@ -241,7 +245,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.gmf_data
                   where gmf_id in %s)
                   to stdout with (format '%s')""" % (coll_ids, self.format),
-            self.outdir, 'hzrdr.gmf_data.csv', 'a')
+            self.outdir, 'hzrdr.gmf_data.csv', 'w')
 
     def ses(self, output):
         """Dump ses_collection, ses, ses_rupture"""
@@ -249,7 +253,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.ses_collection
                   where output_id in %s)
                   to stdout with (format '%s')""" % (output, self.format),
-            self.outdir, 'hzrdr.ses_collection.csv', 'a')
+            self.outdir, 'hzrdr.ses_collection.csv', 'w')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.ses_collection '
                                       'where output_id in %s' % output)
@@ -257,7 +261,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.ses
                   where ses_collection_id in %s)
                   to stdout with (format '%s')""" % (coll_ids, self.format),
-            self.outdir, 'hzrdr.ses.csv', 'a')
+            self.outdir, 'hzrdr.ses.csv', 'w')
 
         ses_ids = self.curs.tuplestr(
             'select id from hzrdr.ses where ses_collection_id in %s'
@@ -266,7 +270,7 @@ class HazardDumper(object):
             """copy (select * from hzrdr.ses_rupture
                   where ses_id in %s)
                   to stdout with (format '%s')""" % (ses_ids, self.format),
-            self.outdir, 'hzrdr.ses_rupture.csv', 'a')
+            self.outdir, 'hzrdr.ses_rupture.csv', 'w')
 
     def dump(self, *hazard_calculation_ids):
         """
@@ -313,17 +317,21 @@ class HazardDumper(object):
                 self.gmf(ids)
             elif output_type == 'ses':
                 self.ses(ids)
+        # save FILENAMES.txt
+        filenames = os.path.join(
+            self.outdir, 'FILENAMES.txt')
+        with open(filenames, 'w') as f:
+            f.write('\n'.join(map(os.path.basename, self.curs.filenames)))
 
+    # this is not used right now; the functionality could be restored in
+    # the future (optionally)
     def mktar(self):
         """
         Tar the contents of outdir into a tarfile and remove the directory
         """
-        # save FILENAMES.txt
-        with open(os.path.join(self.outdir, 'FILENAMES.txt'), 'w') as f:
-            f.write('\n'.join(map(os.path.basename, self.curs.filenames)))
         # tar outdir
         with tarfile.open(self.outdir + '.tar', 'w') as t:
-            t.add(self.outdir, 'hazard_calculation')
+            t.add(self.outdir)
         shutil.rmtree(self.outdir)
         # return pathname of the generated tarfile
         tarname = self.outdir + '.tar'
@@ -344,7 +352,7 @@ def main(hazard_calculation_id, outdir=None,
         host=host, database=dbname, user=user, password=password, port=port)
     hc = HazardDumper(conn, outdir)
     hc.dump(hazard_calculation_id)
-    log.info('Written %s' % hc.mktar())
+    log.info('Written %s' % hc.outdir)
 
 
 if __name__ == '__main__':
