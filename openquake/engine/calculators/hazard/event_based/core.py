@@ -33,6 +33,7 @@ For more information on computing ground motion fields, see
 
 import math
 import random
+import itertools
 
 import openquake.hazardlib.imt
 import numpy.random
@@ -83,8 +84,8 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     :param src_ids:
         List of ids of parsed source models from which we will generate
         stochastic event sets/ruptures.
-    :param lt_rlz_id:
-        Id of logic tree realization model to calculate for.
+    :param ses:
+        Stochastic Event Set object
     :param int task_seed:
         Value for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields.
@@ -130,9 +131,15 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
         if not ruptures:
             return
 
-        for i, r in enumerate(ruptures):
-            r.tag = 'rlz=%02d,ses=%04d,src=%s,i=%d' % (
-                lt_rlz.ordinal, ses.ordinal, 'SRC', i)
+        # set the tag for each generated source:
+        # the same rupture can be repeated several times, therefore
+        # the tags are not unique; this is not a problem since ruptures
+        # with the same tag are actually the same rupture
+        for source_id, rupts in itertools.groupby(
+                ruptures, lambda r: r.source.source_id):
+            for i, r in enumerate(rupts):
+                r.tag = 'rlz=%02d,ses=%04d,src=%s,i=%d' % (
+                    lt_rlz.ordinal, ses.ordinal, source_id, i)
 
     with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
         rupture_ids = _save_ses_ruptures(ses, ruptures, cmplt_lt_ses)
