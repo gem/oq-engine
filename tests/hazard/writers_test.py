@@ -105,7 +105,7 @@ class SESRupture(object):
         self.bottom_left_corner = bottom_left_corner
 
 
-class HazardCurveXMLWriterTestCase(unittest.TestCase):
+class HazardCurveWriterTestCase(unittest.TestCase):
 
     FAKE_PATH = 'TODO'  # use a place in /tmp
     TIME = 50.0
@@ -220,9 +220,9 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         )
 
 
-class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
+class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
     """
-    Tests for the `serialize` method of the hazard curve XML writer.
+    Tests for the `serialize` method of the hazard curve writers.
     """
 
     def setUp(self):
@@ -280,6 +280,45 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
         utils.assert_xml_equal(expected, self.path)
         self.assertTrue(utils.validates_against_xml_schema(self.path))
 
+    def test_serialize_geojson(self):
+        expected = {
+            u'features': [
+                {u'geometry': {u'coordinates': [38.0, -20.1],
+                               u'type': u'Point'},
+                 u'properties': {u'poEs': [0.1, 0.2, 0.3]},
+                 u'type': u'Feature'},
+               {u'geometry': {u'coordinates': [38.1, -20.2],
+                              u'type': u'Point'},
+                u'properties': {u'poEs': [0.4, 0.5, 0.6]},
+                u'type': u'Feature'},
+               {u'geometry': {u'coordinates': [38.2, -20.3],
+                              u'type': u'Point'},
+                u'properties': {u'poEs': [0.7, 0.8, 0.8]},
+                u'type': u'Feature'}],
+            u'oqmetadata': {u'IMT': u'SA',
+                            u'gsimTreePath': u'b1_b4_b5',
+                            u'investigationTime': u'50.0',
+                            u'IMLs': [0.005, 0.007, 0.0098],
+                            u'saDamping': u'5.0',
+                            u'saPeriod': u'0.025',
+                            u'sourceModelTreePath': u'b1_b2_b4'},
+            u'oqnrmlversion': u'0.4',
+            u'oqtype': u'HazardCurve',
+            u'type': u'FeatureCollection'
+        }
+
+        metadata = dict(
+            investigation_time=self.TIME, imt='SA', imls=self.IMLS,
+            sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
+            gsimlt_path='b1_b4_b5'
+        )
+        writer = writers.HazardCurveGeoJSONWriter(self.path, **metadata)
+        writer.serialize(self.data)
+
+        actual = json.load(open(self.path))
+        self.assertEqual(expected, actual)
+
+
     def test_serialize_quantile(self):
         # Test serialization of qunatile curves.
         expected = StringIO.StringIO("""\
@@ -319,6 +358,44 @@ class HazardCurveXMLWriterSerializeTestCase(HazardCurveXMLWriterTestCase):
 
         utils.assert_xml_equal(expected, self.path)
         self.assertTrue(utils.validates_against_xml_schema(self.path))
+
+    def test_serialize_quantile_geojson(self):
+        expected = {
+            u'features': [
+                {u'geometry': {u'coordinates': [38.0, -20.1],
+                               u'type': u'Point'},
+                 u'properties': {u'poEs': [0.1, 0.2, 0.3]},
+                 u'type': u'Feature'},
+               {u'geometry': {u'coordinates': [38.1, -20.2],
+                              u'type': u'Point'},
+                u'properties': {u'poEs': [0.4, 0.5, 0.6]},
+                u'type': u'Feature'},
+               {u'geometry': {u'coordinates': [38.2, -20.3],
+                              u'type': u'Point'},
+                u'properties': {u'poEs': [0.7, 0.8, 0.8]},
+                u'type': u'Feature'}],
+            u'oqmetadata': {u'IMT': u'SA',
+                            u'investigationTime': u'50.0',
+                            u'IMLs': [0.005, 0.007, 0.0098],
+                            u'saDamping': u'5.0',
+                            u'saPeriod': u'0.025',
+                            u'statistics': u'quantile',
+                            u'quantileValue': u'0.15'},
+            u'oqnrmlversion': u'0.4',
+            u'oqtype': u'HazardCurve',
+            u'type': u'FeatureCollection'
+        }
+
+        metadata = dict(
+            investigation_time=self.TIME, imt='SA', imls=self.IMLS,
+            sa_period=0.025, sa_damping=5.0, statistics='quantile',
+            quantile_value=0.15
+        )
+        writer = writers.HazardCurveGeoJSONWriter(self.path, **metadata)
+        writer.serialize(self.data)
+
+        actual = json.load(open(self.path))
+        self.assertEqual(expected, actual)
 
 
 class MultiHazardCurveXMLWriterSerializeTestCase(unittest.TestCase):
