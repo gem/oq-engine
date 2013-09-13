@@ -31,9 +31,10 @@ class EventBaseQATestCase(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             0.924562361744, 0.740587007803, 0.544386574808, 0.534670090278,
             0.485769830166, 0.481694006612, 0.440383989379, 0.281221895051,
             0.0209633644322, 0.00729990319192, 0.00365613600187]
+
         losses = self._run_test().output_set.get(
             output_type="event_loss").event_loss
-        print [l.aggregate_loss for l in losses]
+
         for event_loss, expected in zip(losses, expected_losses):
             self.assertAlmostEqual(
                 expected, event_loss.aggregate_loss,
