@@ -71,8 +71,8 @@ class Gmf(object):
 
 class SES(object):
 
-    def __init__(self, ses_id, investigation_time, ruptures):
-        self.id = ses_id
+    def __init__(self, ordinal, investigation_time, ruptures):
+        self.ordinal = ordinal
         self.investigation_time = investigation_time
         self.ruptures = ruptures
 
