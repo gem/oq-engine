@@ -27,13 +27,13 @@ from openquake.hazardlib.imt import PGA, SA
 
 class PezeshkEtAl2011(GMPE):
     """
-    Implements GMPE developed by Shahram Pezeshk, Arash Zandieh 
-    and Behrooz Tavakoli. Published as "Hybrid Empirical Ground-Motion 
-    Prediction Equations for Eastern North America Using NGA Models and 
-    Updated Seismological Parameters", 2011, Bulletin of the Seismological 
-    Society of America, vol. 101, no. 4, 1859 - 1870. 
+    Implements GMPE developed by Shahram Pezeshk, Arash Zandieh
+    and Behrooz Tavakoli. Published as "Hybrid Empirical Ground-Motion
+    Prediction Equations for Eastern North America Using NGA Models and
+    Updated Seismological Parameters", 2011, Bulletin of the Seismological
+    Society of America, vol. 101, no. 4, 1859 - 1870.
     """
-    #: Supported tectonic region type is 'stable continental region' 
+    #: Supported tectonic region type is 'stable continental region'
     #: equation has been derived from data from Eastern North America (ENA)
     # 'Instroduction', page 1859.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
@@ -45,27 +45,27 @@ class PezeshkEtAl2011(GMPE):
         SA
     ])
 
-    #: Geometric mean determined from the fiftieth percentile values of the 
-    #: geometric means computed for all nonredundant rotation angles and all 
-    #: periods less than the maximum useable period, independent of 
+    #: Geometric mean determined from the fiftieth percentile values of the
+    #: geometric means computed for all nonredundant rotation angles and all
+    #: periods less than the maximum useable period, independent of
     #: sensor orientation. See page 1864.
-    #: :attr:'~openquake.hazardlib.const.IMC.GMRotI50'. 
+    #: :attr:'~openquake.hazardlib.const.IMC.GMRotI50'.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
 
-    #: Supported standard deviation types is total. 
+    #: Supported standard deviation types is total.
     #: See equation 6 and 7, page 1866.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL
-    ]) 
+    ])
 
     #: No site parameters are needed. The GMPE was developed for hard-rock site
-    # with Vs30 >= 2000 m/s (NEHRP site class A) only. Page 1864. 
+    # with Vs30 >= 2000 m/s (NEHRP site class A) only. Page 1864.
     REQUIRES_SITES_PARAMETERS = set()
-    
+
     #: Required rupture parameters are magnitude (eq. 4, page 1866).
     REQUIRES_RUPTURE_PARAMETERS = set(('mag'))
-    
-    #: Required distance measure is RRup, explained in page 1864 (eq. 2 page 
+
+    #: Required distance measure is RRup, explained in page 1864 (eq. 2 page
     #: 1861, eq. 5 page 1866).
     REQUIRES_DISTANCES = set(('rrup'))
 
@@ -74,37 +74,36 @@ class PezeshkEtAl2011(GMPE):
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
-        """                    
-        
+        """
+
         # Extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
 
         imean = (self._compute_magnitude(rup, C) +
-                 self._compute_attenuation(rup, dists, imt, C) + 
+                 self._compute_attenuation(rup, dists, imt, C) +
                  self._compute_distance(rup, dists, imt, C))
 
-        mean = np.log(10.0 **(imean))
- 
+        mean = np.log(10.0 ** (imean))
+
         istddevs = self._get_stddevs(C, stddev_types, rup, imt,
                                      num_sites=len(sites.vs30))
 
-        stddevs = np.log(10.0 ** np.array(istddevs)) 
+        stddevs = np.log(10.0 ** np.array(istddevs))
 
         return mean, stddevs
 
     def _get_stddevs(self, C, stddev_types, rup, imt, num_sites):
         """
-        Return standard deviations as defined in eq. 6 and 7, pag. 1866, 
-        based on table 2, p. 1865. 
+        Return standard deviations as defined in eq. 6 and 7, pag. 1866,
+        based on table 2, p. 1865.
         """
         stddevs = []
         for stddev_type in stddev_types:
             sigma_mean = self._compute_standard_dev(rup, imt, C)
-            sigma_tot = np.sqrt( (sigma_mean ** 2) + (C['SigmaReg'] ** 2) )
+            sigma_tot = np.sqrt((sigma_mean ** 2) + (C['SigmaReg'] ** 2))
             stddevs.append(sigma_tot + np.zeros(num_sites))
         return stddevs
-        
 
     def _compute_magnitude(self, rup, C):
         """
@@ -119,27 +118,33 @@ class PezeshkEtAl2011(GMPE):
         Compute the second term of the equation described on p. 1866:
 
         " [(c4 + c5 * M) * min{ log10(R), log10(70.) }] +
-        [(c4 + c5 * M) * max{ min{ log10(R/70.), log10(140./70.) }, 0.}] + 
+        [(c4 + c5 * M) * max{ min{ log10(R/70.), log10(140./70.) }, 0.}] +
         [(c8 + c9 * M) * max{ log10(R/140.), 0}] "
         """
-        
+
         vec = np.ones(len(dists.rrup))
-        
-        a1 = (np.log10(np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0)), np.log10(70.*vec))
+
+        a1 = (np.log10(np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0)),
+              np.log10(70. * vec))
+
         a = np.column_stack([a1[0], a1[1]])
-        
-        b3 = (np.log10(np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0) / (70.*vec)), np.log10((140. / 70.)*vec))
+
+        b3 = (np.log10(np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0) /
+                      (70. * vec)),
+              np.log10((140. / 70.) * vec))
+
         b2 = np.column_stack([b3[0], b3[1]])
-        b1 = ([np.min( b2, axis=1), 0.*vec])
+        b1 = ([np.min(b2, axis=1), 0. * vec])
         b = np.column_stack([b1[0], b1[1]])
-        
-        c1 = (np.log10( np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0) / (140.)*vec), 0.*vec)
+
+        c1 = (np.log10(np.sqrt(dists.rrup ** 2.0 + C['c11'] ** 2.0) /
+              (140.) * vec), 0. * vec)
         c = np.column_stack([c1[0], c1[1]])
 
-        return ( ((C['c4'] + C['c5'] * rup.mag) * np.min( a, axis=1)) + 
-            ((C['c6'] + C['c7'] * rup.mag) * np.max( b, axis=1)) + 
-            ((C['c8'] + C['c9'] * rup.mag) * np.max( c, axis=1)) )
-    
+        return (((C['c4'] + C['c5'] * rup.mag) * np.min(a, axis=1)) +
+                ((C['c6'] + C['c7'] * rup.mag) * np.max(b, axis=1)) +
+                ((C['c8'] + C['c9'] * rup.mag) * np.max(c, axis=1)))
+
     def _compute_distance(self, rup, dists, imt, C):
         """
         Compute the third term of the equation described on p. 1866:
@@ -150,16 +155,15 @@ class PezeshkEtAl2011(GMPE):
 
     def _compute_standard_dev(self, rup, imt, C):
         """
-        Compute the the standard deviation in terms of magnitude described on p. 1866, 
-        eq. 6
+        Compute the the standard deviation in terms of magnitude
+        described on p. 1866, eq. 6
         """
         sigma_mean = 0.
         if rup.mag <= 7.0:
             sigma_mean = (C['c12'] * rup.mag) + C['c13']
         elif rup.mag > 7.0:
-            sigma_mean = (-0.00695 * rup.mag) +  C['c14']
+            sigma_mean = (-0.00695 * rup.mag) + C['c14']
         return sigma_mean
-        
 
     #: Equation coefficients, described in Table 2 on pp. 1865
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -188,4 +192,3 @@ class PezeshkEtAl2011(GMPE):
     7.500    -8.33763300     1.80623080     -0.104248570    -2.9838785     0.25418641     0.287880220   -0.022521612    -1.18165170      0.095976523    -0.000162413     6.5180975     -0.007239689     0.37304593     0.37100909     0.029567069
     10.00    -9.10461860     1.89872240     -0.107604830    -2.8611231     0.23953867     0.286847230   -0.022896491    -1.37862210      0.122158550    -0.000126810     6.5383616     -0.007485065     0.38476363     0.38100915     0.024448978
     """)
-
