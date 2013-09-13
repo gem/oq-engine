@@ -13,5 +13,3 @@ ALTER TABLE hzrdr.ses_rupture RENAME COLUMN surface TO old_surface;
 
 ALTER TABLE hzrdr.ses_rupture ADD COLUMN rupture BYTEA NOT NULL;
 ALTER TABLE hzrdr.ses_rupture ALTER COLUMN rupture SET DEFAULT 'not computed'
-
-ALTER TABLE hzrdr.ses_rupture ADD COLUMN tag TEXT;
