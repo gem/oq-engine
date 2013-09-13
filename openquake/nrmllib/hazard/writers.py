@@ -453,7 +453,7 @@ class SESXMLWriter(object):
             for ses in data:
                 ses_elem = etree.SubElement(
                     ses_container, 'stochasticEventSet')
-                ses_elem.set('id', str(ses.ordinal))
+                ses_elem.set('id', str(ses.ordinal or 0))
                 ses_elem.set('investigationTime', str(ses.investigation_time))
 
                 for rupture in ses:
