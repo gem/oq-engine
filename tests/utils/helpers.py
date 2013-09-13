@@ -872,7 +872,7 @@ def get_ruptures(job, ses_collection, num):
                     Point(1, 0, 2), Point(0, 0, 2)),
                 occurrence_rate=1,
                 temporal_occurrence_model=PoissonTOM(10),
-                source=object()))
+                source_typology=object()))
         for i in range(num)]
 
 

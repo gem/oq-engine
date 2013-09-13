@@ -125,21 +125,21 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
-        ruptures = list(stochastic.stochastic_event_set_poissonian(
-                        source_iter, hc.investigation_time, site_collection,
-                        src_filter, rup_filter))
-        if not ruptures:
-            return
-
-        # set the tag for each generated source:
-        # the same rupture can be repeated several times, therefore
-        # the tags are not unique; this is not a problem since ruptures
-        # with the same tag are actually the same rupture
-        for source_id, rupts in itertools.groupby(
-                ruptures, lambda r: r.source.source_id):
+        ruptures = []
+        for src in source_iter:
+            rupts = list(stochastic.stochastic_event_set_poissonian(
+                         [src], hc.investigation_time, site_collection,
+                         src_filter, rup_filter))
+            # now set the tag for each generated rupture:
+            # the same rupture can be repeated several times, therefore
+            # the tags are not unique; this is not a problem since ruptures
+            # with the same tag are actually the same rupture
             for i, r in enumerate(rupts):
                 r.tag = 'rlz=%02d,ses=%04d,src=%s,i=%d' % (
-                    lt_rlz.ordinal, ses.ordinal, source_id, i)
+                    lt_rlz.ordinal, ses.ordinal, src.source_id, i)
+            ruptures.extend(rupts)
+        if not ruptures:
+            return
 
     with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
         rupture_ids = _save_ses_ruptures(ses, ruptures, cmplt_lt_ses)
