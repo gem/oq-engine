@@ -173,7 +173,6 @@ class BMaxLikelihood(SeismicityOccurrence):
         sigma_a = average_parameters[3]
         return bval, sigma_b, aval, sigma_a
 
-
     def _weighted_mean(self, parameters, neq):
         '''Simple weighted mean'''
         weight = neq.astype(float) / np.sum(neq)
