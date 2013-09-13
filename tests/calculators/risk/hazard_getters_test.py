@@ -178,7 +178,7 @@ class GroundMotionValuesCalcGetterTestCase(unittest.TestCase):
                                   ),
             occurrence_rate=1,
             temporal_occurrence_model=mock.Mock(),
-            source=mock.Mock())
+            source_typology=mock.Mock())
 
         r.source_typology.filter_sites_by_distance_to_rupture = mock.Mock(
             return_value=None)
