@@ -115,7 +115,12 @@ class HazardDumper(object):
         # this is why we are requiring text format
         assert format == 'text', format
         if outdir:
-            if not os.path.exists(outdir):
+            if os.path.exists(outdir):
+                # cleanup previously dumped archives, if any
+                for fname in os.listdir(outdir):
+                    if fname.endswith('.gz'):
+                        os.remove(os.path.join(outdir, fname))
+            else:
                 os.mkdir(outdir)
         else:
             outdir = tempfile.mkdtemp(prefix='hazard_calculation-')

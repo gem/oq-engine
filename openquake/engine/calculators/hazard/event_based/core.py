@@ -33,6 +33,7 @@ For more information on computing ground motion fields, see
 
 import math
 import random
+import itertools
 
 import openquake.hazardlib.imt
 import numpy.random
@@ -83,8 +84,8 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     :param src_ids:
         List of ids of parsed source models from which we will generate
         stochastic event sets/ruptures.
-    :param lt_rlz_id:
-        Id of logic tree realization model to calculate for.
+    :param ses:
+        Stochastic Event Set object
     :param int task_seed:
         Value for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields.
@@ -124,9 +125,19 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
-        ruptures = list(stochastic.stochastic_event_set_poissonian(
-                        source_iter, hc.investigation_time, site_collection,
-                        src_filter, rup_filter))
+        ruptures = []
+        for src in source_iter:
+            rupts = list(stochastic.stochastic_event_set_poissonian(
+                         [src], hc.investigation_time, site_collection,
+                         src_filter, rup_filter))
+            # now set the tag for each generated rupture:
+            # the same rupture can be repeated several times, therefore
+            # the tags are not unique; this is not a problem since ruptures
+            # with the same tag are actually the same rupture
+            for i, r in enumerate(rupts):
+                r.tag = 'rlz=%02d,ses=%04d,src=%s,i=%d' % (
+                    lt_rlz.ordinal, ses.ordinal, src.source_id, i)
+            ruptures.extend(rupts)
         if not ruptures:
             return
 
@@ -206,8 +217,9 @@ def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
     # TODO: Possible future optimiztion:
     # Refactor this to do bulk insertion of ruptures
     with transaction.commit_on_success(using='reslt_writer'):
-        rupture_ids = [models.SESRupture.objects.create(ses=ses, rupture=r).id
-                       for r in ruptures]
+        rupture_ids = [models.SESRupture.objects.create(
+            ses=ses, rupture=r, tag=r.tag).id
+            for r in ruptures]
 
         if complete_logic_tree_ses is not None:
             for rupture in ruptures:
