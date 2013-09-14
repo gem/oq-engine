@@ -337,7 +337,7 @@ GROUP BY site_id ORDER BY site_id;
         # check that the ruptures have been computed by a sufficiently
         # new version of openquake
         queryset = models.SESRupture.objects.filter(
-            ses__ses_collection=hazard_output).order_by('id')
+            ses__ses_collection=hazard_output).order_by('tag')
 
         if queryset.filter(rupture="not computed").exists():
             msg = ("The stochastic event set has been computed with "
@@ -348,6 +348,7 @@ GROUP BY site_id ORDER BY site_id;
         count = queryset.count()
 
         # using a generator over ruptures to save memory
+        # the ruptures are ordered by tag
         def ruptures():
             cursor = models.getcursor('job_init')
             # a rupture "consumes" 8Kb. This limit actually
@@ -358,12 +359,12 @@ GROUP BY site_id ORDER BY site_id;
                     SELECT rup.rupture FROM hzrdr.ses_rupture AS rup
                     JOIN hzrdr.ses AS ses ON ses.id = rup.ses_id
                     WHERE ses.ses_collection_id = %s
-                    ORDER BY rup.id LIMIT %s OFFSET %s"""
+                    ORDER BY rup.tag LIMIT %s OFFSET %s"""
             for offset in offsets:
                 cursor.execute(query, (hazard_output.id, limit, offset))
                 for (rupture_data,) in cursor.fetchall():
                     yield pickle.loads(str(rupture_data))
-        r_objs = ruptures()
+        r_objs = list(ruptures())
 
         r_seeds = numpy.random.randint(0, models.MAX_SINT_32, count)
         r_ids = queryset.values_list('id', flat=True)
@@ -375,6 +376,7 @@ GROUP BY site_id ORDER BY site_id;
         with monitor.copy('computing gmvs'):
             all_assets, gmvs = calc_getter.compute(
                 r_objs, r_seeds, r_ids, hc.maximum_distance)
+
         return all_assets, (gmvs, r_ids)
 
 
@@ -576,7 +578,8 @@ class GroundMotionValuesCalcGetter(object):
                 (total, inter, intra) = self.epsilons(
                     rupture_seed, mask, tstddev)
 
-            with LightMonitor(performance_dict, 'compute ground motion fields'):
+            with LightMonitor(
+                    performance_dict, 'compute ground motion fields'):
                 gmf = ground_motion_field_with_residuals(
                     rupture, sites_of_interest,
                     self.imt, gsim, self.truncation_level,
