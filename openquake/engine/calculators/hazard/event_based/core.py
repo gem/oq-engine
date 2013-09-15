@@ -31,9 +31,9 @@ For more information on computing ground motion fields, see
 :mod:`openquake.hazardlib.calc.gmf`.
 """
 
+import copy
 import math
 import random
-import itertools
 
 import openquake.hazardlib.imt
 import numpy.random
@@ -127,13 +127,12 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
         ruptures = []
         for src in source_iter:
-            rupts = list(stochastic.stochastic_event_set_poissonian(
-                         [src], hc.investigation_time, site_collection,
-                         src_filter, rup_filter))
-            # now set the tag for each generated rupture:
-            # the same rupture can be repeated several times, therefore
-            # the tags are not unique; this is not a problem since ruptures
-            # with the same tag are actually the same rupture
+            # make copies of the hazardlib ruptures (which may contain
+            # duplicates)
+            rupts = map(copy.copy, stochastic.stochastic_event_set_poissonian(
+                        [src], hc.investigation_time, site_collection,
+                        src_filter, rup_filter))
+            # set the tag for each copy
             for i, r in enumerate(rupts):
                 r.tag = 'rlz=%02d,ses=%04d,src=%s,i=%d' % (
                     lt_rlz.ordinal, ses.ordinal, src.source_id, i)
