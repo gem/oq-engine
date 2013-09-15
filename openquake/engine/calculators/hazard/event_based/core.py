@@ -134,7 +134,7 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
                         src_filter, rup_filter))
             # set the tag for each copy
             for i, r in enumerate(rupts):
-                r.tag = 'rlz=%02d,ses=%04d,src=%s,i=%d' % (
+                r.tag = 'rlz=%02d|ses=%04d|src=%s|i=%d' % (
                     lt_rlz.ordinal, ses.ordinal, src.source_id, i)
             ruptures.extend(rupts)
         if not ruptures:
