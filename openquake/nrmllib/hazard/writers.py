@@ -686,7 +686,7 @@ class HazardMapGeoJSONWriter(HazardMapWriter):
                     'type': 'Point',
                     'coordinates': [float(lon), float(lat)],
                 },
-                'properties': {'iml': str(iml)},
+                'properties': {'iml': float(iml)},
             }
             features.append(feature)
 
