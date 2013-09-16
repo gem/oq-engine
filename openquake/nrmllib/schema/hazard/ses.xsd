@@ -30,7 +30,7 @@
             <xs:element name="planarSurface" type="PlanarSurface" minOccurs="1" maxOccurs="unbounded" />
             <xs:element name="mesh" type="SESMesh" />
         </xs:choice>
-        <xs:attribute name="id" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="id" type="xs:string" use="required" />
         <xs:attribute name="magnitude" type="PositiveDoubleType" use="required" />
         <xs:attribute name="strike" type="Strike" use="required" />
         <xs:attribute name="dip" type="Dip" use="required" />
