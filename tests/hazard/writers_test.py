@@ -71,8 +71,8 @@ class Gmf(object):
 
 class SES(object):
 
-    def __init__(self, ses_id, investigation_time, ruptures):
-        self.id = ses_id
+    def __init__(self, ordinal, investigation_time, ruptures):
+        self.ordinal = ordinal
         self.investigation_time = investigation_time
         self.ruptures = ruptures
 
@@ -81,6 +81,8 @@ class SES(object):
 
 
 class SESRupture(object):
+
+    tag = "TAG"
 
     def __init__(self, rupture_id,
                  magnitude, strike, dip, rake, tectonic_region_type,
@@ -641,7 +643,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <stochasticEventSetCollection sourceModelTreePath="b8_b9_b10" gsimTreePath="b1_b2_b3">
     <stochasticEventSet id="1" investigationTime="50.0">
-      <rupture id="1" magnitude="5.5" strike="1.0" dip="40.0" rake="10.0" tectonicRegion="Active Shallow Crust">
+      <rupture id="TAG" magnitude="5.5" strike="1.0" dip="40.0" rake="10.0" tectonicRegion="Active Shallow Crust">
         <planarSurface>
           <topLeft lon="1.1" lat="1.01" depth="10.0"/>
           <topRight lon="2.1" lat="2.01" depth="20.0"/>
@@ -649,7 +651,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
           <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
         </planarSurface>
       </rupture>
-      <rupture id="2" magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
+      <rupture id="TAG" magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
         <mesh rows="2" cols="2">
           <node row="0" col="0" lon="5.1" lat="5.01" depth="10.5"/>
           <node row="0" col="1" lon="6.1" lat="6.01" depth="10.6"/>
@@ -659,7 +661,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
       </rupture>
     </stochasticEventSet>
     <stochasticEventSet id="2" investigationTime="40.0">
-      <rupture id="3" magnitude="5.4" strike="2.0" dip="42.0" rake="12.0" tectonicRegion="Stable Shallow Crust">
+      <rupture id="TAG" magnitude="5.4" strike="2.0" dip="42.0" rake="12.0" tectonicRegion="Stable Shallow Crust">
         <planarSurface>
           <topLeft lon="1.1" lat="1.01" depth="10.0"/>
           <topRight lon="2.1" lat="2.01" depth="20.0"/>
@@ -667,7 +669,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
           <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
         </planarSurface>
       </rupture>
-      <rupture id="4" magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">
+      <rupture id="TAG" magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">
         <mesh rows="2" cols="2">
           <node row="0" col="0" lon="5.2" lat="5.02" depth="10.1"/>
           <node row="0" col="1" lon="6.2" lat="6.02" depth="10.2"/>
@@ -675,7 +677,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
           <node row="1" col="1" lon="8.2" lat="8.02" depth="10.4"/>
         </mesh>
       </rupture>
-      <rupture id="5" magnitude="7.4" strike="4.0" dip="44.0" rake="14.0" tectonicRegion="Stable Shallow Crust">
+      <rupture id="TAG" magnitude="7.4" strike="4.0" dip="44.0" rake="14.0" tectonicRegion="Stable Shallow Crust">
         <planarSurface>
           <topLeft lon="-1.0" lat="1.0" depth="21.0"/>
           <topRight lon="1.0" lat="1.0" depth="21.0"/>
@@ -698,7 +700,6 @@ class SESXMLWriterTestCase(unittest.TestCase):
             _, path = tempfile.mkstemp()
             writer = writers.SESXMLWriter(path, sm_lt_path, gsim_lt_path)
             writer.serialize([ses1, ses2])
-
             utils.assert_xml_equal(expected, path)
             self.assertTrue(utils.validates_against_xml_schema(path))
         finally:
@@ -707,49 +708,43 @@ class SESXMLWriterTestCase(unittest.TestCase):
     def test_serialize_complete_lt_ses(self):
         ruptures = [
             SESRupture(1,
-                5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust',
-                False, False,
-                top_left_corner=(1.1, 1.01, 10.0),
-                top_right_corner=(2.1, 2.01, 20.0),
-                bottom_right_corner=(3.1, 3.01, 30.0),
-                bottom_left_corner=(4.1, 4.01, 40.0)),
+                       5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust',
+                       False, False,
+                       top_left_corner=(1.1, 1.01, 10.0),
+                       top_right_corner=(2.1, 2.01, 20.0),
+                       bottom_right_corner=(3.1, 3.01, 30.0),
+                       bottom_left_corner=(4.1, 4.01, 40.0)),
             SESRupture(2,
-                6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
-                True, False,
-                lons=[
-                    [5.1, 6.1],
-                    [7.1, 8.1],
-                ],
-                lats=[
-                    [5.01, 6.01],
-                    [7.01, 8.01],
-                ],
-                depths=[
-                    [10.5, 10.6],
-                    [10.7, 10.8],
-                ]),
+                       6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
+                       True, False,
+                       lons=[[5.1, 6.1],
+                             [7.1, 8.1],
+                             ],
+                       lats=[[5.01, 6.01],
+                             [7.01, 8.01],
+                             ],
+                       depths=[[10.5, 10.6],
+                               [10.7, 10.8],
+                               ]),
             SESRupture(3,
-                5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust',
-                False, False,
-                top_left_corner=(1.1, 1.01, 10.0),
-                top_right_corner=(2.1, 2.01, 20.0),
-                bottom_right_corner=(3.1, 3.01, 30.0),
-                bottom_left_corner=(4.1, 4.01, 40.0)),
+                       5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust',
+                       False, False,
+                       top_left_corner=(1.1, 1.01, 10.0),
+                       top_right_corner=(2.1, 2.01, 20.0),
+                       bottom_right_corner=(3.1, 3.01, 30.0),
+                       bottom_left_corner=(4.1, 4.01, 40.0)),
             SESRupture(4,
-                6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust',
-                True, False,
-                lons=[
-                    [5.2, 6.2],
-                    [7.2, 8.2],
-                ],
-                lats=[
-                    [5.02, 6.02],
-                    [7.02, 8.02],
-                ],
-                depths=[
-                    [10.1, 10.2],
-                    [10.3, 10.4],
-                ]),
+                       6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust',
+                       True, False,
+                       lons=[[5.2, 6.2],
+                             [7.2, 8.2],
+                             ],
+                       lats=[[5.02, 6.02],
+                             [7.02, 8.02],
+                             ],
+                       depths=[[10.1, 10.2],
+                               [10.3, 10.4],
+                               ]),
 
         ]
         complete_lt_ses = SES(1, 250.0, ruptures)
@@ -758,7 +753,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <stochasticEventSet id="1" investigationTime="250.0">
-    <rupture id="1" magnitude="5.5" strike="1.0" dip="40.0" rake="10.0" tectonicRegion="Active Shallow Crust">
+    <rupture id="TAG" magnitude="5.5" strike="1.0" dip="40.0" rake="10.0" tectonicRegion="Active Shallow Crust">
       <planarSurface>
         <topLeft lon="1.1" lat="1.01" depth="10.0"/>
         <topRight lon="2.1" lat="2.01" depth="20.0"/>
@@ -766,7 +761,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
         <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
       </planarSurface>
     </rupture>
-    <rupture id="2" magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
+    <rupture id="TAG" magnitude="6.5" strike="0.0" dip="41.0" rake="0.0" tectonicRegion="Active Shallow Crust">
       <mesh rows="2" cols="2">
         <node row="0" col="0" lon="5.1" lat="5.01" depth="10.5"/>
         <node row="0" col="1" lon="6.1" lat="6.01" depth="10.6"/>
@@ -774,7 +769,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
         <node row="1" col="1" lon="8.1" lat="8.01" depth="10.8"/>
       </mesh>
     </rupture>
-    <rupture id="3" magnitude="5.4" strike="2.0" dip="42.0" rake="12.0" tectonicRegion="Stable Shallow Crust">
+    <rupture id="TAG" magnitude="5.4" strike="2.0" dip="42.0" rake="12.0" tectonicRegion="Stable Shallow Crust">
       <planarSurface>
         <topLeft lon="1.1" lat="1.01" depth="10.0"/>
         <topRight lon="2.1" lat="2.01" depth="20.0"/>
@@ -782,7 +777,7 @@ class SESXMLWriterTestCase(unittest.TestCase):
         <bottomRight lon="3.1" lat="3.01" depth="30.0"/>
       </planarSurface>
     </rupture>
-    <rupture id="4" magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">
+    <rupture id="TAG" magnitude="6.4" strike="3.0" dip="43.0" rake="13.0" tectonicRegion="Stable Shallow Crust">
       <mesh rows="2" cols="2">
         <node row="0" col="0" lon="5.2" lat="5.02" depth="10.1"/>
         <node row="0" col="1" lon="6.2" lat="6.02" depth="10.2"/>
@@ -793,12 +788,10 @@ class SESXMLWriterTestCase(unittest.TestCase):
   </stochasticEventSet>
 </nrml>
 """)
-
         try:
             _, path = tempfile.mkstemp()
             writer = writers.SESXMLWriter(path, None, None)
             writer.serialize([complete_lt_ses])
-
             utils.assert_xml_equal(expected, path)
             self.assertTrue(utils.validates_against_xml_schema(path))
         finally:
@@ -809,13 +802,13 @@ class SESXMLWriterTestCase(unittest.TestCase):
         # empty.
         rup_elem = etree.Element('test_rup_elem')
         rupture = SESRupture(1,
-            6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
-            True, False,
-            lons=[[], []],
-            lats=[[5.01, 6.01],
-                  [7.01, 8.01]],
-            depths=[[10.5, 10.6],
-                    [10.7, 10.8]])
+                             6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
+                             True, False,
+                             lons=[[], []],
+                             lats=[[5.01, 6.01],
+                                   [7.01, 8.01]],
+                             depths=[[10.5, 10.6],
+                                     [10.7, 10.8]])
 
         self.assertRaises(
             ValueError, writers.SESXMLWriter._create_rupture_mesh,

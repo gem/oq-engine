@@ -380,11 +380,11 @@ class SESXMLWriter(object):
             Each "SES" object should:
 
             * have an `investigation_time` attribute
-            * have an `id` attribute
+            * have an `ordinal` attribute
             * be iterable, yielding a sequence of "rupture" objects
 
-            Each "rupture" should have the following attributes:
-            * `id`
+            Each rupture" should have the following attributes:
+            * `tag`
             * `magnitude`
             * `strike`
             * `dip`
@@ -453,12 +453,12 @@ class SESXMLWriter(object):
             for ses in data:
                 ses_elem = etree.SubElement(
                     ses_container, 'stochasticEventSet')
-                ses_elem.set('id', str(ses.id))
+                ses_elem.set('id', str(ses.ordinal or 1))
                 ses_elem.set('investigationTime', str(ses.investigation_time))
 
                 for rupture in ses:
                     rup_elem = etree.SubElement(ses_elem, 'rupture')
-                    rup_elem.set('id', str(rupture.id))
+                    rup_elem.set('id', str(rupture.tag))
                     rup_elem.set('magnitude', str(rupture.magnitude))
                     rup_elem.set('strike', str(rupture.strike))
                     rup_elem.set('dip', str(rupture.dip))
