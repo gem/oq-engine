@@ -61,6 +61,8 @@ CREATE INDEX hzrdr_uhs_data_uhs_id_idx on hzrdr.uhs_data(uhs_id);
 CREATE INDEX hzrdr_ses_collection_ouput_id_idx on hzrdr.ses_collection(output_id);
 CREATE INDEX hzrdr_ses_ses_collection_id_idx on hzrdr.ses(ses_collection_id);
 CREATE INDEX hzrdr_ses_rupture_ses_id_idx on hzrdr.ses_rupture(ses_id);
+CREATE INDEX hzrdr_ses_rupture_tag_idx ON hzrdr.ses_rupture (tag);
+
 -- disagg_result
 CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(location);
 -- lt_realization
