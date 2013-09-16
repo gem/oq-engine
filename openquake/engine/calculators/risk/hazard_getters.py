@@ -328,7 +328,7 @@ GROUP BY site_id ORDER BY site_id;
         truncation_level = hc.truncation_level
         gsims = logictree.LogicTreeProcessor(
             hc.id).parse_gmpe_logictree_path(
-            hazard_output.lt_realization.gsim_lt_path)
+                hazard_output.lt_realization.gsim_lt_path)
         if hc.ground_motion_correlation_model is not None:
             model = general.get_correl_model(hc)
         else:
@@ -337,7 +337,7 @@ GROUP BY site_id ORDER BY site_id;
         # check that the ruptures have been computed by a sufficiently
         # new version of openquake
         queryset = models.SESRupture.objects.filter(
-            ses__ses_collection=hazard_output).order_by('id')
+            ses__ses_collection=hazard_output).order_by('tag')
 
         if queryset.filter(rupture="not computed").exists():
             msg = ("The stochastic event set has been computed with "
@@ -348,6 +348,7 @@ GROUP BY site_id ORDER BY site_id;
         count = queryset.count()
 
         # using a generator over ruptures to save memory
+        # the ruptures are ordered by tag
         def ruptures():
             cursor = models.getcursor('job_init')
             # a rupture "consumes" 8Kb. This limit actually
@@ -358,7 +359,7 @@ GROUP BY site_id ORDER BY site_id;
                     SELECT rup.rupture FROM hzrdr.ses_rupture AS rup
                     JOIN hzrdr.ses AS ses ON ses.id = rup.ses_id
                     WHERE ses.ses_collection_id = %s
-                    ORDER BY rup.id LIMIT %s OFFSET %s"""
+                    ORDER BY rup.tag LIMIT %s OFFSET %s"""
             for offset in offsets:
                 cursor.execute(query, (hazard_output.id, limit, offset))
                 for (rupture_data,) in cursor.fetchall():
