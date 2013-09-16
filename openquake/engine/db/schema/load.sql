@@ -19,4 +19,4 @@
 INSERT INTO admin.organization(name) VALUES('GEM Foundation');
 INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
 -- If a new database is being built, explicitly set the oq-engine DB schema version:
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('oq-engine', '1.0.1', 4);
+INSERT INTO admin.revision_info(artefact, revision, step) VALUES('oq-engine', '1.0.1', 5);
