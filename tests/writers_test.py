@@ -33,14 +33,13 @@ class StreamingXMLWriterTestCase(unittest.TestCase):
 >
     <exposureModel
      category="population"
-     taxonomySource="fake population datasource"
      id="my_exposure_model_for_population"
+     taxonomySource="fake population datasource"
     >
         <description>
             Sample population
         </description>
-        <assets>
-        </assets>
+        <assets />
     </exposureModel>
 </nrml>
 ''')

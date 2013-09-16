@@ -14,7 +14,7 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import cStringIO
-from xml.sax.saxutils import XMLGenerator
+from xml.sax.saxutils import XMLGenerator, quoteattr
 
 
 class _PrettyXMLGenerator(XMLGenerator):
@@ -24,18 +24,29 @@ class _PrettyXMLGenerator(XMLGenerator):
     indentation level.
     """
     indentlevel = 0
-    indent = '  '
+    indent = 2
 
     def _write(self, text):
+        """Write text by respecting the current indentlevel"""
         if not isinstance(text, str):
             text = text.encode(self._encoding, 'xmlcharrefreplace')
-        self._out.write(self.indent * self.indentlevel + text + '\n')
+        self._out.write(' ' * self.indent * self.indentlevel + text + '\n')
 
     def startElement(self, name, attrs):
+        """Start an element"""
         if not attrs:
             self._write('<%s>' % name)
         else:
-            XMLGenerator.startElement(self, name, attrs)
+            self._write('<' + name)
+            for (name, value) in sorted(attrs.items()):
+                self._write(' %s=%s' % (name, quoteattr(value)))
+            self._write('>')
+
+    def emptyElement(self, name, attrs):
+        """Add an empty element (may have attributes)"""
+        attr = ' '.join('%s=%s' % (n, quoteattr(v))
+                        for n, v in sorted(attrs.iteritems()))
+        self._write('<%s %s/>' % (name, attr))
 
 
 class StreamingXMLWriter(object):
@@ -48,10 +59,10 @@ class StreamingXMLWriter(object):
                 writer.serialize(node)
             writer.end_tag('root')
     """
-    def __init__(self, stream, indent='    '):
+    def __init__(self, stream, indent=4):
         """
         :param stream: the stream or a file where to write the XML
-        :param indent: the indentation to use in the XML (default 4 spaces)
+        :param int indent: the indentation to use in the XML (default 4 spaces)
         """
         self.stream = stream
         self._xgen = _PrettyXMLGenerator(stream, 'utf-8')
@@ -77,10 +88,12 @@ class StreamingXMLWriter(object):
 
     def serialize(self, node):
         """Serialize a node object (typically an ElementTree object)"""
-        if node.text:  # leaf node
-            self.tag(node.tag, node.attrib, node.text)
+        if not node and not node.text:
+            self._xgen.emptyElement(node.tag, node.attrib)
             return
         self.start_tag(node.tag, node.attrib)
+        if node.text:
+            self._xgen.characters(node.text)
         for subnode in node:
             self.serialize(subnode)
         self.end_tag(node.tag)
@@ -95,7 +108,7 @@ class StreamingXMLWriter(object):
         self._xgen.endDocument()
 
 
-def tostring(node, indent='    '):
+def tostring(node, indent=4):
     """
     Convert a node into an XML string by using the StreamingXMLWriter.
     This is useful for testing purposes.
