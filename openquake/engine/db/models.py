@@ -1829,6 +1829,7 @@ class SESCollection(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
+        ordering = ['lt_realization']
 
     def __iter__(self):
         """
@@ -1854,6 +1855,7 @@ class SES(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
+        ordering = ['ordinal']
 
     def __iter__(self):
         """
@@ -1904,6 +1906,7 @@ class SESRupture(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
+        ordering = ['tag']
 
     def _validate_planar_surface(self):
         """
