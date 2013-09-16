@@ -1836,12 +1836,14 @@ class SESCollection(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
+        ordering = ['lt_realization']
 
     def __iter__(self):
         """
         Iterator for walking through all child :class:`SES` objects.
         """
-        return SES.objects.filter(ses_collection=self.id).iterator()
+        return SES.objects.filter(ses_collection=self.id).order_by('ordinal') \
+            .iterator()
 
 
 class SES(djm.Model):
@@ -1860,12 +1862,14 @@ class SES(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
+        ordering = ['ordinal']
 
     def __iter__(self):
         """
         Iterator for walking through all child :class:`SESRupture` objects.
         """
-        return SESRupture.objects.filter(ses=self.id).iterator()
+        return SESRupture.objects.filter(ses=self.id).order_by('tag') \
+            .iterator()
 
 
 def old_field_property(prop):
@@ -1888,6 +1892,9 @@ class SESRupture(djm.Model):
     #: instance
     rupture = fields.PickleField()
 
+    # a tag with rlz, ses, src and ordinal info
+    tag = djm.TextField()
+
     old_magnitude = djm.FloatField(null=True)
     old_strike = djm.FloatField(null=True)
     old_dip = djm.FloatField(null=True)
@@ -1906,6 +1913,7 @@ class SESRupture(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
+        ordering = ['tag']
 
     def _validate_planar_surface(self):
         """
