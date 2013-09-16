@@ -28,13 +28,12 @@
         <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
     </xs:complexType>
 
-    <xs:element name="periods">
-        <xs:simpleType>
-            <xs:restriction base="gml:doubleList">
-                <xs:minLength value="1"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:element>
+    <xs:simpleType name="Periods">
+      <xs:restriction base="gml:doubleList">
+        <xs:minLength value="1"/>
+      </xs:restriction>
+    </xs:simpleType>
+    <xs:element name="periods" type="Periods" />
 
     <!-- UHS result node -->
     <xs:element name="uhs">
