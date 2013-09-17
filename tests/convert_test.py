@@ -73,6 +73,10 @@ class ConvertBadFilesTestCase(unittest.TestCase):
 </vulnerabilityModel>
 '''
 
+    def test_no_readers(self):
+        with self.assertRaises(AssertionError):
+            build_node([])
+
     def test_empty(self):
         with self.assertRaises(InvalidFile):
             build_node([StringReader('empty', '', '')])
@@ -83,8 +87,8 @@ class ConvertBadFilesTestCase(unittest.TestCase):
 
     def test_no_data(self):
         reader = StringReader('some', self.JSON,
-                            'IML,IR.lossRatio,IR.coefficientsVariation,'
-                            'PK.lossRatio,PK.coefficientsVariation')
+                              'IML,IR.lossRatio,IR.coefficientsVariation,'
+                              'PK.lossRatio,PK.coefficientsVariation')
         with tempfile.NamedTemporaryFile('w+') as out:
             build_node([reader], out)
 

@@ -28,24 +28,18 @@ from openquake.nrmllib import model
 def build_node(readers, output=None):
     """
     Build a NRML node from a consistent set of .mdata and .csv files.
-    If output is not None, it should be a file-like object where to
-    save the corresponding NRML file.
-    """
-    assert readers
-    all_readers = []
-    tag = None
-    # group pairs of .csv and .mdata files and build a list of metadata
-    for reader in readers:
-        md = reader.metadata
-        if tag and tag != md.tag:
-            raise ValueError('Found tag=%s in %s.mdata, expected %s' % (
-                             md.tag, reader.name, tag))
-        else:
-            tag = md.tag
-        all_readers.append(reader)
 
-    nodebuilder = getattr(model, '%s_from' % md.tag.lower())
-    node = nodebuilder(all_readers)
+    :param readers: list of :class:`openquake.nrmllib.readers.Reader` instances
+    :param output: a file-like object open for writing or None
+    """
+    assert len(readers) > 0
+    tags = set(r.metadata.tag for r in readers)
+    if len(tags) > 1:
+        raise ValueError(
+            'All readers must have the same tag, found %s instead' % tags)
+    tag = tags.pop()
+    nodebuilder = getattr(model, '%s_from' % tag.lower())
+    node = nodebuilder(readers)
     if output is not None:
         node_to_nrml(node, output)
     return node
