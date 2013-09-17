@@ -21,25 +21,25 @@ import csv
 import zipfile
 from openquake.nrmllib.node import (
     node_from_nrml, node_to_nrml, node_to_xml)
-from openquake.nrmllib.readers import ZipReader, DataReader, collect_readers
+from openquake.nrmllib.tables import ZipTable, DataTable, collect_tables
 from openquake.nrmllib import model
 
 
-def build_node(readers, output=None):
+def build_node(tables, output=None):
     """
     Build a NRML node from a consistent set of .mdata and .csv files.
 
-    :param readers: list of :class:`openquake.nrmllib.readers.Reader` instances
+    :param tables: list of :class:`openquake.nrmllib.tables.Table` instances
     :param output: a file-like object open for writing or None
     """
-    assert len(readers) > 0
-    tags = set(r.metadata.tag for r in readers)
+    assert len(tables) > 0
+    tags = set(r.metadata.tag for r in tables)
     if len(tags) > 1:
         raise ValueError(
-            'All readers must have the same tag, found %s instead' % tags)
+            'All tables must have the same tag, found %s instead' % tags)
     tag = tags.pop()
     nodebuilder = getattr(model, '%s_from' % tag.lower())
-    node = nodebuilder(readers)
+    node = nodebuilder(tables)
     if output is not None:
         node_to_nrml(node, output)
     return node
@@ -47,14 +47,14 @@ def build_node(readers, output=None):
 
 def parse_nrml(fname):
     """
-    Parse a NRML file and yield row readers
+    Parse a NRML file and yield row tables
 
     :param fname: filename or file object
     """
     mdl = node_from_nrml(fname)[0]
     parse = getattr(model, '%s_parse' % mdl.tag.lower())
     for metadata, data in parse(mdl):
-        yield DataReader(mdl.tag, metadata, data)
+        yield DataTable(mdl.tag, metadata, data)
 
 
 ################################# generic #####################################
@@ -68,14 +68,14 @@ def convert_nrml_to_flat(fname, outfname):
     :param outfname: output path, for instance <path>.csv
     """
     tozip = []
-    for i, reader in enumerate(parse_nrml(fname)):
+    for i, table in enumerate(parse_nrml(fname)):
         with open(outfname[:-4] + '__%d.mdata' % i, 'w') as mdatafile:
             with open(outfname[:-4] + '__%d.csv' % i, 'w') as csvfile:
-                node_to_xml(reader.metadata, mdatafile)
+                node_to_xml(table.metadata, mdatafile)
                 tozip.append(mdatafile.name)
                 cw = csv.writer(csvfile)
-                cw.writerow(reader.fieldnames)
-                cw.writerows(reader.rows)
+                cw.writerow(table.fieldnames)
+                cw.writerows(table.rows)
                 tozip.append(csvfile.name)
     return tozip
 
@@ -107,9 +107,9 @@ def convert_zip_to_nrml(fname, outdir=None):
     outdir = outdir or os.path.dirname(fname)
     z = zipfile.ZipFile(fname)
     outputs = []
-    for name, readers in collect_readers(ZipReader, z):
+    for name, tables in collect_tables(ZipTable, z):
         outname = os.path.join(outdir, name + '.xml')
         with open(outname, 'wb+') as out:
-            build_node(readers, out)
+            build_node(tables, out)
         outputs.append(outname)
     return outputs

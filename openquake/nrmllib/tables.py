@@ -16,17 +16,17 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-A library of Reader classes to read flat data from .csv + .mdata files.
+A library of Table classes to read flat data from .csv + .mdata files.
 If provides the classes:
 
-- FileReader: to read a pair of files (metadata, data) from a directory
-- ZipReader: to read a pair of files (metadata, data) from a zip file
-- StringReader: to wrap two strings (metadata, data)
-- DataReader: to wrap the node and list iterator (metadata, data)
+- FileTable: to read a pair of files (metadata, data) from a directory
+- ZipTable: to read a pair of files (metadata, data) from a zip file
+- StringTable: to wrap two strings (metadata, data)
+- DataTable: to wrap the node and list iterator (metadata, data)
 
-Moreover it provided a generator collect_readers(readercls, container)
+Moreover it provided a generator collect_tables(tablecls, container)
 which reads all the files in the container and yields pairs
-(readername, readergroup) where readergroup is a list of readers
+(tablename, tablegroup) where tablegroup is a list of tables
 with the same name.
 """
 
@@ -40,13 +40,13 @@ from openquake.nrmllib.node import node_from_xml
 from openquake.nrmllib import model
 
 
-def collect_readers(readercls, container, fnames=None):
+def collect_tables(tablecls, container, fnames=None):
     """
-    Given a list of filenames, instantiates several readers and yields
+    Given a list of filenames, instantiates several tables and yields
     them in groups. Display a warning for invalid files and ignore
     unpaired files.
 
-    :param readercls: Reader subclass
+    :param tablecls: Table subclass
     :param container: the container of the files
     :param fnames: the names of the files to consider
 
@@ -61,31 +61,31 @@ def collect_readers(readercls, container, fnames=None):
     def getprefix(f):
         return f.rsplit('.', 1)[0]
     fnames = sorted(f for f in fnames if f.endswith(('.csv', '.mdata')))
-    readers = []
+    tables = []
     for name, group in itertools.groupby(fnames, getprefix):
         gr = list(group)
         if len(gr) == 2:  # pair (.mdata, .csv)
             try:
-                readers.append(readercls(container, name))
+                tables.append(tablecls(container, name))
             except Exception as e:
                 raise
-                # the reader could not be instantiated, due to an invalid file
+                # the table could not be instantiated, due to an invalid file
                 warnings.warn(str(e))
         # ignore unpaired files
 
-    def getgroupname(reader):
-        """Extract the groupname for readers named <groupname>__<subname>"""
-        return reader.name.rsplit('__', 1)[0]
-    for name, readergroup in itertools.groupby(readers, getgroupname):
-        yield name, list(readergroup)
+    def getgroupname(table):
+        """Extract the groupname for tables named <groupname>__<subname>"""
+        return table.name.rsplit('__', 1)[0]
+    for name, tablegroup in itertools.groupby(tables, getgroupname):
+        yield name, list(tablegroup)
 
 
-class Reader(object):
+class Table(object):
     """
-    Base class of all Readers. A Reader object has a name and a container,
+    Base class of all Tables. A Table object has a name and a container,
     and various methods to extracted the underlying data and metadata.
     When instantiated only the metadata are read; the data are extracted
-    only when iterating on the reader, which has a list-like interface.
+    only when iterating on the table, which has a list-like interface.
 
     NB: in real application you will not instantiate this class, but only
     specific subclasses. Still, this class can be instantiated for testing
@@ -162,20 +162,20 @@ class Reader(object):
         :param index: integer or slice object
         """
         with self.opencsv() as f:
-            reader = csv.DictReader(f)
-            reader.fieldnames  # read the fieldnames from the header
+            table = csv.DictReader(f)
+            table.fieldnames  # read the fieldnames from the header
             if isinstance(index, int):
                 # skip the first lines
                 for i in xrange(index):
                     next(f)
-                return next(reader)
+                return next(table)
             else:  # slice object
                 # skip the first lines
                 for i in xrange(index.start):
                     next(f)
                 rows = []
                 for i in xrange(index.stop - index.start):
-                    rows.append(next(reader))
+                    rows.append(next(table))
                 return rows
 
     def __iter__(self):
@@ -192,7 +192,7 @@ class Reader(object):
         return '<%s %s>' % (self.__class__.__name__, self.name)
 
 
-class FileReader(Reader):
+class FileTable(Table):
     """
     Read from a couple of files .mdata and .csv
     """
@@ -209,7 +209,7 @@ class FileReader(Reader):
         return open(os.path.join(self.container, self.name + '.csv'))
 
 
-class ZipReader(Reader):
+class ZipTable(Table):
     """
     Read from .zip archives.
     """
@@ -254,7 +254,7 @@ class FileObject(object):
         pass
 
 
-class StringReader(Reader):
+class StringTable(Table):
     """
     Read data from the given strings, not from the file system.
     Assume the strings are UTF-8 encoded. The intended usage is
@@ -264,7 +264,7 @@ class StringReader(Reader):
         self.name = name
         self.mdata_str = mdata_str
         self.csv_str = csv_str
-        Reader.__init__(self, None, name)
+        Table.__init__(self, None, name)
 
     def opencsv(self):
         """
@@ -279,9 +279,9 @@ class StringReader(Reader):
         return FileObject(self.name + '.mdata', self.mdata_str)
 
 
-class DataReader(Reader):
+class DataTable(Table):
     """
-    Given name, metadata and data returns a reader yielding
+    Given name, metadata and data returns a table yielding
     dictionaries when iterated over.
     """
     def __init__(self, name, metadata, rows):

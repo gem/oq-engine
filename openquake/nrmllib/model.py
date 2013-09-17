@@ -28,7 +28,7 @@ and <model>_parse where <model> is one of
 
 The <model>_fieldnames functions are used to extract the names of the CSV
 fields from the metadata file; the <model>_from functions are used to
-convert a set of readers into a Node object; the <model>_parse functions
+convert a set of tables into a Node object; the <model>_parse functions
 are used to flatten a Node object into a set of (metadata, data) pairs
 where metadata is a Node a data a list-valued iterator.
 """
@@ -95,17 +95,17 @@ def _floats_to_text(fname, colname, records):
     return ' ' .join(floats)
 
 
-def vulnerabilitymodel_from(readers):
+def vulnerabilitymodel_from(tables):
     """
-    Build a vulnerability Node from a group of readers
+    Build a vulnerability Node from a group of tables
     """
     vsets = []
-    for reader in readers:
-        md = reader.metadata
-        fname = reader.name
-        rows = list(reader)
+    for table in tables:
+        md = table.metadata
+        fname = table.name
+        rows = list(table)
         if not rows:
-            warnings.warn('No data in %s' % reader.name)
+            warnings.warn('No data in %s' % table.name)
         vset = md.discreteVulnerabilitySet
         for vf in vset.getnodes('discreteVulnerability'):
             vf_id = vf.attrib['vulnerabilityFunctionID']
@@ -164,16 +164,16 @@ def fragilitymodel_parse(fm):
         yield md, zip(*matrix)
 
 
-def fragilitymodel_from(readers):
+def fragilitymodel_from(tables):
     """
-    Build Node objects from readers
+    Build Node objects from tables
     """
-    fm = node_copy(readers[0].metadata)
+    fm = node_copy(tables[0].metadata)
     del fm[2]  # ffs node
     discrete = fm.attrib['format'] == 'discrete'
-    for reader in readers:
-        rows = list(reader)
-        ffs = node_copy(reader.metadata.ffs)
+    for table in tables:
+        rows = list(table)
+        ffs = node_copy(table.metadata.ffs)
         if discrete:
             ffs.IML.text = ' '.join(row['IML'] for row in rows)
         for ls in fm.limitStates.text.split():
@@ -313,19 +313,19 @@ def assetgenerator(records, costtypes):
         yield Node('asset', attr, nodes=nodes)
 
 
-def exposuremodel_from(readers):
+def exposuremodel_from(tables):
     """
     Build a Node object containing a full exposure. The assets are
-    lazily read from the associated reader.
+    lazily read from the associated table.
 
-    :param readers: a non-empty list of metadata dictionaries
+    :param tables: a non-empty list of metadata dictionaries
     """
-    assert len(readers) == 1, 'Exposure files must contain a single node'
-    reader = readers[0]
-    em = node_copy(reader.metadata)
+    assert len(tables) == 1, 'Exposure files must contain a single node'
+    table = tables[0]
+    em = node_copy(table.metadata)
     ctypes = em.conversions.costTypes if em.attrib['category'] == 'buildings' \
         else []
-    em.assets.nodes = assetgenerator(reader, ctypes)
+    em.assets.nodes = assetgenerator(table, ctypes)
     return em
 
 
@@ -375,39 +375,39 @@ def gmfcollection_fieldnames(md):
     return ['lon', 'lat', 'gmv']
 
 
-def gmfcollection_from(readers):
+def gmfcollection_from(tables):
     """
-    Build a node from a list of metadata dictionaries with readers
+    Build a node from a list of metadata dictionaries with tables
     """
-    assert len(readers) >= 1
-    md = readers[0].metadata
+    assert len(tables) >= 1
+    md = tables[0].metadata
     gmfcoll = Node('gmfCollection', dict(
         sourceModelTreePath=md.attrib['sourceModelTreePath'],
         gsimTreePath=md.attrib['gsimTreePath']))
 
-    def get_ses_id(reader):
-        return reader.metadata.gmfSet.attrib['stochasticEventSetId']
-    for ses_id, readergroup in itertools.groupby(readers, get_ses_id):
-        readerlist = list(readergroup)
-        gmfset = Node('gmfSet', readerlist[0].metadata.gmfSet.attrib)
-        for reader in readerlist:
-            gmf = Node('gmf', reader.metadata.gmfSet.gmf.attrib,
-                       nodes=[Node('node', record) for record in reader])
+    def get_ses_id(table):
+        return table.metadata.gmfSet.attrib['stochasticEventSetId']
+    for ses_id, tablegroup in itertools.groupby(tables, get_ses_id):
+        tablelist = list(tablegroup)
+        gmfset = Node('gmfSet', tablelist[0].metadata.gmfSet.attrib)
+        for table in tablelist:
+            gmf = Node('gmf', table.metadata.gmfSet.gmf.attrib,
+                       nodes=[Node('node', record) for record in table])
             gmfset.append(gmf)
         gmfcoll.append(gmfset)
     return gmfcoll
 
 
-def gmfset_from(readers):
+def gmfset_from(tables):
     """
-    Build a node from a list of metadata dictionaries with readers
+    Build a node from a list of metadata dictionaries with tables
     """
-    assert len(readers) > 1
+    assert len(tables) > 1
     gmfcoll = Node('gmfSet')
-    for reader in readers:
-        md = reader.metadata
+    for table in tables:
+        md = table.metadata
         gmf = node_copy(md.gmf)
-        for record in reader:
+        for record in table:
             gmf.append(Node('node', record))
         gmfcoll.append(gmf)
     return gmfcoll

@@ -20,7 +20,7 @@ import sys
 import time
 from openquake.nrmllib.convert import (
     convert_nrml_to_zip, convert_zip_to_nrml, build_node)
-from openquake.nrmllib.readers import FileReader, collect_readers
+from openquake.nrmllib.tables import FileTable, collect_tables
 
 
 def collect(fnames):
@@ -59,7 +59,7 @@ def main(*fnames):
     for zipfile in zipfiles:
         create(convert_zip_to_nrml, zipfile)
 
-    for name, group in collect_readers(FileReader, '.', csvmdatafiles):
+    for name, group in collect_tables(FileTable, '.', csvmdatafiles):
         def convert_to_nrml(out):
             build_node(group, open(out, 'wb+'))
             return out
