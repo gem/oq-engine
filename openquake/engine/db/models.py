@@ -505,8 +505,8 @@ class ModelContent(djm.Model):
     Stores raw content for the various input model files.
     '''
 
-    # contains the raw text of an input file
-    raw_content = djm.TextField()
+    # contains the raw text of a gzipped UTF-8 input file
+    raw_content = fields.GzippedField()
     # `content_type` should be used to indicate the file format
     # (xml, csv, etc.)
     content_type = djm.TextField()
@@ -516,18 +516,11 @@ class ModelContent(djm.Model):
         db_table = 'uiapi\".\"model_content'
 
     @property
-    def raw_content_utf8(self):
-        """
-        Returns raw_content in UTF-8
-        """
-        return self.raw_content.encode('utf-8')
-
-    @property
     def as_string_io(self):
         """
         Return a `StringIO` object containing the `raw_content` as utf-8 text.
         """
-        return StringIO.StringIO(self.raw_content_utf8)
+        return StringIO.StringIO(self.raw_content)
 
 
 class Input2job(djm.Model):
