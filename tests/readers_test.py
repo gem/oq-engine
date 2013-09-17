@@ -23,15 +23,17 @@ lon,lat,gmv
              {'lon': '1.0', 'lat': '2.3', 'gmv': '0.2'}])
 
     def test_collect_readers(self):
-        # test the logic of the reader generator
+        # test the logic of the reader generator, in particular the
+        # `<groupname>__` convention in the name of the files to specify
+        # files belonging to the same group
+        # also test the lexicographic ordering of the readers
         fnames = ['a.csv', 'a.mdata',  # group of one pair
-                  'x__0.mdata', 'x__0.csv',  # group of two pairs
-                  'x__1.mdata', 'x__1.csv',  # group of two pairs
+                  'x__1.mdata', 'x__1.csv', 'x__0.mdata', 'x__0.csv',  # group
                   'y.csv',  # unpaired file
                   'x__2.mdata',  # another unpaired file
                   'x__2.cs',  # ignored extension
                   ]
         got = []
-        for name, readers in collect_readers(Reader, None, fnames):
-            got.append((name, ' '.join(reader.name for reader in readers)))
+        for groupname, readers in collect_readers(Reader, None, fnames):
+            got.append((groupname, ' '.join(r.name for r in readers)))
         self.assertEqual(got, [('a', 'a'), ('x', 'x__0 x__1')])
