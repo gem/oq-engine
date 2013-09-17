@@ -496,17 +496,18 @@ class LossMapGeoJSONWriter(LossMapWriter):
             if loss.std_dev is not None:
                 loss_node['properties']['losses'].append({
                     'assetRef': str(loss.asset_ref),
-                    'mean': str(loss.value),
-                    'stdDev': str(loss.std_dev),
+                    'mean': float(loss.value),
+                    'stdDev': float(loss.std_dev),
                 })
             else:
                 loss_node['properties']['losses'].append({
                     'assetRef': str(loss.asset_ref),
-                    'value': str(loss.value),
+                    'value': float(loss.value),
                 })
 
         with NRMLFile(self._dest, 'w') as fh:
-            fh.write(json.dumps(feature_coll))
+            json.dump(feature_coll, fh, sort_keys=True, indent=4,
+                      separators=(',', ': '))
 
     def _create_oqmetadata(self):
         """

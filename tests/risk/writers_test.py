@@ -406,13 +406,13 @@ class LossMapWriterTestCase(unittest.TestCase):
             'features': [
                 {'geometry': {'coordinates': [1.0, 1.5], 'type': 'Point'},
                  'properties': {'losses': [
-                    {'assetRef': 'asset_1', 'value': '15.23'},
-                    {'assetRef': 'asset_2', 'value': '16.23'},
+                    {'assetRef': 'asset_1', 'value': 15.23},
+                    {'assetRef': 'asset_2', 'value': 16.23},
                  ]},
                  'type': 'Feature'},
                 {'geometry': {'coordinates': [2.0, 2.5], 'type': 'Point'},
                  'properties': {'losses': [
-                    {'assetRef': 'asset_3', 'value': '17.23'},
+                    {'assetRef': 'asset_3', 'value': 17.23},
                  ]},
                  'type': 'Feature'},
             ],
@@ -475,7 +475,7 @@ class LossMapWriterTestCase(unittest.TestCase):
             'features': [
                 {'geometry': {'coordinates': [1.0, 1.5], 'type': 'Point'},
                  'properties': {'losses': [
-                    {'assetRef': 'asset_1', 'mean': '15.23', 'stdDev': '2'},
+                    {'assetRef': 'asset_1', 'mean': 15.23, 'stdDev': 2.0},
                  ]},
                  'type': 'Feature'},
             ],
@@ -542,7 +542,7 @@ class LossMapWriterTestCase(unittest.TestCase):
             'features': [
                 {'geometry': {'coordinates': [1.0, 1.5], 'type': 'Point'},
                  'properties': {'losses': [
-                    {'assetRef': 'asset_1', 'mean': '15.23', 'stdDev': '2'},
+                    {'assetRef': 'asset_1', 'mean': 15.23, 'stdDev': 2.0},
                  ]},
                  'type': 'Feature'},
             ],

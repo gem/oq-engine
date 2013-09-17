@@ -21,6 +21,8 @@ See :module:`openquake.nrmllib.models`.
 """
 
 import decimal
+import json
+import warnings
 from collections import OrderedDict
 
 from lxml import etree
@@ -428,11 +430,7 @@ class SourceModelParser(FaultGeometryParserMixin):
         """
         src_model = models.SourceModel()
 
-        schema = etree.XMLSchema(
-            etree.parse(openquake.nrmllib.nrml_schema_file()))
-
-        tree = etree.iterparse(self.source, events=('start', 'end'),
-                               schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source)
 
         for event, element in tree:
             # Find the <sourceModel> element and get the 'name' attr.
@@ -467,10 +465,8 @@ class SiteModelParser(object):
         :returns:
             A iterable of :class:`openquake.nrmllib.model.SiteModel` objects.
         """
-        schema = etree.XMLSchema(
-            etree.parse(openquake.nrmllib.nrml_schema_file()))
-        tree = etree.iterparse(self.source, events=('start',),
-                               schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source,
+                                                events=('start', ))
 
         for _, element in tree:
             if element.tag == '{%s}site' % openquake.nrmllib.NAMESPACE:
@@ -555,9 +551,7 @@ class RuptureModelParser(FaultGeometryParserMixin):
             instance or
             :class:`openquake.nrmllib.models.ComplexFaultRuptureModel` instance
         """
-        schema = etree.XMLSchema(etree.parse(
-            openquake.nrmllib.nrml_schema_file()))
-        tree = etree.iterparse(self.source, schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source)
         for _, element in tree:
             parse_fn = self._parse_fn_map.get(element.tag)
             if parse_fn:
@@ -582,9 +576,7 @@ class GMFScenarioParser(object):
         :returns:
             an iterable over triples (imt, gmvs, location)
         """
-        schema = etree.XMLSchema(etree.parse(
-            openquake.nrmllib.nrml_schema_file()))
-        tree = etree.iterparse(self.source, schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source, events=('end',))
         gmf = OrderedDict()  # (imt, location) -> gmvs
         point_value_list = []
         for _, element in tree:
@@ -610,7 +602,7 @@ class GMFScenarioParser(object):
             yield imt, '{%s}' % ','.join(gmvs), location
 
 
-class HazardCurveParser(object):
+class HazardCurveXMLParser(object):
     _CURVES_TAG = '{%s}hazardCurves' % openquake.nrmllib.NAMESPACE
     _CURVE_TAG = '{%s}hazardCurve' % openquake.nrmllib.NAMESPACE
 
@@ -623,10 +615,7 @@ class HazardCurveParser(object):
         :returns:
             Populated :class:`openquake.nrmllib.models.HazardCurveModel` object
         """
-        schema = etree.XMLSchema(etree.parse(
-            openquake.nrmllib.nrml_schema_file()))
-        tree = etree.iterparse(
-            self.source, events=('start', 'end'), schema=schema)
+        tree = openquake.nrmllib.iterparse_tree(self.source)
         hc_iter = self._parse(tree)
         header = hc_iter.next()
         return models.HazardCurveModel(data_iter=hc_iter, **header)
@@ -652,3 +641,53 @@ class HazardCurveParser(object):
                 location = models.Location(x, y)
                 poes_array = map(float, poes.text.split())
                 yield models.HazardCurveData(location, poes_array)
+
+
+def HazardCurveParser(*args, **kwargs):
+    warnings.warn(
+        'HazardCurveParser is deprecated, use HazardCurveXMLParser instead',
+        RuntimeWarning
+    )
+    return HazardCurveXMLParser(*args, **kwargs)
+
+
+class HazardCurveGeoJSONParser(object):
+    """
+    Parser for reading hazard curve data from a GeoJSON.
+    Has the same interface and output as the :class:`HazardCurveXMLParser`.
+    """
+
+    def __init__(self, source):
+        self.source = source
+
+    def parse(self):
+        """
+        Read hazard curve data from a GeoJSON source into a
+        :class:`openquake.nrmllib.models.HazardCurveModel`.
+        """
+        metadata = OrderedDict()
+        with openquake.nrmllib.NRMLFile(self.source) as fh:
+            data = json.load(fh)
+
+        oqmetadata = data['oqmetadata']
+        metadata = {}
+        metadata['statistics'] = oqmetadata.get('statistics')
+        metadata['quantile_value'] = oqmetadata.get('quantileValue')
+        metadata['smlt_path'] = oqmetadata.get('sourceModelTreePath')
+        metadata['gsimlt_path'] = oqmetadata.get('gsimTreePath')
+        metadata['imt'] = oqmetadata.get('IMT')
+        metadata['investigation_time'] = oqmetadata.get('investigationTime')
+        metadata['sa_period'] = oqmetadata.get('saPeriod')
+        metadata['sa_damping'] = oqmetadata.get('saDamping')
+        metadata['imls'] = oqmetadata.get('IMLs')
+
+        features = data['features']
+
+        data_iter = []
+        for feature in features:
+            lon, lat = feature['geometry']['coordinates']
+            loc = models.Location(lon, lat)
+            curve = models.HazardCurveData(loc, feature['properties']['poEs'])
+            data_iter.append(curve)
+
+        return models.HazardCurveModel(data_iter=data_iter, **metadata)
