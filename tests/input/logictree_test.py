@@ -184,7 +184,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.gsm_mock = self.gsm_patch.start()
         ret_val = Mock()
         ret_val.model_content.raw_content = sm
-        ret_val.model_content.raw_content_utf8 = sm
+        ret_val.model_content.raw_content = sm
         self.gsm_mock.return_value = ret_val
 
     def tearDown(self):
@@ -521,7 +521,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         sm = """ololo"""
 
         ret_val = Mock()
-        ret_val.model_content.raw_content_utf8 = sm
+        ret_val.model_content.raw_content = sm
         self.gsm_mock.return_value = ret_val
 
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
@@ -572,7 +572,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         </sourceModel>
         """)
         ret_val = Mock()
-        ret_val.model_content.raw_content_utf8 = sm
+        ret_val.model_content.raw_content = sm
         self.gsm_mock.return_value = ret_val
 
         self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',

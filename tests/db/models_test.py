@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -16,6 +17,7 @@
 import getpass
 import unittest
 import mock
+import zlib
 
 import numpy
 
@@ -71,7 +73,6 @@ class Inputs4RiskCalcTestCase(unittest.TestCase):
             get_data_path('classical_psha_based_risk/job.ini'),
             get_data_path('simple_fault_demo_hazard/job.ini'))
         rc = job.risk_calculation
-
 
         inputs = models.inputs4rcalc(rc.id)
         self.assertEqual(2, inputs.count())
@@ -532,3 +533,14 @@ class LossFractionTestCase(unittest.TestCase):
                          lf.display_value("7, 21", rc))
         self.assertEqual("0.0000,0.5000|0.0000,0.5000",
                          lf.display_value("0.0, 0.0", rc))
+
+
+class ModelContentTestCase(unittest.TestCase):
+    def test_compress_decompress(self):
+        # test the gzip functionality for the raw_content field
+        xml = u'<nrml>così</nrml>'.encode('utf-8')
+        mc = models.ModelContent(
+            raw_content=zlib.compress(xml), content_type='text/xml')
+        mc.save()  # calls GzippedField.get_prep_value
+        saved = models.ModelContent.objects.get(pk=mc.id)
+        self.assertEqual(saved.raw_content, xml)
