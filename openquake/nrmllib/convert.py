@@ -22,7 +22,7 @@ import zipfile
 from openquake.nrmllib.node import (
     node_from_nrml, node_to_nrml, node_to_xml)
 from openquake.nrmllib.tables import ZipTable, collect_tables
-from openquake.nrmllib.model import converter
+from openquake.nrmllib.converter import converter
 
 
 def build_node(tables, output=None):

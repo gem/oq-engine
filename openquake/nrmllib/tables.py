@@ -37,7 +37,7 @@ import warnings
 import cStringIO
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.node import node_from_xml
-from openquake.nrmllib.model import converter
+from openquake.nrmllib.converter import converter
 
 
 def collect_tables(tablecls, container, fnames=None):
