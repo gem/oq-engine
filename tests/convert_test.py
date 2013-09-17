@@ -88,8 +88,8 @@ class ConvertBadFilesTestCase(unittest.TestCase):
 
     def test_no_data(self):
         table = StringTable('some', self.JSON,
-                              'IML,IR.lossRatio,IR.coefficientsVariation,'
-                              'PK.lossRatio,PK.coefficientsVariation')
+                            'IML,IR.lossRatio,IR.coefficientsVariation,'
+                            'PK.lossRatio,PK.coefficientsVariation')
         with tempfile.NamedTemporaryFile('w+') as out:
             build_node([table], out)
 

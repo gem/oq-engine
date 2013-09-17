@@ -37,7 +37,7 @@ import warnings
 import cStringIO
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.node import node_from_xml
-from openquake.nrmllib import model
+from openquake.nrmllib.model import converter
 
 
 def collect_tables(tablecls, container, fnames=None):
@@ -111,19 +111,10 @@ class Table(object):
         except Exception as e:
             raise InvalidFile('%s:%s' % (fileobj.name, e))
         try:
-            self.read_fieldnames()
+            self.fieldnames = converter(self.metadata).getfields()
         except Exception as e:
             raise InvalidFile('%s: could not extract fieldnames: %s' %
                               (fileobj.name, e))
-
-    def read_fieldnames(self):
-        """
-        Set the .fieldnames list by parsing the .metadata with the
-        appropriate function (depending on the model).
-        """
-        getfields = getattr(model, '%s_fieldnames' %
-                            self.metadata.tag.lower())
-        self.fieldnames = getfields(self.metadata)
 
     def check_fieldnames(self, fileobj):
         """
@@ -277,19 +268,3 @@ class StringTable(Table):
         Returns a file-like object with the content of mdata_str
         """
         return FileObject(self.name + '.mdata', self.mdata_str)
-
-
-class DataTable(Table):
-    """
-    Given name, metadata and data returns a table yielding
-    dictionaries when iterated over.
-    """
-    def __init__(self, name, metadata, rows):
-        self.name = name
-        self.metadata = metadata
-        self.read_fieldnames()
-        self.rows = rows
-
-    def __iter__(self):
-        for row in self.rows:
-            yield dict(zip(self.fieldnames, row))

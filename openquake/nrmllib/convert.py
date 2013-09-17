@@ -21,8 +21,8 @@ import csv
 import zipfile
 from openquake.nrmllib.node import (
     node_from_nrml, node_to_nrml, node_to_xml)
-from openquake.nrmllib.tables import ZipTable, DataTable, collect_tables
-from openquake.nrmllib import model
+from openquake.nrmllib.tables import ZipTable, collect_tables
+from openquake.nrmllib.model import converter
 
 
 def build_node(tables, output=None):
@@ -37,24 +37,10 @@ def build_node(tables, output=None):
     if len(tags) > 1:
         raise ValueError(
             'All tables must have the same tag, found %s instead' % tags)
-    tag = tags.pop()
-    nodebuilder = getattr(model, '%s_from' % tag.lower())
-    node = nodebuilder(tables)
+    node = converter(tables[0].metadata).build_node(tables)
     if output is not None:
         node_to_nrml(node, output)
     return node
-
-
-def parse_nrml(fname):
-    """
-    Parse a NRML file and yield row tables
-
-    :param fname: filename or file object
-    """
-    mdl = node_from_nrml(fname)[0]
-    parse = getattr(model, '%s_parse' % mdl.tag.lower())
-    for metadata, data in parse(mdl):
-        yield DataTable(mdl.tag, metadata, data)
 
 
 ################################# generic #####################################
@@ -68,7 +54,8 @@ def convert_nrml_to_flat(fname, outfname):
     :param outfname: output path, for instance <path>.csv
     """
     tozip = []
-    for i, table in enumerate(parse_nrml(fname)):
+    tables = converter(node_from_nrml(fname)[0]).to_tables()
+    for i, table in enumerate(tables):
         with open(outfname[:-4] + '__%d.mdata' % i, 'w') as mdatafile:
             with open(outfname[:-4] + '__%d.csv' % i, 'w') as csvfile:
                 node_to_xml(table.metadata, mdatafile)
