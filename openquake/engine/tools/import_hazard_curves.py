@@ -4,7 +4,7 @@ from cStringIO import StringIO
 
 from django.db import connections
 
-from openquake.nrmllib.hazard.parsers import HazardCurveParser
+from openquake.nrmllib.hazard.parsers import HazardCurveXMLParser
 from openquake.engine.db import models
 from openquake.engine.engine import get_current_user
 
@@ -40,7 +40,7 @@ def import_hazard_curves(fileobj, user=None):
 
     f = StringIO()
     # convert the XML into a tab-separated StringIO
-    hazcurve = HazardCurveParser(fileobj).parse()
+    hazcurve = HazardCurveXMLParser(fileobj).parse()
     haz_curve = models.HazardCurve.objects.create(
         investigation_time=hazcurve.investigation_time,
         imt=hazcurve.imt,
