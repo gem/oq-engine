@@ -96,3 +96,10 @@ class NRMLFile(object):
 
     def __exit__(self, *args):
         self._file.close()
+
+
+def iterparse_tree(source, events=('start', 'end')):
+    schema = etree.XMLSchema(etree.parse(nrml_schema_file()))
+
+    tree = etree.iterparse(source, events=events, schema=schema)
+    return tree
