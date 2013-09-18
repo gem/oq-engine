@@ -13,7 +13,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="PGA"
-            ruptureId="rlz=00,ses=0001,src=1,i=0"
+            ruptureId="rlz=00|ses=0001|src=1|i=0"
             >
                 <node gmv="0.2" lat="0.0" lon="0.0"/>
                 <node gmv="1.4" lat="0.0" lon="1.0"/>
@@ -26,7 +26,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="PGA"
-            ruptureId="rlz=00,ses=0002,src=1,i=0"
+            ruptureId="rlz=00|ses=0002|src=1|i=0"
             >
                 <node gmv="0.2" lat="0.0" lon="0.0"/>
                 <node gmv="1.4" lat="0.0" lon="1.0"/>
@@ -34,7 +34,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </gmf>
             <gmf
             IMT="PGV"
-            ruptureId="rlz=00,ses=0002,src=1,i=0"
+            ruptureId="rlz=00|ses=0002|src=1|i=0"
             >
                 <node gmv="0.2" lat="0.0" lon="0.0"/>
                 <node gmv="1.4" lat="0.0" lon="1.0"/>
@@ -42,7 +42,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </gmf>
             <gmf
             IMT="PGV"
-            ruptureId="rlz=00,ses=0002,src=1,i=1"
+            ruptureId="rlz=00|ses=0002|src=1|i=1"
             >
                 <node gmv="0.2" lat="0.0" lon="0.0"/>
                 <node gmv="1.4" lat="0.0" lon="1.0"/>
@@ -55,7 +55,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="SA"
-            ruptureId="rlz=00,ses=0001,src=1,i=1"
+            ruptureId="rlz=00|ses=0001|src=1|i=1"
             saDamping="5.0"
             saPeriod="0.025"
             >
@@ -70,7 +70,7 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <gmf
             IMT="SA"
-            ruptureId="rlz=00,ses=0002,src=1,i=2"
+            ruptureId="rlz=00|ses=0002|src=1|i=2"
             saDamping="5.0"
             saPeriod="0.025"
             >

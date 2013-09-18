@@ -27,7 +27,9 @@ from openquake.nrmllib.converter import converter
 
 def build_node(tables, output=None):
     """
-    Build a NRML node from a consistent set of .mdata and .csv files.
+    Build a NRML node from a consistent set of table objects (i.e. all
+    tables must have the same metadata tag). If output is a file-like
+    object open for writing it also saves the node in NRML format.
 
     :param tables: list of :class:`openquake.nrmllib.tables.Table` instances
     :param output: a file-like object open for writing or None
@@ -54,7 +56,9 @@ def convert_nrml_to_flat(fname, outfname):
     :param outfname: output path, for instance <path>.csv
     """
     tozip = []
-    tables = list(converter(node_from_nrml(fname)[0]).build_tables())
+    # extract the first node inside the <nrml> tag
+    node = node_from_nrml(fname)[0]
+    tables = list(converter(node).build_tables())
     suffixes = set(t.suffix for t in tables)
     if len(suffixes) < len(tables):
         raise ValueError('Duplicates in %s' % suffixes)

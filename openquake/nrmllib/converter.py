@@ -17,8 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-This module contains functions named <model>_fieldnames, <model>_from
-and <model>_build_tables where <model> is one of
+This module contains converter classes working on nodes of kind
 
 - vulnerabilitymodel
 - fragilitymodel
@@ -26,11 +25,7 @@ and <model>_build_tables where <model> is one of
 - gmfset
 - gmfcollection
 
-The <model>_fieldnames functions are used to extract the names of the CSV
-fields from the metadata file; the <model>_from functions are used to
-convert a set of tables into a Node object; the <model>_build_tables functions
-are used to flatten a Node object into a set of (metadata, data) pairs
-where metadata is a Node a data a list-valued iterator.
+Each converter has three methods get_fields, build_node and build_tables.
 """
 
 import warnings
@@ -57,7 +52,10 @@ class Table(object):
 
 
 class BaseConverter(object):
-
+    """
+    Base class. Each converter takes a node in input and has methods
+    get_fields, build_tables and build_node.
+    """
     def __init__(self, node):
         self.node = node
 
@@ -75,7 +73,7 @@ def converter(node):
     """
     Given a node with the right tag, return the corresponding Converter
     instance. For example, a node with tag exposureModel returns an
-    instance of kind ExposureModel.
+    instance of ExposureModel.
     """
     clsname = node.tag[0].upper() + node.tag[1:]
     cls = globals()[clsname]
@@ -106,22 +104,28 @@ def _floats_to_text(fname, colname, records):
 ############################# vulnerability #################################
 
 class VulnerabilityModel(BaseConverter):
+    """A converter for vulnerabilityModel nodes"""
 
     def get_fields(self):
         """
-        Extract the names of the fields of the CSV file from the metadata file
-
-        :param self: metadata node object
+        Extract the names of the fields of the CSV file from the node.
+        For instance, if the node contains two vulnerabilityFunctionIDs
+        IR and PK there will be 5 fields ['IMT', 'IR.lossRatio',
+       'IR.coefficientsVariation', 'PK.lossRatio', 'PK.coefficientsVariation'].
         """
         fieldnames = ['IML']
         for vf in self.node.discreteVulnerabilitySet.getnodes(
                 'discreteVulnerability'):
             vf_id = vf['vulnerabilityFunctionID']
-            for node in vf:  # lossRatio and coefficientsVariation
-                fieldnames.append('%s.%s' % (vf_id, node.tag))
+            lossRatio, coefficientsVariation = vf
+            fieldnames.append('%s.%s' % (vf_id, lossRatio.tag))
+            fieldnames.append('%s.%s' % (vf_id, coefficientsVariation.tag))
         return fieldnames
 
     def build_tables(self):
+        """
+        Yield a table for each vulnerabilitySetID in the model.
+        """
         node = self.node
         for vset in self.node.getnodes('discreteVulnerabilitySet'):
             vset = node_copy(vset)
@@ -137,7 +141,7 @@ class VulnerabilityModel(BaseConverter):
 
     def build_node(self, tables):
         """
-        Build a vulnerability Node from a group of tables
+        Build a full vulnerability Node from a group of tables
         """
         vsets = []
         for table in tables:
@@ -148,7 +152,7 @@ class VulnerabilityModel(BaseConverter):
                 warnings.warn('No data in %s' % table.name)
             vset = md.discreteVulnerabilitySet
             for vf in vset.getnodes('discreteVulnerability'):
-                vf_id = vf.attrib['vulnerabilityFunctionID']
+                vf_id = vf['vulnerabilityFunctionID']
                 for node in vf:  # lossRatio, coefficientsVariation
                     node.text = _floats_to_text(
                         fname, '%s.%s' % (vf_id, node.tag),  rows)
@@ -161,12 +165,21 @@ class VulnerabilityModel(BaseConverter):
 ############################# fragility #################################
 
 class FragilityModel(BaseConverter):
-    """
-    Extract the names of the fields of the CSV file from the metadata file
+    """A converter for fragilityModel nodes"""
 
-    :param md: metadata node object
-    """
     def get_fields(self):
+        """
+        Extract the names of the fields of the CSV file from the model.
+        For instance, if the model is discrete and has limit states minor,
+        moderate, severe and collapse, returns
+
+        ['IML', 'minor', 'moderate', 'severe', 'collapse']
+
+        If the model is continuous and has limit states slight, moderate,
+        extensive and complete returns
+
+        ['param', 'slight', 'moderate', 'extensive', 'complete']
+        """
         a = self.node.attrib
         if a['format'] == 'discrete':
             return ['IML'] + self.node.limitStates.text.split()
@@ -174,6 +187,22 @@ class FragilityModel(BaseConverter):
             return ['param'] + self.node.limitStates.text.split()
 
     def build_tables(self):
+        """
+        Yield a table for each Fragility Function Set (ffs) keyed by
+        the ordinal of the set, starting from 1. Here is an example
+        of a table for a discrete model::
+
+          IML,minor,moderate,severe,collapse
+          7,0.0,0.0,0.0,0.0
+          8,0.09,0.00,0.00,0.00
+          9,0.56,0.04,0.00,0.00
+
+        Here is an example for a continuous model::
+
+          param,slight,moderate,extensive,complete
+          mean,11.19,27.98,48.05,108.9
+          stddev,8.27,20.677,42.49,123.7
+        """
         node = self.node
         format = node['format']
         limitStates = node.limitStates.text.split()
@@ -201,6 +230,9 @@ class FragilityModel(BaseConverter):
             yield Table(str(i), md, zip(*matrix))
 
     def build_node(self, tables):
+        """
+        Build a full fragility Node from a group of tables.
+        """
         fm = node_copy(tables[0].metadata)
         del fm[2]  # ffs node
         discrete = fm.attrib['format'] == 'discrete'
@@ -307,6 +339,8 @@ def assetgenerator(records, costtypes):
 
 
 class ExposureModel(BaseConverter):
+    """A converter for exposureModel nodes"""
+
     def get_fields(self):
         """
         Extract the names of the fields of the CSV file from the metadata file
@@ -324,9 +358,21 @@ class ExposureModel(BaseConverter):
 
     def build_tables(self):
         """
-        A parser for exposure models yielding a pair (metadata, data)
+        Yield a single table object. For population exposure a table
+        has a form like
 
-        :param self: exposure model Node object
+          id,taxonomy,lon,lat,number
+          asset_01,IT-PV,9.15000,45.16667,7
+          asset_02,IT-CE,9.15333,45.12200,7
+
+        whereas for building has a form like
+
+          id,taxonomy,lon,lat,number,area,cost.value,..., occupancy.day
+          asset_01,RC/DMRF-D/LR,9.15000,45.16667,7,120,40,.5,...,20
+          asset_02,RC/DMRF-D/HR,9.15333,45.12200,7,119,40,,,...,20
+          asset_03,RC/DMRF-D/LR,9.14777,45.17999,5,118,,...,,5
+
+        with a variable number of columns depending on the metadata.
         """
         node = self.node
         metadata = Node('exposureModel', node.attrib, nodes=[node.description])
@@ -349,10 +395,8 @@ class ExposureModel(BaseConverter):
 
     def build_node(self, tables):
         """
-        Build a Node object containing a full exposure. The assets are
-        lazily read from the associated table.
-
-        :param tables: a non-empty list of metadata dictionaries
+        Build a Node object containing a full exposure from a set
+        of tables. The assets are lazily read.
         """
         assert len(tables) == 1, 'Exposure files must contain a single node'
         table = tables[0]
@@ -366,6 +410,8 @@ class ExposureModel(BaseConverter):
 ################################# gmf ##################################
 
 class GmfSet(BaseConverter):
+    """A converter for gmfSet nodes"""
+
     def get_fields(self):
         """
         The fields in a GMF CSV file (lon, lat, gmv)
@@ -376,8 +422,12 @@ class GmfSet(BaseConverter):
 
     def build_tables(self):
         """
-        A parser for GMF scenario yielding a pair (metadata, data)
-        for each node <gmf>.
+        Yield a table for each gmf node. The table has a form like
+
+          lon,lat,gmv
+          0.0,0.0,0.2
+          1.0,0.0,1.4
+          0.0,1.0,0.6
         """
         node = self.node
         for gmf in node.getnodes('gmf'):
@@ -391,7 +441,7 @@ class GmfSet(BaseConverter):
 
     def build_node(self, tables):
         """
-        Build a node from a list of metadata dictionaries with tables
+        Build a gmfSet node from a list of tables.
         """
         assert len(tables) > 1
         gmfcoll = Node('gmfSet')
@@ -405,6 +455,7 @@ class GmfSet(BaseConverter):
 
 
 class GmfCollection(BaseConverter):
+    """A converter for gmfCollection nodes"""
 
     def get_fields(self):
         """
@@ -413,6 +464,14 @@ class GmfCollection(BaseConverter):
         return ['lon', 'lat', 'gmv']
 
     def build_tables(self):
+        """
+        Yield a table for each gmf node. The table has a form like
+
+          lon,lat,gmv
+          0.0,0.0,0.2
+          1.0,0.0,1.4
+          0.0,1.0,0.6
+        """
         node = self.node
         for gmfset in node.getnodes('gmfSet'):
             for gmf in gmfset.getnodes('gmf'):
@@ -429,7 +488,7 @@ class GmfCollection(BaseConverter):
 
     def build_node(self, tables):
         """
-        Build a node from a list of metadata dictionaries with tables
+        Build a gmfCollection node from a list of tables.
         """
         assert len(tables) >= 1
         md = tables[0].metadata
