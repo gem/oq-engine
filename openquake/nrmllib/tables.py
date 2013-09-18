@@ -95,7 +95,7 @@ class Table(object):
     def __init__(self, container, name):
         self.container = container
         self.name = name
-        self.fieldnames = None  # set in read_fieldnames
+        self.fieldnames = None  # set in load_metadata
         with self.openmdata() as j:
             self.load_metadata(j)
         with self.opencsv() as c:
@@ -202,7 +202,7 @@ class FileTable(Table):
 
 class ZipTable(Table):
     """
-    Read from .zip archives.
+    Read from a .zip archive
     """
 
     def openmdata(self):

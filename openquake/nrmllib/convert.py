@@ -55,23 +55,15 @@ def convert_nrml_to_flat(fname, outfname):
     :param fname: path to a NRML file of kind <path>.xml
     :param outfname: output path, for instance <path>.csv
     """
-    tozip = []
     # extract the first node inside the <nrml> tag
     node = node_from_nrml(fname)[0]
     tables = list(converter(node).build_tables())
     suffixes = set(t.suffix for t in tables)
     if len(suffixes) < len(tables):
         raise ValueError('Duplicates in %s' % suffixes)
+    tozip = []
     for table in tables:
-        name = outfname[:-4] + '__' + table.suffix
-        with open(name + '.mdata', 'w') as mdatafile:
-            with open(name + '.csv', 'w') as csvfile:
-                node_to_xml(table.metadata, mdatafile)
-                tozip.append(mdatafile.name)
-                cw = csv.writer(csvfile)
-                cw.writerow(table.fieldnames)
-                cw.writerows(table.rows)
-                tozip.append(csvfile.name)
+        tozip.extend(table.save(outfname[:-4]))
     return tozip
 
 

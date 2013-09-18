@@ -27,28 +27,61 @@ This module contains converter classes working on nodes of kind
 
 Each converter has three methods get_fields, build_node and build_tables.
 """
-
+import csv
 import warnings
 import itertools
-from openquake.nrmllib.node import node_copy, Node
+from openquake.nrmllib.node import node_copy, Node, node_to_xml
 from openquake.nrmllib import InvalidFile
 
 
+# A write-only table, essentially the opposite of the read-only
+# tables in the nrmllib.tables module.
 class Table(object):
     """
-    Given name, metadata and data returns a sequence yielding
-    dictionaries when iterated over. It does not keep
-    everything in memory.
+    Given a triple suffix, metadata and data matrix returns a sequence yielding
+    dictionaries when iterated over. This kind of table keeps everything in
+    memory and it is used in the conversion NRML -> CSV. It is the conversion
+    CSV -> NRML which is lazy (and does not use this function).
+    The suffix is a string used as a suffix in the name of the .csv and .mdata
+    files associated to the table, which are generated when the .save method
+    is called.
     """
-    def __init__(self, suffix, metadata, rows):
+    def __init__(self, suffix, metadata, matrix):
         self.suffix = suffix
         self.metadata = metadata
         self.fieldnames = converter(metadata).get_fields()
-        self.rows = rows
+        self.rows = matrix
 
     def __iter__(self):
+        """Yield a record dictionary for each row"""
         for row in self.rows:
             yield dict(zip(self.fieldnames, row))
+
+    def __getitem__(self, i):
+        """Return the underlying rows"""
+        return self.rows[i]
+
+    def __len__(self):
+        """The number of rows of the table"""
+        return len(self.rows)
+
+    def save(self, basename):
+        """
+        Save the table as a pair of files .mdata and .csv.
+
+        :param basename: pathname where to save the table
+        :returns: the .mdata and .csv filenames (with suffix)
+        """
+        name = basename + ('__' + self.suffix if self.suffix else '')
+        with open(name + '.mdata', 'w') as mdatafile, \
+                open(name + '.csv', 'w') as csvfile:
+            # save metadata
+            node_to_xml(self.metadata, mdatafile)
+            # save data
+            cw = csv.writer(csvfile)
+            cw.writerow(self.fieldnames)
+            cw.writerows(self.rows)
+        return mdatafile.name, csvfile.name
 
 
 class BaseConverter(object):
@@ -141,7 +174,7 @@ class VulnerabilityModel(BaseConverter):
 
     def build_node(self, tables):
         """
-        Build a full vulnerability Node from a group of tables
+        Build a full vulnerability Node from a group of tables.
         """
         vsets = []
         for table in tables:
