@@ -215,10 +215,8 @@ class SiteCollection(object):
         num_values = data.shape[1]
         result = numpy.empty((total_sites, num_values))
         result.fill(placeholder)
-        #for i in xrange(num_values):
-        #    result[:, i].put(self.indices, data[:, i])
-        for i, idx in enumerate(self.indices):
-            result[idx] = data[i]
+        for i in xrange(num_values):
+            result[:, i].put(self.indices, data[:, i])
         return result
 
     def filter(self, mask):
