@@ -65,6 +65,27 @@ class ClassicalTest(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.ones((4,)) * 3, output.average_losses)
 
+    def test_statistics(self):
+        self.workflow.insured_losses = False
+        out = mock.Mock()
+        out.loss_curves = numpy.empty((4, 2, 10))
+        out.insured_loss_curves = numpy.empty((4, 2, 10))
+        self.calcs.exposure_statistics.return_value = [
+            mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
+            numpy.empty((3, 2))]
+        self.workflow.statistics(
+            [out],
+            mock.Mock(), mock.Mock(), mock.Mock())
+        self.assertEqual(
+            1, self.calcs.exposure_statistics.call_count)
+
+        self.workflow.insured_losses = True
+        self.workflow.statistics(
+            [out], mock.Mock(), mock.Mock(), mock.Mock())
+        self.assertEqual(
+            3,  # 2 more
+            self.calcs.exposure_statistics.call_count)
+
 
 class ProbabilisticEventBasedTest(unittest.TestCase):
     def setUp(self):
@@ -121,6 +142,28 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
 
         numpy.testing.assert_allclose(
             numpy.ones((3,)) * 0.1, output.stddev_losses)
+
+    def test_statistics(self):
+        self.workflow.insured_losses = False
+        out = mock.Mock()
+        out.loss_curves = numpy.empty((4, 2, 10))
+        out.event_loss_table = collections.Counter()
+        out.insured_loss_curves = numpy.empty((4, 2, 10))
+        self.calcs.exposure_statistics.return_value = [
+            mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
+            numpy.empty((3, 2))]
+        self.workflow.statistics(
+            [out],
+            mock.Mock(), mock.Mock(), mock.Mock())
+        self.assertEqual(
+            1, self.calcs.exposure_statistics.call_count)
+
+        self.workflow.insured_losses = True
+        self.workflow.statistics(
+            [out], mock.Mock(), mock.Mock(), mock.Mock())
+        self.assertEqual(
+            3,  # 2 more
+            self.calcs.exposure_statistics.call_count)
 
     def test_normalize_all_trivial(self):
         poes = numpy.linspace(1, 0, 11)
