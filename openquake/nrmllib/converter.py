@@ -158,7 +158,6 @@ class VulnerabilityModel(BaseConverter):
                         fname, '%s.%s' % (vf_id, node.tag),  rows)
             vset.IML.text = _floats_to_text(fname, 'IML', rows)
             vsets.append(vset)
-        # nodes=[Node('config', {})] + vsets
         return Node('vulnerabilityModel', nodes=vsets)
 
 
