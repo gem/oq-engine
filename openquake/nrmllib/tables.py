@@ -111,7 +111,7 @@ class Table(object):
         except Exception as e:
             raise InvalidFile('%s:%s' % (fileobj.name, e))
         try:
-            self.fieldnames = converter(self.metadata).getfields()
+            self.fieldnames = converter(self.metadata).get_fields()
         except Exception as e:
             raise InvalidFile('%s: could not extract fieldnames: %s' %
                               (fileobj.name, e))

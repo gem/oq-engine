@@ -18,7 +18,7 @@
 
 """
 This module contains functions named <model>_fieldnames, <model>_from
-and <model>_to_tables where <model> is one of
+and <model>_build_tables where <model> is one of
 
 - vulnerabilitymodel
 - fragilitymodel
@@ -28,7 +28,7 @@ and <model>_to_tables where <model> is one of
 
 The <model>_fieldnames functions are used to extract the names of the CSV
 fields from the metadata file; the <model>_from functions are used to
-convert a set of tables into a Node object; the <model>_to_tables functions
+convert a set of tables into a Node object; the <model>_build_tables functions
 are used to flatten a Node object into a set of (metadata, data) pairs
 where metadata is a Node a data a list-valued iterator.
 """
@@ -39,15 +39,16 @@ from openquake.nrmllib.node import node_copy, Node
 from openquake.nrmllib import InvalidFile
 
 
-class DataTable(object):
+class Table(object):
     """
     Given name, metadata and data returns a sequence yielding
-    dictionaries when iterated over.
+    dictionaries when iterated over. It does not keep
+    everything in memory.
     """
-    def __init__(self, metadata, rows):
-        self.name = metadata.tag
+    def __init__(self, suffix, metadata, rows):
+        self.suffix = suffix
         self.metadata = metadata
-        self.fieldnames = converter(metadata).getfields()
+        self.fieldnames = converter(metadata).get_fields()
         self.rows = rows
 
     def __iter__(self):
@@ -60,10 +61,10 @@ class BaseConverter(object):
     def __init__(self, node):
         self.node = node
 
-    def getfields(self):
+    def get_fields(self):
         return []
 
-    def to_tables(self):
+    def build_tables(self):
         return []
 
     def build_node(self):
@@ -71,17 +72,20 @@ class BaseConverter(object):
 
 
 def converter(node):
+    """
+    Given a node with the right tag, return the corresponding Converter
+    instance. For example, a node with tag exposureModel returns an
+    instance of kind ExposureModel.
+    """
     clsname = node.tag[0].upper() + node.tag[1:]
     cls = globals()[clsname]
     return cls(node)
-
-############################# vulnerability #################################
 
 
 def _floats_to_text(fname, colname, records):
     """
     A convenience function for reading floats from columns in a
-    CSV vulnerability file.
+    CSV file.
 
     :param fname: the pathname of the file
     :param colname: the name of the column
@@ -99,9 +103,11 @@ def _floats_to_text(fname, colname, records):
     return ' ' .join(floats)
 
 
+############################# vulnerability #################################
+
 class VulnerabilityModel(BaseConverter):
 
-    def getfields(self):
+    def get_fields(self):
         """
         Extract the names of the fields of the CSV file from the metadata file
 
@@ -115,10 +121,7 @@ class VulnerabilityModel(BaseConverter):
                 fieldnames.append('%s.%s' % (vf_id, node.tag))
         return fieldnames
 
-    def to_tables(self):
-        """
-        A to_tablesr for vulnerability models yielding pairs (metadata, data)
-        """
+    def build_tables(self):
         node = self.node
         for vset in self.node.getnodes('discreteVulnerabilitySet'):
             vset = node_copy(vset)
@@ -130,7 +133,7 @@ class VulnerabilityModel(BaseConverter):
                 matrix.append(vf.coefficientsVariation.text.split())
                 vf.lossRatio.text = None
                 vf.coefficientsVariation.text = None
-            yield DataTable(metadata, zip(*matrix))
+            yield Table(vset['vulnerabilitySetID'], metadata, zip(*matrix))
 
     def build_node(self, tables):
         """
@@ -163,23 +166,18 @@ class FragilityModel(BaseConverter):
 
     :param md: metadata node object
     """
-    def getfields(self):
+    def get_fields(self):
         a = self.node.attrib
         if a['format'] == 'discrete':
             return ['IML'] + self.node.limitStates.text.split()
         elif a['format'] == 'continuous':
             return ['param'] + self.node.limitStates.text.split()
 
-    def to_tables(self):
-        """
-        A parser for fragility models yielding pairs (metadata, data)
-
-        :param self: fragility model Node object
-        """
+    def build_tables(self):
         node = self.node
         format = node['format']
         limitStates = node.limitStates.text.split()
-        for ffs in node.getnodes('ffs'):
+        for i, ffs in enumerate(node.getnodes('ffs'), 1):
             md = Node('fragilityModel', node.attrib,
                       nodes=[node.description, node.limitStates])
             if format == 'discrete':
@@ -200,12 +198,9 @@ class FragilityModel(BaseConverter):
             md.ffs.append(ffs.taxonomy)
             md.ffs.append(Node('IML', ffs.IML.attrib))
             # append the two nodes taxonomy and IML
-            yield DataTable(md, zip(*matrix))
+            yield Table(str(i), md, zip(*matrix))
 
     def build_node(self, tables):
-        """
-        Build Node objects from tables
-        """
         fm = node_copy(tables[0].metadata)
         del fm[2]  # ffs node
         discrete = fm.attrib['format'] == 'discrete'
@@ -213,10 +208,10 @@ class FragilityModel(BaseConverter):
             rows = list(table)
             ffs = node_copy(table.metadata.ffs)
             if discrete:
-                ffs.IML.text = ' '.join(row['IML'] for row in rows)
+                ffs.IML.text = _floats_to_text(table.name, 'IML', rows)
             for ls in fm.limitStates.text.split():
                 if discrete:
-                    poes = ' '.join(row[ls] for row in rows)
+                    poes = _floats_to_text(table.name, ls, rows)
                     ffs.append(Node('ffd', dict(ls=ls),
                                     nodes=[Node('poEs', {}, poes)]))
                 else:
@@ -312,7 +307,7 @@ def assetgenerator(records, costtypes):
 
 
 class ExposureModel(BaseConverter):
-    def getfields(self):
+    def get_fields(self):
         """
         Extract the names of the fields of the CSV file from the metadata file
 
@@ -327,7 +322,7 @@ class ExposureModel(BaseConverter):
                 costcolumns + ['occupancy.%s' % period for period in PERIODS])
         return fieldnames
 
-    def to_tables(self):
+    def build_tables(self):
         """
         A parser for exposure models yielding a pair (metadata, data)
 
@@ -350,7 +345,7 @@ class ExposureModel(BaseConverter):
                     + getoccupancies(asset)
                     for asset in node.assets)
         metadata.append(Node('assets'))
-        yield DataTable(metadata, data)
+        yield Table('', metadata, data)
 
     def build_node(self, tables):
         """
@@ -371,7 +366,7 @@ class ExposureModel(BaseConverter):
 ################################# gmf ##################################
 
 class GmfSet(BaseConverter):
-    def getfields(self):
+    def get_fields(self):
         """
         The fields in a GMF CSV file (lon, lat, gmv)
 
@@ -379,17 +374,20 @@ class GmfSet(BaseConverter):
         """
         return ['lon', 'lat', 'gmv']
 
-    def to_tables(self):
+    def build_tables(self):
         """
         A parser for GMF scenario yielding a pair (metadata, data)
         for each node <gmf>.
         """
         node = self.node
         for gmf in node.getnodes('gmf'):
+            imt = gmf['IMT']
+            if imt == 'SA':
+                imt += '(%s)' % gmf['saPeriod']
             metadata = Node('gmfSet', node.attrib,
                             nodes=[Node('gmf', gmf.attrib)])
             data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
-            yield DataTable(metadata, data)
+            yield Table(imt, metadata, data)
 
     def build_node(self, tables):
         """
@@ -408,26 +406,26 @@ class GmfSet(BaseConverter):
 
 class GmfCollection(BaseConverter):
 
-    def getfields(self):
+    def get_fields(self):
         """
         The fields in a GMF CSV file ['lon', 'lat', 'gmv']
         """
         return ['lon', 'lat', 'gmv']
 
-    def to_tables(self):
-        """
-        A parser for GMF event based yielding a pair (metadata, data)
-        for each node <gmf>.
-        """
+    def build_tables(self):
         node = self.node
         for gmfset in node.getnodes('gmfSet'):
             for gmf in gmfset.getnodes('gmf'):
+                rup = gmf['ruptureId']
+                imt = gmf['IMT']
+                if imt == 'SA':
+                    imt += '(%s)' % gmf['saPeriod']
                 metadata = Node('gmfCollection', node.attrib)
                 gs = Node('gmfSet', gmfset.attrib,
                           nodes=[Node('gmf', gmf.attrib)])
                 metadata.append(gs)
                 data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
-                yield DataTable(metadata, data)
+                yield Table(imt + ',' + rup, metadata, data)
 
     def build_node(self, tables):
         """

@@ -5,15 +5,6 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <gmfSet>
         <gmf
-        IMT="SA"
-        saDamping="5.0"
-        saPeriod="0.025"
-        >
-            <node gmv="0.2" lat="0.0" lon="0.0"/>
-            <node gmv="1.4" lat="0.0" lon="1.0"/>
-            <node gmv="0.6" lat="1.0" lon="0.0"/>
-        </gmf>
-        <gmf
         IMT="PGA"
         >
             <node gmv="0.3" lat="0.0" lon="0.0"/>
@@ -22,6 +13,15 @@ xmlns:gml="http://www.opengis.net/gml"
         </gmf>
         <gmf
         IMT="PGV"
+        >
+            <node gmv="0.2" lat="0.0" lon="0.0"/>
+            <node gmv="1.4" lat="0.0" lon="1.0"/>
+            <node gmv="0.6" lat="1.0" lon="0.0"/>
+        </gmf>
+        <gmf
+        IMT="SA"
+        saDamping="5.0"
+        saPeriod="0.025"
         >
             <node gmv="0.2" lat="0.0" lon="0.0"/>
             <node gmv="1.4" lat="0.0" lon="1.0"/>
