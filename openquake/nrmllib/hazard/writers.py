@@ -28,8 +28,7 @@ from itertools import izip
 
 import openquake.nrmllib
 from openquake.nrmllib import NRMLFile
-from openquake.nrmllib import utils
-from openquake.nrmllib import models
+from openquake.nrmllib import models, node
 
 
 SM_TREE_PATH = 'sourceModelTreePath'
@@ -308,49 +307,48 @@ class EventBasedGMFXMLWriter(object):
             * `lon` and `lat` attributes (to indicate the geographical location
               of the ground motion field)
         """
-        with NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element('nrml',
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
+        gmf_set_nodes = []
+        for gmf_set in data:
+            gmf_set_node = node.Node('gmfSet')
+            gmf_set_node['investigationTime'] = str(gmf_set.investigation_time)
+            gmf_set_node['stochasticEventSetId'] = str(
+                gmf_set.stochastic_event_set_id)
 
-            if self.sm_lt_path is not None and self.gsim_lt_path is not None:
-                # A normal GMF collection
-                gmf_container = etree.SubElement(root, 'gmfCollection')
-                gmf_container.set(SM_TREE_PATH, self.sm_lt_path)
-                gmf_container.set(GSIM_TREE_PATH, self.gsim_lt_path)
-            else:
-                # A collection of GMFs for a complete logic tree
-                # In this case, we should only have a single <gmfSet>,
-                # containing all ground motion fields.
-                # NOTE: In this case, there is no need for a <gmfCollection>
-                # element; instead, we just write the single <gmfSet>
-                # underneath the root <nrml> element.
-                gmf_container = root
-
-            for gmf_set in data:
-                gmf_set_elem = etree.SubElement(gmf_container, 'gmfSet')
-                gmf_set_elem.set(
-                    'investigationTime', str(gmf_set.investigation_time))
-                gmf_set_elem.set(
-                    'stochasticEventSetId',
-                    str(gmf_set.stochastic_event_set_id))
-
+            def gen_gmfs():
                 for gmf in gmf_set:
-                    gmf_elem = etree.SubElement(gmf_set_elem, 'gmf')
-                    gmf_elem.set('IMT', gmf.imt)
+                    gmf_node = node.Node('gmf')
+                    gmf_node['IMT'] = gmf.imt
                     if gmf.imt == 'SA':
-                        gmf_elem.set('saPeriod', str(gmf.sa_period))
-                        gmf_elem.set('saDamping', str(gmf.sa_damping))
-                    gmf_elem.set('ruptureId', str(gmf.rupture_id))
+                        gmf_node['saPeriod'] = str(gmf.sa_period)
+                        gmf_node['saDamping'] = str(gmf.sa_damping)
+                    gmf_node['ruptureId'] = str(gmf.rupture_id)
+                    gmf_node.nodes = (
+                        node.Node('node', dict(gmv=str(n.gmv),
+                                               lon=str(n.location.x),
+                                               lat=str(n.location.y)
+                                               ))
+                        for n in gmf)
+                    yield gmf_node
+            gmf_set_node.nodes = gen_gmfs()
+            gmf_set_nodes.append(gmf_set_node)
 
-                    for gmf_node in gmf:
-                        node_elem = etree.SubElement(gmf_elem, 'node')
-                        node_elem.set('gmv', str(gmf_node.gmv))
-                        node_elem.set('lon', str(gmf_node.location.x))
-                        node_elem.set('lat', str(gmf_node.location.y))
+        if self.sm_lt_path is not None and self.gsim_lt_path is not None:
+            # A normal GMF collection
+            gmf_container = node.Node('gmfCollection')
+            gmf_container[SM_TREE_PATH] = self.sm_lt_path
+            gmf_container[GSIM_TREE_PATH] = self.gsim_lt_path
+            gmf_container.nodes = gmf_set_nodes
+        else:
+            # A collection of GMFs for a complete logic tree
+            # In this case, we should only have a single <gmfSet>,
+            # containing all ground motion fields.
+            # NOTE: In this case, there is no need for a <gmfCollection>
+            # element; instead, we just write the single <gmfSet>
+            # underneath the root <nrml> element.
+            gmf_container = gmf_set_nodes[0]
 
-            fh.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+        with open(self.dest, 'w') as dest:
+            node.node_to_nrml(gmf_container, dest)
 
 
 class SESXMLWriter(object):
