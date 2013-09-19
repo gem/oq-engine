@@ -23,21 +23,10 @@ import math
 
 class BaseASR(object):
     """
-    A base class for Area Scaling Relationship.
-    Allows calculation of rupture magnitude
-    from area.
+    A base class for Area-Magnitude Scaling Relationship.
+    Allows calculation of rupture magnitude from area.
     """
     __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def get_std_dev_mag(self, rake):
-        """
-        Return the standard deviation on the magnitude.
-
-        :param rake:
-            Rake angle (the rupture propagation direction) in degrees,
-            from -180 to 180.
-        """
 
     @abc.abstractmethod
     def get_median_mag(self, area, rake):
@@ -46,6 +35,24 @@ class BaseASR(object):
 
         :param area:
             Area in square km.
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
+        """
+
+
+class BaseASRWithUncertainties(BaseASR):
+    """
+    Extend :class:`BaseASR` and allows to include uncertainties in
+    rupture magnitude estimation.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def get_std_dev_mag(self, rake):
+        """
+        Return the standard deviation on the magnitude.
+
         :param rake:
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
@@ -72,7 +79,7 @@ class BaseASR(object):
 
 class BaseMSR(object):
     """
-    A base class for Magnitude-Scaling Relationship.
+    A base class for Magnitude-Area Scaling Relationship.
     Allows calculation of rupture area from magnitude.
     """
     __metaclass__ = abc.ABCMeta
@@ -90,6 +97,14 @@ class BaseMSR(object):
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
         """
+
+
+class BaseMSRWithUncertainties(BaseMSR):
+    """
+    Extends :class:`BaseMSR` and allows to include uncertainties in rupture
+    area estimation.
+    """
+    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def get_std_dev_area(self, mag, rake):
