@@ -546,16 +546,10 @@ class HazardCurveModel(object):
     def __init__(self, **metadata):
         self._data_iter = metadata.pop('data_iter', ())
         self.metadata = metadata
+        vars(self).update(metadata)
 
     def __iter__(self):
         return self._data_iter
-
-    def __getattr__(self, name):
-        if name in self.metadata:
-            return self.metadata.get(name)
-        else:
-            raise AttributeError('HazardCurveModel has no attribute "%s"'
-                                 % name)
 
 
 HazardCurveData = namedtuple('HazardCurveData', 'location poes')
