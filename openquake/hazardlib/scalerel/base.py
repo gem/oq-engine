@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.scalerel.base` defines an abstract base
-classes for :class:`ASR <BaseASR>` and :class:`MSR <BaseMSR>`.
+Module :mod:`openquake.hazardlib.scalerel.base` defines abstract base
+classes for :class:`ASR <BaseASR>`, :class:`MSR <BaseMSR>`,
+:class:`ASRSigma <BaseASRSigma>`, and :class:`MSRSigma <BaseMSRSigma>`
 """
 import abc
 import math

@@ -21,7 +21,8 @@ import os
 import inspect
 import importlib
 from collections import OrderedDict
-from openquake.hazardlib.scalerel.base import BaseMSR, BaseASR
+from openquake.hazardlib.scalerel.base import BaseMSR, BaseASR, BaseMSRSigma, \
+BaseASRSigma
 
 
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -55,13 +56,28 @@ def get_available_magnitude_scalerel():
     '''
     return _get_available_class(BaseMSR)
 
+def get_available_sigma_magnitude_scalerel():
+    '''
+    Return an ordered dictionary with the available Sigma Magnitude
+    ScaleRel classes, keyed by class name.
+    '''
+    return _get_available_class(BaseMSRSigma)
+
 
 def get_available_area_scalerel():
     '''
-    Return an ordered dictionary with the available Magnitude ScaleRel
+    Return an ordered dictionary with the available Area ScaleRel
     classes, keyed by class name.
     '''
     return _get_available_class(BaseASR)
+
+
+def get_available_sigma_area_scalerel():
+    '''
+    Return an ordered dictionary with the available Sigma Area ScaleRel
+    classes, keyed by class name.
+    '''
+    return _get_available_class(BaseASRSigma)
 
 
 def get_available_scalerel():
