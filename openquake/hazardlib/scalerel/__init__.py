@@ -42,7 +42,8 @@ def _get_available_class(base_class):
                 'openquake.hazardlib.scalerel.' + modname)
             for cls in mod.__dict__.itervalues():
                 if inspect.isclass(cls) and issubclass(cls, base_class) \
-                        and cls != base_class:
+                        and cls != base_class \
+                        and not inspect.isabstract(cls):
                     gsims[cls.__name__] = cls
     return OrderedDict((k, gsims[k]) for k in sorted(gsims))
 
