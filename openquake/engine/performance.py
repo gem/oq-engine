@@ -36,22 +36,8 @@ class PerformanceMonitor(object):
     and by overriding the method on_exit(), called at end and used to display
     or store the results of the analysis.
     """
-
-    @classmethod
-    def monitor(cls, method):
-        """
-        A decorator to add monitoring to calculator methods. The only
-        constraints are:
-        1) the method has no arguments except self
-        2) there is an attribute self.job.id
-        """
-        def newmeth(self):
-            with cls(method.__name__, self.job.id, flush=True):
-                return method(self)
-        newmeth.__name__ = method.__name__
-        return newmeth
-
-    def __init__(self, pids):
+    def __init__(self, pids=None):
+        pids = pids or [os.getpid()]
         self._procs = [psutil.Process(pid) for pid in pids if pid]
         self._start_time = None  # seconds from the epoch
         self.start_time = None  # datetime object
@@ -120,6 +106,20 @@ class EnginePerformanceMonitor(PerformanceMonitor):
     def store_task_id(cls, job_id, task):
         with cls('storing task id', job_id, task, flush=True):
             pass
+
+    @classmethod
+    def monitor(cls, method):
+        """
+        A decorator to add monitoring to calculator methods. The only
+        constraints are:
+        1) the method has no arguments except self
+        2) there is an attribute self.job.id
+        """
+        def newmeth(self):
+            with cls(method.__name__, self.job.id, flush=True):
+                return method(self)
+        newmeth.__name__ = method.__name__
+        return newmeth
 
     def __init__(self, operation, job_id, task=None, tracing=False,
                  profile_pymem=True, profile_pgmem=False, flush=False):
