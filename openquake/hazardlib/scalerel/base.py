@@ -41,9 +41,9 @@ class BaseASR(object):
         """
 
 
-class BaseASRWithUncertainties(BaseASR):
+class BaseASRSigma(BaseASR):
     """
-    Extend :class:`BaseASR` and allows to include uncertainties in
+    Extend :class:`BaseASR` and allows to include uncertainties (sigma) in
     rupture magnitude estimation.
     """
     __metaclass__ = abc.ABCMeta
@@ -99,10 +99,10 @@ class BaseMSR(object):
         """
 
 
-class BaseMSRWithUncertainties(BaseMSR):
+class BaseMSRSigma(BaseMSR):
     """
-    Extends :class:`BaseMSR` and allows to include uncertainties in rupture
-    area estimation.
+    Extends :class:`BaseMSR` and allows to include uncertainties (sigma) in
+    rupture area estimation.
     """
     __metaclass__ = abc.ABCMeta
 

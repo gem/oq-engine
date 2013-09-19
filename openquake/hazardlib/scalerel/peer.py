@@ -16,12 +16,12 @@
 """
 Module :mod:`openquake.hazardlib.scalerel.peer` implements :class:`PeerMSR`.
 """
-from openquake.hazardlib.scalerel.base import BaseMSRWithUncertainties
+from openquake.hazardlib.scalerel.base import BaseMSRSigma
 from openquake.hazardlib.slots import with_slots
 
 
 @with_slots
-class PeerMSR(BaseMSRWithUncertainties):
+class PeerMSR(BaseMSRSigma):
     """
     Magnitude-Scaling Relationship defined for PEER PSHA test cases.
 
