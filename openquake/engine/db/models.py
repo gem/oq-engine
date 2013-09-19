@@ -2130,7 +2130,7 @@ class Gmf(djm.Model):
                      'where parent_id=%s', (self.id,))
         return [self.__class__.objects.get(pk=r[0]) for r in curs]
 
-    def get_gmfs_per_ses(self, orderby=False):
+    def get_gmfs_per_ses(self, orderby=True):
         """
         Get the ground motion fields per SES in a good format for
         the XML export.
@@ -2169,7 +2169,7 @@ class Gmf(djm.Model):
         GROUP BY imt, sa_period, sa_damping, tag
         """ % (hc.id, self.id, ses.id)
             if orderby:  # may be used in tests to get reproducible results
-                query += 'order by imt, sa_period, sa_damping, rupture_id;'
+                query += 'order by imt, sa_period, sa_damping, tag;'
             with transaction.commit_on_success(using='job_init'):
                 curs = getcursor('job_init')
                 curs.execute(query)
