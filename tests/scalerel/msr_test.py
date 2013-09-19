@@ -30,10 +30,6 @@ class BaseMSRTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.msr.get_median_area(mag, rake),
                                expected_value)
 
-    def _test_get_area(self, mag, rake, epsilon, expected_value):
-        self.assertAlmostEqual(self.msr.get_area(mag, rake, epsilon),
-                               expected_value)
-
 
 class PeerMSRMSRTestCase(BaseMSRTestCase):
     MSR_CLASS = PeerMSR
@@ -41,10 +37,6 @@ class PeerMSRMSRTestCase(BaseMSRTestCase):
     def test_median_area(self):
         self._test_get_median_area(4.3, None, 1.9952623)
         self._test_get_median_area(5.1, 0, 12.5892541)
-
-    def test_get_area(self):
-        self._test_get_area(4.8, None, -0.5, 4.7315126)
-        self._test_get_area(3.4, 0, 0.2, 0.2818383)
 
 
 class WC1994MSRTestCase(BaseMSRTestCase):
@@ -75,7 +67,3 @@ class WC1994MSRTestCase(BaseMSRTestCase):
         self.assertEqual(self.msr.get_std_dev_area(None, -136), 0.22)
         self.assertEqual(self.msr.get_std_dev_area(None, 50), 0.26)
         self.assertEqual(self.msr.get_std_dev_area(None, -130), 0.22)
-
-    def test_get_area(self):
-        self._test_get_area(4.8, 50, 0.3, 6.1944108)
-        self._test_get_area(5.6, 138, 1.3, 80.5378441)
