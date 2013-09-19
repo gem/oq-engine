@@ -2173,14 +2173,15 @@ class Gmf(djm.Model):
             with transaction.commit_on_success(using='job_init'):
                 curs = getcursor('job_init')
                 curs.execute(query)
-            gmfs = []
-            for imt, sa_period, sa_damping, rupture_tag, gmvs, xs, ys in curs:
-                nodes = [_GroundMotionFieldNode(gmv, _Point(x, y))
-                         for gmv, x, y in zip(gmvs, xs, ys)]
-                gmfs.append(
-                    _GroundMotionField(
-                        imt, sa_period, sa_damping, rupture_tag, nodes))
-            yield _GmfsPerSES(gmfs, ses.investigation_time, ses.id)
+
+            def gengmfs(data):
+                for imt, sa_period, sa_damping, rupture_tag, gmvs, xs, ys \
+                        in data:
+                    nodes = [_GroundMotionFieldNode(gmv, _Point(x, y))
+                             for gmv, x, y in zip(gmvs, xs, ys)]
+                    yield _GroundMotionField(
+                        imt, sa_period, sa_damping, rupture_tag, nodes)
+            yield _GmfsPerSES(gengmfs(curs), ses.investigation_time, ses.id)
 
     __iter__ = get_gmfs_per_ses
 
