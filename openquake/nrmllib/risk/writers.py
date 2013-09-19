@@ -506,7 +506,8 @@ class LossMapGeoJSONWriter(LossMapWriter):
                 })
 
         with NRMLFile(self._dest, 'w') as fh:
-            fh.write(json.dumps(feature_coll))
+            json.dump(feature_coll, fh, sort_keys=True, indent=4,
+                      separators=(',', ': '))
 
     def _create_oqmetadata(self):
         """
