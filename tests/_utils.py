@@ -16,8 +16,10 @@
 import collections
 from nose import tools
 from lxml import etree
+from xml.etree.ElementTree import parse
 
 import openquake.nrmllib
+from openquake.nrmllib.writers import tostring
 
 
 def deep_eq(a, b):
@@ -67,9 +69,7 @@ def _test_dict(a, b):
 def _test_seq(a, b):
     """Compare `list` or `tuple` types recursively."""
     assert len(a) == len(b), ('Sequence length mismatch. Expected %s, got %s'
-        % (len(a), len(b))
-    )
-
+                              % (len(a), len(b)))
     for i, item in enumerate(a):
         _deep_eq(item, b[i])
 
@@ -82,11 +82,8 @@ def assert_xml_equal(a, b):
         Paths to XML files, or a file-like object containing the XML
         contents.
     """
-
-    contents_a = etree.tostring(etree.parse(a), pretty_print=True)
-    contents_b = etree.tostring(etree.parse(b), pretty_print=True)
-
-    tools.assert_equal(contents_a, contents_b)
+    tools.assert_equal(tostring(parse(a).getroot()),
+                       tostring(parse(b).getroot()))
 
 
 def validates_against_xml_schema(
