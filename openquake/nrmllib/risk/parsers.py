@@ -109,10 +109,10 @@ class ExposureModelParser(object):
                         self._current_meta['areaType'] = el.get('type')
                         self._current_meta['areaUnit'] = el.get('unit')
                     elif el.tag[len(NRML):] == "deductible":
-                        self._current_meta['deductibleIsAbsolute'] = (
-                            el.get('isAbsolute'))
-                        self._current_meta['insuranceLimitIsAbsolute'] = (
-                            el.get('isAbsolute'))
+                        self._current_meta['deductibleIsAbsolute'] = not (
+                            el.get('isAbsolute', "false") == "false")
+                        self._current_meta['insuranceLimitIsAbsolute'] = not (
+                            el.get('isAbsolute', "false") == "false")
             if event == 'start' and element.tag == "%scostTypes" % NRML:
                 for el in element.findall(".//"):
                     self._cost_types[el.get('name')] = (
