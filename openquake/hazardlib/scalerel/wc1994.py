@@ -17,10 +17,10 @@
 Module :mod:`openquake.hazardlib.scalerel.wc1994` implements :class:`WC1994`.
 """
 from math import log10
-from openquake.hazardlib.scalerel.base import BaseMSR, BaseASR
+from openquake.hazardlib.scalerel.base import BaseMSRSigma, BaseASRSigma
 
 
-class WC1994(BaseMSR, BaseASR):
+class WC1994(BaseMSRSigma, BaseASRSigma):
     """
     Wells and Coppersmith magnitude -- rupture area relationships,
     see 1994, Bull. Seism. Soc. Am., pages 974-2002.

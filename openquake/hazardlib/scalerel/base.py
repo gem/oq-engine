@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.scalerel.base` defines an abstract base
-classes for :class:`ASR <BaseASR>` and :class:`MSR <BaseMSR>`.
+Module :mod:`openquake.hazardlib.scalerel.base` defines abstract base
+classes for :class:`ASR <BaseASR>`, :class:`MSR <BaseMSR>`,
+:class:`ASRSigma <BaseASRSigma>`, and :class:`MSRSigma <BaseMSRSigma>`
 """
 import abc
 import math
@@ -23,21 +24,10 @@ import math
 
 class BaseASR(object):
     """
-    A base class for Area Scaling Relationship.
-    Allows calculation of rupture magnitude
-    from area.
+    A base class for Area-Magnitude Scaling Relationship.
+    Allows calculation of rupture magnitude from area.
     """
     __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def get_std_dev_mag(self, rake):
-        """
-        Return the standard deviation on the magnitude.
-
-        :param rake:
-            Rake angle (the rupture propagation direction) in degrees,
-            from -180 to 180.
-        """
 
     @abc.abstractmethod
     def get_median_mag(self, area, rake):
@@ -51,28 +41,28 @@ class BaseASR(object):
             from -180 to 180.
         """
 
-    def get_mag(self, area, rake, epsilon=0.0):
-        """
-        Return the Moment magnitude given the area, rake
-        and uncertainty epsilon.
 
-        :param area:
-            Area in square km.
+class BaseASRSigma(BaseASR):
+    """
+    Extend :class:`BaseASR` and allows to include uncertainties (sigma) in
+    rupture magnitude estimation.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def get_std_dev_mag(self, rake):
+        """
+        Return the standard deviation on the magnitude.
+
         :param rake:
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
-        :param epsilon:
-            Uncertainty residual, which identifies the number
-            of standard deviations from the median.
         """
-        median_mag = self.get_median_mag(area, rake)
-        std_dev = self.get_std_dev_mag(rake)
-        return median_mag + epsilon * std_dev
 
 
 class BaseMSR(object):
     """
-    A base class for Magnitude-Scaling Relationship.
+    A base class for Magnitude-Area Scaling Relationship.
     Allows calculation of rupture area from magnitude.
     """
     __metaclass__ = abc.ABCMeta
@@ -91,6 +81,14 @@ class BaseMSR(object):
             from -180 to 180.
         """
 
+
+class BaseMSRSigma(BaseMSR):
+    """
+    Extends :class:`BaseMSR` and allows to include uncertainties (sigma) in
+    rupture area estimation.
+    """
+    __metaclass__ = abc.ABCMeta
+
     @abc.abstractmethod
     def get_std_dev_area(self, mag, rake):
         """
@@ -105,22 +103,3 @@ class BaseMSR(object):
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
         """
-
-    def get_area(self, mag, rake, epsilon=0.0):
-        """
-        Return the area (in square km) from magnitude ``mag``, ``rake``,
-        and uncertainty ``epsilon``. Assumes area to be log-normally
-        distributed (with logarithmic function of base 10).
-
-        :param mag:
-            Moment magnitude (Mw)
-        :param rake:
-            Rake angle (the rupture propagation direction) in degrees,
-            from -180 to 180.
-        :param epsilon:
-            Uncertainty residual, which identifies the number
-            of standard deviations from the median.
-        """
-        median_area = self.get_median_area(mag, rake)
-        std_dev = self.get_std_dev_area(mag, rake)
-        return 10 ** (math.log10(median_area) + epsilon * std_dev)

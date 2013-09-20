@@ -27,13 +27,6 @@ class CEUS2011TestCase(unittest.TestCase):
     def setUp(self):
         self.asr = CEUS2011()
 
-    def test_get_std_dev_area(self):
-        """
-        This should test the get_std_dev method. This magnitude scaling 
-        relationship doesn't have an assoviated standard deviation
-        """
-        self.assertEqual(self.asr.get_std_dev_area(4.0, 0.0), None)
-
     def test_get_median_area(self):
         """
         This tests the MSR

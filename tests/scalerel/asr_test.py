@@ -38,7 +38,3 @@ class WC1994ASRTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.asr.get_median_mag(500, -136), 6.7329494)
         self.assertAlmostEqual(self.asr.get_median_mag(700, 50), 6.8905882)
         self.assertAlmostEqual(self.asr.get_median_mag(800, -130), 6.8911518)
-
-    def test_get_mag(self):
-        self.assertAlmostEqual(self.asr.get_mag(100, 45, 0.4), 6.1120000)
-        self.assertAlmostEqual(self.asr.get_mag(500, None, 1.3), 7.0269906)

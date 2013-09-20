@@ -39,10 +39,3 @@ class CEUS2011(BaseMSR):
         Calculates median area as ``10 ** (mag - 4.366)``. Rake is ignored.
         """
         return 10 ** (mag - 4.366)
-
-    def get_std_dev_area(self, mag, rake):
-        """
-        Standard deviation not specified for this MSR.
-
-        """
-        return None
