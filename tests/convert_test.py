@@ -21,11 +21,11 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
         # from nrml -> zip an back
         fname = os.path.join(DATADIR, name)
         z = convert_nrml_to_zip(fname)
-        tmp = tempfile.gettempdir()
-        [outname] = convert_zip_to_nrml(z, tmp)
-        if open(fname).read() != open(outname).read():
+        [tmpname] = convert_zip_to_nrml(z, tempfile.gettempdir())
+        if open(fname).read() != open(tmpname).read():
             raise ValueError('Files %s and %s are different' %
-                             (fname, outname))
+                             (fname, tmpname))
+        os.remove(z)
 
     def test_vulnerability(self):
         self.check_round_trip('vulnerability-model-discrete.xml')

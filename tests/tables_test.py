@@ -1,4 +1,5 @@
 import unittest
+from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.tables import MemTable, FileObject
 
 
@@ -9,24 +10,22 @@ class FakeTable(MemTable):
 
 
 class TableTestCase(unittest.TestCase):
-    fake = MemTable.create('fake', '<gmfSet/>', '''\
+    def test_getitem(self):
+        tbl = MemTable.create('tbl', '<gmfSet/>', '''\
 lon,lat,gmv
 1.0,2.0,0.1
 1.0,2.1,0.1
 1.0,2.2,0.2
 1.0,2.3,0.2
 ''')
-
-    def test_getitem(self):
         # test that a Table object support the bracket notation
-        self.assertEqual(self.fake[0],
+        self.assertEqual(tbl[0],
                          {'lon': '1.0', 'lat': '2.0', 'gmv': '0.1'})
-        self.assertEqual(self.fake[1],
+        self.assertEqual(tbl[1],
                          {'lon': '1.0', 'lat': '2.1', 'gmv': '0.1'})
-        self.assertEqual(
-            self.fake[2:4],
-            [{'lon': '1.0', 'lat': '2.2', 'gmv': '0.2'},
-             {'lon': '1.0', 'lat': '2.3', 'gmv': '0.2'}])
+        self.assertEqual(tbl[2:4],
+                         [{'lon': '1.0', 'lat': '2.2', 'gmv': '0.2'},
+                          {'lon': '1.0', 'lat': '2.3', 'gmv': '0.2'}])
 
     def test_get_all(self):
         # test the logic of the table generator, in particular the
@@ -52,3 +51,26 @@ lon,lat,gmv
         }
         self.assertEqual(list(MemTable.get_all(container)), [])
         # will print a UserWarning: a.mdata:Document is empty, line 1, column 1
+
+    def test_could_not_extract_fieldnames(self):
+        bad_metadata = '''\
+<?xml version="1.0" encoding="utf-8"?>
+<vulnerabilityModel>
+    <discreteVulnerabilitySet
+    assetCategory="population"
+    lossCategory="fatalities"
+    vulnerabilitySetID="NPAGER"
+    >
+        <IML IMT="MMI"/>
+        <discreteVulnerability
+        probabilisticDistribution="LN"
+        vulnerabilityFunctionID="AA"
+        >
+            <lossRatio />
+        </discreteVulnerability>
+    </discreteVulnerabilitySet>
+</vulnerabilityModel>
+'''  # there is no coefficientsVariation node
+        with self.assertRaises(InvalidFile) as e:
+            MemTable.create('bad', bad_metadata, '')
+            assert isinstance(e, ValueError), e

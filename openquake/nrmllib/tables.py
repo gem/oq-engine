@@ -35,6 +35,7 @@ import itertools
 import warnings
 import cStringIO
 from abc import ABCMeta, abstractmethod
+from lxml.etree import XMLSyntaxError
 
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.node import node_from_xml
@@ -118,11 +119,13 @@ class Table(object):
         """
         try:
             self.metadata = node_from_xml(fileobj)
-        except Exception as e:
+        except XMLSyntaxError as e:
             raise InvalidFile('%s:%s' % (fileobj.name, e))
         try:
             self.fieldnames = converter(self.metadata).get_fields()
         except Exception as e:
+            # get_fields can raise different kind of errors for invalid
+            # metadata; see for instance `test_could_not_extract_fieldnames`
             raise InvalidFile('%s: could not extract fieldnames: %s' %
                               (fileobj.name, e))
 
