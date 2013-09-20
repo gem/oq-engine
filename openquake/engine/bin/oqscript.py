@@ -96,8 +96,6 @@ from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 from openquake.engine.input import source
-from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
-from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
@@ -230,23 +228,6 @@ def set_up_arg_parser():
         help=('Use with --export-hazard or --export-risk, specify the '
               'desired output format. Defaults to "xml".')
     )
-
-    export_grp = parser.add_argument_group('Import')
-    export_grp.add_argument(
-        '--load-gmf',
-        help=('Load gmf from a file. Only single-source gmf are supported '
-              'currently. The file can be xml or tab-separated.'),
-        metavar='GMF_FILE',
-    )
-    export_grp.add_argument(
-        '--load-curve',
-        help=('Load hazard curves from an XML file.'),
-        metavar='CURVE_FILE',
-    )
-    export_grp.add_argument(
-        '--list-imported-outputs', action='store_true',
-        help=('List outputs which were imported from a file, not calculated '
-              'from a job'))
 
     pre_proc_grp = parser.add_argument_group('Pre-processing')
     pre_proc_grp.add_argument(
@@ -491,19 +472,6 @@ def main():
     elif args.delete_risk_calculation is not None:
         del_risk_calc(args.delete_risk_calculation, args.yes)
 
-    # import
-    elif args.load_gmf is not None:
-        with open(args.load_gmf) as f:
-            out, hc = import_gmf_scenario(f)
-            print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, hc.id)
-    elif args.load_curve is not None:
-        with open(args.load_curve) as f:
-            out, hc = import_hazard_curves(f)
-            print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, hc.id)
-    elif args.list_imported_outputs:
-        list_imported_outputs()
     else:
         arg_parser.print_usage()
 
