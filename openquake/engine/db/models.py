@@ -505,8 +505,8 @@ class ModelContent(djm.Model):
     Stores raw content for the various input model files.
     '''
 
-    # contains the raw text of an input file
-    raw_content = djm.TextField()
+    # contains the raw text of a gzipped UTF-8 input file
+    raw_content = fields.GzippedField()
     # `content_type` should be used to indicate the file format
     # (xml, csv, etc.)
     content_type = djm.TextField()
@@ -516,18 +516,11 @@ class ModelContent(djm.Model):
         db_table = 'uiapi\".\"model_content'
 
     @property
-    def raw_content_utf8(self):
-        """
-        Returns raw_content in UTF-8
-        """
-        return self.raw_content.encode('utf-8')
-
-    @property
     def as_string_io(self):
         """
         Return a `StringIO` object containing the `raw_content` as utf-8 text.
         """
-        return StringIO.StringIO(self.raw_content_utf8)
+        return StringIO.StringIO(self.raw_content)
 
 
 class Input2job(djm.Model):
@@ -1836,12 +1829,14 @@ class SESCollection(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
+        ordering = ['lt_realization']
 
     def __iter__(self):
         """
         Iterator for walking through all child :class:`SES` objects.
         """
-        return SES.objects.filter(ses_collection=self.id).iterator()
+        return SES.objects.filter(ses_collection=self.id).order_by('ordinal') \
+            .iterator()
 
 
 class SES(djm.Model):
@@ -1860,12 +1855,14 @@ class SES(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses'
+        ordering = ['ordinal']
 
     def __iter__(self):
         """
         Iterator for walking through all child :class:`SESRupture` objects.
         """
-        return SESRupture.objects.filter(ses=self.id).iterator()
+        return SESRupture.objects.filter(ses=self.id).order_by('tag') \
+            .iterator()
 
 
 def old_field_property(prop):
@@ -1888,6 +1885,9 @@ class SESRupture(djm.Model):
     #: instance
     rupture = fields.PickleField()
 
+    # a tag with rlz, ses, src and ordinal info
+    tag = djm.TextField()
+
     old_magnitude = djm.FloatField(null=True)
     old_strike = djm.FloatField(null=True)
     old_dip = djm.FloatField(null=True)
@@ -1906,6 +1906,7 @@ class SESRupture(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
+        ordering = ['tag']
 
     def _validate_planar_surface(self):
         """

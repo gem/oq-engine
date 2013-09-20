@@ -857,7 +857,7 @@ class SourceModelLogicTree(BaseLogicTree):
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
 
         source_model = self._get_source_model(filename)
-        fh = StringIO.StringIO(source_model.model_content.raw_content_utf8)
+        fh = StringIO.StringIO(source_model.model_content.raw_content)
         eventstream = etree.iterparse(fh, tag='{%s}*' % self.NRML,
                                       schema=self.get_xmlschema())
         while True:
@@ -1052,11 +1052,11 @@ class LogicTreeProcessor(object):
     def __init__(self, calc_id):
         [smlt_input] = models.inputs4hcalc(
             calc_id, input_type='source_model_logic_tree')
-        smlt_content = smlt_input.model_content.raw_content_utf8
+        smlt_content = smlt_input.model_content.raw_content
 
         [gmpelt_input] = models.inputs4hcalc(
             calc_id, input_type='gsim_logic_tree')
-        gmpelt_content = gmpelt_input.model_content.raw_content_utf8
+        gmpelt_content = gmpelt_input.model_content.raw_content
 
         self.source_model_lt = SourceModelLogicTree(
             smlt_content, basepath=None, filename=None, calc_id=calc_id,
