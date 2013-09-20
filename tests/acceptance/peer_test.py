@@ -29,16 +29,16 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.source import AreaSource, SimpleFaultSource
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo import NodalPlane
-from openquake.hazardlib.scalerel import PeerMSR
+from openquake.hazardlib.scalerel import PeerMSR, PointMSR
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.calc import hazard_curves_poissonian as hazard_curves
 
 from tests.acceptance import _peer_test_data as test_data
 
 
-def assert_hazard_curve_is(testcase, actual, expected, tolerance):
+def assert_hazard_curve_is(testcase, actual, expected, atol, rtol):
     actual, expected = numpy.array(actual), numpy.array(expected)
-    testcase.assertTrue(numpy.allclose(actual, expected, atol=tolerance),
+    testcase.assertTrue(numpy.allclose(actual, expected, atol=atol, rtol=rtol),
                         "%s != %s" % (actual, expected))
 
 class Set1TestCase(unittest.TestCase):
@@ -51,10 +51,10 @@ class Set1TestCase(unittest.TestCase):
             hypocenter_distribution=hypocenter_pmf,
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship = PeerMSR(),
+            magnitude_scaling_relationship = PointMSR(),
             rupture_aspect_ratio=test_data.SET1_RUPTURE_ASPECT_RATIO,
             polygon=test_data.SET1_CASE10_SOURCE_POLYGON,
-            area_discretization=30.0,
+            area_discretization=10.0,
             rupture_mesh_spacing=10.0
         )]
         sites = SiteCollection([
@@ -71,13 +71,13 @@ class Set1TestCase(unittest.TestCase):
         s1hc, s2hc, s3hc, s4hc = curves[test_data.IMT]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE10_SITE1_POES,
-                               tolerance=2e-3)
+                               atol=1e-4, rtol=1e-1)
         assert_hazard_curve_is(self, s2hc, test_data.SET1_CASE10_SITE2_POES,
-                               tolerance=2e-3)
+                               atol=1e-4, rtol=1e-1)
         assert_hazard_curve_is(self, s3hc, test_data.SET1_CASE10_SITE3_POES,
-                               tolerance=2e-3)
+                               atol=1e-4, rtol=1e-1)
         assert_hazard_curve_is(self, s4hc, test_data.SET1_CASE10_SITE4_POES,
-                               tolerance=2e-3)
+                               atol=1e-4, rtol=1e-1)
 
     def test_case_11(self):
         hypocenter_probability = (
@@ -95,10 +95,10 @@ class Set1TestCase(unittest.TestCase):
             hypocenter_distribution=hypocenter_pmf,
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0,
-            magnitude_scaling_relationship = PeerMSR(),
+            magnitude_scaling_relationship = PointMSR(),
             rupture_aspect_ratio=test_data.SET1_RUPTURE_ASPECT_RATIO,
             polygon=test_data.SET1_CASE11_SOURCE_POLYGON,
-            area_discretization=30.0,
+            area_discretization=10.0,
             rupture_mesh_spacing=10.0
         )]
         sites = SiteCollection([
@@ -115,13 +115,13 @@ class Set1TestCase(unittest.TestCase):
         s1hc, s2hc, s3hc, s4hc = curves[test_data.IMT]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE11_SITE1_POES,
-                               tolerance=2e-3)
+                               atol=1e-4, rtol=1e-1)
         assert_hazard_curve_is(self, s2hc, test_data.SET1_CASE11_SITE2_POES,
-                               tolerance=2e-3)
+                               atol=1e-4, rtol=1e-1)
         assert_hazard_curve_is(self, s3hc, test_data.SET1_CASE11_SITE3_POES,
-                               tolerance=2e-3)
+                               atol=1e-4, rtol=1e-1)
         assert_hazard_curve_is(self, s4hc, test_data.SET1_CASE11_SITE4_POES,
-                               tolerance=2e-3)
+                               atol=1e-4, rtol=1e-1)
 
     def test_case_2(self):
         sources = [SimpleFaultSource(source_id='fault1', name='fault1',
@@ -152,19 +152,19 @@ class Set1TestCase(unittest.TestCase):
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[test_data.IMT]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE2_SITE1_POES,
-                               tolerance=3e-3)
+                               atol=3e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s2hc, test_data.SET1_CASE2_SITE2_POES,
-                               tolerance=2e-5)
+                               atol=2e-5, rtol=1e-5)
         assert_hazard_curve_is(self, s3hc, test_data.SET1_CASE2_SITE3_POES,
-                               tolerance=2e-5)
+                               atol=2e-5, rtol=1e-5)
         assert_hazard_curve_is(self, s4hc, test_data.SET1_CASE2_SITE4_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s5hc, test_data.SET1_CASE2_SITE5_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s6hc, test_data.SET1_CASE2_SITE6_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s7hc, test_data.SET1_CASE2_SITE7_POES,
-                               tolerance=2e-5)
+                               atol=2e-5, rtol=1e-5)
 
     def test_case_5(self):
         # only mfd differs from case 2
@@ -196,16 +196,16 @@ class Set1TestCase(unittest.TestCase):
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[test_data.IMT]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE5_SITE1_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s2hc, test_data.SET1_CASE5_SITE2_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s3hc, test_data.SET1_CASE5_SITE3_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s4hc, test_data.SET1_CASE5_SITE4_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s5hc, test_data.SET1_CASE5_SITE5_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s6hc, test_data.SET1_CASE5_SITE6_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s7hc, test_data.SET1_CASE5_SITE7_POES,
-                               tolerance=1e-3)
+                               atol=1e-3, rtol=1e-5)
