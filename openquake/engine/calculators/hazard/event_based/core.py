@@ -31,6 +31,7 @@ For more information on computing ground motion fields, see
 :mod:`openquake.hazardlib.calc.gmf`.
 """
 
+import copy
 import math
 import random
 
@@ -83,8 +84,8 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     :param src_ids:
         List of ids of parsed source models from which we will generate
         stochastic event sets/ruptures.
-    :param lt_rlz_id:
-        Id of logic tree realization model to calculate for.
+    :param ses:
+        Stochastic Event Set object
     :param int task_seed:
         Value for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields.
@@ -124,9 +125,18 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
-        ruptures = list(stochastic.stochastic_event_set_poissonian(
-                        source_iter, hc.investigation_time, site_collection,
+        ruptures = []
+        for src in source_iter:
+            # make copies of the hazardlib ruptures (which may contain
+            # duplicates)
+            rupts = map(copy.copy, stochastic.stochastic_event_set_poissonian(
+                        [src], hc.investigation_time, site_collection,
                         src_filter, rup_filter))
+            # set the tag for each copy
+            for i, r in enumerate(rupts):
+                r.tag = 'rlz=%02d|ses=%04d|src=%s|i=%d' % (
+                    lt_rlz.ordinal, ses.ordinal, src.source_id, i)
+            ruptures.extend(rupts)
         if not ruptures:
             return
 
@@ -206,8 +216,9 @@ def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
     # TODO: Possible future optimiztion:
     # Refactor this to do bulk insertion of ruptures
     with transaction.commit_on_success(using='reslt_writer'):
-        rupture_ids = [models.SESRupture.objects.create(ses=ses, rupture=r).id
-                       for r in ruptures]
+        rupture_ids = [models.SESRupture.objects.create(
+            ses=ses, rupture=r, tag=r.tag).id
+            for r in ruptures]
 
         if complete_logic_tree_ses is not None:
             for rupture in ruptures:
