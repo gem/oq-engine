@@ -20,7 +20,7 @@ import sys
 import time
 from openquake.nrmllib.convert import (
     convert_nrml_to_zip, convert_zip_to_nrml, build_node)
-from openquake.nrmllib.tables import FileTable, get_all
+from openquake.nrmllib.tables import FileTable
 
 
 def collect(fnames):
