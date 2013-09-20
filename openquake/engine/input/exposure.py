@@ -38,7 +38,7 @@ class ExposureDBWriter(object):
         """Create a new serializer"""
         self.exposure_input = exposure_input
         self.model = None
-        self.conversions = {}
+        self.cost_types = {}
 
     @transaction.commit_on_success(router.db_for_write(models.ExposureModel))
     def serialize(self, iterator):
@@ -46,88 +46,101 @@ class ExposureDBWriter(object):
         Serialize a list of values produced by iterating over an instance of
         :class:`openquake.nrmllib.risk.parsers.ExposureParser`
         """
-        for point, occupancy, values, costs, conversions in iterator:
-            self.insert_datum(point, occupancy, values, costs, conversions)
+        for asset_data in iterator:
+            if not self.model:
+                self.model, self.cost_types = (
+                    self.insert_model(asset_data.exposure_metadata))
+            self.insert_datum(asset_data)
 
-    def insert_datum(self, point, occupancy, values, costs, conversions):
+    def insert_model(self, model):
+        """
+        :returns:
+            a 2-tuple holding a newly created instance of
+            :class:`openquake.engine.db.models.ExposureModel` and
+            a dictionary of (newly created)
+            :class:`openquake.engine.db.models.ExposureModel` instances
+            keyed by the cost type name
+
+        :param model:
+            an instance of
+            :class:`openquake.nrmllib.risk.parsers.ExposureMetadata`
+        """
+        exposure_model = models.ExposureModel.objects.create(
+            input=self.exposure_input,
+            name=model.exposure_id,
+            description=model.description,
+            taxonomy_source=model.taxonomy_source,
+            category=model.asset_category,
+            area_type=model.conversions.area_type,
+            area_unit=model.conversions.area_unit,
+            deductible_absolute=model.conversions.deductible_is_absolute,
+            insurance_limit_absolute=(
+                model.conversions.insurance_limit_is_absolute))
+
+        cost_types = {}
+        for cost_type in model.conversions.cost_types:
+            cost_types[cost_type.name] = models.CostType.objects.create(
+                exposure_model=exposure_model,
+                name=cost_type.name,
+                conversion=cost_type.conversion_type,
+                unit=cost_type.unit,
+                retrofitted_conversion=cost_type.retrofitted_type,
+                retrofitted_unit=cost_type.retrofitted_unit)
+
+        return exposure_model, cost_types
+
+    def insert_datum(self, asset_data):
         """
         Insert a single asset entry.
 
-        :param list point:
-            Asset location (format [lon, lat]).
-        :param list occupancy:
-            A potentially empty list of named tuples
-            each one having an 'occupants' and a 'period' property.
-        :param dict values:
-            Asset attributes (see
-            :class:`openquake.nrmllib.risk.parsers.ExposureModelParser`).
-        :param list costs:
-            A potentially empty list of named tuples
-            each one having the following fields:
-            type, value, retrofitted, deductible and limit.
-        :param dict conversions:
-            A potentially empty dict with conversion, mapping cost types to
-            conversion types (per_area, aggregated, per_unit)
-
-        It also inserts the main exposure model entry if
-        not already present.
+        :param asset_data:
+            an instance of :class:`openquake.nrmllib.risk.parsers.AssetData`
         """
-
-        if not self.model:
-            self.model = models.ExposureModel.objects.create(
-                input=self.exposure_input,
-                name=values["exposureID"],
-                description=values.get("description"),
-                taxonomy_source=values.get("taxonomySource"),
-                category=values["category"],
-                area_type=values.get("areaType"),
-                area_unit=values.get("areaUnit"),
-                deductible_absolute=values.get("deductibleIsAbsolute"),
-                insurance_limit_absolute=values.get("limitIsAbsolute"))
-
-            for name, (conversion, unit,
-                       retrofitted_conversion, retrofitted_unit) in (
-                           conversions.items()):
-                self.conversions[name] = models.CostType.objects.create(
-                    exposure_model=self.model,
-                    name=name,
-                    conversion=conversion,
-                    unit=unit,
-                    retrofitted_conversion=retrofitted_conversion,
-                    retrofitted_unit=retrofitted_unit)
-
         asset = models.ExposureData.objects.create(
-            exposure_model=self.model, asset_ref=values["id"],
-            taxonomy=values.get("taxonomy"),
-            area=values.get("area"),
-            number_of_units=values.get("number"),
-            site="POINT(%s %s)" % (point[0], point[1]))
+            exposure_model=self.model,
+            asset_ref=asset_data.asset_ref,
+            taxonomy=asset_data.taxonomy,
+            area=asset_data.area,
+            number_of_units=asset_data.number,
+            site="POINT(%s %s)" % (asset_data.site.longitude,
+                                   asset_data.site.latitude))
 
-        for cost_type in self.conversions:
-            if not any([cost_type == cost.type for cost in costs]):
+        for cost_type in self.cost_types:
+            if not any([cost_type == cost.cost_type
+                        for cost in asset_data.costs]):
                 raise ValueError("Invalid Exposure. "
                                  "Missing cost %s for asset %s" % (
                                      cost_type, asset.asset_ref))
 
-        for cost in costs:
-            cost_type = self.conversions.get(cost.type, None)
+        model = asset_data.exposure_metadata
+        deductible_is_absolute = model.conversions.deductible_is_absolute
+        insurance_limit_is_absolute = (
+            model.conversions.insurance_limit_is_absolute)
+
+        for cost in asset_data.costs:
+            cost_type = self.cost_types.get(cost.cost_type, None)
 
             if cost_type is None:
                 raise ValueError("Invalid Exposure. Missing conversion "
-                                 "for cost type %s" % cost.type)
+                                 "for cost type %s" % cost.cost_type)
 
             if cost.retrofitted is not None:
                 retrofitted = models.ExposureData.per_asset_value(
                     cost.retrofitted, cost_type.retrofitted_conversion,
-                    asset.area, values.get("areaType"),
-                    asset.number_of_units, values["category"])
+                    asset_data.area,
+                    model.conversions.area_type,
+                    asset_data.number,
+                    model.asset_category)
             else:
                 retrofitted = None
 
             converted_cost = models.ExposureData.per_asset_value(
                 cost.value, cost_type.conversion,
-                asset.area, values.get("areaType"),
-                asset.number_of_units, values["category"])
+                asset_data.area,
+                model.conversions.area_type,
+                asset_data.number,
+                model.asset_category)
+
             models.Cost.objects.create(
                 exposure_data=asset,
                 cost_type=cost_type,
@@ -136,13 +149,13 @@ class ExposureDBWriter(object):
                 deductible_absolute=models.make_absolute(
                     cost.deductible,
                     converted_cost,
-                    values.get("deductibleIsAbsolute", True)),
+                    deductible_is_absolute),
                 insurance_limit_absolute=models.make_absolute(
                     cost.limit,
                     converted_cost,
-                    values.get("insuranceLimitIsAbsolute", True)))
+                    insurance_limit_is_absolute))
 
-        for odata in occupancy:
+        for odata in asset_data.occupancy:
             models.Occupancy.objects.create(exposure_data=asset,
                                             occupants=odata.occupants,
                                             period=odata.period)

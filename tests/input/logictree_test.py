@@ -207,8 +207,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'broken_xml', {'broken_xml': "<?xml foo bar baz"}, 'basepath',
             logictree.ParsingError
         )
-        self.assertTrue(exc.message.startswith('Malformed declaration'),
-                        "wrong exception message: %s" % exc.message)
 
     def test_logictree_schema_violation(self):
         source = _make_nrml("""\
@@ -527,8 +525,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ParsingError,
                                             exc_filename='sm')
-        self.assertEqual(exc.message, "Document is empty, line 1, column 1",
-                         "wrong exception message: %s" % exc.message)
 
     def test_source_model_schema_violation(self):
         lt = _make_nrml("""\
@@ -875,8 +871,6 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         gmpe = """zxc<nrml></nrml>"""
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
                                             logictree.ParsingError)
-        self.assertTrue(exc.message.startswith('Start tag expected'),
-                        "wrong exception message: %s" % exc.message)
 
     def test_schema_violation(self):
         gmpe = _make_nrml("<logicTree></logicTree>")
