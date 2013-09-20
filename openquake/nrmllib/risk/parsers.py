@@ -82,10 +82,6 @@ class ExposureModelParser(object):
         self._meta = None
 
     def __iter__(self):
-        for i in self._parse():
-            yield i
-
-    def _parse(self):
         """
         Parse the document iteratively.
         """
@@ -158,6 +154,7 @@ class ExposureModelParser(object):
                     costs=_to_costs(element),
                     occupancy=_to_occupancy(element))
                 del element
+
                 yield site_data
 
 
