@@ -52,7 +52,7 @@ class ExposureModelParserTestCase(unittest.TestCase):
 
   <exposureModel id="ep1"
                  category="buildings"
-                 taxonomySource="Pavia buildings">
+                 taxonomySource="source">
         <conversions>
           <area type="per_asset" unit="GBP"/>
           <costTypes>
@@ -61,6 +61,8 @@ class ExposureModelParserTestCase(unittest.TestCase):
                        retrofittedType="aggregated" retrofittedUnit="EUR"/>
              <costType name="nonStructural" type="aggregated" unit="USD"/>
           </costTypes>
+          <deductible isAbsolute="false"/>
+          <insuranceLimit isAbsolute="true"/>
         </conversions>
 
     <description>Buildings in Pavia</description>
@@ -96,64 +98,50 @@ class ExposureModelParserTestCase(unittest.TestCase):
 </nrml>
 """
 
-        expected_result = [
-            ([9.15000, 45.16667], [], {
-                "area": 120.0,
-                "areaType": "per_asset",
-                "areaUnit": "GBP",
-                "category": "buildings",
-                "id": "asset_01",
-                "description": "Buildings in Pavia",
-                "exposureID": "ep1",
-                "number": 7.0,
-                "taxonomy": "RC/DMRF-D/LR",
-                "taxonomySource": "Pavia buildings",
-            }, [
-                parsers.Cost("contents", 12.95, None, None, None),
-                parsers.Cost("structural", 150000.0, None, 55.0, 999.0),
-                parsers.Cost("nonStructural", 25000.0, None, None, None)
-            ], {
-                "contents": ("per_area", "CHF", None, None),
-                "structural": ("aggregated", "USD", "aggregated", "EUR"),
-                "nonStructural": ("aggregated", "USD", None, None),
-            }),
-            ([9.15333, 45.12200], [
-                parsers.Occupancy(12, "day"),
-                parsers.Occupancy(50, "night")], {
-                    "area": 119.0,
-                    "areaType": "per_asset",
-                    "areaUnit": "GBP",
-                    "category": "buildings",
-                    "id": "asset_02",
-                    "description": "Buildings in Pavia",
-                    "exposureID": "ep1",
-                    "number": 6.0,
-                    "taxonomy": "RC/DMRF-D/HR",
-                    "taxonomySource": "Pavia buildings",
-                }, [
-                    parsers.Cost("contents", 21.95, None, None, None),
-                    parsers.Cost(
-                        "structural", 250000.0, None, 66.0, 1999.0)
-                ], {
-                    "contents": ("per_area", "CHF", None, None),
-                    "structural": ("aggregated", "USD", "aggregated", "EUR"),
-                    "nonStructural": ("aggregated", "USD", None, None),
-                }),
-        ]
-
         parser = parsers.ExposureModelParser(StringIO.StringIO(exposure))
 
-        i = None
-        for ctr, (exposure_point, occupancy_data, exposure_data,
-                  costs, conversions) in enumerate(parser):
-            self.assertEqual(expected_result[ctr][0], exposure_point)
-            self.assertEqual(expected_result[ctr][1], occupancy_data)
-            self.assertEqual(expected_result[ctr][2], exposure_data)
-            self.assertEqual(expected_result[ctr][3], costs)
-            self.assertEqual(expected_result[ctr][4], conversions)
-            i = ctr
+        for i, asset_data in enumerate(parser):
+            self.assertEqual(
+                parsers.ExposureMetadata(
+                    "ep1", "source", "buildings", "Buildings in Pavia",
+                    parsers.Conversions(
+                        [parsers.CostType(
+                            "contents", "per_area", "CHF", None, None),
+                         parsers.CostType(
+                             "structural",
+                             "aggregated", "USD",
+                             "aggregated", "EUR"),
+                         parsers.CostType(
+                             "nonStructural",
+                             "aggregated", "USD", None, None)],
+                        "per_asset", "GBP", False, True)),
+                asset_data.exposure_metadata)
 
-        self.assertEqual(2, i + 1)
+            self.assertEqual(
+                [parsers.Site(9.15000, 45.16667),
+                 parsers.Site(9.15333, 45.12200)][i],
+                asset_data.site)
+
+            self.assertEqual(["asset_01", "asset_02"][i], asset_data.asset_ref)
+
+            self.assertEqual(
+                ["RC/DMRF-D/LR", "RC/DMRF-D/HR"][i], asset_data.taxonomy)
+
+            self.assertEqual([120, 119][i], asset_data.area)
+            self.assertEqual([7, 6][i], asset_data.number)
+
+            self.assertEqual(
+                [[parsers.Cost("contents", 12.95, None, None, None),
+                  parsers.Cost("structural", 150000, None, 55, 999),
+                  parsers.Cost("nonStructural", 25000, None, None, None)],
+                 [parsers.Cost("contents", 21.95, None, None, None),
+                  parsers.Cost("structural", 250000.0, None, 66, 1999)]][i],
+                asset_data.costs)
+
+            self.assertEqual(
+                [[], [parsers.Occupancy(12, "day"),
+                      parsers.Occupancy(50, "night")]][i],
+                asset_data.occupancy)
 
 
 class VulnerabilityModelParserTestCase(unittest.TestCase):
