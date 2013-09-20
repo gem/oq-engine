@@ -18,6 +18,7 @@ calculations."""
 
 import ConfigParser
 import csv
+import zlib
 import getpass
 import md5
 import os
@@ -298,9 +299,9 @@ def create_input(path, input_type, owner, name=None):
     """
     digest = _file_digest(path)
 
-    model_content = models.ModelContent()
-    with open(path, 'rb') as fh:
-        model_content.raw_content = fh.read()
+    with open(path, 'rb') as fh:  # assume UTF-8 encoding
+        zipped = zlib.compress(fh.read())
+        model_content = models.ModelContent(raw_content=zipped)
     # Try to guess the content type:
     model_content.content_type = _get_content_type(path)
     model_content.save()

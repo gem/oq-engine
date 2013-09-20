@@ -158,7 +158,7 @@ CREATE TABLE uiapi.input (
 CREATE TABLE uiapi.model_content (
     id SERIAL PRIMARY KEY,
     -- contains the raw text of an input file
-    raw_content TEXT NOT NULL,
+    raw_content BYTEA NOT NULL,
     content_type VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -587,7 +587,8 @@ CREATE TABLE hzrdr.ses_rupture (
     old_lats BYTEA NULL,
     old_depths BYTEA NULL,
     old_surface BYTEA NULL,
-    rupture BYTEA NOT NULL DEFAULT 'not computed'
+    rupture BYTEA NOT NULL DEFAULT 'not computed',
+    tag VARCHAR
 ) TABLESPACE hzrdr_ts;
 
 
