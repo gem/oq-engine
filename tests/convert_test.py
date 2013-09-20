@@ -5,7 +5,7 @@ import tempfile
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.convert import (
     convert_nrml_to_zip, convert_zip_to_nrml, build_node)
-from openquake.nrmllib.tables import StringTable
+from openquake.nrmllib.tables import MemTable
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -50,7 +50,7 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
 
 
 class ConvertBadFilesTestCase(unittest.TestCase):
-    JSON = '''\
+    MDATA = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <vulnerabilityModel>
 <discreteVulnerabilitySet
@@ -80,21 +80,22 @@ class ConvertBadFilesTestCase(unittest.TestCase):
 
     def test_empty(self):
         with self.assertRaises(InvalidFile):
-            build_node([StringTable('empty', '', '')])
+            build_node([MemTable.create('empty', '', '')])
 
     def test_no_header(self):
         with self.assertRaises(ValueError):
-            StringTable('some', self.JSON, '')
+            MemTable.create('some', self.MDATA, '')
 
     def test_no_data(self):
-        table = StringTable('some', self.JSON,
-                            'IML,IR.lossRatio,IR.coefficientsVariation,'
-                            'PK.lossRatio,PK.coefficientsVariation')
+        table = MemTable.create(
+            'some', self.MDATA,
+            'IML,IR.lossRatio,IR.coefficientsVariation,'
+            'PK.lossRatio,PK.coefficientsVariation')
         with tempfile.NamedTemporaryFile('w+') as out:
             build_node([table], out)
 
     def test_bad_data_1(self):
-        table = StringTable('vm', self.JSON, '''\
+        table = MemTable.create('vm', self.MDATA, '''\
 IML,IR.lossRatio,IR.coefficientsVariation,PK.lossRatio,PK.coefficientsVariation
 5.00,0.00,0.30,0.00,0.30
 5.50,0.00,0.30,0.00,0.30
@@ -105,7 +106,7 @@ IML,IR.lossRatio,IR.coefficientsVariation,PK.lossRatio,PK.coefficientsVariation
                 build_node([table], out)
 
     def test_bad_data_2(self):
-        table = StringTable('vm', self.JSON, '''\
+        table = MemTable.create('vm', self.MDATA, '''\
 IML,IR.lossRatio,IR.coefficientsVariation,PK.lossRatio,PK.coefficientsVariation
 5.00,0.00,0.30,0.00,0.30
 5.50,0.00,0.30,0.00,0.30

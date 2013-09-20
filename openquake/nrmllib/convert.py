@@ -19,7 +19,7 @@
 import os
 import zipfile
 from openquake.nrmllib.node import node_from_nrml, node_to_nrml
-from openquake.nrmllib.tables import ZipTable, collect_tables
+from openquake.nrmllib.tables import ZipTable
 from openquake.nrmllib.converter import converter
 
 
@@ -94,7 +94,7 @@ def convert_zip_to_nrml(fname, outdir=None):
     outdir = outdir or os.path.dirname(fname)
     z = zipfile.ZipFile(fname)
     outputs = []
-    for name, tables in collect_tables(ZipTable, z):
+    for name, tables in ZipTable.get_all(z):
         outname = os.path.join(outdir, name + '.xml')
         with open(outname, 'wb+') as out:
             build_node(tables, out)

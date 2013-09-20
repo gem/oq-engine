@@ -32,7 +32,7 @@ import warnings
 import itertools
 from openquake.nrmllib.node import node_copy, Node, node_to_xml
 from openquake.nrmllib import InvalidFile
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 
 
 # A write-only table, essentially the opposite of the read-only
@@ -47,6 +47,8 @@ class Table(object):
     files associated to the table, which are generated when the .save method
     is called.
     """
+    __metaclass__ = ABCMeta
+
     def __init__(self, suffix, metadata, matrix):
         self.suffix = suffix
         self.metadata = metadata
