@@ -36,7 +36,7 @@
             Optional; used only for 'Event-Based' calculations.
             Not used for 'Scenario' calculations.
         -->
-        <xs:attribute name="ruptureId" type="PositiveNonZeroDoubleType" use="optional" />
+        <xs:attribute name="ruptureId" type="xs:string" use="optional" />
         <xs:attribute name="IMT" type="IMTType" use="required" />
         <!-- saPeriod and saDamping are only relevant when IMT == 'SA' -->
         <xs:attribute name="saPeriod" type="PositiveDoubleType" use="optional" />

@@ -29,12 +29,12 @@ class StreamingXMLWriterTestCase(unittest.TestCase):
         etree.SubElement(em, 'assets')
         self.assertEqual(tostring(nrml), '''\
 <nrml
- xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns="http://openquake.org/xmlns/nrml/0.4"
 >
     <exposureModel
-     category="population"
-     id="my_exposure_model_for_population"
-     taxonomySource="fake population datasource"
+    category="population"
+    id="my_exposure_model_for_population"
+    taxonomySource="fake population datasource"
     >
         <description>
             Sample population
