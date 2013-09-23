@@ -254,7 +254,7 @@ class Classical(object):
                  weights, quantiles, post_processing))
 
         if self.insured_losses:
-            loss_curves = [out.insured_loss_curves for out in outputs]
+            loss_curves = [out.insured_curves for out in outputs]
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
                  calculators.exposure_statistics(
@@ -441,7 +441,7 @@ class ProbabilisticEventBased(object):
                   collections.Counter())
 
         if self.insured_losses:
-            loss_curves = [out.insured_loss_curves for out in outputs]
+            loss_curves = [out.insured_curves for out in outputs]
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
                  calculators.exposure_statistics(
