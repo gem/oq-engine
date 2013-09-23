@@ -29,6 +29,14 @@ Peer
     :members:
 
 
+-----
+Point
+-----
+
+.. automodule:: openquake.hazardlib.scalerel.point
+    :members:
+
+
 
 --------------------------
 Abstract base relationship
