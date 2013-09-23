@@ -455,18 +455,41 @@ class LossCurveMapBuilder(OutputBuilder):
                 output_type='loss_curve'),
             statistics='mean', loss_type=loss_type)]
 
+        if loss_type != "fatalities" and self.calc.rc.insured_losses:
+            mean_insured_loss_curve = [models.LossCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    job=self.calc.job,
+                    display_name='mean insured curves. type=%s' % loss_type,
+                    output_type='loss_curve'),
+                statistics='mean', insured=True, loss_type=loss_type)]
+        else:
+            mean_insured_loss_curve = []
+
         quantile_loss_curves = []
+        quantile_insured_loss_curves = []
         for quantile in self.calc.rc.quantile_loss_curves or []:
-            name = 'quantile(%s) loss curves. type=%s' % (
-                quantile, loss_type)
             quantile_loss_curves.append(models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.calc.job,
-                    display_name=name,
+                    display_name='quantile(%s) curves. type=%s' % (
+                        quantile, loss_type),
                     output_type='loss_curve'),
                 statistics='quantile',
                 quantile=quantile,
                 loss_type=loss_type))
+            if loss_type != "fatalities" and self.calc.rc.insured_losses:
+                quantile_insured_loss_curves.append(
+                    models.LossCurve.objects.create(
+                        output=models.Output.objects.create_output(
+                            job=self.calc.job,
+                            display_name=(
+                                'quantile(%s) insured curves. type=%s' % (
+                            quantile, loss_type)),
+                            output_type='loss_curve'),
+                        statistics='quantile',
+                        insured=True,
+                        quantile=quantile,
+                        loss_type=loss_type))
 
         mean_loss_maps = []
         for poe in self.calc.rc.conditional_loss_poes or []:
@@ -496,7 +519,8 @@ class LossCurveMapBuilder(OutputBuilder):
                     poe=poe))
 
         return (mean_loss_curve + quantile_loss_curves +
-                mean_loss_maps + quantile_loss_maps)
+                mean_loss_maps + quantile_loss_maps +
+                mean_insured_loss_curve + quantile_insured_loss_curves)
 
 
 class EventLossCurveMapBuilder(LossCurveMapBuilder):

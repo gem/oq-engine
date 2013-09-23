@@ -19,7 +19,7 @@ import os
 import StringIO
 import unittest
 
-from lxml import etree
+from xml.etree import ElementTree
 
 from openquake.hazardlib import geo
 from openquake.hazardlib import mfd
@@ -817,11 +817,11 @@ class OptimizeSourceModelTestCase(unittest.TestCase):
         try:
             source_input.optimize_source_model(in_file, area_src_disc,
                                                out_file)
-            expected = etree.tostring(
-                etree.parse(StringIO.StringIO(self.output_source_model)),
-                pretty_print=True
-            )
-            actual = etree.tostring(etree.parse(out_file), pretty_print=True)
+            expected = ElementTree.tostring(
+                ElementTree.XML(self.output_source_model))
+
+            actual = ElementTree.tostring(
+                ElementTree.XML(open(out_file).read()))
             self.assertEqual(expected, actual)
         finally:
             os.unlink(in_file)
