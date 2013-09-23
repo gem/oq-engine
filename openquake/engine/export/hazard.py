@@ -297,6 +297,7 @@ def export_gmf_xml(output, target):
 
     writer = writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path, gsim_lt_path)
+
     writer.serialize(gmf_coll)
 
     return dest
