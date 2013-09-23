@@ -318,6 +318,14 @@ class ParseImtTestCase(unittest.TestCase):
         self.assertEqual(None, sa_damping)
 
 
+def get_tags(gmf_data):
+    """
+    Get the rupture tags associated to a given gmf_data record
+    """
+    for r_id in gmf_data.rupture_ids:
+        yield models.SESRupture.objects.get(pk=r_id).tag
+
+
 class GmfsPerSesTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -350,29 +358,29 @@ class GmfsPerSesTestCase(unittest.TestCase):
         cls.parent_coll = models.Gmf.objects.create(
             output=models.Output.objects.create_output(
                 job, "Test Hazard output", "complete_lt_gmf"))
-        cls.ruptures1 = tuple(gmf_data1.rupture_ids)
-        cls.ruptures2 = tuple(gmf_data2.rupture_ids)
+        cls.ruptures1 = tuple(get_tags(gmf_data1))
+        cls.ruptures2 = tuple(get_tags(gmf_data2))
         cls.investigation_time = job.hazard_calculation.investigation_time
 
     def test_branch_lt(self):
-        all_gmfs = list(self.gmf_coll1.get_gmfs_per_ses(orderby=True))
+        all_gmfs = list(self.gmf_coll1.get_gmfs_per_ses())
         self.assertEqual(len(all_gmfs), 1)
         gmfs = all_gmfs[0]
         expected = """\
 GMFsPerSES(investigation_time=%f, stochastic_event_set_id=%d,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.31000, Y= 38.22500, GMV=0.1000000>
 <X= 15.48000, Y= 38.09100, GMV=0.1000000>
 <X= 15.48100, Y= 38.25000, GMV=0.1000000>
 <X= 15.56500, Y= 38.17000, GMV=0.1000000>
 <X= 15.71000, Y= 37.22500, GMV=0.1000000>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.31000, Y= 38.22500, GMV=0.2000000>
 <X= 15.48000, Y= 38.09100, GMV=0.2000000>
 <X= 15.48100, Y= 38.25000, GMV=0.2000000>
 <X= 15.56500, Y= 38.17000, GMV=0.2000000>
 <X= 15.71000, Y= 37.22500, GMV=0.2000000>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.31000, Y= 38.22500, GMV=0.3000000>
 <X= 15.48000, Y= 38.09100, GMV=0.3000000>
 <X= 15.48100, Y= 38.25000, GMV=0.3000000>
@@ -383,24 +391,24 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
         self.assertEqual(str(gmfs), expected)
 
     def test_complete_lt(self):
-        all_gmfs = list(self.parent_coll.get_gmfs_per_ses(orderby=True))
+        all_gmfs = list(self.parent_coll.get_gmfs_per_ses())
         self.assertEqual(len(all_gmfs), 1)
         gmfs = all_gmfs[0]
         expected = """\
 GMFsPerSES(investigation_time=100.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.31000, Y= 38.22500, GMV=0.1000000>
 <X= 15.48000, Y= 38.09100, GMV=0.1000000>
 <X= 15.48100, Y= 38.25000, GMV=0.1000000>
 <X= 15.56500, Y= 38.17000, GMV=0.1000000>
 <X= 15.71000, Y= 37.22500, GMV=0.1000000>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.31000, Y= 38.22500, GMV=0.2000000>
 <X= 15.48000, Y= 38.09100, GMV=0.2000000>
 <X= 15.48100, Y= 38.25000, GMV=0.2000000>
 <X= 15.56500, Y= 38.17000, GMV=0.2000000>
 <X= 15.71000, Y= 37.22500, GMV=0.2000000>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%d
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.31000, Y= 38.22500, GMV=0.3000000>
 <X= 15.48000, Y= 38.09100, GMV=0.3000000>
 <X= 15.48100, Y= 38.25000, GMV=0.3000000>
