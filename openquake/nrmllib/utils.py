@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -13,11 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-General utility functions for NRML.
-"""
-
-import numpy
+################### string manipulation routines for NRML ####################
 
 _LINESTRING_FMT = 'LINESTRING(%s)'
 _POLYGON_FMT = 'POLYGON((%s))'

@@ -36,13 +36,12 @@
     <xs:element name="periods" type="Periods" />
 
     <!-- UHS result node -->
-    <xs:element name="uhs">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element ref="gml:Point" minOccurs="1" maxOccurs="1" />
-                <xs:element name="IMLs" type="gml:doubleList" minOccurs="1" maxOccurs="1" />
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
+    <xs:complexType name="UHS">
+        <xs:sequence>
+          <xs:element ref="gml:Point" minOccurs="1" maxOccurs="1" />
+          <xs:element name="IMLs" type="gml:doubleList" minOccurs="1" maxOccurs="1" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="uhs" type="UHS" />
 
 </xs:schema>

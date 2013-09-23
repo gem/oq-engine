@@ -165,7 +165,6 @@ class VulnerabilityModelParserTestCase(unittest.TestCase):
   xmlns:gml="http://www.opengis.net/gml">
 
   <vulnerabilityModel>
-    <config/>
     <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
       assetCategory="population" lossCategory="fatalities">
       <IML IMT="MMI">5.00 5.50 6.00 6.50</IML>

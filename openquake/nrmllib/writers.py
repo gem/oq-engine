@@ -41,7 +41,8 @@ class StreamingXMLWriter(object):
         """Write text by respecting the current indentlevel"""
         if not isinstance(text, str):
             text = text.encode(self.encoding, 'xmlcharrefreplace')
-        self.stream.write(' ' * self.indent * self.indentlevel + text + '\n')
+        spaces = ' ' * (self.indent * self.indentlevel)
+        self.stream.write(spaces + text.strip() + '\n')
 
     def emptyElement(self, name, attrs):
         """Add an empty element (may have attributes)"""
@@ -69,7 +70,7 @@ class StreamingXMLWriter(object):
         """Add a complete XML tag"""
         self.start_tag(name, attr)
         if value:
-            self._write(escape(value))
+            self._write(escape(value.strip()))
         self.end_tag(name)
 
     def serialize(self, node):
@@ -79,7 +80,7 @@ class StreamingXMLWriter(object):
             return
         self.start_tag(node.tag, node.attrib)
         if node.text:
-            self._write(escape(node.text))
+            self._write(escape(node.text.strip()))
         for subnode in node:
             self.serialize(subnode)
         self.end_tag(node.tag)
