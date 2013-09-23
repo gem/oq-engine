@@ -109,6 +109,13 @@ def save_individual_outputs(containers, outs, params):
         (outs.loss_curves, outs.average_losses),
         output_type="loss_curve")
 
+    if outs.insured_curves is not None:
+        containers.write(
+            outs.assets,
+            (outs.insured_curves, outs.average_insured_losses),
+            insured=True,
+            output_type="loss_curve")
+
     containers.write_all(
         "poe", params.conditional_loss_poes,
         outs.loss_maps,
@@ -174,6 +181,21 @@ def save_statistical_output(containers, stats, params):
                              output_type="loss_fraction",
                              statistics="quantile", quantile=quantile,
                              variable="taxonomy")
+
+    # mean and quantile insured curves
+    if stats.mean_insured_curves is not None:
+        containers.write(
+            stats.assets, (stats.mean_insured_curves,
+                           stats.mean_average_insured_losses),
+            output_type="loss_curve", statistics="mean", insured=True)
+
+        containers.write_all(
+            "quantile", params.quantiles,
+            [(c, a) for c, a in itertools.izip(
+                stats.quantile_insured_curves,
+                stats.quantile_average_insured_losses)],
+            stats.assets,
+            output_type="loss_curve", statistics="quantile", insured=True)
 
 
 class ClassicalRiskCalculator(base.RiskCalculator):
