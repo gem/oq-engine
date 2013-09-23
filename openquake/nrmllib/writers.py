@@ -14,40 +14,7 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 import cStringIO
-from xml.sax.saxutils import XMLGenerator, quoteattr
-
-
-class _PrettyXMLGenerator(XMLGenerator):
-    """
-    XMLGenerator with pretty print functionality; must be used
-    from XMLWriter, which is in charge of setting the correct
-    indentation level.
-    """
-    indentlevel = 0
-    indent = 2
-
-    def _write(self, text):
-        """Write text by respecting the current indentlevel"""
-        if not isinstance(text, str):
-            text = text.encode(self._encoding, 'xmlcharrefreplace')
-        spaces = ' ' * (self.indent * self.indentlevel)
-        self._out.write(spaces + text.strip() + '\n')
-
-    def startElement(self, name, attrs):
-        """Start an element"""
-        if not attrs:
-            self._write('<%s>' % name)
-        else:
-            self._write('<' + name)
-            for (name, value) in sorted(attrs.items()):
-                self._write(' %s=%s' % (name, quoteattr(value)))
-            self._write('>')
-
-    def emptyElement(self, name, attrs):
-        """Add an empty element (may have attributes)"""
-        attr = ' '.join('%s=%s' % (n, quoteattr(v))
-                        for n, v in sorted(attrs.iteritems()))
-        self._write('<%s %s/>' % (name, attr))
+from xml.sax.saxutils import escape, quoteattr
 
 
 class StreamingXMLWriter(object):
@@ -60,53 +27,73 @@ class StreamingXMLWriter(object):
                 writer.serialize(node)
             writer.end_tag('root')
     """
-    def __init__(self, stream, indent=4):
+    def __init__(self, stream, indent=4, encoding='utf-8'):
         """
         :param stream: the stream or a file where to write the XML
         :param int indent: the indentation to use in the XML (default 4 spaces)
         """
         self.stream = stream
-        self._xgen = _PrettyXMLGenerator(stream, 'utf-8')
-        self._xgen.indentlevel = 0
-        self._xgen.indent = indent
+        self.indent = indent
+        self.encoding = encoding
+        self.indentlevel = 0
 
-    def start_tag(self, name, attr=None):
+    def _write(self, text):
+        """Write text by respecting the current indentlevel"""
+        if not isinstance(text, str):
+            text = text.encode(self.encoding, 'xmlcharrefreplace')
+        spaces = ' ' * (self.indent * self.indentlevel)
+        self.stream.write(spaces + text.strip() + '\n')
+
+    def emptyElement(self, name, attrs):
+        """Add an empty element (may have attributes)"""
+        attr = ' '.join('%s=%s' % (n, quoteattr(v))
+                        for n, v in sorted(attrs.iteritems()))
+        self._write('<%s %s/>' % (name, attr))
+
+    def start_tag(self, name, attrs=None):
         """Open an XML tag"""
-        self._xgen.startElement(name, attr or {})
-        self._xgen.indentlevel += 1
+        if not attrs:
+            self._write('<%s>' % name)
+        else:
+            self._write('<' + name)
+            for (name, value) in sorted(attrs.items()):
+                self._write(' %s=%s' % (name, quoteattr(value)))
+            self._write('>')
+        self.indentlevel += 1
 
     def end_tag(self, name):
         """Close an XML tag"""
-        self._xgen.indentlevel -= 1
-        self._xgen.endElement(name)
+        self.indentlevel -= 1
+        self._write('</%s>' % name)
 
     def tag(self, name, attr=None, value=None):
         """Add a complete XML tag"""
         self.start_tag(name, attr)
         if value:
-            self._xgen.characters(value)
+            self._write(escape(value.strip()))
         self.end_tag(name)
 
     def serialize(self, node):
         """Serialize a node object (typically an ElementTree object)"""
         if not node and not node.text:
-            self._xgen.emptyElement(node.tag, node.attrib)
+            self.emptyElement(node.tag, node.attrib)
             return
         self.start_tag(node.tag, node.attrib)
         if node.text:
-            self._xgen.characters(node.text)
+            self._write(escape(node.text.strip()))
         for subnode in node:
             self.serialize(subnode)
         self.end_tag(node.tag)
 
     def __enter__(self):
         """Write the XML declaration"""
-        self._xgen.startDocument()
+        self._write('<?xml version="1.0" encoding="%s"?>\n' %
+                    self.encoding)
         return self
 
     def __exit__(self, etype, exc, tb):
         """Close the XML document"""
-        self._xgen.endDocument()
+        pass
 
 
 def tostring(node, indent=4):

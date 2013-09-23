@@ -17,11 +17,9 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import csv
 import zipfile
-from openquake.nrmllib.node import (
-    node_from_nrml, node_to_nrml, node_to_xml)
-from openquake.nrmllib.tables import ZipTable, collect_tables
+from openquake.nrmllib.node import node_from_nrml, node_to_nrml
+from openquake.nrmllib.tables import ZipTable
 from openquake.nrmllib.converter import converter
 
 
@@ -47,15 +45,16 @@ def build_node(tables, output=None):
 
 ################################# generic #####################################
 
-def convert_nrml_to_flat(fname, outfname):
+def convert_nrml_to_flat(fname, outname):
     """
     Convert a NRML file into .csv and .mdata files. Returns the path names
     of the generated files.
 
     :param fname: path to a NRML file of kind <path>.xml
-    :param outfname: output path, for instance <path>.csv
+    :param outfname: output path without extension
     """
     # extract the first node inside the <nrml> tag
+    assert fname.endswith('.xml'), fname
     node = node_from_nrml(fname)[0]
     tables = list(converter(node).build_tables())
     suffixes = set(t.suffix for t in tables)
@@ -63,7 +62,7 @@ def convert_nrml_to_flat(fname, outfname):
         raise ValueError('Duplicates in %s' % suffixes)
     tozip = []
     for table in tables:
-        tozip.extend(table.save(outfname[:-4]))
+        tozip.extend(table.save(outname))
     return tozip
 
 
@@ -72,16 +71,17 @@ def convert_nrml_to_zip(fname, outfname=None):
     Convert a NRML file into a zip archive.
 
     :param fname: path to a NRML file of kind <path>.xml
-    :param outfname: output path; if None, <path>.zip is used instead
+    :param outfname: output path without extension
     """
-    outname = outfname or fname[:-4] + '.zip'
-    assert outname.endswith('.zip'), outname
+    assert fname.endswith('.xml'), fname
+    outname = outfname or fname[:-4]
+    zipname = outname + '.zip'
     tozip = convert_nrml_to_flat(fname, outname)
-    with zipfile.ZipFile(fname[:-4] + '.zip', 'w') as z:
+    with zipfile.ZipFile(zipname, 'w') as z:
         for fname in tozip:
             z.write(fname, os.path.basename(fname))
             os.remove(fname)
-    return outname
+    return zipname
 
 
 def convert_zip_to_nrml(fname, outdir=None):
@@ -94,7 +94,7 @@ def convert_zip_to_nrml(fname, outdir=None):
     outdir = outdir or os.path.dirname(fname)
     z = zipfile.ZipFile(fname)
     outputs = []
-    for name, tables in collect_tables(ZipTable, z):
+    for name, tables in ZipTable.get_all(z):
         outname = os.path.join(outdir, name + '.xml')
         with open(outname, 'wb+') as out:
             build_node(tables, out)

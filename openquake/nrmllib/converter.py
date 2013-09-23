@@ -32,6 +32,7 @@ import warnings
 import itertools
 from openquake.nrmllib.node import node_copy, Node, node_to_xml
 from openquake.nrmllib import InvalidFile
+from abc import ABCMeta, abstractmethod
 
 
 # A write-only table, essentially the opposite of the read-only
@@ -46,6 +47,8 @@ class Table(object):
     files associated to the table, which are generated when the .save method
     is called.
     """
+    __metaclass__ = ABCMeta
+
     def __init__(self, suffix, metadata, matrix):
         self.suffix = suffix
         self.metadata = metadata
@@ -86,20 +89,23 @@ class Table(object):
 
 class BaseConverter(object):
     """
-    Base class. Each converter takes a node in input and has methods
+    Abstract base class. Each converter takes a node in input and has methods
     get_fields, build_tables and build_node.
     """
     def __init__(self, node):
         self.node = node
 
+    @abstractmethod
     def get_fields(self):
-        return []
+        """Return the CSV fields by parsing the metadata node"""
 
+    @abstractmethod
     def build_tables(self):
-        return []
+        """Convert the node into a list of table objects"""
 
-    def build_node(self):
-        return BaseConverter()
+    @abstractmethod
+    def build_node(self, tables):
+        """Convert a list of tables objects into a full node"""
 
 
 def converter(node):

@@ -21,10 +21,9 @@ If provides the classes:
 
 - FileTable: to read a pair of files (metadata, data) from a directory
 - ZipTable: to read a pair of files (metadata, data) from a zip file
-- StringTable: to wrap two strings (metadata, data)
-- DataTable: to wrap the node and list iterator (metadata, data)
+- MemTable: to read a pair of file objects (metadata, data) from a dict
 
-Moreover it provided a generator collect_tables(tablecls, container)
+Moreover it provided a generator get_all(tablecls, container)
 which reads all the files in the container and yields pairs
 (tablename, tablegroup) where tablegroup is a list of tables
 with the same name.
@@ -35,49 +34,14 @@ import csv
 import itertools
 import warnings
 import cStringIO
+from abc import ABCMeta, abstractmethod
+from lxml.etree import XMLSyntaxError
+
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.node import node_from_xml
 from openquake.nrmllib.converter import converter
 
-
-def collect_tables(tablecls, container, fnames=None):
-    """
-    Given a list of filenames, instantiates several tables and yields
-    them in groups. Display a warning for invalid files and ignore
-    unpaired files.
-
-    :param tablecls: Table subclass
-    :param container: the container of the files
-    :param fnames: the names of the files to consider
-
-    If fnames is not None, consider only the files listed there.
-    """
-    if fnames is None:
-        if hasattr(container, 'infolist'):  # zip archive
-            fnames = [i.filename for i in container.infolist()]
-        else:  # assume container is a directory
-            fnames = os.listdir(container)
-
-    def getprefix(f):
-        return f.rsplit('.', 1)[0]
-    fnames = sorted(f for f in fnames if f.endswith(('.csv', '.mdata')))
-    tables = []
-    for name, group in itertools.groupby(fnames, getprefix):
-        gr = list(group)
-        if len(gr) == 2:  # pair (.mdata, .csv)
-            try:
-                tables.append(tablecls(container, name))
-            except Exception as e:
-                raise
-                # the table could not be instantiated, due to an invalid file
-                warnings.warn(str(e))
-        # ignore unpaired files
-
-    def getgroupname(table):
-        """Extract the groupname for tables named <groupname>__<subname>"""
-        return table.name.rsplit('__', 1)[0]
-    for name, tablegroup in itertools.groupby(tables, getgroupname):
-        yield name, list(tablegroup)
+MISSING = object()  # sentinel for missing values in a CSV
 
 
 class Table(object):
@@ -92,6 +56,53 @@ class Table(object):
     purposes, as a stub; in that case it will have fieldnames lon,lat,gmv
     and no data.
     """
+    __metaclass__ = ABCMeta
+
+    @classmethod
+    def get_all(cls, container, fnames=None):
+        """
+        Given a list of filenames, instantiates several tables and collects
+        them in groups with the same prefix. Yield pairs
+        (prefix, list-of-tables) where prefix is the command prefix
+
+        Display a warning for invalid files and ignore unpaired files.
+
+        :param container: the container of the files
+        :param fnames: the names of the files to consider
+
+        If fnames is None, extracts all the relevant files from the
+        container by invoking the classmethod .extract_filenames.
+        """
+        if fnames is None:
+            fnames = cls.extract_filenames(container)
+        fnames = sorted(f for f in fnames if f.endswith(('.csv', '.mdata')))
+
+        def getprefix(f):
+            return f.rsplit('.', 1)[0]
+        tables = []
+        for name, group in itertools.groupby(fnames, getprefix):
+            gr = list(group)
+            if len(gr) == 2:  # pair (.mdata, .csv)
+                try:
+                    tables.append(cls(container, name))
+                except InvalidFile as e:
+                    # the table could not be instantiated
+                    warnings.warn(str(e))
+            # ignore unpaired files
+
+        def getgroupname(table):
+            """Extract the groupname for tables named <groupname>__<subname>"""
+            return table.name.rsplit('__', 1)[0]
+        for name, tablegroup in itertools.groupby(tables, getgroupname):
+            yield name, list(tablegroup)
+
+    @classmethod
+    def extract_filenames(cls, container):
+        """
+        Implemented in the subclasses ZipTable and FileTable
+        """
+        raise NotImplementedError
+
     def __init__(self, container, name):
         self.container = container
         self.name = name
@@ -108,11 +119,13 @@ class Table(object):
         """
         try:
             self.metadata = node_from_xml(fileobj)
-        except Exception as e:
+        except XMLSyntaxError as e:
             raise InvalidFile('%s:%s' % (fileobj.name, e))
         try:
             self.fieldnames = converter(self.metadata).get_fields()
         except Exception as e:
+            # get_fields can raise different kind of errors for invalid
+            # metadata; see for instance `test_could_not_extract_fieldnames`
             raise InvalidFile('%s: could not extract fieldnames: %s' %
                               (fileobj.name, e))
 
@@ -134,17 +147,19 @@ class Table(object):
                     self.name, self.fieldnames,
                     self.name, fieldnames))
 
+    @abstractmethod
     def openmdata(self):
         """
         Return a file-like object with the metadata (to be overridden)
         """
-        return FileObject(self.name + '.mdata', '<gmfSet/>')
+        pass
 
+    @abstractmethod
     def opencsv(self):
         """
         Return a file-like object with the data (to be overridden)
         """
-        return FileObject(self.name + '.csv', 'lon,lat,gmv')
+        pass
 
     def __getitem__(self, index):
         """
@@ -153,7 +168,7 @@ class Table(object):
         :param index: integer or slice object
         """
         with self.opencsv() as f:
-            table = csv.DictReader(f)
+            table = csv.DictReader(f, restval=MISSING)
             table.fieldnames  # read the fieldnames from the header
             if isinstance(index, int):
                 # skip the first lines
@@ -172,12 +187,13 @@ class Table(object):
     def __iter__(self):
         """Data iterator yielding dictionaries"""
         with self.opencsv() as f:
-            for record in csv.DictReader(f):
+            for record in csv.DictReader(f, restval=MISSING):
                 yield record
 
     def __len__(self):
         """Number of data records in the underlying data structure"""
-        return sum(1 for line in self.opencsv()) - 1  # skip header
+        with self.opencsv() as f:
+            return sum(1 for line in f) - 1  # skip header
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.name)
@@ -187,6 +203,13 @@ class FileTable(Table):
     """
     Read from a couple of files .mdata and .csv
     """
+    @classmethod
+    def extract_filenames(cls, container):
+        """
+        :param container: the pathname to a directory
+        """
+        return os.listdir(container)
+
     def openmdata(self):
         """
         Open the metadata file <name>.mdata inside the directory
@@ -204,6 +227,12 @@ class ZipTable(Table):
     """
     Read from a .zip archive
     """
+    @classmethod
+    def extract_filenames(cls, container):
+        """
+        :param container: the pathname to a .zip archive
+        """
+        return [i.filename for i in container.infolist()]
 
     def openmdata(self):
         """
@@ -220,11 +249,15 @@ class ZipTable(Table):
 
 class FileObject(object):
     """
-    A named cStringIO for reading, useful for the tests
+    A named reusable cStringIO for reading, useful for the tests
     """
     def __init__(self, name, bytestring):
         self.name = name
+        self.bytestring = bytestring
         self.io = cStringIO.StringIO(bytestring)
+
+    def close(self):
+        self.io = cStringIO.StringIO(self.bytestring)
 
     def __iter__(self):
         return self
@@ -242,29 +275,40 @@ class FileObject(object):
         return self
 
     def __exit__(self, etype, exc, tb):
-        pass
+        self.close()
 
 
-class StringTable(Table):
+class MemTable(Table):
     """
     Read data from the given strings, not from the file system.
     Assume the strings are UTF-8 encoded. The intended usage is
     for unittests.
     """
-    def __init__(self, name, mdata_str, csv_str):
-        self.name = name
-        self.mdata_str = mdata_str
-        self.csv_str = csv_str
-        Table.__init__(self, None, name)
+    @classmethod
+    def create(cls, name, mdata_str, csv_str):
+        name_csv = name + '.csv'
+        name_mdata = name + '.mdata'
+        container = {
+            name_csv: FileObject(name_csv, csv_str),
+            name_mdata: FileObject(name_mdata, mdata_str),
+            }
+        return cls(container, name)
+
+    @classmethod
+    def extract_filenames(cls, container):
+        """
+        :param container: a dictionary {name.ext: <FileObject>}
+        """
+        return container.keys()
 
     def opencsv(self):
         """
         Returns a file-like object with the content of csv_str
         """
-        return FileObject(self.name + '.csv', self.csv_str)
+        return self.container[self.name + '.csv']
 
     def openmdata(self):
         """
         Returns a file-like object with the content of mdata_str
         """
-        return FileObject(self.name + '.mdata', self.mdata_str)
+        return self.container[self.name + '.mdata']

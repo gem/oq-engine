@@ -123,13 +123,13 @@ requiring the full list of them. The routines provided by lxml
 and ElementTree are no good, however nrmllib.writers
 provide an StreamingXMLWriter just for that purpose.
 
-Lazy trees should *not* be used unless it is necessary to save
-memory; the problem is that if you use a lazy tree the slice
-notation will not work (the underlying generator will not accept
+Lazy trees should *not* be used unless it is absolutely necessary in
+order to save memory; the problem is that if you use a lazy tree the
+slice notation will not work (the underlying generator will not accept
 it); moreover it will not be possible to iterate twice on the
-subnodes, since the generator will be exhausted. Notice that
-even accessing a subnode with the dot notation will avance the
-generator.
+subnodes, since the generator will be exhausted. Notice that even
+accessing a subnode with the dot notation will avance the
+generator. Finally, nodes containing lazy nodes will not be pickleable.
 
 From Node objects to NRML files and viceversa
 ------------------------------------------------------
