@@ -231,19 +231,19 @@ def set_up_arg_parser():
               'desired output format. Defaults to "xml".')
     )
 
-    export_grp = parser.add_argument_group('Import')
-    export_grp.add_argument(
+    import_grp = parser.add_argument_group('Import')
+    import_grp.add_argument(
         '--load-gmf',
         help=('Load gmf from a file. Only single-source gmf are supported '
               'currently. The file can be xml or tab-separated.'),
         metavar='GMF_FILE',
     )
-    export_grp.add_argument(
+    import_grp.add_argument(
         '--load-curve',
         help=('Load hazard curves from an XML file.'),
         metavar='CURVE_FILE',
     )
-    export_grp.add_argument(
+    import_grp.add_argument(
         '--list-imported-outputs', action='store_true',
         help=('List outputs which were imported from a file, not calculated '
               'from a job'))
@@ -490,7 +490,6 @@ def main():
                         hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_risk_calc(args.delete_risk_calculation, args.yes)
-
     # import
     elif args.load_gmf is not None:
         with open(args.load_gmf) as f:

@@ -172,18 +172,36 @@ class ClassicalExportTestCase(BaseExportTestCase):
             loss_map_outputs = risk_outputs.filter(output_type='loss_map')
 
             # 16 logic tree realizations + 1 mean + 2 quantiles = 19
-            self.assertEqual(19, loss_curve_outputs.count())
+            # + 19 insured loss curves
+            self.assertEqual(38, loss_curve_outputs.count())
             # make sure the mean and quantile curve sets got created correctly
             loss_curves = models.LossCurve.objects.filter(
-                output__oq_job=risk_job
+                output__oq_job=risk_job,
+                insured=False
             )
             # sanity check
             self.assertEqual(19, loss_curves.count())
+
+            insured_curves = models.LossCurve.objects.filter(
+                output__oq_job=risk_job,
+                insured=True
+            )
+            # sanity check
+            self.assertEqual(19, insured_curves.count())
+
             # mean
             self.assertEqual(1, loss_curves.filter(statistics='mean').count())
             # quantiles
             self.assertEqual(
                 2, loss_curves.filter(statistics='quantile').count()
+            )
+
+            # mean
+            self.assertEqual(
+                1, insured_curves.filter(statistics='mean').count())
+            # quantiles
+            self.assertEqual(
+                2, insured_curves.filter(statistics='quantile').count()
             )
 
             # 16 logic tree realizations = 16 loss map + 1 mean loss
@@ -205,7 +223,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             for o in loss_map_outputs:
                 loss_map_files.append(risk.export(o.id, target_dir, 'xml'))
 
-            self.assertEqual(19, len(loss_curve_files))
+            self.assertEqual(38, len(loss_curve_files))
             self.assertEqual(19, len(loss_map_files))
 
             for f in loss_curve_files:
@@ -242,26 +260,26 @@ class EventBasedExportTestCase(BaseExportTestCase):
             loss_curve_outputs = risk_outputs.filter(output_type='loss_curve')
             loss_map_outputs = risk_outputs.filter(output_type='loss_map')
 
-            # 1 mean + 2 quantiles
-            self.assertEqual(3, loss_curve_outputs.count())
+            # (1 mean + 2 quantiles) * 2 (as there also insured curves)
+            self.assertEqual(6, loss_curve_outputs.count())
 
-            # 16 rlzs
+            # 16 rlzs + 16 (due to insured curves)
             event_loss_curve_outputs = risk_outputs.filter(
                 output_type='event_loss_curve')
-            self.assertEqual(16, event_loss_curve_outputs.count())
+            self.assertEqual(32, event_loss_curve_outputs.count())
             self.assertEqual(16, agg_loss_curve_outputs.count())
 
             # make sure the mean and quantile curve sets got created correctly
             loss_curves = models.LossCurve.objects.filter(
                 output__oq_job=risk_job
             )
-            # sanity check (16 aggregate loss curve + 19 loss curves)
-            self.assertEqual(35, loss_curves.count())
+            # sanity check (16 aggregate loss curve + 38 loss curves)
+            self.assertEqual(54, loss_curves.count())
             # mean
-            self.assertEqual(1, loss_curves.filter(statistics='mean').count())
+            self.assertEqual(2, loss_curves.filter(statistics='mean').count())
             # quantiles
             self.assertEqual(
-                2, loss_curves.filter(statistics='quantile').count()
+                4, loss_curves.filter(statistics='quantile').count()
             )
 
             # 16 logic tree realizations = 16 loss map + 1 mean loss
@@ -301,7 +319,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             for o in loss_map_outputs:
                 loss_map_files.append(risk.export(o.id, target_dir, 'xml'))
 
-            self.assertEqual(19, len(loss_curve_files))
+            self.assertEqual(38, len(loss_curve_files))
             self.assertEqual(16, len(agg_loss_curve_files))
             self.assertEqual(16, len(event_loss_table_files))
             self.assertEqual(19, len(loss_map_files))
