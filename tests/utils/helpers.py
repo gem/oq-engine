@@ -860,9 +860,12 @@ def get_ruptures(job, ses_collection, num):
         investigation_time=job.hazard_calculation.investigation_time,
         ordinal=1)
 
+    rlz = ses_collection.lt_realization.ordinal
+
     return [
         models.SESRupture.objects.create(
             ses=ses,
+            tag='rlz=%d|ses=%d|src=test|i=%d' % (rlz, ses.ordinal, i),
             rupture=ProbabilisticRupture(
                 mag=1 + i * 10. / float(num), rake=0,
                 tectonic_region_type="test region type",
