@@ -69,7 +69,7 @@ class ClassicalTest(unittest.TestCase):
         self.workflow.insured_losses = False
         out = mock.Mock()
         out.loss_curves = numpy.empty((4, 2, 10))
-        out.insured_loss_curves = numpy.empty((4, 2, 10))
+        out.insured_curves = numpy.empty((4, 2, 10))
         self.calcs.exposure_statistics.return_value = [
             mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
             numpy.empty((3, 2))]
@@ -148,7 +148,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         out = mock.Mock()
         out.loss_curves = numpy.empty((4, 2, 10))
         out.event_loss_table = collections.Counter()
-        out.insured_loss_curves = numpy.empty((4, 2, 10))
+        out.insured_curves = numpy.empty((4, 2, 10))
         self.calcs.exposure_statistics.return_value = [
             mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
             numpy.empty((3, 2))]
