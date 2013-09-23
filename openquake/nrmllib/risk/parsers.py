@@ -26,8 +26,41 @@ import openquake.nrmllib
 NRML = "{%s}" % openquake.nrmllib.NAMESPACE
 GML = "{%s}" % openquake.nrmllib.GML_NAMESPACE
 
+AssetData = namedtuple(
+    "AssetData",
+    "exposure_metadata site asset_ref taxonomy area number costs occupancy")
+Site = namedtuple("Site", "longitude latitude")
+ExposureMetadata = namedtuple(
+    "ExposureMetadata",
+    "exposure_id taxonomy_source asset_category description conversions")
+
+
+class Conversions(object):
+    def __init__(self, cost_types, area_type, area_unit,
+                 deductible_is_absolute, insurance_limit_is_absolute):
+        self.cost_types = cost_types
+        self.area_type = area_type
+        self.area_unit = area_unit
+        self.deductible_is_absolute = deductible_is_absolute
+        self.insurance_limit_is_absolute = insurance_limit_is_absolute
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def __eq__(self, cs):
+        return (
+            self.cost_types == cs.cost_types and
+            self.area_type == cs.area_type and
+            self.area_unit == cs.area_unit and
+            self.deductible_is_absolute == cs.deductible_is_absolute and
+            self.insurance_limit_is_absolute == cs.insurance_limit_is_absolute)
+
+
+CostType = namedtuple(
+    "CostType",
+    "name conversion_type unit retrofitted_type retrofitted_unit")
+Cost = namedtuple("Cost", "cost_type value retrofitted deductible limit")
 Occupancy = namedtuple("Occupancy", "occupants period")
-Cost = namedtuple("Cost", "type value retrofitted deductible limit")
 
 
 class ExposureModelParser(object):
@@ -35,30 +68,7 @@ class ExposureModelParser(object):
     Exposure model parser. This class is implemented as a generator.
 
     For each `asset` element in the parsed document,
-    it yields a tuple, where:
-
-    * the first element is a list with the geographical information,
-      in the following format: [lon, lat].
-    * the second element is a list of occupancy objects, each one with
-      a property called `occupants` (the number of
-      occupants), and a property called `period` (the context
-      in which the number of occupants has been measured, for example
-      during the day or night).
-    * the third element is a dictionary with all the other information
-      related to the asset as well as the whole exposure model.
-      The attributes dictionary looks like this:
-      {'exposure': 'PAV01',
-       'description': 'Collection of existing building in Pavia',
-       'id': 'asset_02',
-       'category': 'buildings',
-       'taxonomy': 'RC/DMRF-D/LR'}
-    * the fourth element is a list of costs objects, each one with a
-      property called `type` (the type of cost, e.g. structural),
-      a property named `value`, a property named `retrofitted` (optional)
-      a property named `deductible` and a property named `insuranceLimit`.
-    * the fifth element holds the cost types with a dictionary mapping a
-      cost type with a tuple with four elements (representing type and unit for
-      standard and retrofitted case)
+    it yields an `AssetData` instance
 
     :param source:
         Filename or file-like object containing the XML data.
@@ -69,14 +79,9 @@ class ExposureModelParser(object):
         openquake.nrmllib.assert_valid(self._source)
 
         # contains the data of the node currently parsed.
-        self._current_meta = {}
-        self._cost_types = {}
+        self._meta = None
 
     def __iter__(self):
-        for i in self._parse():
-            yield i
-
-    def _parse(self):
         """
         Parse the document iteratively.
         """
@@ -87,59 +92,70 @@ class ExposureModelParser(object):
         for event, element in etree.iterparse(
                 self._source, events=('start', 'end'), schema=schema):
 
+            # exposure metadata
             if event == 'start' and element.tag == '%sexposureModel' % NRML:
-                # we need to get the exposureList id, description and
-                # asset category.
-                exp_id = element.get('id')
-                self._current_meta['exposureID'] = str(exp_id)
-
                 desc = element.find('%sdescription' % NRML)
                 if desc is not None:
-                    self._current_meta['description'] = str(desc.text)
+                    desc = desc.text
+                else:
+                    desc = ""
 
-                self._current_meta['taxonomySource'] = element.get(
-                    'taxonomySource')
+                self._meta = ExposureMetadata(
+                    exposure_id=element.get('id'),
+                    description=desc,
+                    taxonomy_source=element.get('taxonomySource'),
+                    asset_category=str(element.get('category')),
+                    conversions=Conversions(
+                        cost_types=[], area_type=None, area_unit=None,
+                        deductible_is_absolute=True,
+                        insurance_limit_is_absolute=True))
 
-                asset_category = str(element.get('category'))
-                self._current_meta['category'] = asset_category
+            # conversions
+            if event == 'start' and element.tag == "%sarea" % NRML:
+                self._meta.conversions.area_type = element.get('type')
+                self._meta.conversions.area_unit = element.get('unit')
+            elif event == 'start' and element.tag == "%sdeductible" % NRML:
+                self._meta.conversions.deductible_is_absolute = not (
+                    element.get('isAbsolute', "false") == "false")
+            elif event == 'start' and element.tag == "%sinsuranceLimit" % NRML:
+                self._meta.conversions.insurance_limit_is_absolute = not (
+                    element.get('isAbsolute', "false") == "false")
+            elif event == 'start' and element.tag == "%scostType" % NRML:
+                self._meta.conversions.cost_types.append(
+                    CostType(
+                        name=element.get('name'),
+                        conversion_type=element.get('type'),
+                        unit=element.get('unit'),
+                        retrofitted_type=element.get('retrofittedType'),
+                        retrofitted_unit=element.get('retrofittedUnit')))
 
-            if event == 'start' and element.tag == "%sconversions" % NRML:
-                for el in element.findall(".//"):
-                    if el.tag[len(NRML):] == "area":
-                        self._current_meta['areaType'] = el.get('type')
-                        self._current_meta['areaUnit'] = el.get('unit')
-                    elif el.tag[len(NRML):] == "deductible":
-                        self._current_meta['deductibleIsAbsolute'] = (
-                            el.get('isAbsolute'))
-                        self._current_meta['insuranceLimitIsAbsolute'] = (
-                            el.get('isAbsolute'))
-            if event == 'start' and element.tag == "%scostTypes" % NRML:
-                for el in element.findall(".//"):
-                    self._cost_types[el.get('name')] = (
-                        el.get('type'), el.get('unit'),
-                        el.get('retrofittedType'), el.get('retrofittedUnit'))
-
+            # asset data
             elif event == 'end' and element.tag == '%sasset' % NRML:
-                site_data = (_to_site(element), _to_occupancy(element),
-                             self._to_site_attributes(element),
-                             _to_costs(element), self._cost_types)
+                if element.get('area') is not None:
+                    area = float(element.get('area'))
+                else:
+                    area = None
+
+                if element.get('number') is not None:
+                    number = float(element.get('number'))
+                else:
+                    number = None
+
+                point_elem = element.find('%slocation' % NRML)
+
+                site_data = AssetData(
+                    exposure_metadata=self._meta,
+                    site=Site(float(point_elem.get("lon")),
+                              float(point_elem.get("lat"))),
+                    asset_ref=element.get('id'),
+                    taxonomy=element.get('taxonomy'),
+                    area=area,
+                    number=number,
+                    costs=_to_costs(element),
+                    occupancy=_to_occupancy(element))
                 del element
+
                 yield site_data
-
-    def _to_site_attributes(self, element):
-        """
-        Build a dict of all node attributes.
-        """
-
-        site_attributes = {}
-        site_attributes['id'] = element.get('id')
-        site_attributes['taxonomy'] = element.get('taxonomy')
-        if element.get('area') is not None:
-            site_attributes['area'] = float(element.get('area'))
-        if element.get('number') is not None:
-            site_attributes['number'] = float(element.get('number'))
-        site_attributes.update(self._current_meta)
-        return site_attributes
 
 
 def _to_occupancy(element):
@@ -156,7 +172,7 @@ def _to_occupancy(element):
     occupancy_data = []
     for otag in element.findall('.//%soccupancy' % NRML):
         occupancy_data.append(Occupancy(
-            int(otag.attrib['occupants']),
+            float(otag.attrib['occupants']),
             otag.attrib["period"]))
     return occupancy_data
 
@@ -185,15 +201,6 @@ def _to_costs(element):
             retrofitted, deductible, limit))
 
     return costs
-
-
-def _to_site(element):
-    """
-    Get lon lat from an <asset> element
-    """
-
-    point_elem = element.find('%slocation' % NRML)
-    return map(float, [point_elem.get("lon"), point_elem.get("lat")])
 
 
 class VulnerabilityModelParser(object):
