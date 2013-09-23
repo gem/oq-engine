@@ -2156,7 +2156,7 @@ class Gmf(djm.Model):
 
         for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
             query = """
-        SELECT imt, sa_period, sa_damping, rupture_id,
+        SELECT imt, sa_period, sa_damping, tag,
                array_agg(gmv) AS gmvs,
                array_agg(ST_X(location::geometry)) AS xs,
                array_agg(ST_Y(location::geometry)) AS ys
@@ -2164,8 +2164,9 @@ class Gmf(djm.Model):
              unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
            FROM hzrdr.gmf_data, hzrdi.hazard_site
            WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
-             AND gmf_id=%d AND ses_id=%d) AS x
-        GROUP BY imt, sa_period, sa_damping, rupture_id
+             AND gmf_id=%d AND ses_id=%d) AS x, hzrdr.ses_rupture AS y
+        WHERE x.rupture_id = y.id
+        GROUP BY imt, sa_period, sa_damping, tag
         """ % (hc.id, self.id, ses.id)
             if orderby:  # may be used in tests to get reproducible results
                 query += 'order by imt, sa_period, sa_damping, rupture_id;'
@@ -2173,12 +2174,12 @@ class Gmf(djm.Model):
                 curs = getcursor('job_init')
                 curs.execute(query)
             gmfs = []
-            for imt, sa_period, sa_damping, rupture_id, gmvs, xs, ys in curs:
+            for imt, sa_period, sa_damping, rupture_tag, gmvs, xs, ys in curs:
                 nodes = [_GroundMotionFieldNode(gmv, _Point(x, y))
                          for gmv, x, y in zip(gmvs, xs, ys)]
                 gmfs.append(
                     _GroundMotionField(
-                        imt, sa_period, sa_damping, rupture_id, nodes))
+                        imt, sa_period, sa_damping, rupture_tag, nodes))
             yield _GmfsPerSES(gmfs, ses.investigation_time, ses.id)
 
     __iter__ = get_gmfs_per_ses
