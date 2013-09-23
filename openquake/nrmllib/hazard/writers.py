@@ -313,6 +313,30 @@ class MultiHazardCurveXMLWriter(object):
                 encoding='UTF-8'))
 
 
+def gen_gmfs(gmf_set):
+    """
+    Generate GMF nodes from a gmf_set
+    :param gmf_set: a sequence of GMF objects with attributes
+    imt, sa_period, sa_damping, rupture_id and containing a list
+    of GMF nodes with attributes gmv and location.
+    """
+    for gmf in gmf_set:
+        gmf_node = node.Node('gmf')
+        gmf_node['IMT'] = gmf.imt
+        if gmf.imt == 'SA':
+            gmf_node['saPeriod'] = str(gmf.sa_period)
+            gmf_node['saDamping'] = str(gmf.sa_damping)
+        tag = gmf.rupture_id
+        if tag:
+            gmf_node['ruptureId'] = tag
+        gmf_node.nodes = (
+            node.Node('node', dict(gmv=str(n.gmv),
+                                   lon=str(n.location.x),
+                                   lat=str(n.location.y)))
+            for n in gmf)
+        yield gmf_node
+
+
 class EventBasedGMFXMLWriter(object):
     """
     :param dest:
@@ -364,23 +388,7 @@ class EventBasedGMFXMLWriter(object):
             gmf_set_node['investigationTime'] = str(gmf_set.investigation_time)
             gmf_set_node['stochasticEventSetId'] = str(
                 gmf_set.stochastic_event_set_id)
-
-            def gen_gmfs():
-                for gmf in gmf_set:
-                    gmf_node = node.Node('gmf')
-                    gmf_node['IMT'] = gmf.imt
-                    if gmf.imt == 'SA':
-                        gmf_node['saPeriod'] = str(gmf.sa_period)
-                        gmf_node['saDamping'] = str(gmf.sa_damping)
-                    gmf_node['ruptureId'] = str(gmf.rupture_id)
-                    gmf_node.nodes = (
-                        node.Node('node', dict(gmv=str(n.gmv),
-                                               lon=str(n.location.x),
-                                               lat=str(n.location.y)
-                                               ))
-                        for n in gmf)
-                    yield gmf_node
-            gmf_set_node.nodes = gen_gmfs()
+            gmf_set_node.nodes = gen_gmfs(gmf_set)
             gmf_set_nodes.append(gmf_set_node)
 
         if self.sm_lt_path is not None and self.gsim_lt_path is not None:
@@ -895,25 +903,9 @@ class ScenarioGMFXMLWriter(object):
             * `lon` and `lat` attributes (to indicate the geographical location
               of the ground motion field
         """
-        with NRMLFile(self.dest, 'w') as fh:
-            root = etree.Element('nrml',
-                                 nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
-            gmfset = etree.SubElement(root, 'gmfSet')
-            for gmf in data:
-                gmf_elem = etree.SubElement(gmfset, 'gmf')
-                gmf_elem.set('IMT', gmf.imt)
-                if gmf.imt == 'SA':
-                    gmf_elem.set('saPeriod', str(gmf.sa_period))
-                    gmf_elem.set('saDamping', str(gmf.sa_damping))
-                for gmf_node in gmf:
-                    node_elem = etree.SubElement(gmf_elem, 'node')
-                    node_elem.set('gmv', str(gmf_node.gmv))
-                    node_elem.set('lon', str(gmf_node.location.x))
-                    node_elem.set('lat', str(gmf_node.location.y))
-
-            fh.write(etree.tostring(
-                root, pretty_print=True, xml_declaration=True,
-                encoding='UTF-8'))
+        gmfset = node.Node('gmfSet', {}, nodes=gen_gmfs(data))
+        with open(self.dest, 'w') as dest:
+            node.node_to_nrml(gmfset, dest)
 
 
 class UHSXMLWriter(BaseCurveWriter):
