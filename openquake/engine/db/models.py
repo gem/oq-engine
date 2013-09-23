@@ -2207,7 +2207,7 @@ class _GroundMotionField(object):
         and testing.
         """
         mdata = ('imt=%(imt)s sa_period=%(sa_period)s '
-                 'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)d' %
+                 'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)s' %
                  vars(self))
         nodes = sorted(map(str, self.gmf_nodes))
         return 'GMF(%s\n%s)' % (mdata, '\n'.join(nodes))
