@@ -2169,7 +2169,7 @@ class Gmf(djm.Model):
         GROUP BY imt, sa_period, sa_damping, tag
         """ % (hc.id, self.id, ses.id)
             if orderby:  # may be used in tests to get reproducible results
-                query += 'order by imt, sa_period, sa_damping, rupture_id;'
+                query += 'order by imt, sa_period, sa_damping, tag;'
             with transaction.commit_on_success(using='job_init'):
                 curs = getcursor('job_init')
                 curs.execute(query)
@@ -2207,7 +2207,7 @@ class _GroundMotionField(object):
         and testing.
         """
         mdata = ('imt=%(imt)s sa_period=%(sa_period)s '
-                 'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)d' %
+                 'sa_damping=%(sa_damping)s rupture_id=%(rupture_id)s' %
                  vars(self))
         nodes = sorted(map(str, self.gmf_nodes))
         return 'GMF(%s\n%s)' % (mdata, '\n'.join(nodes))
