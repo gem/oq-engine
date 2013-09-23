@@ -76,7 +76,7 @@ root
 
     def test_ini(self):
         # can read and write a .ini file converted into a Node object
-        inifile = cStringIO.StringIO(u"""\
+        inifile = cStringIO.StringIO("""\
 [general]
 a = 1
 b = 2
@@ -102,7 +102,7 @@ param=yyy
 
     def test_xml(self):
         # can read and write a .xml file converted into a Node object
-        xmlfile = cStringIO.StringIO(u"""\
+        xmlfile = cStringIO.StringIO("""\
 <root>
 <general>
 <a>1</a>
