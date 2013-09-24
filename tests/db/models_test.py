@@ -363,7 +363,7 @@ class GmfsPerSesTestCase(unittest.TestCase):
         cls.investigation_time = job.hazard_calculation.investigation_time
 
     def test_branch_lt(self):
-        all_gmfs = list(self.gmf_coll1.get_gmfs_per_ses())
+        all_gmfs = list(self.gmf_coll1)
         self.assertEqual(len(all_gmfs), 1)
         gmfs = all_gmfs[0]
         expected = """\
@@ -391,7 +391,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
         self.assertEqual(str(gmfs), expected)
 
     def test_complete_lt(self):
-        all_gmfs = list(self.parent_coll.get_gmfs_per_ses())
+        all_gmfs = list(self.parent_coll)
         self.assertEqual(len(all_gmfs), 1)
         gmfs = all_gmfs[0]
         expected = """\
