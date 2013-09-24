@@ -2130,23 +2130,43 @@ class Gmf(djm.Model):
                      'where parent_id=%s', (self.id,))
         return [self.__class__.objects.get(pk=r[0]) for r in curs]
 
-    def get_gmfs_per_ses(self, orderby=True):
+    # this part is tested in models_test:GmfsPerSesTestCase
+    def __iter__(self):
         """
-        Get the ground motion fields per SES in a good format for
-        the XML export.
+        Get the ground motion fields per SES ("GMF set" objects) for
+        the XML export. Each "GMF set" should:
+
+            * have an `investigation_time` attribute
+            * have an `stochastic_event_set_id` attribute
+            * be iterable, yielding a sequence of "GMF" objects
+
+            Each "GMF" object should:
+
+            * have an `imt` attribute
+            * have an `sa_period` attribute (only if `imt` is 'SA')
+            * have an `sa_damping` attribute (only if `imt` is 'SA')
+            * have a `rupture_id` attribute (to indicate which rupture
+              contributed to this gmf)
+            * be iterable, yielding a sequence of "GMF node" objects
+
+            Each "GMF node" object should have:
+
+            * a `gmv` attribute (to indicate the ground motion value
+            * `lon` and `lat` attributes (to indicate the geographical location
+              of the ground motion field)
         """
         children = self.get_children()
         if children:  # complete logic tree
             all_gmfs = []
             tot_time = 0.0
-            fake_ses_id = 1
+            fake_ses_ordinal = 1
             for coll in children:
-                for g in coll.get_gmfs_per_ses(orderby):
+                for g in coll:
                     all_gmfs.append(g)
                     tot_time += g.investigation_time
             if all_gmfs:
                 yield _GmfsPerSES(
-                    itertools.chain(*all_gmfs), tot_time, fake_ses_id)
+                    itertools.chain(*all_gmfs), tot_time, fake_ses_ordinal)
             return
         # leaf of the tree
         ses_coll = SESCollection.objects.get(
@@ -2154,7 +2174,8 @@ class Gmf(djm.Model):
 
         hc = ses_coll.output.oq_job.hazard_calculation
 
-        for ses in SES.objects.filter(ses_collection=ses_coll).order_by('id'):
+        for ses in SES.objects.filter(ses_collection=ses_coll
+                                      ).order_by('ordinal'):
             query = """
         SELECT imt, sa_period, sa_damping, tag,
                array_agg(gmv) AS gmvs,
@@ -2167,9 +2188,8 @@ class Gmf(djm.Model):
              AND gmf_id=%d AND ses_id=%d) AS x, hzrdr.ses_rupture AS y
         WHERE x.rupture_id = y.id
         GROUP BY imt, sa_period, sa_damping, tag
+        ORDER BY imt, sa_period, sa_damping, tag;
         """ % (hc.id, self.id, ses.id)
-            if orderby:  # may be used in tests to get reproducible results
-                query += 'order by imt, sa_period, sa_damping, tag;'
             with transaction.commit_on_success(using='job_init'):
                 curs = getcursor('job_init')
                 curs.execute(query)
@@ -2181,9 +2201,8 @@ class Gmf(djm.Model):
                              for gmv, x, y in zip(gmvs, xs, ys)]
                     yield _GroundMotionField(
                         imt, sa_period, sa_damping, rupture_tag, nodes)
-            yield _GmfsPerSES(gengmfs(curs), ses.investigation_time, ses.id)
-
-    __iter__ = get_gmfs_per_ses
+            yield _GmfsPerSES(gengmfs(curs), ses.investigation_time,
+                              ses.ordinal)
 
 
 class _GroundMotionField(object):
