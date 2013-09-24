@@ -40,10 +40,6 @@ from openquake.engine.db import models
 # Silencing 'Access to protected member' (WRT hazardlib polygons)
 # pylint: disable=W0212
 
-_SCALE_REL_MAP = {
-    'PeerMSR': scalerel.PeerMSR,
-    'WC1994': scalerel.WC1994,
-}
 
 
 def nrml_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
@@ -153,13 +149,15 @@ def _point_to_hazardlib(src, mesh_spacing, bin_width):
     # hypocentral depth distribution:
     hd = pmf.PMF([(x.probability, x.depth) for x in src.hypo_depth_dist])
 
+    msr = scalerel.get_available_magnitude_scalerel()[src.mag_scale_rel]()
+
     point = source.PointSource(
         source_id=src.id,
         name=src.name,
         tectonic_region_type=src.trt,
         mfd=mf_dist,
         rupture_mesh_spacing=mesh_spacing,
-        magnitude_scaling_relationship=_SCALE_REL_MAP[src.mag_scale_rel](),
+        magnitude_scaling_relationship=msr,
         rupture_aspect_ratio=src.rupt_aspect_ratio,
         upper_seismogenic_depth=src.geometry.upper_seismo_depth,
         lower_seismogenic_depth=src.geometry.lower_seismo_depth,
@@ -207,13 +205,14 @@ def _area_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
     # hypocentral depth distribution:
     hd = pmf.PMF([(x.probability, x.depth) for x in src.hypo_depth_dist])
 
+    msr = scalerel.get_available_magnitude_scalerel()[src.mag_scale_rel]()
     area = source.AreaSource(
         source_id=src.id,
         name=src.name,
         tectonic_region_type=src.trt,
         mfd=mf_dist,
         rupture_mesh_spacing=mesh_spacing,
-        magnitude_scaling_relationship=_SCALE_REL_MAP[src.mag_scale_rel](),
+        magnitude_scaling_relationship=msr,
         rupture_aspect_ratio=src.rupt_aspect_ratio,
         upper_seismogenic_depth=src.geometry.upper_seismo_depth,
         lower_seismogenic_depth=src.geometry.lower_seismo_depth,
@@ -244,6 +243,7 @@ def _simple_to_hazardlib(src, mesh_spacing, bin_width):
     fault_trace = geo.Line([geo.Point(*x) for x in shapely_line.coords])
 
     mf_dist = _mfd_to_hazardlib(src.mfd, bin_width)
+    msr = scalerel.get_available_magnitude_scalerel()[src.mag_scale_rel]()
 
     simple = source.SimpleFaultSource(
         source_id=src.id,
@@ -251,7 +251,7 @@ def _simple_to_hazardlib(src, mesh_spacing, bin_width):
         tectonic_region_type=src.trt,
         mfd=mf_dist,
         rupture_mesh_spacing=mesh_spacing,
-        magnitude_scaling_relationship=_SCALE_REL_MAP[src.mag_scale_rel](),
+        magnitude_scaling_relationship=msr,
         rupture_aspect_ratio=src.rupt_aspect_ratio,
         upper_seismogenic_depth=src.geometry.upper_seismo_depth,
         lower_seismogenic_depth=src.geometry.lower_seismo_depth,
@@ -291,6 +291,7 @@ def _complex_to_hazardlib(src, mesh_spacing, bin_width):
         edges.append(line)
 
     mf_dist = _mfd_to_hazardlib(src.mfd, bin_width)
+    msr = scalerel.get_available_magnitude_scalerel()[src.mag_scale_rel]()
 
     cmplx = source.ComplexFaultSource(
         source_id=src.id,
@@ -298,7 +299,7 @@ def _complex_to_hazardlib(src, mesh_spacing, bin_width):
         tectonic_region_type=src.trt,
         mfd=mf_dist,
         rupture_mesh_spacing=mesh_spacing,
-        magnitude_scaling_relationship=_SCALE_REL_MAP[src.mag_scale_rel](),
+        magnitude_scaling_relationship=msr,
         rupture_aspect_ratio=src.rupt_aspect_ratio,
         edges=edges,
         rake=src.rake,
