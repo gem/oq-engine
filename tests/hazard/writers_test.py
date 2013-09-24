@@ -516,12 +516,12 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
         locations = [Location(i * 0.1, i * 0.1) for i in xrange(12)]
         gmf_nodes = [GmfNode(i * 0.2, locations[i]) for i in xrange(12)]
         gmfs = [
-            Gmf('SA', 0.1, 5.0, gmf_nodes[:2], 1),
-            Gmf('SA', 0.2, 5.0, gmf_nodes[2:4], 2),
-            Gmf('SA', 0.3, 5.0, gmf_nodes[4:6], 3),
-            Gmf('PGA', None, None, gmf_nodes[6:8], 4),
-            Gmf('PGA', None, None, gmf_nodes[8:10], 5),
-            Gmf('PGA', None, None, gmf_nodes[10:], 6),
+            Gmf('SA', 0.1, 5.0, gmf_nodes[:2], 'i=1'),
+            Gmf('SA', 0.2, 5.0, gmf_nodes[2:4], 'i=2'),
+            Gmf('SA', 0.3, 5.0, gmf_nodes[4:6], 'i=3'),
+            Gmf('PGA', None, None, gmf_nodes[6:8], 'i=4'),
+            Gmf('PGA', None, None, gmf_nodes[8:10], 'i=5'),
+            Gmf('PGA', None, None, gmf_nodes[10:], 'i=6'),
         ]
         gmf_sets = [
             GmfSet(gmfs[:2], 50.0, 1),
@@ -535,31 +535,31 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <gmfCollection sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b7_b15">
     <gmfSet investigationTime="50.0" stochasticEventSetId="1">
-      <gmf IMT="SA" saPeriod="0.1" saDamping="5.0" ruptureId="1">
+      <gmf IMT="SA" saPeriod="0.1" saDamping="5.0" ruptureId="i=1">
         <node gmv="0.0" lon="0.0" lat="0.0"/>
         <node gmv="0.2" lon="0.1" lat="0.1"/>
       </gmf>
-      <gmf IMT="SA" saPeriod="0.2" saDamping="5.0" ruptureId="2">
+      <gmf IMT="SA" saPeriod="0.2" saDamping="5.0" ruptureId="i=2">
         <node gmv="0.4" lon="0.2" lat="0.2"/>
         <node gmv="0.6" lon="0.3" lat="0.3"/>
       </gmf>
     </gmfSet>
     <gmfSet investigationTime="40.0" stochasticEventSetId="2">
-      <gmf IMT="SA" saPeriod="0.3" saDamping="5.0" ruptureId="3">
+      <gmf IMT="SA" saPeriod="0.3" saDamping="5.0" ruptureId="i=3">
         <node gmv="0.8" lon="0.4" lat="0.4"/>
         <node gmv="1.0" lon="0.5" lat="0.5"/>
       </gmf>
-      <gmf IMT="PGA" ruptureId="4">
+      <gmf IMT="PGA" ruptureId="i=4">
         <node gmv="1.2" lon="0.6" lat="0.6"/>
         <node gmv="1.4" lon="0.7" lat="0.7"/>
       </gmf>
     </gmfSet>
     <gmfSet investigationTime="30.0" stochasticEventSetId="3">
-      <gmf IMT="PGA" ruptureId="5">
+      <gmf IMT="PGA" ruptureId="i=5">
         <node gmv="1.6" lon="0.8" lat="0.8"/>
         <node gmv="1.8" lon="0.9" lat="0.9"/>
       </gmf>
-      <gmf IMT="PGA" ruptureId="6">
+      <gmf IMT="PGA" ruptureId="i=6">
         <node gmv="2.0" lon="1.0" lat="1.0"/>
         <node gmv="2.2" lon="1.1" lat="1.1"/>
       </gmf>
@@ -594,12 +594,12 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
         locations = [Location(i * 0.1, i * 0.1) for i in xrange(12)]
         gmf_nodes = [GmfNode(i * 0.2, locations[i]) for i in xrange(12)]
         gmfs = [
-            Gmf('SA', 0.1, 5.0, gmf_nodes[:2], 1),
-            Gmf('SA', 0.2, 5.0, gmf_nodes[2:4], 2),
-            Gmf('SA', 0.3, 5.0, gmf_nodes[4:6], 3),
-            Gmf('PGA', None, None, gmf_nodes[6:8], 4),
-            Gmf('PGA', None, None, gmf_nodes[8:10], 5),
-            Gmf('PGA', None, None, gmf_nodes[10:], 6),
+            Gmf('SA', 0.1, 5.0, gmf_nodes[:2], 'i=1'),
+            Gmf('SA', 0.2, 5.0, gmf_nodes[2:4], 'i=2'),
+            Gmf('SA', 0.3, 5.0, gmf_nodes[4:6], 'i=3'),
+            Gmf('PGA', None, None, gmf_nodes[6:8], 'i=4'),
+            Gmf('PGA', None, None, gmf_nodes[8:10], 'i=5'),
+            Gmf('PGA', None, None, gmf_nodes[10:], 'i=6'),
         ]
         gmf_set = GmfSet(gmfs, 350.0, 1)
 
@@ -607,27 +607,27 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
   <gmfSet investigationTime="350.0" stochasticEventSetId="1">
-    <gmf IMT="SA" saPeriod="0.1" saDamping="5.0" ruptureId="1">
+    <gmf IMT="SA" saPeriod="0.1" saDamping="5.0" ruptureId="i=1">
       <node gmv="0.0" lon="0.0" lat="0.0"/>
       <node gmv="0.2" lon="0.1" lat="0.1"/>
     </gmf>
-    <gmf IMT="SA" saPeriod="0.2" saDamping="5.0" ruptureId="2">
+    <gmf IMT="SA" saPeriod="0.2" saDamping="5.0" ruptureId="i=2">
       <node gmv="0.4" lon="0.2" lat="0.2"/>
       <node gmv="0.6" lon="0.3" lat="0.3"/>
     </gmf>
-    <gmf IMT="SA" saPeriod="0.3" saDamping="5.0" ruptureId="3">
+    <gmf IMT="SA" saPeriod="0.3" saDamping="5.0" ruptureId="i=3">
       <node gmv="0.8" lon="0.4" lat="0.4"/>
       <node gmv="1.0" lon="0.5" lat="0.5"/>
     </gmf>
-    <gmf IMT="PGA" ruptureId="4">
+    <gmf IMT="PGA" ruptureId="i=4">
       <node gmv="1.2" lon="0.6" lat="0.6"/>
       <node gmv="1.4" lon="0.7" lat="0.7"/>
     </gmf>
-    <gmf IMT="PGA" ruptureId="5">
+    <gmf IMT="PGA" ruptureId="i=5">
       <node gmv="1.6" lon="0.8" lat="0.8"/>
       <node gmv="1.8" lon="0.9" lat="0.9"/>
     </gmf>
-    <gmf IMT="PGA" ruptureId="6">
+    <gmf IMT="PGA" ruptureId="i=6">
       <node gmv="2.0" lon="1.0" lat="1.0"/>
       <node gmv="2.2" lon="1.1" lat="1.1"/>
     </gmf>
@@ -653,27 +653,24 @@ class SESXMLWriterTestCase(unittest.TestCase):
     def test_serialize(self):
         ruptures1 = [
             SESRupture(1,
-                5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust',
-                False, False,
-                top_left_corner=(1.1, 1.01, 10.0),
-                top_right_corner=(2.1, 2.01, 20.0),
-                bottom_right_corner=(3.1, 3.01, 30.0),
-                bottom_left_corner=(4.1, 4.01, 40.0)),
+                       5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust',
+                       False, False,
+                       top_left_corner=(1.1, 1.01, 10.0),
+                       top_right_corner=(2.1, 2.01, 20.0),
+                       bottom_right_corner=(3.1, 3.01, 30.0),
+                       bottom_left_corner=(4.1, 4.01, 40.0)),
             SESRupture(2,
-                6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
-                True, False,
-                lons=[
-                    [5.1, 6.1],
-                    [7.1, 8.1],
-                ],
-                lats=[
-                    [5.01, 6.01],
-                    [7.01, 8.01],
-                ],
-                depths=[
-                    [10.5, 10.6],
-                    [10.7, 10.8],
-                ]),
+                       6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
+                       True, False,
+                       lons=[[5.1, 6.1],
+                             [7.1, 8.1],
+                             ],
+                       lats=[[5.01, 6.01],
+                             [7.01, 8.01],
+                             ],
+                       depths=[[10.5, 10.6],
+                               [10.7, 10.8],
+                               ]),
         ]
         ses1 = SES(1, 50.0, ruptures1)
 
@@ -1338,34 +1335,55 @@ class ScenarioGMFXMLWriterTestCase(unittest.TestCase):
         ]
 
         expected = StringIO.StringIO("""\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <gmfSet>
-    <gmf IMT="SA" saPeriod="0.1" saDamping="5.0">
-      <node gmv="0.0" lon="0.0" lat="0.0"/>
-      <node gmv="0.2" lon="0.1" lat="0.1"/>
-    </gmf>
-    <gmf IMT="SA" saPeriod="0.2" saDamping="5.0">
-      <node gmv="0.4" lon="0.2" lat="0.2"/>
-      <node gmv="0.6" lon="0.3" lat="0.3"/>
-    </gmf>
-    <gmf IMT="SA" saPeriod="0.3" saDamping="5.0">
-      <node gmv="0.8" lon="0.4" lat="0.4"/>
-      <node gmv="1.0" lon="0.5" lat="0.5"/>
-    </gmf>
-    <gmf IMT="PGA">
-      <node gmv="1.2" lon="0.6" lat="0.6"/>
-      <node gmv="1.4" lon="0.7" lat="0.7"/>
-    </gmf>
-    <gmf IMT="PGA">
-      <node gmv="1.6" lon="0.8" lat="0.8"/>
-      <node gmv="1.8" lon="0.9" lat="0.9"/>
-    </gmf>
-    <gmf IMT="PGA">
-      <node gmv="2.0" lon="1.0" lat="1.0"/>
-      <node gmv="2.2" lon="1.1" lat="1.1"/>
-    </gmf>
-  </gmfSet>
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <gmfSet>
+        <gmf
+        IMT="SA"
+        saDamping="5.0"
+        saPeriod="0.1"
+        >
+            <node gmv="0.0" lat="0.0" lon="0.0"/>
+            <node gmv="0.2" lat="0.1" lon="0.1"/>
+        </gmf>
+        <gmf
+        IMT="SA"
+        saDamping="5.0"
+        saPeriod="0.2"
+        >
+            <node gmv="0.4" lat="0.2" lon="0.2"/>
+            <node gmv="0.6" lat="0.3" lon="0.3"/>
+        </gmf>
+        <gmf
+        IMT="SA"
+        saDamping="5.0"
+        saPeriod="0.3"
+        >
+            <node gmv="0.8" lat="0.4" lon="0.4"/>
+            <node gmv="1.0" lat="0.5" lon="0.5"/>
+        </gmf>
+        <gmf
+        IMT="PGA"
+        >
+            <node gmv="1.2" lat="0.6" lon="0.6"/>
+            <node gmv="1.4" lat="0.7" lon="0.7"/>
+        </gmf>
+        <gmf
+        IMT="PGA"
+        >
+            <node gmv="1.6" lat="0.8" lon="0.8"/>
+            <node gmv="1.8" lat="0.9" lon="0.9"/>
+        </gmf>
+        <gmf
+        IMT="PGA"
+        >
+            <node gmv="2.0" lat="1.0" lon="1.0"/>
+            <node gmv="2.2" lat="1.1" lon="1.1"/>
+        </gmf>
+    </gmfSet>
 </nrml>
 """)
         try:

@@ -20,7 +20,7 @@
         <xs:attribute name="saDamping" type="PositiveDoubleType"/>
     </xs:complexType>
 
-	<xs:simpleType name="Vs30Method">
+    <xs:simpleType name="Vs30Method">
         <xs:annotation>
             <xs:documentation>Method used to define the vs30 value.</xs:documentation>
         </xs:annotation>
