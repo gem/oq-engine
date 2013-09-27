@@ -291,7 +291,7 @@ class MemTable(Table):
         container = {
             name_csv: FileObject(name_csv, csv_str),
             name_mdata: FileObject(name_mdata, mdata_str),
-            }
+        }
         return cls(container, name)
 
     @classmethod
