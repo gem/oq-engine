@@ -289,9 +289,9 @@ class MemTable(Table):
         name_csv = name + '.csv'
         name_mdata = name + '.mdata'
         container = {
-            name_csv: FileObject(name_csv, csv_str),
             name_mdata: FileObject(name_mdata, mdata_str),
-            }
+            name_csv: FileObject(name_csv, csv_str),
+        }
         return cls(container, name)
 
     @classmethod

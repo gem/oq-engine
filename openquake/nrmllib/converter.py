@@ -37,7 +37,7 @@ from abc import ABCMeta, abstractmethod
 
 # A write-only table, essentially the opposite of the read-only
 # tables in the nrmllib.tables module.
-class Table(object):
+class EdiTable(object):
     """
     Given a triple suffix, metadata and data matrix returns a sequence yielding
     dictionaries when iterated over. This kind of table keeps everything in
@@ -47,13 +47,14 @@ class Table(object):
     files associated to the table, which are generated when the .save method
     is called.
     """
-    __metaclass__ = ABCMeta
-
     def __init__(self, suffix, metadata, matrix):
         self.suffix = suffix
         self.metadata = metadata
-        self.fieldnames = converter(metadata).get_fields()
         self.rows = matrix
+
+    @property
+    def fieldnames(self):
+        return converter(self.metadata).get_fields()
 
     def __iter__(self):
         """Yield a record dictionary for each row"""
@@ -92,6 +93,8 @@ class BaseConverter(object):
     Abstract base class. Each converter takes a node in input and has methods
     get_fields, build_tables and build_node.
     """
+    __metaclass__ = ABCMeta
+
     def __init__(self, node):
         self.node = node
 
@@ -176,7 +179,7 @@ class VulnerabilityModel(BaseConverter):
                 matrix.append(vf.coefficientsVariation.text.split())
                 vf.lossRatio.text = None
                 vf.coefficientsVariation.text = None
-            yield Table(vset['vulnerabilitySetID'], metadata, zip(*matrix))
+            yield EdiTable(vset['vulnerabilitySetID'], metadata, zip(*matrix))
 
     def build_node(self, tables):
         """
@@ -265,7 +268,7 @@ class FragilityModel(BaseConverter):
             md.ffs.append(ffs.taxonomy)
             md.ffs.append(Node('IML', ffs.IML.attrib))
             # append the two nodes taxonomy and IML
-            yield Table(str(i), md, zip(*matrix))
+            yield EdiTable(str(i), md, zip(*matrix))
 
     def build_node(self, tables):
         """
@@ -429,7 +432,7 @@ class ExposureModel(BaseConverter):
                     + getoccupancies(asset)
                     for asset in node.assets)
         metadata.append(Node('assets'))
-        yield Table('', metadata, data)
+        yield EdiTable('', metadata, data)
 
     def build_node(self, tables):
         """
@@ -475,7 +478,7 @@ class GmfSet(BaseConverter):
             metadata = Node('gmfSet', node.attrib,
                             nodes=[Node('gmf', gmf.attrib)])
             data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
-            yield Table(imt, metadata, data)
+            yield EdiTable(imt, metadata, data)
 
     def build_node(self, tables):
         """
@@ -522,7 +525,7 @@ class GmfCollection(BaseConverter):
                           nodes=[Node('gmf', gmf.attrib)])
                 metadata.append(gs)
                 data = ((n['lon'], n['lat'], n['gmv']) for n in gmf)
-                yield Table(imt + ',' + rup, metadata, data)
+                yield EdiTable(imt + ',' + rup, metadata, data)
 
     def build_node(self, tables):
         """
