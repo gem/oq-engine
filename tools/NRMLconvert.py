@@ -65,9 +65,6 @@ def main(*fnames):
             return out
         create(convert_to_nrml, name + '.xml')
 
-    if not xmlfiles and not zipfiles:
-        sys.exit('Could not convert %s' % ' '.join(csvmdatafiles + otherfiles))
-
 
 if __name__ == '__main__':
     # TODO: this is a preliminary version

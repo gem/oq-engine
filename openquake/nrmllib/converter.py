@@ -88,6 +88,70 @@ class EdiTable(object):
         return mdatafile.name, csvfile.name
 
 
+def mkgetter(name, ref):
+    dic = {}
+    s = 'def _get_%s(self): return self.%s' % (name, ref)
+    exec(s, dic)
+    return dic['_get_' + name]
+
+
+def mksetter(name, ref):
+    dic = {}
+    s = 'def _set_%s(self, value): self.%s = value' % (name, ref)
+    exec(s, dic)
+    return dic['_set_' + name]
+
+
+def no_getter(self):
+    raise NotImplementedError
+
+
+def no_setter(self, value):
+    raise NotImplementedError
+
+
+class PropertyList(object):
+    """
+    """
+    def __init__(self, *namerefs):
+        def __getitem__(rec, i):
+            if isinstance(i, str):
+                i = rec.name2index[i]
+            return rec.getters[i](rec)
+
+        def __setitem__(rec, i, v):
+            if isinstance(i, str):
+                i = rec.name2index[i]
+            rec.setters[i](rec, v)
+
+        def __len__(rec):
+            return len(rec.fields)
+
+        self.dict = dict(
+            fields=[],
+            name2index={},
+            getters=[],
+            setters=[],
+            __getitem__=__getitem__,
+            __setitem__=__setitem__,
+            __len__=__len__)
+
+        for name, ref in namerefs:
+            self.add(name, ref)
+
+    def add(self, field, ref, mode='rw'):
+        getter = mkgetter(field, ref) if 'r' in mode else no_getter
+        setter = mksetter(field, ref) if 'w' in mode else no_setter
+        self.dict['getters'].append(getter)
+        self.dict['setters'].append(setter)
+        self.dict['fields'].append(field)
+        self.dict['name2index'][field] = len(self.dict['fields'])
+
+    def attach(self, cls):
+        for k, v in self.dict.iteritems():
+            setattr(cls, k, v)
+
+
 class BaseConverter(object):
     """
     Abstract base class. Each converter takes a node in input and has methods
@@ -117,7 +181,8 @@ def converter(node):
     instance. For example, a node with tag exposureModel returns an
     instance of ExposureModel.
     """
-    clsname = node.tag[0].upper() + node.tag[1:]
+    name = node.tag[0].upper() + node.tag[1:]
+    clsname = name if name.endswith('Model') else name + 'Model'
     cls = globals()[clsname]
     return cls(node)
 
@@ -201,6 +266,23 @@ class VulnerabilityModel(BaseConverter):
             vset.IML.text = _floats_to_text(fname, 'IML', rows)
             vsets.append(vset)
         return Node('vulnerabilityModel', nodes=vsets)
+
+PropertyList(
+    ('vulnerabilitySetID',
+     "node.discreteVulnerabilitySet['vulnerabilitySetID']"),
+    ('assetCategory',
+     "node.discreteVulnerabilitySet['assetCategory']"),
+    ('lossCategory',
+     "node.discreteVulnerabilitySet['lossCategory']"),
+    ('IMT',
+     "node.discreteVulnerabilitySet.IML['IMT']"),
+    ('vulnerabilityFunctionID',
+     "node.discreteVulnerabilitySet.discreteVulnerability"
+     "['vulnerabilityFunctionID']"),
+    ('probabilisticDistribution',
+     "node.discreteVulnerabilitySet.discreteVulnerability"
+     "['probabilisticDistribution']"),
+).attach(VulnerabilityModel)
 
 
 ############################# fragility #################################
@@ -294,6 +376,36 @@ class FragilityModel(BaseConverter):
                                     nodes=[Node('params', params)]))
             fm.append(ffs)
         return fm
+
+
+class FragilityModelDiscrete(FragilityModel):
+    pass
+
+PropertyList(
+    ('format', "node['format']"),
+    ('description', "node.description.text"),
+    ('limitStates', "node,limitStates.text"),
+    ('taxonomy', 'node.ffs.taxonomy.text'),
+    ('IMT', "node.ffs.IML['IMT']"),
+    ('imlUnit', "node.ffs.IML['imlUnit']"),
+).attach(FragilityModelDiscrete)
+
+
+class FragilityModelContinuous(FragilityModel):
+    pass
+
+PropertyList(
+    ('format', "node['format']"),
+    ('description', "node.description.text"),
+    ('limitStates', "node.limitStates.text"),
+    ('noDamageLimit', "node.ffs['noDamageLimit']"),
+    ('type', "node.ffs['type']"),
+    ('taxonomy', 'node.ffs.taxonomy.text'),
+    ('IMT', "node.ffs.IML['IMT']"),
+    ('imlUnit', "node.ffs.IML['imlUnit']"),
+    ('maxIML', "node.ffs.IML['maxIML']"),
+    ('minIML', "node.ffs.IML['minIML']"),
+).attach(FragilityModelContinuous)
 
 ############################# exposure #################################
 
@@ -450,7 +562,7 @@ class ExposureModel(BaseConverter):
 
 ################################# gmf ##################################
 
-class GmfSet(BaseConverter):
+class GmfSetModel(BaseConverter):
     """A converter for gmfSet nodes"""
 
     def get_fields(self):
@@ -495,7 +607,14 @@ class GmfSet(BaseConverter):
         return gmfcoll
 
 
-class GmfCollection(BaseConverter):
+PropertyList(
+    ("IMT", "node.gmf['IMT']"),
+    ("saPeriod", "node.gmf['saPeriod']"),
+    ("saDamping", "node.gmf['saDamping']"),
+).attach(GmfSetModel)
+
+
+class GmfCollectionModel(BaseConverter):
     """A converter for gmfCollection nodes"""
 
     def get_fields(self):
@@ -548,3 +667,12 @@ class GmfCollection(BaseConverter):
                 gmfset.append(gmf)
             gmfcoll.append(gmfset)
         return gmfcoll
+
+PropertyList(
+    ("gsimTreePath", "node['gsimTreePath']"),
+    ("sourceModelTreePath", "node['sourceModelTreePath']"),
+    ("investigationTime", "node.gmfSet['investigationTime']"),
+    ("stochasticEventSetId", "node.gmfSet['stochasticEventSetId']"),
+    ("IMT", "node.gmfSet.gmf['IMT']"),
+    ("ruptureId", "node.gmfSet.gmf['ruptureId']"),
+).attach(GmfCollectionModel)
