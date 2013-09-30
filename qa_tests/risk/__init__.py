@@ -234,7 +234,10 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
 
     def get_hazard_job(self):
         if not self._get_queryset().exists():
-            warnings.warn("fixture not loaded. skipping test")
-            raise SkipTest
+            print("Running Hazard")
+            completed_job = helpers.run_hazard_job(cfg, exports=exports)
+            self.assertEqual('complete', completed_job.status)
+
         else:
+            warnings.warn("using cached fixture")
             return self._get_queryset()[0].oqjob
