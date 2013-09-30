@@ -942,31 +942,3 @@ def get_risk_outputs(rc_id):
         A sequence of :class:`openquake.engine.db.models.Output` objects
     """
     return models.Output.objects.filter(oq_job__risk_calculation=rc_id)
-
-
-def get_hazard_calculations(username):
-    """
-    Get all hazard calculations belonging to the given ``username``.
-    """
-    # FIXME(lp). As it might happen to have an HazardCalculation
-    # without a OqJob instance (e.g. when the user imports outputs
-    # directly from files) we filter out the calculation without the
-    # corresponding job
-
-    return models.HazardCalculation.objects.filter(
-        owner__user_name=username, oqjob__isnull=False).order_by(
-            'oqjob__last_update')
-
-
-def get_risk_calculations(username):
-    """
-    Get all risk calculations belonging to the given ``username``.
-    """
-    # FIXME(lp). As it might happen to have a RiskCalculation without
-    # a OqJob instance (e.g. when the user imports outputs directly
-    # from files) we filter out the calculation without the
-    # corresponding job
-
-    return models.RiskCalculation.objects.filter(
-        owner__user_name=username, oqjob__isnull=False).order_by(
-            'oqjob__last_update')
