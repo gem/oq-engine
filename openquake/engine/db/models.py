@@ -103,7 +103,7 @@ LOSS_TYPES = ["structural", "nonstructural", "fatalities", "contents"]
 
 
 #: relative tolerance to consider two risk outputs (almost) equal
-RISK_RTOL = 0.08
+RISK_RTOL = 0.05
 
 
 #: absolute tolerance to consider two risk outputs (almost) equal
@@ -143,6 +143,38 @@ def cost_type(loss_type):
 def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
     return numpy.testing.assert_allclose(
         numpy.array(key(o1)), numpy.array(key(o2)), rtol=rtol, atol=atol)
+
+
+def loss_curve_almost_equal(curve, expected_curve):
+    if curve.losses[curve.losses > 0].any():
+        poes = interpolate.interp1d(
+            curve.losses, curve.poes,
+            bounds_error=False, fill_value=0)(expected_curve.losses)
+    else:
+        poes = numpy.zeros(len(expected_curve.poes))
+
+    for poe, expected_poe in zip(curve.poes, poes):
+        absolute_tolerance = (1 - expected_poe) * RISK_ATOL * 5
+        try:
+            risk_almost_equal(poe, expected_poe, atol=absolute_tolerance)
+        except AssertionError:
+            raise AssertionError("""
+Curve 1 with losses
+%s
+poes
+%s does not match with
+curve 2 with losses
+%s
+and poes
+%s
+First different poe is %s (vs %s) where the used tolerance was %s
+""" % ("\t ".join(map(str, curve.losses)),
+       "\t ".join(map(str, curve.poes)),
+       "\t ".join(map(str, expected_curve.losses)),
+       "\t ".join(map(str, expected_curve.poes)),
+       poe, expected_poe, absolute_tolerance))
+
+    return True
 
 
 def getcursor(route):
@@ -2835,14 +2867,7 @@ class LossCurveData(djm.Model):
         return self.loss_curve.output_hash + (self.asset_ref,)
 
     def assertAlmostEqual(self, data):
-        if self.losses[self.losses > 0].any():
-            poes = interpolate.interp1d(
-                self.losses, self.poes,
-                bounds_error=False, fill_value=0)(data.losses)
-        else:
-            poes = numpy.zeros(len(data.poes))
-
-        return risk_almost_equal(self.poes, poes)
+        return loss_curve_almost_equal(self, data)
 
 
 class AggregateLossCurveData(djm.Model):
@@ -2867,14 +2892,7 @@ class AggregateLossCurveData(djm.Model):
         return self.loss_curve.output_hash
 
     def assertAlmostEqual(self, data):
-        if self.losses[self.losses > 0].any():
-            poes = interpolate.interp1d(
-                self.losses, self.poes,
-                bounds_error=False, fill_value=0)(data.losses)
-        else:
-            poes = numpy.zeros(len(data.poes))
-
-        return risk_almost_equal(self.poes, poes)
+        return loss_curve_almost_equal(self, data)
 
 
 class EventLoss(djm.Model):

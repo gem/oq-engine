@@ -230,7 +230,8 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
 
     def _get_queryset(self):
         return models.HazardCalculation.objects.filter(
-            description=self.hazard_calculation_fixture)
+            description=self.hazard_calculation_fixture,
+            oqjob__status="complete")
 
     def get_hazard_job(self):
         if not self._get_queryset().exists():
@@ -240,5 +241,5 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             self.assertEqual('complete', completed_job.status)
             return completed_job
         else:
-            warnings.warn("using cached fixture")
-            return self._get_queryset()[0].oqjob
+            warnings.warn("Using existing Hazard input")
+            return self._get_queryset().latest('oqjob__last_update').oqjob
