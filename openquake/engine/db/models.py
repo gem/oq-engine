@@ -153,28 +153,7 @@ def loss_curve_almost_equal(curve, expected_curve):
     else:
         poes = numpy.zeros(len(expected_curve.poes))
 
-    for poe, expected_poe in zip(curve.poes, poes):
-        absolute_tolerance = (1 - expected_poe) * RISK_ATOL * 5
-        try:
-            risk_almost_equal(poe, expected_poe, atol=absolute_tolerance)
-        except AssertionError:
-            raise AssertionError("""
-Curve 1 with losses
-%s
-poes
-%s does not match with
-curve 2 with losses
-%s
-and poes
-%s
-First different poe is %s (vs %s) where the used tolerance was %s
-""" % ("\t ".join(map(str, curve.losses)),
-       "\t ".join(map(str, curve.poes)),
-       "\t ".join(map(str, expected_curve.losses)),
-       "\t ".join(map(str, expected_curve.poes)),
-       poe, expected_poe, absolute_tolerance))
-
-    return True
+    return risk_almost_equal(poes, expected_curve.poes)
 
 
 def getcursor(route):
