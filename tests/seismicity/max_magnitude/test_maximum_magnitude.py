@@ -123,7 +123,7 @@ class MmaxTestCase(unittest.TestCase):
         self.assertAlmostEqual(mmin, 4.0)
         # Test 2 Finds the number of events from the catalogue with an 
         # unspecified minimum magnitude
-        self.config['input_mmin'] = None
+        del self.config['input_mmin']
         neq, mmin = _get_magnitude_vector_properties(test_catalogue, 
                                                      self.config)
         self.assertAlmostEqual(neq, 5.0)

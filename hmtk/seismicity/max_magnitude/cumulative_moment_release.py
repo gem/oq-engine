@@ -50,7 +50,7 @@ from hmtk.seismicity.max_magnitude.base import (
     BaseMaximumMagnitude, MAX_MAGNITUDE_METHODS)
 
 
-@MAX_MAGNITUDE_METHODS.add("get_mmax", number_bootstraps=np.float)
+@MAX_MAGNITUDE_METHODS.add("get_mmax", number_bootstraps=np.int)
 class CumulativeMoment(BaseMaximumMagnitude):
     '''Class to implement the bootstrapped cumulative moment estimator of
     maximum magnitude. Adapted by G. Weatherill from the Cumulative Strain

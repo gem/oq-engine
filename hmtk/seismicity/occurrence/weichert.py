@@ -54,6 +54,7 @@ from hmtk.seismicity.occurrence.utils import input_checks
 
 @OCCURRENCE_METHODS.add(
     'calculate',
+    completeness=True,
     reference_magnitude=0.0,
     magnitude_interval=0.1,
     bvalue=1.0,
@@ -68,9 +69,10 @@ class Weichert(SeismicityOccurrence):
         cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
                                                    completeness)
         # Apply Weichert preparation
-        cent_mag, t_per, n_obs = self._weichert_prep(catalogue['year'],
-                                                     catalogue['magnitude'],
-                                                     ctime, cmag, dmag)
+        cent_mag, t_per, n_obs = self._weichert_prep(
+            catalogue.data['year'],
+            catalogue.data['magnitude'],
+            ctime, cmag, dmag)
 
         # A few more Weichert checks
         key_list = config.keys()

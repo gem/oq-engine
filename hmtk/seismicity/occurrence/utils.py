@@ -112,11 +112,11 @@ def input_checks(catalogue, config, completeness):
         # Completeness corresponds to a single magnitude (i.e. applies to
         # the entire catalogue)
         cmag = np.array(completeness)
-        ctime = np.array(np.min(catalogue['year']))
+        ctime = np.array(np.min(catalogue.data['year']))
     else:
         # Everything is valid - i.e. no completeness magnitude
-        cmag = np.array(np.min(catalogue['magnitude']))
-        ctime = np.array(np.min(catalogue['year']))
+        cmag = np.array(np.min(catalogue.data['magnitude']))
+        ctime = np.array(np.min(catalogue.data['year']))
      
     # Set reference magnitude - if not in config then default to M = 0.
     if not config:

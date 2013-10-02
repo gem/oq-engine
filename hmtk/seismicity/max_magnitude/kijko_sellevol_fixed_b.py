@@ -83,7 +83,10 @@ def check_config(config, data):
 
 @MAX_MAGNITUDE_METHODS.add(
     "get_mmax",
-    **{"input_mmin": np.float,
+    **{"input_mmin": lambda cat: np.min(cat.data['magnitude']),
+       "input_mmax": lambda cat: cat.data['magnitude'][
+           np.argmax(cat.data['magnitude'])],
+       "input_mmax_uncertainty": lambda cat: cat.get_observed_mmax_sigma(0.2),
        "b-value": 1E-7,
        "maximum_iterations": 1000,
        "tolerance": 1E-5})

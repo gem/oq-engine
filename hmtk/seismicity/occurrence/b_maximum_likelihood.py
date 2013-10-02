@@ -57,17 +57,21 @@ from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
 
 
 @OCCURRENCE_METHODS.add(
-    'calculate', reference_magnitude=0.0, magnitude_interval=0.1)
+    'calculate', **{
+        'completeness': True,
+        'reference_magnitude': 0.0,
+        'magnitude_interval': 0.1,
+        'Average Type': ['Weighted','Harmonic']})
 class BMaxLikelihood(SeismicityOccurrence):
     """ Implements maximum likelihood calculations taking into account time
     variation in completeness"
     """
 
-    def calculate(self, catalogue, config, completeness=None, end_year=None):
+    def calculate(self, catalogue, config, completeness=None):
         """ Calculates recurrence parameters a_value and b_value, and their
         respective uncertainties
 
-        :param dict catalogue: Earthquake Catalogue
+        :param catalogue: Earthquake Catalogue
             An instance of :class:`hmtk.seismicity.catalogue`
         :param dict config:
             A configuration dictionary; the only parameter that can be
@@ -75,29 +79,21 @@ class BMaxLikelihood(SeismicityOccurrence):
             in the calculation
         :param list or numpy.ndarray completeness:
             Completeness table
-        :param int end_year:
-            Catalogue termination year
         """
 
         # Input checks
         cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
-                                                    completeness)
-
-        # Fix the end year
-        if end_year is None:
-            end_year = np.max(catalogue['year'])
+                                                  completeness)
 
         # Check the configuration
         if not config['Average Type'] in ['Weighted','Harmonic']:
-            raise ValueError('Average type not recognised in bMaxLiklihood!')
+            raise ValueError('Average type not recognised in bMaxLikelihood!')
 
-        return self._b_ml(catalogue, config, cmag, ctime, ref_mag,
-                dmag, end_year)
+        return self._b_ml(catalogue, config, cmag, ctime, ref_mag, dmag)
 
-    def _b_ml(self, catalogue, config, cmag, ctime, ref_mag, dmag, end_year):
-        """
-        """
-
+    def _b_ml(self, catalogue, config, cmag, ctime, ref_mag, dmag):
+        end_year = catalogue.end_year
+        catalogue = catalogue.data
         ival = 0
         mag_eq_tolerance = 1E-5
         aki_ml = AkiMaxLikelihood()
@@ -135,7 +131,7 @@ class BMaxLikelihood(SeismicityOccurrence):
                 np.log10(rate))
             if ival == 0:
                 gr_pars = np.array([np.hstack([bval, sigma_b, rate, sigrate])])
-                neq = np.sum(id1)  # Number of events
+                neq = np.array(np.sum(id1))  # Number of events
             else:
                 gr_pars = np.vstack([gr_pars, np.hstack([bval, sigma_b, rate,
                                                          sigrate])])
@@ -162,7 +158,7 @@ class BMaxLikelihood(SeismicityOccurrence):
         :param numpy.ndarray neq:
 
         """
-        if np.shape(gr_params)[0] != np.shape(neq)[0]:
+        if np.shape(gr_params)[0] != neq.size:
             raise ValueError('Number of weights does not correspond'
                              ' to number of parameters')
 
@@ -177,11 +173,10 @@ class BMaxLikelihood(SeismicityOccurrence):
         sigma_a = average_parameters[3]
         return bval, sigma_b, aval, sigma_a
 
-
     def _weighted_mean(self, parameters, neq):
         '''Simple weighted mean'''
         weight = neq.astype(float) / np.sum(neq)
-        if np.shape(parameters)[0] != np.shape(weight)[0]:
+        if np.shape(parameters)[0] != weight.size:
             raise ValueError('Parameter vector not same shape as weights')
         else:
             average_value = np.zeros(np.shape(parameters)[1], dtype=float)
@@ -192,11 +187,11 @@ class BMaxLikelihood(SeismicityOccurrence):
     def _harmonic_mean(self, parameters, neq):
         '''Harmonic mean'''
         weight = neq.astype(float) / np.sum(neq)
-        if np.shape(parameters)[0] != np.shape(weight)[0]:
+        if np.shape(parameters)[0] != weight.size:
                 raise ValueError('Parameter vector not same shape as weights')
-        else:
-            average_value = np.zeros(np.shape(parameters)[1], dtype=float)
-            for iloc in range(0, np.shape(parameters)[1]):
-                average_value[iloc] = 1. / np.sum(
-                    (weight * (1. / parameters[:, iloc])))
+
+        average_value = np.zeros(np.shape(parameters)[1], dtype=float)
+        for iloc in range(0, np.shape(parameters)[1]):
+            average_value[iloc] = 1. / np.sum(
+                (weight * (1. / parameters[:, iloc])))
         return average_value

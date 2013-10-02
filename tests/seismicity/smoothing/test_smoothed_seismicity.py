@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
 # 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -14,45 +14,45 @@
 #
 # DISCLAIMER
 # 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM’s OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM’s OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 # -*- coding: utf-8 -*-
 '''
 Test suite for smoothed seismicity class
 '''
-import os, sys
+import os
 import unittest
 import numpy as np
 from math import fabs
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.smoothing import utils
-from hmtk.seismicity.smoothing.smoothed_seismicity import (SmoothedSeismicity, 
-                                                           _get_adjustment)
+from hmtk.seismicity.smoothing.smoothed_seismicity import (
+    SmoothedSeismicity, _get_adjustment, Grid)
 
 from hmtk.seismicity.smoothing.kernels.isotropic_gaussian import \
     IsotropicGaussian
@@ -74,7 +74,6 @@ class TestSmoothingUtils(unittest.TestCase):
         '''
         self.catalogue = Catalogue()
 
-
     def test_check_completeness_table_numpy_array(self):
         '''
         Tests behaviour when data input as numpy array
@@ -82,12 +81,12 @@ class TestSmoothingUtils(unittest.TestCase):
         # When valid data is input
         simple_array = np.array([[1990., 4.0],
                                  [1960., 5.0]])
-        np.testing.assert_array_almost_equal(simple_array,
-            utils.check_completeness_table(simple_array, None))
+        np.testing.assert_array_almost_equal(
+            simple_array, utils.check_completeness_table(simple_array, None))
         # When invalid data is input
         bad_array = np.array([[1990., 4.0, 23.4],
                                [1960., 5.0, 2.1]])
-        
+
         with self.assertRaises(AssertionError) as aer:
             utils.check_completeness_table(bad_array, None)
 
@@ -106,7 +105,7 @@ class TestSmoothingUtils(unittest.TestCase):
         with self.assertRaises(AssertionError) as aer:
             utils.check_completeness_table(bad_list, None)
 
-            
+
     def test_check_completeness_table_none(self):
         '''
         Checks any other instance - completeness from catalogue
@@ -140,54 +139,54 @@ class TestSmoothingUtils(unittest.TestCase):
                                    [1900., 4.9],
                                    [1900., 5.0]])
         np.testing.assert_array_almost_equal(expected_table,
-            utils.get_even_magnitude_completeness(comp_table, 
+            utils.get_even_magnitude_completeness(comp_table,
                                                   self.catalogue)[0])
 
         # Common case - only one value
         comp_table = np.array([[1990., 4.0]])
         np.testing.assert_array_almost_equal(np.array([[1990., 4.0]]),
-            utils.get_even_magnitude_completeness(comp_table, 
+            utils.get_even_magnitude_completeness(comp_table,
                                                   self.catalogue)[0])
 
 
     def test_get_adjustment_factor(self):
         '''
         Tests the function that should return an input adjustment factor if
-        the magnitude is from a "complete" event - and a zero otherwise 
+        the magnitude is from a "complete" event - and a zero otherwise
         '''
         # Good case - when event is in the first completeness period
         comp_table = np.array([[1990., 4.0],
                                [1960., 4.5],
                                [1900., 5.5]])
         self.catalogue.data['magnitude'] = np.array([4.5, 5.7])
-        comp_table = utils.get_even_magnitude_completeness(comp_table, 
+        comp_table = utils.get_even_magnitude_completeness(comp_table,
                                                            self.catalogue)[0]
 
         tfact = 0.5
-        self.assertAlmostEqual(tfact, 
-            _get_adjustment(4.2, 1995., comp_table[0, 1], comp_table[:, 0], 
+        self.assertAlmostEqual(tfact,
+            _get_adjustment(4.2, 1995., comp_table[0, 1], comp_table[:, 0],
                             tfact))
 
         # Good case - when event is in a previous completeness period
-        self.assertAlmostEqual(tfact, 
-            _get_adjustment(4.7, 1985., comp_table[0, 1], comp_table[:, 0], 
+        self.assertAlmostEqual(tfact,
+            _get_adjustment(4.7, 1985., comp_table[0, 1], comp_table[:, 0],
                             tfact))
 
         # Bad case - below minimum completeness in file
-        self.assertFalse(_get_adjustment(3.8, 1990., comp_table[0, 1], 
+        self.assertFalse(_get_adjustment(3.8, 1990., comp_table[0, 1],
                                          comp_table[:, 0], tfact))
 
         # Bad case - below an earlier completeness threshold
-        self.assertFalse(_get_adjustment(4.8, 1950., comp_table[0, 1], 
+        self.assertFalse(_get_adjustment(4.8, 1950., comp_table[0, 1],
                                          comp_table[:, 0], tfact))
 
         # Good case when only one completeness period is needed
         comp_table = np.array([[1960., 4.5]])
-        self.assertAlmostEqual(1.0, 
-            _get_adjustment(5.0, 1990., comp_table[0, 1], comp_table[:, 0], 
+        self.assertAlmostEqual(1.0,
+            _get_adjustment(5.0, 1990., comp_table[0, 1], comp_table[:, 0],
                             tfact))
         # Bad case when only one completeness period is needed
-        self.assertFalse(_get_adjustment(4.0, 1990., comp_table[0, 1], 
+        self.assertFalse(_get_adjustment(4.0, 1990., comp_table[0, 1],
                                          comp_table[:, 0], tfact))
 
 
@@ -203,14 +202,14 @@ class TestSmoothingUtils(unittest.TestCase):
 
     def test_incremental_avalue(self):
         '''
-        Tests the Incremental a-value function. Notionally equivalent to the 
+        Tests the Incremental a-value function. Notionally equivalent to the
         Hermann factor
         '''
         # Simple case (again no variation in parameter behaviour!)
         ainc = utils.incremental_a_value(1.0, 5.0, 0.1)
         self.assertAlmostEqual(ainc, 99999.6670766, 3)
 
-            
+
     def test_weichert_factor(self):
         '''
         Tests the Weichert adjustment factor to compensate for time varying
@@ -226,14 +225,14 @@ class TestSmoothingUtils(unittest.TestCase):
         self.assertAlmostEqual(0.0124319686,
             utils.get_weichert_factor(beta, comp_table[:, 1], comp_table[:, 0],
                                       end_year)[0])
-        
+
         # Test 2: Single value of completeness
         comp_table = np.array([[1960., 4.0]])
         self.assertAlmostEqual(1.0,
             utils.get_weichert_factor(beta, comp_table[:, 1], comp_table[:, 0],
                                       end_year)[0])
 
-   
+
 
 class TestSmoothedSeismicity(unittest.TestCase):
     '''
@@ -248,12 +247,13 @@ class TestSmoothedSeismicity(unittest.TestCase):
         Tests the instantiation of the class
         '''
         # Test 1: Good Grid Limits
-        self.grid_limits = [35.0, 40., 0.5, 40., 45.0, 0.5, 0., 40., 20.]
+        self.grid_limits = Grid.make_from_list(
+            [35.0, 40., 0.5, 40., 45.0, 0.5, 0., 40., 20.])
         expected_dict = {'beta': None,
                          'bval': None,
                          'catalogue': None,
                          'data': None,
-                         'grid': None, 
+                         'grid': None,
                          'grid_limits': {'xmax': 40.0,
                                          'xmin': 35.0,
                                          'xspc': 0.5,
@@ -278,7 +278,8 @@ class TestSmoothedSeismicity(unittest.TestCase):
         '''
         Tests the module to count the events across a grid
         '''
-        self.grid_limits = [35.0, 40., 0.5, 40., 45.0, 0.5, 0., 40., 20.]
+        self.grid_limits = Grid.make_from_list(
+            [35.0, 40., 0.5, 40., 45.0, 0.5, 0., 40., 20.])
         self.model = SmoothedSeismicity(self.grid_limits, bvalue=1.0)
         # Case 1 - all events in grid (including borderline cases)
         comp_table = np.array([[1960., 4.0]])
@@ -289,7 +290,7 @@ class TestSmoothedSeismicity(unittest.TestCase):
         expected_result = np.zeros(100, dtype=int)
         expected_result[[9, 28, 46, 64, 82, 90]] = 1
         np.testing.assert_array_almost_equal(expected_result,
-            self.model.create_2D_grid_simple(lons, lats, years, mags, 
+            self.model.create_2D_grid_simple(lons, lats, years, mags,
                                              comp_table))
         self.assertEqual(np.sum(expected_result), 6)
 
@@ -299,7 +300,7 @@ class TestSmoothedSeismicity(unittest.TestCase):
         mags = 5.0 * np.ones(7)
         years = 2000. * np.ones(7)
         np.testing.assert_array_almost_equal(expected_result,
-            self.model.create_2D_grid_simple(lons, lats, years, mags, 
+            self.model.create_2D_grid_simple(lons, lats, years, mags,
                                              comp_table))
         self.assertEqual(np.sum(expected_result), 6)
 
@@ -317,15 +318,15 @@ class TestSmoothedSeismicity(unittest.TestCase):
             np.arange(40., 46.0, 1.0)])
         self.catalogue.data['depth'] = np.hstack([10.0 * np.ones(6),
                                                   30.0 * np.ones(6)])
-        
         self.catalogue.data['magnitude'] = 4.5 * np.ones(12)
         self.catalogue.data['year'] = 1990. * np.ones(12)
 
 
         # Case 1 - one depth layer
-        self.grid_limits = [35.0, 40., 0.5, 40.0, 45., 0.5, 0., 40., 40.]
+        self.grid_limits = Grid.make_from_list(
+            [35.0, 40., 0.5, 40.0, 45., 0.5, 0., 40., 40.])
         self.model = SmoothedSeismicity(self.grid_limits, bvalue=1.0)
-        [gx, gy] = np.meshgrid(np.arange(35.25, 40., 0.5), 
+        [gx, gy] = np.meshgrid(np.arange(35.25, 40., 0.5),
                                np.arange(40.25, 45., 0.5))
         ngp = np.shape(gx)[0]  * np.shape(gy)[1]
         gx = np.reshape(gx, [ngp, 1])
@@ -333,24 +334,25 @@ class TestSmoothedSeismicity(unittest.TestCase):
         gz = 20. * np.ones(ngp)
         expected_count = np.zeros(ngp, dtype=float)
         expected_count[[9, 28, 46, 64, 82, 90]] = 2.0
-        expected_result = np.column_stack([gx, np.flipud(gy), gz, 
+        expected_result = np.column_stack([gx, np.flipud(gy), gz,
                                            expected_count])
         self.model.create_3D_grid(self.catalogue, comp_table)
         np.testing.assert_array_almost_equal(expected_result, self.model.data)
 
         # Case 2 - multiple depth layers
-        self.grid_limits = [35.0, 40., 0.5, 40., 45., 0.5, 0., 40., 20.]
+        self.grid_limits = Grid.make_from_list(
+            [35.0, 40., 0.5, 40., 45., 0.5, 0., 40., 20.])
         self.model = SmoothedSeismicity(self.grid_limits, bvalue=1.0)
         expected_result = np.vstack([expected_result, expected_result])
         expected_count = np.zeros(200)
-        expected_count[[9, 28, 46, 64, 82, 90, 
+        expected_count[[9, 28, 46, 64, 82, 90,
             109, 128, 146, 164, 182, 190]] = 1.0
         expected_result[:, -1] = expected_count
-        expected_result[:, 2] = np.hstack([10. * np.ones(100), 
+        expected_result[:, 2] = np.hstack([10. * np.ones(100),
                                            30. * np.ones(100)])
         self.model.create_3D_grid(self.catalogue, comp_table)
         np.testing.assert_array_almost_equal(expected_result, self.model.data)
-       
+
     def test_csv_writer(self):
         '''
         Short test of consistency of the csv writer
@@ -386,18 +388,16 @@ class TestSmoothedSeismicity(unittest.TestCase):
         self.catalogue.data['latitude'] = frankel_catalogue[:, 2]
         self.catalogue.data['depth'] = frankel_catalogue[:, 3]
         self.catalogue.data['year'] = frankel_catalogue[:, 4]
-        
-        frankel_results = np.genfromtxt(os.path.join(BASE_PATH, 
+        self.catalogue.end_year = 2006
+        frankel_results = np.genfromtxt(os.path.join(BASE_PATH,
                                                      FRANKEL_OUTPUT_FILE))
         # Run analysis
         output_data = self.model.run_analysis(
-            self.catalogue, 
+            self.catalogue,
             config,
             completeness_table=comp_table,
-            smoothing_kernel = IsotropicGaussian(),
-            end_year=2006)
+            smoothing_kernel = IsotropicGaussian())
 
-        self.assertTrue(fabs(np.sum(output_data[:, -1]) - 
+        self.assertTrue(fabs(np.sum(output_data[:, -1]) -
                              np.sum(output_data[:, -2])) < 1.0)
         self.assertTrue(fabs(np.sum(output_data[:, -1]) - 390.) < 1.0)
-
