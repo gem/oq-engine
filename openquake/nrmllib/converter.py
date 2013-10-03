@@ -27,6 +27,7 @@ This module contains converter classes working on nodes of kind
 """
 
 import os
+import inspect
 import itertools
 from openquake.nrmllib.node import Node, node_to_nrml, node_from_nrml
 from openquake.nrmllib import record, records, InvalidFile
@@ -36,11 +37,8 @@ class Converter(object):
     """
     Base class.
     """
-    def __init__(self, name, archive):
-        self.archive = archive
-        self.name = name
-        fullname = name + '__' + self.__class__.__name__
-        self.io = record.RecordIO(fullname, archive)
+    def __init__(self, csvmanager):
+        self.man = csvmanager
 
     def __str__(self):
         return '<%s %s>' % (self.__class__.___name__, self.name)
@@ -55,11 +53,12 @@ class Converter(object):
         """
         name = node.tag[0].upper() + node.tag[1:]
         clsname = name[:-5] if name.endswith('Model') else name
-        conv = globals()[clsname](prefix, self.archive)
-        with conv.io as io:
+        man = record.CSVManager(prefix, self.man.archive)
+        conv = globals()[clsname](man)
+        with man:
             for rec in conv.node_to_records(node):
-                io.write(rec)  # automatically writes the header
-        return [f.name for f in io.archive.opened]
+                man.write(rec)  # automatically writes the header
+        return [f.name for f in man.archive.opened]
 
     def nrml_to_csv(self, fname):
         """
@@ -78,7 +77,7 @@ class Converter(object):
         """
         For .csv files with a given prefix to a single .xml file
         """
-        with self.io:
+        with self.man:
             node_to_nrml(self.csv_to_node(), out)
         return out.name
 
@@ -88,16 +87,22 @@ class Converter(object):
         in the underlying archive.
         """
         converters = {}  # converter name->class dictionary
-        cc = dict((c.__name__, c) for c in self.__class__.__subclasses__())
-        for fname in sorted(self.archive.extract_filenames()):
+        cc = {}
+        for name, value in globals().iteritems():
+            if inspect.isclass(value) and issubclass(value, Converter):
+                cc[name] = value
+        for fname in sorted(self.man.archive.extract_filenames()):
             try:
-                name, converter, recordcsv = fname.split('__')
+                name, recordcsv = fname.split('__')
             except ValueError:
                 continue
-            if not recordcsv.endswith('.csv') or not converter in cc:
+            if not recordcsv.endswith('.csv'):
+                continue
+            recordtype = getattr(records, recordcsv[:-4], None)
+            if recordtype is None:
                 continue
             if not name in converters:
-                converters[name] = cc[converter](name, self.archive)
+                converters[name] = cc[recordtype._tag](self.man)
         return converters.values()
 
     def get(self):
@@ -111,7 +116,7 @@ class Converter(object):
         if not converters:
             raise RuntimeError(
                 'Could not determine the right converter '
-                'from files %s' % self.archive.extract_filenames())
+                'from files %s' % self.man.archive.extract_filenames())
         elif len(converters) > 2:
             raise RuntimeError(
                 'Found %d converters, expected 1' % len(converters))
@@ -152,11 +157,11 @@ class Vulnerability(Converter):
         """
         Build a full vulnerability Node from a group of tables.
         """
-        dvs_node = self.io.readtable(
+        dvs_node = self.man.readtable(
             records.DiscreteVulnerabilitySet).to_nodedict()
-        dvf_node = self.io.readtable(
+        dvf_node = self.man.readtable(
             records.DiscreteVulnerability).to_nodedict()
-        for (set_id, vf_id), group in self.io.groupby(
+        for (set_id, vf_id), group in self.man.groupby(
                 ['vulnerabilitySetID', 'vulnerabilityFunctionID'],
                 records.DiscreteVulnerabilityData):
             dvf = dvf_node[set_id, vf_id]
@@ -171,7 +176,7 @@ class Vulnerability(Converter):
             dvf.coefficientsVariation.text = ' '.join(coeffs)
             dvs_node[set_id].append(dvf)
             dvs_node[set_id].IML.text = ' '.join(imls)
-        datafile = self.io.rt2file[records.DiscreteVulnerabilityData]
+        datafile = self.man.rt2file[records.DiscreteVulnerabilityData]
         for set_id, dvs in dvs_node.iteritems():
             if dvs.IML.text is None:
                 raise InvalidFile(
@@ -234,16 +239,16 @@ class Fragility(Converter):
         FFSDiscrete.csv, FFDDiscrete.csv or
         FFSContinuous.csv, FFDContinuous.csv.
         """
-        frag = self.io.read(records.Fragility).next().to_node()
+        frag = self.man.read(records.Fragility).next().to_node()
         if frag['format'] == 'discrete':
             FFSRecord = records.FFSDiscrete
             FFDRecord = records.FFDDiscrete
         else:  # 'continuous'
             FFSRecord = records.FFSContinuous
             FFDRecord = records.FFDContinuos
-        ffs_node = self.io.readtable(FFSRecord).to_nodedict()
+        ffs_node = self.man.readtable(FFSRecord).to_nodedict()
         frag.nodes.extend(ffs_node.values())
-        for (ordinal, ls), data in self.io.groupby(
+        for (ordinal, ls), data in self.man.groupby(
                 ['ffs_ordinal', 'limitState'], FFDRecord):
             data = list(data)
             if frag['format'] == 'discrete':
@@ -424,16 +429,16 @@ class Exposure(Converter):
         Build a Node object containing a full exposure from a set
         of tables. The assets are lazily read.
         """
-        exp = self.io.read(records.Exposure).next().to_node()
+        exp = self.man.read(records.Exposure).next().to_node()
         if exp['category'] == 'buildings':
             exp.conversions.costTypes.nodes = ctypes = [
-                c.to_node() for c in self.io.read(records.CostType)]
+                c.to_node() for c in self.man.read(records.CostType)]
             costcolumns = getcostcolumns(exp.conversions.costTypes)
             Asset = make_asset_class(costcolumns)
         else:
             Asset = records.AssetPopulation
             ctypes = []
-        assets = (a.to_node() for a in self.io.read(Asset))
+        assets = (a.to_node() for a in self.man.read(Asset))
         exp.assets.nodes = assetgenerator(assets, ctypes)
         return exp
 
@@ -441,41 +446,7 @@ class Exposure(Converter):
 ################################# gmf ##################################
 
 class GmfSet(Converter):
-    """A converter for gmfSet nodes"""
-
-    def node_to_records(self, node):
-        """
-        """
-        for gmf in node.getnodes('gmf'):
-            imt = gmf['IMT']
-            if imt == 'SA':
-                imt += '(%s)' % gmf['saPeriod']
-            yield records.Gmf(1, imt, '')
-            for n in gmf:
-                yield records.GmfData(
-                    1, imt, '', n['lon'], n['lat'], n['gmv'])
-
-    def csv_to_node(self, gmfset=None):
-        """
-        Build a gmfSet node from GmfData.csv
-        """
-        gmfset = gmfset or Node('gmfSet')
-        for (ses, imt, rupture), rows in self.io.groupby(
-                ['stochasticEventSetId', 'imtStr', 'ruptureId'],
-                records.GmfData):
-            if imt.startswith('SA'):
-                attr = dict(IMT='SA', saPeriod=imt[3:-1], saDamping='5')
-            else:
-                attr = dict(IMT=imt)
-            if rupture:
-                attr['ruptureId'] = rupture
-            nodes = [records.GmfData(*r).to_node() for r in rows]
-            gmfset.append(Node('gmf', attr, nodes=nodes))
-        return gmfset
-
-
-class GmfCollection(Converter):
-    """A converter for gmfCollection nodes"""
+    """A converter for gmfSet/GmfCollection nodes"""
 
     def node_to_records(self, node):
         """
@@ -486,6 +457,16 @@ class GmfCollection(Converter):
           1.0,0.0,1.4
           0.0,1.0,0.6
         """
+        if node.tag == 'gmfSet':
+            for gmf in node.getnodes('gmf'):
+                imt = gmf['IMT']
+                if imt == 'SA':
+                    imt += '(%s)' % gmf['saPeriod']
+                yield records.Gmf(1, imt, '')
+                for n in gmf:
+                    yield records.GmfData(
+                        1, imt, '', n['lon'], n['lat'], n['gmv'])
+            return
         yield records.GmfCollection(
             node['sourceModelTreePath'],
             node['gsimTreePath'])
@@ -502,16 +483,39 @@ class GmfCollection(Converter):
                     yield records.GmfData(
                         ses_id, imt, rup, n['lon'], n['lat'], n['gmv'])
 
+    def _csv_to_node(self, gmfset):
+        """
+        Build a gmfSet node from GmfData.csv
+        """
+        for (ses, imt, rupture), rows in self.man.groupby(
+                ['stochasticEventSetId', 'imtStr', 'ruptureId'],
+                records.GmfData):
+            if imt.startswith('SA'):
+                attr = dict(IMT='SA', saPeriod=imt[3:-1], saDamping='5')
+            else:
+                attr = dict(IMT=imt)
+            if rupture:
+                attr['ruptureId'] = rupture
+            nodes = [records.GmfData(*r).to_node() for r in rows]
+            gmfset.append(Node('gmf', attr, nodes=nodes))
+        return gmfset
+
     def csv_to_node(self):
         """
         Build a gmfCollection node from GmfCollection.csv,
         GmfSet.csv and GmfData.csv
         """
-        gmfcoll = self.io.read(records.GmfCollection).next().to_node()
-        for gmfset in self.io.read(records.GmfSet):
-            node = GmfSet.csv_to_node.im_func(self, gmfset.to_node())
+        try:
+            gmfcoll = self.man.read(records.GmfCollection).next()
+        except Exception:  # no data for GmfCollection
+            return self._csv_to_node(Node('gmfSet'))
+        gmfcoll_node = gmfcoll.to_node()
+        for gmfset in self.man.read(records.GmfSet):
+            node = self._csv_to_node(gmfset.to_node())
             node['stochasticEventSetId'] = gmfset['stochasticEventSetId']
             node['investigationTime'] = gmfset['investigationTime']
             if node:  # the node is empty when EOF is reached
-                gmfcoll.append(node)
-        return gmfcoll
+                gmfcoll_node.append(node)
+        return gmfcoll_node
+
+GmfCollection = GmfSet

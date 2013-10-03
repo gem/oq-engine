@@ -68,21 +68,22 @@ class Field(object):
         self.ordinal = self._counter.next()
 
 
+def extractfields(dic):
+    fields = []
+    for n, v in dic.iteritems():
+        if isinstance(v, Field):
+            v.name = n
+            fields.append(v)
+    return sorted(fields, key=operator.attrgetter('ordinal'))
+
+
 class MetaRecord(abc.ABCMeta):
     def __new__(mcl, name, bases, dic):
-        fields = []
-        keyindices = []
-        for n, v in dic.iteritems():
-            if isinstance(v, Field):
-                v.name = n
-                fields.append(v)
-        fields.sort(key=operator.attrgetter('ordinal'))
+        fields = sum((extractfields(vars(base)) for base in bases), [])
+        fields.extend(extractfields(dic))
         fieldnames = [f.name for f in fields]
         name2index = dict((n, i) for i, n in enumerate(fieldnames))
-        keyindices = [name2index[f.name] for f in fields if f.key]
-        if not keyindices:
-            raise RuntimeError(
-                'Missing primary key field(s) in %s' % name)
+        keyindices = [name2index[f.name] for f in fields if f.key] or [0]
         if '__init__' not in dic:
             dic['__init__'] = mcl.mkinit(fieldnames)
         if 'name2index' not in dic:
@@ -125,7 +126,6 @@ class Record(collections.Sequence):
     Assume the inner data are UTF-8 encoded strings
     """
     __metaclass__ = MetaRecord
-    key = Field(str, key=True)
 
     def init(self):
         pass
@@ -184,11 +184,11 @@ class Table(collections.MutableSequence):
     def create(cls, recordtype, csvstr):
         name = '__' + recordtype.__name__ + '.csv'
         archive = MemArchive((name, csvstr))
-        reclist = list(RecordIO('', archive).read(recordtype))
+        reclist = list(CSVManager('', archive).read(recordtype))
         return cls(recordtype, reclist)
 
-    def __init__(self, recordcls, records):
-        self.recordcls = recordcls
+    def __init__(self, recordtype, records):
+        self.recordtype = recordtype
         self.key2index = {}
         self.records = []
         self.index = 0
@@ -199,10 +199,6 @@ class Table(collections.MutableSequence):
         return collections.OrderedDict(
             (rec.keytuple(), rec.to_node()) for rec in self)
 
-    @property
-    def header(self):
-        return self.recordcls.fieldnames
-
     def __getitem__(self, i):
         return self.records[i]
 
@@ -210,15 +206,19 @@ class Table(collections.MutableSequence):
         self.records[i] = record
 
     def __delitem__(self, i):
+        del self.key2index[self[i].keytuple()]
         del self.records[i]
-
-    def insert(self, position, rec):
-        self.records.append(rec)
-        self.key2index[rec.keytuple()] = self.index
-        self.index += 1
 
     def __len__(self):
         return len(self.records)
+
+    def insert(self, position, rec):
+        key = rec.keytuple()
+        if key in self.key2index:
+            raise KeyError('Duplicate key: %s' % str(key))
+        self.records.append(rec)
+        self.key2index[key] = self.index
+        self.index += 1
 
     def getrecord(self, *key):
         return self[self.key2index[key]]
@@ -243,7 +243,7 @@ class Table(collections.MutableSequence):
         return '\n'.join(map(str, self))
 
     def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name, self.recordcls.__name__)
+        return '<%s %s>' % (self.__class__.__name, self.recordtype.__name__)
 
 
 class FileObject(object):
@@ -293,6 +293,10 @@ class FakeWriter(object):
         pass
 
 
+class NotInArchive(Exception):
+    pass
+
+
 class ArchiveABC(object):
     __metaclass__ = ABCMeta
 
@@ -321,8 +325,8 @@ class ArchiveABC(object):
 
 
 class ZipArchive(ArchiveABC):
-    def __init__(self, zipname):
-        self.zip = zipfile.ZipFile(zipname, 'w')
+    def __init__(self, zipname, mode='r'):
+        self.zip = zipfile.ZipFile(zipname, mode)
         self.opened = set()
 
     def _open(self, name, mode):
@@ -338,7 +342,7 @@ class ZipArchive(ArchiveABC):
 
 
 class DirArchive(ArchiveABC):
-    def __init__(self, dirname, mode):
+    def __init__(self, dirname, mode='r'):
         self.dirname = dirname
         self.mode = mode
         if mode in ('w', 'w+', 'r+') and not os.path.exists(dirname):
@@ -353,7 +357,7 @@ class DirArchive(ArchiveABC):
 
 
 class MemArchive(ArchiveABC):
-    def __init__(self, *items):
+    def __init__(self, items, mode='r'):
         self.dic = {}
         for name, csvstr in items:
             self.add(name, csvstr)
@@ -363,19 +367,40 @@ class MemArchive(ArchiveABC):
         self.dic[name] = FileObject(name, csvstr)
 
     def _open(self, name, mode='r'):
-        return self.dic[name]
+        try:
+            return self.dic[name]
+        except KeyError:
+            raise NotInArchive(name)
 
     def extract_filenames(self, prefix=''):
         return [f for f in self.dic if f.startswith(prefix)]
 
 
-class RecordIO(object):
+class CSVManager(object):
     def __init__(self, prefix, archive):
         self.prefix = prefix
         self.archive = archive
         self.rt2reader = {}
         self.rt2writer = {}
         self.rt2file = {}
+
+    def get_all(self, recordmodule):
+        """
+        Returns a dictionary of lists, {tag: [recordtype]}
+        """
+        dd = collections.defaultdict(list)
+        for fname in sorted(self.archive.extract_filenames(self.prefix)):
+            try:
+                name, recordcsv = fname.split('__')
+            except ValueError:
+                continue
+            if not recordcsv.endswith('.csv'):
+                continue
+            recordtype = getattr(recordmodule, recordcsv[:-4], None)
+            if recordtype is None:
+                continue
+            dd[recordtype._tag].append(recordtype)
+        return dd
 
     def read(self, recordtype):
         reader = self.rt2reader.get(recordtype)

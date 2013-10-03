@@ -4,7 +4,8 @@ import unittest
 import tempfile
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.converter import Converter
-from openquake.nrmllib.record import ZipArchive, DirArchive, MemArchive
+from openquake.nrmllib.record import ZipArchive, DirArchive, MemArchive, \
+    CSVManager
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -24,11 +25,11 @@ NPAGER,BB,LN
 
 
 def fake_archive(dvs=DVSet, dvf=DVFun, dvd=''):
-    return MemArchive(
-        ('test__Vulnerability__DiscreteVulnerabilitySet.csv', dvs),
-        ('test__Vulnerability__DiscreteVulnerability.csv', dvf),
-        ('test__Vulnerability__DiscreteVulnerabilityData.csv', dvd),
-        )
+    return MemArchive([
+        ('test__DiscreteVulnerabilitySet.csv', dvs),
+        ('test__DiscreteVulnerability.csv', dvf),
+        ('test__DiscreteVulnerabilityData.csv', dvd),
+        ])
 
 
 class ConvertGoodFilesTestCase(unittest.TestCase):
@@ -45,7 +46,7 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
         zipname = fname[:-4] + '.zip'
         archive = DirArchive(zipname, 'w')
         try:
-            conv = Converter(name, archive)
+            conv = Converter(CSVManager(name, archive))
             conv.nrml_to_csv(fname)
             #archive.opened = set()
             #archive.close()
@@ -86,18 +87,18 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
 class ConvertBadFilesTestCase(unittest.TestCase):
 
     def test_empty_archive(self):
-        empty_archive = MemArchive()
+        empty_archive = MemArchive([])
         with self.assertRaises(RuntimeError):
-            Converter('', empty_archive).get()
+            Converter(CSVManager('test', empty_archive)).get()
 
     def test_empty_files(self):
         archive = fake_archive('', '', '')
-        conv = Converter('', archive).get()
+        conv = Converter(CSVManager('test', archive)).get()
         self.assertEqual(conv.csv_to_node().to_str(), 'vulnerabilityModel\n')
 
     def test_no_header(self):
         archive = fake_archive(dvd='5.00,0.00,0.30')
-        conv = Converter('', archive).get()
+        conv = Converter(CSVManager('test', archive)).get()
         with self.assertRaises(InvalidFile):
             conv.csv_to_node().to_str()
 
@@ -105,7 +106,7 @@ class ConvertBadFilesTestCase(unittest.TestCase):
         archive = fake_archive(
             dvd='vulnerabilitySetID,vulnerabilityFunctionID,'
             'IML,lossRatio,coefficientsVariation')
-        conv = Converter('', archive).get()
+        conv = Converter(CSVManager('test', archive)).get()
         with self.assertRaises(InvalidFile):
             conv.csv_to_node()
 
@@ -115,7 +116,7 @@ vulnerabilitySetID,vulnerabilityFunctionID,IML,lossRatio,coefficientsVariation
 PAGER,IR,5.00,0.00,0.30
 PAGER,IR,5.50,0.00,0.30
 PAGER,IR,6.00,0.00,''')
-        conv = Converter('', archive).get()
+        conv = Converter(CSVManager('test', archive)).get()
         with self.assertRaises(InvalidFile):
             conv.csv_to_node()
 
@@ -125,6 +126,6 @@ vulnerabilitySetID,vulnerabilityFunctionID,IML,lossRatio,coefficientsVariation
 PAGER,IR,5.00,0.00,0.30
 PAGER,IR,5.50,0.00,0.30
 PAGER,IR,6.00,0.00''')
-        conv = Converter('', archive).get()
+        conv = Converter(CSVManager('test', archive)).get()
         with self.assertRaises(InvalidFile):
             conv.csv_to_node()
