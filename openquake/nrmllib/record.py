@@ -20,18 +20,11 @@
 A module to manage record extracted from CSV files, i.e. with fields
 which are UTF-8 encoded strings.
 """
-
-import os
 import re
-import csv
 import abc
-import zipfile
-import cStringIO
 import itertools
 import operator
 import collections
-from abc import ABCMeta, abstractmethod
-from openquake.nrmllib import InvalidFile
 
 
 NAME = re.compile(r'[a-zA-Z_]\w*')
@@ -180,13 +173,6 @@ class Table(collections.MutableSequence):
     """
     __metaclass__ = abc.ABCMeta
 
-    @classmethod
-    def create(cls, recordtype, csvstr):
-        name = '__' + recordtype.__name__ + '.csv'
-        archive = MemArchive((name, csvstr))
-        reclist = list(CSVManager('', archive).read(recordtype))
-        return cls(recordtype, reclist)
-
     def __init__(self, recordtype, records):
         self.recordtype = recordtype
         self.key2index = {}
@@ -224,221 +210,10 @@ class Table(collections.MutableSequence):
         return self[self.key2index[key]]
 
     def is_valid(self):
-        is_valid = all(rec.is_valid() for rec in self)
-        if not is_valid:
-            return False
-        # check unique keys for instance
-        keyset = set()
-        for i, rec in enumerate(self.records):
-            key = rec.getkey()
-            if key in keyset:
-                return False
-                raise KeyError('At row %s: %s is duplicated' %
-                               (i, key))
-            else:
-                keyset.add(key)
-        return True
+        return all(rec.is_valid() for rec in self)
 
     def __str__(self):
         return '\n'.join(map(str, self))
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name, self.recordtype.__name__)
-
-
-class FileObject(object):
-    """
-    A named reusable cStringIO for reading, useful for the tests
-    """
-    def __init__(self, name, bytestring):
-        self.name = name
-        self.bytestring = bytestring
-        self.io = cStringIO.StringIO(bytestring)
-
-    def close(self):
-        self.io = cStringIO.StringIO(self.bytestring)
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        return self.io.next()
-
-    def readline(self):
-        return self.io.readline()
-
-    def read(self, n=-1):
-        return self.io.read(n)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        self.close()
-
-
-class FakeWriter(object):
-    def __init__(self, archive, name):
-        self.archive = archive
-        self.name = name
-
-    def write(self, data):
-        print 'Writing', self.name, data
-        self.archive.writestr(self.name, data)
-
-    def flush(self):
-        pass
-
-    def close(self):
-        pass
-
-
-class NotInArchive(Exception):
-    pass
-
-
-class ArchiveABC(object):
-    __metaclass__ = ABCMeta
-
-    opened = []
-
-    def open(self, name, mode='r'):
-        #opened = set(f.name for f in self.opened)
-        #if name in opened:
-        #    raise RuntimeError(
-        #        'Trying to open a file already opened: %r' % name)
-        f = self._open(name, mode)
-        self.opened.add(f)
-        return f
-
-    @abstractmethod
-    def _open(self, name, mode):
-        pass
-
-    @abstractmethod
-    def extract_filenames(self, prefix=''):
-        pass
-
-    def close(self):
-        for f in self.opened:
-            f.close()
-
-
-class ZipArchive(ArchiveABC):
-    def __init__(self, zipname, mode='r'):
-        self.zip = zipfile.ZipFile(zipname, mode)
-        self.opened = set()
-
-    def _open(self, name, mode):
-        if mode in ('w', 'w+', 'r+'):
-            f = FakeWriter(self.zip, name)
-        else:
-            f = self.zip.open(name, mode)
-        return f
-
-    def extract_filenames(self, prefix=''):
-        return set(i.filename for i in self.zip.infolist()
-                   if i.filename.startswith(prefix))
-
-
-class DirArchive(ArchiveABC):
-    def __init__(self, dirname, mode='r'):
-        self.dirname = dirname
-        self.mode = mode
-        if mode in ('w', 'w+', 'r+') and not os.path.exists(dirname):
-            os.mkdir(dirname)
-        self.opened = set()
-
-    def _open(self, name, mode):
-        return open(os.path.join(self.dirname, name), mode)
-
-    def extract_filenames(self, prefix=''):
-        return [f for f in os.listdir(self.dirname) if f.startswith(prefix)]
-
-
-class MemArchive(ArchiveABC):
-    def __init__(self, items, mode='r'):
-        self.dic = {}
-        for name, csvstr in items:
-            self.add(name, csvstr)
-        self.opened = set()
-
-    def add(self, name, csvstr):
-        self.dic[name] = FileObject(name, csvstr)
-
-    def _open(self, name, mode='r'):
-        try:
-            return self.dic[name]
-        except KeyError:
-            raise NotInArchive(name)
-
-    def extract_filenames(self, prefix=''):
-        return [f for f in self.dic if f.startswith(prefix)]
-
-
-class CSVManager(object):
-    def __init__(self, prefix, archive):
-        self.prefix = prefix
-        self.archive = archive
-        self.rt2reader = {}
-        self.rt2writer = {}
-        self.rt2file = {}
-
-    def get_all(self, recordmodule):
-        """
-        Returns a dictionary of lists, {tag: [recordtype]}
-        """
-        dd = collections.defaultdict(list)
-        for fname in sorted(self.archive.extract_filenames(self.prefix)):
-            try:
-                name, recordcsv = fname.split('__')
-            except ValueError:
-                continue
-            if not recordcsv.endswith('.csv'):
-                continue
-            recordtype = getattr(recordmodule, recordcsv[:-4], None)
-            if recordtype is None:
-                continue
-            dd[recordtype._tag].append(recordtype)
-        return dd
-
-    def read(self, recordtype):
-        reader = self.rt2reader.get(recordtype)
-        if reader is None:
-            fname = '%s__%s.csv' % (self.prefix, recordtype.__name__)
-            self.rt2file[recordtype] = f = self.archive.open(fname, 'r')
-            self.rt2reader[recordtype] = reader = csv.reader(f)
-            header = reader.next()  # skip header
-            if header != recordtype.fieldnames:
-                raise InvalidFile('%s: line 1: got %s as header, expected %s' %
-                                  (fname, header, recordtype.fieldnames))
-        for row in reader:
-            yield recordtype(*row)
-
-    def groupby(self, keyfields, recordtype):
-        keyindices = [recordtype.name2index[k] for k in keyfields]
-        return itertools.groupby(
-            self.read(recordtype), lambda rec: [rec[i] for i in keyindices])
-
-    def readtable(self, recordtype):
-        return Table(recordtype, list(self.read(recordtype)))
-
-    def write(self, record):
-        rt = type(record)  # record type
-        writer = self.rt2writer.get(rt)
-        if writer is None:
-            fname = '%s__%s.csv' % (self.prefix, rt.__name__)
-            self.rt2file[rt] = f = self.archive.open(fname, 'w')
-            self.rt2writer[rt] = writer = csv.writer(f)
-            writer.writerow(rt.fieldnames)
-        writer.writerow(record)
-
-    def __enter__(self):
-        self.rt2reader = {}
-        self.rt2writer = {}
-        self.rt2file = {}
-        self.archive.opened = set()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        self.archive.close()

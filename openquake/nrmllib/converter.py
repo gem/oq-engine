@@ -26,11 +26,9 @@ This module contains converter classes working on nodes of kind
 - gmfcollection
 """
 
-import os
-import inspect
 import itertools
-from openquake.nrmllib.node import Node, node_to_nrml, node_from_nrml
-from openquake.nrmllib import record, records, InvalidFile
+from openquake.nrmllib.node import Node
+from openquake.nrmllib import InvalidFile, record, records
 
 
 class Converter(object):
@@ -47,80 +45,9 @@ class Converter(object):
         """Convert the node into a sequence of records"""
         raise NotImplementedError
 
-    def node_to_csv(self, node, prefix):
-        """
-        From a node to a set of .csv files with the given prefix
-        """
-        name = node.tag[0].upper() + node.tag[1:]
-        clsname = name[:-5] if name.endswith('Model') else name
-        man = record.CSVManager(prefix, self.man.archive)
-        conv = globals()[clsname](man)
-        with man:
-            for rec in conv.node_to_records(node):
-                man.write(rec)  # automatically writes the header
-        return [f.name for f in man.archive.opened]
-
-    def nrml_to_csv(self, fname):
-        """
-        From a NRML file to a set of .csv files with the given prefix.
-        :returns: the names of the generated files
-        """
-        assert fname.endswith('.xml'), fname
-        return self.node_to_csv(node_from_nrml(fname)[0],
-                                os.path.basename(fname)[:-4])
-
     def csv_to_node(self):
         """For .csv files with a given prefix to a single node"""
         raise NotImplementedError
-
-    def csv_to_nrml(self, out):
-        """
-        For .csv files with a given prefix to a single .xml file
-        """
-        with self.man:
-            node_to_nrml(self.csv_to_node(), out)
-        return out.name
-
-    def get_all(self):
-        """
-        Returns a list of Converter instances, one for each file group
-        in the underlying archive.
-        """
-        converters = {}  # converter name->class dictionary
-        cc = {}
-        for name, value in globals().iteritems():
-            if inspect.isclass(value) and issubclass(value, Converter):
-                cc[name] = value
-        for fname in sorted(self.man.archive.extract_filenames()):
-            try:
-                name, recordcsv = fname.split('__')
-            except ValueError:
-                continue
-            if not recordcsv.endswith('.csv'):
-                continue
-            recordtype = getattr(records, recordcsv[:-4], None)
-            if recordtype is None:
-                continue
-            if not name in converters:
-                converters[name] = cc[recordtype._tag](self.man)
-        return converters.values()
-
-    def get(self):
-        """
-        Extract the appropriate converter to convert the files in
-        the underlying archive. Raise an error is no converter is
-        found (this happens if there are no files following the
-        naming conventions).
-        """
-        converters = self.get_all()
-        if not converters:
-            raise RuntimeError(
-                'Could not determine the right converter '
-                'from files %s' % self.man.archive.extract_filenames())
-        elif len(converters) > 2:
-            raise RuntimeError(
-                'Found %d converters, expected 1' % len(converters))
-        return converters[0]
 
 
 ############################# vulnerability #################################
