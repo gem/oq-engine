@@ -72,7 +72,6 @@ class FakeWriter(object):
         self.name = name
 
     def write(self, data):
-        print 'Writing', self.name, data
         self.archive.writestr(self.name, data)
 
     def flush(self):
@@ -117,12 +116,12 @@ class ArchiveABC(object):
 
 
 class ZipArchive(ArchiveABC):
-    def __init__(self, zipname, mode='r'):
+    def __init__(self, zipname, mode='a'):
         self.zip = zipfile.ZipFile(zipname, mode)
         self.opened = set()
 
     def _open(self, name, mode):
-        if mode in ('w', 'w+', 'r+'):
+        if mode in ('a', 'w', 'w+', 'r+'):
             f = FakeWriter(self.zip, name)
         else:
             f = self.zip.open(name, mode)
@@ -231,7 +230,8 @@ class CSVManager(object):
                 'from files %s' % self.archive.extract_filenames())
         elif len(converters) > 2:
             raise RuntimeError(
-                'Found %d converters, expected 1' % len(converters))
+                'Found %d converters, expected 1' %
+                len(converters))
         return converters[0]
 
     def convert_to_node(self):
@@ -241,15 +241,26 @@ class CSVManager(object):
         """
         return self.getconverter().csv_to_node()
 
-    def convert_to_nrml(self, out=None):
+    def convert_to_nrml(self, out):
         """
         From CSV files with the given prefix to a single .xml file
         """
         conv = self.getconverter()
         with conv.man:
-            out = out or conv.man.archive.open(conv.man.prefix + '.xml', 'w')
             node_to_nrml(conv.csv_to_node(), out)
         return out.name
+
+    def convert_all_to_nrml(self):
+        """
+        From CSV files with the given prefix to .xml files
+        """
+        fnames = []
+        for conv in self.getconverters(self.archive):
+            with conv.man:
+                out = conv.man.archive.open(conv.man.prefix + '.xml', 'w+')
+                node_to_nrml(conv.csv_to_node(), out)
+                fnames.append(out.name)
+        return fnames
 
     def convert_from_nrml(self, fname):
         """

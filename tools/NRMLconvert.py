@@ -16,31 +16,16 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import time
-from openquake.nrmllib.convert import (
-    convert_nrml_to_zip, convert_zip_to_nrml, build_node)
-from openquake.nrmllib.tables import FileTable
+from openquake.nrmllib.csvmanager import CSVManager, DirArchive, ZipArchive
 
 
-def collect(fnames):
-    xmlfiles, zipfiles, csvmdatafiles, otherfiles = [], [],  [], []
-    for fname in sorted(fnames):
-        if fname.endswith('.xml'):
-            xmlfiles.append(fname)
-        elif fname.endswith('.zip'):
-            zipfiles.append(fname)
-        elif fname.endswith(('.csv', '.mdata')):
-            csvmdatafiles.append(fname)
-        else:
-            otherfiles.append(fname)
-    return xmlfiles, zipfiles, csvmdatafiles, otherfiles
-
-
-def create(factory, fname):
+def create(convert, fname):
     t0 = time.time()
     try:
-        out = factory(fname)
+        out = convert(fname)
     except Exception as e:
         print e
         return
@@ -48,22 +33,40 @@ def create(factory, fname):
     print 'Created %s in %s seconds' % (out, dt)
 
 
-def main(*fnames):
-    if not fnames:
-        sys.exit('Please provide some input files')
+def main(inp_out):
+    try:
+        inp, out = inp_out
+    except ValueError:
+        sys.exit('Please provide both input and output')
 
-    xmlfiles, zipfiles, csvmdatafiles, otherfiles = collect(fnames)
-    for xmlfile in xmlfiles:
-        create(convert_nrml_to_zip, xmlfile)
+    if out.endswith('.zip'):
+        out_archive = ZipArchive(out, 'w')
+    elif not out.endswith('.xml'):
+        out_archive = DirArchive(out, 'w')
 
-    for zipfile in zipfiles:
-        create(convert_zip_to_nrml, zipfile)
+    fname = os.path.basename(inp)
+    name, inp_ext = os.path.splitext(fname)
+    outname, out_ext = os.path.splitext(out)
 
-    for name, group in FileTable.get_all('.', csvmdatafiles):
-        def convert_to_nrml(out):
-            build_node(group, open(out, 'wb+'))
-            return out
-        create(convert_to_nrml, name + '.xml')
+    if inp_ext == '.xml':
+        man = CSVManager(name, out_archive)
+        create(man.convert_from_nrml, inp)
+    elif inp_ext == '.zip' or os.path.isdir(inp):
+        if inp.endswith('.zip'):
+            inp_archive = ZipArchive(inp, 'a')
+        elif os.path.isdir(inp):
+            inp_archive = DirArchive(inp)
+        if out == 'inplace':
+            man = CSVManager(name, inp_archive)
+            print man.convert_all_to_nrml()
+        elif out.endswith('.xml'):
+            with open(out, 'w+') as f:
+                create(man.convert_to_nrml, f)
+        else:
+            raise SystemExit('Invalid output: %s; '
+                             'expected inplace or .xml name' % out)
+    else:
+        raise SystemExit('Invalid input: %s' % inp)
 
 
 if __name__ == '__main__':
@@ -72,4 +75,4 @@ if __name__ == '__main__':
     # collected more features will be added and a proper argparse
     # interface will be designed.
     # For the moment the scripts only accepts file names in input.
-    main(*sys.argv[1:])
+    main(sys.argv[1:])

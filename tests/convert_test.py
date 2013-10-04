@@ -3,8 +3,7 @@ import os
 import unittest
 import tempfile
 from openquake.nrmllib import InvalidFile
-from openquake.nrmllib.csvmanager import ZipArchive, DirArchive, MemArchive, \
-    CSVManager
+from openquake.nrmllib.csvmanager import MemArchive, CSVManager
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
