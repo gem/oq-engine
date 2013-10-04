@@ -61,19 +61,16 @@ class Field(object):
         self.ordinal = self._counter.next()
 
 
-def extractfields(dic):
-    fields = []
-    for n, v in dic.iteritems():
-        if isinstance(v, Field):
-            v.name = n
-            fields.append(v)
-    return sorted(fields, key=operator.attrgetter('ordinal'))
-
-
 class MetaRecord(abc.ABCMeta):
     def __new__(mcl, name, bases, dic):
-        fields = sum((extractfields(vars(base)) for base in bases), [])
-        fields.extend(extractfields(dic))
+        fields = []
+        for base in bases:
+            fields.extend(getattr(base, 'fields', []))
+        for n, v in dic.iteritems():
+            if isinstance(v, Field):
+                v.name = n
+                fields.append(v)
+        fields.sort(key=operator.attrgetter('ordinal'))
         fieldnames = [f.name for f in fields]
         name2index = dict((n, i) for i, n in enumerate(fieldnames))
         keyindices = [name2index[f.name] for f in fields if f.key] or [0]

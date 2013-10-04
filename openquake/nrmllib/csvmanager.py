@@ -22,7 +22,6 @@ import inspect
 import zipfile
 import StringIO
 import itertools
-import collections
 from abc import ABCMeta, abstractmethod
 
 from openquake.nrmllib.record import Table
@@ -255,27 +254,29 @@ class CSVManager(object):
         given XML file.
         """
         assert fname.endswith('.xml'), fname
-        return self.convert_from_node(node_from_nrml(fname)[0], fname[:-4])
+        prefix = os.path.basename(fname)[:-4]
+        return self.convert_from_node(node_from_nrml(fname)[0], prefix)
 
     def convert_from_node(self, node, prefix=''):
         """
         Populate the underlying archive with CSV files extracted from the
         given Node object.
         """
-        name = node.tag[0].upper() + node.tag[1:]
-        clsname = name[:-5] if name.endswith('Model') else name
         man = self.__class__(prefix, self.archive)
-        conv = getattr(converter, clsname)(man)
+        conv = converter.Converter.from_tag(node.tag)(man)
         with man:
             for rec in conv.node_to_records(node):
                 man.write(rec)  # automatically writes the header
         return [f.name for f in man.archive.opened]
 
-    def get_all(self):
+    def readtables(self):
         """
-        Returns a dictionary of lists, {tag: [recordtype]}
         """
-        dd = collections.defaultdict(list)
+        class Container(object):
+            def __init__(self, name):
+                self.name = name
+
+        containers = {}
         for fname in sorted(self.archive.extract_filenames(self.prefix)):
             try:
                 name, recordcsv = fname.split('__')
@@ -286,8 +287,12 @@ class CSVManager(object):
             recordtype = getattr(records, recordcsv[:-4], None)
             if recordtype is None:
                 continue
-            dd[recordtype._tag].append(recordtype)
-        return dd
+            if name not in containers:
+                containers[name] = c = Container(name)
+            else:
+                c = containers[name]
+            setattr(c, recordtype.__name__, self.readtable(recordtype))
+        return containers.values()
 
     def read(self, recordtype):
         reader = self.rt2reader.get(recordtype)

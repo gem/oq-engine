@@ -61,10 +61,10 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
     def test_fragility_continuous(self):
         self.check_round_trip('fragility-model-continuous.xml')
 
-    ## TEMPORARILY COMMENTED OUT TESTS
+    def test_exposure_population(self):
+        self.check_round_trip('exposure-population.xml')
 
-    #def test_exposure_population(self):
-    #    self.check_round_trip('exposure-population.xml')
+    ## TEMPORARILY COMMENTED OUT TEST
 
     #def test_exposure_buildings(self):
     #    self.check_round_trip('exposure-buildings.xml')

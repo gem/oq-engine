@@ -25,7 +25,6 @@ This module contains converter classes working on nodes of kind
 - gmfset
 - gmfcollection
 """
-
 import itertools
 from openquake.nrmllib.node import Node
 from openquake.nrmllib import InvalidFile, record, records
@@ -35,15 +34,34 @@ class Converter(object):
     """
     Base class.
     """
+
+    @classmethod
+    def from_tag(cls, tag):
+        name = tag[0].upper() + tag[1:]
+        clsname = name[:-5] if name.endswith('Model') else name
+        return globals()[clsname]
+
+    @classmethod
+    def node_to_tables(cls, node):
+        tbl = {}
+        subcls = cls.from_tag(node.tag)
+        for rec in subcls.node_to_records(node):
+            name = rec.__class__.__name__
+            if name not in tbl:
+                tbl[name] = record.Table(rec.__class__, [])
+            tbl[name].append(rec)
+        return tbl
+
+    @classmethod
+    def node_to_records(cls, node):
+        """Convert the node into a sequence of records"""
+        raise NotImplementedError
+
     def __init__(self, csvmanager):
         self.man = csvmanager
 
     def __str__(self):
         return '<%s %s>' % (self.__class__.___name__, self.name)
-
-    def node_to_records(self, node):
-        """Convert the node into a sequence of records"""
-        raise NotImplementedError
 
     def csv_to_node(self):
         """For .csv files with a given prefix to a single node"""
@@ -55,7 +73,8 @@ class Converter(object):
 class Vulnerability(Converter):
     """A converter for vulnerabilityModel nodes"""
 
-    def node_to_records(self, node):
+    @classmethod
+    def node_to_records(cls, node):
         """
         """
         for vset in node.getnodes('discreteVulnerabilitySet'):
@@ -116,7 +135,8 @@ class Vulnerability(Converter):
 class Fragility(Converter):
     """A converter for fragilityModel nodes"""
 
-    def node_to_records(self, node):
+    @classmethod
+    def node_to_records(cls, node):
         """
         """
         format = node['format']
@@ -235,23 +255,23 @@ def getoccupancies(asset):
     return [dic.get('occupancy__%s' % period, '') for period in PERIODS]
 
 
-def assetgenerator(records, costtypes):
+def assetgenerator(assets, location_node, costtypes):
     """
-    Convert records into asset nodes.
+    Convert assets into asset nodes.
 
-    :param records: an iterable over dictionaries
+    :param assets: an iterable over dictionaries
     :param costtypes: list of dictionaries with the cost types
 
     :returns: an iterable over Node objects describing exposure assets
     """
-    for record in records:
-        nodes = [Node('location', dict(lon=record['lon'], lat=record['lat']))]
+    for asset in assets:
+        nodes = [location_node[asset['location']]]
         costnodes = []
         for costtype in costtypes:
             keepnode = True
             attr = dict(type=costtype['name'])
             for costcol in COSTCOLUMNS:
-                value = record['%s.%s' % (costtype['name'], costcol)]
+                value = asset['%s.%s' % (costtype['name'], costcol)]
                 if value:
                     attr[costcol] = value
                 elif costcol == 'value':
@@ -260,20 +280,20 @@ def assetgenerator(records, costtypes):
                 costnodes.append(Node('cost', attr))
         if costnodes:
             nodes.append(Node('costs', {}, nodes=costnodes))
-        has_occupancies = any('occupancy__%s' % period in record
+        has_occupancies = any('occupancy__%s' % period in asset
                               for period in PERIODS)
         if has_occupancies:
             occ = []
             for period in PERIODS:
-                occupancy = record['occupancy__' + period]
+                occupancy = asset['occupancy__' + period]
                 if occupancy:
                     occ.append(Node('occupancy',
                                     dict(occupants=occupancy, period=period)))
             nodes.append(Node('occupancies', {}, nodes=occ))
-        attr = dict(id=record['id'], number=record['number'],
-                    taxonomy=record['taxonomy'])
-        if 'area' in record:
-            attr['area'] = record['area']
+        attr = dict(id=asset['id'], number=asset['number'],
+                    taxonomy=asset['taxonomy'])
+        if 'area' in asset:
+            attr['area'] = asset['area']
         yield Node('asset', attr, nodes=nodes)
 
 
@@ -290,7 +310,8 @@ def make_asset_class(costcolumns):
 class Exposure(Converter):
     """A converter for exposureModel nodes"""
 
-    def node_to_records(self, node):
+    @classmethod
+    def node_to_records(cls, node):
         """
         Yield a single table object. For population exposure a table
         has a form like
@@ -347,9 +368,9 @@ class Exposure(Converter):
             except KeyError:
                 loc_id = locations[loc] = loc_counter.next()
 
-            yield records.Location(loc_id, loc[0], loc[1])
-            yield Asset(asset['id'], asset['taxonomy'], loc_id,
-                        asset['number'], *extras)
+            yield records.Location(str(loc_id), loc[0], loc[1])
+            yield Asset(asset['id'], asset['taxonomy'],
+                        asset['number'], loc_id, *extras)
 
     def csv_to_node(self):
         """
@@ -365,8 +386,9 @@ class Exposure(Converter):
         else:
             Asset = records.AssetPopulation
             ctypes = []
-        assets = (a.to_node() for a in self.man.read(Asset))
-        exp.assets.nodes = assetgenerator(assets, ctypes)
+        assets = self.man.read(Asset)
+        location_dict = self.man.readtable(records.Location).to_nodedict()
+        exp.assets.nodes = assetgenerator(assets, location_dict, ctypes)
         return exp
 
 
@@ -375,7 +397,8 @@ class Exposure(Converter):
 class GmfSet(Converter):
     """A converter for gmfSet/GmfCollection nodes"""
 
-    def node_to_records(self, node):
+    @classmethod
+    def node_to_records(cls, node):
         """
         Yield a table for each gmf node. The table has a form like
 
