@@ -729,6 +729,7 @@ def run_hazard(cfg_file, log_level, log_file, exports):
         raise
 
 
+@django_db.transaction.commit_on_success
 def haz_job_from_file(cfg_file_path, username, log_level, exports):
     """
     Create a full hazard job profile from a job config file.
@@ -870,6 +871,7 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
         raise
 
 
+@django_db.transaction.commit_on_success
 def risk_job_from_file(cfg_file_path, username, log_level, exports,
                        hazard_output_id=None, hazard_calculation_id=None):
     """
@@ -940,21 +942,3 @@ def get_risk_outputs(rc_id):
         A sequence of :class:`openquake.engine.db.models.Output` objects
     """
     return models.Output.objects.filter(oq_job__risk_calculation=rc_id)
-
-
-def get_hazard_calculations(username):
-    """
-    Get all hazard calculations belonging to the given ``username``.
-    """
-    return models.HazardCalculation.objects\
-        .filter(owner__user_name=username)\
-        .order_by('oqjob__last_update')
-
-
-def get_risk_calculations(username):
-    """
-    Get all risk calculations belonging to the given ``username``.
-    """
-    return models.RiskCalculation.objects\
-        .filter(owner__user_name=username)\
-        .order_by('oqjob__last_update')
