@@ -22,6 +22,7 @@ import inspect
 import zipfile
 import StringIO
 import itertools
+import tempfile
 from abc import ABCMeta, abstractmethod
 
 from openquake.nrmllib.record import Table
@@ -66,21 +67,6 @@ class FileObject(object):
         self.close()
 
 
-class FakeWriter(object):
-    def __init__(self, archive, name):
-        self.archive = archive
-        self.name = name
-
-    def write(self, data):
-        self.archive.writestr(self.name, data)
-
-    def flush(self):
-        pass
-
-    def close(self):
-        pass
-
-
 class NotInArchive(Exception):
     pass
 
@@ -122,7 +108,8 @@ class ZipArchive(ArchiveABC):
 
     def _open(self, name, mode):
         if mode in ('a', 'w', 'w+', 'r+'):
-            f = FakeWriter(self.zip, name)
+            f = tempfile.NamedTemporaryFile(mode)
+            f.arcname = os.path.basename(name)
         else:
             f = self.zip.open(name, mode)
         return f
@@ -130,6 +117,13 @@ class ZipArchive(ArchiveABC):
     def extract_filenames(self, prefix=''):
         return set(i.filename for i in self.zip.infolist()
                    if i.filename.startswith(prefix))
+
+    def close(self):
+        for f in self.opened:
+            if hasattr(f, 'arcname'):
+                # save the temporary files in the archive
+                self.zip.write(f.name, f.arcname)
+            f.close()
 
 
 class DirArchive(ArchiveABC):
