@@ -30,41 +30,49 @@ from openquake.nrmllib.node import node_to_nrml, node_from_nrml
 from openquake.nrmllib import InvalidFile, records, converter
 
 
-class FileObject(object):
-    """
-    A named reusable StringIO for reading and writing, useful for the tests
-    """
-    def __init__(self, name, bytestring):
-        self.name = name
-        self.bytestring = bytestring
-        self.io = StringIO.StringIO(bytestring)
-
-    def close(self):
-        self.io = StringIO.StringIO(self.io.getvalue())
+class FileWrapper(object):
 
     def __iter__(self):
         return self
 
     def next(self):
-        return self.io.next()
+        return self.fileobj.next()
 
     def readline(self):
-        return self.io.readline()
+        return self.fileobj.readline()
 
     def read(self, n=-1):
-        return self.io.read(n)
+        return self.fileobj.read(n)
 
     def write(self, data):
-        self.io.write(data)
+        self.fileobj.write(data)
 
     def flush(self):
-        pass
+        self.fileobj.flush()
+
+    def close(self):
+        self.fileobj.close()
 
     def __enter__(self):
         return self
 
     def __exit__(self, etype, exc, tb):
         self.close()
+
+
+class FileObject(FileWrapper):
+    """
+    A named reusable StringIO for reading and writing, useful for the tests
+    """
+    def __init__(self, name, bytestring):
+        self.name = name
+        self.bytestring = bytestring
+        self.fileobj = StringIO.StringIO(bytestring)
+
+    def close(self):
+        data = self.fileobj.getvalue()
+        self.fileobj.close()
+        self.fileobj = StringIO.StringIO(data)
 
 
 class NotInArchive(Exception):
@@ -77,10 +85,6 @@ class ArchiveABC(object):
     opened = []
 
     def open(self, name, mode='r'):
-        #opened = set(f.name for f in self.opened)
-        #if name in opened:
-        #    raise RuntimeError(
-        #        'Trying to open a file already opened: %r' % name)
         f = self._open(name, mode)
         self.opened.add(f)
         return f
@@ -101,44 +105,58 @@ class ArchiveABC(object):
         return '<%s %s>' % (self.__class__.__name__, self.extract_filenames())
 
 
+# Writing directly to a zip archive is not possible because .writestr
+# adds a new object every time it is called, so you cannot work line-by-line.
+# The solution is to write to a temporary file and then push it into the
+# archive at closing time
+class TempFile(FileWrapper):
+    def __init__(self, arczip, arcname, mode):
+        self.arczip = arczip
+        self.arcname = arcname
+        self.fileobj = tempfile.NamedTemporaryFile(mode)
+        self.name = self.fileobj.name
+        self.closed = False
+
+    def close(self):
+        if self.closed:  # already closed, do nothing
+            return
+        self.arczip.write(self.name, self.arcname)  # save in the archive
+        self.fileobj.close()  # remove the temporary file
+        self.closed = True
+
+
 class ZipArchive(ArchiveABC):
     def __init__(self, zipname, mode='a'):
         self.zip = zipfile.ZipFile(zipname, mode)
+        self.name = self.zip.filename
         self.opened = set()
 
     def _open(self, name, mode):
-        if mode in ('a', 'w', 'w+', 'r+'):
-            f = tempfile.NamedTemporaryFile(mode)
-            f.arcname = os.path.basename(name)
+        if mode in ('w', 'w+', 'r+'):
+            # write on a temporary file
+            return TempFile(self.zip, name, mode)
         else:
-            f = self.zip.open(name, mode)
-        return f
+            # open for reading
+            return self.zip.open(name, mode)
 
     def extract_filenames(self, prefix=''):
         return set(i.filename for i in self.zip.infolist()
                    if i.filename.startswith(prefix))
 
-    def close(self):
-        for f in self.opened:
-            if hasattr(f, 'arcname'):
-                # save the temporary files in the archive
-                self.zip.write(f.name, f.arcname)
-            f.close()
-
 
 class DirArchive(ArchiveABC):
     def __init__(self, dirname, mode='r'):
-        self.dirname = dirname
+        self.name = dirname
         self.mode = mode
         if mode in ('w', 'w+', 'r+') and not os.path.exists(dirname):
             os.mkdir(dirname)
         self.opened = set()
 
     def _open(self, name, mode):
-        return open(os.path.join(self.dirname, name), mode)
+        return open(os.path.join(self.name, name), mode)
 
     def extract_filenames(self, prefix=''):
-        return [f for f in os.listdir(self.dirname) if f.startswith(prefix)]
+        return [f for f in os.listdir(self.name) if f.startswith(prefix)]
 
 
 class MemArchive(ArchiveABC):
