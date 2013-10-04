@@ -171,10 +171,12 @@ class MemArchive(ArchiveABC):
         return [f for f in self.dic if f.startswith(prefix)]
 
 
+# used in the tests
 def create_table(recordtype, csvstr):
     name = '__' + recordtype.__name__ + '.csv'
-    archive = MemArchive((name, csvstr))
-    reclist = list(CSVManager('', archive).read(recordtype))
+    archive = MemArchive([(name, csvstr)])
+    man = CSVManager('', archive, has_header=False)
+    reclist = list(man.read(recordtype))
     return Table(recordtype, reclist)
 
 
@@ -207,9 +209,10 @@ class CSVManager(object):
                 converters[prefix] = cc[recordtype._tag](cls(prefix, archive))
         return converters.values()
 
-    def __init__(self, prefix, archive):
+    def __init__(self, prefix, archive, has_header=True):
         self.prefix = prefix
         self.archive = archive
+        self.has_header = has_header
         self.rt2reader = {}
         self.rt2writer = {}
         self.rt2file = {}
@@ -300,10 +303,12 @@ class CSVManager(object):
             fname = '%s__%s.csv' % (self.prefix, recordtype.__name__)
             self.rt2file[recordtype] = f = self.archive.open(fname, 'r')
             self.rt2reader[recordtype] = reader = csv.reader(f)
-            header = reader.next()  # skip header
-            if header != recordtype.fieldnames:
-                raise InvalidFile('%s: line 1: got %s as header, expected %s' %
-                                  (fname, header, recordtype.fieldnames))
+            if self.has_header:
+                header = reader.next()
+                if header != recordtype.fieldnames:
+                    raise InvalidFile(
+                        '%s: line 1: got %s as header, expected %s' %
+                        (fname, header, recordtype.fieldnames))
         for row in reader:
             yield recordtype(*row)
 
@@ -322,7 +327,8 @@ class CSVManager(object):
             fname = '%s__%s.csv' % (self.prefix, rt.__name__)
             self.rt2file[rt] = f = self.archive.open(fname, 'w')
             self.rt2writer[rt] = writer = csv.writer(f)
-            writer.writerow(rt.fieldnames)
+            if self.has_header:
+                writer.writerow(rt.fieldnames)
         writer.writerow(record)
 
     def __enter__(self):

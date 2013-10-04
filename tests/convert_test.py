@@ -121,3 +121,13 @@ PAGER,IR,6.00,0.00''')
         man = CSVManager('test', archive)
         with self.assertRaises(InvalidFile):
             man.convert_to_node()
+
+    def test_primary_key_violation(self):
+        archive = fake_archive(dvs='''\
+vulnerabilitySetID,assetCategory,lossCategory,IMT
+PAGER,population,fatalities,MMI
+PAGER,population,fatalities,MMI
+''')
+        man = CSVManager('test', archive)
+        with self.assertRaises(KeyError):
+            man.convert_to_node()

@@ -120,8 +120,8 @@ class Vulnerability(Converter):
                 ratios.append(row['lossRatio'])
             dvf.lossRatio.text = ' '.join(ratios)
             dvf.coefficientsVariation.text = ' '.join(coeffs)
-            dvs_node[set_id].append(dvf)
-            dvs_node[set_id].IML.text = ' '.join(imls)
+            dvs_node[(set_id,)].append(dvf)
+            dvs_node[(set_id,)].IML.text = ' '.join(imls)
         datafile = self.man.rt2file[records.DiscreteVulnerabilityData]
         for set_id, dvs in dvs_node.iteritems():
             if dvs.IML.text is None:
@@ -200,7 +200,7 @@ class Fragility(Converter):
             data = list(data)
             if frag['format'] == 'discrete':
                 imls = ' '.join(rec['iml'] for rec in data)
-                ffs_node[ordinal].IML.text = imls
+                ffs_node[(ordinal,)].IML.text = imls
                 poes = ' '.join(rec['poe'] for rec in data)
                 n = Node('ffd', dict(ls=ls))
                 n.append(Node('poEs', text=poes))
@@ -208,7 +208,7 @@ class Fragility(Converter):
                 n = Node('ffc', dict(ls=ls))
                 rows = [row[2:] for row in data]  # param, value
                 n.append(Node('params', dict(rows)))
-            ffs_node[ordinal].append(n)
+            ffs_node[(ordinal,)].append(n)
         return frag
 
 
@@ -265,7 +265,7 @@ def assetgenerator(assets, location_node, costtypes):
     :returns: an iterable over Node objects describing exposure assets
     """
     for asset in assets:
-        nodes = [location_node[asset['location']]]
+        nodes = [location_node[(asset['location'],)]]
         costnodes = []
         for costtype in costtypes:
             keepnode = True

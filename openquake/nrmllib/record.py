@@ -22,6 +22,7 @@ which are UTF-8 encoded strings.
 """
 import re
 import abc
+import inspect
 import itertools
 import operator
 import collections
@@ -50,6 +51,18 @@ def namelist(text):
     return names
 
 
+class Unique(object):
+    def __init__(self, *indices):
+        assert len(set(indices)) == len(indices), 'Duplicates in %s!' % indices
+        self.indices = list(indices)  # set by MetaRecord
+        self.name = 'unique'  # set by MetaRecord
+
+    def __get__(self, rec, recordtype):
+        if rec is None:  # called from the record class
+            return self
+        return tuple(rec[f] for f in self.indices)
+
+
 class Field(object):
     _counter = itertools.count()
 
@@ -59,6 +72,9 @@ class Field(object):
         self.name = name
         self.default = default
         self.ordinal = self._counter.next()
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, self.name)
 
 
 class MetaRecord(abc.ABCMeta):
@@ -74,6 +90,15 @@ class MetaRecord(abc.ABCMeta):
         fieldnames = [f.name for f in fields]
         name2index = dict((n, i) for i, n in enumerate(fieldnames))
         keyindices = [name2index[f.name] for f in fields if f.key] or [0]
+
+        # unique constraints
+        for n, v in dic.iteritems():
+            if isinstance(v, Unique):
+                for i, index in enumerate(v.indices):
+                    if isinstance(index, str):
+                        v.name = n
+                        v.indices[i] = name2index[index]
+
         if '__init__' not in dic:
             dic['__init__'] = mcl.mkinit(fieldnames)
         if 'name2index' not in dic:
@@ -82,8 +107,8 @@ class MetaRecord(abc.ABCMeta):
             dic['fields'] = fields
         if 'ntuple' not in dic:
             dic['ntuple'] = collections.namedtuple(name, fieldnames)
-        if 'keygetter' not in dic:
-            dic['keygetter'] = operator.itemgetter(*keyindices)
+        if 'pkey' not in dic:
+            dic['pkey'] = Unique(*keyindices)
         return super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
 
     @staticmethod
@@ -118,15 +143,14 @@ class Record(collections.Sequence):
     __metaclass__ = MetaRecord
 
     def init(self):
-        pass
-
-    def keytuple(self):
-        return self.__class__.keygetter(self)
+        """To override for post-initialization operations"""
 
     def is_valid(self):
+        """True is all columns are valid"""
         return all(self.check_valid())
 
     def check_valid(self):
+        """Returns a namedtuple of booleans, one for each column"""
         status = {}
         for col, field in zip(self.row, self.fields):
             try:
@@ -137,50 +161,63 @@ class Record(collections.Sequence):
                 status[field.name] = True
         return self.ntuple(**status)
 
-    def convert(self):
-        return self.ntuple(
+    def cast(self):
+        """Cast the record into a namedtuple by casting all of the columns"""
+        return self.ntuple._make(
             field.converter(col) for col, field in zip(self.row, self.fields))
 
     def __getitem__(self, i):
+        """Return the column 'i', where 'i' can be an integer or a string"""
         if isinstance(i, str):
             i = self.name2index[i]
         return self.row[i]
 
     def __setitem__(self, i, value):
+        """
+        Set the column 'i', where 'i' can be an integer or a name.
+        If the value is invalid, raise a ValueError.
+        """
         if isinstance(i, str):
             i = self.name2index[i]
         self.fields[i].converter(value)
         self.row[i] = value
 
     def __delitem__(self, i):
+        """Delete the column 'i', where 'i' can be an integer or a string"""
         if isinstance(i, str):
             i = self.name2index[i]
         del self.row[i]
 
     def __len__(self):
+        """The number of columns in the record"""
         return len(self.fields)
 
     def __str__(self):
+        """A CSV representation of the record"""
         return ','.join(self.row)
 
 
 class Table(collections.MutableSequence):
     """
-    In-memory table with a method is_valid
+    In-memory table storing a sequence of record objects.
+    Primary key and unique constraints are checked at insertion time.
     """
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, recordtype, records):
         self.recordtype = recordtype
-        self.key2index = {}
+        self.unique = []
+        for n, v in inspect.getmembers(
+                recordtype, lambda v: isinstance(v, Unique)):
+            setattr(self, '%s_dict' % v.name, {})
+            self.unique.append(v)
         self.records = []
-        self.index = 0
         for rec in records:
             self.append(rec)
 
     def to_nodedict(self):
         return collections.OrderedDict(
-            (rec.keytuple(), rec.to_node()) for rec in self)
+            (rec.pkey, rec.to_node()) for rec in self)
 
     def __getitem__(self, i):
         return self.records[i]
@@ -189,28 +226,43 @@ class Table(collections.MutableSequence):
         self.records[i] = record
 
     def __delitem__(self, i):
-        del self.key2index[self[i].keytuple()]
+        for descr in self.unique:
+            key = descr.__get__(self.records[i], self.recordtype)
+            del getattr(self, '%s_dict' % descr.name)[key]
         del self.records[i]
 
     def __len__(self):
         return len(self.records)
 
     def insert(self, position, rec):
-        key = rec.keytuple()
-        if key in self.key2index:
-            raise KeyError('Duplicate key: %s' % str(key))
+        for descr in self.unique:
+            dic = getattr(self, '%s_dict' % descr.name)
+            key = descr.__get__(rec, self.recordtype)
+            try:
+                rec = dic[key]
+            except KeyError:  # not inserted yet
+                dic[key] = rec
+            else:
+                msg = []
+                for k, i in zip(key, descr.indices):
+                    msg.append('%s=%s' % (rec.fields[i].name, k))
+                raise KeyError('%s:%d:Duplicate record:%s' %
+                               (self.recordtype.__name__, position,
+                                ','.join(msg)))
         self.records.append(rec)
-        self.key2index[key] = self.index
-        self.index += 1
 
-    def getrecord(self, *key):
-        return self[self.key2index[key]]
+    def getrecord(self, *pkey):
+        return self.pkey_dict[pkey]
 
     def is_valid(self):
         return all(rec.is_valid() for rec in self)
 
     def __str__(self):
         return '\n'.join(map(str, self))
+
+    def __eq__(self, other):
+        assert len(self) == len(other)
+        return all(x == y for x, y in zip(self, other))
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name, self.recordtype.__name__)
