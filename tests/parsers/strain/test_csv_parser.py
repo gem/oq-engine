@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+#License as published by the Free Software Foundation, either version
 #3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,33 +17,33 @@
 #
 #DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-#is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-#Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+#is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+#Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 #for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 '''
 Test suite for hmtk.parsers.strain.strain_csv_parser - the reader and writer of
@@ -55,7 +55,7 @@ import unittest
 import numpy as np
 from collections import OrderedDict
 from hmtk.strain.geodetic_strain import GeodeticStrain
-from hmtk.parsers.strain.strain_csv_parser import (ReadStrainCsv, 
+from hmtk.parsers.strain.strain_csv_parser import (ReadStrainCsv,
                                                    WriteStrainCsv)
 
 
@@ -99,19 +99,19 @@ class TestStrainCsvReader(unittest.TestCase):
         self.model = ReadStrainCsv(IN_FILE)
         strain =self.model.read_data()
         # First test - check longitude and latitude
-        exp_longitude = np.array([ -74.2,  -74.1,  -74. ,  -73.9,  -72.9, 
+        exp_longitude = np.array([ -74.2,  -74.1,  -74. ,  -73.9,  -72.9,
             -72.8,   46.2,   46.3, 46.4,  176.9,  177. ,177.1,  -74.1,  -74.,
             -73.9,  -73.8,  -112.2, -112.1, -112. , -111.9, -111.8])
-        exp_latitude = np.array([-55.7, -55.7, -55.7, -55.7, -55.7, -55.7, 
+        exp_latitude = np.array([-55.7, -55.7, -55.7, -55.7, -55.7, -55.7,
             -38.2, -38.2, -38.2,  -38.2, -38.2, -38.2, -38.1, -38.1, -38.1,
             -38.1, -24.8, -24.8, -24.8, -24.8, -24.8])
-        region = np.array(['IPL', 'IPL', 'IPL', 'IPL', 'R', 'R', 'O', 'O', 
-                           'O', 'C', 'C', 'C', 'S', 'S', 'S', 'S', 'R', 'R', 
+        region = np.array(['IPL', 'IPL', 'IPL', 'IPL', 'R', 'R', 'O', 'O',
+                           'O', 'C', 'C', 'C', 'S', 'S', 'S', 'S', 'R', 'R',
                            'R', 'R', 'R'])
-        str_2nd_inv = np.array([0., 0.,   0., 0.0, 6.97660913e-07,   
+        str_2nd_inv = np.array([0., 0.,   0., 0.0, 6.97660913e-07,
             4.64676812e-07, 3.51209339e-08, 3.59874978e-08, 3.69339952e-08,
-            9.96827969e-08, 8.17414827e-08, 5.58344876e-08, 3.42756721e-07, 
-            3.42576969e-07, 3.55996685e-07, 3.35017194e-07, 1.11642096e-06, 
+            9.96827969e-08, 8.17414827e-08, 5.58344876e-08, 3.42756721e-07,
+            3.42576969e-07, 3.55996685e-07, 3.35017194e-07, 1.11642096e-06,
             2.39838312e-06, 2.73038946e-06, 2.46489650e-06, 1.14653444e-06])
 
         np.testing.assert_array_almost_equal(exp_longitude,
@@ -119,7 +119,7 @@ class TestStrainCsvReader(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(exp_latitude,
                                              strain.data['latitude'])
-        
+
         np.testing.assert_array_equal(region, strain.data['region'])
         #self.assertListEqual(region, strain.data['region'])
         # Take from 4th value to avoid log10(0.) for IPL regions
@@ -127,7 +127,7 @@ class TestStrainCsvReader(unittest.TestCase):
             np.log10(strain.data['2nd_inv'][4:]))
 
         self.assertListEqual(strain.data_variables,
-            ['longitude', 'latitude', 'exx', 'eyy', 'exy', '2nd_inv', 
+            ['longitude', 'latitude', 'exx', 'eyy', 'exy', '2nd_inv',
              'dilatation', 'err', 'e1h', 'e2h'])
 
 
@@ -166,7 +166,7 @@ class TestStrainCsvWriter(unittest.TestCase):
         self.model.target_magnitudes = np.array([5.5, 6.6])
         self.model, output_variables = self.writer.slice_rates_to_data(
             self.model)
-        
+
         self.assertListEqual(output_variables,
             ['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500', '6.600'])
         np.testing.assert_array_almost_equal(self.model.data['5.500'],
@@ -174,7 +174,7 @@ class TestStrainCsvWriter(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(self.model.data['6.600'],
                                              np.array([2., 2., 2.]))
-        
+
 
     def test_write_to_file(self):
         '''
@@ -185,12 +185,12 @@ class TestStrainCsvWriter(unittest.TestCase):
                                                 [1., 2.],
                                                 [1., 2.]])
         self.model.target_magnitudes = np.array([5.5, 6.6])
-       
 
-        expected = [['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500', 
-                     '6.600'], ['30.0', '30.0', '1.0', '1.0', '1.0', '1.0', 
-                     '2.0'], ['30.0', '30.0', '2.0', '2.0', '2.0', '1.0', 
-                     '2.0'], ['30.0', '30.0', '3.0', '3.0', '3.0', '1.0', 
+
+        expected = [['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500',
+                     '6.600'], ['30.0', '30.0', '1.0', '1.0', '1.0', '1.0',
+                     '2.0'], ['30.0', '30.0', '2.0', '2.0', '2.0', '1.0',
+                     '2.0'], ['30.0', '30.0', '3.0', '3.0', '3.0', '1.0',
                      '2.0']]
         self.writer.write_file(self.model)
         f = open('a_test_file.csv')
@@ -199,10 +199,3 @@ class TestStrainCsvWriter(unittest.TestCase):
             self.assertListEqual(expected[iloc], row)
 
         os.system('rm a_test_file.csv')
-
-
-
-
-
-
-

@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+#License as published by the Free Software Foundation, either version
 #3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,42 +17,42 @@
 #
 #DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-#is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-#Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+#is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+#Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 #for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 '''
 Module hmtk.strain.shift.Shift implements the Seismic Hazard Inferred from
-Tectonics (SHIFT) methodology (Bird & Liu, 2007; Bird et al. 2010) for 
-calculating seismic moment rate from Geodetic Strain 
+Tectonics (SHIFT) methodology (Bird & Liu, 2007; Bird et al. 2010) for
+calculating seismic moment rate from Geodetic Strain
 '''
 
 import numpy as np
-from math import fabs 
+from math import fabs
 from hmtk.strain.strain_utils import moment_function, calculate_taper_function
 
 
@@ -67,7 +67,7 @@ CRB_PARAMS = {'CMT_EVENTS': 285.9, 'CMT_moment': 1.13E17,
               'assumed_mu': 27.7, 'line_integral': 5.5E8,
               'coupled_thickness': 3.0, 'lithosphere': 6.,
               'coupling': 0.50, 'adjustment_factor':1.001, 'area':None}
-              
+
 CTF_PARAMS = {'CMT_EVENTS': 198.5, 'CMT_moment': 3.5E17,
               'beta': 0.65, 'corner_mag': 8.01, 'tGR_moment_rate': 3.8E12,
               'length': 19375., 'velocity': 21.54, 'assumed_dip': 73.,
@@ -133,10 +133,10 @@ SUB_PARAMS = {'CMT_EVENTS': 2052.8, 'CMT_moment': 3.5E17,
 
 IPL_PARAMS = {'CMT_EVENTS': 189.0, 'CMT_moment': 3.47E17,
               'beta': 0.63, 'corner_mag': 9.0, 'tGR_moment_rate': None,
-              'length': None, 'velocity': None, 'area': 4.3536E14, 
+              'length': None, 'velocity': None, 'area': 4.3536E14,
               'assumed_dip': 14., 'assumed_mu': None, 'line_integral': None,
-              'coupled_thickness': None, 'lithosphere': None, 'coupling': None, 
-              'adjustment_factor': 1.619, 
+              'coupled_thickness': None, 'lithosphere': None, 'coupling': None,
+              'adjustment_factor': 1.619,
               'CMT_duration': 32.25 * SECS_PER_YEAR}
 
 BIRD_GLOBAL_PARAMETERS = {'CRB': CRB_PARAMS,
@@ -175,21 +175,21 @@ for reg_type in BIRD_GLOBAL_PARAMETERS.keys():
     BIRD_GLOBAL_PARAMETERS[reg_type] = reg
 
 
-STRAIN_VARIABLES = ['exx', 'eyy', 'exy', 'e1h', 'e2h', 'err', '2nd_inv', 
+STRAIN_VARIABLES = ['exx', 'eyy', 'exy', 'e1h', 'e2h', 'err', '2nd_inv',
                     'dilatation']
 
 
 class Shift(object):
     '''
-    :class: hmtk.strain.shift.Shift implments the main Seismic Hazard 
+    :class: hmtk.strain.shift.Shift implments the main Seismic Hazard
     Inferred from Tectonics (SHIFT) methodology for calculating
     activity rates (Bird & Liu, 2007; Bird et al. 2010)
     :param strain:
-        Strain model as instance of :class: 
+        Strain model as instance of :class:
         hmtk.strain.geodetic_strain.GeodeticStrain
 
     :param float/list/array target_magnitudes:
-        Magnitude of list of target magnitudes for calculation of the activity 
+        Magnitude of list of target magnitudes for calculation of the activity
         rates
 
     :param int number_magnitudes:
@@ -205,10 +205,10 @@ class Shift(object):
     :param np.ndarray base_rates:
         Minimum (background) rates for each corresponding target magnitude
     '''
-    def __init__(self, minimum_magnitude, base_params=IPL_PARAMS, 
+    def __init__(self, minimum_magnitude, base_params=IPL_PARAMS,
         region_parameter_file=None):
         '''
-        Instantiate the class, retreive minimum moments, base rates and 
+        Instantiate the class, retreive minimum moments, base rates and
         regionalisation informaton
 
         :param float/list/np.ndarray minimum_magnitude:
@@ -217,10 +217,10 @@ class Shift(object):
         :param dict base_params:
             Regionalisation parameters for the background region type (in this
             case the Bird et al. Intraplate class
-        
+
         :param str region_parameter_file:
-            To overwrite the default Bird et al (2007) classifcations the 
-            regionalisation can be defined in a separate Yaml file 
+            To overwrite the default Bird et al (2007) classifcations the
+            regionalisation can be defined in a separate Yaml file
         '''
         self.strain = None
         if isinstance(minimum_magnitude, float):
@@ -236,7 +236,7 @@ class Shift(object):
         self.threshold_moment = moment_function(self.target_magnitudes)
         # Get the base rate from the input parameters
         self._get_base_rates(base_params)
-        # If a regionalisation parameter file is defined then read 
+        # If a regionalisation parameter file is defined then read
         # regionalisation from there - otherwise use Bird regionalisation
         if region_parameter_file:
             self.regionalisation = yaml.load(open(region_parameter_file, 'rt'))
@@ -247,11 +247,11 @@ class Shift(object):
 
     def _get_base_rates(self, base_params):
         '''
-        Defines the base moment rate that should be assigned to places of 
-        zero strain (i.e. Intraplate regions). In Bird et al (2010) this is 
-        taken as basic rate of Intraplate events in GCMT catalogue above the 
+        Defines the base moment rate that should be assigned to places of
+        zero strain (i.e. Intraplate regions). In Bird et al (2010) this is
+        taken as basic rate of Intraplate events in GCMT catalogue above the
         threshold magnitude
-        
+
         :param dict base_params:
             Parameters needed for calculating the base rate. Requires:
                 'CMT_EVENTS': The number of CMT events
@@ -264,7 +264,7 @@ class Shift(object):
         base_ipl_rate = base_params['CMT_EVENTS'] / (base_params['area'] *
             base_params['CMT_duration'])
         self.base_rate = np.zeros(self.number_magnitudes, dtype=float)
-        
+
         for iloc in range(0, self.number_magnitudes):
             self.base_rate[iloc] = base_ipl_rate * calculate_taper_function(
                     base_params['CMT_moment'],
@@ -276,8 +276,8 @@ class Shift(object):
     def calculate_activity_rate(self, strain_data, cumulative=False,
         in_seconds=False):
         '''
-        Main function to calculate the activity rate (for each of the 
-        magnitudes in target_magnitudes) for all of the cells specified in 
+        Main function to calculate the activity rate (for each of the
+        magnitudes in target_magnitudes) for all of the cells specified in
         the input strain model file
 
         :param strain_data:
@@ -285,7 +285,7 @@ class Shift(object):
             hmtk.strain.geodetic_strain.GeodeticStrain
 
         :param bool cumulative:
-            Set to true if the cumulative rate is required, False for 
+            Set to true if the cumulative rate is required, False for
             incremental
 
         :param bool in_seconds:
@@ -303,24 +303,24 @@ class Shift(object):
                               'definition of regionalisation')
         else:
             self._reclassify_Bird_regions_with_data()
-        
-        
+
+
         # Initially all seismicity rates assigned to background rate
         self.strain.seismicity_rate = np.tile(
-            self.base_rate, 
+            self.base_rate,
             [self.strain.get_number_observations(), 1])
-        
+
         regionalisation_zones = (
-            np.unique(self.strain.data['region'])).tolist()        
-        
-        
+            np.unique(self.strain.data['region'])).tolist()
+
+
         for region in regionalisation_zones:
             id0 = self.strain.data['region'] == region
             if 'IPL' in region:
-                # For intra-plate seismicity everything is refered to 
+                # For intra-plate seismicity everything is refered to
                 # the background rate
                 continue
-            
+
             elif 'OSR_special_1' in region:
                 # Special case 1 - normal and transform faulting
                 calculated_rate = self.get_rate_osr_normal_transform(
@@ -334,20 +334,20 @@ class Shift(object):
             else:
                 calculated_rate = \
                     self.regionalisation[region]['adjustment_factor'] * \
-                    self.continuum_seismicity(self.threshold_moment, 
-                                              self.strain.data['e1h'][id0], 
-                                              self.strain.data['e2h'][id0], 
-                                              self.strain.data['err'][id0], 
+                    self.continuum_seismicity(self.threshold_moment,
+                                              self.strain.data['e1h'][id0],
+                                              self.strain.data['e2h'][id0],
+                                              self.strain.data['err'][id0],
                                               self.regionalisation[region])
-            
+
             for jloc, iloc in enumerate(np.where(id0)[0]):
                 # Where the calculated rate exceeds the base rate then becomes
                 # calculated rate. In this version the magnitudes are treated
-                # independently (i.e. if Rate(M < 7) > Base Rate (M < 7) but 
+                # independently (i.e. if Rate(M < 7) > Base Rate (M < 7) but
                 # Rate (M > 7) < Base Rate (M > 7) then returned Rate (M < 7)
                 # = Rate (M < 7) and returned Rate (M > 7) = Base Rate (M > 7)
                 id1 = calculated_rate[jloc] > self.base_rate
-                self.strain.seismicity_rate[iloc, id1] = calculated_rate[jloc, 
+                self.strain.seismicity_rate[iloc, id1] = calculated_rate[jloc,
                                                                          id1]
 
         if not cumulative and self.number_magnitudes > 1:
@@ -357,7 +357,7 @@ class Shift(object):
                 self.strain.seismicity_rate[:, iloc] = \
                     self.strain.seismicity_rate[:, iloc] -\
                     self.strain.seismicity_rate[:, iloc + 1]
-        
+
         if not in_seconds:
             self.strain.seismicity_rate  = self.strain.seismicity_rate * \
                 SECS_PER_YEAR
@@ -368,17 +368,17 @@ class Shift(object):
 
     def get_rate_osr_normal_transform(self, threshold_moment, id0):
         '''
-        Gets seismicity rate for special case of the ridge condition with 
+        Gets seismicity rate for special case of the ridge condition with
         spreading and transform component
-        
+
         :param float threshold_moment:
             Moment required for calculating activity rate
 
         :param np.ndarray id0:
             Logical vector indicating the cells to which this condition applies
-        
+
         :returns:
-            Activity rates for cells corresponding to the hybrid ocean 
+            Activity rates for cells corresponding to the hybrid ocean
             spreading ridge and oceanic transform condition
 
         '''
@@ -386,43 +386,43 @@ class Shift(object):
         e1h_ridge = np.zeros(np.sum(id0), dtype=float)
         e2h_ridge = self.strain.data['e1h'][id0] + self.strain.data['e2h'][id0]
         err_ridge = -(e1h_ridge + e2h_ridge)
-        
+
         calculated_rate_ridge = self.continuum_seismicity(
             threshold_moment,
             e1h_ridge,
             e2h_ridge,
             err_ridge,
             self.regionalisation['OSRnor'])
-        
+
         # Get transform
         e1h_trans = self.strain.data['e1h'][id0]
         e2h_trans = -e1h_trans
         err_trans = np.zeros(np.sum(id0), dtype=float)
-        
+
         calculated_rate_transform = self.continuum_seismicity(
             threshold_moment,
-            e1h_trans, 
+            e1h_trans,
             e2h_trans,
             err_trans,
             self.regionalisation['OTFmed'])
-        
+
         return self.regionalisation['OSRnor']['adjustment_factor'] * \
                 (calculated_rate_ridge + calculated_rate_transform)
-        
+
 
     def get_rate_osr_convergent_transform(self, threshold_moment, id0):
         '''
-        Calculates seismicity rate for special case of the ridge condition 
+        Calculates seismicity rate for special case of the ridge condition
         with convergence and transform
-        
+
         :param float threshold_moment:
             Moment required for calculating activity rate
 
         :param np.ndarray id0:
             Logical vector indicating the cells to which this condition applies
-        
+
         :returns:
-            Activity rates for cells corresponding to the hybrid ocean 
+            Activity rates for cells corresponding to the hybrid ocean
             convergent boundary and oceanic transform condition
         '''
         # Get convergent component
@@ -433,34 +433,34 @@ class Shift(object):
         calculated_rate_ocb = self.continuum_seismicity(
             threshold_moment,
             e1h_ocb,
-            e2h_ocb, 
+            e2h_ocb,
             err_ocb,
             self.regionalisation['OCB'])
-        
+
         # Get transform
         e2h_trans = self.strain.data['e2h'][id0]
         e1h_trans = -e2h_trans
         err_trans = np.zeros(np.sum(id0), dtype=float)
-        
+
         calculated_rate_transform = self.continuum_seismicity(
             threshold_moment,
             e1h_trans,
-            e2h_trans, 
+            e2h_trans,
             err_trans,
             self.regionalisation['OTFmed'])
-        
+
         return self.regionalisation['OSRnor']['adjustment_factor'] * \
                 (calculated_rate_ocb + calculated_rate_transform)
-        
 
-    def continuum_seismicity(self, threshold_moment, e1h, e2h, err, 
+
+    def continuum_seismicity(self, threshold_moment, e1h, e2h, err,
         region_params):
         '''
         Function to implement the continuum seismicity calculation given
-        vectors of input rates e1h, e2h [np.ndarray] and a dictionary of 
+        vectors of input rates e1h, e2h [np.ndarray] and a dictionary of
         the corresponding regionalisation params
         returns a vector of the corresponding seismicity rates
-        Python implementation of the CONTINUUM_SEISMICITY subroutine of 
+        Python implementation of the CONTINUUM_SEISMICITY subroutine of
         SHIFT_GSRM.f90
 
         :param float threshold_moment:
@@ -468,29 +468,29 @@ class Shift(object):
 
         :param np.ndarray e1h:
             First principal strain rate
-        
+
         :param np.ndarray e1h:
             Second principal strain rate
 
         :param np.ndarray err:
-            Vertical strain rate 
+            Vertical strain rate
 
         :param dict region_params:
             Activity rate parameters specific to the tectonic region under
             consideration
-        
+
         :returns:
-            Cumulative seismicity rate greater than or equal to the 
+            Cumulative seismicity rate greater than or equal to the
             threshold magnitude
         '''
-        
+
         strain_values = np.column_stack([e1h, e2h, err])
         e1_rate = np.amin(strain_values, axis=1)
         e3_rate = np.amax(strain_values, axis=1)
         e2_rate = 0. - e1_rate - e3_rate
         # Pre-allocate seismicity rate with zeros
         seismicity_rate = np.zeros(
-            [np.shape(strain_values)[0], len(threshold_moment)], 
+            [np.shape(strain_values)[0], len(threshold_moment)],
             dtype=float)
         # Calculate moment rate per unit area
         temp_e_rate = 2.0 * (-e1_rate)
@@ -518,8 +518,8 @@ class Shift(object):
 
     def _reclassify_Bird_regions_with_data(self):
         '''
-        The SHIFT regionalisation defines only 'C','R','S','O' - need to 
-        use strain data to reclassify to sub-categories according to the 
+        The SHIFT regionalisation defines only 'C','R','S','O' - need to
+        use strain data to reclassify to sub-categories according to the
         definition in Bird & Liu (2007)
         '''
         # Treat trivial cases of subduction zones and oceanic types
@@ -527,19 +527,19 @@ class Shift(object):
             ['IPL']
         self.strain.data['region'][self.strain.data['region'] == 'S'] = ['SUB']
         self.strain.data['region'][self.strain.data['region'] == 'O'] = ['OCB']
-        
-        
+
+
         # Continental types
         id0 = self.strain.data['region'] == 'C'
         self.strain.data['region'][id0] = ['CTF']
         id0_pos_err = np.logical_and(
             self.strain.data['err'] > 0.,
-            self.strain.data['err'] > (0.364 * self.strain.data['e2h'])) 
-        
+            self.strain.data['err'] > (0.364 * self.strain.data['e2h']))
+
         id0_neg_err = np.logical_and(
             self.strain.data['err'] < 0.,
-            self.strain.data['err'] <= (0.364 * self.strain.data['e1h'])) 
-        
+            self.strain.data['err'] <= (0.364 * self.strain.data['e1h']))
+
         self.strain.data['region'][np.logical_and(id0, id0_pos_err)] = 'CCB'
         self.strain.data['region'][np.logical_and(id0, id0_neg_err)] = 'CRB'
 
@@ -553,17 +553,15 @@ class Shift(object):
                 self.strain.data['region'][iloc] = 'OSRnor'
             elif fabs(self.strain.data['e1h'][iloc]) < 1E-99: # Effective == 0.0
                 self.strain.data['region'][iloc] = 'OSRnor'
-            elif ((self.strain.data['e1h'][iloc] * 
+            elif ((self.strain.data['e1h'][iloc] *
                    self.strain.data['e2h'][iloc]) < 0.0) and\
-                 ((self.strain.data['e1h'][iloc] + 
-                   self.strain.data['e2h'][iloc]) >= 0.):      
+                 ((self.strain.data['e1h'][iloc] +
+                   self.strain.data['e2h'][iloc]) >= 0.):
                 self.strain.data['region'][iloc] = 'OSR_special_1'
-            elif ((self.strain.data['e1h'][iloc] * 
+            elif ((self.strain.data['e1h'][iloc] *
                    self.strain.data['e2h'][iloc]) < 0.) and\
-                 ((self.strain.data['e1h'][iloc] + 
-                   self.strain.data['e2h'][iloc]) < 0.):      
+                 ((self.strain.data['e1h'][iloc] +
+                   self.strain.data['e2h'][iloc]) < 0.):
                 self.strain.data['region'][iloc] = 'OSR_special_2'
             else:
                 self.strain.data['region'][iloc] = 'OCB'
-
-

@@ -7,12 +7,12 @@
 # modification, are permitted provided that the following conditions are
 # met:
 
-#   Redistributions of source code must retain the above copyright 
+#   Redistributions of source code must retain the above copyright
 #   notice, this list of conditions and the following disclaimer.
 #   Redistributions in bytecode form must reproduce the above copyright
 #   notice, this list of conditions and the following disclaimer in
 #   the documentation and/or other materials provided with the
-#   distribution. 
+#   distribution.
 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -73,7 +73,7 @@ class FunctionMaker(object):
             # func can be a class or a callable, but not an instance method
             self.name = func.__name__
             if self.name == '<lambda>': # small hack for lambda functions
-                self.name = '_lambda_' 
+                self.name = '_lambda_'
             self.doc = func.__doc__
             self.module = func.__module__
             if inspect.isfunction(func):
@@ -143,7 +143,7 @@ class FunctionMaker(object):
         if mo is None:
             raise SyntaxError('not a valid function template\n%s' % src)
         name = mo.group(1) # extract the function name
-        names = set([name] + [arg.strip(' *') for arg in 
+        names = set([name] + [arg.strip(' *') for arg in
                              self.shortsignature.split(',')])
         for n in names:
             if n in ('_func_', '_call_'):
@@ -175,7 +175,7 @@ class FunctionMaker(object):
         """
         if isinstance(obj, str): # "name(signature)"
             name, rest = obj.strip().split('(', 1)
-            signature = rest[:-1] #strip a right parens            
+            signature = rest[:-1] #strip a right parens
             func = None
         else: # a function
             name = None
@@ -183,9 +183,9 @@ class FunctionMaker(object):
             func = obj
         self = cls(func, name, signature, defaults, doc, module)
         ibody = '\n'.join('    ' + line for line in body.splitlines())
-        return self.make('def %(name)s(%(signature)s):\n' + ibody, 
+        return self.make('def %(name)s(%(signature)s):\n' + ibody,
                         evaldict, addsource, **attrs)
-  
+
 def decorator(caller, func=None):
     """
     decorator(caller) converts a caller function into a decorator;
@@ -220,7 +220,7 @@ def decorator(caller, func=None):
         evaldict['_call_'] = caller
         evaldict['decorator'] = decorator
         return FunctionMaker.create(
-            '%s(%s)' % (name, fun), 
+            '%s(%s)' % (name, fun),
             'return decorator(_call_, %s)' % fun,
             evaldict, undecorated=caller, __wrapped__=caller,
             doc=doc, module=caller.__module__)
@@ -235,7 +235,7 @@ def __call__(self, func):
 
 try: # Python >= 3.2
 
-    from contextlib import _GeneratorContextManager 
+    from contextlib import _GeneratorContextManager
     ContextManager = type(
         'ContextManager', (_GeneratorContextManager,), dict(__call__=__call__))
 
@@ -245,7 +245,7 @@ except ImportError: # Python >= 2.5
     def __init__(self, f, *a, **k):
         return GeneratorContextManager.__init__(self, f(*a, **k))
     ContextManager = type(
-        'ContextManager', (GeneratorContextManager,), 
+        'ContextManager', (GeneratorContextManager,),
         dict(__call__=__call__, __init__=__init__))
-    
+
 contextmanager = decorator(ContextManager)

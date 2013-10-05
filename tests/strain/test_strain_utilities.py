@@ -1,11 +1,11 @@
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+#License as published by the Free Software Foundation, either version
 #3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -13,33 +13,33 @@
 #
 #DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-#is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-#Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+#is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+#Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 #for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 '''
 Test suite for hmtk.strain.strain_utils a set of utility functions for the
@@ -49,7 +49,7 @@ import os
 import unittest
 import numpy as np
 from math import log, log10
-from hmtk.strain.strain_utils import (moment_function, 
+from hmtk.strain.strain_utils import (moment_function,
                                       moment_magnitude_function,
                                       calculate_taper_function,
                                       tapered_gutenberg_richter_cdf,
@@ -60,8 +60,8 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'strain_data')
 TAPER_FUNCTION_DATA = np.genfromtxt(
     os.path.join(BASE_DATA_PATH, 'taper_function_log_data.txt'),
     delimiter=',')
-                                                 
-                                             
+
+
 
 class TestStrainUtils(unittest.TestCase):
     '''
@@ -71,7 +71,7 @@ class TestStrainUtils(unittest.TestCase):
         '''
         '''
         self.beta = log(10.)
-        
+
     def test_moment_function(self):
         '''
         Tests the simple function to implement the Hanks & Kanamori (1979)
@@ -90,10 +90,10 @@ class TestStrainUtils(unittest.TestCase):
 
     def test_calculate_taper_function(self):
         '''
-        Tests the function to calculate the taper part of the Tapered 
+        Tests the function to calculate the taper part of the Tapered
         Gutenberg & Richter model with exhaustive data set
         '''
-        
+
         obs_mo = moment_function(np.arange(5.0, 9.5, 1.0))
         sel_mo = moment_function(np.arange(5.0, 9.5, 1.0))
         obs_data = np.zeros([len(obs_mo), len(sel_mo)], dtype=float)
@@ -104,14 +104,14 @@ class TestStrainUtils(unittest.TestCase):
                                                                 sel,
                                                                 corner_mo,
                                                                 self.beta)
-        np.testing.assert_array_almost_equal(TAPER_FUNCTION_DATA, 
+        np.testing.assert_array_almost_equal(TAPER_FUNCTION_DATA,
                                              np.log10(obs_data))
 
     def test_calculate_taper_function_zero_case(self):
         '''
         Test case when g_function is 0.0.
         g_function is 0 when (obs - sel) < -100.0 * corner_mo
-        This scenario seems to occur when the selected moment is 
+        This scenario seems to occur when the selected moment is
         significantly greater than the corner magnitude
         '''
         self.assertAlmostEqual(0.0, calculate_taper_function(
@@ -119,6 +119,3 @@ class TestStrainUtils(unittest.TestCase):
             moment_function(8.0),
             moment_function(6.0),
             self.beta))
-
-
-

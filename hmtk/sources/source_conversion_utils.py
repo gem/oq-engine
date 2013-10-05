@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -64,7 +64,7 @@ class MFDConverter(object):
     @abc.abstractmethod
     def convert(self, mag_freq_dist):
         '''
-        Converts the input magnitude frequency distribution in the 
+        Converts the input magnitude frequency distribution in the
         openquake.hazardlib format to the openquake.nrmllib.models format
 
         :param mag_freq_dist:
@@ -72,7 +72,7 @@ class MFDConverter(object):
             openquake.hazardlib.mfd
 
         :returns:
-            Truncated Gutenberg-Richter distribution as an instance of the 
+            Truncated Gutenberg-Richter distribution as an instance of the
             :class: openquake.nrmllib.models
 
         '''
@@ -81,12 +81,12 @@ class MFDConverter(object):
 
 class ConvertTruncGR(MFDConverter):
     '''
-     Converts the :class: openquake.hazardlib.mfd.truncated_gr to 
+     Converts the :class: openquake.hazardlib.mfd.truncated_gr to
      the class openquake.nrmllib.models.TGRMFD
     '''
     def convert(self, mag_freq_dist):
         '''
-        Converts the input truncated Gutenberg-Richter magnitude frequency 
+        Converts the input truncated Gutenberg-Richter magnitude frequency
         distribution to the required openquake.nrmlib implementation
 
         :param mag_freq_dist:
@@ -94,7 +94,7 @@ class ConvertTruncGR(MFDConverter):
             openquake.hazardlib.mfd.truncated_gr.TruncatedGRMFD
 
         :returns:
-            Truncated Gutenberg-Richter distribution as an instance of the 
+            Truncated Gutenberg-Richter distribution as an instance of the
             :class: openquake.nrmllib.models.TGRMFD
 
         '''
@@ -107,22 +107,22 @@ class ConvertTruncGR(MFDConverter):
 class ConvertIncremental(MFDConverter):
     '''
      Converts an evenly discretized incremental magnitude frequency
-     distribution in the form of either 
-     :class: openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretized or 
+     distribution in the form of either
+     :class: openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretized or
      the :class: openquake.nrmllib.models.IncrementalMFD
     '''
     def convert(self, mag_freq_dist):
         '''
         :param mag_freq_dist:
             Magnitude frequency distribution as instance of the :class:
-            openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretized 
+            openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretized
 
         :returns:
-            Evenly discretized magnitude frequency distribution as an instance 
+            Evenly discretized magnitude frequency distribution as an instance
             of the :class: openquake.nrmllib.models.IncrementalMFD
 
         '''
-        assert isinstance(mag_freq_dist, 
+        assert isinstance(mag_freq_dist,
                           mfd.evenly_discretized.EvenlyDiscretizedMFD)
         return models.IncrementalMFD(
             min_mag=mag_freq_dist.min_mag,
@@ -141,8 +141,8 @@ def render_mfd(mag_freq_dist):
     '''
     Render the magnitude frequency distribution
     '''
-    
-    
+
+
     mfd_name = mag_freq_dist.__class__.__name__
     if mfd_name in ACCEPTED_MFD:
         # Class is already an instance of a oq.nrmllib.models mfd class
@@ -159,12 +159,12 @@ def render_aspect_ratio(aspect_ratio, use_default=False):
     Returns the aspect ratio if one is defined for the source, otherwise
     if defaults are accepted a default value of 1.0 is returned or else
     a ValueError is raised
-    
+
     :param float aspect_ratio:
         Ratio of along strike-length to down-dip width of the rupture
 
     :param bool use_default:
-        If true, when aspect_ratio is undefined will return default value of 
+        If true, when aspect_ratio is undefined will return default value of
         1.0, otherwise will raise an error.
     '''
     if aspect_ratio:
@@ -206,12 +206,12 @@ def render_mag_scale_rel(mag_scale_rel, use_default=False):
 
 def render_npd(nodal_plane_dist, use_default=False):
     '''
-    Checks to see if nodal plane distribution exists and renders to 
+    Checks to see if nodal plane distribution exists and renders to
     an instances of the class openquake.nrmllib.models.NodalPlane
-    
+
     :param nodal_plane_dist:
-        Nodal plane distribution of a source as either an instance of 
-        :class: openquake.nrmllib.models.NodalPlane or 
+        Nodal plane distribution of a source as either an instance of
+        :class: openquake.nrmllib.models.NodalPlane or
         :class: openquake.hazardlib.pmf.PMF
 
     :param bool use_default:
@@ -235,7 +235,7 @@ def render_npd(nodal_plane_dist, use_default=False):
             if not isinstance(value, NodalPlane):
                 raise ValueError('Nodal Planes incorrectly formatted!')
 
-            output_npd.append(models.NodalPlane(Decimal(str(prob)), 
+            output_npd.append(models.NodalPlane(Decimal(str(prob)),
                                                 strike=value.strike,
                                                 dip=value.dip,
                                                 rake=value.rake))
@@ -246,7 +246,7 @@ def render_npd(nodal_plane_dist, use_default=False):
     else:
         if use_default:
             # Use a default nodal plane with strike 0, dip 90 and rake 0.
-            return [models.NodalPlane(Decimal('1.0'), strike=0., dip=90., 
+            return [models.NodalPlane(Decimal('1.0'), strike=0., dip=90.,
                                       rake=0.)]
         else:
             raise ValueError('Nodal Plane distribution not defined')
@@ -254,7 +254,7 @@ def render_npd(nodal_plane_dist, use_default=False):
 def render_hdd(hypo_depth_dist, use_default=False):
     '''
     Check to see if hypocentral depth distribution exists. If it
-    is already defined as an instance of 
+    is already defined as an instance of
     openquake.nrmllib.HypocentralDepth then returns. If it is an instance
     of openquake.hazardlib.pmf.PMF then convert to nrmllib version
     '''
@@ -310,7 +310,7 @@ def simple_edge_to_wkt_linestring(edge):
     '''
     trace_str = ""
     for point in edge:
-        trace_str += ' %s %s %s,' % (point.longitude, point.latitude, 
+        trace_str += ' %s %s %s,' % (point.longitude, point.latitude,
                                      point.depth)
     trace_str = trace_str.lstrip(' ')
     return 'LINESTRING (' + trace_str.rstrip(',') + ')'
@@ -338,6 +338,6 @@ def complex_trace_to_wkt_linestring(edges):
             bottom_edge = simple_edge_to_wkt_linestring(edge)
         else:
             int_edges.append(simple_edge_to_wkt_linestring(edge))
-    if len(int_edges) == 0: 
-        int_edges = None  
+    if len(int_edges) == 0:
+        int_edges = None
     return models.ComplexFaultGeometry(top_edge, bottom_edge, int_edges)

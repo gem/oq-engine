@@ -7,8 +7,8 @@ import numpy as np
 #from openquake.hazardlib import scalerel
 
 def _scale_moment(magnitude, in_nm=False):
-    '''Returns the moment for a given magnitude. 
-    :param float magnitude: 
+    '''Returns the moment for a given magnitude.
+    :param float magnitude:
         Earthquake magnitude
     :param bool in_nm:
         To return the value in newton metres set to true - otherwise in
@@ -31,14 +31,9 @@ class BaseMFDfromSlip(object):
 
     @abc.abstractmethod
     def get_mmax(self, mfd_conf, msr, rake, area):
-        '''Gets the mmax for the fault - reading directly from the config file 
+        '''Gets the mmax for the fault - reading directly from the config file
         or using the msr otherwise'''
 
     @abc.abstractmethod
     def get_mfd(self):
         '''Calculates the magnitude frequency distribution'''
-        
-
-        
-            
-        

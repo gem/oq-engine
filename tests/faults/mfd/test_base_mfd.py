@@ -26,10 +26,8 @@ class TestScaleMoment(unittest.TestCase):
         '''
 
         # Case 1 - Moment in dyne-cm
-        self.assertAlmostEqual(26.55, 
+        self.assertAlmostEqual(26.55,
                                log10(self.func(self.magnitude, in_nm=False)))
         # Case 2 - Moment in N-m
-        self.assertAlmostEqual(19.55, 
+        self.assertAlmostEqual(19.55,
                                log10(self.func(self.magnitude, in_nm=True)))
-
-

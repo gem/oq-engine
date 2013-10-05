@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -64,8 +64,8 @@ from hmtk.sources import source_conversion_utils as conv
 class TestMFDConverters(unittest.TestCase):
     '''
     Tests the magnitude frequency conversion utils functions
-    :class: hmtk.sources.source_conversion_utils.ConvertTruncGR and 
-    :class: hmtk.sources.source_conversion_utils.ConvertIncremental 
+    :class: hmtk.sources.source_conversion_utils.ConvertTruncGR and
+    :class: hmtk.sources.source_conversion_utils.ConvertIncremental
     '''
 
     def setUp(self):
@@ -82,7 +82,7 @@ class TestMFDConverters(unittest.TestCase):
         self.model_ed = mfd.evenly_discretized.EvenlyDiscretizedMFD(
             min_mag=5.0,
             bin_width=0.1,
-            occurrence_rates=[1., 1., 1., 1., 1.]) 
+            occurrence_rates=[1., 1., 1., 1., 1.])
 
     def test_truncgr(self):
         '''
@@ -98,7 +98,7 @@ class TestMFDConverters(unittest.TestCase):
         '''
         Tests the evenly discretized MFD class
         '''
-        expected = {'min_mag': 5.0, 'bin_width': 0.1, 
+        expected = {'min_mag': 5.0, 'bin_width': 0.1,
                     'occur_rates': np.ones(5, dtype=float)}
         self.model = conv.ConvertIncremental()
         output = self.model.convert(self.model_ed)
@@ -122,7 +122,7 @@ class TestMFDConverters(unittest.TestCase):
         Tests the function to render the mfd given a valid :class:
         openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretizedMFD
         '''
-        expected = {'min_mag': 5.0, 'bin_width': 0.1, 
+        expected = {'min_mag': 5.0, 'bin_width': 0.1,
                     'occur_rates': np.ones(5, dtype=float)}
         output = conv.render_mfd(self.model_ed)
         self.assertAlmostEqual(output.__dict__['min_mag'], 5.0)
@@ -132,7 +132,7 @@ class TestMFDConverters(unittest.TestCase):
 
     def test_raise_error_unrecognised_mfd(self):
         '''
-        Tests that the render_mfd function raises an error when 
+        Tests that the render_mfd function raises an error when
         rendering an unsupported MFD
         '''
         class BadInput(object):
@@ -227,7 +227,7 @@ class TestRenderNodalPlane(unittest.TestCase):
 
         self.npd_as_pmf = PMF([(0.5, NodalPlane(0., 90., 0.)),
                                (0.5, NodalPlane(90., 90., 180.))])
-                               
+
         self.npd_as_pmf_bad = PMF([(0.5, None),
                                     (0.5, NodalPlane(90., 90., 180.))])
 
@@ -284,17 +284,17 @@ class TestRenderNodalPlane(unittest.TestCase):
     def test_render_nodal_planes_null_default(self):
         '''
         Tests the rendering of the nodal planes when no input is specified,
-        but the use_defaults is on. 
+        but the use_defaults is on.
         '''
-        output = conv.render_npd(None, use_default=True)    
+        output = conv.render_npd(None, use_default=True)
         self.assertAlmostEqual(output[0].probability, 1.0)
         self.assertAlmostEqual(output[0].strike, 0.)
         self.assertAlmostEqual(output[0].dip, 90.)
         self.assertAlmostEqual(output[0].rake, 0.)
-        
+
     def test_render_nodal_planes_null(self):
         '''
-        Tests the rendering of the nodal planes when no input is specified 
+        Tests the rendering of the nodal planes when no input is specified
         and no defaults are permitted. Should raise ValueError
         '''
         with self.assertRaises(ValueError) as ae:
@@ -335,7 +335,7 @@ class TestRenderHypoDepth(unittest.TestCase):
         self.assertAlmostEqual(output[0].depth, 5.)
         self.assertAlmostEqual(output[1].probability, 0.5)
         self.assertAlmostEqual(output[1].depth, 10.)
- 
+
     def test_bad_instance_pmf(self):
         '''
         Tests function when openquake.hazardlib.pmf.PMF class is passed
@@ -350,7 +350,7 @@ class TestRenderHypoDepth(unittest.TestCase):
 
     def test_no_input_with_defaults(self):
         '''
-        Tests hypocentral depth distribution renderer when no input is 
+        Tests hypocentral depth distribution renderer when no input is
         supplied but the user opts to accept defaults
         '''
         output = conv.render_hdd(None, use_default=True)
@@ -359,26 +359,26 @@ class TestRenderHypoDepth(unittest.TestCase):
 
     def test_no_input_without_defaults(self):
         '''
-        Tests hypocentral depth distribution renderer when no input is 
-        supplied but the user does not accept defaults. Should raise 
+        Tests hypocentral depth distribution renderer when no input is
+        supplied but the user does not accept defaults. Should raise
         ValueError
         '''
         with self.assertRaises(ValueError) as ae:
             output = conv.render_hdd(None)
             self.assertEqual(ae.exception.message,
                 'Hypocentral depth distribution not defined!')
-            
+
 
 class TestConvertSourceGeometries(unittest.TestCase):
     '''
-    Class to test the functions simple_trace_to_wkt_linestring and 
-    complex_trace_to_wkt_linestring, which convert a simple edge or 
+    Class to test the functions simple_trace_to_wkt_linestring and
+    complex_trace_to_wkt_linestring, which convert a simple edge or
     set of edges to linestrings
     '''
     def setUp(self):
         '''
         '''
-        self.simple_edge = Line([Point(10.5, 10.5, 1.0), 
+        self.simple_edge = Line([Point(10.5, 10.5, 1.0),
                                  Point(11.35, 11.45, 2.0)])
 
         top_edge = Line([Point(10.5, 10.5, 1.0), Point(11.35, 11.45, 2.0)])
@@ -404,8 +404,8 @@ class TestConvertSourceGeometries(unittest.TestCase):
         self.assertEqual(
             conv.simple_edge_to_wkt_linestring(self.simple_edge),
             expected)
-        
-        
+
+
     def test_complex_trace_to_wkt(self):
         '''
         Tests the conversion of a list of instances of the :class:
@@ -413,9 +413,9 @@ class TestConvertSourceGeometries(unittest.TestCase):
         models.ComplexFaultGeometry
         '''
         model = conv.complex_trace_to_wkt_linestring(self.complex_edge)
-        self.assertEqual(model.top_edge_wkt, 
-                        'LINESTRING (10.5 10.5 1.0, 11.35 11.45 2.0)') 
-        self.assertListEqual(model.int_edges, 
+        self.assertEqual(model.top_edge_wkt,
+                        'LINESTRING (10.5 10.5 1.0, 11.35 11.45 2.0)')
+        self.assertListEqual(model.int_edges,
                              ['LINESTRING (10.5 10.5 20.0, 11.35 11.45 21.0)'])
-        self.assertEqual(model.bottom_edge_wkt, 
-                        'LINESTRING (10.5 10.5 40.0, 11.35 11.45 40.0)') 
+        self.assertEqual(model.bottom_edge_wkt,
+                        'LINESTRING (10.5 10.5 40.0, 11.35 11.45 40.0)')

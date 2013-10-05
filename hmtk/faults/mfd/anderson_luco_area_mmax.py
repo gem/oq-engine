@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+#License as published by the Free Software Foundation, either version
 #3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,37 +17,37 @@
 #
 #DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-#is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-#Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+#is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+#Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 #for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 """
 Module :mod: mfd.anderson_luco_1_mmax implements :class:
-AndersonLucoType1Mmax. This calculates the magnitude occurrence rate on a fault 
+AndersonLucoType1Mmax. This calculates the magnitude occurrence rate on a fault
 given a known slip value using the exponential models described by
 Anderson & Luco (1983) referring to the rupture area of the maximum earthquake.
 
@@ -73,22 +73,22 @@ class BaseRecurrenceModel(object):
         Returns the rate of earthquakes with M > mag_value
         '''
         return
-        
+
 
 class Type1RecurrenceModel(BaseRecurrenceModel):
     '''
-    Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as 
+    Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as
     inverse of formula I.10 of Table 2 in Anderson & Luco (1993).
     '''
-    
+
     def cumulative_value(self, slip, mmax, mag_value, bbar, dbar, beta):
         '''
         Returns the rate of events with M > mag_value
-        
+
         :param float slip:
-            Slip rate in mm/yr 
+            Slip rate in mm/yr
         :param float mmax:
-            Maximum magnitude        
+            Maximum magnitude
         :param float mag_value:
             Magnitude value
         :param float bbar:
@@ -98,25 +98,25 @@ class Type1RecurrenceModel(BaseRecurrenceModel):
         :param float beta:
             Beta value of formula defined in Eq. 20 of Anderson & Luco (1983)
         '''
-        return (((dbar - bbar) / dbar) * ((slip / 10.) / beta) * 
-                np.exp(bbar * (mmax - mag_value)) * 
+        return (((dbar - bbar) / dbar) * ((slip / 10.) / beta) *
+                np.exp(bbar * (mmax - mag_value)) *
                 np.exp(-(dbar / 2.) * mmax))
-                
+
 
 class Type2RecurrenceModel(BaseRecurrenceModel):
     '''
-    Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as 
+    Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as
     inverse of formula II.9 of Table 3 in Anderson & Luco (1993).
     '''
-    
+
     def cumulative_value(self, slip, mmax, mag_value, bbar, dbar, beta):
         '''
         Returns the rate of events with M > mag_value
-        
+
         :param float slip:
-            Slip rate in mm/yr 
+            Slip rate in mm/yr
         :param float mmax:
-            Maximum magnitude        
+            Maximum magnitude
         :param float mag_value:
             Magnitude value
         :param float bbar:
@@ -127,25 +127,25 @@ class Type2RecurrenceModel(BaseRecurrenceModel):
             Beta value of formula defined in Eq. 20 of Anderson & Luco (1983)
         '''
 
-        return (((dbar - bbar) / (bbar)) * ((slip / 10.) / beta) * 
-                (np.exp(bbar * (mmax - mag_value)) - 1.) * 
+        return (((dbar - bbar) / (bbar)) * ((slip / 10.) / beta) *
+                (np.exp(bbar * (mmax - mag_value)) - 1.) *
                  np.exp(-(dbar / 2.) * mmax))
-    
+
 
 class Type3RecurrenceModel(BaseRecurrenceModel):
     '''
-    Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as 
+    Calculate N(M > mag_value) using Anderson & Luco Type 1 formula as
     inverse of formula III.9 of Table 4 in Anderson & Luco (1993).
     '''
-    
+
     def cumulative_value(self, slip, mmax, mag_value, bbar, dbar, beta):
         '''
         Returns the rate of events with M > mag_value
-        
+
         :param float slip:
-            Slip rate in mm/yr 
+            Slip rate in mm/yr
         :param float mmax:
-            Maximum magnitude        
+            Maximum magnitude
         :param float mag_value:
             Magnitude value
         :param float bbar:
@@ -156,7 +156,7 @@ class Type3RecurrenceModel(BaseRecurrenceModel):
             Beta value of formula defined in Eq. 20 of Anderson & Luco (1983)
         '''
         return (dbar * (dbar - bbar) / bbar) * ((slip / 10.) / beta) * \
-                ((1./ bbar) * (np.exp(bbar * (mmax - mag_value)) - 1.) - 
+                ((1./ bbar) * (np.exp(bbar * (mmax - mag_value)) - 1.) -
                 (mmax - mag_value)) * np.exp(-(dbar / 2.) * mmax)
 
 
@@ -167,39 +167,39 @@ RECURRENCE_MAP = {'First': Type1RecurrenceModel(),
 
 class AndersonLucoAreaMmax(BaseMFDfromSlip):
     '''
-    Class to implement the 1st fault activity rate calculator                
+    Class to implement the 1st fault activity rate calculator
     of Anderson & Luco (1983)
-    
+
     :param str mfd_type:
         Type of magnitude frequency distribution
-    
+
     :param float mfd_weight:
         Weight of the mfd distribution (for subsequent logic tree processing)
-    
+
     :param float bin_width:
         Width of the magnitude bin (rates are given for the centre point)
-    
+
     :param float mmin:
         Minimum magnitude
-    
+
     :param float mmax:
         Maximum magnitude
-    
+
     :param float mmax_sigma:
         Uncertainty on maximum magnitude
-    
+
     :param float b_value:
         Exponent (b-value) for the magnitude frequency distribution
-    
+
     :param numpy.ndarray occurrence_rate:
-        Activity rates for magnitude in the range mmin to mmax in steps of 
+        Activity rates for magnitude in the range mmin to mmax in steps of
         bin_width
-    '''                                                
+    '''
     def setUp(self, mfd_conf):
         '''
-        Input core configuration parameters as specified in the 
+        Input core configuration parameters as specified in the
         configuration file
-        
+
         :param dict mfd_conf:
             Configuration file containing the following attributes:
             * 'Type' - Choose between the 1st, 2nd or 3rd type of recurrence
@@ -228,7 +228,7 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
 
     def get_mmax(self, mfd_conf, msr, rake, area):
         '''
-        Gets the mmax for the fault - reading directly from the config file 
+        Gets the mmax for the fault - reading directly from the config file
         or using the msr otherwise
         :param dict mfd_config:
             Configuration file (see setUp for paramters)
@@ -238,12 +238,12 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
             Rake of the fault (in range -180 to 180)
         :param float area:
             Area of the fault surface (km^2)
-        '''    
+        '''
         if mfd_conf['Maximum_Magnitude']:
             self.mmax = mfd_conf['Maximum_Magnitude']
         else:
             self.mmax = msr.get_median_mag(area, rake)
-        
+
         if 'Maximum_Magnitude_Uncertainty' in mfd_conf.keys() and\
             mfd_conf['Maximum_Magnitude_Uncertainty']:
             self.mmax_sigma = mfd_conf['Maximum_Magnitude_Uncertainty']
@@ -251,20 +251,20 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
             self.mmax_sigma = msr.get_std_dev_mag(rake)
 
 
-    def get_mfd(self, slip, fault_width, shear_modulus= 30.0, 
-                disp_length_ratio=1.25E-5):                                           
+    def get_mfd(self, slip, fault_width, shear_modulus= 30.0,
+                disp_length_ratio=1.25E-5):
         '''
         Calculates activity rate on the fault
-        
+
         :param float slip:
             Slip rate in mm/yr
-        
+
         :param fault_width:
             Width of the fault (km)
-                
+
         :param float shear_modulus:
             Shear modulus of the fault (GPa)
-        
+
         :param float disp_length_ratio:
             Displacement to length ratio (dimensionless)
 
@@ -273,20 +273,20 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
             * Bin width (float)
             * Occurrence Rates (numpy.ndarray)
         '''
-        beta = np.sqrt((disp_length_ratio * (10.0 ** C_VALUE)) /             
-            ((shear_modulus * 1.0E10) * (fault_width * 1E5)))                 
-        dbar = D_VALUE * np.log(10.0)                         
+        beta = np.sqrt((disp_length_ratio * (10.0 ** C_VALUE)) /
+            ((shear_modulus * 1.0E10) * (fault_width * 1E5)))
+        dbar = D_VALUE * np.log(10.0)
         bbar = self.b_value * np.log(10.0)
-        mag = np.arange(self.mmin - (self.bin_width / 2.), 
-                        self.mmax +  self.bin_width, 
+        mag = np.arange(self.mmin - (self.bin_width / 2.),
+                        self.mmax +  self.bin_width,
                         self.bin_width)
-        
+
         if bbar > dbar:
             print 'b-value larger than 1.5 will produce invalid results in '\
                    'Anderson & Luco models'
             self.occurrence_rate = np.nan * np.ones(len(mag) - 1)
             return self.mmin, self.bin_width, self.occurrence_rate
-        
+
         self.occurrence_rate = np.zeros(len(mag) - 1, dtype=float)
         for ival in range(0, len(mag) - 1):
             self.occurrence_rate[ival] = \
@@ -297,5 +297,3 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
             if self.occurrence_rate[ival] < 0.:
                 self.occurrence_rate[ival] = 0.
         return self.mmin, self.bin_width, self.occurrence_rate
-
- 
