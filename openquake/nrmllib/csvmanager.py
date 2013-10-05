@@ -186,15 +186,22 @@ class MemArchive(ArchiveABC):
 def create_table(recordtype, csvstr):
     name = '__' + recordtype.__name__ + '.csv'
     archive = MemArchive([(name, csvstr)])
-    man = CSVManager('', archive, has_header=False)
+    man = CSVManager(archive, has_header=False)
     reclist = list(man.read(recordtype))
     return Table(recordtype, reclist)
 
 
 class CSVManager(object):
 
-    @classmethod
-    def getconverters(cls, archive):
+    def __init__(self, archive, prefix='', has_header=True):
+        self.archive = archive
+        self.prefix = prefix
+        self.has_header = has_header
+        self.rt2reader = {}
+        self.rt2writer = {}
+        self.rt2file = {}
+
+    def getconverters(self):
         """
         Returns a list of Converter instances, one for each file group
         in the underlying archive. Each converter has its own manager
@@ -206,7 +213,7 @@ class CSVManager(object):
             if inspect.isclass(value) and issubclass(
                     value, converter.Converter):
                 cc[name] = value
-        for fname in sorted(archive.extract_filenames()):
+        for fname in sorted(self.archive.extract_filenames()):
             try:
                 prefix, recordcsv = fname.split('__')
             except ValueError:
@@ -217,16 +224,9 @@ class CSVManager(object):
             if recordtype is None:
                 continue
             if not prefix in converters:
-                converters[prefix] = cc[recordtype._tag](cls(prefix, archive))
+                man = self.__class__(self.archive, prefix)
+                converters[prefix] = cc[recordtype._tag](man)
         return converters.values()
-
-    def __init__(self, prefix, archive, has_header=True):
-        self.prefix = prefix
-        self.archive = archive
-        self.has_header = has_header
-        self.rt2reader = {}
-        self.rt2writer = {}
-        self.rt2file = {}
 
     def getconverter(self):
         """
@@ -235,7 +235,7 @@ class CSVManager(object):
         found (this happens if there are no files following the
         naming conventions).
         """
-        converters = self.getconverters(self.archive)
+        converters = self.getconverters()
         if not converters:
             raise RuntimeError(
                 'Could not determine the right converter '
@@ -253,24 +253,21 @@ class CSVManager(object):
         """
         return self.getconverter().csv_to_node()
 
-    def convert_to_nrml(self, out):
+    def convert_to_nrml(self, outdir=None):
         """
-        From CSV files with the given prefix to a single .xml file
-        """
-        conv = self.getconverter()
-        with conv.man:
-            node_to_nrml(conv.csv_to_node(), out)
-        return out.name
-
-    def convert_all_to_nrml(self):
-        """
-        From CSV files with the given prefix to .xml files
+        From CSV files with the given prefix to .xml files; if the output
+        directory is not specified, use the input archive to store the output.
         """
         fnames = []
-        for conv in self.getconverters(self.archive):
-            with conv.man:
-                out = conv.man.archive.open(conv.man.prefix + '.xml', 'w+')
-                node_to_nrml(conv.csv_to_node(), out)
+        for conv in self.getconverters():
+            with conv.man as man:
+                outname = man.prefix + '.xml'
+                if outdir is None:
+                    out = man.archive.open(outname, 'w+')
+                else:
+                    out = open(os.path.join(outdir, outname), 'w+')
+                with out:
+                    node_to_nrml(conv.csv_to_node(), out)
                 fnames.append(out.name)
         return fnames
 
@@ -288,24 +285,29 @@ class CSVManager(object):
         Populate the underlying archive with CSV files extracted from the
         given Node object.
         """
-        man = self.__class__(prefix, self.archive)
+        man = self.__class__(self.archive, prefix)
         conv = converter.Converter.from_tag(node.tag)(man)
         with man:
             for rec in conv.node_to_records(node):
-                man.write(rec)  # automatically writes the header
+                man.write(rec)  # automatically opens the needed files
         return [f.name for f in man.archive.opened]
 
+    # this is needed by the GUI
     def readtables(self):
         """
+        Read the CSV files contained in the archive and create a set
+        of Table objects. Return a list of Containers, one for each
+        file prefix. Each container has the corresponding tables as
+        attributes.
         """
         class Container(object):
-            def __init__(self, name):
-                self.name = name
+            def __init__(self, prefix):
+                self.prefix = prefix
 
         containers = {}
         for fname in sorted(self.archive.extract_filenames(self.prefix)):
             try:
-                name, recordcsv = fname.split('__')
+                prefix, recordcsv = fname.split('__')
             except ValueError:
                 continue
             if not recordcsv.endswith('.csv'):
@@ -313,14 +315,17 @@ class CSVManager(object):
             recordtype = getattr(records, recordcsv[:-4], None)
             if recordtype is None:
                 continue
-            if name not in containers:
-                containers[name] = c = Container(name)
+            if prefix not in containers:
+                containers[prefix] = c = Container(prefix)
             else:
-                c = containers[name]
+                c = containers[prefix]
             setattr(c, recordtype.__name__, self.readtable(recordtype))
         return containers.values()
 
     def read(self, recordtype):
+        """
+        Read the records from the underlying CSV file. Returns an iterator.
+        """
         reader = self.rt2reader.get(recordtype)
         if reader is None:
             fname = '%s__%s.csv' % (self.prefix, recordtype.__name__)
@@ -336,14 +341,24 @@ class CSVManager(object):
             yield recordtype(*row)
 
     def groupby(self, keyfields, recordtype):
+        """
+        Group the records on the underlying CSV according to the given
+        keyfield. Assume the records are sorted.
+        """
         keyindices = [recordtype.name2index[k] for k in keyfields]
         return itertools.groupby(
             self.read(recordtype), lambda rec: [rec[i] for i in keyindices])
 
     def readtable(self, recordtype):
+        """
+        Generate a Table object from the underlying CSV
+        """
         return Table(recordtype, list(self.read(recordtype)))
 
     def write(self, record):
+        """
+        Write a record on the corresponding CSV file
+        """
         rt = type(record)  # record type
         writer = self.rt2writer.get(rt)
         if writer is None:
@@ -355,6 +370,7 @@ class CSVManager(object):
         writer.writerow(record)
 
     def __enter__(self):
+        """Initialize a few dictionaries"""
         self.rt2reader = {}
         self.rt2writer = {}
         self.rt2file = {}
@@ -362,4 +378,5 @@ class CSVManager(object):
         return self
 
     def __exit__(self, etype, exc, tb):
+        """Close the underlying archive"""
         self.archive.close()

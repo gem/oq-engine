@@ -42,11 +42,10 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
         name = model_xml[:-4]  # strips the .xml extension
         fname = os.path.join(DATADIR, model_xml)
         archive = MemArchive([])
-        manager = CSVManager(name, archive)
+        manager = CSVManager(archive, name)
         manager.convert_from_nrml(fname)
-        outname = os.path.join(tempfile.gettempdir(), model_xml)
-        with open(outname, 'w') as out:
-            manager.convert_to_nrml(out)
+        outdir = tempfile.gettempdir()
+        [outname] = manager.convert_to_nrml(outdir)
         if open(fname).read() != open(outname).read():
             raise ValueError('Files %s and %s are different' %
                              (fname, outname))
@@ -80,16 +79,16 @@ class ConvertBadFilesTestCase(unittest.TestCase):
     def test_empty_archive(self):
         empty_archive = MemArchive([])
         with self.assertRaises(RuntimeError):
-            CSVManager('test', empty_archive).convert_to_node()
+            CSVManager(empty_archive, 'test').convert_to_node()
 
     def test_empty_files(self):
         archive = fake_archive('', '', '')
-        node = CSVManager('test', archive).convert_to_node()
+        node = CSVManager(archive, 'test').convert_to_node()
         self.assertEqual(node.to_str(), 'vulnerabilityModel\n')
 
     def test_no_header(self):
         archive = fake_archive(dvd='5.00,0.00,0.30')
-        man = CSVManager('test', archive)
+        man = CSVManager(archive, 'test')
         with self.assertRaises(InvalidFile):
             man.convert_to_node().to_str()
 
@@ -97,7 +96,7 @@ class ConvertBadFilesTestCase(unittest.TestCase):
         archive = fake_archive(
             dvd='vulnerabilitySetID,vulnerabilityFunctionID,'
             'IML,lossRatio,coefficientsVariation')
-        man = CSVManager('test', archive)
+        man = CSVManager(archive, 'test')
         with self.assertRaises(InvalidFile):
             man.convert_to_node()
 
@@ -107,7 +106,7 @@ vulnerabilitySetID,vulnerabilityFunctionID,IML,lossRatio,coefficientsVariation
 PAGER,IR,5.00,0.00,0.30
 PAGER,IR,5.50,0.00,0.30
 PAGER,IR,6.00,0.00,''')
-        man = CSVManager('test', archive)
+        man = CSVManager(archive, 'test')
         with self.assertRaises(InvalidFile):
             man.convert_to_node()
 
@@ -117,7 +116,7 @@ vulnerabilitySetID,vulnerabilityFunctionID,IML,lossRatio,coefficientsVariation
 PAGER,IR,5.00,0.00,0.30
 PAGER,IR,5.50,0.00,0.30
 PAGER,IR,6.00,0.00''')
-        man = CSVManager('test', archive)
+        man = CSVManager(archive, 'test')
         with self.assertRaises(InvalidFile):
             man.convert_to_node()
 
@@ -127,6 +126,6 @@ vulnerabilitySetID,assetCategory,lossCategory,IMT
 PAGER,population,fatalities,MMI
 PAGER,population,fatalities,MMI
 ''')
-        man = CSVManager('test', archive)
+        man = CSVManager(archive, 'test')
         with self.assertRaises(KeyError):
             man.convert_to_node()

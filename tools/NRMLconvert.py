@@ -41,7 +41,7 @@ def main(inp_out):
 
     if out.endswith('.zip'):
         out_archive = ZipArchive(out, 'w')
-    elif not out.endswith('.xml'):
+    elif out != 'inplace':
         out_archive = DirArchive(out, 'w')
 
     fname = os.path.basename(inp)
@@ -49,7 +49,7 @@ def main(inp_out):
     outname, out_ext = os.path.splitext(out)
 
     if inp_ext == '.xml':
-        man = CSVManager(name, out_archive)
+        man = CSVManager(out_archive, name)
         create(man.convert_from_nrml, inp)
     elif inp_ext == '.zip' or os.path.isdir(inp):
         if inp.endswith('.zip'):
@@ -57,14 +57,11 @@ def main(inp_out):
         elif os.path.isdir(inp):
             inp_archive = DirArchive(inp)
         if out == 'inplace':
-            man = CSVManager(name, inp_archive)
+            man = CSVManager(inp_archive, name)
             print man.convert_all_to_nrml()
-        elif out.endswith('.xml'):
-            with open(out, 'w+') as f:
-                create(man.convert_to_nrml, f)
         else:
             raise SystemExit('Invalid output: %s; '
-                             'expected inplace or .xml name' % out)
+                             'expected "inplace"' % out)
     else:
         raise SystemExit('Invalid input: %s' % inp)
 
