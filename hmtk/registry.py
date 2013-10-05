@@ -154,11 +154,14 @@ class CatalogueFunctionRegistry(collections.OrderedDict):
         """
         def dec(fn):
             if completeness:
-                def fn_with_config(catalogue, config, completeness_table=None):
+                def fn_with_config_and_c(
+                        catalogue, config, completeness_table=None):
                     return fn(catalogue, completeness_table, **config)
+                fn_with_config = fn_with_config_and_c
             else:
-                def fn_with_config(catalogue, config):
+                def fn_with_config_without_c(catalogue, config):
                     return fn(catalogue, **config)
+                fn_with_config = fn_with_config_without_c
             fn_with_config.fields = fields
             fn_with_config.completeness = completeness
             fn.fields = fields

@@ -46,3 +46,5 @@
 # liability for use of the software.
 
 from hmtk.parsers import (catalogue)
+
+__all__ = [catalogue]

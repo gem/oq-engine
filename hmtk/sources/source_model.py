@@ -53,11 +53,6 @@ general class to describe a set of seismogenic sources
 
 from openquake.nrmllib import models
 from openquake.nrmllib.hazard.writers import SourceModelXMLWriter
-from hmtk.sources.area_source import mtkAreaSource
-from hmtk.sources.point_source import mtkPointSource
-from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
-from hmtk.sources.complex_fault_source import mtkComplexFaultSource
-from hmtk.seismicity.selector import CatalogueSelector
 
 
 class mtkSourceModel(object):

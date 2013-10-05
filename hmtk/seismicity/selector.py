@@ -57,9 +57,7 @@ and earthquake catalogue
 import numpy as np
 from datetime import datetime
 from copy import deepcopy
-from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.geo.mesh import Mesh
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.utils import decimal_time

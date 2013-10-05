@@ -55,9 +55,6 @@ import numpy as np
 from math import fabs
 
 from openquake.hazardlib.scalerel import get_available_scalerel
-from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from openquake.nrmllib.models import IncrementalMFD
 from hmtk.faults.fault_geometries import (SimpleFaultGeometry,
