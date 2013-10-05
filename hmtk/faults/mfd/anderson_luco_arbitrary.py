@@ -84,7 +84,7 @@ class BaseRecurrenceModel(object):
         :param float dbar:
             \bar{d} parameter
         '''
-        return
+        raise NotImplementedError
 
 
 class Type1RecurrenceModel(BaseRecurrenceModel):
@@ -172,6 +172,7 @@ RECURRENCE_MAP = {'First': Type1RecurrenceModel(),
                   'Second': Type2RecurrenceModel(),
                   'Third': Type3RecurrenceModel()}
 
+
 class AndersonLucoArbitrary(BaseMFDfromSlip):
     '''
     Class to implement the fault activity rate calculators of Anderson & Luco
@@ -218,7 +219,8 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
             * 'b_value' - Tuple of (b-value, b-value uncertainty)
             * 'Maximum_Magnitude' - Maximum magnitude on fault (if not defined
                                     will use scaling relation)
-            * 'Maximum_Magnitude_Uncertainty' - Uncertainty on maximum magnitude
+            * 'Maximum_Magnitude_Uncertainty' - Uncertainty on maximum
+               magnitude
                (If not defined and the MSR has a sigma term then this will be
                taken from sigma)
         '''
@@ -232,7 +234,6 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
         self.b_value = mfd_conf['b_value'][0]
         self.b_value_sigma = mfd_conf['b_value'][1]
         self.occurrence_rate = None
-
 
     def get_mmax(self, mfd_conf, msr, rake, area):
         '''
@@ -256,14 +257,13 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        if 'Maximum_Magnitude_Uncertainty' in mfd_conf.keys() and \
-            mfd_conf['Maximum_Magnitude_Uncertainty']:
+        if ('Maximum_Magnitude_Uncertainty' in mfd_conf and
+                mfd_conf['Maximum_Magnitude_Uncertainty']):
             self.mmax_sigma = mfd_conf['Maximum_Magnitude_Uncertainty']
         else:
             self.mmax_sigma = msr.get_std_dev_mag(rake)
 
-
-    def get_mfd(self, slip, area, shear_modulus= 30.0):
+    def get_mfd(self, slip, area, shear_modulus=30.0):
         '''
         Calculates activity rate on the fault
 
@@ -289,11 +289,11 @@ class AndersonLucoArbitrary(BaseMFDfromSlip):
         bbar = self.b_value * np.log(10.0)
 
         mags = np.arange(self.mmin - (self.bin_width / 2.),
-                        self.mmax + self.bin_width,
-                        self.bin_width)
+                         self.mmax + self.bin_width,
+                         self.bin_width)
         if bbar >= dbar:
-            print 'b-value larger than 1.5 will produce invalid results in '\
-                   'Anderson & Luco models'
+            print ('b-value larger than 1.5 will produce invalid results in '
+                   'Anderson & Luco models')
             self.occurrence_rate = np.nan * np.ones(len(mags) - 1)
             return self.mmin, self.bin_width, self.occurrence_rate
 

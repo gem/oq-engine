@@ -47,9 +47,10 @@
 
 # -*- coding: utf-8 -*-
 '''
-Defines the :class hmtk.sources.complx_fault_source.mtkComplexFaultSource, which
-represents the hmtk defition of a complex fault source. This extends the :class:
-nrml.models.ComplexFaultSource
+Defines the :class
+hmtk.sources.complex_fault_source.mtkComplexFaultSource, which
+represents the hmtk defition of a complex fault source. This extends
+the :class: nrml.models.ComplexFaultSource
 '''
 import warnings
 import numpy as np
@@ -59,6 +60,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 import hmtk.sources.source_conversion_utils as conv
+
 
 class mtkComplexFaultSource(object):
     '''
@@ -110,6 +112,7 @@ class mtkComplexFaultSource(object):
         self.upper_depth = None
         self.lower_depth = None
         self.catalogue = None
+        self.dip = None
 
     def create_geometry(self, input_geometry,  mesh_spacing=1.0):
         '''
@@ -138,7 +141,7 @@ class mtkComplexFaultSource(object):
                                      'definition')
                 else:
                     self.fault_edges.append(Line([Point(row[0], row[1], row[2])
-                                             for row in edge]))
+                                                  for row in edge]))
             else:
                 self.fault_edges.append(edge)
             # Updates the upper and lower sesmogenic depths to reflect geometry
@@ -172,7 +175,6 @@ class mtkComplexFaultSource(object):
         else:
             if temp_lower_depth > self.lower_depth:
                 self.lower_depth = temp_lower_depth
-
 
     def select_catalogue(self, selector, distance,
                          distance_metric='joyner-boore', upper_eq_depth=None,
@@ -218,7 +220,7 @@ class mtkComplexFaultSource(object):
             # Throw a warning regarding the small number of earthquakes in
             # the source!
             warnings.warn('Source %s (%s) has fewer than 5 events'
-                %(self.id, self.name))
+                          % (self.id, self.name))
 
     def create_oqnrml_source(self, use_defaults=False):
         '''

@@ -85,16 +85,14 @@ class mtkActiveFaultModel(object):
                 self.faults = []
         self.source_model = None
 
-
     def get_number_faults(self):
         '''
         Returns the number of faults in the model
         '''
         return len(self.faults)
 
-
     def build_fault_model(self, collapse=False, rendered_msr=WC1994(),
-        mfd_config=None):
+                          mfd_config=None):
         '''
         Constructs a full fault model with epistemic uncertainty by
         enumerating all the possible recurrence models of each fault as

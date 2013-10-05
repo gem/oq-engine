@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -51,6 +51,7 @@
 """
 
 import numpy as np
+
 
 def recurrence_table(mag, dmag, year, time_interval=None):
     """
@@ -97,6 +98,7 @@ def recurrence_table(mag, dmag, year, time_interval=None):
                                  n_c_annual])
     return rec_table
 
+
 def input_checks(catalogue, config, completeness):
     """ Performs a basic set of input checks on the data
     """
@@ -124,27 +126,8 @@ def input_checks(catalogue, config, completeness):
         ref_mag = 0.0
         dmag = 0.1
     else:
-        if (not 'reference_magnitude' in config.keys()) or \
-            not config['reference_magnitude']:
-            ref_mag = 0.0
-        else:
-            ref_mag = config['reference_magnitude']
-
-        if (not 'magnitude_interval' in config.keys()) or \
-            not config['magnitude_interval']:
-            dmag = 0.1
-        else:
-            dmag = config['magnitude_interval']
-
-#    if config is None or not 'reference_magnitude' in config:
-#        ref_mag = 0.0
-#    else:
-#        ref_mag = config['reference_magnitude']
-#
-#    if config is None or not 'magnitude_interval' in config:
-#        dmag = 0.1
-#    else:
-#        dmag = config['magnitude_interval']
+        ref_mag = config.get('reference_magnitude', 0.0)
+        dmag = config.get('magnitude_interval', 0.1)
 
     return cmag, ctime, ref_mag, dmag
 
@@ -167,8 +150,9 @@ def generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples):
     '''
     sampler = np.random.uniform(0., 1., nsamples)
     beta = bval * np.log(10.)
-    return (-1. / beta) * (np.log(1. - sampler * (1 - np.exp(-beta * (mmax -
-        mmin))))) + mmin
+    return (-1. / beta) * (
+        np.log(1. - sampler * (1 - np.exp(-beta * (mmax - mmin))))) + mmin
+
 
 def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
     '''

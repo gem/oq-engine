@@ -66,13 +66,11 @@ def check_config(config, data):
     if 'tolerance' not in config.keys() or not config['tolerance']:
         config['tolerance'] = 1E-5
 
-    if 'maximum_iterations' not in config.keys() \
-        or not config['maximum_iterations']:
+    if not config.get('maximum_iterations', None):
         config['maximum_iterations'] = 1000
 
     mmin_obs = np.min(data['magnitude'])
-    if 'input_mmin' not in config.keys() or not config['input_mmin'] \
-        or config['input_mmin'] < mmin_obs:
+    if config.get('input_mmin', 0) < mmin_obs:
         config['input_mmin'] = mmin_obs
 
     if fabs(config['b-value']) < 1E-7:
@@ -132,17 +130,17 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
 
         while d_t > config['tolerance']:
             delta = quadrature(self._ks_intfunc, mmin, mmax,
-                               args = (neq, mmax, mmin, beta))[0]
+                               args=(neq, mmax, mmin, beta))[0]
             #print mmin, neq, delta, mmax
             tmmax = obsmax + delta
             d_t = np.abs(tmmax - mmax)
             mmax = np.copy(tmmax)
             iterator += 1
             if iterator > config['maximum_iterations']:
-                print 'Kijko-Sellevol estimator reached maximum # of iterations'
+                print ('Kijko-Sellevol estimator reached '
+                       'maximum # of iterations')
                 d_t = -np.inf
         return mmax.item(), np.sqrt(obsmaxsig ** 2. + delta ** 2.)
-
 
     def _ks_intfunc(self, mval, neq, mmax, mmin, beta):
         '''Integral function inside Kijko-Sellevol estimator
@@ -168,5 +166,5 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
         if np.fabs(beta) > 1e-3:
             func1 = (func1 / (1. - np.exp(-beta * (mmax - mmin)))) ** neq
         else:
-            warnings.warn('beta is lower or equal to 0',RuntimeWarning)
+            warnings.warn('beta is lower or equal to 0', RuntimeWarning)
         return func1

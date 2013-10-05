@@ -81,8 +81,9 @@ class CumulativeMoment(BaseMaximumMagnitude):
         # If no bootstraps no uncertainty on magnitudes then simply calculate
         # Mmax without uncertainty
         self.check_config(config)
-        if config['number_bootstraps'] == 1 or \
-            not isinstance(catalogue.data['sigmaMagnitude'], np.ndarray):
+        cond = (config['number_bootstraps'] == 1 or
+                not isinstance(catalogue.data['sigmaMagnitude'], np.ndarray))
+        if cond:
             return self.cumulative_moment(catalogue.data['year'],
                                           catalogue.data['magnitude']), 0.0
 
@@ -104,8 +105,7 @@ class CumulativeMoment(BaseMaximumMagnitude):
         Checks the configuration file for the number of bootstraps.
         Returns 1 if not found or invalid (i.e. < 0)
         '''
-        if not config['number_bootstraps'] or\
-            (config['number_bootstraps'] < 1):
+        if config.get('number_bootstraps', 0) < 1:
             config['number_bootstraps'] = 1
         return config
 
@@ -122,7 +122,7 @@ class CumulativeMoment(BaseMaximumMagnitude):
         :rtype mmax: Float
         '''
         # Calculate seismic moment
-        m_o =  10. ** (9.05 + 1.5 * mag)
+        m_o = 10. ** (9.05 + 1.5 * mag)
         year_range = np.arange(np.min(year), np.max(year) + 1, 1)
         nyr = np.float(np.shape(year_range)[0])
         morate = np.zeros(nyr, dtype=float)
@@ -136,10 +136,10 @@ class CumulativeMoment(BaseMaximumMagnitude):
 
         # Average moment rate vector
         exp_morate = np.cumsum(ave_morate * np.ones(nyr))
-        modiff = np.abs(np.max(np.cumsum(morate) - exp_morate)) + \
-                        np.abs(np.min(np.cumsum(morate) - exp_morate))
+        modiff = (np.abs(np.max(np.cumsum(morate) - exp_morate)) +
+                  np.abs(np.min(np.cumsum(morate) - exp_morate)))
         # Return back to Mw
         if fabs(modiff) < 1E-20:
             return -np.inf
-        mmax = (2./ 3.) * (np.log10(modiff) - 9.05)
+        mmax = (2. / 3.) * (np.log10(modiff) - 9.05)
         return mmax

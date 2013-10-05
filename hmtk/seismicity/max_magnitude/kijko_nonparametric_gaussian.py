@@ -46,7 +46,6 @@ implements the Non-Parametric Gaussian estimator of maximum magnitude
 proposed by Kijko (2004)
 '''
 import numpy as np
-from scipy.integrate import quadrature
 from scipy.stats.mstats import mquantiles
 from hmtk.seismicity.max_magnitude.base import (
     BaseMaximumMagnitude, MAX_MAGNITUDE_METHODS)
@@ -59,19 +58,15 @@ def check_config(config):
     for key in essential_keys:
         if not key in config.keys():
             raise ValueError('For Kijko Nonparametric Gaussian the key %s '
-                              'needs to be set in the configuation' % key)
+                             'needs to be set in the configuation' % key)
 
-    if 'tolerance' not in config.keys() or not config['tolerance'] or \
-        config['tolerance'] <= 0.0:
+    if config.get('tolerance', 0.0) <= 0.0:
         config['tolerance'] = 0.05
 
-    if 'maximum_iterations' not in config.keys() \
-        or not config['maximum_iterations'] or \
-        (config['maximum_iterations'] < 1):
+    if config.get('maximum_iterations', 0) < 1:
         config['maximum_iterations'] = 100
 
-    if 'number_samples' not in config.keys() \
-        or not config['number_samples'] or (config['number_samples'] < 2):
+    if config.get('number_samples', 0) < 2:
         config['number_samples'] = 51
 
     return config
@@ -137,8 +132,8 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         obsmaxsig = catalogue.data['sigmaMagnitude'][max_loc]
 
         # Find number_eqs largest events
-        if np.shape(catalogue.data['magnitude'])[0] \
-            <= config['number_earthquakes']:
+        n_evts = np.shape(catalogue.data['magnitude'])[0]
+        if n_evts <= config['number_earthquakes']:
             # Catalogue smaller than number of required events
             mag = np.copy(catalogue.data['magnitude'])
             neq = np.float(np.shape(mag)[0])
@@ -163,7 +158,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
             delta = self._kijko_npg_intfunc_simps(magval, mag, mmax.item(),
                                                   hfact, neq)
             tmmax = obsmax + delta
-            d_t  = np.abs(tmmax - mmax.item())
+            d_t = np.abs(tmmax - mmax.item())
             mmax = np.copy(tmmax)
             iterator += 1
             if iterator > config['maximum_iterations']:
@@ -172,7 +167,6 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
                 d_t = -np.inf
         return mmax.item(), np.sqrt(obsmaxsig ** 2. +
                                     (mmax.item() - obsmax) ** 2.)
-
 
     def h_smooth(self, mag):
         '''
@@ -188,15 +182,14 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         neq = np.float(len(mag))
 
         # Calculate inter-quartile range
-        qtiles = mquantiles(mag, prob = [0.25, 0.75])
+        qtiles = mquantiles(mag, prob=[0.25, 0.75])
         iqr = qtiles[1] - qtiles[0]
         hfact = 0.9 * np.min([np.std(mag), iqr / 1.34]) * (neq ** (-1. / 5.))
         # Round h to 2 dp
         hfact = np.round(100. * hfact) / 100.
         return hfact
 
-
-    def _gauss_cdf_hastings(self, xval, barx = 0.0, sigx = 1.0):
+    def _gauss_cdf_hastings(self, xval, barx=0.0, sigx=1.0):
         '''Function to implement Hasting's approximation of the normalised
         cumulative normal function - this is taken from Kijko's own code
         so I don't really know why this is here!!!!!
@@ -255,7 +248,7 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         for ival, target_mag in enumerate(mval):
             # Calculate normalised magnitudes
             p_mag = self._gauss_cdf_hastings((target_mag - mag) / hfact)
-            cdf_func[ival] = ((np.sum(p_mag) - np.sum(p_min))/
+            cdf_func[ival] = ((np.sum(p_mag) - np.sum(p_min)) /
                               (np.sum(p_max) - np.sum(p_min))) ** neq
         # Now to perform integration via mid-point rule
         intfunc = 0.5 * cdf_func[0] * (mval[1] - mval[0])

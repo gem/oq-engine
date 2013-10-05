@@ -95,9 +95,8 @@ class mtkSimpleFaultSource(object):
         hmtk.seismicity.catalogue.Catalogue object
     '''
 
-
     def __init__(self, identifier, name, trt=None, geometry=None, dip=None,
-                 upper_depth=None, lower_depth = None, mag_scale_rel=None,
+                 upper_depth=None, lower_depth=None, mag_scale_rel=None,
                  rupt_aspect_ratio=None, mfd=None, rake=None):
         '''
         Instantiate class with just the basic attributes identifier and name
@@ -144,11 +143,10 @@ class mtkSimpleFaultSource(object):
             raise ValueError('Lower seismogenic depth must be defined for '
                              'simple fault source!')
         if lower_depth < self.upper_depth:
-                raise ValueError('Lower seismogenic depth must take a greater'
-                                 ' value than upper seismogenic depth')
+            raise ValueError('Lower seismogenic depth must take a greater'
+                             ' value than upper seismogenic depth')
 
         self.lower_depth = lower_depth
-
 
     def create_geometry(self, input_geometry, dip, upper_depth, lower_depth,
                         mesh_spacing=1.0):
@@ -184,7 +182,7 @@ class mtkSimpleFaultSource(object):
                                  'definition')
             else:
                 self.fault_trace = Line([Point(row[0], row[1]) for row in
-                                      input_geometry])
+                                         input_geometry])
         else:
             self.fault_trace = input_geometry
         # Build fault surface
@@ -193,7 +191,6 @@ class mtkSimpleFaultSource(object):
                                                            self.lower_depth,
                                                            self.dip,
                                                            mesh_spacing)
-
 
     def select_catalogue(self, selector, distance,
                          distance_metric='joyner-boore', upper_eq_depth=None,
@@ -239,8 +236,7 @@ class mtkSimpleFaultSource(object):
             # Throw a warning regarding the small number of earthquakes in
             # the source!
             warnings.warn('Source %s (%s) has fewer than 5 events'
-                %(self.id, self.name))
-
+                          % (self.id, self.name))
 
     def create_oqnrml_source(self, use_defaults=False):
         '''

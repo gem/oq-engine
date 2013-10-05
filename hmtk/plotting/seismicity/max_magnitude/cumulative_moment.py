@@ -48,43 +48,40 @@ Module to produce cumulative moment plot
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_cumulative_moment(year, mag):
-        '''Calculation of Mmax using aCumulative Moment approach, adapted from
-        the cumulative strain energy method of Makropoulos & Burton (1983)
-        :param year: Year of Earthquake
-        :type year: numpy.ndarray
-        :param mag: Magnitude of Earthquake
-        :type mag: numpy.ndarray
-        :keyword iplot: Include cumulative moment plot
-        :type iplot: Boolean
-        :return mmax: Returns Maximum Magnitude
-        :rtype mmax: Float
-        '''
-        # Calculate seismic moment
-        m_o =  10. ** (9.05 + 1.5 * mag)
-        year_range = np.arange(np.min(year), np.max(year) + 1, 1)
-        nyr = np.float(np.shape(year_range)[0])
-        morate = np.zeros(nyr, dtype=float)
-        # Get moment release per year
-        for loc, tyr in enumerate(year_range):
-            idx = np.abs(year - tyr) < 1E-5
-            if np.sum(idx) > 0:
-                # Some moment release in that year
-                morate[loc] = np.sum(m_o[idx])
-        ave_morate = np.sum(morate) / nyr
 
-        # Average moment rate vector
-        exp_morate = np.cumsum(ave_morate * np.ones(nyr))
-        modiff = np.abs(np.max(np.cumsum(morate) - exp_morate)) + \
-                        np.abs(np.min(np.cumsum(morate) - exp_morate))
-        # Return back to Mw
-        mmax = (2./ 3.) * (np.log10(modiff) - 9.05)
-        if iplot:
-            plt.step(year_range, np.cumsum(morate), 'b-', linewidth = 2)
-            plt.plot(year_range, exp_morate, 'r-', linewidth = 2)
-            # Get offsets
-            upper_morate = exp_morate + (np.max(np.cumsum(morate) - exp_morate))
-            lower_morate = exp_morate + (np.min(np.cumsum(morate) - exp_morate))
-            plt.plot(year_range, upper_morate, 'r--', linewidth = 1)
-            plt.plot(year_range, lower_morate, 'r--', linewidth = 1)
-            plt.axis([np.min(year), np.max(year), 0.0, np.sum(morate)])
+def plot_cumulative_moment(year, mag):
+    '''Calculation of Mmax using aCumulative Moment approach, adapted from
+    the cumulative strain energy method of Makropoulos & Burton (1983)
+    :param year: Year of Earthquake
+    :type year: numpy.ndarray
+    :param mag: Magnitude of Earthquake
+    :type mag: numpy.ndarray
+    :keyword iplot: Include cumulative moment plot
+    :type iplot: Boolean
+    :return mmax: Returns Maximum Magnitude
+    :rtype mmax: Float
+    '''
+    # Calculate seismic moment
+    m_o = 10. ** (9.05 + 1.5 * mag)
+    year_range = np.arange(np.min(year), np.max(year) + 1, 1)
+    nyr = np.float(np.shape(year_range)[0])
+    morate = np.zeros(nyr, dtype=float)
+    # Get moment release per year
+    for loc, tyr in enumerate(year_range):
+        idx = np.abs(year - tyr) < 1E-5
+        if np.sum(idx) > 0:
+            # Some moment release in that year
+            morate[loc] = np.sum(m_o[idx])
+    ave_morate = np.sum(morate) / nyr
+
+    # Average moment rate vector
+    exp_morate = np.cumsum(ave_morate * np.ones(nyr))
+
+    plt.step(year_range, np.cumsum(morate), 'b-', linewidth=2)
+    plt.plot(year_range, exp_morate, 'r-', linewidth=2)
+    # Get offsets
+    upper_morate = exp_morate + (np.max(np.cumsum(morate) - exp_morate))
+    lower_morate = exp_morate + (np.min(np.cumsum(morate) - exp_morate))
+    plt.plot(year_range, upper_morate, 'r--', linewidth=1)
+    plt.plot(year_range, lower_morate, 'r--', linewidth=1)
+    plt.axis([np.min(year), np.max(year), 0.0, np.sum(morate)])

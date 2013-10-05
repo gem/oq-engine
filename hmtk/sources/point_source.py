@@ -57,6 +57,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.nrmllib import models
 import hmtk.sources.source_conversion_utils as conv
 
+
 class mtkPointSource(object):
     '''New class to describe the mtkPointsource object
 
@@ -91,7 +92,6 @@ class mtkPointSource(object):
         hmtk.seismicity.catalogue.Catalogue object
     '''
 
-
     def __init__(self, identifier, name, trt=None, geometry=None,
                  upper_depth=None, lower_depth=None, mag_scale_rel=None,
                  rupt_aspect_ratio=None, mfd=None, nodal_plane_dist=None,
@@ -114,7 +114,6 @@ class mtkPointSource(object):
         # Check consistency of hypocentral depth inputs
         self._check_seismogenic_depths(upper_depth, lower_depth)
         self.catalogue = None
-
 
     def create_geometry(self, input_geometry, upper_depth, lower_depth):
         '''
@@ -144,7 +143,6 @@ class mtkPointSource(object):
         else:
             self.geometry = input_geometry
 
-
     def _check_seismogenic_depths(self, upper_depth, lower_depth):
         '''
         Checks the seismic depths for physical consistency
@@ -171,7 +169,6 @@ class mtkPointSource(object):
                 self.lower_depth = lower_depth
         else:
             self.lower_depth = np.inf
-
 
     def select_catalogue(self, selector, distance, selector_type='circle',
                          distance_metric='epicentral', point_depth=None,
@@ -219,10 +216,9 @@ class mtkPointSource(object):
         else:
             raise ValueError('Unrecognised selection type for point source!')
 
-
-
-    def select_catalogue_within_distance(self, selector, distance,
-        distance_metric='epicentral', point_depth=None):
+    def select_catalogue_within_distance(
+            self, selector, distance,
+            distance_metric='epicentral', point_depth=None):
         '''
         Selects catalogue of earthquakes within distance from point
         :param selector:
@@ -230,13 +226,13 @@ class mtkPointSource(object):
         :param distance:
             Distance from point (km) for selection
         :param str distance_metric
-            Choice of point source distance metric 'epicentral' or 'hypocentral'
+            Choice of point source distance metric 'epicentral' or
+            'hypocentral'
         '''
 
-
         if ('hypocentral' in distance_metric) and point_depth:
-            # If a hypocentral distance metric is chosen and a hypocentral depth
-            # specified then update geometry
+            # If a hypocentral distance metric is chosen and a
+            # hypocentral depth specified then update geometry
             self.geometry = Point(self.geometry.longitude,
                                   self.geometry.latitude,
                                   point_depth)
@@ -250,8 +246,7 @@ class mtkPointSource(object):
             # Throw a warning regarding the small number of earthquakes in
             # the source!
             warnings.warn('Source %s (%s) has fewer than 5 events'
-                %(self.id, self.name))
-
+                          % (self.id, self.name))
 
     def select_catalogue_within_cell(self, selector, distance,
                                      upper_depth=None, lower_depth=None):
@@ -270,8 +265,7 @@ class mtkPointSource(object):
             # Throw a warning regarding the small number of earthquakes in
             # the source!
             warnings.warn('Source %s (%s) has fewer than 5 events'
-                %(self.id, self.name))
-
+                          % (self.id, self.name))
 
     def create_oqnrml_source(self, use_defaults=False):
         '''

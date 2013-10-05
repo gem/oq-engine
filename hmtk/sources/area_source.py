@@ -59,6 +59,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.polygon import Polygon
 import hmtk.sources.source_conversion_utils as conv
 
+
 class mtkAreaSource(object):
     '''
     Describes the Area Source
@@ -117,7 +118,6 @@ class mtkAreaSource(object):
         self._check_seismogenic_depths(upper_depth, lower_depth)
         self.catalogue = None
 
-
     def create_geometry(self, input_geometry, upper_depth, lower_depth):
         '''
         If geometry is defined as a numpy array then create instance of
@@ -146,13 +146,12 @@ class mtkAreaSource(object):
             if np.shape(input_geometry)[0] < 3:
                 raise ValueError('Incorrectly formatted polygon geometry -'
                                  ' needs three or more vertices')
-            self.geometry = []
+            geometry = []
             for row in input_geometry:
-                self.geometry.append(Point(row[0], row[1], self.upper_depth))
-            self.geometry = Polygon(self.geometry)
+                geometry.append(Point(row[0], row[1], self.upper_depth))
+            self.geometry = Polygon(geometry)
         else:
             self.geometry = input_geometry
-
 
     def _check_seismogenic_depths(self, upper_depth, lower_depth):
         '''
@@ -181,7 +180,6 @@ class mtkAreaSource(object):
         else:
             self.lower_depth = np.inf
 
-
     def select_catalogue(self, selector, distance=None):
         '''
         Selects the catalogue of earthquakes attributable to the source
@@ -204,8 +202,7 @@ class mtkAreaSource(object):
             # Throw a warning regarding the small number of earthquakes in
             # the source!
             warnings.warn('Source %s (%s) has fewer than 5 events'
-                %(self.id, self.name))
-
+                          % (self.id, self.name))
 
     def create_oqnrml_source(self, use_defaults=False):
         '''

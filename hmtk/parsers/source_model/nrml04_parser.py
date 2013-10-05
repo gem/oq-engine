@@ -68,7 +68,6 @@ class FaultGeometryParserMixin(object):
 
         return trace, dip, upper_seismo_depth, lower_seismo_depth
 
-
     @classmethod
     def _parse_complex_geometry(cls, src_elem):
         """
@@ -89,11 +88,11 @@ class FaultGeometryParserMixin(object):
             complex_edges.append(cls._parse_edge_to_line(edge, dimension=3))
 
         # Bottom edge
-        [bottom_edge] = _xpath(src_elem, './/nrml:faultBottomEdge//gml:posList')
+        [bottom_edge] = _xpath(
+            src_elem, './/nrml:faultBottomEdge//gml:posList')
         complex_edges.append(cls._parse_edge_to_line(bottom_edge, dimension=3))
 
         return complex_edges
-
 
     @classmethod
     def _parse_edge_to_line(cls, edge_string, dimension=2):
@@ -148,7 +147,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
             self._COMPLEX_TAG: self._parse_complex,
         }
 
-
     def _source_gen(self, tree):
         """Returns a generator which yields source model objects."""
         for event, element in tree:
@@ -171,7 +169,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
                         # the input file which are considered siblings to
                         # source elements.
                         del element.getparent()[0]
-
 
     @classmethod
     def _set_common_attrs(cls, model, src_elem):
@@ -198,7 +195,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
         rup_asp = _xpath(src_elem, './nrml:ruptAspectRatio')[0].text
         if rup_asp:
             model.rupt_aspect_ratio = float(rup_asp)
-
 
     @classmethod
     def _parse_mfd(cls, src_elem):
@@ -236,7 +232,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
         else:
             return None
 
-
     @classmethod
     def _parse_nodal_plane_dist(cls, src_elem):
         """
@@ -263,7 +258,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
         else:
             return None
 
-
     @classmethod
     def _parse_hypo_depth_dist(cls, src_elem):
         """
@@ -287,7 +281,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
             return hdd
         else:
             return None
-
 
     @classmethod
     def _parse_point(cls, src_elem):
@@ -331,7 +324,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
         point.hypo_depth_dist = cls._parse_hypo_depth_dist(src_elem)
 
         return point
-
 
     @classmethod
     def _parse_area(cls, src_elem):
@@ -380,7 +372,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
 
         return area
 
-
     @classmethod
     def _parse_simple(cls, src_elem, mesh_spacing):
         """
@@ -409,7 +400,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
 
         return simple
 
-
     @classmethod
     def _parse_complex(cls, src_elem, mesh_spacing):
         """
@@ -420,7 +410,8 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
             :class:`openquake.nrmllib.models.ComplexFaultSource` object.
         """
         # Instantiate with identifier and name
-        complx = mtkComplexFaultSource(src_elem.get('id'), src_elem.get('name'))
+        complx = mtkComplexFaultSource(
+            src_elem.get('id'), src_elem.get('name'))
         print 'Complex Fault Source - ID: %s, name: %s' % (complx.id,
                                                            complx.name)
         # Set common attributes
@@ -435,7 +426,6 @@ class nrmlSourceModelParser(BaseSourceModelParser, FaultGeometryParserMixin):
             complx.rake = float(
                 _xpath(src_elem, './/nrml:rake')[0].text)
         return complx
-
 
     def read_file(self, fault_mesh_spacing=1.0, validation=False):
         """

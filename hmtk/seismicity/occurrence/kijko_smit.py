@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -65,7 +65,7 @@ class KijkoSmit(SeismicityOccurrence):
         '''Main function to calculate the a- and b-value'''
         # Input checks
         cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
-                                                   completeness)
+                                                  completeness)
         ival = 0
         mag_eq_tolerance = 1E-5
         number_intervals = np.shape(ctime)[0]
@@ -77,23 +77,16 @@ class KijkoSmit(SeismicityOccurrence):
             id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
             m_c = np.min(cmag[id0])
             if ival == number_intervals - 1:
-                id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
+                id1 = np.logical_and(
+                    catalogue.data['year'] >= ctime[ival],
                     catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
             else:
                 id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
                                      catalogue.data['year'] < ctime[ival + 1])
-                id1 = np.logical_and(id1,
+                id1 = np.logical_and(
+                    id1,
                     catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
 
-#        while ival < number_intervals:
-#            id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
-#            m_c = np.min(cmag[id0])
-#            # Find events later than cut-off year, and with magnitude
-#            # greater than or equal to the corresponding completeness magnitude.
-#            # m_c - mag_eq_tolerance is required to correct floating point
-#            # differences.
-#            id1 = np.logical_and(catalogue['year'] >= ctime[ival],
-#                catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
             nyr[ival] = np.float(np.max(catalogue.data['year'][id1]) -
                                  np.min(catalogue.data['year'][id1]) + 1)
             neq[ival] = np.sum(id1)
@@ -103,9 +96,9 @@ class KijkoSmit(SeismicityOccurrence):
                                               catalogue.data['year'][id1])
 
             aki_ml = AkiMaxLikelihood()
-            b_est[ival]= aki_ml._aki_ml(temp_rec_table[:, 0],
-                                        temp_rec_table[:, 1],
-                                        dmag, m_c)[0]
+            b_est[ival] = aki_ml._aki_ml(temp_rec_table[:, 0],
+                                         temp_rec_table[:, 1],
+                                         dmag, m_c)[0]
             ival += 1
 
         total_neq = np.float(np.sum(neq))

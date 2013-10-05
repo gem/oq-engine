@@ -61,6 +61,7 @@ from hmtk.faults.mfd.base import BaseMFDfromSlip
 C_VALUE = 16.05
 D_VALUE = 1.5
 
+
 class BaseRecurrenceModel(object):
     '''
     Abstract base class to implement cumulative value formula
@@ -72,7 +73,7 @@ class BaseRecurrenceModel(object):
         '''
         Returns the rate of earthquakes with M > mag_value
         '''
-        return
+        raise NotImplementedError
 
 
 class Type1RecurrenceModel(BaseRecurrenceModel):
@@ -129,7 +130,7 @@ class Type2RecurrenceModel(BaseRecurrenceModel):
 
         return (((dbar - bbar) / (bbar)) * ((slip / 10.) / beta) *
                 (np.exp(bbar * (mmax - mag_value)) - 1.) *
-                 np.exp(-(dbar / 2.) * mmax))
+                np.exp(-(dbar / 2.) * mmax))
 
 
 class Type3RecurrenceModel(BaseRecurrenceModel):
@@ -155,9 +156,9 @@ class Type3RecurrenceModel(BaseRecurrenceModel):
         :param float beta:
             Beta value of formula defined in Eq. 20 of Anderson & Luco (1983)
         '''
-        return (dbar * (dbar - bbar) / bbar) * ((slip / 10.) / beta) * \
-                ((1./ bbar) * (np.exp(bbar * (mmax - mag_value)) - 1.) -
-                (mmax - mag_value)) * np.exp(-(dbar / 2.) * mmax)
+        return ((dbar * (dbar - bbar) / bbar) * ((slip / 10.) / beta) *
+                ((1. / bbar) * (np.exp(bbar * (mmax - mag_value)) - 1.) -
+                 (mmax - mag_value)) * np.exp(-(dbar / 2.) * mmax))
 
 
 RECURRENCE_MAP = {'First': Type1RecurrenceModel(),
@@ -210,7 +211,8 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
             * 'b_value' - Tuple of (b-value, b-value uncertainty)
             * 'Maximum_Magnitude' - Maximum magnitude on fault (if not defined
                                     will use scaling relation)
-            * 'Maximum_Magnitude_Uncertainty' - Uncertainty on maximum magnitude
+            * 'Maximum_Magnitude_Uncertainty' - Uncertainty
+               on maximum magnitude
                (If not defined and the MSR has a sigma term then this will be
                taken from sigma)
         '''
@@ -224,7 +226,6 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
         self.b_value = mfd_conf['b_value'][0]
         self.b_value_sigma = mfd_conf['b_value'][1]
         self.occurrence_rate = None
-
 
     def get_mmax(self, mfd_conf, msr, rake, area):
         '''
@@ -244,14 +245,10 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        if 'Maximum_Magnitude_Uncertainty' in mfd_conf.keys() and\
-            mfd_conf['Maximum_Magnitude_Uncertainty']:
-            self.mmax_sigma = mfd_conf['Maximum_Magnitude_Uncertainty']
-        else:
-            self.mmax_sigma = msr.get_std_dev_mag(rake)
+        self.mmax_sigma = mfd_conf.get(
+            'Maximum_Magnitude_Uncertainty', None) or msr.get_std_dev_mag(rake)
 
-
-    def get_mfd(self, slip, fault_width, shear_modulus= 30.0,
+    def get_mfd(self, slip, fault_width, shear_modulus=30.0,
                 disp_length_ratio=1.25E-5):
         '''
         Calculates activity rate on the fault
@@ -274,16 +271,16 @@ class AndersonLucoAreaMmax(BaseMFDfromSlip):
             * Occurrence Rates (numpy.ndarray)
         '''
         beta = np.sqrt((disp_length_ratio * (10.0 ** C_VALUE)) /
-            ((shear_modulus * 1.0E10) * (fault_width * 1E5)))
+                       ((shear_modulus * 1.0E10) * (fault_width * 1E5)))
         dbar = D_VALUE * np.log(10.0)
         bbar = self.b_value * np.log(10.0)
         mag = np.arange(self.mmin - (self.bin_width / 2.),
-                        self.mmax +  self.bin_width,
+                        self.mmax + self.bin_width,
                         self.bin_width)
 
         if bbar > dbar:
-            print 'b-value larger than 1.5 will produce invalid results in '\
-                   'Anderson & Luco models'
+            print ('b-value larger than 1.5 will produce invalid results in '
+                   'Anderson & Luco models')
             self.occurrence_rate = np.nan * np.ones(len(mag) - 1)
             return self.mmin, self.bin_width, self.occurrence_rate
 

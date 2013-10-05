@@ -88,8 +88,9 @@ class BaseMaximumMagnitude(object):
     @abc.abstractmethod
     def get_mmax(self, catalogue, config):
         '''
-        Analyses the catalogue to infer the maximum magnitude from a statistical
-        process
+        Analyses the catalogue to infer the maximum magnitude from a
+        statistical process
+
         :param catalogue:
             Earthquake catalogue as instance of the :class:
             'hmtk.seismicity.catalogue.Catalogue'

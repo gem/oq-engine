@@ -59,12 +59,13 @@ Bull. Seis. Soc. Am. 75(4) 939 - 964
 """
 
 import numpy as np
-from math import exp, log, log10
+from math import exp, log
 from hmtk.faults.mfd.base import _scale_moment, BaseMFDfromSlip
 from openquake.hazardlib.mfd.youngs_coppersmith_1985 import \
     YoungsCoppersmith1985MFD
 C_VALUE = 16.05
 D_VALUE = 1.5
+
 
 class YoungsCoppersmithExponential(BaseMFDfromSlip):
     '''
@@ -113,7 +114,8 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
             * 'b_value' - Tuple of (b-value, b-value uncertainty)
             * 'Maximum_Magnitude' - Maximum magnitude on fault (if not defined
                                     will use scaling relation)
-            * 'Maximum_Magnitude_Uncertainty' - Uncertainty on maximum magnitude
+            * 'Maximum_Magnitude_Uncertainty' - Uncertainty on
+               maximum magnitude
                (If not defined and the MSR has a sigma term then this will be
                taken from sigma)
         '''
@@ -126,7 +128,6 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
         self.b_value = mfd_conf['b_value'][0]
         self.b_value_sigma = mfd_conf['b_value'][1]
         self.occurrence_rate = None
-
 
     def get_mmax(self, mfd_conf, msr, rake, area):
         '''
@@ -146,12 +147,8 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        if 'Maximum_Magnitude_Uncertainty' in mfd_conf.keys() and \
-            mfd_conf['Maximum_Magnitude_Uncertainty']:
-            self.mmax_sigma = mfd_conf['Maximum_Magnitude_Uncertainty']
-        else:
-            self.mmax_sigma = msr.get_std_dev_mag(rake)
-
+        self.mmax_sigma = mfd_conf.get(
+            'Maximum_Magnitude_Uncertainty', None) or msr.get_std_dev_mag(rake)
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
         '''
@@ -181,19 +178,19 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
                         self.mmax + self.bin_width,
                         self.bin_width)
         if self.b_value > 1.5:
-            print 'b-value larger than 1.5 will produce invalid results in '\
-                   'Anderson & Luco models'
+            print ('b-value larger than 1.5 will produce invalid results in '
+                   'Anderson & Luco models')
             self.occurrence_rate = np.nan * np.ones(len(mag) - 1)
             return self.mmin, self.bin_width, self.occurrence_rate
 
         self.occurrence_rate = np.zeros(len(mag) - 1, dtype=float)
         for ival in range(0, len(mag) - 1):
-            self.occurrence_rate[ival] = self.cumulative_value(mag[ival],
-                moment_rate, beta, moment_mag) - self.cumulative_value(
-                mag[ival + 1], moment_rate, beta, moment_mag)
+            self.occurrence_rate[ival] = (
+                self.cumulative_value(mag[ival], moment_rate, beta, moment_mag)
+                - self.cumulative_value(
+                    mag[ival + 1], moment_rate, beta, moment_mag))
 
         return self.mmin, self.bin_width, self.occurrence_rate
-
 
     def cumulative_value(self, mag_val, moment_rate, beta, moment_mag):
         '''
@@ -220,7 +217,8 @@ class YoungsCoppersmithExponential(BaseMFDfromSlip):
 class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
     '''
     Calculates the activity rate on a fault with a given slip assuming the
-    characteristic model described in Youngs & Coppersmith (1985) Eqs. 16 and 17
+    characteristic model described in Youngs & Coppersmith (1985)
+    Eqs. 16 and 17
 
     :param str mfd_type:
         Type of magnitude frequency distribution
@@ -268,7 +266,8 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
             * 'b_value' - Tuple of (b-value, b-value uncertainty)
             * 'Maximum_Magnitude' - Characteristic magnitude on fault
                                     (if not defined, will use scaling relation)
-            * 'Maximum_Magnitude_Uncertainty' - Uncertainty on maximum magnitude
+            * 'Maximum_Magnitude_Uncertainty' - Uncertainty on
+               maximum magnitude
                (If not defined and the MSR has a sigma term then this will be
                taken from sigma)
 
@@ -283,7 +282,6 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
         self.b_value_sigma = mfd_conf['b_value'][1]
         self.occurrence_rate = None
         self.model = None
-
 
     def get_mmax(self, mfd_conf, msr, rake, area):
         '''
@@ -303,12 +301,8 @@ class YoungsCoppersmithCharacteristic(BaseMFDfromSlip):
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        if 'Maximum_Magnitude_Uncertainty' in mfd_conf.keys() and \
-            mfd_conf['Maximum_Magnitude_Uncertainty']:
-            self.mmax_sigma = mfd_conf['Maximum_Magnitude_Uncertainty']
-        else:
-            self.mmax_sigma = msr.get_std_dev_mag(rake)
-
+        self.mmax_sigma = mfd_conf.get(
+            'Maximum_Magnitude_Uncertainty', None) or msr.get_std_dev_mag(rake)
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
         '''

@@ -50,7 +50,8 @@ strain rate model calculations
 '''
 
 import numpy as np
-from math import fabs, exp
+from math import exp
+
 
 def moment_function(magnitude):
     '''
@@ -62,6 +63,7 @@ def moment_function(magnitude):
     '''
     return 10. ** ((1.5 * magnitude) + 9.05)
 
+
 def moment_magnitude_function(moment):
     '''
     For a given moment, get the moment magnitude using the formula
@@ -72,8 +74,9 @@ def moment_magnitude_function(moment):
 
     return (2. / 3.) * (np.log10(moment) - 9.05)
 
+
 def calculate_taper_function(obs_threshold_moment, sel_threshold_moment,
-    corner_moment, beta):
+                             corner_moment, beta):
     '''
     Calculates the tapering function of the tapered Gutenberg & Richter model:
     as described in Bird & Liu (2007):
@@ -98,11 +101,12 @@ def calculate_taper_function(obs_threshold_moment, sel_threshold_moment,
         g_function = 0.0
     else:
         g_function = ((sel_threshold_moment / obs_threshold_moment) **
-            -beta) * exp(argument)
+                      -beta) * exp(argument)
     return g_function
 
+
 def tapered_gutenberg_richter_cdf(moment, moment_threshold, beta,
-    corner_moment):
+                                  corner_moment):
     '''
     Tapered Gutenberg Richter Cumulative Density Function
 
@@ -126,8 +130,9 @@ def tapered_gutenberg_richter_cdf(moment, moment_threshold, beta,
     cdf = np.exp((moment_threshold - moment) / corner_moment)
     return ((moment / moment_threshold) ** (-beta)) * cdf
 
+
 def tapered_gutenberg_richter_pdf(moment, moment_threshold, beta,
-    corner_moment):
+                                  corner_moment):
     '''
     Tapered Gutenberg-Richter Probability Density Function
 
@@ -146,6 +151,6 @@ def tapered_gutenberg_richter_pdf(moment, moment_threshold, beta,
     :returns:
         Absolute probability of moment release > moment
     '''
-    return (beta / moment + 1. / corner_moment) * \
-        tapered_gutenberg_richter_cdf(moment, moment_threshold, beta,
-        corner_moment)
+    return ((beta / moment + 1. / corner_moment) *
+            tapered_gutenberg_richter_cdf(moment, moment_threshold, beta,
+                                          corner_moment))

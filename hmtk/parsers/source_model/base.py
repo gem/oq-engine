@@ -52,6 +52,7 @@ for :class:`SourceModelParser <BaseSourceModelParser>`.
 import abc
 import os.path
 
+
 class BaseSourceModelParser(object):
     """
     A base class for a Source Model Parser

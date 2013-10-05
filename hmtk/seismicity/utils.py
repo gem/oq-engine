@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -60,6 +60,7 @@ MARKER_LEAP = np.array([0, 31, 60, 91, 121, 152, 182,
 
 SECONDS_PER_DAY = 86400.0
 
+
 def decimal_year(year, month, day):
     """
     Allows to calculate the decimal year for a vector of dates
@@ -76,12 +77,13 @@ def decimal_year(year, month, day):
     :rtype: numpy.ndarray
     """
     marker = np.array([0., 31., 59., 90., 120., 151., 181.,
-                                 212., 243., 273., 304., 334.])
+                       212., 243., 273., 304., 334.])
     tmonth = (month - 1).astype(int)
     day_count = marker[tmonth] + day - 1.
     dec_year = year + (day_count / 365.)
 
     return dec_year
+
 
 def leap_check(year):
     """
@@ -89,6 +91,7 @@ def leap_check(year):
     """
     return np.logical_and((year % 4) == 0,
                           np.logical_or((year % 100 != 0), (year % 400) == 0))
+
 
 def decimal_time(year, month, day, hour, minute, second):
     """
@@ -113,12 +116,12 @@ def decimal_time(year, month, day, hour, minute, second):
     id_leap = leap_check(year)
     leap_loc = np.where(id_leap)[0]
     day_count[leap_loc] = MARKER_LEAP[tmonth[leap_loc]] + day[leap_loc] - 1
-    year_secs = (day_count.astype(float) * SECONDS_PER_DAY) +  second + \
+    year_secs = (day_count.astype(float) * SECONDS_PER_DAY) + second + \
         (60. * minute.astype(float)) + (3600. * hour.astype(float))
-    decimal_time = year.astype(float) + (year_secs / (365. * 24. * 3600.))
-    decimal_time[leap_loc] = year[leap_loc].astype(float) + \
+    dtime = year.astype(float) + (year_secs / (365. * 24. * 3600.))
+    dtime[leap_loc] = year[leap_loc].astype(float) + \
         (year_secs[leap_loc] / (366. * 24. * 3600.))
-    return decimal_time
+    return dtime
 
 
 def haversine(lon1, lat1, lon2, lat2, radians=False, earth_rad=6371.227):
@@ -141,7 +144,7 @@ def haversine(lon1, lat1, lon2, lat2, radians=False, earth_rad=6371.227):
     :returns: geographical distance in km
     :rtype: numpy.ndarray
     """
-    if radians == False:
+    if not radians:
         cfact = np.pi / 180.
         lon1 = cfact * lon1
         lat1 = cfact * lat1
@@ -169,9 +172,9 @@ def haversine(lon1, lat1, lon2, lat2, radians=False, earth_rad=6371.227):
         dlat = lat1 - lat2[i]
         dlon = lon1 - lon2[i]
         aval = (np.sin(dlat / 2.) ** 2.) + (np.cos(lat1) * np.cos(lat2[i]) *
-             (np.sin(dlon / 2.) ** 2.))
+                                            (np.sin(dlon / 2.) ** 2.))
         distance[:, i] = (2. * earth_rad * np.arctan2(np.sqrt(aval),
-                                                    np.sqrt(1 - aval))).T
+                                                      np.sqrt(1 - aval))).T
         i += 1
     return distance
 
@@ -201,11 +204,14 @@ def greg2julian(year, month, day, hour, minute, second):
     timeut = hour.astype(float) + (minute.astype(float) / 60.0) + \
         (second / 3600.0)
 
-    julian_time = (367.0 * year) - np.floor(7.0 * (year +
-             np.floor((month + 9.0) / 12.0)) / 4.0) - np.floor(3.0 *
-             (np.floor((year + (month - 9.0) / 7.0) / 100.0) + 1.0) /
-             4.0) + np.floor((275.0 * month) / 9.0) + day +\
-             1721028.5 + (timeut / 24.0)
+    julian_time = ((367.0 * year) -
+                   np.floor(
+                       7.0 * (year + np.floor((month + 9.0) / 12.0)) / 4.0) -
+                   np.floor(3.0 *
+                            (np.floor((year + (month - 9.0) / 7.0) / 100.0) +
+                             1.0) / 4.0) +
+                   np.floor((275.0 * month) / 9.0) +
+                   day + 1721028.5 + (timeut / 24.0))
     return julian_time
 
 
@@ -231,14 +237,15 @@ def piecewise_linear_scalar(params, xval):
     if n_seg == 1:
         return params[1] + params[0] * xval
 
-    gradients = params[0 : n_seg]
+    gradients = params[0:n_seg]
     turning_points = params[n_seg: -1]
     c_val = np.array([params[-1]])
 
     for iloc in range(1, n_seg):
-        c_val = np.hstack([c_val, (c_val[iloc - 1] + gradients[iloc - 1] *
-            turning_points[iloc - 1]) - (gradients[iloc] *
-            turning_points[iloc - 1])])
+        c_val = np.hstack(
+            [c_val, (c_val[iloc - 1] + gradients[iloc - 1] *
+                     turning_points[iloc - 1]) - (gradients[iloc] *
+                                                  turning_points[iloc - 1])])
 
     if xval <= turning_points[0]:
         return gradients[0] * xval + c_val[0]
@@ -281,9 +288,8 @@ def sample_truncated_gaussian_vector(data, uncertainties, bounds=None):
     return data + uncertainties * sample
 
 
-
-
-def bootstrap_histogram_1D(values, intervals, uncertainties=None,
+def bootstrap_histogram_1D(
+        values, intervals, uncertainties=None,
         normalisation=False, number_bootstraps=None, boundaries=None):
     '''
     Bootstrap samples a set of vectors
@@ -329,7 +335,9 @@ def bootstrap_histogram_1D(values, intervals, uncertainties=None,
             output = output.astype(float) / float(number_bootstraps)
         return output
 
-def bootstrap_histogram_2D(xvalues, yvalues, xbins, ybins,
+
+def bootstrap_histogram_2D(
+        xvalues, yvalues, xbins, ybins,
         boundaries=[None, None], xsigma=None, ysigma=None,
         normalisation=False, number_bootstraps=None):
     '''

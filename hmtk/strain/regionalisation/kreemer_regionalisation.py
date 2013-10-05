@@ -57,6 +57,7 @@ from linecache import getlines
 KREEMER_GLOBAL_0506 = os.path.join(os.path.dirname(__file__),
                                    'kreemer_polygons_area.txt')
 
+
 def _build_kreemer_cell(data, loc):
     '''
     Constructs the "Kreemer Cell" from the input file. The Kreemer cell is
@@ -69,12 +70,12 @@ def _build_kreemer_cell(data, loc):
         temp_poly - 5 by 2 numpy array of cell longitudes and latitudes
     '''
 
-    temp_poly = np.empty([5,2], dtype = float)
-    for ival in range(1,6):
+    temp_poly = np.empty([5, 2], dtype=float)
+    for ival in range(1, 6):
         value = data[loc + ival].rstrip('\n')
         value = value.lstrip(' ')
-        value = np.array((value.split(' ',1))).astype(float)
-        temp_poly[ival - 1,:] = value.flatten()
+        value = np.array((value.split(' ', 1))).astype(float)
+        temp_poly[ival - 1, :] = value.flatten()
     return temp_poly
 
 
@@ -108,16 +109,18 @@ class KreemerRegionalisation(object):
             Strain model with complete regionalisation
         '''
         self.strain = strain_model
-        self.strain.data['region'] = np.array(['IPL' for value in range(0,
-            self.strain.get_number_observations())], dtype='|S13')
-        self.strain.data['area'] = np.array([np.nan for value in range(0,
-            self.strain.get_number_observations())])
+        self.strain.data['region'] = np.array(
+            ['IPL'
+             for _ in range(self.strain.get_number_observations())],
+            dtype='|S13')
+        self.strain.data['area'] = np.array(
+            [np.nan
+             for _ in range(self.strain.get_number_observations())])
 
         regional_model = self.define_kreemer_regionalisation()
         for polygon in regional_model:
-            _ = self._point_in_tectonic_region(polygon)
+            self._point_in_tectonic_region(polygon)
         return self.strain
-
 
     def _point_in_tectonic_region(self, polygon):
         '''
@@ -147,7 +150,7 @@ class KreemerRegionalisation(object):
         return marker
 
     def define_kreemer_regionalisation(self, north=90., south=-90., east=180.,
-            west=-180.):
+                                       west=-180.):
         '''
         Applies the regionalisation defined according to the regionalisation
         typology of Corne Kreemer

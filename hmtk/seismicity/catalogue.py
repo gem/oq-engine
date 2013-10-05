@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -63,19 +63,20 @@ class Catalogue(object):
     General Catalogue Class
     """
 
-    FLOAT_ATTRIBUTE_LIST = ['second', 'timeError', 'longitude', 'latitude',
-                        'SemiMajor90', 'SemiMinor90', 'ErrorStrike', 'depth',
-                        'depthError', 'magnitude', 'sigmaMagnitude']
+    FLOAT_ATTRIBUTE_LIST = [
+        'second', 'timeError', 'longitude', 'latitude',
+        'SemiMajor90', 'SemiMinor90', 'ErrorStrike', 'depth',
+        'depthError', 'magnitude', 'sigmaMagnitude']
 
-    INT_ATTRIBUTE_LIST = ['eventID','year', 'month', 'day', 'hour', 'minute',
+    INT_ATTRIBUTE_LIST = ['eventID', 'year', 'month', 'day', 'hour', 'minute',
                           'flag']
 
-    STRING_ATTRIBUTE_LIST = ['Agency', 'magnitudeType','comment']
+    STRING_ATTRIBUTE_LIST = ['Agency', 'magnitudeType', 'comment']
 
     TOTAL_ATTRIBUTE_LIST = list(
         (set(FLOAT_ATTRIBUTE_LIST).union(
             set(INT_ATTRIBUTE_LIST))).union(
-                 set(STRING_ATTRIBUTE_LIST)))
+                set(STRING_ATTRIBUTE_LIST)))
 
     def __init__(self):
         """
@@ -106,12 +107,10 @@ class Catalogue(object):
         return len(self.data[self.data.keys()[0]])
 
     def add_event(self):
-        # TODO
-        raise AttributeError('Not implemented yet!')
+        raise NotImplementedError
 
     def write_catalogue(self, output_file, filetype):
-        # TODO
-        raise AttributeError('Not implemented yet!')
+        raise NotImplementedError
 
     def load_to_array(self, keys):
         """
@@ -122,11 +121,11 @@ class Catalogue(object):
             A list of keys to be uploaded into the array
         :type list:
         """
-        # Preallocate the numpy array
-        data = np.empty( (len(self.data[keys[0]]), len(keys)) )
-        for i in range(0, len(self.data[keys[0]]) ):
+        # Preallocate the numpy array
+        data = np.empty((len(self.data[keys[0]]), len(keys)))
+        for i in range(0, len(self.data[keys[0]])):
             for j, key in enumerate(keys):
-                data[i,j] = self.data[key][i]
+                data[i, j] = self.data[key][i]
         return data
 
     def load_from_array(self, keys, data_array):
@@ -236,7 +235,6 @@ class Catalogue(object):
         '''
         Sorts the catalogue into chronological order
         '''
-        neqs = self.get_number_events()
         dec_time = self.get_decimal_time()
         idx = np.argsort(dec_time)
         if np.all((idx[1:] - idx[:-1]) > 0.):
@@ -263,12 +261,12 @@ class Catalogue(object):
             Pointer array indicating the locations of selected events
         '''
         for key in self.data.keys():
-            if isinstance(self.data[key], np.ndarray) and \
-                len(self.data[key]) > 0:
+            if isinstance(
+                    self.data[key], np.ndarray) and len(self.data[key]) > 0:
                 # Dictionary element is numpy array - use logical indexing
                 self.data[key] = self.data[key][id0]
-            elif isinstance(self.data[key], list) and \
-                len(self.data[key]) > 0:
+            elif isinstance(
+                    self.data[key], list) and len(self.data[key]) > 0:
                 # Dictionary element is list
                 self.data[key] = [self.data[key][iloc] for iloc in id0]
             else:
@@ -311,7 +309,7 @@ class Catalogue(object):
                                       boundaries=(0., None))
 
     def get_magnitude_depth_distribution(self, magnitude_bins, depth_bins,
-        normalisation=False, bootstrap=None):
+                                         normalisation=False, bootstrap=None):
         '''
         Returns a 2-D magnitude-depth histogram for the catalogue
 
@@ -354,7 +352,7 @@ class Catalogue(object):
                                       number_bootstraps=bootstrap)
 
     def get_magnitude_time_distribution(self, magnitude_bins, time_bins,
-        normalisation=False, bootstrap=None):
+                                        normalisation=False, bootstrap=None):
         '''
         Returns a 2-D histogram indicating the number of earthquakes in a
         set of time-magnitude bins. Time is in decimal years!
@@ -375,7 +373,8 @@ class Catalogue(object):
         :returns:
             2D histogram of events in magnitude-year bins
         '''
-        return bootstrap_histogram_2D(self.get_decimal_time(),
+        return bootstrap_histogram_2D(
+            self.get_decimal_time(),
             self.data['magnitude'],
             time_bins,
             magnitude_bins,

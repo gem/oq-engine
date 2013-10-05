@@ -65,7 +65,8 @@ from hmtk.seismicity.selector import CatalogueSelector
 SOURCE_ATTRIBUTES = ['fault_edges', 'mfd', 'name', 'geometry', 'rake',
                      'typology', 'upper_depth', 'catalogue',
                      'rupt_aspect_ratio', 'lower_depth', 'id', 'mag_scale_rel',
-                     'trt']
+                     'dip', 'trt']
+
 
 class TestComplexFaultSource(unittest.TestCase):
     '''
@@ -85,7 +86,6 @@ class TestComplexFaultSource(unittest.TestCase):
         self.trace_array.append(np.array([[1.2, 0.0, 40.],
                                           [1.0, 1.0, 45.],
                                           [0.0, 1.3, 42.]]))
-
 
     def test_simple_fault_instantiation(self):
         '''

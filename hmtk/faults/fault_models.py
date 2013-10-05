@@ -50,10 +50,10 @@ Module: hmtk.faults.fault_model implements the set of classes to allow for a
 calculation of the magnitude frequency distribution from the geological
 slip rate
 '''
-import abc
+
 import numpy as np
 from math import fabs
-from shapely import wkt
+
 from openquake.hazardlib.scalerel import get_available_scalerel
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
@@ -84,10 +84,9 @@ def _update_slip_rates_with_aseismic(slip_rate, aseismic):
     :returns:
         slip - List of tuples (Slip Value, Weight) for adjusted slip rates
     '''
-    slip = []
-    for iloc, slip_val in enumerate(slip_rate):
-        slip.append((slip_val[0] * (1.0 - aseismic), slip_val[1]))
-    return slip
+
+    return [(slip_val * (1.0 - aseismic), weight)
+            for slip_val, weight in slip_rate]
 
 
 class RecurrenceBranch(object):
@@ -123,7 +122,7 @@ class RecurrenceBranch(object):
 
     '''
     def __init__(self, area, slip, msr, rake, shear_modulus,
-        disp_length_ratio=None, msr_sigma=0., weight=1.0):
+                 disp_length_ratio=None, msr_sigma=0., weight=1.0):
         '''
         '''
         self.branch_id = None
@@ -166,7 +165,8 @@ class RecurrenceBranch(object):
             if not self.disp_length_ratio:
                 # If not defined then default to 1.25E-5
                 self.disp_length_ratio = 1.25E-5
-            min_mag, bin_width, occur_rates = model.get_mfd(self.slip,
+            min_mag, bin_width, occur_rates = model.get_mfd(
+                self.slip,
                 self.area, self.shear_modulus, self.disp_length_ratio)
 
         else:
@@ -175,7 +175,8 @@ class RecurrenceBranch(object):
                                                             self.shear_modulus)
 
         self.recurrence = IncrementalMFD(min_mag, bin_width, occur_rates)
-        self.magnitudes = min_mag + np.cumsum(bin_width *
+        self.magnitudes = min_mag + np.cumsum(
+            bin_width *
             np.ones(len(occur_rates), dtype=float)) - bin_width
         self.max_mag = np.max(self.magnitudes)
 
@@ -226,7 +227,7 @@ class mtkActiveFault(object):
         distribution calculation
     '''
     def __init__(self, identifier, name, geometry, slip_rate, rake, trt,
-                 aseismic=0.0, msr_sigma=DEFAULT_MSR_SIGMA,
+                 aseismic=0.0, msr_sigma=None,
                  neotectonic_fault=None, scale_rel=None, aspect_ratio=None,
                  shear_modulus=None, disp_length_ratio=None):
         '''
@@ -234,8 +235,11 @@ class mtkActiveFault(object):
         self.id = identifier
         self.name = name
 
-        if not isinstance(geometry, SimpleFaultGeometry) and not \
-            isinstance(geometry, ComplexFaultGeometry):
+        msr_sigma = msr_sigma or DEFAULT_MSR_SIGMA
+
+        cond = (not isinstance(geometry, SimpleFaultGeometry) and
+                not isinstance(geometry, ComplexFaultGeometry))
+        if cond:
             raise IOError('Geometry must be instance of '
                           'hmtk.faults.fault_geometries.BaseFaultGeometry')
 
@@ -258,7 +262,7 @@ class mtkActiveFault(object):
         self.msr_sigma = msr_sigma
         self.area = self.geometry.get_area()
         self.config = None
-
+        self.regionalisation = None
 
     def get_tectonic_regionalisation(self, regionalisation, region_type=None):
         '''
@@ -286,7 +290,8 @@ class mtkActiveFault(object):
                 # Update undefined shear modulus from tectonic regionalisation
                 if not self.shear_modulus:
                     self.shear_modulus = self.regionalisation.shear_modulus
-                 # Update undefined scaling relation from tectonic regionalisation
+                 # Update undefined scaling relation from tectonic
+                 # regionalisation
                 if not self.msr:
                     self.msr = self.regionalisation.scaling_rel
                 # Update undefined displacement to length ratio from tectonic
@@ -296,7 +301,6 @@ class mtkActiveFault(object):
                         self.regionalisation.disp_length_ratio
                 break
         return
-
 
     def _generate_branching_index(self):
         '''
@@ -360,10 +364,9 @@ class mtkActiveFault(object):
         else:
             raise ValueError('MFD config must be input as dictionary or list!')
 
-
-
-    def generate_recurrence_models(self, collapse=False,
-            bin_width=0.1, config=None, rendered_msr=None):
+    def generate_recurrence_models(
+            self, collapse=False, bin_width=0.1,
+            config=None, rendered_msr=None):
         '''
         Iterates over the lists of values defining epistemic uncertainty
         in the parameters and calculates the corresponding recurrence model
@@ -397,9 +400,8 @@ class mtkActiveFault(object):
             raise ValueError('MFD configuration missing or incorrectly '
                              'formatted')
 
-
         # Generate the branching index
-        branch_index, number_branches = self._generate_branching_index()
+        branch_index, _number_branches = self._generate_branching_index()
         mmin = np.inf
         mmax = -np.inf
         for idx in branch_index:
@@ -450,7 +452,6 @@ class mtkActiveFault(object):
                 mfd_msr.append(model.msr)
             self.mfd = (mfd_mods, mfd_wgts, mfd_msr)
 
-
     def collapse_branches(self, mmin, bin_width, mmax):
         '''
         Collapse the logic tree branches into a single IncrementalMFD
@@ -480,16 +481,15 @@ class mtkActiveFault(object):
                                                      10. ** interp_y)
         return IncrementalMFD(mmin, bin_width, master_rates)
 
-
     def generate_fault_source_model(self):
         '''
         Creates a resulting hmtk fault source set.
 
         :returns:
-            source_model - list of instances of either the :class:
-                           hmtk.sources.simple_fault_source.mtkSimpleFaultSource
-                           or :class:
-                           hmtk.sources.complex_fault_source.mtkComplexFaultSource
+            source_model - list of instances of either the
+              :class:`hmtk.sources.simple_fault_source.mtkSimpleFaultSource`
+              or
+              :class:`hmtk.sources.complex_fault_source.mtkComplexFaultSource`
             model_weight - Corresponding weights for each source model
         '''
         source_model = []

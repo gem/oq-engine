@@ -10,18 +10,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -39,9 +39,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -57,13 +57,13 @@ and earthquake catalogue
 import numpy as np
 from datetime import datetime
 from copy import deepcopy
-from matplotlib.nxutils import points_inside_poly
 from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.geo.mesh import Mesh
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.utils import decimal_time
+
 
 def _check_depth_limits(input_dict):
     '''Returns the default upper and lower depth values if not in dictionary
@@ -123,8 +123,7 @@ class CatalogueSelector(object):
 
     '''
 
-
-    def __init__(self, master_catalogue,  create_copy=True):
+    def __init__(self, master_catalogue, create_copy=True):
         '''
         Instantiate
         :param master_catalogue:
@@ -135,7 +134,6 @@ class CatalogueSelector(object):
         '''
         self.catalogue = master_catalogue
         self.copycat = create_copy
-
 
     def select_catalogue(self, valid_id):
         '''
@@ -152,14 +150,12 @@ class CatalogueSelector(object):
             # No events selected - create clean instance of class
             output = Catalogue()
             output.processes = self.catalogue.processes
-            output
 
         elif np.all(valid_id):
             if self.copycat:
-                output =  deepcopy(self.catalogue)
+                output = deepcopy(self.catalogue)
             else:
-                output =  self.catalogue
-
+                output = self.catalogue
         else:
             if self.copycat:
                 output = deepcopy(self.catalogue)
@@ -167,7 +163,6 @@ class CatalogueSelector(object):
                 output = self.catalogue
             output.purge_catalogue(valid_id)
         return output
-
 
     def within_polygon(self, polygon, distance=None, **kwargs):
         '''
@@ -190,7 +185,6 @@ class CatalogueSelector(object):
         else:
             zone_polygon = polygon
 
-
         # Make valid all events inside depth range
         upper_depth, lower_depth = _check_depth_limits(kwargs)
         valid_depth = np.logical_and(
@@ -205,7 +199,6 @@ class CatalogueSelector(object):
                                   zone_polygon.intersects(catalogue_mesh))
 
         return self.select_catalogue(valid_id)
-
 
     def circular_distance_from_point(self, point, distance, **kwargs):
         '''
@@ -234,7 +227,6 @@ class CatalogueSelector(object):
         is_close = point.closer_than(locations, distance)
 
         return self.select_catalogue(is_close)
-
 
     def cartesian_square_centred_on_point(self, point, distance, **kwargs):
         '''
@@ -272,7 +264,6 @@ class CatalogueSelector(object):
 
         return self.select_catalogue(is_valid)
 
-
     def within_joyner_boore_distance(self, surface, distance, **kwargs):
         '''
         Select events within a Joyner-Boore distance of a fault
@@ -297,11 +288,8 @@ class CatalogueSelector(object):
         is_valid = np.logical_and(
             rjb <= distance,
             np.logical_and(self.catalogue.data['depth'] >= upper_depth,
-                           self.catalogue.data['depth'] < lower_depth)
-            )
-
+                           self.catalogue.data['depth'] < lower_depth))
         return self.select_catalogue(is_valid)
-
 
     def within_rupture_distance(self, surface, distance,  **kwargs):
         '''
@@ -324,11 +312,9 @@ class CatalogueSelector(object):
         is_valid = np.logical_and(
             rrupt <= distance,
             np.logical_and(self.catalogue.data['depth'] >= upper_depth,
-                           self.catalogue.data['depth'] < lower_depth)
-            )
+                           self.catalogue.data['depth'] < lower_depth))
 
         return self.select_catalogue(is_valid)
-
 
     def within_time_period(self, start_time=None, end_time=None):
         '''
@@ -365,7 +351,6 @@ class CatalogueSelector(object):
                                   time_value < end_time)
 
         return self.select_catalogue(is_valid)
-
 
     def within_depth_range(self, lower_depth=None, upper_depth=None):
         '''

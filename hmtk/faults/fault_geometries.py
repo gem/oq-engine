@@ -49,6 +49,7 @@ import numpy as np
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
+
 class BaseFaultGeometry(object):
     '''
     Abstract base class to support geometry parameters and methods
@@ -60,6 +61,7 @@ class BaseFaultGeometry(object):
         '''
         Returns the area of the fault surface
         '''
+
 
 class SimpleFaultGeometry(BaseFaultGeometry):
     '''
@@ -118,6 +120,7 @@ class SimpleFaultGeometry(BaseFaultGeometry):
                                                          np.pi / 180.)
         self.area = self.length * self.downdip_width
         return self.area
+
 
 class ComplexFaultGeometry(BaseFaultGeometry):
     '''

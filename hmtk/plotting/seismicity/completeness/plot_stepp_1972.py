@@ -60,8 +60,7 @@ valid_markers = ['*', '+', '1', '2', '3', '4', '8', '<', '>', 'D', 'H', '^',
                  '_', 'd', 'h', 'o', 'p', 's', 'v', 'x', '|']
 
 
-def create_stepp_plot(model, filename, filetype='png',
-    filedpi=300):
+def create_stepp_plot(model, filename, filetype='png', filedpi=300):
     '''
     Creates the classic Stepp (1972) plots for a completed Stepp analysis,
     and exports the figure to a file.
@@ -88,7 +87,7 @@ def create_stepp_plot(model, filename, filetype='png',
     while len(valid_markers) < len(model.magnitude_bin):
         valid_markers.append(valid_markers)
 
-    marker_sampler = np.arange(0, len(valid_markers),1)
+    marker_sampler = np.arange(0, len(valid_markers), 1)
     np.random.shuffle(marker_sampler)
     # Get colour for each bin
     for value in range(0, len(model.magnitude_bin) - 1):
@@ -107,7 +106,7 @@ def create_stepp_plot(model, filename, filetype='png',
     # Plot expected Poisson rate
     for iloc in range(0, len(model.magnitude_bin) - 1):
         plt.loglog(model.time_values,
-                   model.model_line[:,iloc],
+                   model.model_line[:, iloc],
                    linestyle='-',
                    marker='None',
                    color=rgb_list[iloc])
@@ -118,7 +117,7 @@ def create_stepp_plot(model, filename, filetype='png',
                                     np.log10(model.model_line[id0, iloc]))
         plt.loglog(xmarker, ymarker, 'ks')
     plt.xlabel('Time (years)', fontsize=15)
-    plt.ylabel('$\sigma_{\lambda} = \sqrt{\lambda} / \sqrt{T}$',
-                fontsize=15)
+    plt.ylabel("$\\sigma_{\\lambda} = \\sqrt{\\lambda} / \\sqrt{T}$",
+               fontsize=15)
     # Save figure to file
     plt.savefig(filename, dpi=filedpi, format=filetype)

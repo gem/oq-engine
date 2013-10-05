@@ -45,14 +45,17 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-"""Module :mod: hmtk.faults.mfd.characteristic implements :class: Characteristic
-the simple characteristic earthquake calculator of recurrence.
+"""
+Module :mod: hmtk.faults.mfd.characteristic implements
+:class:Characteristic the simple characteristic earthquake calculator
+of recurrence.
 """
 
 import numpy as np
 from scipy.stats import truncnorm
-from math import exp, log, log10, fabs
+from math import fabs
 from hmtk.faults.mfd.base import _scale_moment, BaseMFDfromSlip
+
 
 class Characteristic(BaseMFDfromSlip):
     '''
@@ -103,7 +106,8 @@ class Characteristic(BaseMFDfromSlip):
             * 'Minimum_Magnitude' - Minimum magnitude of activity rates (float)
             * 'Maximum_Magnitude' - Characteristic magnituded (float)
                                     (if not defined will use scaling relation)
-            * 'Maximum_Magnitude_Uncertainty' - Uncertainty on maximum magnitude
+            * 'Maximum_Magnitude_Uncertainty' - Uncertainty on
+               maximum magnitude
                (If not defined and the MSR has a sigma term then this will be
                taken from sigma)
             * 'Lower_Bound' - Lower bound in terms of number of sigma (float)
@@ -114,14 +118,13 @@ class Characteristic(BaseMFDfromSlip):
         self.mfd_model = 'Characteristic'
         self.mfd_weight = mfd_conf['Model_Weight']
         self.bin_width = mfd_conf['MFD_spacing']
-        self.mmin =  None
+        self.mmin = None
         self.mmax = None
         self.mmax_sigma = None
         self.lower_bound = mfd_conf['Lower_Bound']
         self.upper_bound = mfd_conf['Upper_Bound']
         self.sigma = mfd_conf['Sigma']
         self.occurrence_rate = None
-
 
     def get_mmax(self, mfd_conf, msr, rake, area):
         '''
@@ -145,12 +148,8 @@ class Characteristic(BaseMFDfromSlip):
         else:
             self.mmax = msr.get_median_mag(area, rake)
 
-        if 'Maximum_Magnitude_Uncertainty' in mfd_conf.keys() and \
-            mfd_conf['Maximum_Magnitude_Uncertainty']:
-            self.mmax_sigma = mfd_conf['Maximum_Magnitude_Uncertainty']
-        else:
-            self.mmax_sigma = msr.get_std_dev_mag(rake)
-
+        self.mmax_sigma = mfd_conf.get(
+            'Maximum_Magnitude_Uncertainty', None) or msr.get_std_dev_mag(rake)
 
     def get_mfd(self, slip, area, shear_modulus=30.0):
         '''
@@ -179,7 +178,7 @@ class Characteristic(BaseMFDfromSlip):
         moment_rate = (shear_modulus * 1.E9) * (area * 1.E6) * (slip / 1000.)
         moment_mag = _scale_moment(self.mmax, in_nm=True)
         characteristic_rate = moment_rate / moment_mag
-        if self.sigma and (fabs(self.sigma) > 1E-5) :
+        if self.sigma and (fabs(self.sigma) > 1E-5):
             self.mmin = self.mmax + (self.lower_bound * self.sigma)
             mag_upper = self.mmax + (self.upper_bound * self.sigma)
             mag_range = np.arange(self.mmin,
@@ -187,11 +186,11 @@ class Characteristic(BaseMFDfromSlip):
                                   self.bin_width)
             self.occurrence_rate = characteristic_rate * (
                 truncnorm.cdf(mag_range + (self.bin_width / 2.),
-                    self.lower_bound, self.upper_bound, loc=self.mmax,
-                    scale=self.sigma) -
+                              self.lower_bound, self.upper_bound,
+                              loc=self.mmax, scale=self.sigma) -
                 truncnorm.cdf(mag_range - (self.bin_width / 2.),
-                    self.lower_bound, self.upper_bound, loc=self.mmax,
-                              scale=self.sigma))
+                              self.lower_bound, self.upper_bound,
+                              loc=self.mmax, scale=self.sigma))
         else:
             # Returns only a single rate
             self.mmin = self.mmax

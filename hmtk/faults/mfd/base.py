@@ -3,8 +3,7 @@ Module :mod:`mfd.base` defines an abstract base classes
 for :class:`BaseMFDfromSlip>`
 """
 import abc
-import numpy as np
-#from openquake.hazardlib import scalerel
+
 
 def _scale_moment(magnitude, in_nm=False):
     '''Returns the moment for a given magnitude.

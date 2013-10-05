@@ -47,12 +47,12 @@
 
 # -*- coding: utf-8 -*-
 import abc
-import numpy as np
 from decimal import Decimal
 from openquake.nrmllib import models
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib import mfd
+
 
 class MFDConverter(object):
     '''
@@ -76,7 +76,7 @@ class MFDConverter(object):
             :class: openquake.nrmllib.models
 
         '''
-        return
+        raise NotImplementedError
 
 
 class ConvertTruncGR(MFDConverter):
@@ -103,6 +103,7 @@ class ConvertTruncGR(MFDConverter):
                              b_val=mag_freq_dist.b_val,
                              min_mag=mag_freq_dist.min_mag,
                              max_mag=mag_freq_dist.max_mag)
+
 
 class ConvertIncremental(MFDConverter):
     '''
@@ -142,7 +143,6 @@ def render_mfd(mag_freq_dist):
     Render the magnitude frequency distribution
     '''
 
-
     mfd_name = mag_freq_dist.__class__.__name__
     if mfd_name in ACCEPTED_MFD:
         # Class is already an instance of a oq.nrmllib.models mfd class
@@ -150,7 +150,7 @@ def render_mfd(mag_freq_dist):
 
     if not mfd_name in MFD_MAP.keys():
         raise ValueError('Magnitude frequency distribution %s not supported',
-                          mfd_name)
+                         mfd_name)
     return MFD_MAP[mfd_name].convert(mag_freq_dist)
 
 
@@ -175,6 +175,7 @@ def render_aspect_ratio(aspect_ratio, use_default=False):
             return 1.0
         else:
             raise ValueError('Rupture aspect ratio not defined!')
+
 
 def render_mag_scale_rel(mag_scale_rel, use_default=False):
     '''
@@ -251,6 +252,7 @@ def render_npd(nodal_plane_dist, use_default=False):
         else:
             raise ValueError('Nodal Plane distribution not defined')
 
+
 def render_hdd(hypo_depth_dist, use_default=False):
     '''
     Check to see if hypocentral depth distribution exists. If it
@@ -297,6 +299,7 @@ def simple_trace_to_wkt_linestring(trace):
         trace_str += ' %s %s,' % (point.longitude, point.latitude)
     trace_str = trace_str.lstrip(' ')
     return 'LINESTRING (' + trace_str.rstrip(',') + ')'
+
 
 def simple_edge_to_wkt_linestring(edge):
     '''

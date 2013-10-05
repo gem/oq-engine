@@ -60,6 +60,7 @@ DEFAULT_SHEAR_MODULUS = [(30.0, 1.0)]
 DEFAULT_DLR = [(1.25E-5, 1.0)]
 DEFAULT_MSR = [(WC1994(), 1.0)]
 
+
 def _check_list_weights(parameter, name):
     '''
     Checks that the weights in a list of tuples sums to 1.0
@@ -93,17 +94,23 @@ class TectonicRegion(object):
     '''
     Definition of the tectonic region
     '''
-    def __init__(self, identifier, name, shear_modulus=DEFAULT_SHEAR_MODULUS,
-                 disp_length_ratio=DEFAULT_DLR, scaling_rel=DEFAULT_MSR):
+    def __init__(self, identifier, name, shear_modulus=None,
+                 disp_length_ratio=None, scaling_rel=None):
+
+        shear_modulus = shear_modulus or DEFAULT_SHEAR_MODULUS
+        disp_length_ratio = disp_length_ratio or DEFAULT_DLR
+        scaling_rel = scaling_rel or DEFAULT_MSR
 
         self.id = identifier
         self.region_name = name
-        self.shear_modulus = _check_list_weights(shear_modulus,
-            'Shear Modulus ' + self.region_name)
-        self.disp_length_ratio = _check_list_weights(disp_length_ratio,
+        self.shear_modulus = _check_list_weights(
+            shear_modulus, 'Shear Modulus ' + self.region_name)
+        self.disp_length_ratio = _check_list_weights(
+            disp_length_ratio,
             'Displacement to Length Ratio ' + self.region_name)
 
-        self.scaling_rel = _check_list_weights(scaling_rel,
+        self.scaling_rel = _check_list_weights(
+            scaling_rel,
             'Scaling Relation ' + self.region_name)
 
 
@@ -142,7 +149,8 @@ class TectonicRegionalisation(object):
                 scaling_relation = DEFAULT_MSR
 
             self.regionalisation.append(
-                TectonicRegion(tect_reg['Code'], tect_reg['Name'],
+                TectonicRegion(
+                    tect_reg['Code'], tect_reg['Name'],
                     shear_modulus, disp_length_ratio, scaling_relation))
             self.key_list.append(tect_reg['Name'])
 

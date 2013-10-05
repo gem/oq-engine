@@ -52,6 +52,7 @@ for :class:`CatalogueParser <BaseCatalogueParser>`.
 import abc
 import os.path
 
+
 class BaseCatalogueParser(object):
     """
     A base class for a Catalogue Parser
@@ -71,6 +72,7 @@ class BaseCatalogueParser(object):
         """
         Return an instance of the class :class:`Catalogue`
         """
+
 
 class BaseCatalogueWriter(object):
     """

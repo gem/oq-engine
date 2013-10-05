@@ -44,5 +44,3 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-
-#from hmtk.parsers.faults.fault_yaml_parser import FaultYamltoSource

@@ -51,7 +51,6 @@ Module implements :class: hmtk.sources.source_model.mtkSourceModel, the
 general class to describe a set of seismogenic sources
 '''
 
-import numpy as np
 from openquake.nrmllib import models
 from openquake.nrmllib.hazard.writers import SourceModelXMLWriter
 from hmtk.sources.area_source import mtkAreaSource
@@ -60,10 +59,11 @@ from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.seismicity.selector import CatalogueSelector
 
+
 class mtkSourceModel(object):
     '''
-    Object to describe a seismogenic source model (composite of multiple sources
-    with mixed typologies)
+    Object to describe a seismogenic source model (composite of
+    multiple sources with mixed typologies)
 
     :param str id:
         Identifier for the source model
@@ -83,7 +83,6 @@ class mtkSourceModel(object):
                 raise ValueError('Sources must be input as list!')
             self.sources = []
 
-
     def __iter__(self):
         return iter(self.sources)
 
@@ -92,7 +91,6 @@ class mtkSourceModel(object):
         Returns the number of sources in the model
         '''
         return len(self.sources)
-
 
     def serialise_to_nrml(self, filename, use_defaults=False):
         '''

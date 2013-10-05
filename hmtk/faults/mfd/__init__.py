@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -50,11 +50,7 @@ import inspect
 import importlib
 from collections import OrderedDict
 from hmtk.faults.mfd.base import BaseMFDfromSlip
-#from hmtk.faults.mfd.anderson_luco_area_mmax import AndersonLucoAreaMmax
-#from hmtk.faults.mfd.anderson_luco_arbitrary import AndersonLucoArbitrary
-#from hmtk.faults.mfd.youngs_coppersmith import (YoungsCoppersmithExponential,
-#    YoungsCoppersmithCharacteristic)
-#from hmtk.faults.mfd.characteristic import Characteristic
+
 
 def get_available_mfds():
     '''
@@ -68,7 +64,6 @@ def get_available_mfds():
             mod = importlib.import_module(
                 'hmtk.faults.mfd.' + modname)
             for cls in mod.__dict__.itervalues():
-                if inspect.isclass(cls) and issubclass(cls,
-                    BaseMFDfromSlip):
-                        mfds[cls.__name__] = cls
+                if inspect.isclass(cls) and issubclass(cls, BaseMFDfromSlip):
+                    mfds[cls.__name__] = cls
     return OrderedDict((k, mfds[k]) for k in sorted(mfds))

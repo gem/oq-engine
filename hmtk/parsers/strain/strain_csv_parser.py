@@ -78,7 +78,6 @@ class ReadStrainCsv(object):
         self.filename = strain_file
         self.strain = GeodeticStrain()
 
-
     def read_data(self, scaling_factor=1E-9, strain_headers=None):
         '''
         Reads the data from the csv file
@@ -132,7 +131,6 @@ class ReadStrainCsv(object):
         self.strain.get_secondary_strain_data()
         return self.strain
 
-
     def _check_invalid_longitudes(self):
         '''
         Checks to ensure that all longitudes are in the range -180. to 180
@@ -141,7 +139,6 @@ class ReadStrainCsv(object):
         if np.any(idlon):
             self.strain.data['longitude'][idlon] = \
                 self.strain.data['longitude'][idlon] - 360.
-
 
 
 class WriteStrainCsv(object):
@@ -180,12 +177,10 @@ class WriteStrainCsv(object):
         # Slice seismicity rates into separate dictionary vectors
         strain, output_variables = self.slice_rates_to_data(strain)
 
-
         outfile = open(self.filename, 'wt')
         print 'Writing strain data to file %s' % self.filename
         writer = csv.DictWriter(outfile,
-                                fieldnames = output_variables)
-        headers = dict( (name0, name0) for name0 in output_variables)
+                                fieldnames=output_variables)
         writer.writeheader()
         for iloc in range(0, strain.get_number_observations()):
             row_dict = {}
@@ -212,8 +207,9 @@ class WriteStrainCsv(object):
             output_variables - Updated list of headers
         '''
         output_variables = strain.data.keys()
-        if isinstance(strain.target_magnitudes, np.ndarray) or \
-            isinstance(strain.target_magnitudes, list):
+        cond = (isinstance(strain.target_magnitudes, np.ndarray) or
+                isinstance(strain.target_magnitudes, list))
+        if cond:
             magnitude_list = ['%.3f' % mag for mag in strain.target_magnitudes]
         else:
             return strain, output_variables

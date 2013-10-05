@@ -61,17 +61,16 @@ from hmtk.faults.fault_geometries import (SimpleFaultGeometry,
                                           ComplexFaultGeometry)
 from hmtk.faults.fault_models import mtkActiveFault
 from hmtk.faults.active_fault_model import mtkActiveFaultModel
-from hmtk.faults.tectonic_regionalisation import (TectonicRegionalisation,
-                                                  _check_list_weights)
+from hmtk.faults.tectonic_regionalisation import TectonicRegionalisation
 
 
 SCALE_REL_MAP = get_available_scalerel()
+
 
 def weight_list_to_tuple(data, attr_name):
     '''
     Converts a list of values and corresponding weights to a tuple of values
     '''
-
 
     if len(data['Value']) != len(data['Weight']):
         raise ValueError('Number of weights do not correspond to number of '
@@ -84,6 +83,7 @@ def weight_list_to_tuple(data, attr_name):
     for iloc, value in enumerate(data['Value']):
         data_tuple.append((value, weight[iloc]))
     return data_tuple
+
 
 def parse_tect_region_dict_to_tuples(region_dict):
     '''
@@ -118,6 +118,7 @@ def get_scaling_relation_tuple(msr_dict):
     return weight_list_to_tuple(msr_dict,
                                 'Magnitude Scaling Relation')
 
+
 class FaultYmltoSource(object):
     '''
     Class to parse a fault model definition from Yaml format to a fault model
@@ -132,7 +133,7 @@ class FaultYmltoSource(object):
         if not 'Fault_Model' in self.data.keys():
             raise ValueError('Fault Model not defined in input file!')
 
-    def read_file(self, mesh_spacing = 1.0):
+    def read_file(self, mesh_spacing=1.0):
         '''
         Reads the file and returns an instance of the FaultSource class
         :param float mesh_spacing:
@@ -143,7 +144,7 @@ class FaultYmltoSource(object):
         tectonic_reg = self.process_tectonic_regionalisation()
 
         model = mtkActiveFaultModel(self.data['Fault_Model_ID'],
-                           self.data['Fault_Model_Name'])
+                                    self.data['Fault_Model_Name'])
         for fault in self.data['Fault_Model']:
             fault_geometry = self.read_fault_geometry(fault['Fault_Geometry'],
                                                       mesh_spacing)
@@ -155,7 +156,6 @@ class FaultYmltoSource(object):
                 fault['Displacement_Length_Ratio'] = weight_list_to_tuple(
                     fault['Displacement_Length_Ratio'],
                     '%s Displacement to Length Ratio' % fault['ID'])
-
 
             fault_source = mtkActiveFault(
                 fault['ID'],
@@ -194,7 +194,7 @@ class FaultYmltoSource(object):
             tectonic_reg = TectonicRegionalisation()
             tectonic_reg.populate_regions(
                 parse_tect_region_dict_to_tuples(
-                self.data['tectonic_regionalisation']))
+                    self.data['tectonic_regionalisation']))
         else:
             tectonic_reg = None
         return tectonic_reg
@@ -204,8 +204,8 @@ class FaultYmltoSource(object):
         Creates the fault geometry from the parameters specified in the
         dictionary
         :param dict geo_dict:
-            Sub-dictionary of main fault dictionary containing only the geometry
-            attributes
+            Sub-dictionary of main fault dictionary containing only
+            the geometry attributes
         :param float mesh_spacing:
             Fault mesh spacing (km)
         :returns:

@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -101,7 +101,6 @@ class Afteran(BaseCatalogueDecluster):
         # Rank magnitudes into descending order
         id0 = np.flipud(np.argsort(mag, kind='heapsort'))
 
-        iloc = 0
         clust_index = 0
         for imarker in id0:
             # Earthquake not allocated to cluster - perform calculation
@@ -116,8 +115,9 @@ class Afteran(BaseCatalogueDecluster):
                 # Select earthquakes inside distance window, later than
                 # mainshock and not already assigned to a cluster
                 vsel1 = np.where(
-                    np.logical_and(vcl==0,
-                        np.logical_and(mdist <= sw_space[imarker],
+                    np.logical_and(vcl == 0,
+                                   np.logical_and(
+                                       mdist <= sw_space[imarker],
                                        year_dec > year_dec[imarker])))[0]
                 has_aftershocks = False
                 if len(vsel1) > 0:
@@ -136,7 +136,8 @@ class Afteran(BaseCatalogueDecluster):
                 # mainshock and not already assigned to a cluster
                 has_foreshocks = False
                 vsel2 = np.where(
-                    np.logical_and(vcl == 0,
+                    np.logical_and(
+                        vcl == 0,
                         np.logical_and(mdist <= sw_space[imarker],
                                        year_dec < year_dec[imarker])))[0]
                 if len(vsel2) > 0:
@@ -155,10 +156,8 @@ class Afteran(BaseCatalogueDecluster):
                     # Assign mainshock to cluster
                     vcl[imarker] = clust_index + 1
                     clust_index += 1
-            iloc += 1
 
         return vcl, flagvector
-
 
     def _find_aftershocks(self, vsel, year_dec, time_window, imarker, neq):
         '''
@@ -195,7 +194,6 @@ class Afteran(BaseCatalogueDecluster):
                 return temp_vsel1, has_aftershocks
 
         return temp_vsel1, has_aftershocks
-
 
     def _find_foreshocks(self, vsel, year_dec, time_window, imarker, neq):
         '''

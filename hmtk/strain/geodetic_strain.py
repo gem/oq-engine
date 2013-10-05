@@ -48,10 +48,8 @@
 Module hmtk.strain.geodectic_strain.GeodeticStain is a core class for storage
 and implementation of a geodetic strain rate model
 '''
-import csv
 import numpy as np
 from copy import deepcopy
-from math import fabs
 
 DATA_VARIABLES = ['longitude', 'latitude', 'exx', 'eyy', 'exy']
 
@@ -111,7 +109,7 @@ class GeodeticStrain(object):
             if not essential_key in self.data.keys():
                 print self.data
                 raise ValueError('Essential strain information %s missing!'
-                                  % essential_key)
+                                 % essential_key)
         self.data_variables = deepcopy(DATA_VARIABLES)
 
         # Second Invarient
@@ -120,8 +118,7 @@ class GeodeticStrain(object):
             (self.data['eyy'] ** 2.) +
             2.0 * (self.data['exy'] ** 2.))
         # Dilatation
-        self.data['dilatation'] = self.data['exx'] + \
-                                  self.data['eyy']
+        self.data['dilatation'] = self.data['exx'] + self.data['eyy']
         # err
         self.data['err'] = -1. * self.data['dilatation']
         center_normal_rate = (self.data['exx'] +
@@ -135,7 +132,6 @@ class GeodeticStrain(object):
         self.data['area'] = np.zeros(self.get_number_observations())
         self.data_variables.extend(['2nd_inv', 'dilatation', 'err', 'e1h',
                                     'e2h'])
-
 
     def get_number_observations(self):
         '''
