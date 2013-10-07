@@ -31,7 +31,10 @@ from openquake.nrmllib import InvalidFile, records, converter
 
 
 class FileWrapper(object):
-
+    """
+    Mixin class providing a file-like interface to the underlying
+    .fileobj.
+    """
     def __iter__(self):
         return self
 
@@ -76,10 +79,14 @@ class FileObject(FileWrapper):
 
 
 class NotInArchive(Exception):
-    pass
+    """Raised when trying to open a non-existing file in the archive"""
 
 
 class ArchiveABC(object):
+    """
+    Abstract Base Class for Archive classes. Subclasses must override
+    the methods ``_open`` and ``extract_filenames``.
+    """
     __metaclass__ = ABCMeta
 
     opened = []
@@ -110,6 +117,11 @@ class ArchiveABC(object):
 # The solution is to write to a temporary file and then push it into the
 # archive at closing time
 class TempFile(FileWrapper):
+    """
+    Wrapper over a NamedTemporaryFile to be used in conjunction with
+    ZipArchive objects. It automatically stores the data in the archive
+    at file closing time.
+    """
     def __init__(self, arczip, arcname, mode):
         self.arczip = arczip
         self.arcname = arcname
@@ -126,6 +138,9 @@ class TempFile(FileWrapper):
 
 
 class ZipArchive(ArchiveABC):
+    """
+    Thin wrapper over a ZipFile object.
+    """
     def __init__(self, zipname, mode='a'):
         self.zip = zipfile.ZipFile(zipname, mode)
         self.name = self.zip.filename
@@ -145,6 +160,9 @@ class ZipArchive(ArchiveABC):
 
 
 class DirArchive(ArchiveABC):
+    """
+    Provides an archive interface over a filesystem directory
+    """
     def __init__(self, dirname, mode='r'):
         self.name = dirname
         self.mode = mode
@@ -160,6 +178,9 @@ class DirArchive(ArchiveABC):
 
 
 class MemArchive(ArchiveABC):
+    """
+    Provides an archive interface over FileObjects in memory
+    """
     def __init__(self, items, mode='r'):
         self.dic = {}
         for name, csvstr in items:
@@ -192,7 +213,13 @@ def create_table(recordtype, csvstr):
 
 
 class CSVManager(object):
+    """
+    A class to manage CSV files stored in an Archive object.
+    The file names must be of the form <prefix>__<recordtype>.csv
+    where <recordtype> is the name of the record class describing
+    the structure of the file.
 
+    """
     def __init__(self, archive, prefix='', has_header=True):
         self.archive = archive
         self.prefix = prefix
@@ -208,7 +235,7 @@ class CSVManager(object):
         with the right prefix.
         """
         converters = {}  # name->converter dictionary
-        cc = {}  # name -> converter class dictionary
+        cc = {}  # dataset name -> converter class dictionary
         for name, value in vars(converter).iteritems():
             if inspect.isclass(value) and issubclass(
                     value, converter.Converter):
@@ -225,7 +252,7 @@ class CSVManager(object):
                 continue
             if not prefix in converters:
                 man = self.__class__(self.archive, prefix)
-                converters[prefix] = cc[recordtype._tag](man)
+                converters[prefix] = cc[recordtype.dataset](man)
         return converters.values()
 
     def getconverter(self):
@@ -345,9 +372,9 @@ class CSVManager(object):
         Group the records on the underlying CSV according to the given
         keyfield. Assume the records are sorted.
         """
-        keyindices = [recordtype.name2index[k] for k in keyfields]
+        keyindexes = [recordtype.name2index[k] for k in keyfields]
         return itertools.groupby(
-            self.read(recordtype), lambda rec: [rec[i] for i in keyindices])
+            self.read(recordtype), lambda rec: [rec[i] for i in keyindexes])
 
     def readtable(self, recordtype):
         """

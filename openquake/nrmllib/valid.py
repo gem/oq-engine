@@ -37,6 +37,8 @@ class Choice(object):
             raise ValueError('%r is not a valid choice in %s' % (
                              value, self.choices))
 
+category = Choice('population', 'buildings')
+
 
 def namelist(text):
     """String -> list of identifiers"""
