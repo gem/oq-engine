@@ -21,8 +21,7 @@ Validation library
 """
 
 import re
-
-NAME = re.compile(r'[a-zA-Z_]\w*')
+import collections
 
 
 class Choice(object):
@@ -40,15 +39,44 @@ class Choice(object):
 category = Choice('population', 'buildings')
 
 
+class Regex(object):
+    """
+    Compare the value with the given regex
+    """
+    def __init__(self, regex):
+        self.rx = re.compile(regex)
+
+    def __call__(self, value):
+        if self.rx.match(value) is None:
+            raise ValueError('%r does not match the regex %r' %
+                             (value, self.rx.pattern))
+        return value
+
+name = Regex(r'^[a-zA-Z_]\w*$')
+
+
+class FloatRange(object):
+    def __init__(self, minrange, maxrange):
+        self.minrange = minrange
+        self.maxrange = maxrange
+
+    def __call__(self, value):
+        f = float(value)
+        if f > self.maxrange:
+            raise ValueError('%r is bigger than the max, %r' %
+                             (f, self.maxrange))
+        if f < self.minrange:
+            raise ValueError('%r is smaller than the min, %r' %
+                             (f, self.minrange))
+        return f
+
+
 def namelist(text):
     """String -> list of identifiers"""
     names = text.split()
     if not names:
         raise ValueError('Got an empty name list')
-    for name in names:
-        if NAME.match(name) is None:
-            raise ValueError('%r is not a valid name' % name)
-    return names
+    return map(name, names)
 
 
 def longitude(text):
@@ -77,3 +105,26 @@ def positiveint(text):
     if i < 0:
         raise ValueError('integer %d < 0' % i)
     return i
+
+
+def positivefloat(text):
+    """String -> positive float"""
+    f = float(text)
+    if f < 0:
+        raise ValueError('float %d < 0' % f)
+    return f
+
+probability = FloatRange(0, 1)
+
+IMT = collections.namedtuple('IMT', 'imt saPeriod saDamping')
+
+
+def IMTstr(text):
+    """String -> namedtuple with fields imt, saPeriod, saDamping"""
+    mo = re.match(r'PGA|PGV|PGD|IA|RSD|MMI|SA\((\d+\.?\d*)\)', text)
+    if mo is None:
+        raise ValueError('%r is not a valid IMT' % text)
+    period = mo.group(1)
+    if period:
+        return IMT('SA', float(period), 5.0)
+    return IMT(text, None, None)
