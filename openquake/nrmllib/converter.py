@@ -104,10 +104,10 @@ class Vulnerability(Converter):
         """
         Build a full vulnerability Node from a group of tables.
         """
-        dvs_node = self.man.readtable(
-            records.DiscreteVulnerabilitySet).to_nodedict()
-        dvf_node = self.man.readtable(
-            records.DiscreteVulnerability).to_nodedict()
+        dvs_node = record.nodedict(self.man.read(
+            records.DiscreteVulnerabilitySet))
+        dvf_node = record.nodedict(self.man.read(
+            records.DiscreteVulnerability))
         for (set_id, vf_id), group in self.man.groupby(
                 ['vulnerabilitySetID', 'vulnerabilityFunctionID'],
                 records.DiscreteVulnerabilityData):
@@ -127,7 +127,8 @@ class Vulnerability(Converter):
         for set_id, dvs in dvs_node.iteritems():
             if dvs.IML.text is None:
                 raise InvalidFile(
-                    '%s: no data for %s' % (datafile.name, set_id))
+                    '%s: no data for %s (or the file may contain duplicates)'
+                    % (datafile.name, set_id))
         return Node('vulnerabilityModel', nodes=dvs_node.values())
 
 
@@ -193,7 +194,7 @@ class Fragility(Converter):
         else:  # 'continuous'
             FFSRecord = records.FFSetContinuous
             FFDRecord = records.FFDContinuos
-        ffs_node = self.man.readtable(FFSRecord).to_nodedict()
+        ffs_node = record.nodedict(self.man.read(FFSRecord))
         frag.nodes.extend(ffs_node.values())
         for (ordinal, ls), data in self.man.groupby(
                 ['ffs_ordinal', 'limitState'], FFDRecord):
@@ -386,7 +387,7 @@ class Exposure(Converter):
             Asset = records.AssetPopulation
             ctypes = []
         assets = self.man.read(Asset)
-        location_dict = self.man.readtable(records.Location).to_nodedict()
+        location_dict = record.nodedict(self.man.read(records.Location))
         exp.assets.nodes = assetgenerator(assets, location_dict, ctypes)
         return exp
 
@@ -442,7 +443,7 @@ class GmfSet(Converter):
 
         The rows are grouped by ses, imt, rupture.
         """
-        gmfset_node = self.man.readtable(records.GmfSet).to_nodedict()
+        gmfset_node = record.nodedict(self.man.read(records.GmfSet))
         for (ses, imt, rupture), rows in self.man.groupby(
                 ['stochasticEventSetId', 'imtStr', 'ruptureId'],
                 records.GmfData):

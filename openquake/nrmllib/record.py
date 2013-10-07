@@ -251,6 +251,15 @@ class Record(collections.Sequence):
         return ','.join(self.row)
 
 
+def nodedict(records):
+    """
+    Convert a sequence of records into an OrderedDict
+    rec.pkey -> rec.to_node()
+    """
+    return collections.OrderedDict(
+        (rec.pkey, rec.to_node()) for rec in records)
+
+
 class Table(collections.MutableSequence):
     """
     In-memory table storing a sequence of record objects.
@@ -269,10 +278,6 @@ class Table(collections.MutableSequence):
         self.records = []
         for rec in records:
             self.append(rec)
-
-    def to_nodedict(self):
-        return collections.OrderedDict(
-            (rec.pkey, rec.to_node()) for rec in self)
 
     def __getitem__(self, i):
         return self.records[i]
