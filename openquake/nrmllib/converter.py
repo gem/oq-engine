@@ -62,8 +62,8 @@ class Converter(object):
     def __init__(self, csvmanager):
         self.man = csvmanager
 
-    def __str__(self):
-        return '<%s %s>' % (self.__class__.___name__, self.man.prefix)
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, self.man.prefix)
 
     def csv_to_node(self):
         """For .csv files with a given prefix to a single node"""
@@ -150,7 +150,7 @@ class Fragility(Converter):
             ffs_ordinal = str(i)
 
             if format == 'discrete':
-                yield records.FFSDiscrete(
+                yield records.FFSetDiscrete(
                     ffs_ordinal,
                     ffs.taxonomy.text,
                     ffs.attrib.get('noDamageLimit', ''),
@@ -162,7 +162,7 @@ class Fragility(Converter):
                         ls, ffd['ls'])
                     poEs = ffd.poEs.text.split()
                     for iml, poe in zip(imls, poEs):
-                        yield records.FFDDiscrete(ffs_ordinal, ls, iml, poe)
+                        yield records.FFDataDiscrete(ffs_ordinal, ls, iml, poe)
 
             elif format == 'continuous':
                 yield records.FFSContinuous(
@@ -185,13 +185,13 @@ class Fragility(Converter):
     def csv_to_node(self):
         """
         Build a full fragility node from Fragility.csv and
-        FFSDiscrete.csv, FFDDiscrete.csv or
+        FFSetDiscrete.csv, FFDataDiscrete.csv or
         FFSContinuous.csv, FFDContinuous.csv.
         """
         frag = self.man.read(records.Fragility).next().to_node()
         if frag['format'] == 'discrete':
-            FFSRecord = records.FFSDiscrete
-            FFDRecord = records.FFDDiscrete
+            FFSRecord = records.FFSetDiscrete
+            FFDRecord = records.FFDataDiscrete
         else:  # 'continuous'
             FFSRecord = records.FFSContinuous
             FFDRecord = records.FFDContinuos

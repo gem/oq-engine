@@ -3,7 +3,7 @@ import os
 import unittest
 import tempfile
 from openquake.nrmllib import InvalidFile
-from openquake.nrmllib.csvmanager import MemArchive, CSVManager
+from openquake.nrmllib.csvmanager import MemArchive, CSVManager, NotInArchive
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -78,7 +78,7 @@ class ConvertBadFilesTestCase(unittest.TestCase):
 
     def test_empty_archive(self):
         empty_archive = MemArchive([])
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(NotInArchive):
             CSVManager(empty_archive, 'test').convert_to_node()
 
     def test_empty_files(self):

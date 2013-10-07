@@ -57,8 +57,8 @@ def main(inp_out):
         elif os.path.isdir(inp):
             inp_archive = DirArchive(inp)
         if out == 'inplace':
-            man = CSVManager(inp_archive, name)
-            print man.convert_all_to_nrml()
+            create(lambda n: CSVManager(inp_archive, n).convert_to_nrml(),
+                   name)
         else:
             raise SystemExit('Invalid output: %s; '
                              'expected "inplace"' % out)

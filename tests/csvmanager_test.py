@@ -2,7 +2,9 @@ import os
 import unittest
 import tempfile
 from openquake.nrmllib import records
-from openquake.nrmllib.csvmanager import create_table, ZipArchive
+from openquake.nrmllib.csvmanager import (
+    create_table, ZipArchive, MemArchive, CSVManager,
+    MultipleConverterError)
 
 
 class TableTestCase(unittest.TestCase):
@@ -40,3 +42,14 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(archive.extract_filenames(), set('ab'))
         finally:
             os.remove(archive.name)
+
+    def test_bad_prefix(self):
+        archive = MemArchive([
+            ('test__DiscreteVulnerabilitySet.csv', ''),
+            ('test__DiscreteVulnerability.csv', ''),
+            ('tes__DiscreteVulnerabilityData.csv', ''),
+            ])
+        man = CSVManager(archive)
+        with self.assertRaises(MultipleConverterError):
+            man._getconverter()
+        # the case NotInArchive is convered in convert_test.py

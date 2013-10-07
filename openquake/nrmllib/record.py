@@ -191,6 +191,10 @@ class Record(collections.Sequence):
         return self.ntuple._make(
             field.converter(col) for col, field in zip(self.row, self.fields))
 
+    def to_node(self):
+        """Implement this if you want to convert records into Node objects"""
+        raise NotImplementedError
+
     def __getitem__(self, i):
         """Return the field 'i', where 'i' can be an integer or a field name"""
         if isinstance(i, str):
