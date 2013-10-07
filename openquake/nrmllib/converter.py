@@ -52,7 +52,7 @@ class Converter(object):
             if name not in tbl:
                 tbl[name] = record.Table(rec.__class__, [])
             tbl[name].append(rec)
-        return sorted(tbl.itervalues(), key=lambda t: t.recordtype.ordinal)
+        return sorted(tbl.itervalues(), key=lambda t: t.recordtype._ordinal)
 
     @classmethod
     def node_to_records(cls, node):
@@ -77,8 +77,7 @@ class Vulnerability(Converter):
 
     @classmethod
     def node_to_records(cls, node):
-        """
-        """
+        """Convert the node into a sequence of Vulnerability records"""
         for vset in node.getnodes('discreteVulnerabilitySet'):
             set_id = vset['vulnerabilitySetID']
             dvs = records.DiscreteVulnerabilitySet(
@@ -139,8 +138,7 @@ class Fragility(Converter):
 
     @classmethod
     def node_to_records(cls, node):
-        """
-        """
+        """Convert the node into a sequence of Fragility records"""
         format = node['format']
         limitStates = node.limitStates.text.split()
         yield records.Fragility(node['format'],
@@ -315,21 +313,7 @@ class Exposure(Converter):
     @classmethod
     def node_to_records(cls, node):
         """
-        Yield a single table object. For population exposure a table
-        has a form like
-
-          id,taxonomy,lon,lat,number
-          asset_01,IT-PV,9.15000,45.16667,7
-          asset_02,IT-CE,9.15333,45.12200,7
-
-        whereas for building has a form like
-
-          id,taxonomy,lon,lat,number,area,cost__value,..., occupancy__day
-          asset_01,RC/DMRF-D/LR,9.15000,45.16667,7,120,40,.5,...,20
-          asset_02,RC/DMRF-D/HR,9.15333,45.12200,7,119,40,,,...,20
-          asset_03,RC/DMRF-D/LR,9.14777,45.17999,5,118,,...,,5
-
-        with a variable number of columns depending on the metadata.
+        Convert the node into a sequence of Exposure records
         """
         if node['category'] == 'buildings':
             for c in node.conversions.costTypes:
@@ -377,7 +361,20 @@ class Exposure(Converter):
     def csv_to_node(self):
         """
         Build a Node object containing a full exposure from a set
-        of tables. The assets are lazily read.
+        of CSV files. For population exposure the CSV has a form like
+
+          id,taxonomy,lon,lat,number
+          asset_01,IT-PV,9.15000,45.16667,7
+          asset_02,IT-CE,9.15333,45.12200,7
+
+        whereas for building has a form like
+
+          id,taxonomy,lon,lat,number,area,cost__value,..., occupancy__day
+          asset_01,RC/DMRF-D/LR,9.15000,45.16667,7,120,40,.5,...,20
+          asset_02,RC/DMRF-D/HR,9.15333,45.12200,7,119,40,,,...,20
+          asset_03,RC/DMRF-D/LR,9.14777,45.17999,5,118,,...,,5
+
+        with a variable number of columns depending on the metadata.
         """
         exp = self.man.read(records.Exposure).next().to_node()
         if exp['category'] == 'buildings':
@@ -402,14 +399,10 @@ class GmfSet(Converter):
     @classmethod
     def node_to_records(cls, node):
         """
-        Yield a table for each gmf node. The table has a form like
-
-          lon,lat,gmv
-          0.0,0.0,0.2
-          1.0,0.0,1.4
-          0.0,1.0,0.6
+        Convert the node into a sequence of Gmf records
         """
         if node.tag == 'gmfSet':
+            yield records.GmfSet('0', '')
             for gmf in node.getnodes('gmf'):
                 imt = gmf['IMT']
                 if imt == 'SA':
@@ -417,7 +410,7 @@ class GmfSet(Converter):
                 yield records.Gmf(1, imt, '')
                 for n in gmf:
                     yield records.GmfData(
-                        1, imt, '', n['lon'], n['lat'], n['gmv'])
+                        '0', imt, '', n['lon'], n['lat'], n['gmv'])
             return
         yield records.GmfCollection(
             node['sourceModelTreePath'],
@@ -435,10 +428,21 @@ class GmfSet(Converter):
                     yield records.GmfData(
                         ses_id, imt, rup, n['lon'], n['lat'], n['gmv'])
 
-    def _csv_to_node(self, gmfset):
+    def _csv_to_node(self):
         """
-        Build a gmfSet node from GmfData.csv
+        Add to a gmfset node all the data from a file GmfData.csv of the form::
+
+         stochasticEventSetId,imtStr,ruptureId,lon,lat,gmv
+         1,SA(0.025),,0.0,0.0,0.2
+         1,SA(0.025),,1.0,0.0,1.4
+         1,SA(0.025),,0.0,1.0,0.6
+         1,PGA,,0.0,0.0,0.2
+         1,PGA,,1.0,0.0,1.4
+         1,PGA,,0.0,1.0,0.6
+
+        The rows are grouped by ses, imt, rupture.
         """
+        gmfset_node = self.man.readtable(records.GmfSet).to_nodedict()
         for (ses, imt, rupture), rows in self.man.groupby(
                 ['stochasticEventSetId', 'imtStr', 'ruptureId'],
                 records.GmfData):
@@ -449,8 +453,8 @@ class GmfSet(Converter):
             if rupture:
                 attr['ruptureId'] = rupture
             nodes = [records.GmfData(*r).to_node() for r in rows]
-            gmfset.append(Node('gmf', attr, nodes=nodes))
-        return gmfset
+            gmfset_node[(ses,)].append(Node('gmf', attr, nodes=nodes))
+        return gmfset_node
 
     def csv_to_node(self):
         """
@@ -460,14 +464,12 @@ class GmfSet(Converter):
         try:
             gmfcoll = self.man.read(records.GmfCollection).next()
         except Exception:  # no data for GmfCollection
-            return self._csv_to_node(Node('gmfSet'))
+            gmfset_node = self._csv_to_node()
+            return gmfset_node.values()[0]  # there is a single node
+        gmfset_node = self._csv_to_node()
         gmfcoll_node = gmfcoll.to_node()
-        for gmfset in self.man.read(records.GmfSet):
-            node = self._csv_to_node(gmfset.to_node())
-            node['stochasticEventSetId'] = gmfset['stochasticEventSetId']
-            node['investigationTime'] = gmfset['investigationTime']
-            if node:  # the node is empty when EOF is reached
-                gmfcoll_node.append(node)
+        for node in gmfset_node.values():
+            gmfcoll_node.append(node)
         return gmfcoll_node
 
 GmfCollection = GmfSet

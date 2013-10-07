@@ -369,7 +369,7 @@ class CSVManager(object):
         Group the records on the underlying CSV according to the given
         keyfield. Assume the records are sorted.
         """
-        keyindexes = [recordtype.name2index[k] for k in keyfields]
+        keyindexes = [recordtype._name2index[k] for k in keyfields]
         return itertools.groupby(
             self.read(recordtype), lambda rec: [rec[i] for i in keyindexes])
 

@@ -27,6 +27,7 @@ def create(convert, fname):
     try:
         out = convert(fname)
     except Exception as e:
+        raise
         print e
         return
     dt = time.time() - t0

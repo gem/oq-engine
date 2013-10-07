@@ -90,13 +90,18 @@ class MetaRecord(abc.ABCMeta):
     it sets their .name and .index attributes. It also processes the
     Unique constraints, by setting their .name and .indexes attributes.
     It defines on the record subclasses the ``__init__`` method, the
-    ``pkey`` property and the attributes ``name2index``, ``fields``,
-    ``ntuple``. Moreover it defines the metaclass method
+    ``pkey`` property and the attributes ``_name2index``, ``fields``,
+    ``_ntuple``. Moreover it defines the metaclass method
     ``__len__`` and the metaclass property ``fieldnames``.
     """
     _counter = itertools.count()
+    _reserved_names = set('fields fieldnames _name2index _ntuple pkey')
 
     def __new__(mcl, name, bases, dic):
+        for nam in dic:
+            if nam in mcl._reserved_names:
+                raise NameError('Cannot instantiate %s because the name %s'
+                                ' is reserved' % (name, nam))
         fields = []
         for base in bases:
             fields.extend(getattr(base, 'fields', []))
@@ -106,11 +111,11 @@ class MetaRecord(abc.ABCMeta):
                 fields.append(v)
         fields.sort(key=operator.attrgetter('ordinal'))
         fieldnames = []
-        name2index = {}
+        _name2index = {}
         keyindexes = []
         for i, f in enumerate(fields):
             fieldnames.append(f.name)
-            name2index[f.name] = f.index = i
+            _name2index[f.name] = f.index = i
             if f.key:
                 keyindexes.append(i)
         keyindexes = keyindexes or [0]
@@ -121,19 +126,19 @@ class MetaRecord(abc.ABCMeta):
                 for i, index in enumerate(v.indexes):
                     if isinstance(index, str):
                         v.name = n
-                        v.indexes[i] = name2index[index]
+                        v.indexes[i] = _name2index[index]
 
         if '__init__' not in dic:
             dic['__init__'] = mcl.mkinit(fieldnames)
-        if 'name2index' not in dic:
-            dic['name2index'] = name2index
+        if '_name2index' not in dic:
+            dic['_name2index'] = _name2index
         if 'fields' not in dic:
             dic['fields'] = fields
-        if 'ntuple' not in dic:
-            dic['ntuple'] = collections.namedtuple(name, fieldnames)
+        if '_ntuple' not in dic:
+            dic['_ntuple'] = collections.namedtuple(name, fieldnames)
         if 'pkey' not in dic:
             dic['pkey'] = Unique(*keyindexes)
-        dic['ordinal'] = mcl._counter.next()
+        dic['_ordinal'] = mcl._counter.next()
         return super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
 
     @staticmethod
@@ -187,11 +192,11 @@ class Record(collections.Sequence):
                 status[field.name] = False
             else:
                 status[field.name] = True
-        return self.ntuple(**status)
+        return self._ntuple(**status)
 
     def cast(self):
         """Cast the record into a namedtuple by casting all of the field"""
-        return self.ntuple._make(
+        return self._ntuple._make(
             field.converter(col) for col, field in zip(self.row, self.fields))
 
     def to_node(self):
@@ -201,7 +206,7 @@ class Record(collections.Sequence):
     def __getitem__(self, i):
         """Return the field 'i', where 'i' can be an integer or a field name"""
         if isinstance(i, str):
-            i = self.name2index[i]
+            i = self._name2index[i]
         return self.row[i]
 
     def __setitem__(self, i, value):
@@ -210,14 +215,14 @@ class Record(collections.Sequence):
         If the value is invalid, raise a ValueError.
         """
         if isinstance(i, str):
-            i = self.name2index[i]
+            i = self._name2index[i]
         self.fields[i].converter(value)
         self.row[i] = value
 
     def __delitem__(self, i):
         """Delete the column 'i', where 'i' can be an integer or a string"""
         if isinstance(i, str):
-            i = self.name2index[i]
+            i = self._name2index[i]
         del self.row[i]
 
     def __eq__(self, other):
