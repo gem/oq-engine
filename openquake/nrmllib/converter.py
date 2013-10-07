@@ -44,7 +44,7 @@ class Converter(object):
     # this is used by the GUI
     @classmethod
     def node_to_tables(cls, node):
-        """Convert a Node object into a dictionary of Table objects"""
+        """Convert a Node object into an ordered list of Table objects"""
         tbl = {}
         subcls = cls.from_tag(node.tag)
         for rec in subcls.node_to_records(node):
@@ -52,7 +52,7 @@ class Converter(object):
             if name not in tbl:
                 tbl[name] = record.Table(rec.__class__, [])
             tbl[name].append(rec)
-        return tbl
+        return sorted(tbl.itervalues(), key=lambda t: t.recordtype.ordinal)
 
     @classmethod
     def node_to_records(cls, node):
@@ -165,7 +165,7 @@ class Fragility(Converter):
                         yield records.FFDataDiscrete(ffs_ordinal, ls, iml, poe)
 
             elif format == 'continuous':
-                yield records.FFSContinuous(
+                yield records.FFSetContinuous(
                     ffs_ordinal,
                     ffs.taxonomy.text,
                     ffs.attrib.get('noDamageLimit', ''),
@@ -186,14 +186,14 @@ class Fragility(Converter):
         """
         Build a full fragility node from Fragility.csv and
         FFSetDiscrete.csv, FFDataDiscrete.csv or
-        FFSContinuous.csv, FFDContinuous.csv.
+        FFSetContinuous.csv, FFDataContinuous.csv.
         """
         frag = self.man.read(records.Fragility).next().to_node()
         if frag['format'] == 'discrete':
             FFSRecord = records.FFSetDiscrete
             FFDRecord = records.FFDataDiscrete
         else:  # 'continuous'
-            FFSRecord = records.FFSContinuous
+            FFSRecord = records.FFSetContinuous
             FFDRecord = records.FFDContinuos
         ffs_node = self.man.readtable(FFSRecord).to_nodedict()
         frag.nodes.extend(ffs_node.values())

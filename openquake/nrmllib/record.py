@@ -94,6 +94,8 @@ class MetaRecord(abc.ABCMeta):
     ``ntuple``. Moreover it defines the metaclass method
     ``__len__`` and the metaclass property ``fieldnames``.
     """
+    _counter = itertools.count()
+
     def __new__(mcl, name, bases, dic):
         fields = []
         for base in bases:
@@ -131,6 +133,7 @@ class MetaRecord(abc.ABCMeta):
             dic['ntuple'] = collections.namedtuple(name, fieldnames)
         if 'pkey' not in dic:
             dic['pkey'] = Unique(*keyindexes)
+        dic['ordinal'] = mcl._counter.next()
         return super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
 
     @staticmethod
@@ -340,4 +343,4 @@ class Table(collections.MutableSequence):
 
     def __repr__(self):
         """String representation of table displaying the record type name"""
-        return '<%s %s>' % (self.__class__.__name, self.recordtype.__name__)
+        return '<%s %s>' % (self.__class__.__name__, self.recordtype.__name__)
