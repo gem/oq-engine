@@ -34,15 +34,17 @@ class Converter(object):
     """
     Base class.
     """
-
     @classmethod
     def from_tag(cls, tag):
+        """Return the Converter subclass specified by the tag"""
         name = tag[0].upper() + tag[1:]
         clsname = name[:-5] if name.endswith('Model') else name
         return globals()[clsname]
 
+    # this is used by the GUI
     @classmethod
     def node_to_tables(cls, node):
+        """Convert a Node object into a dictionary of Table objects"""
         tbl = {}
         subcls = cls.from_tag(node.tag)
         for rec in subcls.node_to_records(node):
@@ -61,7 +63,7 @@ class Converter(object):
         self.man = csvmanager
 
     def __str__(self):
-        return '<%s %s>' % (self.__class__.___name__, self.name)
+        return '<%s %s>' % (self.__class__.___name__, self.man.prefix)
 
     def csv_to_node(self):
         """For .csv files with a given prefix to a single node"""

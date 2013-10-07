@@ -20,35 +20,12 @@
 A module to manage record extracted from CSV files, i.e. with fields
 which are UTF-8 encoded strings.
 """
-import re
+
 import abc
 import inspect
 import itertools
 import operator
 import collections
-
-
-NAME = re.compile(r'[a-zA-Z_]\w*')
-
-
-class Choice(object):
-    def __init__(self, *choices):
-        self.choices = choices
-
-    def __call__(self, value):
-        if not value in self.choices:
-            raise ValueError('%r is not a valid choice in %s' % (
-                             value, self.choices))
-
-
-def namelist(text):
-    names = text.split()
-    if not names:
-        raise ValueError('Got an empty name list')
-    for name in names:
-        if NAME.match(name) is None:
-            raise ValueError('%r is not a valid name' % name)
-    return names
 
 
 class Unique(object):
@@ -72,6 +49,12 @@ class Field(object):
         self.name = name
         self.default = default
         self.ordinal = self._counter.next()
+        self.index = 0  # set by MetaRecord
+
+    def __get__(self, rec, rectype):
+        if rec is None:
+            return self
+        return rec.converter(rec[self.index])
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.name)
@@ -87,9 +70,15 @@ class MetaRecord(abc.ABCMeta):
                 v.name = n
                 fields.append(v)
         fields.sort(key=operator.attrgetter('ordinal'))
-        fieldnames = [f.name for f in fields]
-        name2index = dict((n, i) for i, n in enumerate(fieldnames))
-        keyindices = [name2index[f.name] for f in fields if f.key] or [0]
+        fieldnames = []
+        name2index = {}
+        keyindices = []
+        for i, f in enumerate(fields):
+            fieldnames.append(f.name)
+            name2index[f.name] = f.index = i
+            if f.key:
+                keyindices.append(i)
+        keyindices = keyindices or [0]
 
         # unique constraints
         for n, v in dic.iteritems():
@@ -134,6 +123,9 @@ class MetaRecord(abc.ABCMeta):
     @property
     def fieldnames(cls):
         return [f.name for f in cls.fields]
+
+    def __len__(cls):
+        return len(cls.fields)
 
 
 class Record(collections.Sequence):
@@ -226,6 +218,7 @@ class Table(collections.MutableSequence):
         self.records[i] = record
 
     def __delitem__(self, i):
+        # i must be an integer, not a range
         for descr in self.unique:
             key = descr.__get__(self.records[i], self.recordtype)
             del getattr(self, '%s_dict' % descr.name)[key]
