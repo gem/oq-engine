@@ -178,26 +178,30 @@ class Record(collections.Sequence):
     def init(self):
         """To override for post-initialization operations"""
 
-    def is_valid(self):
-        """True if all fields are valid"""
-        return all(self.check_valid())
-
-    def check_valid(self):
-        """Returns a namedtuple of booleans, one for each fields"""
-        status = {}
-        for col, field in zip(self.row, self.fields):
-            try:
-                field.converter(col)
-            except ValueError:
-                status[field.name] = False
-            else:
-                status[field.name] = True
-        return self._ntuple(**status)
+    def is_valid(self, i=None):
+        """
+        True if the fields `i` is valid; if `i` is None, check all the fields
+        """
+        if i is None:
+            return all(self.is_valid(i) for i in range(len(self)))
+        if isinstance(i, str):
+            i = self._name2index[i]
+        try:
+            self.fields[i].converter(self[i])
+        except ValueError:
+            return False
+        return True
 
     def cast(self):
         """Cast the record into a namedtuple by casting all of the field"""
-        return self._ntuple._make(
-            field.converter(col) for col, field in zip(self.row, self.fields))
+        cols = []
+        for col, field in zip(self.row, self.fields):
+            try:
+                cols.append(field.converter(col))
+            except ValueError as e:
+                raise ValueError('Invalid %s.%s: %s' %
+                                 (self.__class__.__name__, field.name, e))
+        return self._ntuple._make(cols)
 
     def to_node(self):
         """Implement this if you want to convert records into Node objects"""
@@ -329,6 +333,19 @@ class Table(collections.MutableSequence):
     def is_valid(self):
         """True if all the records in the table are valid"""
         return all(rec.is_valid() for rec in self)
+
+    def cast(self):
+        """
+        Cast all the rows in the table to namedtuples;
+        raise a ValueError at the first invalid record
+        """
+        rows = []
+        for i, rec in enumerate(self):
+            try:
+                rows.append(rec.cast())
+            except ValueError as e:
+                raise ValueError('At row %d: %s' % (i, e))
+        return rows
 
     def __str__(self):
         """CSV representation of the whole table"""

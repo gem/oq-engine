@@ -53,3 +53,11 @@ class TableTestCase(unittest.TestCase):
         with self.assertRaises(MultipleConverterError):
             man._getconverter()
         # the case NotInArchive is convered in convert_test.py
+
+    def test_is_valid(self):
+        tbl = create_table(records.Location, '1,190.0,2.0')
+        with self.assertRaises(ValueError) as ctxt:
+            tbl.cast()
+        self.assertEqual(
+            str(ctxt.exception),
+            'At row 0: Invalid Location.lon: longitude 190.0 > 180')
