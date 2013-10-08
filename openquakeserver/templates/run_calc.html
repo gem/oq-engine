@@ -1,7 +1,24 @@
 <html>
 <head>
     <title>Run calculation</title>
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="{{ STATIC_URL }}jquery-1.10.2.js"></script>
+</head>
+<body>
+    <div id="calc-form-wrapper">
+        <button id="add-input-model">Add input model</button>
+        <form id="calc-form" enctype="multipart/form-data"
+              action="{{ post_url }}" method="post">
+
+        {{ form.as_p }}
+
+        <!-- Dynamically add more fields here -->
+        <div id="additional-fields"></div>
+
+        <input id="calc-form-submit" type="submit" value="Submit" />
+        </form>
+
+    </div>
+
     <script>
     $('#add-input-model').click(
         function() {
@@ -19,21 +36,5 @@
         }
     );
     </script>
-</head>
-<body>
-    <div id="calc-form-wrapper">
-        <button id="add-input-model">Add input model</button>
-        <form id="calc-form" enctype="multipart/form-data"
-              action="{{ post_url }}" method="post">
-
-        {{ form.as_p }}
-
-        <!-- Dynamically add more fields here -->
-        <div id="additional-fields"></div>
-
-        <input type="submit" value="Submit" />
-        </form>
-
-    </div>
 </body>
 </html>
