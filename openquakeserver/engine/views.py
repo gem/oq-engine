@@ -44,6 +44,24 @@ DEFAULT_CONTENT_TYPE = 'text/plain'
 
 LOGGER = logging.getLogger('openquakeserver')
 
+ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                  'Access-Control-Max-Age': 1000,
+                  'Access-Control-Allow-Headers': '*'}
+
+# Credit for this decorator to https://gist.github.com/aschem/1308865.
+def cross_domain_ajax(func):
+    def wrap(request, *args, **kwargs):
+        # Firefox sends 'OPTIONS' request for cross-domain javascript call.
+        if not request.method == "OPTIONS":
+            response = func(request, *args, **kwargs)
+        else:
+            response = HttpResponse()
+        for k, v in ACCESS_HEADERS.iteritems():
+            response[k] = v
+        return response
+    return wrap
+
 
 def _get_base_url(request):
     """
@@ -108,8 +126,13 @@ def calc_hazard(request):
                         content_type=JSON)
 
 
-# csrf_excempt so we post to the view without necessarily having a form
 @csrf_exempt
+# NOTE(LB): Needed in order to use this service in the oq-platform.
+# We can probably remove this later if we can properly fix
+# authentication.
+# See https://bugs.launchpad.net/oq-platform/+bug/1234350
+#@allow_origin_for_methods('*', ['GET', 'POST', 'OPTIONS'])
+@cross_domain_ajax
 @require_http_methods(['GET', 'POST'])
 def run_hazard_calc(request):
     """
@@ -350,6 +373,11 @@ def calc_risk(request):
 
 
 @csrf_exempt
+# NOTE(LB): Needed in order to use this service in the oq-platform.
+# We can probably remove this later if we can properly fix
+# authentication.
+# See https://bugs.launchpad.net/oq-platform/+bug/1234350
+@cross_domain_ajax
 @require_http_methods(['GET', 'POST'])
 def run_risk_calc(request):
     """
@@ -366,10 +394,6 @@ def run_risk_calc(request):
             'run_calc.html',
             {'post_url': request.build_absolute_uri(), 'form': form}
         )
-        # NOTE(LB): Needed in order to use this service in the oq-platform.
-        # We can probably remove this later if we can properly fix
-        # authentication.
-        # See https://bugs.launchpad.net/oq-platform/+bug/1234350
         resp['Access-Control-Allow-Origin'] = "*"
         return resp
     else:
