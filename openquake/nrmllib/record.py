@@ -270,8 +270,6 @@ class Table(collections.MutableSequence):
     Primary key and unique constraints are checked at insertion time,
     by looking at the dictionaries <constraint-name>_dict.
     """
-    __metaclass__ = abc.ABCMeta
-
     def __init__(self, recordtype, records):
         self.recordtype = recordtype
         self.unique = []
@@ -284,12 +282,15 @@ class Table(collections.MutableSequence):
             self.append(rec)
 
     def __getitem__(self, i):
+        """Return the i-th record"""
         return self.records[i]
 
     def __setitem__(self, i, record):
+        """Set the i-th record"""
         self.records[i] = record
 
     def __delitem__(self, i):
+        """Delete the i-th record"""
         # i must be an integer, not a range
         for descr in self.unique:
             key = descr.__get__(self.records[i], self.recordtype)
@@ -297,6 +298,7 @@ class Table(collections.MutableSequence):
         del self.records[i]
 
     def __len__(self):
+        """The number of records stored in the table"""
         return len(self.records)
 
     def insert(self, position, rec):
