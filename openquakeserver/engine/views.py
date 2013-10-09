@@ -257,6 +257,7 @@ def _get_haz_calcs():
 
 
 @require_http_methods(['GET'])
+@cross_domain_ajax
 def calc_hazard_info(request, calc_id):
     """
     Get a JSON blob containing all of parameters for the given calculation
@@ -341,6 +342,7 @@ def get_hazard_result(request, result_id):
 
 
 @require_http_methods(['GET'])
+@cross_domain_ajax
 def calc_risk(request):
     """
     Get a list of risk calculations and report their id, status, description,
