@@ -108,6 +108,12 @@ class Archive(object):
         for f in self.opened:
             f.close()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        self.close()
+
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.extract_filenames())
 
@@ -124,15 +130,16 @@ class TempFile(FileWrapper):
     """
     def __init__(self, arczip, arcname, mode):
         self.arczip = arczip
-        self.arcname = arcname
+        self.name = arcname
         self.fileobj = tempfile.NamedTemporaryFile(mode)
-        self.name = self.fileobj.name
+        self.tempname = self.fileobj.name
         self.closed = False
 
     def close(self):
         if self.closed:  # already closed, do nothing
             return
-        self.arczip.write(self.name, self.arcname)  # save in the archive
+        self.fileobj.seek(0)  # this is essential
+        self.arczip.write(self.tempname, self.name)  # save in the archive
         self.fileobj.close()  # remove the temporary file
         self.closed = True
 
@@ -155,6 +162,9 @@ class ZipArchive(Archive):
             return self.zip.open(name, mode)
 
     def extract_filenames(self, prefix=''):
+        """
+        Return the file objects in the archive with the given prefix
+        """
         return set(i.filename for i in self.zip.infolist()
                    if i.filename.startswith(prefix))
 
@@ -176,6 +186,9 @@ class DirArchive(Archive):
         return open(os.path.join(self.name, name), mode)
 
     def extract_filenames(self, prefix=''):
+        """
+        Return the file objects in the archive with the given prefix
+        """
         return [f for f in os.listdir(self.name) if f.startswith(prefix)]
 
 
@@ -202,6 +215,9 @@ class MemArchive(Archive):
             raise NotInArchive(name)
 
     def extract_filenames(self, prefix=''):
+        """
+        Return the file objects in the archive with the given prefix
+        """
         return [f for f in self.dic if f.startswith(prefix)]
 
 
@@ -217,6 +233,10 @@ def mkarchive(pathname, mode):
 
 # used in the tests
 def create_table(recordtype, csvstr):
+    """
+    Given a record class and a csv UTF8-encoded string, returns
+    a Table object.
+    """
     name = '__' + recordtype.__name__ + '.csv'
     archive = MemArchive([(name, csvstr)])
     man = CSVManager(archive, has_header=False)
@@ -327,9 +347,10 @@ class CSVManager(object):
                 if out_archive is None:
                     out = man.archive.open(outname, 'w+')
                 else:
-                    out = out_archive.open(outname, 'w')
+                    out = out_archive.open(outname, 'w+')
                 with out:
-                    node_to_nrml(conv.csv_to_node(), out)
+                    node = conv.csv_to_node()
+                    node_to_nrml(node, out)
                 fnames.append(out.name)
         return fnames
 
