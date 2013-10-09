@@ -19,7 +19,7 @@
 import os
 import sys
 import time
-from openquake.nrmllib.csvmanager import CSVManager, DirArchive, ZipArchive
+from openquake.nrmllib.csvmanager import CSVManager, mkarchive
 
 
 def create(convert, fname):
@@ -34,37 +34,18 @@ def create(convert, fname):
     print 'Created %s in %s seconds' % (out, dt)
 
 
-def main(inp_out):
-    try:
-        inp, out = inp_out
-    except ValueError:
-        sys.exit('Please provide both input and output')
-
-    if out.endswith('.zip'):
-        out_archive = ZipArchive(out, 'w')
-    elif out != 'inplace':
-        out_archive = DirArchive(out, 'w')
-
-    fname = os.path.basename(inp)
-    name, inp_ext = os.path.splitext(fname)
-    outname, out_ext = os.path.splitext(out)
-
-    if inp_ext == '.xml':
-        man = CSVManager(out_archive, name)
-        create(man.convert_from_nrml, inp)
-    elif inp_ext == '.zip' or os.path.isdir(inp):
-        if inp.endswith('.zip'):
-            inp_archive = ZipArchive(inp, 'a')
-        elif os.path.isdir(inp):
-            inp_archive = DirArchive(inp)
-        if out == 'inplace':
-            create(lambda n: CSVManager(inp_archive, n).convert_to_nrml(),
-                   name)
-        else:
-            raise SystemExit('Invalid output: %s; '
-                             'expected "inplace"' % out)
-    else:
-        raise SystemExit('Invalid input: %s' % inp)
+def main(input, output=None):
+    if input.endswith('.xml'):
+        if not output:
+            sys.exit('Please specify an output archive')
+        name, _ = os.path.splitext(os.path.basename(input))
+        create(CSVManager(mkarchive(output, 'w'), name).
+               convert_from_nrml, input)
+        return
+    inp_archive = mkarchive(input, 'r+')
+    out_archive = mkarchive(output, 'a') if output else inp_archive
+    create(lambda n: CSVManager(inp_archive, n).
+           convert_to_nrml(out_archive), os.path.basename(input))
 
 
 if __name__ == '__main__':
@@ -73,4 +54,4 @@ if __name__ == '__main__':
     # collected more features will be added and a proper argparse
     # interface will be designed.
     # For the moment the scripts only accepts file names in input.
-    main(sys.argv[1:])
+    main(*sys.argv[1:])

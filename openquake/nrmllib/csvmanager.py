@@ -82,7 +82,7 @@ class NotInArchive(Exception):
     """Raised when trying to open a non-existing file in the archive"""
 
 
-class ArchiveABC(object):
+class Archive(object):
     """
     Abstract Base Class for Archive classes. Subclasses must override
     the methods ``_open`` and ``extract_filenames``.
@@ -137,7 +137,7 @@ class TempFile(FileWrapper):
         self.closed = True
 
 
-class ZipArchive(ArchiveABC):
+class ZipArchive(Archive):
     """
     Thin wrapper over a ZipFile object.
     """
@@ -159,7 +159,7 @@ class ZipArchive(ArchiveABC):
                    if i.filename.startswith(prefix))
 
 
-class DirArchive(ArchiveABC):
+class DirArchive(Archive):
     """
     Provides an archive interface over a filesystem directory
     """
@@ -168,6 +168,8 @@ class DirArchive(ArchiveABC):
         self.mode = mode
         if mode in ('w', 'w+', 'r+') and not os.path.exists(dirname):
             os.mkdir(dirname)
+        else:
+            assert os.path.exists(dirname), dirname
         self.opened = set()
 
     def _open(self, name, mode):
@@ -177,7 +179,7 @@ class DirArchive(ArchiveABC):
         return [f for f in os.listdir(self.name) if f.startswith(prefix)]
 
 
-class MemArchive(ArchiveABC):
+class MemArchive(Archive):
     """
     Provides an archive interface over FileObjects in memory
     """
@@ -201,6 +203,16 @@ class MemArchive(ArchiveABC):
 
     def extract_filenames(self, prefix=''):
         return [f for f in self.dic if f.startswith(prefix)]
+
+
+def mkarchive(pathname, mode):
+    """
+    Return a ZipArchive or a DirArchive depending on the pathname extension
+    """
+    if pathname.endswith('.zip'):
+        return ZipArchive(pathname, mode)
+    else:
+        return DirArchive(pathname, mode)
 
 
 # used in the tests
@@ -303,7 +315,7 @@ class CSVManager(object):
         """
         return self._getconverter().csv_to_node()
 
-    def convert_to_nrml(self, outdir=None):
+    def convert_to_nrml(self, out_archive=None):
         """
         From CSV files with the given prefix to .xml files; if the output
         directory is not specified, use the input archive to store the output.
@@ -312,10 +324,10 @@ class CSVManager(object):
         for conv in self._getconverters():
             with conv.man as man:
                 outname = man.prefix + '.xml'
-                if outdir is None:
+                if out_archive is None:
                     out = man.archive.open(outname, 'w+')
                 else:
-                    out = open(os.path.join(outdir, outname), 'w+')
+                    out = out_archive.open(outname, 'w')
                 with out:
                     node_to_nrml(conv.csv_to_node(), out)
                 fnames.append(out.name)

@@ -3,7 +3,8 @@ import os
 import unittest
 import tempfile
 from openquake.nrmllib import InvalidFile
-from openquake.nrmllib.csvmanager import MemArchive, CSVManager, NotInArchive
+from openquake.nrmllib.csvmanager import (
+    MemArchive, CSVManager, NotInArchive, mkarchive)
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -45,7 +46,7 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
         manager = CSVManager(archive, name)
         manager.convert_from_nrml(fname)
         outdir = tempfile.gettempdir()
-        [outname] = manager.convert_to_nrml(outdir)
+        [outname] = manager.convert_to_nrml(mkarchive(outdir, 'w'))
         if open(fname).read() != open(outname).read():
             raise ValueError('Files %s and %s are different' %
                              (fname, outname))
