@@ -44,6 +44,7 @@ class TableTestCase(unittest.TestCase):
             with archive.open('b', 'w') as f:
                 f.write('3,4')
             self.assertEqual(archive.extract_filenames(), set('ab'))
+            self.assertEqual(archive.open('a').read(), '1,2')
         finally:
             os.remove(archive.name)
 
