@@ -43,18 +43,20 @@ def print_invalid(man, limit):
         sys.exit('Found %d invalid records' % len(invalid))
 
 
-def main(input, output=None):
+def main(input, output=None, limit=None):
+    if limit is not None:
+        limit = int(limit)  # max number of errors
     if input.endswith('.xml'):
         if not output:
             sys.exit('Please specify an output archive')
         name, _ = os.path.splitext(os.path.basename(input))
         csv = create(CSVManager(mkarchive(output, 'w'), name).
                      convert_from_nrml, input)
-        print_invalid(csv, limit=None)
+        print_invalid(csv, limit)
         return
     inp_archive = mkarchive(input, 'r+')
     csv = CSVManager(inp_archive, os.path.basename(input))
-    print_invalid(csv, limit=None)
+    print_invalid(csv, limit)
     out_archive = mkarchive(output, 'a') if output else inp_archive
     create(lambda n: csv.convert_to_nrml(out_archive), os.path.basename(input))
 

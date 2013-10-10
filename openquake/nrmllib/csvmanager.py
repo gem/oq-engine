@@ -426,7 +426,7 @@ class CSVManager(object):
         it = self._find_invalid()
         if limit is None:
             return list(it)  # return all
-        return [it.next() for _ in range(limit)]
+        return [e for i, e in zip(range(limit), it)]
 
     def _find_invalid(self):
         for conv in self._getconverters():
