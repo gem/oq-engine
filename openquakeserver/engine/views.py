@@ -146,17 +146,11 @@ def run_hazard_calc(request):
     """
     if request.method == 'GET':
         form = forms.HazardForm()
-        resp =  render(
+        return render(
             request,
             'run_calc.html',
             {'post_url': request.build_absolute_uri(), 'form': form}
         )
-        # NOTE(LB): Needed in order to use this service in the oq-platform.
-        # We can probably remove this later if we can properly fix
-        # authentication.
-        # See https://bugs.launchpad.net/oq-platform/+bug/1234350
-        resp['Access-Control-Allow-Origin'] = "*"
-        return resp
     else:
         # POST: run a new calculation
         temp_dir = tempfile.mkdtemp()
@@ -389,13 +383,11 @@ def run_risk_calc(request):
     """
     if request.method == 'GET':
         form = forms.RiskForm()
-        resp = render(
+        return render(
             request,
             'run_calc.html',
             {'post_url': request.build_absolute_uri(), 'form': form}
         )
-        resp['Access-Control-Allow-Origin'] = "*"
-        return resp
     else:
         # POST: run a new calculation
         temp_dir = tempfile.mkdtemp()
