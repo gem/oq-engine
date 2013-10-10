@@ -131,7 +131,6 @@ def calc_hazard(request):
 # We can probably remove this later if we can properly fix
 # authentication.
 # See https://bugs.launchpad.net/oq-platform/+bug/1234350
-#@allow_origin_for_methods('*', ['GET', 'POST', 'OPTIONS'])
 @cross_domain_ajax
 @require_http_methods(['GET', 'POST'])
 def run_hazard_calc(request):
