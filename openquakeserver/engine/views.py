@@ -101,6 +101,7 @@ def _calc_to_response_data(calc):
     return response_data
 
 
+@cross_domain_ajax
 @require_http_methods(['GET'])
 def calc_hazard(request):
     """
@@ -288,6 +289,7 @@ def _get_haz_calc_info(calc_id):
     return response_data
 
 
+@cross_domain_ajax
 @require_http_methods(['GET'])
 def calc_hazard_results(request, calc_id):
     """
@@ -330,6 +332,7 @@ def calc_hazard_results(request, calc_id):
     return HttpResponse(content=json.dumps(response_data))
 
 
+@cross_domain_ajax
 @require_http_methods(['GET'])
 def get_hazard_result(request, result_id):
     """
@@ -439,6 +442,7 @@ def _get_risk_calcs():
                      'risk_calculation__description')
 
 
+@cross_domain_ajax
 @require_http_methods(['GET'])
 def calc_risk_info(request, calc_id):
     """
@@ -471,6 +475,7 @@ def _get_risk_calc_info(calc_id):
 
 
 @require_http_methods(['GET'])
+@cross_domain_ajax
 def calc_risk_results(request, calc_id):
     """
     Get a summarized list of risk calculation results for a given
@@ -512,6 +517,7 @@ def calc_risk_results(request, calc_id):
     return HttpResponse(content=json.dumps(response_data))
 
 
+@cross_domain_ajax
 @require_http_methods(['GET'])
 def get_risk_result(request, result_id):
     """
