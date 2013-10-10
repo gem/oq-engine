@@ -59,6 +59,16 @@ class Converter(object):
         """Convert the node into a sequence of records"""
         raise NotImplementedError
 
+    @classmethod
+    def recordtypes(cls):
+        """Record classes associated to the given converter class"""
+        rectypes = []
+        for val in vars(records).itervalues():
+            if (isinstance(val, record.MetaRecord) and
+                    val.convertername == cls.__name__):
+                rectypes.append(val)
+        return rectypes
+
     def __init__(self, csvmanager):
         self.man = csvmanager
 

@@ -27,7 +27,7 @@ from abc import ABCMeta, abstractmethod
 
 from openquake.nrmllib.record import Table
 from openquake.nrmllib.node import node_to_nrml, node_from_nrml
-from openquake.nrmllib import InvalidFile, records, converter
+from openquake.nrmllib import InvalidFile, record, records, converter
 
 
 class FileWrapper(object):
@@ -366,7 +366,8 @@ class CSVManager(object):
     def convert_from_node(self, node, prefix=None):
         """
         Populate the underlying archive with CSV files extracted from the
-        given Node object.
+        given Node object. If the prefix is not None, instantiate a new
+        manager object associated to the same archive and return it.
         """
         if prefix is None:
             man = self
@@ -376,7 +377,7 @@ class CSVManager(object):
         with man:
             for rec in conv.node_to_records(node):
                 man.write(rec)  # automatically opens the needed files
-        return [f.name for f in man.archive.opened]
+        return man
 
     def read(self, recordtype):
         """
@@ -412,6 +413,29 @@ class CSVManager(object):
         """
         return Table(recordtype, list(self.read(recordtype)))
 
+    def find_invalid(self, limit=None):
+        """
+        Yield the InvalidRecord exceptions found in the CSV files.
+        If limit=1, the search stops at the first exception found.
+
+        :param limit:
+
+           the maximum number of exceptions to retrieve;
+           if None, all the exceptions are retrieved.
+        """
+        it = self._find_invalid()
+        if limit is None:
+            return list(it)  # return all
+        return [it.next() for _ in range(limit)]
+
+    def _find_invalid(self):
+        for conv in self._getconverters():
+            for recordtype in conv.recordtypes():
+                for invalid in record.find_invalid(conv.man.read(recordtype)):
+                    invalid.fname = '%s__%s.csv' % (
+                        conv.man.prefix, recordtype.__name__)
+                    yield invalid
+
     def write(self, record):
         """
         Write a record on the corresponding CSV file
@@ -437,3 +461,9 @@ class CSVManager(object):
     def __exit__(self, etype, exc, tb):
         """Close the underlying archive"""
         self.archive.close()
+
+    def __str__(self):
+        """Display the filenames managed by the CSVManager"""
+        return '<%s %s>' % (
+            self.__class__.__name__,
+            self.archive.extract_filenames(self.prefix))

@@ -41,6 +41,30 @@ import operator
 import collections
 
 
+class InvalidRecord(Exception):
+    """
+    Exception raised when casting a record fails. It provides the attributes
+    .record (the failing record) and .errorlist which is a list of pair
+    (fieldname, errormessage), where fieldname is the name of the column
+    that could not be casted and errormessage is the relative error message.
+    """
+
+    def __init__(self, record, errorlist):
+        self.fname = None
+        self.rowno = 0
+        self.record = record
+        self.errorlist = errorlist
+
+    def __str__(self):
+        where = self.fname or self.record.__class__.__name__
+        msg = []
+        for field, errmsg in self.errorlist:
+            colno = self.record._name2index[field]
+            msg.append('%s[%s]: %d,%d: %s' %
+                       (where, field, self.rowno, colno, errmsg))
+        return '\n'.join(msg)
+
+
 class Unique(object):
     """
     Descriptor used to describe unique constraints on a record type.
@@ -174,6 +198,7 @@ class Record(collections.Sequence):
     method, a .check_valid() method and a .is_valid() method.
     """
     __metaclass__ = MetaRecord
+    convertername = 'Converter'
 
     def init(self):
         """To override for post-initialization operations"""
@@ -193,15 +218,18 @@ class Record(collections.Sequence):
         return True
 
     def cast(self):
-        """Cast the record into a namedtuple by casting all of the field"""
+        """Return a casted (namedtuple, InvalidRecord) pair"""
         cols = []
+        errs = []
         for col, field in zip(self.row, self.fields):
             try:
                 cols.append(field.converter(col))
             except ValueError as e:
-                raise ValueError('Invalid %s.%s: %s' %
-                                 (self.__class__.__name__, field.name, e))
-        return self._ntuple._make(cols)
+                errs.append((field.name, str(e)))
+        if errs:
+            return None, InvalidRecord(self, errs)
+        else:
+            return self._ntuple._make(cols), None
 
     def to_node(self):
         """Implement this if you want to convert records into Node objects"""
@@ -262,6 +290,20 @@ def nodedict(records):
     """
     return collections.OrderedDict(
         (rec.pkey, rec.to_node()) for rec in records)
+
+
+def find_invalid(recorditer):
+    """
+    Yield the InvalidRecord exceptions found in the record iterator.
+    To find the first record only call
+
+      find_invalid(records).next()
+    """
+    for rowno, rec in enumerate(recorditer):
+        row, exc = rec.cast()
+        if exc:
+            exc.rowno = rowno
+            yield exc
 
 
 class Table(collections.MutableSequence):
@@ -335,19 +377,6 @@ class Table(collections.MutableSequence):
     def is_valid(self):
         """True if all the records in the table are valid"""
         return all(rec.is_valid() for rec in self)
-
-    def cast(self):
-        """
-        Cast all the rows in the table to namedtuples;
-        raise a ValueError at the first invalid record
-        """
-        rows = []
-        for i, rec in enumerate(self):
-            try:
-                rows.append(rec.cast())
-            except ValueError as e:
-                raise ValueError('At row %d: %s' % (i, e))
-        return rows
 
     def __str__(self):
         """CSV representation of the whole table"""

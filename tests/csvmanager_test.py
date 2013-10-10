@@ -7,6 +7,10 @@ from openquake.nrmllib.csvmanager import (
     MultipleConverterError)
 
 
+def cast(rec):
+    return rec.cast()[0]
+
+
 class TableTestCase(unittest.TestCase):
     def test_getitem(self):
         tbl = create_table(records.Location, '''\
@@ -16,9 +20,9 @@ class TableTestCase(unittest.TestCase):
 4,1.0,2.3
 ''')
         # test that a Table object support the bracket notation
-        self.assertEqual(tbl[0].cast(), (1, 1.0, 2.0))
-        self.assertEqual(tbl[1].cast(), (2, 1.0, 2.1))
-        self.assertEqual([r.cast() for r in tbl[2:4]],
+        self.assertEqual(cast(tbl[0]), (1, 1.0, 2.0))
+        self.assertEqual(cast(tbl[1]), (2, 1.0, 2.1))
+        self.assertEqual(map(cast, tbl[2:4]),
                          [(3, 1.0,  2.2), (4, 1.0, 2.3)])
 
     def test_unique_constraint(self):
@@ -48,7 +52,7 @@ class TableTestCase(unittest.TestCase):
             ('test__DiscreteVulnerabilitySet.csv', ''),
             ('test__DiscreteVulnerability.csv', ''),
             ('tes__DiscreteVulnerabilityData.csv', ''),
-            ])
+        ])
         man = CSVManager(archive)
         with self.assertRaises(MultipleConverterError):
             man._getconverter()
@@ -56,8 +60,7 @@ class TableTestCase(unittest.TestCase):
 
     def test_is_valid(self):
         tbl = create_table(records.Location, '1,190.0,2.0')
-        with self.assertRaises(ValueError) as ctxt:
-            tbl.cast()
+        row, exc = tbl[0].cast()
         self.assertEqual(
-            str(ctxt.exception),
-            'At row 0: Invalid Location.lon: longitude 190.0 > 180')
+            str(exc),
+            'Location[lon]: 0,1: longitude 190.0 > 180')
