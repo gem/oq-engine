@@ -31,6 +31,13 @@ from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
+def run_multi(func, arg_chunks):
+    results = []
+    for args in arg_chunks:
+        results.append(func(*args))
+    return results
+
+
 def _map_reduce(task_func, task_args, agg, acc):
     """
     Given a callable and an iterable of positional arguments, apply the
