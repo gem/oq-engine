@@ -134,7 +134,7 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
                         src_filter, rup_filter))
             # set the tag for each copy
             for i, r in enumerate(rupts):
-                r.tag = 'rlz=%02d|ses=%04d|src=%s|i=%d' % (
+                r.tag = 'rlz=%02d|ses=%04d|src=%s|i=%03d' % (
                     lt_rlz.ordinal, ses.ordinal, src.source_id, i)
             ruptures.extend(rupts)
         if not ruptures:
@@ -368,7 +368,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                            ses_collection__lt_realization=lt_rlz,
                            ordinal__isnull=False).order_by('ordinal'))
 
-            for src_ids in block_splitter(sources, self.preferred_block_size):
+            for src_ids in block_splitter(sources, 1):
                 for ses in all_ses:
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
                     task_args = (self.job.id, src_ids, ses, task_seed)
