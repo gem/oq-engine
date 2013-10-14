@@ -107,19 +107,22 @@ def oqtask(task_func):
     :exc:`JobCompletedError`. (This also means that the task doesn't get
     executed, so we don't do useless computation.)
     """
-
     @wraps(task_func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args):
         """
         Initialize logs, make sure the job is still running, and run the task
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # job_id is always assumed to be the first argument passed to
-        # the task, or a keyword argument
+        # TEMPORARY hack: args can be a tuple of tuples of just
+        # a tuple with the job_id as first argument
+        if isinstance(args[0], long):  # the job_id, convert into a tuple
+            chunks = (args,)
+        else:
+            chunks = args
+        job_id = chunks[0][0]
+        # job_id is always assumed to be the first argument passed to the task
         # this is the only required argument
-        job_id = kwargs.get('job_id') or args[0]
-
         with EnginePerformanceMonitor(
                 'totals per task', job_id, tsk, flush=True):
             job = models.OqJob.objects.get(id=job_id)
@@ -151,14 +154,15 @@ def oqtask(task_func):
                         'The status of job %d is %s, should be executing or '
                         'post_processing' % (job_id, job.status))
                 # else continue with task execution
-                res = task_func(*args, **kwargs)
+                for args in chunks:
+                    task_func(*args)
             # TODO: should we do something different with JobCompletedError?
             except Exception, err:
                 logs.LOG.critical('Error occurred in task: %s', err)
                 logs.LOG.exception(err)
                 raise
             else:
-                return res
+                return
             finally:
                 CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
