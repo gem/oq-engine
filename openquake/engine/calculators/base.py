@@ -23,6 +23,7 @@ import kombu
 import openquake.engine
 
 from openquake.engine import logs
+from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import config, tasks, general
 
@@ -44,7 +45,7 @@ class Calculator(object):
 
     def __init__(self, job):
         self.job = job
-
+        self.num_tasks = None
         self.progress = dict(total=0, computed=0, in_queue=0)
 
     def monitor(self, operation):
@@ -78,6 +79,34 @@ class Calculator(object):
         """
         raise NotImplementedError()
 
+    def calc_num_tasks(self):
+        """
+        Number of tasks to spawn.
+        Subclasses must implement this.
+        """
+
+    def record_init_stats(self, num_tasks=None):
+        """
+        Record some basic job stats, including the number of sites,
+        realizations (end branches), and total number of tasks for the job.
+
+        This should be run between the `pre-execute` and `execute` phases, once
+        the job has been fully initialized. It is invoked again when the
+        `parallelize` method is called, to update the number of tasks
+        spawned when it is known.
+        """
+        # Record num sites, num realizations, and num tasks.
+        num_sites = len(self.hc.points_to_compute())
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc.id)
+        num_rlzs = realizations.count()
+
+        [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
+        job_stats.num_sites = num_sites
+        job_stats.num_tasks = num_tasks or self.calc_num_tasks()
+        job_stats.num_realizations = num_rlzs
+        job_stats.save()
+
     def parallelize(self, task_func, task_arg_gen):
         """
         Given a callable and a task arg generator, apply the callable to
@@ -94,22 +123,22 @@ class Calculator(object):
         tasks are run sequentially in the current process.
         """
         self.taskname = task_func.__name__
-        logs.LOG.debug('building arglist')
-        arglist = list(task_arg_gen)
         maxtasks = self.concurrent_tasks() * 10
+        arglist = list(task_arg_gen)
         chunksize = int(math.ceil(float(len(arglist)) / maxtasks))
         chunks = list(general.block_splitter(arglist, chunksize))
-        self.ntasks = len(chunks)
+        self.num_tasks = len(chunks)
         self.tasksdone = 0
         self.percent = 0.0
-        logs.LOG.progress('spawning %d tasks of kind %s',
-                          self.ntasks, self.taskname)
+        logs.LOG.progress(
+            'spawning %d tasks of kind %s', self.num_tasks, self.taskname)
+        self.record_init_stats(self.num_tasks)  # update job_stats
         tasks.parallelize(task_func, chunks, self.log_percent)
 
     def log_percent(self, dummy):
         """Log the percentage of tasks completed"""
         self.tasksdone += 1
-        percent = math.ceil(float(self.tasksdone) / self.ntasks * 100)
+        percent = math.ceil(float(self.tasksdone) / self.num_tasks * 100)
         if percent > self.percent:
             logs.LOG.progress('> %s %3d%% complete', self.taskname, percent)
             self.percent = percent
