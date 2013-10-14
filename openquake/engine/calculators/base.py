@@ -93,18 +93,26 @@ class Calculator(object):
         NB: if the environment variable OQ_NO_DISTRIBUTE is set the
         tasks are run sequentially in the current process.
         """
-        taskname = task_func.__name__
+        self.taskname = task_func.__name__
         logs.LOG.debug('building arglist')
         arglist = list(task_arg_gen)
-        total = len(arglist)
-        logs.LOG.progress('spawning %d tasks of kind %s', total, taskname)
-        ntasks = 0
-        for argblock in general.block_splitter(
-                arglist, self.concurrent_tasks()):
-            tasks.parallelize(task_func, argblock, lambda _: None)
-            ntasks += len(argblock)
-            percent = math.ceil(float(ntasks) / total * 100)
-            logs.LOG.progress('> %s %3d%% complete', taskname, percent)
+        maxtasks = self.concurrent_tasks() * 10
+        chunksize = int(math.ceil(float(len(arglist)) / maxtasks))
+        chunks = list(general.block_splitter(arglist, chunksize))
+        self.ntasks = len(chunks)
+        self.tasksdone = 0
+        self.percent = 0.0
+        logs.LOG.progress('spawning %d tasks of kind %s',
+                          self.ntasks, self.taskname)
+        tasks.parallelize(task_func, chunks, self.log_percent)
+
+    def log_percent(self, dummy):
+        """Log the percentage of tasks completed"""
+        self.tasksdone += 1
+        percent = math.ceil(float(self.tasksdone) / self.ntasks * 100)
+        if percent > self.percent:
+            logs.LOG.progress('> %s %3d%% complete', self.taskname, percent)
+            self.percent = percent
 
     def get_task_complete_callback(self, task_arg_gen, block_size,
                                    concurrent_tasks):
