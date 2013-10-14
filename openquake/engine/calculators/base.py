@@ -23,6 +23,7 @@ import kombu
 import openquake.engine
 
 from openquake.engine import logs
+from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import config, tasks, general
 
@@ -44,7 +45,7 @@ class Calculator(object):
 
     def __init__(self, job):
         self.job = job
-
+        self.num_tasks = None
         self.progress = dict(total=0, computed=0, in_queue=0)
 
     def monitor(self, operation):
@@ -78,14 +79,67 @@ class Calculator(object):
         """
         raise NotImplementedError()
 
+    def calc_num_tasks(self):
+        """
+        Number of tasks to spawn.
+        Subclasses must implement this.
+        """
+
+    # NB: there is an issue here, because a single calculation can run
+    # two bunches of parallel tasks: one in the execute phase and one
+    # in the post-processing phase; however the job_stats table has
+    # room only for a single num_tasks column;
+    # see https://bugs.launchpad.net/oq-engine/+bug/1239529
+    def record_init_stats(self, num_tasks=None):
+        """
+        Record some basic job stats, including the number of sites,
+        realizations (end branches), and total number of tasks for the job.
+
+        This should be run between the `pre-execute` and `execute` phases, once
+        the job has been fully initialized.
+        """
+        # Record num sites, num realizations, and num tasks.
+        num_sites = len(self.hc.points_to_compute())
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc.id)
+        num_rlzs = realizations.count()
+
+        [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
+        job_stats.num_sites = num_sites
+        job_stats.num_tasks = num_tasks or self.calc_num_tasks()
+        job_stats.num_realizations = num_rlzs
+        job_stats.save()
+
     def parallelize(self, task_func, task_arg_gen):
         """
         Given a callable and a task arg generator, apply the callable to
-        the arguments in parallel. To save memory the tasks are spawned in
-        blocks with maximum size defined by the method .concurrent_tasks().
-        It is possible to pass a function side_effect(ret) which takes the
-        return value of the callable and does something with it, such as
-        saving or printing it. The order is not preserved.
+        the arguments in parallel. For efficiency the tasks are spawned in
+        chunks. Here is how it works.
+
+        Suppose you are running a computation with 100,000 sources and 10
+        realizations: then 1,000,000 arguments are generated (if the
+        calculation is an event based one this number must be multiplied
+        by the number of stochastic event sets). Generating a million
+        tasks would be foolish an inefficient: the number of tasks should
+        not be much bigger than the number of available cores. Such number
+        is more or less given by the configuration parameter `concurrent_tasks`
+        (usually we set it to twice the number of the cores). This method
+        implements a chunking mechanism to collect the arguments and generate
+        a total number of tasks which is always lower than
+
+         `maxtasks = concurrent_tasks * 10`
+
+        which is a good heuristic number. In the cluster the number of
+        concurrent_tasks is set to 512, so that maxtasks is 5120. If there
+        are 1,000,000 arguments the algorithm divides num_args / maxtasks
+        and finds out a chunksize of 196, by rounding to the closest upper
+        integer. That means that we will generated 1,000,000 / 196 = 5103
+        tasks (the division is rounded to the closest upper integer) each
+        with 196 arguments except the last one which will have 8 arguments.
+        Each task will call the task_func with its arguments.
+
+        Every time a task completes the method .log_percent() is called
+        and a progress message is displayed if the percentage has changed.
 
         :param task_func: a `celery` task callable
         :param task_args: an iterable over positional arguments
@@ -93,18 +147,25 @@ class Calculator(object):
         NB: if the environment variable OQ_NO_DISTRIBUTE is set the
         tasks are run sequentially in the current process.
         """
-        taskname = task_func.__name__
-        logs.LOG.debug('building arglist')
+        self.taskname = task_func.__name__
+        maxtasks = self.concurrent_tasks() * 10
         arglist = list(task_arg_gen)
-        total = len(arglist)
-        logs.LOG.progress('spawning %d tasks of kind %s', total, taskname)
-        ntasks = 0
-        for argblock in general.block_splitter(
-                arglist, self.concurrent_tasks()):
-            tasks.parallelize(task_func, argblock, lambda _: None)
-            ntasks += len(argblock)
-            percent = math.ceil(float(ntasks) / total * 100)
-            logs.LOG.progress('> %s %3d%% complete', taskname, percent)
+        chunksize = int(math.ceil(float(len(arglist)) / maxtasks))
+        chunks = list(general.block_splitter(arglist, chunksize))
+        self.num_tasks = len(chunks)
+        self.tasksdone = 0
+        self.percent = 0.0
+        logs.LOG.progress(
+            'spawning %d tasks of kind %s', self.num_tasks, self.taskname)
+        tasks.parallelize(task_func, chunks, self.log_percent)
+
+    def log_percent(self, dummy):
+        """Log the percentage of tasks completed"""
+        self.tasksdone += 1
+        percent = math.ceil(float(self.tasksdone) / self.num_tasks * 100)
+        if percent > self.percent:
+            logs.LOG.progress('> %s %3d%% complete', self.taskname, percent)
+            self.percent = percent
 
     def get_task_complete_callback(self, task_arg_gen, block_size,
                                    concurrent_tasks):
