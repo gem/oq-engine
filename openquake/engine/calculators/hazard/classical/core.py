@@ -244,8 +244,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         """
         Run hazard_curves in parallel.
         """
-        self.parallelize(self.core_calc_task,
-                         self.task_arg_gen(self.block_size()))
+        self.parallelize(self.core_calc_task, self.task_arg_gen(1, 0))
 
     def post_execute(self):
         """
