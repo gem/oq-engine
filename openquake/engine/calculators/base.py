@@ -120,12 +120,13 @@ class Calculator(object):
         realizations: then 1,000,000 arguments are generated (if the
         calculation is an event based one this number must be multiplied
         by the number of stochastic event sets). Generating a million
-        tasks would be foolish an inefficient: the number of tasks should
-        not be much bigger than the number of available cores. Such number
-        is more or less given by the configuration parameter `concurrent_tasks`
-        (usually we set it to twice the number of the cores). This method
-        implements a chunking mechanism to collect the arguments and generate
-        a total number of tasks which is always lower than
+        tasks would be foolish and inefficient, since most of the time would
+        be spent in passing arguments via rabbitmq.
+        The number of available cores is more or less given by the
+        configuration parameter `concurrent_tasks` (usually we set it to
+        twice the number of the cores). This method implements a chunking
+        mechanism to collect the arguments and generate a total number of
+        tasks which is always lower than
 
          `maxtasks = concurrent_tasks * 10`
 
