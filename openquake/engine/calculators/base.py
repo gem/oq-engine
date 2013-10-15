@@ -163,7 +163,7 @@ class Calculator(object):
     def log_percent(self, dummy):
         """Log the percentage of tasks completed"""
         self.tasksdone += 1
-        percent = math.ceil(float(self.tasksdone) / self.num_tasks * 100)
+        percent = int(float(self.tasksdone) / self.num_tasks * 100)
         if percent > self.percent:
             logs.LOG.progress('> %s %3d%% complete', self.taskname, percent)
             self.percent = percent
