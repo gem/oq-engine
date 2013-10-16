@@ -534,6 +534,9 @@ class GroundMotionValuesCalcGetter(object):
             [const.StdDev.TOTAL])
         return gsim, cond
 
+    # TODO: when the distribution used in the risk calculators will become
+    # the one based on .parallelize, this method should grow a LightMonitor
+    # argument and use copies of that one inside
     def compute(self, ruptures, rupture_seeds, rupture_ids, maximum_distance):
         """
         Compute ground motion values radiated from `ruptures`.
@@ -560,7 +563,7 @@ class GroundMotionValuesCalcGetter(object):
         all_assets = []
 
         site_gmv = collections.defaultdict(dict)
-        performance_dict = collections.Counter()
+        performance_dict = {}
 
         for rupture, rupture_seed, rupture_id in itertools.izip(
                 ruptures, rupture_seeds, rupture_ids):
