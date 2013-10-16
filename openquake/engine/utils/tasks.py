@@ -109,21 +109,17 @@ def oqtask(task_func):
     executed, so we don't do useless computation.)
     """
     @wraps(task_func)
-    def wrapped(*args):
+    def wrapped(*args, **kwargs):
         """
         Initialize logs, make sure the job is still running, and run the task
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # TEMPORARY hack: args can be a tuple of tuples of just
-        # a tuple with the job_id as first argument
-        if isinstance(args[0], long):  # the job_id, convert into a tuple
-            chunks = (args,)
-        else:
-            chunks = args
-        job_id = chunks[0][0]
-        # job_id is always assumed to be the first argument passed to the task
+        # job_id is always assumed to be the first argument passed to
+        # the task, or a keyword argument
         # this is the only required argument
+        job_id = kwargs.get('job_id') or args[0]
+
         with EnginePerformanceMonitor(
                 'totals per task', job_id, tsk, flush=True):
             job = models.OqJob.objects.get(id=job_id)
@@ -155,15 +151,14 @@ def oqtask(task_func):
                         'The status of job %d is %s, should be executing or '
                         'post_processing' % (job_id, job.status))
                 # else continue with task execution
-                for args in chunks:
-                    task_func(*args)
+                res = task_func(*args, **kwargs)
             # TODO: should we do something different with JobCompletedError?
             except Exception, err:
                 logs.LOG.critical('Error occurred in task: %s', err)
                 logs.LOG.exception(err)
                 raise
             else:
-                return
+                return res
             finally:
                 CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
@@ -171,12 +166,23 @@ def oqtask(task_func):
     return tsk
 
 
+# NB: the plan is to remove oqtask eventually, and to use montask instead
+# this will require replace the distribution with parallelize everywhere
 def montask(task_func):
     """
-    Monitoring task decorator
+    Monitoring task decorator: it calls the task_func several times,
+    by passing to it a LightMonitor instance and then the arguments.
+    At the end the monitoring information is saved in the performance
+    table.
     """
     @wraps(task_func)
     def wrapped(*chunks):
+        """
+        The arguments of the wrapped function are collected in chunks;
+        each chunk has the form (job_id, src_id, ...). The wrapped function
+        calls the task_func several times, by passing to it a task_mon
+        and a chunk of arguments.
+        """
         job_id = chunks[0][0]
         # job_id is always assumed to be the first argument passed to the task
         # this is the only required argument
