@@ -227,22 +227,31 @@ class DummyMonitor(PerformanceMonitor):
 
 class LightMonitor(object):
     """
-    in situations where a `PerformanceMonitor` is overkill or affects
+    In situations where a `PerformanceMonitor` is overkill or affects
     the performance (as in short loops), this helper can aid in
     measuring roughly the performance of a small piece of code. Please
     note that it does not prevent the common traps in measuring the
     performance as stated in the "Algorithms" chapter in the Python
     Cookbook.
     """
-
-    def __enter__(self):
-        self.t0 = time.time()
-        return self
-
     def __init__(self, counter, operation):
         self.counter = counter
         self.operation = operation
         self.t0 = None
 
+    def copy(self, operation):
+        """A copy of the monitor associated to the same counter dict"""
+        return self.__class__(self.counter, operation)
+
+    def __enter__(self):
+        self.t0 = time.time()
+        return self
+
     def __exit__(self, etype, exc, tb):
-        self.counter.update({self.operation: time.time() - self.t0})
+        try:
+            start_time, duration = self.counter[self.operation]
+        except KeyError:  # set start_time and duration
+            self.counter[self.operation] = self.t0, time.time() - self.t0
+        else:  # preserve the original start_time, increment the duration
+            duration += time.time() - self.t0
+            self.counter[self.operation] = start_time, duration

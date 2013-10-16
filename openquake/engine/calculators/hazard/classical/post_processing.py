@@ -93,13 +93,17 @@ _UHS_DISP_NAME_FMT = 'uhs-(%(poe)s)-rlz-%(rlz)s'
 
 # Silencing 'Too many local variables'
 # pylint: disable=R0914
-def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
+@tasks.momotask
+def hazard_curves_to_hazard_map_task(task_mon, job_id, hazard_curve_id, poes):
     """
     Function to process a set of hazard curves into 1 hazard map for each PoE
     in ``poes``.
 
     Hazard map results are written directly to the database.
 
+    :param task_mon:
+        a :class:`openquake.engine.performance.LightMonitor` instance
+        supplemented by the momotask decorator
     :param int job_id:
         ID of the current :class:`openquake.engine.db.models.OqJob`.
     :param int hazard_curve_id:
@@ -163,9 +167,6 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             lats=lats,
             imls=map_values,
         )
-
-hazard_curves_to_hazard_map_task = tasks.oqtask(hazard_curves_to_hazard_map)
-hazard_curves_to_hazard_map_task.ignore_result = False  # this is essential
 
 
 def hazard_curves_to_hazard_map_task_arg_gen(job):

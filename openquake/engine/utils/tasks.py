@@ -20,6 +20,7 @@
 """Utility functions related to splitting work into tasks."""
 
 from functools import wraps
+from datetime import datetime
 
 from celery.task.sets import TaskSet
 from celery.task import task
@@ -28,7 +29,8 @@ from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.performance import (
+    EnginePerformanceMonitor, LightMonitor)
 
 
 def _map_reduce(task_func, task_args, agg, acc):
@@ -107,7 +109,6 @@ def oqtask(task_func):
     :exc:`JobCompletedError`. (This also means that the task doesn't get
     executed, so we don't do useless computation.)
     """
-
     @wraps(task_func)
     def wrapped(*args, **kwargs):
         """
@@ -163,4 +164,68 @@ def oqtask(task_func):
                 CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, ignore_result=True, queue=celery_queue)
+    return tsk
+
+
+# NB: the plan is to remove oqtask eventually, and to use momotask instead
+# this will require replace the distribution with parallelize everywhere
+def momotask(task_func):
+    """
+    Decorator: a Monitoring Openquake Multiple Operation task (MOMO task)
+    is a celery task which calls the task_func multiple times,
+    by passing to it a LightMonitor instance and then the arguments.
+    The decorator takes care of saving the monitoring information
+    in the performance table.
+    """
+    @wraps(task_func)
+    def wrapped(*chunks):
+        """
+        The arguments of the wrapped function are collected in chunks;
+        each chunk has the form (job_id, src_id, ...). The wrapped function
+        calls the task_func several times, by passing to it a task_mon
+        and a chunk of arguments.
+        """
+        job_id = chunks[0][0]
+        # job_id is always assumed to be the first argument passed to the task
+        # this is the only required argument
+        with LightMonitor({}, 'totals per task') as task_mon:
+            job = models.OqJob.objects.get(id=job_id)
+            if not job.is_running:
+                return  # don't run the task
+
+            # it is important to save the task ids soon, so that
+            # the revoke functionality implemented in supervisor.py can work
+            EnginePerformanceMonitor.store_task_id(job_id, tsk)
+
+            with EnginePerformanceMonitor(
+                    'loading calculation object', job_id, tsk, flush=True):
+                calculation = job.calculation
+
+            # Set up logging via amqp.
+            if isinstance(calculation, models.HazardCalculation):
+                logs.init_logs_amqp_send(level=job.log_level,
+                                         calc_domain='hazard',
+                                         calc_id=calculation.id)
+            else:
+                logs.init_logs_amqp_send(level=job.log_level,
+                                         calc_domain='risk',
+                                         calc_id=calculation.id)
+            try:  # run the task with the created monitor
+                for args in chunks:
+                    task_func(task_mon, *args)
+            finally:
+                # save the performance information
+                for operation in task_mon.counter:
+                    start_time, duration = task_mon.counter[operation]
+                    models.Performance.objects.create(
+                        oq_job_id=job_id,
+                        task_id=tsk.request.id,
+                        task=tsk.__name__,
+                        operation=operation,
+                        start_time=datetime.fromtimestamp(start_time),
+                        duration=duration)
+                CacheInserter.flushall()
+    celery_queue = config.get('amqp', 'celery_queue')
+    tsk = task(wrapped, queue=celery_queue)
+    tsk.task_func = task_func
     return tsk
