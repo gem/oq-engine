@@ -38,7 +38,7 @@ from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
 from openquake.engine.calculators.hazard.classical.post_processing import (
-    hazard_curves_to_hazard_map
+    hazard_curves_to_hazard_map_task
 )
 
 aaae = numpy.testing.assert_array_almost_equal
@@ -171,7 +171,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
             compute.return_value = self.MOCK_HAZARD_MAP
 
             for curve in lt_haz_curves:
-                hazard_curves_to_hazard_map(
+                hazard_curves_to_hazard_map_task.task_func(
                     self.job.id, curve.id, self.TEST_POES)
 
                 lt_rlz = curve.lt_realization
@@ -193,7 +193,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
             compute.return_value = self.MOCK_HAZARD_MAP
 
             for curve in mean_haz_curves:
-                hazard_curves_to_hazard_map(
+                hazard_curves_to_hazard_map_task.task_func(
                     self.job.id, curve.id, self.TEST_POES)
 
                 hm_0_1, hm_0_02 = models.HazardMap.objects.filter(
@@ -215,7 +215,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
                     quantile=quantile)
 
                 for curve in quantile_haz_curves:
-                    hazard_curves_to_hazard_map(
+                    hazard_curves_to_hazard_map_task.task_func(
                         self.job.id, curve.id, self.TEST_POES)
 
                     hm_0_1, hm_0_02 = models.HazardMap.objects.filter(

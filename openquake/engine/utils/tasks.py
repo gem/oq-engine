@@ -29,7 +29,8 @@ from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
-from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
+from openquake.engine.performance import (
+    EnginePerformanceMonitor, LightMonitor, DummyMonitor)
 
 
 def _map_reduce(task_func, task_args, agg, acc):
@@ -226,4 +227,5 @@ def montask(task_func):
                 CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, queue=celery_queue)
+    tsk.task_func = lambda *args: task_func(DummyMonitor(), *args)
     return tsk
