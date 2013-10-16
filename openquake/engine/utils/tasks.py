@@ -20,6 +20,7 @@
 """Utility functions related to splitting work into tasks."""
 
 from functools import wraps
+from datetime import datetime
 
 from celery.task.sets import TaskSet
 from celery.task import task
@@ -214,7 +215,7 @@ def montask(task_func):
                         task_id=tsk.request.id,
                         task=tsk.__name__,
                         operation=operation,
-                        start_time=start_time,
+                        start_time=datetime.fromtimestamp(start_time),
                         duration=duration)
                 CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
