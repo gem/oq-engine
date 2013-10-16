@@ -51,7 +51,6 @@ from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import tasks
-from openquake.engine.performance import EnginePerformanceMonitor
 
 
 #: Always 1 for the computation of ground motion fields in the event-based
@@ -64,8 +63,8 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
-@tasks.oqtask
-def ses_and_gmfs(job_id, src_ids, ses, task_seed):
+@tasks.montask
+def ses_and_gmfs(task_mon, job_id, src_ids, ses, task_seed):
     """
     Celery task for the stochastic event set calculator.
 
@@ -117,13 +116,12 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     src_filter = filters.source_site_distance_filter(hc.maximum_distance)
     rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
 
-    with EnginePerformanceMonitor(
-            'reading site collection', job_id, ses_and_gmfs):
+    with task_mon.copy('reading site collection'):
         site_collection = hc.site_collection
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
-    with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
+    with task_mon.copy('computing ses'):
         ruptures = []
         for src in source_iter:
             # make copies of the hazardlib ruptures (which may contain
@@ -139,19 +137,16 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
         if not ruptures:
             return
 
-    with EnginePerformanceMonitor('saving ses', job_id, ses_and_gmfs):
+    with task_mon.copy('saving ses'):
         rupture_ids = _save_ses_ruptures(ses, ruptures, cmplt_lt_ses)
 
     if hc.ground_motion_fields:
-        with EnginePerformanceMonitor(
-                'computing gmfs', job_id, ses_and_gmfs):
+        with task_mon('computing gmfs'):
             gmf_cache = compute_gmf_cache(
                 hc, gsims, ruptures, rupture_ids)
 
-        with EnginePerformanceMonitor('saving gmfs', job_id, ses_and_gmfs):
+        with task_mon.copy('saving gmfs'):
             _save_gmfs(ses, gmf_cache, site_collection)
-
-ses_and_gmfs.ignore_result = False  # essential
 
 
 def compute_gmf_cache(hc, gsims, ruptures, rupture_ids):
@@ -436,8 +431,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         curves.
         """
         if self.hc.hazard_curves_from_gmfs:
-            with EnginePerformanceMonitor('generating hazard curves',
-                                          self.job.id):
+            with self.monitor('generating hazard curves'):
                 self.parallelize(
                     post_processing.gmf_to_hazard_curve_task,
                     post_processing.gmf_to_hazard_curve_arg_gen(self.job))
@@ -446,13 +440,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             # has some value (not an empty list), do this additional
             # post-processing.
             if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-                with EnginePerformanceMonitor(
-                        'generating mean/quantile curves', self.job.id):
+                with self.monitor('generating mean/quantile curves'):
                     self.do_aggregate_post_proc()
 
             if self.hc.hazard_maps:
-                with EnginePerformanceMonitor(
-                        'generating hazard maps', self.job.id):
+                with self.monitor('generating hazard maps'):
                     self.parallelize(
                         cls_post_proc.hazard_curves_to_hazard_map_task,
                         cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
