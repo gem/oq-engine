@@ -141,7 +141,7 @@ def ses_and_gmfs(task_mon, job_id, src_ids, ses, task_seed):
         rupture_ids = _save_ses_ruptures(ses, ruptures, cmplt_lt_ses)
 
     if hc.ground_motion_fields:
-        with task_mon('computing gmfs'):
+        with task_mon.copy('computing gmfs'):
             gmf_cache = compute_gmf_cache(
                 hc, gsims, ruptures, rupture_ids)
 
