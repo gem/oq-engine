@@ -302,10 +302,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                            ses_collection__lt_realization=lt_rlz,
                            ordinal__isnull=False).order_by('ordinal'))
 
-            for src_ids in block_splitter(sources, 1):
-                for ses in all_ses:
+            for ses in all_ses:
+                for src_id in sources:
                     task_seed = rnd.randint(0, models.MAX_SINT_32)
-                    task_args = (self.job.id, src_ids, ses, task_seed)
+                    task_args = (self.job.id, [src_id], ses, task_seed)
                     yield task_args
 
     def execute(self):
