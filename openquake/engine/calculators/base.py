@@ -116,28 +116,24 @@ class Calculator(object):
         the arguments in parallel. For efficiency the tasks are spawned in
         chunks. Here is how it works.
 
-        Suppose you are running a computation with 100,000 sources and 10
-        realizations: then 1,000,000 arguments are generated (if the
-        calculation is an event based one this number must be multiplied
-        by the number of stochastic event sets). Generating a million
-        tasks would be foolish and inefficient, since most of the time would
-        be spent in passing arguments via rabbitmq.
-        The number of available cores is more or less given by the
-        configuration parameter `concurrent_tasks` (usually we set it to
-        twice the number of the cores). This method implements a chunking
-        mechanism to collect the arguments and generate a total number of
-        tasks which is always lower than
-
-         `maxtasks = concurrent_tasks * 10`
-
-        which is a good heuristic number. In the cluster the number of
-        concurrent_tasks is set to 512, so that maxtasks is 5120. If there
-        are 1,000,000 arguments the algorithm divides num_args / maxtasks
-        and finds out a chunksize of 196, by rounding to the closest upper
-        integer. That means that we will generated 1,000,000 / 196 = 5103
-        tasks (the division is rounded to the closest upper integer) each
-        with 196 arguments except the last one which will have 8 arguments.
-        Each task will call the task_func with its arguments.
+        Suppose you are running a computation with 100,000 sources and
+        10 realizations: then 1,000,000 arguments are generated (if
+        the calculation is an event based one this number must be
+        multiplied by the number of stochastic event sets). Generating
+        a million tasks would be foolish and inefficient, since most
+        of the time would be spent in passing arguments via
+        rabbitmq. This method implements a chunking mechanism to
+        collect the arguments and generate a total number of tasks
+        which is always lower than the openquake.cfg parameter
+        `concurrent_tasks`. In the cluster the number of
+        concurrent_tasks is set to 512. If there are 1,000,000
+        arguments the algorithm divides num_args / maxtasks and finds
+        out a chunksize of 1954, by rounding to the closest upper
+        integer. That means that we will generated 1,000,000 / 1954 =
+        512 tasks (the division is rounded to the closest upper
+        integer) each with 1954 arguments except the last one which
+        will have 1506 arguments.  Each task will call the task_func with
+        its arguments.
 
         Every time a task completes the method .log_percent() is called
         and a progress message is displayed if the percentage has changed.
@@ -149,7 +145,7 @@ class Calculator(object):
         tasks are run sequentially in the current process.
         """
         self.taskname = task_func.__name__
-        maxtasks = self.concurrent_tasks() * 10
+        maxtasks = self.concurrent_tasks()
         arglist = list(task_arg_gen)
         chunksize = int(math.ceil(float(len(arglist)) / maxtasks))
         chunks = list(general.block_splitter(arglist, chunksize))
