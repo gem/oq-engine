@@ -49,8 +49,13 @@ class Calculator(object):
         self.progress = dict(total=0, computed=0, in_queue=0)
 
     def monitor(self, operation):
+        """
+        Return an EnginePerformanceMonitor to be used in the calculator,
+        for code running on the master node.
+        """
         return EnginePerformanceMonitor(
-            operation, self.job.id, tracing=True, flush=True)
+            operation, self.job.id, profile_pymem=True, profile_pgmem=True,
+            tracing=True, flush=True)
 
     def task_arg_gen(self, block_size):
         """
