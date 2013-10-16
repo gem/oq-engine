@@ -111,10 +111,10 @@ def gmf_to_hazard_curve_arg_gen(job):
 
 # Disabling "Unused argument 'job_id'" (this parameter is required by @oqtask):
 # pylint: disable=W0613
-@tasks.oqtask
-def gmf_to_hazard_curve_task(job_id, site, lt_rlz_id, imt, imls, hc_coll_id,
-                             invest_time, duration, sa_period=None,
-                             sa_damping=None):
+@tasks.momotask
+def gmf_to_hazard_curve_task(
+        mon, job_id, site, lt_rlz_id, imt, imls, hc_coll_id,
+        invest_time, duration, sa_period=None, sa_damping=None):
     """
     For a given job, site, realization, and IMT, compute a hazard curve and
     save it to the database. The hazard curve will be computed from all
@@ -169,7 +169,6 @@ def gmf_to_hazard_curve_task(job_id, site, lt_rlz_id, imt, imls, hc_coll_id,
     models.HazardCurveData.objects.create(
         hazard_curve_id=hc_coll_id, poes=hc_poes, location=site.location,
         weight=lt_rlz.weight)
-gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):

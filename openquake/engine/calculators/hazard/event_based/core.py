@@ -63,7 +63,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
-@tasks.montask
+@tasks.momotask
 def ses_and_gmfs(task_mon, job_id, src_ids, ses, task_seed):
     """
     Celery task for the stochastic event set calculator.

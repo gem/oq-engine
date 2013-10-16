@@ -30,7 +30,7 @@ from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import (
-    EnginePerformanceMonitor, LightMonitor, DummyMonitor)
+    EnginePerformanceMonitor, LightMonitor)
 
 
 def _map_reduce(task_func, task_args, agg, acc):
@@ -167,14 +167,15 @@ def oqtask(task_func):
     return tsk
 
 
-# NB: the plan is to remove oqtask eventually, and to use montask instead
+# NB: the plan is to remove oqtask eventually, and to use momotask instead
 # this will require replace the distribution with parallelize everywhere
-def montask(task_func):
+def momotask(task_func):
     """
-    Monitoring task decorator: it calls the task_func several times,
+    Decorator: a Monitoring Openquake Multiple Operation task (MOMO task)
+    is a celery task which calls the task_func multiple times,
     by passing to it a LightMonitor instance and then the arguments.
-    At the end the monitoring information is saved in the performance
-    table.
+    The decorator takes care of saving the monitoring information
+    in the performance table.
     """
     @wraps(task_func)
     def wrapped(*chunks):
@@ -209,8 +210,7 @@ def montask(task_func):
                 logs.init_logs_amqp_send(level=job.log_level,
                                          calc_domain='risk',
                                          calc_id=calculation.id)
-            try:
-                # run the task with the created monitor
+            try:  # run the task with the created monitor
                 for args in chunks:
                     task_func(task_mon, *args)
             finally:
@@ -227,5 +227,5 @@ def montask(task_func):
                 CacheInserter.flushall()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, queue=celery_queue)
-    tsk.task_func = lambda *args: task_func(DummyMonitor(), *args)
+    tsk.task_func = task_func
     return tsk
