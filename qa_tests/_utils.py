@@ -142,15 +142,10 @@ def compare_hazard_curve_with_csv(
         reader = csv.reader(f, delimiter=csv_delimiter)
         expected_data = [map(float, row) for row in reader]
 
-    try:
-        numpy.testing.assert_array_almost_equal(
-            expected_data, data, decimal=3)
-    except AssertionError:
-        # to debug the test, in case it breaks, uncomment the following
-        # lines and compare the expected file with the file generated
-        # from the computed data and stored in /tmp
-        import os
-        tmp = os.path.join('/tmp', os.path.basename(csv_name))
-        print >> open(tmp, 'w'), '\n'.join(' '.join(map(str, row))
-                                           for row in data)
-        # raise
+    numpy.testing.assert_array_almost_equal(expected_data, data, decimal=3)
+    # to debug the test, in case it breaks, comment the assert and
+    # uncomment the following, lines then compare the expected file with
+    # the file generated from the computed data and stored in /tmp:
+    # import os
+    # tmp = os.path.join('/tmp', os.path.basename(csv_name))
+    # print >> open(tmp, 'w'), '\n'.join(' '.join(map(str, row))
