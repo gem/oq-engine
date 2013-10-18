@@ -111,18 +111,20 @@ def count(gmf_value, gmfs_site_one, gmfs_site_two,
 
 
 def compare_hazard_curve_with_csv(
-        hc, gsim_lt_path, imt, sa_period, sa_damping,
+        hc, sm_lt_path, gsim_lt_path, imt, sa_period, sa_damping,
         csv_name, csv_delimiter=','):
     """
     This is useful in tests that compares the hazard curves in the db with
     the expected values in the csv. The csv is expected to have the form
     `lon, lat, poe1, poe2, ...`
     """
-    rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+    rlzs = list(models.LtRealization.objects.filter(hazard_calculation=hc))
     # there is some contorsion here since is seems that Django filtering
     # with CharArrayFields does not work, so I get all the realizations
-    # and I extract by hand the one with the given gsim_lt_path
-    [rlz] = [r for r in rlzs if r.gsim_lt_path == gsim_lt_path]
+    # and I extract by hand the one with the given lt_paths
+    [rlz] = [r for r in rlzs
+             if r.sm_lt_path == sm_lt_path
+             and r.gsim_lt_path == gsim_lt_path]
     curves = models.HazardCurveData.objects.filter(
         hazard_curve__lt_realization=rlz,
         hazard_curve__imt=imt,
@@ -140,5 +142,15 @@ def compare_hazard_curve_with_csv(
         reader = csv.reader(f, delimiter=csv_delimiter)
         expected_data = [map(float, row) for row in reader]
 
-    numpy.testing.assert_array_almost_equal(
-        expected_data, data, decimal=3)
+    try:
+        numpy.testing.assert_array_almost_equal(
+            expected_data, data, decimal=3)
+    except AssertionError:
+        # to debug the test, in case it breaks, uncomment the following
+        # lines and compare the expected file with the file generated
+        # from the computed data and stored in /tmp
+        import os
+        tmp = os.path.join('/tmp', os.path.basename(csv_name))
+        print >> open(tmp, 'w'), '\n'.join(' '.join(map(str, row))
+                                           for row in data)
+        # raise
