@@ -36,6 +36,12 @@ class AkkarBommer2010(GMPE):
     SA at 4 s (not supported by the original equations) has been added in the
     context of the SHARE project and assumed to be equal to SA at 3 s but
     scaled with proper factor.
+    Equation coefficients for PGA and SA periods up to 0.05 seconds have been
+    taken from updated model as described in 'Extending ground-motion prediction
+    equations for spectral accelerations to higher response frequencies',
+    Julian J. Bommer, Sinan Akkar, Stephane Drouet, Bull. Earthquake Eng. (2012)
+    volume 10, pages 379 - 399. Coefficients for PGV and SA above 0.05 seconds
+    are taken from the original 2010 publication.
     """
     #: Supported tectonic region type is 'active shallow crust' because the
     #: equations have been derived from data from Southern Europe, North
@@ -190,7 +196,13 @@ class AkkarBommer2010(GMPE):
             Fr = 1
         return Fn, Fr
 
-    #: Equation coefficients, described in Table 1 on pp. 200-201
+    #: For PGA and SA up to 0.05 seconds, coefficients are taken from table 5,
+    #: page 385 of 'Extending ground-motion prediction equations for spectral
+    #: accelerations to higher response frequencies', while for PGV and SA with
+    #: periods greater than 0.05 coefficients are taken from table 1, pages
+    #: 200-201 of 'Empirical Equations for the Prediction of PGA, PGV,
+    #: and Spectral Accelerations in Europe, the Mediterranean Region, and
+    #: the Middle East'
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT     b1          b2          b3          b4          b5          b6          b7           b8          b9           b10          Sigma1    Sigma2    SigmaTot
     pga     1.43525    0.74866    -0.06520    -2.72950    0.25139    7.74959    0.08320     0.00766    -0.05823     0.07087    0.2611    0.1056    0.281646179
