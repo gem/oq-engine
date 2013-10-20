@@ -23,6 +23,7 @@ from openquake.engine.calculators.hazard.event_based.core import \
 
 
 # test independence from the parameter concurrent_tasks
+# it is using a source model with 398 sources
 class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     expected_tags = ['rlz=00|ses=0001|src=1|i=000',
                      'rlz=00|ses=0001|src=1|i=001',
