@@ -114,16 +114,19 @@ def ses_and_gmfs(job_id, src_ids, ses, src_seeds):
             'reading site collection', job_id, ses_and_gmfs):
         site_collection = hc.site_collection
 
+    with EnginePerformanceMonitor(
+            'reading sources', job_id, ses_and_gmfs):
+        sources = list(haz_general.gen_sources(
+            src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
+            hc.width_of_mfd_bin, hc.area_source_discretization))
+
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
         ruptures = []
-        for src_seed, src_id in zip(src_seeds, src_ids):
+        for src_seed, src in zip(src_seeds, sources):
             # first set the seed for the specific source
             numpy.random.seed(src_seed)
-            [src] = haz_general.gen_sources(
-                [src_id], apply_uncertainties, hc.rupture_mesh_spacing,
-                hc.width_of_mfd_bin, hc.area_source_discretization)
             # then make copies of the hazardlib ruptures (which may contain
             # duplicates)
             rupts = map(copy.copy, stochastic.stochastic_event_set_poissonian(

@@ -37,9 +37,9 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
         tags_64 = self.run_with_concurrent_tasks(64)
         self.assertEqual(tags_64, self.expected_tags)
 
-    def test_32(self):
-        tags_32 = self.run_with_concurrent_tasks(32)
-        self.assertEqual(tags_32, self.expected_tags)
+    def test_3(self):
+        tags_3 = self.run_with_concurrent_tasks(3)
+        self.assertEqual(tags_3, self.expected_tags)
 
     def run_with_concurrent_tasks(self, n):
         orig = EventBasedHazardCalculator.concurrent_tasks.im_func
