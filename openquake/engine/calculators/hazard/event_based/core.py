@@ -66,7 +66,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def ses_and_gmfs(job_id, src_ids, ses, task_seed):
+def ses_and_gmfs(job_id, src_ids, ses, src_seeds):
     """
     Celery task for the stochastic event set calculator.
 
@@ -86,12 +86,10 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
         stochastic event sets/ruptures.
     :param ses:
         Stochastic Event Set object
-    :param int task_seed:
-        Value for seeding numpy/scipy in the computation of stochastic event
-        sets and ground motion fields.
+    :param int src_seeds:
+        Values for seeding numpy/scipy in the computation of stochastic event
+        sets and ground motion fields from the sources
     """
-    numpy.random.seed(task_seed)
-
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
     # complete_logic_tree_ses flag
@@ -101,8 +99,6 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
             ses_collection__output__oq_job=job_id,
             ordinal=None)
 
-    # preparing sources
-
     ltp = logictree.LogicTreeProcessor(hc.id)
     lt_rlz = ses.ses_collection.lt_realization
 
@@ -110,10 +106,6 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
         lt_rlz.sm_lt_path)
 
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-
-    source_iter = haz_general.gen_sources(
-        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-        hc.width_of_mfd_bin, hc.area_source_discretization)
 
     src_filter = filters.source_site_distance_filter(hc.maximum_distance)
     rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
@@ -126,15 +118,20 @@ def ses_and_gmfs(job_id, src_ids, ses, task_seed):
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, ses_and_gmfs):
         ruptures = []
-        for src in source_iter:
-            # make copies of the hazardlib ruptures (which may contain
+        for src_seed, src_id in zip(src_seeds, src_ids):
+            # first set the seed for the specific source
+            numpy.random.seed(src_seed)
+            [src] = haz_general.gen_sources(
+                [src_id], apply_uncertainties, hc.rupture_mesh_spacing,
+                hc.width_of_mfd_bin, hc.area_source_discretization)
+            # then make copies of the hazardlib ruptures (which may contain
             # duplicates)
             rupts = map(copy.copy, stochastic.stochastic_event_set_poissonian(
                         [src], hc.investigation_time, site_collection,
                         src_filter, rup_filter))
             # set the tag for each copy
             for i, r in enumerate(rupts):
-                r.tag = 'rlz=%02d|ses=%04d|src=%s|i=%d' % (
+                r.tag = 'rlz=%02d|ses=%04d|src=%s|i=%03d' % (
                     lt_rlz.ordinal, ses.ordinal, src.source_id, i)
             ruptures.extend(rupts)
         if not ruptures:
@@ -339,7 +336,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         self.preferred_block_size = int(
             math.ceil(float(total_sources * num_ses) / preferred_num_tasks))
-        logs.LOG.info('Using block size: %d', self.preferred_block_size)
+        logs.LOG.warn('Using block size: %d', self.preferred_block_size)
 
         num_tasks = [math.ceil(float(n) / self.preferred_block_size) * num_ses
                      for n in num_sources]
@@ -350,8 +347,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
-        Yielded results are tuples of the form job_id, src_ids, ses, task_seed
-        (task_seed will be used to seed numpy for temporal occurence sampling).
+        Yielded results are tuples of the form job_id, src_ids, ses, seeds
+        (seeds will be used to seed numpy for temporal occurence sampling).
         """
         hc = self.hc
         rnd = random.Random()
@@ -370,9 +367,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
             for src_ids in block_splitter(sources, self.preferred_block_size):
                 for ses in all_ses:
-                    task_seed = rnd.randint(0, models.MAX_SINT_32)
-                    task_args = (self.job.id, src_ids, ses, task_seed)
-                    yield task_args
+                    # compute seeds for the sources
+                    src_seeds = [rnd.randint(0, models.MAX_SINT_32)
+                                 for _ in src_ids]
+                    yield self.job.id, src_ids, ses, src_seeds
 
     def execute(self):
         """
