@@ -149,8 +149,11 @@ def compute_gmf(job_id, gsims, ses, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
     """
-    ruptures = models.SESRupture.objects.filter(ses=ses)
     hc = ses.ses_collection.output.oq_job.hazard_calculation
+
+    with EnginePerformanceMonitor(
+            'reading ruptures', job_id, compute_gmf):
+        ruptures = list(models.SESRupture.objects.filter(ses=ses))
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmf):
