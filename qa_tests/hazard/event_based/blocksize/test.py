@@ -14,7 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest
 from nose.plugins.attrib import attr
 from qa_tests import _utils as qa_utils
 from openquake.engine.db import models
