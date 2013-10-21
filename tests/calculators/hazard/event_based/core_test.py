@@ -189,27 +189,17 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             'openquake.hazardlib.calc.stochastic.'
             'stochastic_event_set_poissonian',
             mock.MagicMock(return_value=[rupture1, rupture2]))
-        self.patch_gmf = mock.patch(
-            'openquake.hazardlib.calc.gmf.ground_motion_fields',
-            mock.MagicMock())
         self.patch_save_rup = mock.patch(
             'openquake.engine.calculators.hazard.'
             'event_based.core._save_ses_ruptures',
             mock.MagicMock(return_value=[1, 2]))
-        self.patch_save_gmf = mock.patch(
-            'openquake.engine.calculators.hazard.'
-            'event_based.core._save_gmfs')
         self.patch_ses.start()
-        self.patch_gmf.start()
         self.patch_save_rup.start()
-        self.patch_save_gmf.start()
 
     def _unpatch_calc(self):
         "Remove the patches"
         self.patch_ses.stop()
-        self.patch_gmf.stop()
         self.patch_save_rup.stop()
-        self.patch_save_gmf.stop()
 
     @attr('slow')
     def test_complete_event_based_calculation_cycle(self):
@@ -218,12 +208,11 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             from openquake.hazardlib import calc
             from openquake.engine.calculators.hazard.event_based import core
             ses_mock = calc.stochastic.stochastic_event_set_poissonian
-            gmf_mock = calc.gmf.ground_motion_fields
             save_rup_mock = core._save_ses_ruptures
-            save_gmf_mock = core._save_gmfs
 
             # run the calculation in process (to easy debugging)
-            # and check the outputs
+            # and check the outputs; notice that since the save_ses
+            # part is mocked the gmf won't be computed
             os.environ['OQ_NO_DISTRIBUTE'] = '1'
             try:
                 job = helpers.run_hazard_job(self.cfg)
@@ -240,8 +229,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             # functions: 40 = 2 Lt * 4 sources * 5 ses = 8 tasks * 5 ses
             self.assertEqual(ses_mock.call_count, 40)
             self.assertEqual(save_rup_mock.call_count, 40)  # 2 rupt per ses
-            self.assertEqual(gmf_mock.call_count, 80)  # 2 ruptures per ses
-            self.assertEqual(save_gmf_mock.call_count, 40)  # num_tasks * ses
 
             # Check the complete logic tree SES
             complete_lt_ses = models.SES.objects.get(
