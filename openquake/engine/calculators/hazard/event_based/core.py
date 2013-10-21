@@ -126,7 +126,7 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
             # first set the seed for the specific source
             numpy.random.seed(src_seed)
             # then make copies of the hazardlib ruptures (which may contain
-            # duplicates)
+            # duplicates): the copy is needed to keep the tags distinct
             rupts = map(copy.copy, stochastic.stochastic_event_set_poissonian(
                         [src], hc.investigation_time, site_collection,
                         src_filter, rup_filter))
