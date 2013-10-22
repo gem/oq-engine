@@ -148,4 +148,5 @@ def compare_hazard_curve_with_csv(
     # the file generated from the computed data and stored in /tmp:
     # import os
     # tmp = os.path.join('/tmp', os.path.basename(csv_name))
-    # print >> open(tmp, 'w'), '\n'.join(' '.join(map(str, row))
+    # print 'saving', tmp
+    # print >> open(tmp, 'w'), '\n'.join(' '.join(map(str, r)) for r in data)

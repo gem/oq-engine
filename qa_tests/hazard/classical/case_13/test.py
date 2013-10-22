@@ -22,7 +22,7 @@ CURRENTDIR = os.path.dirname(__file__)
 
 # this test is described in https://bugs.launchpad.net/oq-engine/+bug/1226061
 # the CSV files with the expected hazard_curves were provided by Damiano
-class ClassicalHazardCase14TestCase(BaseQATestCase):
+class ClassicalHazardCase13TestCase(BaseQATestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
