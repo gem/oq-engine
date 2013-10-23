@@ -231,6 +231,16 @@ class Record(collections.Sequence):
         else:
             return self._ntuple._make(cols), None
 
+    def to_tuple(self):
+        """
+        Cast the record to a namedtuple with the right types or raise
+        an InvalidRecord exception.
+        """
+        tup, exc = self.cast()
+        if exc:
+            raise exc
+        return tup
+
     def to_node(self):
         """Implement this if you want to convert records into Node objects"""
         raise NotImplementedError
