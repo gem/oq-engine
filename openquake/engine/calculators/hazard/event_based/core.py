@@ -53,11 +53,14 @@ from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.utils.general import block_splitter
 
 
 #: Always 1 for the computation of ground motion fields in the event-based
 #: hazard calculator.
 DEFAULT_GMF_REALIZATIONS = 1
+
+BLOCK_SIZE = 1000  # blocks of 1,000 sites each
 
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
@@ -145,7 +148,7 @@ compute_ses.ignore_result = False  # essential
 
 
 @tasks.oqtask
-def compute_gmf(job_id, gsims, ses, rupture_seeds):
+def compute_gmf(job_id, gsims, ses, sites, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
     """
@@ -157,16 +160,17 @@ def compute_gmf(job_id, gsims, ses, rupture_seeds):
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmf):
+        site_coll = models.SiteCollection(sites)
         gmf_cache = compute_gmf_cache(
-            hc, gsims, ruptures, rupture_seeds)
+            hc, gsims, site_coll, ruptures, rupture_seeds)
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
-        _save_gmfs(ses, gmf_cache, hc.site_collection)
+        _save_gmfs(ses, gmf_cache, site_coll)
 
 compute_gmf.ignore_result = False  # essential
 
 
-def compute_gmf_cache(hc, gsims, ruptures, rupture_seeds):
+def compute_gmf_cache(hc, gsims, site_coll, ruptures, rupture_seeds):
     """
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for all IMTs.
@@ -177,7 +181,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_seeds):
     if hc.ground_motion_correlation_model is not None:
         correl_model = haz_general.get_correl_model(hc)
 
-    n_points = len(hc.site_collection)
+    n_points = len(site_coll)
 
     # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
     gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_points, 0)),
@@ -188,7 +192,7 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_seeds):
     for rupture, rupture_seed in zip(ruptures, rupture_seeds):
         gmf_calc_kwargs = {
             'rupture': rupture.rupture,
-            'sites': hc.site_collection,
+            'sites': site_coll,
             'imts': imts,
             'gsim': gsims[rupture.tectonic_region_type],
             'truncation_level': hc.truncation_level,
@@ -387,7 +391,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     def compute_gmf_arg_gen(self):
         """
         Argument generator for the task compute_gmf. For each SES yields a
-        tuple of the form (job_id, gsims, ses, rupture_seeds)
+        tuple of the form (job_id, gsims, ses, site_coll, rupture_seeds)
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
@@ -405,7 +409,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 # compute the associated seeds
                 rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
                                  for _ in range(n_ruptures)]
-                yield self.job.id, gsims, ses, rupture_seeds
+                # we are splitting on sites to avoid running out of memory
+                # on the workers for computations like the full Japan
+                for sites in block_splitter(
+                        self.hc.site_collection, BLOCK_SIZE):
+                    yield self.job.id, gsims, ses, sites, rupture_seeds
 
     def execute(self):
         """
