@@ -1,11 +1,11 @@
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+#License as published by the Free Software Foundation, either version
 #3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -13,35 +13,35 @@
 #
 #DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-#is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-#Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+#is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+#Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 #for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 '''
-Test suite for hmtk.strain.geodetic_strain.GeodeticStrain a set of utility 
+Test suite for hmtk.strain.geodetic_strain.GeodeticStrain a set of utility
 functions for the main geodetic strain class
 '''
 import os
@@ -76,7 +76,7 @@ class TestGeodeticStrain(unittest.TestCase):
 
     def test_secondary_strain_data_input_error(self):
         '''
-        Tests to ensure correct error are raised when 
+        Tests to ensure correct error are raised when
         i) strain data is missing
         ii) Strain data lacks critical attribute
         '''
@@ -101,8 +101,8 @@ class TestGeodeticStrain(unittest.TestCase):
 
     def test_secondary_strain_data_with_input(self):
         '''
-        Test to verify correct calculation of 
-        i) 
+        Test to verify correct calculation of
+        i)
         i)   Second Invarient
         ii)  err
         iii) dilatation
@@ -116,7 +116,7 @@ class TestGeodeticStrain(unittest.TestCase):
                      'exy': 1E-9 * np.array([10., 1.0, 0.1])}
         self.model.get_secondary_strain_data(self.data)
         # Check that all expected keys are present
-        expected_keys = ['longitude', 'latitude','exx', 'eyy', 'exy', 
+        expected_keys = ['longitude', 'latitude','exx', 'eyy', 'exy',
                          '2nd_inv', 'dilatation', 'err', 'e1h', 'e2h']
         for key in expected_keys:
             self.assertTrue(key in self.model.data.keys())
@@ -132,7 +132,7 @@ class TestGeodeticStrain(unittest.TestCase):
         # Test err
         np.testing.assert_array_almost_equal(
             self.model.data['dilatation'] + self.model.data['err'],
-            np.zeros(3, dtype=float), 
+            np.zeros(3, dtype=float),
             14)
         # Test e1h
         np.testing.assert_array_almost_equal(
@@ -159,5 +159,3 @@ class TestGeodeticStrain(unittest.TestCase):
         # Test with data
         self.model.data = self.data
         self.assertEqual(self.model.get_number_observations(), 3)
-        
-

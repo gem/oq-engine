@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -48,7 +48,7 @@
 # -*- coding: utf-8 -*-
 
 '''
-Defines the :class hmtk.sources.simple_fault_source.mtkSimpleFaultSource, which 
+Defines the :class hmtk.sources.simple_fault_source.mtkSimpleFaultSource, which
 represents the hmtk defition of a simple fault source. This extends the :class:
 nrml.models.SimpleFaultSource
 '''
@@ -65,8 +65,8 @@ import hmtk.sources.source_conversion_utils as conv
 class mtkSimpleFaultSource(object):
     '''
     New class to describe the mtk Simple fault source object
-    
-    :param str identifier: 
+
+    :param str identifier:
         ID code for the source
     :param str name:
         Source name
@@ -78,33 +78,32 @@ class mtkSimpleFaultSource(object):
         Dip of the fault surface
     :param float upper_depth:
         Upper seismogenic depth (km)
-    :param float lower_depth: 
+    :param float lower_depth:
         Lower seismogenic depth (km)
     :param str mag_scale_rel:
         Magnitude scaling relationsip
     :param float rupt_aspect_ratio:
         Rupture aspect ratio
     :param mfd:
-        Magnitude frequency distribution as instance of 
-        :class: nrml.models.IncrementalMFD or 
+        Magnitude frequency distribution as instance of
+        :class: nrml.models.IncrementalMFD or
         :class: nrml.models.TGRMFD
     :param  float rake:
         Rake of fault
-    :param catalogue: 
-        Earthquake catalogue associated to source as instance of 
+    :param catalogue:
+        Earthquake catalogue associated to source as instance of
         hmtk.seismicity.catalogue.Catalogue object
     '''
-    
-    
+
     def __init__(self, identifier, name, trt=None, geometry=None, dip=None,
-                 upper_depth=None, lower_depth = None, mag_scale_rel=None, 
+                 upper_depth=None, lower_depth=None, mag_scale_rel=None,
                  rupt_aspect_ratio=None, mfd=None, rake=None):
         '''
         Instantiate class with just the basic attributes identifier and name
         '''
         self.typology = 'SimpleFault'
         self.id = identifier
-        self.name = name 
+        self.name = name
         self.trt = trt
         self.geometry = geometry
         self.fault_trace = None
@@ -119,14 +118,14 @@ class mtkSimpleFaultSource(object):
             assert((dip > 0.) and (dip <= 90.))
         self.dip = dip
         self.catalogue = None
-        
+
     def _check_seismogenic_depths(self, upper_depth, lower_depth):
-        
+
         '''
         Checks the seismic depths for physical consistency
         :param float upper_depth:
             Upper seismogenic depth (km)
-            
+
         :param float lower_depth:
             Lower seismogenic depth (km)
         '''
@@ -139,85 +138,83 @@ class mtkSimpleFaultSource(object):
                 self.upper_depth = upper_depth
         else:
             self.upper_depth = 0.0
-        
+
         if not lower_depth:
             raise ValueError('Lower seismogenic depth must be defined for '
                              'simple fault source!')
         if lower_depth < self.upper_depth:
-                raise ValueError('Lower seismogenic depth must take a greater' 
-                                 ' value than upper seismogenic depth')
+            raise ValueError('Lower seismogenic depth must take a greater'
+                             ' value than upper seismogenic depth')
 
         self.lower_depth = lower_depth
-    
-    
-    def create_geometry(self, input_geometry, dip, upper_depth, lower_depth, 
+
+    def create_geometry(self, input_geometry, dip, upper_depth, lower_depth,
                         mesh_spacing=1.0):
         '''
-        If geometry is defined as a numpy array then create instance of 
+        If geometry is defined as a numpy array then create instance of
         nhlib.geo.line.Line class, otherwise if already instance of class
         accept class
-        
+
         :param input_geometry:
             Trace (line) of the fault source as either
             i) instance of nhlib.geo.line.Line class
             ii) numpy.ndarray [Longitude, Latitude]
-        
+
         :param float dip:
             Dip of fault surface (in degrees)
-            
+
         :param float upper_depth:
             Upper seismogenic depth (km)
-        
+
         :param float lower_depth:
             Lower seismogenic depth (km)
-            
+
         :param float mesh_spacing:
             Spacing of the fault mesh (km) {default = 1.0}
         '''
         assert((dip > 0.) and (dip <= 90.))
         self.dip = dip
         self._check_seismogenic_depths(upper_depth, lower_depth)
-        
+
         if not isinstance(input_geometry, Line):
             if not isinstance(input_geometry, np.ndarray):
                 raise ValueError('Unrecognised or unsupported geometry '
                                  'definition')
             else:
-                self.fault_trace = Line([Point(row[0], row[1]) for row in 
-                                      input_geometry])
+                self.fault_trace = Line([Point(row[0], row[1]) for row in
+                                         input_geometry])
         else:
             self.fault_trace = input_geometry
         # Build fault surface
-        self.geometry = SimpleFaultSurface.from_fault_data(self.fault_trace, 
-                                                           self.upper_depth, 
-                                                           self.lower_depth, 
-                                                           self.dip, 
+        self.geometry = SimpleFaultSurface.from_fault_data(self.fault_trace,
+                                                           self.upper_depth,
+                                                           self.lower_depth,
+                                                           self.dip,
                                                            mesh_spacing)
 
-
-    def select_catalogue(self, selector, distance, 
-                         distance_metric='joyner-boore', upper_eq_depth=None, 
+    def select_catalogue(self, selector, distance,
+                         distance_metric='joyner-boore', upper_eq_depth=None,
                          lower_eq_depth=None):
         '''
         Selects earthquakes within a distance of the fault
         :param selector:
             Populated instance of hmtk.seismicity.selector.CatalogueSelector
-        
+
         :param distance:
             Distance from point (km) for selection
-        
+
         :param str distance_metric
             Choice of fault source distance metric 'joyner-boore' or 'rupture'
-        
+
         :param float upper_eq_depth:
             Upper hypocentral depth of hypocentres to be selected
-        
+
         :param float lower_eq_depth:
             Lower hypocentral depth of hypocentres to be selected
-        
+
         '''
         if selector.catalogue.get_number_events() < 1:
-            raise ValueError('No events found in catalogue!') 
+            raise ValueError('No events found in catalogue!')
 
         # rupture metric is selected and dip != 90 or 'rupture'
         if ('rupture' in distance_metric) and (fabs(self.dip - 90) > 1E-5):
@@ -234,17 +231,16 @@ class mtkSimpleFaultSource(object):
                 distance,
                 upper_depth=upper_eq_depth,
                 lower_depth=lower_eq_depth)
-        
+
         if self.catalogue.get_number_events() < 5:
             # Throw a warning regarding the small number of earthquakes in
             # the source!
-            warnings.warn('Source %s (%s) has fewer than 5 events' 
-                %(self.id, self.name))
-
+            warnings.warn('Source %s (%s) has fewer than 5 events'
+                          % (self.id, self.name))
 
     def create_oqnrml_source(self, use_defaults=False):
         '''
-        Turns source into instance of the :class: 
+        Turns source into instance of the :class:
         openquake.nrmllib.model.SimpleFaultSource
         :param bool use_defaults:
             If set to True, will use default values for rupture aspect ratio
@@ -263,8 +259,8 @@ class mtkSimpleFaultSource(object):
             self.id,
             self.name,
             self.trt,
-            simple_geometry, 
-            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults), 
+            simple_geometry,
+            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults),
             conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
             conv.render_mfd(self.mfd),
             self.rake)

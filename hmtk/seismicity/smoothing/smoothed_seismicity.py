@@ -6,18 +6,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -35,9 +35,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -304,7 +304,8 @@ class SmoothedSeismicity(object):
         self.create_3D_grid(self.catalogue, completeness_table, t_f, mag_inc)
         if config['increment']:
             # Get Hermann adjustment factors
-            fval, fival = utils.hermann_adjustment_factors(self.bval,
+            fval, fival = utils.hermann_adjustment_factors(
+                self.bval,
                 completeness_table[0, 1], config['increment'])
             self.data[:, -1] = fval * fival * self.data[:, -1]
 
@@ -370,7 +371,7 @@ class SmoothedSeismicity(object):
             if (dlat < 0.) or (dlat > ylim):
                 # Earthquake outside latitude limits
                 continue
-            ycol = int(dlat) # Correct for floating precision
+            ycol = int(dlat)  # Correct for floating precision
             if ycol == ncoly:
                 # If latitude is directly on upper grid line then retain
                 ycol = ncoly - 1
@@ -435,7 +436,7 @@ class SmoothedSeismicity(object):
 
         # Define centre points of grid cells
         gridx, gridy = np.meshgrid((x_bins[1:] + x_bins[:-1]) / 2.,
-                                    (y_bins[1:] + y_bins[:-1]) / 2.)
+                                   (y_bins[1:] + y_bins[:-1]) / 2.)
 
         n_x, n_y = np.shape(gridx)
         gridx = np.reshape(gridx, [n_x * n_y, 1])
@@ -446,7 +447,7 @@ class SmoothedSeismicity(object):
                              catalogue.data['depth'] < z_bins[1])
         mid_depth = (z_bins[0] + z_bins[1]) / 2.
 
-        data_grid =  np.column_stack([
+        data_grid = np.column_stack([
             gridx,
             gridy,
             mid_depth * np.ones(n_x * n_y, dtype=float),
@@ -481,7 +482,7 @@ class SmoothedSeismicity(object):
                                            t_f,
                                            mag_inc)])
 
-            data_grid =  np.vstack([data_grid, temp_grid])
+            data_grid = np.vstack([data_grid, temp_grid])
         self.data = data_grid
 
     def write_to_csv(self, filename):

@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -98,8 +98,8 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
         neq = len(catalogue.data['magnitude'])  # Number of earthquakes
         # Get decimal year (needed for time windows)
         year_dec = decimal_year(
-             catalogue.data['year'], catalogue.data['month'],
-                catalogue.data['day'])
+            catalogue.data['year'], catalogue.data['month'],
+            catalogue.data['day'])
         # Get space and time windows corresponding to each event
         sw_space, sw_time = (
             config['time_distance_window'].calc(catalogue.data['magnitude']))
@@ -126,8 +126,8 @@ class GardnerKnopoffType1(BaseCatalogueDecluster):
                 vsel = np.logical_and(
                     vcl == 0,
                     np.logical_and(
-                         dt >= (-sw_time[i] * config['fs_time_prop']),
-                         dt <= sw_time[i]))
+                        dt >= (-sw_time[i] * config['fs_time_prop']),
+                        dt <= sw_time[i]))
                 # Of those events inside time window,
                 # find those inside distance window
                 vsel1 = haversine(longitude[vsel],

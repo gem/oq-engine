@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -61,7 +61,7 @@ from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
         'completeness': True,
         'reference_magnitude': 0.0,
         'magnitude_interval': 0.1,
-        'Average Type': ['Weighted','Harmonic']})
+        'Average Type': ['Weighted', 'Harmonic']})
 class BMaxLikelihood(SeismicityOccurrence):
     """ Implements maximum likelihood calculations taking into account time
     variation in completeness"
@@ -86,7 +86,7 @@ class BMaxLikelihood(SeismicityOccurrence):
                                                   completeness)
 
         # Check the configuration
-        if not config['Average Type'] in ['Weighted','Harmonic']:
+        if not config['Average Type'] in ['Weighted', 'Harmonic']:
             raise ValueError('Average type not recognised in bMaxLikelihood!')
 
         return self._b_ml(catalogue, config, cmag, ctime, ref_mag, dmag)
@@ -103,13 +103,14 @@ class BMaxLikelihood(SeismicityOccurrence):
             id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
             m_c = np.min(cmag[id0])
 
-            print '--- ctime',ctime[ival],' m_c',m_c
+            print '--- ctime', ctime[ival], ' m_c', m_c
 
             # Find events later than cut-off year, and with magnitude
-            # greater than or equal to the corresponding completeness magnitude.
-            # m_c - mag_eq_tolerance is required to correct floating point
-            # differences.
-            id1 = np.logical_and(catalogue['year'] >= ctime[ival],
+            # greater than or equal to the corresponding completeness
+            # magnitude. m_c - mag_eq_tolerance is required to correct
+            # floating point differences.
+            id1 = np.logical_and(
+                catalogue['year'] >= ctime[ival],
                 catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
             nyr = np.float(np.max(catalogue['year'][id1])) - ctime[ival] + 1.
             # Get a- and b- value for the selected events
@@ -119,16 +120,16 @@ class BMaxLikelihood(SeismicityOccurrence):
                                               end_year-ctime[ival]+1)
 
             bval, sigma_b = aki_ml._aki_ml(temp_rec_table[:, 0],
-                                             temp_rec_table[:, 1], dmag, m_c)
+                                           temp_rec_table[:, 1], dmag, m_c)
 
             aval = np.log10(np.float(np.sum(id1)) / nyr) + bval * m_c
             sigma_a = np.abs(np.log10(np.float(np.sum(id1)) / nyr) +
-                (bval + sigma_b) * ref_mag - aval)
+                             (bval + sigma_b) * ref_mag - aval)
 
             # Calculate reference rate
             rate = 10.0 ** (aval - bval * ref_mag)
             sigrate = 10.0 ** ((aval + sigma_a) - (bval * ref_mag) -
-                np.log10(rate))
+                               np.log10(rate))
             if ival == 0:
                 gr_pars = np.array([np.hstack([bval, sigma_b, rate, sigrate])])
                 neq = np.array(np.sum(id1))  # Number of events
@@ -139,8 +140,8 @@ class BMaxLikelihood(SeismicityOccurrence):
             ival = ival + np.sum(id0)
 
         # Get average GR parameters
-        bval, sigma_b, aval, sigma_a = self._average_parameters(gr_pars, neq,
-                config['Average Type'])
+        bval, sigma_b, aval, sigma_a = self._average_parameters(
+            gr_pars, neq, config['Average Type'])
 
         if not 'reference_magnitude' in config:
             d_aval = aval - sigma_a
@@ -188,7 +189,7 @@ class BMaxLikelihood(SeismicityOccurrence):
         '''Harmonic mean'''
         weight = neq.astype(float) / np.sum(neq)
         if np.shape(parameters)[0] != weight.size:
-                raise ValueError('Parameter vector not same shape as weights')
+            raise ValueError('Parameter vector not same shape as weights')
 
         average_value = np.zeros(np.shape(parameters)[1], dtype=float)
         for iloc in range(0, np.shape(parameters)[1]):

@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -47,24 +47,19 @@
 
 # -*- coding: utf-8 -*-
 '''
-Module implements :class: hmtk.sources.source_model.mtkSourceModel, the 
+Module implements :class: hmtk.sources.source_model.mtkSourceModel, the
 general class to describe a set of seismogenic sources
 '''
 
-import numpy as np
 from openquake.nrmllib import models
 from openquake.nrmllib.hazard.writers import SourceModelXMLWriter
-from hmtk.sources.area_source import mtkAreaSource
-from hmtk.sources.point_source import mtkPointSource
-from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
-from hmtk.sources.complex_fault_source import mtkComplexFaultSource
-from hmtk.seismicity.selector import CatalogueSelector
+
 
 class mtkSourceModel(object):
     '''
-    Object to describe a seismogenic source model (composite of multiple sources
-    with mixed typologies)
-    
+    Object to describe a seismogenic source model (composite of
+    multiple sources with mixed typologies)
+
     :param str id:
         Identifier for the source model
     :param str name:
@@ -82,21 +77,19 @@ class mtkSourceModel(object):
             if sources:
                 raise ValueError('Sources must be input as list!')
             self.sources = []
-        
-        
+
     def __iter__(self):
         return iter(self.sources)
-    
+
     def get_number_sources(self):
         '''
         Returns the number of sources in the model
         '''
         return len(self.sources)
 
-
     def serialise_to_nrml(self, filename, use_defaults=False):
         '''
-        Writes the source model to a nrml source model file given by the 
+        Writes the source model to a nrml source model file given by the
         filename
 
         :param str filename:

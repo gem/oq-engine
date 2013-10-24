@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -67,7 +67,7 @@ class Weichert(SeismicityOccurrence):
         '''Calculates recurrence using the Weichert (1980) method'''
         # Input checks
         cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
-                                                   completeness)
+                                                  completeness)
         # Apply Weichert preparation
         cent_mag, t_per, n_obs = self._weichert_prep(
             catalogue.data['year'],
@@ -83,9 +83,10 @@ class Weichert(SeismicityOccurrence):
         if (not 'maxiter' in key_list) or (not config['maxiter']):
             config['maxiter'] = 1000
 
-        bval, sigma_b, rate, sigma_rate, aval, sigma_a = \
-            self.weichert_algorithm(t_per, cent_mag, n_obs, ref_mag,
-            config['bvalue'], config['itstab'], config['maxiter'])
+        bval, sigma_b, rate, sigma_rate, aval, sigma_a = (
+            self.weichert_algorithm(
+                t_per, cent_mag, n_obs, ref_mag,
+                config['bvalue'], config['itstab'], config['maxiter']))
 
         if not 'reference_magnitude' in config:
             rate = np.log10(aval)
@@ -120,7 +121,7 @@ class Weichert(SeismicityOccurrence):
             ctime = np.array([ctime])
         if not(isinstance(cmag, np.ndarray)) and not(isinstance(cmag, list)):
             cmag = np.array([cmag])
-        valid_events = np.ones(np.shape(year)[0], dtype = bool)
+        valid_events = np.ones(np.shape(year)[0], dtype=bool)
         # Remove events from catalogue below completeness intervals
         mag_eq_tolerance = dmag / 1.E7
         time_tolerance = dtime / 1.E7
@@ -130,11 +131,8 @@ class Weichert(SeismicityOccurrence):
                                     year < (ctime[iloc] - time_tolerance))
             valid_events[index0] = False
 
-
         year = year[valid_events]
         magnitude = magnitude[valid_events]
-        for iloc, yr in enumerate(year):
-            dum = np.hstack([iloc, yr, magnitude[iloc]])
 
         mag_range = np.arange(np.min(magnitude) - dmag / 2.,
                               np.max(magnitude) + (2.0 * dmag), dmag)
@@ -144,7 +142,7 @@ class Weichert(SeismicityOccurrence):
 
         # Histogram data
         fullcount1 = np.histogram2d(year, magnitude,
-                                    bins = [time_range, mag_range])[0]
+                                    bins=[time_range, mag_range])[0]
         n_y = np.shape(fullcount1)[1] - 1
         cent_mag = ((mag_range[:-1] + mag_range[1:]) / 2.)[:-1]
 

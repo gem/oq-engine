@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -47,7 +47,7 @@
 
 # -*- coding: utf-8 -*-
 '''
-Tests the construction and methods of the 
+Tests the construction and methods of the
 :class: hmtk.sources.source_model.mtkSourceModel
 '''
 
@@ -69,7 +69,7 @@ class TestSourceModel(unittest.TestCase):
     '''
     def setUp(self):
         self.source_model = None
-        
+
     def test_core_instantiation(self):
         '''
         Simple test to ensure the class is correctly instantiated
@@ -79,18 +79,18 @@ class TestSourceModel(unittest.TestCase):
         self.assertEqual(self.source_model.name, 'Model Name')
         # No sources on input
         self.assertEqual(self.source_model.get_number_sources(), 0)
-        
+
         # Input correctly
-        good_model = [mtkPointSource('101', 'Point 1'), 
+        good_model = [mtkPointSource('101', 'Point 1'),
                       mtkPointSource('102', 'Point 2')]
         self.source_model = mtkSourceModel('1001', 'Good Model', good_model)
         self.assertEqual(self.source_model.get_number_sources(), 2)
-        
+
         # Input incorrectly - source not as list
         with self.assertRaises(ValueError) as ver:
-            self.source_model = mtkSourceModel('1002', 'Bad Model', 
+            self.source_model = mtkSourceModel('1002', 'Bad Model',
                 mtkPointSource('103', 'Point 3'))
-            self.assertEqual(ver.exception.message, 
+            self.assertEqual(ver.exception.message,
                              'Sources must be input as list!')
 
     def test_nrml_writer(self):
@@ -115,6 +115,3 @@ class TestSourceModel(unittest.TestCase):
             #self.assertDictEqual(orig_source.__dict__, test_source.__dict__)
         # Remove the test file
         os.system('rm ' + TEST_PATH)
-
-        
-

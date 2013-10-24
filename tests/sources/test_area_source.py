@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -48,7 +48,7 @@
 # -*- coding: utf-8 -*-
 
 '''
-Tests the construction and methods within the :class: 
+Tests the construction and methods within the :class:
 hmtk.sources.area_source.mtkAreaSource
 '''
 
@@ -62,8 +62,8 @@ from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
 
 SOURCE_ATTRIBUTES = ['mfd', 'name', 'geometry', 'nodal_plane_dist', 'typology',
-                     'upper_depth', 'catalogue', 'rupt_aspect_ratio', 
-                     'lower_depth', 'id', 'hypo_depth_dist', 'mag_scale_rel', 
+                     'upper_depth', 'catalogue', 'rupt_aspect_ratio',
+                     'lower_depth', 'id', 'hypo_depth_dist', 'mag_scale_rel',
                      'trt']
 
 class TestAreaSource(unittest.TestCase):
@@ -74,13 +74,13 @@ class TestAreaSource(unittest.TestCase):
         warnings.simplefilter("ignore")
         self.catalogue = Catalogue()
         self.area_source = mtkAreaSource('101', 'A Source')
-        
+
     def test_area_source_instantiation(self):
         '''
         Tests the core (minimal) instantiation of the class
         '''
         # Check source has all required attributes
-        self.assertListEqual(self.area_source.__dict__.keys(), 
+        self.assertListEqual(self.area_source.__dict__.keys(),
                              SOURCE_ATTRIBUTES)
         self.assertEqual(self.area_source.id, '101')
         self.assertEqual(self.area_source.name, 'A Source')
@@ -96,7 +96,7 @@ class TestAreaSource(unittest.TestCase):
         self.assertEqual(ver.exception.message,
                          'Upper seismogenic depth must be greater than or '
                          'equal to 0.0!')
-                         
+
         # Bad Case - Lower depth smaller than upper depth
         with self.assertRaises(ValueError) as ver:
             self.area_source._check_seismogenic_depths(30., 20.)
@@ -107,25 +107,25 @@ class TestAreaSource(unittest.TestCase):
         self.area_source._check_seismogenic_depths(0.0, 20.)
         self.assertAlmostEqual(0.0, self.area_source.upper_depth)
         self.assertAlmostEqual(20.0, self.area_source.lower_depth)
-        
+
 
     def test_geometry_inputs(self):
         '''
         Tests the geometry definition
         '''
-        simple_polygon = polygon.Polygon([point.Point(2.0, 3.0), 
-                                          point.Point(3.0, 3.0), 
+        simple_polygon = polygon.Polygon([point.Point(2.0, 3.0),
+                                          point.Point(3.0, 3.0),
                                           point.Point(3.0, 2.0),
                                           point.Point(2.0, 2.0)])
 
-        simple_polygon_array = np.array([[2.0, 3.0], 
-                                         [3.0, 3.0], 
+        simple_polygon_array = np.array([[2.0, 3.0],
+                                         [3.0, 3.0],
                                          [3.0, 2.0],
                                          [ 2.0, 2.0]])
         # Using nhlib.geo.polygon.Polygon class as input
         self.area_source.create_geometry(simple_polygon, 0.0, 30.0)
         # Check that geometry is an instance of nhlib.geo.polygon.Polygon
-        self.assertTrue(isinstance(self.area_source.geometry, 
+        self.assertTrue(isinstance(self.area_source.geometry,
                                    polygon.Polygon))
 
         np.testing.assert_array_almost_equal(self.area_source.geometry.lons,
@@ -138,7 +138,7 @@ class TestAreaSource(unittest.TestCase):
         self.area_source = mtkAreaSource('101', 'A Source')
         # Using numpy array as input
         self.area_source.create_geometry(simple_polygon_array, 0.0, 30.0)
-        self.assertTrue(isinstance(self.area_source.geometry, 
+        self.assertTrue(isinstance(self.area_source.geometry,
                                    polygon.Polygon))
 
         # Check that geometry is an instance of nhlib.geo.polygon.Polygon
@@ -159,7 +159,7 @@ class TestAreaSource(unittest.TestCase):
 
         # For numpy array with only two rows
         self.area_source = mtkAreaSource('101', 'A Source')
-        simple_polygon_array = np.array([[2.0, 3.0], 
+        simple_polygon_array = np.array([[2.0, 3.0],
                                          [3.0, 3.0]])
         with self.assertRaises(ValueError) as ver:
             self.area_source.create_geometry(simple_polygon_array, 0.0, 30.0)
@@ -172,11 +172,11 @@ class TestAreaSource(unittest.TestCase):
         Basic test of method to select events from catalogue in polygon
         '''
         self.area_source = mtkAreaSource('101', 'A Source')
-        simple_polygon = polygon.Polygon([point.Point(2.0, 3.0), 
-                                          point.Point(3.0, 3.0), 
+        simple_polygon = polygon.Polygon([point.Point(2.0, 3.0),
+                                          point.Point(3.0, 3.0),
                                           point.Point(3.0, 2.0),
                                           point.Point(2.0, 2.0)])
- 
+
         self.catalogue.data['eventID'] = np.arange(0, 7, 1)
         self.catalogue.data['longitude'] = np.arange(1.0, 4.5, 0.5)
         self.catalogue.data['latitude'] = np.arange(1.0, 4.5, 0.5)
@@ -192,7 +192,7 @@ class TestAreaSource(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             np.array([2., 2.5, 3.]),
             self.area_source.catalogue.data['latitude'])
-        
+
         np.testing.assert_array_almost_equal(
             np.array([1., 1., 1.]),
             self.area_source.catalogue.data['depth'])
@@ -206,7 +206,7 @@ class TestAreaSource(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             np.array([1., 1.5, 2., 2.5, 3., 3.5, 4.0]),
             self.area_source.catalogue.data['latitude'])
-        
+
         np.testing.assert_array_almost_equal(
             np.ones(7, dtype=float),
             self.area_source.catalogue.data['depth'])
@@ -219,19 +219,19 @@ class TestAreaSource(unittest.TestCase):
             self.area_source.select_catalogue(selector0, 0.0)
             self.assertEqual(ver.exception.message,
                              'No events found in catalogue!')
-    
+
     def test_create_oqnmrl_area_source(self):
         '''
         Tests the conversion of a point source to an instance of the :class:
-        oqnrmllib.models.AreaSource 
+        oqnrmllib.models.AreaSource
         '''
         # Define a complete source
-        area_geom = polygon.Polygon([point.Point(10., 10.), 
-                                     point.Point(12., 10.), 
-                                     point.Point(12., 8.), 
+        area_geom = polygon.Polygon([point.Point(10., 10.),
+                                     point.Point(12., 10.),
+                                     point.Point(12., 8.),
                                      point.Point(10., 8.)])
-        self.area_source = mtkAreaSource('001', 
-            'A Point Source', 
+        self.area_source = mtkAreaSource('001',
+            'A Point Source',
             trt='Active Shallow Crust',
             geometry = area_geom,
             upper_depth = 0.,
@@ -255,9 +255,9 @@ class TestAreaSource(unittest.TestCase):
         self.assertTrue(isinstance(test_source, models.AreaSource))
         self.assertEqual(test_source.id, expected_source.id)
         self.assertEqual(test_source.name, expected_source.name)
-        self.assertAlmostEqual(test_source.mfd.b_val, 
+        self.assertAlmostEqual(test_source.mfd.b_val,
                                expected_source.mfd.b_val)
 
-                            
+
     def tearDown(self):
         warnings.resetwarnings()

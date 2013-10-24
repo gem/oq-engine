@@ -5,46 +5,46 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
-# 3 of the License, or (at your option) any later version.
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# DISCLAIMER
 #
-# It is distributed for the purpose of open collaboration and in the 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
+#
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
-# for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 # -*- coding: utf-8 -*-
 
@@ -57,20 +57,18 @@ and earthquake catalogue
 import numpy as np
 from datetime import datetime
 from copy import deepcopy
-from matplotlib.nxutils import points_inside_poly
-from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.geo.mesh import Mesh
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.utils import decimal_time
 
+
 def _check_depth_limits(input_dict):
     '''Returns the default upper and lower depth values if not in dictionary
-    
+
     :param input_dict:
         Dictionary corresponding to the kwargs dictionary of calling function
-    
+
     :returns:
         'upper_depth': Upper seismogenic depth (float)
         'lower_depth': Lower seismogenic depth (float)
@@ -96,14 +94,14 @@ def _check_depth_limits(input_dict):
 
 def _get_decimal_from_datetime(time):
     '''
-    As the decimal time function requires inputs in the form of numpy 
-    arrays need to convert each value in the datetime object  to a single 
+    As the decimal time function requires inputs in the form of numpy
+    arrays need to convert each value in the datetime object  to a single
     numpy array
     '''
-    
+
     # Get decimal seconds from seconds + microseconds
     temp_seconds = np.float(time.second) + (np.float(time.microsecond) / 1.0E6)
-    return decimal_time(np.array([time.year], dtype=int), 
+    return decimal_time(np.array([time.year], dtype=int),
                         np.array([time.month], dtype=int),
                         np.array([time.day], dtype=int),
                         np.array([time.hour], dtype=int),
@@ -113,29 +111,27 @@ def _get_decimal_from_datetime(time):
 
 class CatalogueSelector(object):
     '''
-    Class to implement methods for selecting subsets of the catalogue 
+    Class to implement methods for selecting subsets of the catalogue
     according to various attribute criteria
-    :attr catalogue: The catalogue to which the selection is applied as 
+    :attr catalogue: The catalogue to which the selection is applied as
                      instance of hmtk.seismicity.catalogue.Catalogue
 
-    :attr create_copy: Boolean to indicate whether to create copy of the 
+    :attr create_copy: Boolean to indicate whether to create copy of the
                        original catalogue before selecting {default = True}
-    
+
     '''
 
-
-    def __init__(self, master_catalogue,  create_copy=True):
+    def __init__(self, master_catalogue, create_copy=True):
         '''
         Instantiate
         :param master_catalogue:
             Instance of hmtk.seismicity.catalogue.Catalogue class
 
-        :param bool create_copy: Option to create copy of te class before 
+        :param bool create_copy: Option to create copy of te class before
                                  selecting (i.e. preserving original class)
         '''
         self.catalogue = master_catalogue
         self.copycat = create_copy
-
 
     def select_catalogue(self, valid_id):
         '''
@@ -152,14 +148,12 @@ class CatalogueSelector(object):
             # No events selected - create clean instance of class
             output = Catalogue()
             output.processes = self.catalogue.processes
-            output
 
         elif np.all(valid_id):
             if self.copycat:
-                output =  deepcopy(self.catalogue)
+                output = deepcopy(self.catalogue)
             else:
-                output =  self.catalogue
-
+                output = self.catalogue
         else:
             if self.copycat:
                 output = deepcopy(self.catalogue)
@@ -168,17 +162,16 @@ class CatalogueSelector(object):
             output.purge_catalogue(valid_id)
         return output
 
-
     def within_polygon(self, polygon, distance=None, **kwargs):
         '''
         Select earthquakes within polygon
-        
+
         :param polygon:
             Centre point as instance of nhlib.geo.polygon.Polygon class
-        
+
         :param float distance:
             Buffer distance (km) (can take negative values)
-        
+
         :returns:
             Instance of hmtk.seismicity.catalogue.Catalogue class containing
             only selected events
@@ -190,41 +183,39 @@ class CatalogueSelector(object):
         else:
             zone_polygon = polygon
 
-        
         # Make valid all events inside depth range
         upper_depth, lower_depth = _check_depth_limits(kwargs)
         valid_depth = np.logical_and(
             self.catalogue.data['depth'] >= upper_depth,
             self.catalogue.data['depth'] < lower_depth)
-        
+
         # Events outside polygon returned to invalid assignment
-        catalogue_mesh = Mesh(self.catalogue.data['longitude'], 
+        catalogue_mesh = Mesh(self.catalogue.data['longitude'],
                               self.catalogue.data['latitude'],
                               self.catalogue.data['depth'])
-        valid_id = np.logical_and(valid_depth, 
+        valid_id = np.logical_and(valid_depth,
                                   zone_polygon.intersects(catalogue_mesh))
-        
+
         return self.select_catalogue(valid_id)
-       
 
     def circular_distance_from_point(self, point, distance, **kwargs):
         '''
         Select earthquakes within a distance from a Point
-        
+
         :param point:
             Centre point as instance of nhlib.geo.point.Point class
-        
+
         :param float distance:
             Distance (km)
-        
+
         :returns:
             Instance of hmtk.seismicity.catalogue.Catalogue class containing
             only selected events
         '''
-        
+
         if kwargs['distance_type'] is 'epicentral':
             locations = Mesh(
-                self.catalogue.data['longitude'], 
+                self.catalogue.data['longitude'],
                 self.catalogue.data['latitude'],
                 np.zeros(len(self.catalogue.data['longitude']), dtype=float))
             point = Point(point.longitude, point.latitude, 0.0)
@@ -232,26 +223,25 @@ class CatalogueSelector(object):
             locations = self.catalogue.hypocentres_as_mesh()
 
         is_close = point.closer_than(locations, distance)
-        
+
         return self.select_catalogue(is_close)
-        
 
     def cartesian_square_centred_on_point(self, point, distance, **kwargs):
         '''
         Select earthquakes from within a square centered on a point
-        
+
         :param point:
             Centre point as instance of nhlib.geo.point.Point class
-        
+
         :param distance:
             Distance (km)
-        
+
         :returns:
             Instance of hmtk.seismicity.catalogue.Catalogue class containing
             only selected events
         '''
         point_surface = Point(point.longitude, point.latitude, 0.)
-        # As distance is 
+        # As distance is
         north_point = point_surface.point_at(distance, 0., 0.)
         east_point = point_surface.point_at(distance, 0., 90.)
         south_point = point_surface.point_at(distance, 0., 180.)
@@ -263,82 +253,76 @@ class CatalogueSelector(object):
             is_long,
             self.catalogue.data['latitude'] >= south_point.latitude,
             self.catalogue.data['latitude'] < north_point.latitude)
-        
+
         upper_depth, lower_depth = _check_depth_limits(kwargs)
         is_valid = np.logical_and(
             is_surface,
             self.catalogue.data['depth'] >= upper_depth,
             self.catalogue.data['depth'] < lower_depth)
-        
-        return self.select_catalogue(is_valid)
 
+        return self.select_catalogue(is_valid)
 
     def within_joyner_boore_distance(self, surface, distance, **kwargs):
         '''
         Select events within a Joyner-Boore distance of a fault
-        
+
         :param surface:
-            Fault surface as instance of 
-            nhlib.geo.surface.base.SimpleFaultSurface  or as instance of 
+            Fault surface as instance of
+            nhlib.geo.surface.base.SimpleFaultSurface  or as instance of
             nhlib.geo.surface.ComplexFaultSurface
-        
+
         :param float distance:
             Rupture distance (km)
-        
+
         :returns:
             Instance of hmtk.seismicity.catalogue.Catalogue class containing
             only selected events
         '''
-        
+
         upper_depth, lower_depth = _check_depth_limits(kwargs)
-        
+
         rjb = surface.get_joyner_boore_distance(
             self.catalogue.hypocentres_as_mesh())
         is_valid = np.logical_and(
             rjb <= distance,
             np.logical_and(self.catalogue.data['depth'] >= upper_depth,
-                           self.catalogue.data['depth'] < lower_depth)
-            )
-        
+                           self.catalogue.data['depth'] < lower_depth))
         return self.select_catalogue(is_valid)
-        
 
     def within_rupture_distance(self, surface, distance,  **kwargs):
         '''
         Select events within a rupture distance from a fault surface
-        
+
         :param surface:
             Fault surface as instance of nhlib.geo.surface.base.BaseSurface
-        
+
         :param float distance:
             Rupture distance (km)
-        
+
         :returns:
             Instance of hmtk.seismicity.catalogue.Catalogue class containing
             only selected events
         '''
-        # Check for upper and lower depths 
+        # Check for upper and lower depths
         upper_depth, lower_depth = _check_depth_limits(kwargs)
-        
+
         rrupt = surface.get_min_distance(self.catalogue.hypocentres_as_mesh())
         is_valid = np.logical_and(
             rrupt <= distance,
             np.logical_and(self.catalogue.data['depth'] >= upper_depth,
-                           self.catalogue.data['depth'] < lower_depth)
-            )
+                           self.catalogue.data['depth'] < lower_depth))
 
         return self.select_catalogue(is_valid)
-
 
     def within_time_period(self, start_time=None, end_time=None):
         '''
         Select earthquakes occurring within a given time period
         :param start_time:
             Earliest time (as datetime.datetime object)
-        
+
         :param end_time:
             Latest time (as datetime.datetime object)
-        
+
         :returns:
             Instance of hmtk.seismicity.catalogue.Catalogue class containing
             only selected events
@@ -357,25 +341,24 @@ class CatalogueSelector(object):
             end_time = _get_decimal_from_datetime(datetime.now())
         else:
             end_time = _get_decimal_from_datetime(end_time)
-            
+
         # Get decimal time values
         time_value = self.catalogue.get_decimal_time()
-        
+
         is_valid = np.logical_and(time_value >= start_time,
                                   time_value < end_time)
-        
-        return self.select_catalogue(is_valid)
 
+        return self.select_catalogue(is_valid)
 
     def within_depth_range(self, lower_depth=None, upper_depth=None):
         '''
         Selects events within a specified depth range
         :param float lower_depth:
             Lower depth for consideration
-        
+
         :param float upper_depth:
             Upper depth for consideration
-        
+
         :returns:
             Instance of hmtk.seismicity.catalogue.Catalogue class containing
             only selected events
@@ -386,7 +369,7 @@ class CatalogueSelector(object):
                 return self.catalogue
             else:
                 lower_depth = np.inf
-        
+
         if not upper_depth:
             upper_depth = 0.0
 
@@ -398,10 +381,10 @@ class CatalogueSelector(object):
         '''
         :param float lower_mag:
             Lower magnitude for consideration
-        
+
         :param float upper_mag:
             Upper magnitude for consideration
-        
+
         :returns:
             Instance of hmtk.seismicity.catalogue.Catalogue class containing
             only selected events

@@ -1,12 +1,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+#License as published by the Free Software Foundation, either version
 #3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -14,40 +14,40 @@
 #
 #DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-#is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-#Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+#is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+#Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 import unittest
 import numpy as np
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface import complex_fault, simple_fault
-from hmtk.faults.fault_models import (SimpleFaultGeometry, 
+from hmtk.faults.fault_models import (SimpleFaultGeometry,
                                       ComplexFaultGeometry)
 
 
@@ -75,15 +75,15 @@ class TestSimpleGeometry(unittest.TestCase):
         '''
         Test the instantiation of the fault and the calculation of the length
         '''
-        expected_keys = ['trace', 'downdip_width', 'area', 'surface', 
-                         'upper_depth', 'length', 'surface_width', 
+        expected_keys = ['trace', 'downdip_width', 'area', 'surface',
+                         'upper_depth', 'length', 'surface_width',
                          'lower_depth', 'dip', 'typology']
-        self.fault = SimpleFaultGeometry(self.trace, self.dip, 
+        self.fault = SimpleFaultGeometry(self.trace, self.dip,
                                          self.upper_depth, self.lower_depth)
         self.assertListEqual(self.fault.__dict__.keys(), expected_keys)
         self.assertAlmostEqual(self.fault.length, 60., 5)
         self.assertEqual(self.fault.typology, 'Simple')
-        self.assertTrue(isinstance(self.fault.surface, 
+        self.assertTrue(isinstance(self.fault.surface,
                     simple_fault.SimpleFaultSurface))
 
     def test_simple_get_area_vertical(self):
@@ -91,9 +91,9 @@ class TestSimpleGeometry(unittest.TestCase):
         Tests the area calculation for a vertical fault
         '''
         # Case 1 - Vertical fault
-        self.fault = SimpleFaultGeometry(self.trace, self.dip, 
+        self.fault = SimpleFaultGeometry(self.trace, self.dip,
                                          self.upper_depth, self.lower_depth)
-       
+
         self.assertAlmostEqual(1200., self.fault.get_area(), 5)
         self.assertAlmostEqual(20., self.fault.downdip_width, 5)
         self.assertAlmostEqual(0., self.fault.surface_width, 5)
@@ -104,7 +104,7 @@ class TestSimpleGeometry(unittest.TestCase):
         Tests the area calculation for a dipping fault
         '''
         self.dip = 30.
-        self.fault = SimpleFaultGeometry(self.trace, self.dip, 
+        self.fault = SimpleFaultGeometry(self.trace, self.dip,
                                          self.upper_depth, self.lower_depth)
         self.assertAlmostEqual(2400., self.fault.get_area(), 5)
         self.assertAlmostEqual(40., self.fault.downdip_width, 5)
@@ -112,7 +112,7 @@ class TestSimpleGeometry(unittest.TestCase):
 
 class TestComplexFaultGeometry(unittest.TestCase):
     '''
-    Tests the:w implementation of the :class: 
+    Tests the:w implementation of the :class:
     hmtk.faults.fault_geometries.ComplexFaultGeometry
     '''
     def setUp(self):
@@ -138,10 +138,10 @@ class TestComplexFaultGeometry(unittest.TestCase):
                                    complex_fault.ComplexFaultSurface))
         self.assertEqual(self.fault.typology, 'Complex')
         self.assertAlmostEqual(self.fault.dip, 30.8283885, 5)
-        
+
     def test_get_area_complex(self):
         '''
-        As the get area class simply implements the get_area() method of 
+        As the get area class simply implements the get_area() method of
         :class: openquake.hazardlib.geo.surface.complex_fault.
         ComplexFaultSurface this test simply checks that it is called.
         '''

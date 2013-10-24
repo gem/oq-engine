@@ -1,12 +1,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+#License as published by the Free Software Foundation, either version
 #3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -14,33 +14,33 @@
 #
 #DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-#is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-#Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+#is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+#Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 '''
 Module to test :hmtk.faults.tectonic_reionalisation class
@@ -49,7 +49,7 @@ import os
 import unittest
 import numpy as np
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from hmtk.faults.tectonic_regionalisation import (_check_list_weights, 
+from hmtk.faults.tectonic_regionalisation import (_check_list_weights,
                                                   TectonicRegion,
                                                   TectonicRegionalisation)
 
@@ -65,7 +65,7 @@ class TestCheckUtil(unittest.TestCase):
 
     def test_correct_instance(self):
         '''
-        Tests the instance when the list of parameters is entered correctly 
+        Tests the instance when the list of parameters is entered correctly
         as a tuple with weights summing to 1.0
         '''
         # Single entry
@@ -83,7 +83,7 @@ class TestCheckUtil(unittest.TestCase):
         params = [('Something', 0.5), ('Something Else', 0.4)]
         with self.assertRaises(ValueError) as ae:
             _ = _check_list_weights(params, 'Bad Test 1')
-            self.assertEqual(ae.exception.message, 
+            self.assertEqual(ae.exception.message,
                              'Bad Test 1 weights do not sum to 1.0!')
 
     def test_incorrect_format(self):
@@ -93,7 +93,7 @@ class TestCheckUtil(unittest.TestCase):
         params = None
         with self.assertRaises(ValueError) as ae:
             _ = _check_list_weights(params, 'Bad Test 2')
-            self.assertEqual(ae.exception.message, 
+            self.assertEqual(ae.exception.message,
                              'Bad Test 2 must be formatted with a list of ',
                              'tuples')
 
@@ -121,7 +121,7 @@ class TestTectonicRegion(unittest.TestCase):
         self.assertEqual(self.tect_reg.region_name, 'Test 0')
         self.assertAlmostEqual(self.tect_reg.shear_modulus[0][0], 30.0)
         self.assertAlmostEqual(self.tect_reg.shear_modulus[0][1], 1.0)
-        self.assertAlmostEqual(self.tect_reg.disp_length_ratio[0][0], 
+        self.assertAlmostEqual(self.tect_reg.disp_length_ratio[0][0],
                                1.25E-5)
         self.assertAlmostEqual(self.tect_reg.disp_length_ratio[0][1], 1.0)
         self.assertTrue(isinstance(self.tect_reg.scaling_rel[0][0], WC1994))
@@ -137,11 +137,11 @@ class TestTectonicRegion(unittest.TestCase):
                          'shear_modulus': [(28., 0.5), (32., 0.5)],
                          'disp_length_ratio': [(1.0E-4, 1.0)],
                          'scaling_rel': [(WC1994, 1.0)]}
-        
+
         shear_mod = [(28., 0.5), (32., 0.5)]
         dlr = [(1.0E-4, 1.0)]
         msr = [(WC1994, 1.0)]
-        self.tect_reg = TectonicRegion('001', 
+        self.tect_reg = TectonicRegion('001',
                                        'Test 0',
                                        shear_modulus=shear_mod,
                                        disp_length_ratio=dlr,
@@ -151,7 +151,7 @@ class TestTectonicRegion(unittest.TestCase):
 
 class TestTectonicRegionalisation(unittest.TestCase):
     '''
-    Class to test the module 
+    Class to test the module
     hmtk.faults.tectonic_regionalisation.TectonicRegionalisation
     '''
     def setUp(self):
@@ -194,12 +194,12 @@ class TestTectonicRegionalisation(unittest.TestCase):
         '''
         Tests the population of the tectonic regions with input values
         '''
-        region_dict = [{'Code': '001', 
+        region_dict = [{'Code': '001',
                         'Name': 'Active Shallow',
                         'Shear_Modulus': [(20., 0.3), (30., 0.7)],
                         'Displacement_Length_Ratio': [(1.5E-5, 1.0)],
                         'Magnitude_Scaling_Relation': [(WC1994, 1.0)]},
-                        {'Code': '002', 
+                        {'Code': '002',
                         'Name': 'Stable Continental',
                         'Shear_Modulus': [(30., 1.0)],
                         'Displacement_Length_Ratio': [(1.0E-4, 1.0)],
@@ -207,12 +207,12 @@ class TestTectonicRegionalisation(unittest.TestCase):
                         ]
 
         expected_key_list = ['Active Shallow', 'Stable Continental']
-        expected_regions = [{'id': '001', 
+        expected_regions = [{'id': '001',
                              'region_name': 'Active Shallow',
                              'shear_modulus': [(20., 0.3), (30., 0.7)],
                              'disp_length_ratio': [(1.5E-5, 1.0)],
                              'scaling_rel': [(WC1994, 1.0)]},
-                            {'id': '002', 
+                            {'id': '002',
                              'region_name': 'Stable Continental',
                              'shear_modulus': [(30., 1.0)],
                              'disp_length_ratio': [(1.0E-4, 1.0)],
@@ -220,7 +220,7 @@ class TestTectonicRegionalisation(unittest.TestCase):
         self.tect_reg = TectonicRegionalisation()
         self.tect_reg.populate_regions(region_dict)
         for ival, test_reg in enumerate(self.tect_reg.regionalisation):
-            self.assertDictEqual(expected_regions[ival], 
+            self.assertDictEqual(expected_regions[ival],
                                  test_reg.__dict__)
         self.assertListEqual(expected_key_list, self.tect_reg.key_list)
         self.assertEqual(2, self.tect_reg.get_number_regions())
