@@ -53,7 +53,6 @@ from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils.general import block_splitter
 
 
 #: Always 1 for the computation of ground motion fields in the event-based
@@ -148,24 +147,19 @@ compute_ses.ignore_result = False  # essential
 
 
 @tasks.oqtask
-def compute_gmf(job_id, gsims, ses, sites, rupture_seeds):
+def compute_gmf(job_id, gsims, ses, ruptures, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
     """
     hc = ses.ses_collection.output.oq_job.hazard_calculation
 
     with EnginePerformanceMonitor(
-            'reading ruptures', job_id, compute_gmf):
-        ruptures = list(models.SESRupture.objects.filter(ses=ses))
-
-    with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmf):
-        site_coll = models.SiteCollection(sites)
         gmf_cache = compute_gmf_cache(
-            hc, gsims, site_coll, ruptures, rupture_seeds)
+            hc, gsims, hc.site_collection, ruptures, rupture_seeds)
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
-        _save_gmfs(ses, gmf_cache, site_coll)
+        _save_gmfs(ses, gmf_cache, hc.site_collection)
 
 compute_gmf.ignore_result = False  # essential
 
@@ -403,17 +397,16 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 ordinal__isnull=False).order_by('ordinal')
             for ses in all_ses:
                 # count the ruptures in the given SES
-                n_ruptures = models.SESRupture.objects.filter(ses=ses).count()
-                if not n_ruptures:
+                ruptures = list(models.SESRupture.objects.filter(ses=ses))
+                if not ruptures:
                     continue
-                # compute the associated seeds
-                rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
-                                 for _ in range(n_ruptures)]
                 # we are splitting on sites to avoid running out of memory
                 # on the workers for computations like the full Japan
-                for sites in block_splitter(
-                        self.hc.site_collection, BLOCK_SIZE):
-                    yield self.job.id, gsims, ses, sites, rupture_seeds
+                for rupture_block in block_splitter(ruptures, BLOCK_SIZE):
+                    # compute the associated seeds
+                    rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
+                                     for _ in range(len(rupture_block))]
+                    yield self.job.id, gsims, ses, rupture_block, rupture_seeds
 
     def execute(self):
         """
