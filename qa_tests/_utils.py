@@ -112,7 +112,7 @@ def count(gmf_value, gmfs_site_one, gmfs_site_two,
 
 def compare_hazard_curve_with_csv(
         hc, sm_lt_path, gsim_lt_path, imt, sa_period, sa_damping,
-        csv_name, csv_delimiter=','):
+        csv_name, csv_delimiter=',', rtol=0.2):
     """
     This is useful in tests that compares the hazard curves in the db with
     the expected values in the csv. The csv is expected to have the form
@@ -142,7 +142,7 @@ def compare_hazard_curve_with_csv(
         reader = csv.reader(f, delimiter=csv_delimiter)
         expected_data = [map(float, row) for row in reader]
 
-    numpy.testing.assert_array_almost_equal(expected_data, data, decimal=3)
+    numpy.testing.assert_allclose(expected_data, data, rtol=rtol)
     # to debug the test, in case it breaks, comment the assert and
     # uncomment the following, lines then compare the expected file with
     # the file generated from the computed data and stored in /tmp:
