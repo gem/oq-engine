@@ -147,7 +147,7 @@ compute_ses.ignore_result = False  # essential
 
 
 @tasks.oqtask
-def compute_gmf(job_id, gsims, ses, ruptures, rupture_seeds):
+def compute_gmf(job_id, gsims, ses, site_coll, ruptures, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
     """
@@ -156,7 +156,7 @@ def compute_gmf(job_id, gsims, ses, ruptures, rupture_seeds):
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmf):
         gmf_cache = compute_gmf_cache(
-            hc, gsims, hc.site_collection, ruptures, rupture_seeds)
+            hc, gsims, site_coll, ruptures, rupture_seeds)
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
         _save_gmfs(ses, gmf_cache, hc.site_collection)
@@ -385,10 +385,12 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     def compute_gmf_arg_gen(self):
         """
         Argument generator for the task compute_gmf. For each SES yields a
-        tuple of the form (job_id, gsims, ses, site_coll, rupture_seeds)
+        tuple of the form
+        (job_id, gsims, ses, site_coll, ruptures, rupture_seeds).
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
+        site_coll = self.hc.site_collection
         for lt_rlz in self._get_realizations():
             ltp = logictree.LogicTreeProcessor(self.hc.id)
             gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
@@ -400,13 +402,20 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 ruptures = list(models.SESRupture.objects.filter(ses=ses))
                 if not ruptures:
                     continue
-                # we are splitting on sites to avoid running out of memory
-                # on the workers for computations like the full Japan
-                for rupture_block in block_splitter(ruptures, BLOCK_SIZE):
-                    # compute the associated seeds
-                    rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
-                                     for _ in range(len(rupture_block))]
-                    yield self.job.id, gsims, ses, rupture_block, rupture_seeds
+                # compute the associated seeds
+                rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
+                                 for _ in range(len(ruptures))]
+                if self.hc.ground_motion_correlation_model is None:
+                    # we are splitting on sites to avoid running out of memory
+                    # on the workers for computations like the full Japan
+                    for sites in block_splitter(site_coll, BLOCK_SIZE):
+                        yield (self.job.id, gsims, ses,
+                               models.SiteCollection(sites),
+                               ruptures, rupture_seeds)
+                else:
+                    # do not split on sites
+                    yield (self.job.id, gsims, ses, site_coll,
+                           ruptures, rupture_seeds)
 
     def execute(self):
         """
