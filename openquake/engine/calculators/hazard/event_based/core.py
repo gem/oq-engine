@@ -59,6 +59,8 @@ from openquake.engine.performance import EnginePerformanceMonitor
 #: hazard calculator.
 DEFAULT_GMF_REALIZATIONS = 1
 
+BLOCK_SIZE = 1000  # blocks of 1,000 sites each
+
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
 
@@ -145,51 +147,44 @@ compute_ses.ignore_result = False  # essential
 
 
 @tasks.oqtask
-def compute_gmf(job_id, gsims, ses, rupture_seeds):
+def compute_gmf(job_id, imt, gsims, ses, site_coll, ruptures, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
     """
-    hc = ses.ses_collection.output.oq_job.hazard_calculation
-
-    with EnginePerformanceMonitor(
-            'reading ruptures', job_id, compute_gmf):
-        ruptures = list(models.SESRupture.objects.filter(ses=ses))
-
+    hc = ses.ses_collection.output.oq_job.hazard_calculation            
+    imt = haz_general.imt_to_hazardlib(imt)
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmf):
         gmf_cache = compute_gmf_cache(
-            hc, gsims, ruptures, rupture_seeds)
+            hc, imt, gsims, site_coll, ruptures, rupture_seeds)
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
-        _save_gmfs(ses, gmf_cache, hc.site_collection)
+        _save_gmfs(ses, imt, gmf_cache, site_coll)
 
 compute_gmf.ignore_result = False  # essential
 
 
-def compute_gmf_cache(hc, gsims, ruptures, rupture_seeds):
+def compute_gmf_cache(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
     """
     Compute a ground motion field value for each rupture, for all the
-    points affected by that rupture, for all IMTs.
+    points affected by that rupture, for the given IMT.
     """
-    imts = [haz_general.imt_to_hazardlib(x)
-            for x in hc.intensity_measure_types]
     correl_model = None
     if hc.ground_motion_correlation_model is not None:
         correl_model = haz_general.get_correl_model(hc)
 
-    n_points = len(hc.site_collection)
+    n_points = len(site_coll)
 
     # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
-    gmf_cache = dict((imt, dict(gmvs=numpy.empty((n_points, 0)),
-                                rupture_ids=[]))
-                     for imt in imts)
+    gmf_cache = dict(gmvs=numpy.empty((n_points, 0)),
+                     rupture_ids=[])
 
     # Compute and save ground motion fields
     for rupture, rupture_seed in zip(ruptures, rupture_seeds):
         gmf_calc_kwargs = {
             'rupture': rupture.rupture,
-            'sites': hc.site_collection,
-            'imts': imts,
+            'sites': site_coll,
+            'imts': [imt],
             'gsim': gsims[rupture.tectonic_region_type],
             'truncation_level': hc.truncation_level,
             'realizations': DEFAULT_GMF_REALIZATIONS,
@@ -201,10 +196,9 @@ def compute_gmf_cache(hc, gsims, ruptures, rupture_seeds):
         gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
 
         # update the gmf cache:
-        for imt_key, v in gmf_dict.iteritems():
-            gmf_cache[imt_key]['gmvs'] = numpy.append(
-                gmf_cache[imt_key]['gmvs'], v, axis=1)
-            gmf_cache[imt_key]['rupture_ids'].append(rupture.id)
+        [v]= gmf_dict.values()  # there is a single imt => a single value
+        gmf_cache['gmvs'] = numpy.append(gmf_cache['gmvs'], v, axis=1)
+        gmf_cache['rupture_ids'].append(rupture.id)
 
     return gmf_cache
 
@@ -239,12 +233,14 @@ def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmfs(ses, gmf_dict, sites):
+def _save_gmfs(ses, imt, gmf_data, sites):
     """
     Helper method to save computed GMF data to the database.
     :param ses:
         A :class:`openquake.engine.db.models.SES` instance
-    :param dict gmf_dict:
+    :param imt:
+        An intensity measure type instance
+    :param dict gmf_data:
         The dict used to cache/buffer up GMF results during the calculation.
     :param sites:
         An :class:`openquake.hazardlib.site.SiteCollection` object,
@@ -253,38 +249,36 @@ def _save_gmfs(ses, gmf_dict, sites):
     gmf_coll = models.Gmf.objects.get(
         lt_realization=ses.ses_collection.lt_realization)
 
-    for imt, gmf_data in gmf_dict.iteritems():
+    gmfs = gmf_data['gmvs']
+    # ``gmfs`` and ``rupture_ids`` come in as a numpy.matrix and
+    # a list. we want them as an array; it handles subscripting in
+    # the way that we want
+    gmfs = numpy.array(gmfs)
+    rupture_ids = numpy.array(gmf_data['rupture_ids'])
 
-        gmfs = gmf_data['gmvs']
-        # ``gmfs`` and ``rupture_ids`` come in as a numpy.matrix and
-        # a list. we want them as an array; it handles subscripting in
-        # the way that we want
-        gmfs = numpy.array(gmfs)
-        rupture_ids = numpy.array(gmf_data['rupture_ids'])
+    sa_period = None
+    sa_damping = None
+    if isinstance(imt, openquake.hazardlib.imt.SA):
+        sa_period = imt.period
+        sa_damping = imt.damping
+    imt_name = imt.__class__.__name__
 
-        sa_period = None
-        sa_damping = None
-        if isinstance(imt, openquake.hazardlib.imt.SA):
-            sa_period = imt.period
-            sa_damping = imt.damping
-        imt_name = imt.__class__.__name__
-
-        for all_gmvs, site in zip(gmfs, sites):
-            # take only the nonzero ground motion values and the
-            # corresponding rupture ids
-            nonzero_gmvs_idxs = numpy.where(all_gmvs != 0)
-            gmvs = all_gmvs[nonzero_gmvs_idxs].tolist()
-            relevant_rupture_ids = rupture_ids[nonzero_gmvs_idxs].tolist()
-            if gmvs:
-                inserter.add(models.GmfData(
-                    gmf=gmf_coll,
-                    ses_id=ses.id,
-                    imt=imt_name,
-                    sa_period=sa_period,
-                    sa_damping=sa_damping,
-                    site_id=site.id,
-                    gmvs=gmvs,
-                    rupture_ids=relevant_rupture_ids))
+    for all_gmvs, site in zip(gmfs, sites):
+        # take only the nonzero ground motion values and the
+        # corresponding rupture ids
+        nonzero_gmvs_idxs = numpy.where(all_gmvs != 0)
+        gmvs = all_gmvs[nonzero_gmvs_idxs].tolist()
+        relevant_rupture_ids = rupture_ids[nonzero_gmvs_idxs].tolist()
+        if gmvs:
+            inserter.add(models.GmfData(
+                gmf=gmf_coll,
+                ses_id=ses.id,
+                imt=imt_name,
+                sa_period=sa_period,
+                sa_damping=sa_damping,
+                site_id=site.id,
+                gmvs=gmvs,
+                rupture_ids=relevant_rupture_ids))
     inserter.flush()
 
 
@@ -387,10 +381,12 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     def compute_gmf_arg_gen(self):
         """
         Argument generator for the task compute_gmf. For each SES yields a
-        tuple of the form (job_id, gsims, ses, rupture_seeds)
+        tuple of the form
+        (job_id, imt, gsims, ses, site_coll, ruptures, rupture_seeds).
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
+        site_coll = self.hc.site_collection
         for lt_rlz in self._get_realizations():
             ltp = logictree.LogicTreeProcessor(self.hc.id)
             gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
@@ -399,13 +395,25 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 ordinal__isnull=False).order_by('ordinal')
             for ses in all_ses:
                 # count the ruptures in the given SES
-                n_ruptures = models.SESRupture.objects.filter(ses=ses).count()
-                if not n_ruptures:
+                ruptures = list(models.SESRupture.objects.filter(ses=ses))
+                if not ruptures:
                     continue
                 # compute the associated seeds
                 rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
-                                 for _ in range(n_ruptures)]
-                yield self.job.id, gsims, ses, rupture_seeds
+                                 for _ in range(len(ruptures))]
+                # splitting on IMTs to generate more tasks and save memory
+                for imt in self.hc.intensity_measure_types:
+                    if self.hc.ground_motion_correlation_model is None:
+                        # we are splitting on sites to avoid running out of memory
+                        # on the workers for computations like the full Japan
+                        for sites in block_splitter(site_coll, BLOCK_SIZE):
+                            yield (self.job.id, imt, gsims, ses,
+                                   models.SiteCollection(sites),
+                                   ruptures, rupture_seeds)
+                    else:
+                        # do not split on sites
+                        yield (self.job.id, imt, gsims, ses, site_coll,
+                               ruptures, rupture_seeds)
 
     def execute(self):
         """
