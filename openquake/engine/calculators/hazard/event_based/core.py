@@ -169,16 +169,16 @@ def _compute_gmf(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for the given IMT.
     """
+    assert len(ruptures) == len(rupture_seeds)
     correl_model = None
     if hc.ground_motion_correlation_model is not None:
         correl_model = haz_general.get_correl_model(hc)
 
-    n_points = len(site_coll)
-    gmfs = numpy.empty((n_points, 0))  # a cache of gmfs and rupture_ids
-    rupture_ids = []
+    gmfs = numpy.empty((len(site_coll), 0))  # a matrix with zero columns
+    rupture_ids = numpy.empty(len(ruptures), numpy.int64)
 
     # Compute and save ground motion fields
-    for rupture, rupture_seed in zip(ruptures, rupture_seeds):
+    for i, rupture in enumerate(ruptures):
         gmf_calc_kwargs = {
             'rupture': rupture.rupture,
             'sites': site_coll,
@@ -190,14 +190,15 @@ def _compute_gmf(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
             'rupture_site_filter': filters.rupture_site_distance_filter(
                 hc.maximum_distance),
         }
-        numpy.random.seed(rupture_seed)
+        numpy.random.seed(rupture_seeds[i])
         gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
 
-        [v] = gmf_dict.values()  # there is a single imt => a single value
-        gmfs = numpy.append(gmfs, v, axis=1)
-        rupture_ids.append(rupture.id)
+        [value] = gmf_dict.values()  # there is a single imt => a single value
+        # gmfs is a matrix n_sites x n_ruptures; we are appending a column here
+        gmfs = numpy.append(gmfs, value, axis=1)
+        rupture_ids[i] = rupture.id
 
-    return numpy.array(gmfs), numpy.array(rupture_ids)
+    return gmfs, rupture_ids
 
 
 def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
