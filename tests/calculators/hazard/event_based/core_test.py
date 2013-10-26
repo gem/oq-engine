@@ -53,7 +53,7 @@ def make_site_coll(n):
     sites = []
     for i in range(n):
         lon = -78 - float(i) / 1000
-        site = Site(Point(lon, 15.5), 800., 'measured', 50., 2.5, 1)
+        site = Site(Point(lon, 15.5), 800., 'measured', 50., 2.5, i)
         sites.append(site)
     return models.SiteCollection(sites)
 
@@ -89,17 +89,25 @@ class EventBasedHazardTestCase(unittest.TestCase):
         rupture_ids = range(2)
         ruptures = [FakeRupture(i, trt) for i in rupture_ids]
         rupture_seeds = rupture_ids
-
-        gmfs, rids = core._compute_gmf(
+        gmv_dict, rup_dict = core._compute_gmf(
             hc, PGA(), {trt: gsim}, site_coll, ruptures, rupture_seeds)
-        expected_gmfs = numpy.array([
-            [ 0.12214905,  0.08138992],
-            [ 0.05416627,  0.02136369],
-            [ 0.07722465,  0.0226183 ],
-            [ 0.16606267,  0.01641273],
-            [ 0.13358854,  0.05299877]])
-        numpy.testing.assert_equal(rids, rupture_ids)
-        numpy.testing.assert_allclose(gmfs, expected_gmfs, rtol=1e-6)
+        expected_rups = {
+            0: rupture_ids,
+            1: rupture_ids,
+            2: rupture_ids,
+            3: rupture_ids,
+            4: rupture_ids,
+        }
+        expected_gmvs = {
+            0: [0.122149047040728, 0.0813899249039753],
+            1: [0.0541662667863476, 0.02136369236082],
+            2: [0.0772246502768338, 0.0226182956091826],
+            3: [0.166062666449449, 0.0164127269047494],
+            4: [0.133588538354143, 0.0529987707352876]
+        }
+        numpy.testing.assert_equal(rup_dict, expected_rups)
+        for i, gmvs in expected_gmvs.iteritems():
+            numpy.testing.assert_allclose(gmvs, expected_gmvs[i])
 
 
 class EventBasedHazardCalculatorTestCase(unittest.TestCase):
