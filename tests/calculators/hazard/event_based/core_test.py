@@ -24,6 +24,10 @@ import numpy
 from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.rupture import Rupture
+from openquake.hazardlib.site import Site
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.gsim import get_available_gsims
 
 from openquake.engine.db import models
 from openquake.engine.calculators.hazard.event_based import core
@@ -40,6 +44,29 @@ def make_mock_points(n):
         points.append(point)
     return points
 
+
+class FakeRupture(object):
+    def __init__(self):
+        self.rupture = Rupture(5.0, )
+        self.id = 1
+
+
+class EventBasedHazardTestCase(unittest.TestCase):
+    """Tests for the routines used by the event-based hazard calculator"""
+
+    def test_compute_gmf(self):
+        hc = mock.Mock()
+        hc.ground_motion_correlation_model = None
+        ruptures = [FakeRupture()]
+        rupture_seeds = [42]
+        site = Site(Point(0, 0), 800., 'measured', 50., 2.5, 1)
+        site_coll = models.SiteCollection([site])
+        gsim = get_available_gsims()['AbrahamsonSilva2008']
+        cache = compute_gmf_cache(
+            hc, PGA, gsims, site_coll, ruptures, rupture_seeds)
+        print cache
+
+        self.assertEqual(cache, expected_cache)
 
 class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     """
