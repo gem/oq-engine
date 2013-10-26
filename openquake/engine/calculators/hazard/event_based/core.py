@@ -146,6 +146,35 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
 compute_ses.ignore_result = False  # essential
 
 
+def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
+    """
+    Helper function for saving stochastic event set ruptures to the database.
+
+    :param ses:
+        A :class:`openquake.engine.db.models.SES` instance. This will be DB
+        'container' for the new rupture record.
+    :param rupture:
+        A :class:`openquake.hazardlib.source.rupture.Rupture` instance.
+    :param complete_logic_tree_ses:
+        :class:`openquake.engine.db.models.SES` representing the `complete
+        logic tree` stochastic event set.
+        If not None, save a copy of the input `rupture` to this SES.
+    """
+
+    # TODO: Possible future optimiztion:
+    # Refactor this to do bulk insertion of ruptures
+    with transaction.commit_on_success(using='reslt_writer'):
+        for r in ruptures:
+            models.SESRupture.objects.create(
+                ses=ses, rupture=r, tag=r.tag)
+
+        if complete_logic_tree_ses is not None:
+            for rupture in ruptures:
+                models.SESRupture.objects.create(
+                    ses=complete_logic_tree_ses,
+                    rupture=rupture)
+
+
 @tasks.oqtask
 def compute_gmf(job_id, imt, gsims, ses, site_coll, ruptures, rupture_seeds):
     """
@@ -199,35 +228,6 @@ def _compute_gmf(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
         rupture_ids[i] = rupture.id
 
     return gmfs, rupture_ids
-
-
-def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
-    """
-    Helper function for saving stochastic event set ruptures to the database.
-
-    :param ses:
-        A :class:`openquake.engine.db.models.SES` instance. This will be DB
-        'container' for the new rupture record.
-    :param rupture:
-        A :class:`openquake.hazardlib.source.rupture.Rupture` instance.
-    :param complete_logic_tree_ses:
-        :class:`openquake.engine.db.models.SES` representing the `complete
-        logic tree` stochastic event set.
-        If not None, save a copy of the input `rupture` to this SES.
-    """
-
-    # TODO: Possible future optimiztion:
-    # Refactor this to do bulk insertion of ruptures
-    with transaction.commit_on_success(using='reslt_writer'):
-        for r in ruptures:
-            models.SESRupture.objects.create(
-                ses=ses, rupture=r, tag=r.tag)
-
-        if complete_logic_tree_ses is not None:
-            for rupture in ruptures:
-                models.SESRupture.objects.create(
-                    ses=complete_logic_tree_ses,
-                    rupture=rupture)
 
 
 @transaction.commit_on_success(using='reslt_writer')
