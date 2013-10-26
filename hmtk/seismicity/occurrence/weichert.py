@@ -65,12 +65,14 @@ class Weichert(SeismicityOccurrence):
     def calculate(self, catalogue, config, completeness=None):
         '''Calculates recurrence using the Weichert (1980) method'''
         # Input checks
-        cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
-                                                   completeness)
+        cmag, ctime, ref_mag, dmag, config = input_checks(catalogue,
+                                                          config,
+                                                          completeness)
         # Apply Weichert preparation
-        cent_mag, t_per, n_obs = self._weichert_prep(catalogue['year'],
-                                                     catalogue['magnitude'],
-                                                     ctime, cmag, dmag)
+        cent_mag, t_per, n_obs = self._weichert_prep(
+            catalogue.data['year'],
+            catalogue.data['magnitude'],
+            ctime, cmag, dmag)
 
         # A few more Weichert checks
         key_list = config.keys()
@@ -80,14 +82,13 @@ class Weichert(SeismicityOccurrence):
             config['itstab'] = 1E-5
         if (not 'maxiter' in key_list) or (not config['maxiter']):
             config['maxiter'] = 1000
-
         bval, sigma_b, rate, sigma_rate, aval, sigma_a = \
             self.weichert_algorithm(t_per, cent_mag, n_obs, ref_mag,
             config['bvalue'], config['itstab'], config['maxiter'])
-
-        if not 'reference_magnitude' in config:
+       
+        if not config['reference_magnitude']:
             rate = np.log10(aval)
-            sigma_rate = np.log10(sigma_a)
+            sigma_rate = np.log10(aval + sigma_a) - np.log10(aval)
 
         return bval, sigma_b, rate, sigma_rate
 

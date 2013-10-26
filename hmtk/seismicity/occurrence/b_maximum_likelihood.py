@@ -80,12 +80,13 @@ class BMaxLikelihood(SeismicityOccurrence):
         """
 
         # Input checks
-        cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
-                                                    completeness)
+        cmag, ctime, ref_mag, dmagi, config = input_checks(catalogue,
+                                                           config,
+                                                           completeness)
 
         # Fix the end year
         if end_year is None:
-            end_year = np.max(catalogue['year'])
+            end_year = np.max(catalogue.data['year'])
 
         # Check the configuration
         if not config['Average Type'] in ['Weighted','Harmonic']:
@@ -125,36 +126,63 @@ class BMaxLikelihood(SeismicityOccurrence):
             bval, sigma_b = aki_ml._aki_ml(temp_rec_table[:, 0],
                                              temp_rec_table[:, 1], dmag, m_c)
 
-            aval = np.log10(np.float(np.sum(id1)) / nyr) + bval * m_c
-            sigma_a = np.abs(np.log10(np.float(np.sum(id1)) / nyr) +
-                (bval + sigma_b) * ref_mag - aval)
+            #aval = np.log10(np.float(np.sum(id1)) / nyr) + bval * m_c
+            #sigma_a = np.abs(np.log10(np.float(np.sum(id1)) / nyr) +
+            #    (bval + sigma_b) * ref_mag - aval)
 
             # Calculate reference rate
-            rate = 10.0 ** (aval - bval * ref_mag)
-            sigrate = 10.0 ** ((aval + sigma_a) - (bval * ref_mag) -
-                np.log10(rate))
+            #rate = 10.0 ** (aval - bval * ref_mag)
+            #sigrate = 10.0 ** ((aval + sigma_a) - (bval * ref_mag) -
+            #    np.log10(rate))
             if ival == 0:
-                gr_pars = np.array([np.hstack([bval, sigma_b, rate, sigrate])])
+                #gr_pars = np.array([np.hstack([bval, sigma_b, rate, sigrate])])
+                gr_pars = np.array([np.hstack([bval, sigma_b])])
                 neq = np.sum(id1)  # Number of events
             else:
-                gr_pars = np.vstack([gr_pars, np.hstack([bval, sigma_b, rate,
-                                                         sigrate])])
+                
+                #gr_pars = np.vstack([gr_pars, np.hstack([bval, sigma_b, rate,
+                #                                         sigrate])])
+                gr_pars = np.vstack([gr_pars, np.hstack([bval, sigma_b])])
                 neq = np.hstack([neq, np.sum(id1)])
             ival = ival + np.sum(id0)
 
         # Get average GR parameters
-        bval, sigma_b, aval, sigma_a = self._average_parameters(gr_pars, neq,
+        bval, sigma_b = self._average_parameters(gr_pars, neq,
                 config['Average Type'])
-
-        if not 'reference_magnitude' in config:
-            d_aval = aval - sigma_a
-            aval = np.log10(aval)
-            sigma_a = aval - np.log10(d_aval)
-
-        return bval, sigma_b, aval, sigma_a
+        
+        aval = self._calculate_a_value(bval,
+                                       np.float(np.sum(neq)),
+                                       cmag,
+                                       ctime,
+                                       catalogue['magnitude'],
+                                       end_year,
+                                       dmag)
+        sigma_a = self._calculate_a_value(bval + sigma_b,
+                                          np.float(np.sum(neq)),
+                                          cmag,
+                                          ctime,
+                                          catalogue['magnitude'],
+                                          end_year,
+                                          dmag)
+        if not config['reference_magnitude']:
+            return bval,\
+                   sigma_b,\
+                   aval,\
+                   sigma_a - aval
+                   #np.log10((10. ** sigma_a) - (10. ** aval))
+        else:
+            rate = 10. ** (aval - bval * config['reference_magnitude'])
+            sigma_rate =  10. ** (sigma_a - 
+                bval * config['reference_magnitude']) - rate
+            return bval,\
+                   sigma_b,\
+                   rate,\
+                   sigma_rate
+            
 
     def _average_parameters(self, gr_params, neq, average_type='Weighted'):
-        """Calculates the average of a set of Gutenberg-Richter parameters
+        """
+        Calculates the average of a set of Gutenberg-Richter parameters
         depending on the average type
 
         :param numpy.ndarray gr_params:
@@ -173,9 +201,25 @@ class BMaxLikelihood(SeismicityOccurrence):
             average_parameters = self._weighted_mean(gr_params, neq)
         bval = average_parameters[0]
         sigma_b = average_parameters[1]
-        aval = average_parameters[2]
-        sigma_a = average_parameters[3]
-        return bval, sigma_b, aval, sigma_a
+        return bval, sigma_b
+
+    def _calculate_a_value(self, bvalue, nvalue, cmag, cyear, magnitude,
+        end_year, dmag):
+        """
+        Calculates the a-value using the method of Weichert (1980) and 
+        McGuire (2004)
+        """
+        mmin = cmag[0]
+        mmax = np.max(magnitude)
+        if mmax > np.max(cmag):
+            cmag = np.hstack([cmag, mmax + dmag])
+        target_mag = (cmag[:-1] + cmag[1:]) / 2. 
+        nyear = end_year - cyear + 1.
+        beta = bvalue * np.log(10.)
+        rate_mmin = nvalue * np.sum(np.exp(-beta * target_mag)) /\
+            np.sum(nyear * np.exp(-beta * target_mag))
+        print mmin, mmax, target_mag, nyear, beta, rate_mmin
+        return np.log10(rate_mmin) + bvalue * mmin
 
 
     def _weighted_mean(self, parameters, neq):

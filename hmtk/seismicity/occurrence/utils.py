@@ -112,21 +112,24 @@ def input_checks(catalogue, config, completeness):
         # Completeness corresponds to a single magnitude (i.e. applies to
         # the entire catalogue)
         cmag = np.array(completeness)
-        ctime = np.array(np.min(catalogue['year']))
+        ctime = np.array(np.min(catalogue.data['year']))
     else:
         # Everything is valid - i.e. no completeness magnitude
-        cmag = np.array(np.min(catalogue['magnitude']))
-        ctime = np.array(np.min(catalogue['year']))
+        cmag = np.array(np.min(catalogue.data['magnitude']))
+        ctime = np.array(np.min(catalogue.data['year']))
      
     # Set reference magnitude - if not in config then default to M = 0.
     if not config:
         # use default reference magnitude of 0.0 and magnitude interval of 0.1
         ref_mag = 0.0
         dmag = 0.1
+        config = {'reference_magnitude': None,
+                  'magnitude_interval': 0.1}
     else:
-        if (not 'reference_magnitude' in config.keys()) or \
-            not config['reference_magnitude']:
-            ref_mag = 0.0
+        if (not 'reference_magnitude' in config.keys()) or\
+            (config['reference_magnitude'] is None):
+            ref_mag = 0.
+            config['reference_magnitude'] = None
         else:
             ref_mag = config['reference_magnitude']
             
@@ -146,7 +149,7 @@ def input_checks(catalogue, config, completeness):
 #    else:
 #        dmag = config['magnitude_interval']
     
-    return cmag, ctime, ref_mag, dmag
+    return cmag, ctime, ref_mag, dmag, config
 
 
 def generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples):
