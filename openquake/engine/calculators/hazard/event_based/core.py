@@ -151,20 +151,20 @@ def compute_gmf(job_id, imt, gsims, ses, site_coll, ruptures, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
     """
-    hc = ses.ses_collection.output.oq_job.hazard_calculation            
+    hc = ses.ses_collection.output.oq_job.hazard_calculation
     imt = haz_general.imt_to_hazardlib(imt)
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmf):
-        gmf_cache = compute_gmf_cache(
+        gmfs, rupture_ids = _compute_gmf(
             hc, imt, gsims, site_coll, ruptures, rupture_seeds)
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
-        _save_gmfs(ses, imt, gmf_cache, site_coll)
+        _save_gmfs(ses, imt, gmfs, rupture_ids, site_coll)
 
 compute_gmf.ignore_result = False  # essential
 
 
-def compute_gmf_cache(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
+def _compute_gmf(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
     """
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for the given IMT.
@@ -174,10 +174,8 @@ def compute_gmf_cache(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
         correl_model = haz_general.get_correl_model(hc)
 
     n_points = len(site_coll)
-
-    # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
-    gmf_cache = dict(gmvs=numpy.empty((n_points, 0)),
-                     rupture_ids=[])
+    gmfs = numpy.empty((n_points, 0))  # a cache of gmfs and rupture_ids
+    rupture_ids = []
 
     # Compute and save ground motion fields
     for rupture, rupture_seed in zip(ruptures, rupture_seeds):
@@ -185,7 +183,7 @@ def compute_gmf_cache(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
             'rupture': rupture.rupture,
             'sites': site_coll,
             'imts': [imt],
-            'gsim': gsims[rupture.tectonic_region_type],
+            'gsim': gsims[rupture.rupture.tectonic_region_type],
             'truncation_level': hc.truncation_level,
             'realizations': DEFAULT_GMF_REALIZATIONS,
             'correlation_model': correl_model,
@@ -195,12 +193,11 @@ def compute_gmf_cache(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
         numpy.random.seed(rupture_seed)
         gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
 
-        # update the gmf cache:
-        [v]= gmf_dict.values()  # there is a single imt => a single value
-        gmf_cache['gmvs'] = numpy.append(gmf_cache['gmvs'], v, axis=1)
-        gmf_cache['rupture_ids'].append(rupture.id)
+        [v] = gmf_dict.values()  # there is a single imt => a single value
+        gmfs = numpy.append(gmfs, v, axis=1)
+        rupture_ids.append(rupture.id)
 
-    return gmf_cache
+    return numpy.array(gmfs), numpy.array(rupture_ids)
 
 
 def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
@@ -233,28 +230,23 @@ def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmfs(ses, imt, gmf_data, sites):
+def _save_gmfs(ses, imt, gmfs, rupture_ids, sites):
     """
     Helper method to save computed GMF data to the database.
     :param ses:
         A :class:`openquake.engine.db.models.SES` instance
     :param imt:
         An intensity measure type instance
-    :param dict gmf_data:
-        The dict used to cache/buffer up GMF results during the calculation.
+    :param gmfs:
+        The GMFs per rupture
+    :param rupture_ids:
+        The associated rupture ids
     :param sites:
         An :class:`openquake.hazardlib.site.SiteCollection` object,
         representing the sites of interest for a calculation.
     """
     gmf_coll = models.Gmf.objects.get(
         lt_realization=ses.ses_collection.lt_realization)
-
-    gmfs = gmf_data['gmvs']
-    # ``gmfs`` and ``rupture_ids`` come in as a numpy.matrix and
-    # a list. we want them as an array; it handles subscripting in
-    # the way that we want
-    gmfs = numpy.array(gmfs)
-    rupture_ids = numpy.array(gmf_data['rupture_ids'])
 
     sa_period = None
     sa_damping = None
