@@ -185,11 +185,11 @@ def compute_gmf(job_id, imt, gsims, ses, site_coll, ruptures, rupture_seeds):
     imt = haz_general.imt_to_hazardlib(imt)
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmf):
-        gmvs_per_site, ruptures_per_site = _compute_gmf(
+        gmvs_per_site = _compute_gmf(
             hc, imt, gsims, site_coll, ruptures, rupture_seeds)
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
-        _save_gmfs(ses, imt, gmvs_per_site, ruptures_per_site, site_coll)
+        _save_gmfs(ses, imt, gmvs_per_site, site_coll)
 
 compute_gmf.ignore_result = False  # essential
 
@@ -207,8 +207,8 @@ def _compute_gmf(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
         correl_model = haz_general.get_correl_model(hc)
 
     n_sites = len(site_coll)
+    # a dictionary site_id -> [(gmv, rid), ...]
     gmvs_per_site = collections.defaultdict(list)
-    ruptures_per_site = collections.defaultdict(list)
 
     # Compute and save ground motion fields
     for i, rupture in enumerate(ruptures):
@@ -228,24 +228,21 @@ def _compute_gmf(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
         [gmfs] = gmf.ground_motion_fields(**gmf_calc_kwargs).values()
         gmvs = gmfs.reshape(n_sites)
         for site, gmv in zip(site_coll, gmvs):
-            if gmv:  # nonzero contribution to site
-                gmvs_per_site[site.id].append(gmv)
-                ruptures_per_site[site.id].append(rupture.id)
-    return gmvs_per_site, ruptures_per_site
+            if gmv:  # there is a nonzero contribution to the site
+                gmvs_per_site[site.id].append((gmv, rupture.id))
+    return gmvs_per_site
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def _save_gmfs(ses, imt, gmvs_per_site, ruptures_per_site, sites):
+def _save_gmfs(ses, imt, gmvs_per_site, sites):
     """
     Helper method to save computed GMF data to the database.
     :param ses:
         A :class:`openquake.engine.db.models.SES` instance
     :param imt:
         An intensity measure type instance
-    :param gmf_per_site:
-        The GMFs per rupture
-    :param rupture_per_site:
-        The associated rupture ids
+    :param gmvs_per_site:
+        The GMVs and ruptures contributing to each site
     :param sites:
         An :class:`openquake.hazardlib.site.SiteCollection` object,
         representing the sites of interest for a calculation.
@@ -261,6 +258,7 @@ def _save_gmfs(ses, imt, gmvs_per_site, ruptures_per_site, sites):
     imt_name = imt.__class__.__name__
 
     for site_id in gmvs_per_site:
+        gmvs, rids = zip(*gmvs_per_site[site_id])
         inserter.add(models.GmfData(
             gmf=gmf_coll,
             ses_id=ses.id,
@@ -268,8 +266,8 @@ def _save_gmfs(ses, imt, gmvs_per_site, ruptures_per_site, sites):
             sa_period=sa_period,
             sa_damping=sa_damping,
             site_id=site_id,
-            gmvs=gmvs_per_site[site_id],
-            rupture_ids=ruptures_per_site[site_id]))
+            gmvs=gmvs,
+            rupture_ids=rids))
     inserter.flush()
 
 
