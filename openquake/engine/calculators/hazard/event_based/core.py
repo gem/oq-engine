@@ -59,7 +59,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 #: hazard calculator.
 DEFAULT_GMF_REALIZATIONS = 1
 
-BLOCK_SIZE = 500  # TODO: put this in openquake.cfg
+BLOCK_SIZE = 1000  # TODO: put this in openquake.cfg
 
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
