@@ -49,7 +49,7 @@ def make_mock_points(n):
 
 
 def make_site_coll(n):
-    assert n < 1000
+    assert n <= 1000
     sites = []
     for i in range(n):
         lon = -78 - float(i) / 1000
@@ -80,23 +80,25 @@ class EventBasedHazardTestCase(unittest.TestCase):
         hc = mock.Mock()
         hc.ground_motion_correlation_model = None
         hc.truncation_level = None
-        trt = 'Subduction Interface'
-        ruptures = [FakeRupture(1, trt, rake=90.),
-                    FakeRupture(2, trt, rake=80.),
-                    ]
-        rupture_seeds = [1, 2]
-        site_coll = make_site_coll(5)
+        hc.maximum_distance = 200.
+
         gsim = get_available_gsims()['AkkarBommer2010']()
-        gmfs, rupture_ids = core._compute_gmf(
+        site_coll = make_site_coll(5)
+
+        trt = 'Subduction Interface'
+        rupture_ids = range(2)
+        ruptures = [FakeRupture(i, trt) for i in rupture_ids]
+        rupture_seeds = rupture_ids
+
+        gmfs, rids = core._compute_gmf(
             hc, PGA(), {trt: gsim}, site_coll, ruptures, rupture_seeds)
         expected_gmfs = numpy.array([
-            [ 0.08138992,  0.03402456],
-            [ 0.02136369,  0.04254697],
-            [ 0.0226183 ,  0.01226757],
-            [ 0.01641273,  0.11960836],
-            [ 0.05299877,  0.01528255]])
-        expected_rupture_ids = [1, 2]
-        numpy.testing.assert_equal(rupture_ids, expected_rupture_ids)
+            [ 0.12214905,  0.08138992],
+            [ 0.05416627,  0.02136369],
+            [ 0.07722465,  0.0226183 ],
+            [ 0.16606267,  0.01641273],
+            [ 0.13358854,  0.05299877]])
+        numpy.testing.assert_equal(rids, rupture_ids)
         numpy.testing.assert_allclose(gmfs, expected_gmfs, rtol=1e-6)
 
 
