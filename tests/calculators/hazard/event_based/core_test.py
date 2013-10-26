@@ -27,13 +27,10 @@ from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.source.rupture import Rupture
 from openquake.hazardlib.site import Site
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.source.complex_fault import ComplexFaultSource
 from openquake.hazardlib.gsim import get_available_gsims
-from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
-from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 
 from openquake.engine.db import models
 from openquake.engine.calculators.hazard.event_based import core
@@ -51,28 +48,19 @@ def make_mock_points(n):
     return points
 
 
+def make_site_coll(n):
+    assert n < 1000
+    sites = []
+    for i in range(n):
+        lon = -78 - float(i) / 1000
+        site = Site(Point(lon, 15.5), 800., 'measured', 50., 2.5, 1)
+        sites.append(site)
+    return models.SiteCollection(sites)
+
+
 class FakeRupture(object):
-    def __init__(self, trt):
-        mag = 5.0
-        rake = 90.0
-        #rupture_mesh_spacing = 10.
-        #rupture_aspect_ratio = 2.
+    def __init__(self, id, trt, mag=5.0, rake=90.):
         hypocenter = Point(17.788328, -77.219496, 7.8125)
-        #p1 = Point(17.75, -77.18, 5.)
-        #p2 = Point(18.92, -77.1, 5.)
-        #p3 = Point(17.69, -77.86, 50.)
-        #p4 = Point(18.96, -77.7, 50.)
-        #edges = [Line([p1, p2]), Line([p3, p4])]
-        #scalerel = get_available_magnitude_scalerel()['WC1994']
-        #min_mag = 5.
-        #max_mag = 8.5
-        #bin_width = 0.2
-        #a_val = 2.47
-        #b_val = 0.48
-        #mfd = TruncatedGRMFD(min_mag, max_mag, bin_width, a_val, b_val)
-        #source = ComplexFaultSource(
-        #    'FakeSource', trt, mfd, rupture_mesh_spacing, scalerel,
-        #    rupture_aspect_ratio, edges, rake)
         lons = numpy.array(
             [-78.18106621, -78.18013243, -78.17919864, -78.15399318,
              -78.15305962, -78.15212606])
@@ -82,7 +70,7 @@ class FakeRupture(object):
         surface = ComplexFaultSurface(Mesh(lons, lats, None))
         self.rupture = Rupture(mag, rake, trt, hypocenter,
                                surface, ComplexFaultSource)
-        self.id = 1
+        self.id = id
 
 
 class EventBasedHazardTestCase(unittest.TestCase):
@@ -93,17 +81,23 @@ class EventBasedHazardTestCase(unittest.TestCase):
         hc.ground_motion_correlation_model = None
         hc.truncation_level = None
         trt = 'Subduction Interface'
-        ruptures = [FakeRupture(trt)]
-        rupture_seeds = [42]
-        site = Site(Point(0, 0), 800., 'measured', 50., 2.5, 1)
-        site_coll = models.SiteCollection([site])
+        ruptures = [FakeRupture(1, trt, rake=90.),
+                    FakeRupture(2, trt, rake=80.),
+                    ]
+        rupture_seeds = [1, 2]
+        site_coll = make_site_coll(5)
         gsim = get_available_gsims()['AkkarBommer2010']()
         gmfs, rupture_ids = core._compute_gmf(
             hc, PGA(), {trt: gsim}, site_coll, ruptures, rupture_seeds)
-        expected_gmfs = numpy.array([[8.68927783e-06]])
-        expected_rupture_ids = [1]
-        self.assertEqual(rupture_ids, expected_rupture_ids)
-        numpy.testing.assert_allclose(gmfs, expected_gmfs)
+        expected_gmfs = numpy.array([
+            [ 0.08138992,  0.03402456],
+            [ 0.02136369,  0.04254697],
+            [ 0.0226183 ,  0.01226757],
+            [ 0.01641273,  0.11960836],
+            [ 0.05299877,  0.01528255]])
+        expected_rupture_ids = [1, 2]
+        numpy.testing.assert_equal(rupture_ids, expected_rupture_ids)
+        numpy.testing.assert_allclose(gmfs, expected_gmfs, rtol=1e-6)
 
 
 class EventBasedHazardCalculatorTestCase(unittest.TestCase):
