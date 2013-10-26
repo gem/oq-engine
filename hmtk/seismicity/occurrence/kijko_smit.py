@@ -71,24 +71,36 @@ class KijkoSmit(SeismicityOccurrence):
                                                           config,
                                                           completeness)
         ival = 0
-        mag_eq_tolerance = 1E-5
+        tolerance = 1E-7
         number_intervals = np.shape(ctime)[0]
         b_est = np.zeros(number_intervals, dtype=float)
         neq = np.zeros(number_intervals, dtype=float)
         nyr = np.zeros(number_intervals, dtype=float)
 
         for ival in range(0, number_intervals):
-            id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
+            id0 = np.abs(ctime - ctime[ival]) < tolerance
             m_c = np.min(cmag[id0])
-            if ival == number_intervals - 1:
-                id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
-                    catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
-            else:
-                id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
-                                     catalogue.data['year'] < ctime[ival + 1])
-                id1 = np.logical_and(id1,
-                    catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
+            if ival == 0:
+                id1 = np.logical_and(
+                    catalogue.data['year'] >= (ctime[ival] - tolerance),
+                    catalogue.data['magnitude'] >= (m_c - tolerance))
+                nyr[ival] = 
+            elif ival == (number_intervals - 1):
+                id1 = np.logical_and(
+                    catalogue.data['year'] >= (ctime[ival] - tolerance),
+                    catalogue.data['year'] < (ctime[ival - 1] - tolerance))
 
+
+#            if ival == number_intervals - 1:
+#                id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
+#                    catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
+#            else:
+#                id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
+#                                     catalogue.data['year'] < ctime[ival + 1])
+#                print ctime[ival], ctime[ival + 1], np.where(id1)[0]
+#                id1 = np.logical_and(id1,
+#                    catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
+#
 #        while ival < number_intervals:
 #            id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
 #            m_c = np.min(cmag[id0])
@@ -98,6 +110,7 @@ class KijkoSmit(SeismicityOccurrence):
 #            # differences.
 #            id1 = np.logical_and(catalogue['year'] >= ctime[ival],
 #                catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
+            print id0, m_c, np.where(id1)[0]
             nyr[ival] = np.float(np.max(catalogue.data['year'][id1]) -
                                  np.min(catalogue.data['year'][id1]) + 1)
             neq[ival] = np.sum(id1)

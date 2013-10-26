@@ -80,9 +80,9 @@ class BMaxLikelihood(SeismicityOccurrence):
         """
 
         # Input checks
-        cmag, ctime, ref_mag, dmagi, config = input_checks(catalogue,
-                                                           config,
-                                                           completeness)
+        cmag, ctime, ref_mag, dmag, config = input_checks(catalogue,
+                                                          config,
+                                                          completeness)
 
         # Fix the end year
         if end_year is None:
@@ -91,8 +91,7 @@ class BMaxLikelihood(SeismicityOccurrence):
         # Check the configuration
         if not config['Average Type'] in ['Weighted','Harmonic']:
             raise ValueError('Average type not recognised in bMaxLiklihood!')
-
-        return self._b_ml(catalogue, config, cmag, ctime, ref_mag,
+        return self._b_ml(catalogue.data, config, cmag, ctime, ref_mag,
                 dmag, end_year)
 
     def _b_ml(self, catalogue, config, cmag, ctime, ref_mag, dmag, end_year):
@@ -139,7 +138,6 @@ class BMaxLikelihood(SeismicityOccurrence):
                 gr_pars = np.array([np.hstack([bval, sigma_b])])
                 neq = np.sum(id1)  # Number of events
             else:
-                
                 #gr_pars = np.vstack([gr_pars, np.hstack([bval, sigma_b, rate,
                 #                                         sigrate])])
                 gr_pars = np.vstack([gr_pars, np.hstack([bval, sigma_b])])
@@ -149,7 +147,6 @@ class BMaxLikelihood(SeismicityOccurrence):
         # Get average GR parameters
         bval, sigma_b = self._average_parameters(gr_pars, neq,
                 config['Average Type'])
-        
         aval = self._calculate_a_value(bval,
                                        np.float(np.sum(neq)),
                                        cmag,
@@ -178,7 +175,6 @@ class BMaxLikelihood(SeismicityOccurrence):
                    sigma_b,\
                    rate,\
                    sigma_rate
-            
 
     def _average_parameters(self, gr_params, neq, average_type='Weighted'):
         """
