@@ -147,16 +147,16 @@ compute_ses.ignore_result = False  # essential
 
 
 @tasks.oqtask
-def compute_gmf(job_id, imt, gsims, ses, site_coll, ruptures, rupture_seeds):
+def compute_gmf(job_id, params, imt, gsims, ses, site_coll,
+                ruptures, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
-    """
-    hc = ses.ses_collection.output.oq_job.hazard_calculation            
+    """        
     imt = haz_general.imt_to_hazardlib(imt)
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmf):
         gmf_cache = compute_gmf_cache(
-            hc, imt, gsims, site_coll, ruptures, rupture_seeds)
+            params, imt, gsims, site_coll, ruptures, rupture_seeds)
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
         _save_gmfs(ses, imt, gmf_cache, site_coll)
@@ -164,15 +164,25 @@ def compute_gmf(job_id, imt, gsims, ses, site_coll, ruptures, rupture_seeds):
 compute_gmf.ignore_result = False  # essential
 
 
-def compute_gmf_cache(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
+def compute_gmf_cache(params, imt, gsims, site_coll, ruptures, rupture_seeds):
     """
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for the given IMT.
-    """
-    correl_model = None
-    if hc.ground_motion_correlation_model is not None:
-        correl_model = haz_general.get_correl_model(hc)
 
+    :param params:
+        a dictionary containing the keys
+        correl_model, truncation_level, maximum_distance
+    :param imt:
+        a hazardlib IMT instance
+    :param gsims:
+        a dictionary {tectonic region type -> GSIM instance}
+    :param site_coll:
+        a SiteCollection instance
+    :param ruptures:
+        a list of SESRupture objects
+    :param rupture_seeds:
+        a list with the seeds associated to the ruptures
+    """
     n_points = len(site_coll)
 
     # initialize gmf_cache, a dict imt -> {gmvs, rupture_ids}
@@ -186,17 +196,17 @@ def compute_gmf_cache(hc, imt, gsims, site_coll, ruptures, rupture_seeds):
             'sites': site_coll,
             'imts': [imt],
             'gsim': gsims[rupture.tectonic_region_type],
-            'truncation_level': hc.truncation_level,
+            'truncation_level': params['truncation_level'],
             'realizations': DEFAULT_GMF_REALIZATIONS,
-            'correlation_model': correl_model,
+            'correlation_model': params['correl_model'],
             'rupture_site_filter': filters.rupture_site_distance_filter(
-                hc.maximum_distance),
+                params['maximum_distance']),
         }
         numpy.random.seed(rupture_seed)
         gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
 
         # update the gmf cache:
-        [v]= gmf_dict.values()  # there is a single imt => a single value
+        [v] = gmf_dict.values()  # there is a single imt => a single value
         gmf_cache['gmvs'] = numpy.append(gmf_cache['gmvs'], v, axis=1)
         gmf_cache['rupture_ids'].append(rupture.id)
 
@@ -382,11 +392,15 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         Argument generator for the task compute_gmf. For each SES yields a
         tuple of the form
-        (job_id, imt, gsims, ses, site_coll, ruptures, rupture_seeds).
+        (job_id, params, imt, gsims, ses, site_coll, ruptures, rupture_seeds).
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
         site_coll = self.hc.site_collection
+        params = dict(
+            correl_model=haz_general.get_correl_model(self.hc),
+            truncation_level=self.hc.truncation_level,
+            maximum_distance=self.hc.maximum_distance)
         for lt_rlz in self._get_realizations():
             ltp = logictree.LogicTreeProcessor(self.hc.id)
             gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
@@ -404,19 +418,19 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 # splitting on IMTs to generate more tasks and save memory
                 for imt in self.hc.intensity_measure_types:
                     if self.hc.ground_motion_correlation_model is None:
-                        # we are splitting on sites to avoid running out of memory
+                        # we split on sites to avoid running out of memory
                         # on the workers for computations like the full Japan
                         for sites in block_splitter(site_coll, BLOCK_SIZE):
-                            yield (self.job.id, imt, gsims, ses,
+                            yield (self.job.id, params, imt, gsims, ses,
                                    models.SiteCollection(sites),
                                    ruptures, rupture_seeds)
                     else:
-                        # we split on ruptures
+                        # we split on ruptures to avoid running out of memory
                         rupt_iter = block_splitter(ruptures, BLOCK_SIZE)
                         seed_iter = block_splitter(rupture_seeds, BLOCK_SIZE)
                         for rupts, seeds in zip(rupt_iter, seed_iter):
-                            yield (self.job.id, imt, gsims, ses, site_coll,
-                                   rupts, seeds)
+                            yield (self.job.id, params, imt, gsims, ses,
+                                   site_coll, rupts, seeds)
 
     def execute(self):
         """
