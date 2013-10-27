@@ -76,6 +76,7 @@ class FakeRupture(object):
 class EventBasedHazardTestCase(unittest.TestCase):
     """Tests for the routines used by the event-based hazard calculator"""
 
+    # test a case with 5 sites and 2 ruptures
     def test_compute_gmf(self):
         hc = mock.Mock()
         hc.ground_motion_correlation_model = None
@@ -84,13 +85,15 @@ class EventBasedHazardTestCase(unittest.TestCase):
 
         gsim = get_available_gsims()['AkkarBommer2010']()
         site_coll = make_site_coll(5)
-
+        params = dict(truncation_level=3,
+                      correl_model=None,
+                      maximum_distance=200)
         trt = 'Subduction Interface'
         rupture_ids = range(2)
         ruptures = [FakeRupture(i, trt) for i in rupture_ids]
         rupture_seeds = rupture_ids
         gmv_dict, rup_dict = core._compute_gmf(
-            hc, PGA(), {trt: gsim}, site_coll, ruptures, rupture_seeds)
+            params, PGA(), {trt: gsim}, site_coll, ruptures, rupture_seeds)
         expected_rups = {
             0: rupture_ids,
             1: rupture_ids,
