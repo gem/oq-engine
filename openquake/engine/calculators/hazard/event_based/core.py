@@ -148,11 +148,14 @@ compute_ses.ignore_result = False  # essential
 
 @tasks.oqtask
 def compute_gmf(job_id, params, imt, gsims, ses, site_coll,
-                ruptures, rupture_seeds):
+                rupture_ids, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
-    """        
+    """
     imt = haz_general.imt_to_hazardlib(imt)
+    with EnginePerformanceMonitor(
+            'reading ruptures', job_id, compute_gmf):
+        ruptures = list(models.SESRupture.objects.filter(pk__in=rupture_ids))
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_gmf):
         gmf_cache = compute_gmf_cache(
@@ -391,8 +394,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     def compute_gmf_arg_gen(self):
         """
         Argument generator for the task compute_gmf. For each SES yields a
-        tuple of the form
-        (job_id, params, imt, gsims, ses, site_coll, ruptures, rupture_seeds).
+        tuple of the form (job_id, params, imt, gsims, ses, site_coll,
+        rupture_ids, rupture_seeds).
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
@@ -409,12 +412,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 ordinal__isnull=False).order_by('ordinal')
             for ses in all_ses:
                 # count the ruptures in the given SES
-                ruptures = list(models.SESRupture.objects.filter(ses=ses))
-                if not ruptures:
+                rupture_ids = models.SESRupture.objects.filter(
+                    ses=ses).values_list('id', flat=True)
+                if not rupture_ids:
                     continue
                 # compute the associated seeds
                 rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
-                                 for _ in range(len(ruptures))]
+                                 for _ in range(len(rupture_ids))]
                 # splitting on IMTs to generate more tasks and save memory
                 for imt in self.hc.intensity_measure_types:
                     if self.hc.ground_motion_correlation_model is None:
@@ -423,10 +427,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                         for sites in block_splitter(site_coll, BLOCK_SIZE):
                             yield (self.job.id, params, imt, gsims, ses,
                                    models.SiteCollection(sites),
-                                   ruptures, rupture_seeds)
+                                   rupture_ids, rupture_seeds)
                     else:
                         # we split on ruptures to avoid running out of memory
-                        rupt_iter = block_splitter(ruptures, BLOCK_SIZE)
+                        rupt_iter = block_splitter(rupture_ids, BLOCK_SIZE)
                         seed_iter = block_splitter(rupture_seeds, BLOCK_SIZE)
                         for rupts, seeds in zip(rupt_iter, seed_iter):
                             yield (self.job.id, params, imt, gsims, ses,
