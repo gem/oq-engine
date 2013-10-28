@@ -34,13 +34,41 @@ class EventBaseQATestCase(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             0.142304403795, 0.125025819158, 0.0808149878014, 0.0482149371277,
             0.023587467724, 0.013685031793]
 
-        losses = self._run_test().output_set.get(
-            output_type="event_loss").event_loss
+        outputs = self._run_test().output_set
+        losses = outputs.get(output_type="event_loss").event_loss
 
         for event_loss, expected in zip(losses, expected_losses):
-
             self.assertAlmostEqual(
                 expected, event_loss.aggregate_loss,
                 msg="loss for rupture %r is %s (expected %s)" % (
                     event_loss.rupture.tag, event_loss.aggregate_loss,
                     expected))
+
+        disagg_gen = outputs.get(
+            output_type="loss_fraction",
+            loss_fraction__variable="coordinate").loss_fraction.iteritems()
+
+        disagg = list(disagg_gen)
+
+        self.assertEqual(1, len(disagg))
+
+        [(coords, values)] = disagg
+
+        self.assertEqual((83.313823, 29.236172), coords)
+
+        expected = {
+            '80.0000,82.0000|28.0000,30.0000': (0.1350454689871,
+                                                0.0016942753673914457),
+            '82.0000,84.0000|26.0000,28.0000': (0.334522875484,
+                                                0.004196911395936113),
+            '82.0000,84.0000|28.0000,30.0000': (7.93354729428041,
+                                                0.0995339855350374),
+            '82.0000,84.0000|30.0000,32.0000': (63.962514900726,
+                                                0.8024713027806971),
+            '84.0000,86.0000|26.0000,28.0000': (0.538213632029,
+                                                0.00675240795548738),
+            '84.0000,86.0000|28.0000,30.0000': (3.296389565305,
+                                                0.041356379326995076),
+            '84.0000,86.0000|30.0000,32.0000': (3.5066849767739,
+                                                0.04399473763845564)}
+        self.assertEqual(expected, dict(values))
