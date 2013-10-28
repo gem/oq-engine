@@ -22,7 +22,7 @@ CURRENTDIR = os.path.dirname(__file__)
 
 # this test is described in https://bugs.launchpad.net/oq-engine/+bug/1226061
 # the CSV files with the expected hazard_curves were provided by Damiano
-class ClassicalHazardCase14TestCase(BaseQATestCase):
+class ClassicalHazardCase13TestCase(BaseQATestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
@@ -42,9 +42,9 @@ class ClassicalHazardCase14TestCase(BaseQATestCase):
             fname = '%s_%s_expected_curves_PGA.dat' % (sm_path, gsim_path)
             compare_hazard_curve_with_csv(
                 hc, [sm_path], [gsim_path], 'PGA', None, None,
-                os.path.join(csvdir, fname), ' ')
+                os.path.join(csvdir, fname), ' ', rtol=0.2)
 
             fname = '%s_%s_expected_curves_SA02.dat' % (sm_path, gsim_path)
             compare_hazard_curve_with_csv(
                 hc, [sm_path], [gsim_path], 'SA', 0.2, 5.0,
-                os.path.join(csvdir, fname), ' ')
+                os.path.join(csvdir, fname), ' ', rtol=0.2)
