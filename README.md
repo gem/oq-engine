@@ -59,6 +59,7 @@ a minute of your time to read the disclaimer below.
 The main dependencies of this library are the following:
 * csv
 * numpy
+* python-decorator
 * hazardlib (this is part of the OpenQuake suite)
 * nrmllib (this is part of the OpenQuake suite)
 
