@@ -144,14 +144,16 @@ def save_individual_outputs(containers, outputs, disagg_outputs, params):
         output_type="loss_map")
 
     if disagg_outputs is not None:
+        # FIXME. We should avoid synthetizing the generator
+        assets = list(disagg_outputs.assets_disagg)
         containers.write(
-            disagg_outputs.assets_disagg,
+            assets,
             disagg_outputs.magnitude_distance,
             disagg_outputs.fractions,
             output_type="loss_fraction",
             variable="magnitude_distance")
         containers.write(
-            disagg_outputs.assets_disagg,
+            assets,
             disagg_outputs.coordinate, disagg_outputs.fractions,
             output_type="loss_fraction",
             variable="coordinate")
@@ -273,7 +275,7 @@ def disaggregate(outputs, rupture_ids, params):
         magnitudes, coordinates, fractions = [], [], []
 
     return DisaggregationOutputs(
-        list(assets_disagg), magnitudes, coordinates, fractions)
+        assets_disagg, magnitudes, coordinates, fractions)
 
 
 class EventBasedRiskCalculator(base.RiskCalculator):
