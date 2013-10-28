@@ -34,30 +34,28 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
                      'rlz=00|ses=0001|src=1|i=002',
                      'rlz=00|ses=0001|src=1|i=003',
                      'rlz=00|ses=0001|src=1|i=004',
-                     'rlz=00|ses=0001|src=1|i=005',
                      'rlz=00|ses=0001|src=2|i=000']
+
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=50.000000, stochastic_event_set_id=1,
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=000
-<X=131.00000, Y= 40.10000, GMV=0.0018425>)
+<X=131.00000, Y= 40.00000, GMV=0.0104328>
+<X=131.00000, Y= 40.10000, GMV=0.0091073>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=001
-<X=131.00000, Y= 40.00000, GMV=0.0036347>
-<X=131.00000, Y= 40.10000, GMV=0.0040173>)
+<X=131.00000, Y= 40.00000, GMV=0.0091769>
+<X=131.00000, Y= 40.10000, GMV=0.0116606>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=002
-<X=131.00000, Y= 40.00000, GMV=0.0071390>
-<X=131.00000, Y= 40.10000, GMV=0.0106517>)
+<X=131.00000, Y= 40.00000, GMV=0.0058289>
+<X=131.00000, Y= 40.10000, GMV=0.0074472>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=003
-<X=131.00000, Y= 40.00000, GMV=0.0043736>
-<X=131.00000, Y= 40.10000, GMV=0.0171066>)
+<X=131.00000, Y= 40.00000, GMV=0.0012500>
+<X=131.00000, Y= 40.10000, GMV=0.0042969>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=004
-<X=131.00000, Y= 40.00000, GMV=0.0032255>
-<X=131.00000, Y= 40.10000, GMV=0.0029204>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=005
-<X=131.00000, Y= 40.00000, GMV=0.0166739>
-<X=131.00000, Y= 40.10000, GMV=0.0080238>)
+<X=131.00000, Y= 40.00000, GMV=0.0093603>
+<X=131.00000, Y= 40.10000, GMV=0.0078026>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=2|i=000
-<X=131.00000, Y= 40.00000, GMV=0.0056535>
-<X=131.00000, Y= 40.10000, GMV=0.0016968>))'''
+<X=131.00000, Y= 40.00000, GMV=0.0025278>
+<X=131.00000, Y= 40.10000, GMV=0.0015732>))'''
 
     @attr('qa', 'hazard', 'event_based')
     def test_64(self):
