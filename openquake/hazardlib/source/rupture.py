@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.rupture` defines classes
 :class:`Rupture` and its subclass :class:`ProbabilisticRupture`.
 """
+import abc
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 
 
@@ -62,10 +63,45 @@ class Rupture(object):
         self.source_typology = source_typology
 
 
-class ProbabilisticRupture(Rupture):
+class BaseProbabilisticRupture(Rupture):
     """
-    :class:`Rupture` associated with an occurrence rate and a temporal
-    occurrence model.
+    Base class for a Probabilistic rupture, that is a :class:`Rupture`
+    associated with a probability distribution for the number of occurrences in
+    a time span.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
+                 source_typology):
+        super(BaseProbabilisticRupture, self).__init__(
+            mag, rake, tectonic_region_type, hypocenter, surface,
+            source_typology
+        )
+
+    @abc.abstractmethod
+    def get_probability_one_or_more_occurrences(self):
+        """
+        Return the probability of this rupture to occur one or more times.
+        """
+
+    @abc.abstractmethod
+    def get_probability_one_occurrence(self):
+        """
+        Return the probability of this rupture to occur exactly one time.
+        """
+
+    @abc.abstractmethod
+    def sample_number_of_occurrences(self):
+        """
+        Draw a random sample from the distribution and return a number
+        of events to occur.
+        """
+
+
+class ParametricProbabilisticRupture(BaseProbabilisticRupture):
+    """
+    :class:`BaseProbabilisticRupture` defined through an occurrence rate and a
+    temporal occurrence model.
 
     :param occurrence_rate:
         Number of times rupture happens per year.
@@ -81,7 +117,7 @@ class ProbabilisticRupture(Rupture):
                  occurrence_rate, temporal_occurrence_model):
         if not occurrence_rate > 0:
             raise ValueError('occurrence rate must be positive')
-        super(ProbabilisticRupture, self).__init__(
+        super(BaseProbabilisticRupture, self).__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
             source_typology
         )

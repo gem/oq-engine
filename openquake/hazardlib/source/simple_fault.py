@@ -22,7 +22,7 @@ import math
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.slots import with_slots
 
 
@@ -145,7 +145,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                                             first_col: first_col + rup_cols]
                     hypocenter = mesh.get_middle_point()
                     surface = SimpleFaultSurface(mesh)
-                    yield ProbabilisticRupture(
+                    yield ParametricProbabilisticRupture(
                         mag, self.rake, self.tectonic_region_type, hypocenter,
                         surface, type(self),
                         occurrence_rate, temporal_occurrence_model

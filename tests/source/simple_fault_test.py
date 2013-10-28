@@ -19,7 +19,7 @@ import numpy
 
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel import PeerMSR, WC1994
 from openquake.hazardlib.geo import Point, Line
@@ -62,7 +62,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         tom = PoissonTOM(time_span=50)
         ruptures = list(source.iter_ruptures(tom))
         for rupture in ruptures:
-            self.assertIsInstance(rupture, ProbabilisticRupture)
+            self.assertIsInstance(rupture, ParametricProbabilisticRupture)
             self.assertIs(rupture.temporal_occurrence_model, tom)
             self.assertIs(rupture.tectonic_region_type, self.TRT)
             self.assertEqual(rupture.rake, self.RAKE)

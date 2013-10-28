@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.slots import with_slots
 
 
@@ -123,7 +123,7 @@ class AreaSource(PointSource):
                 surface = surface.translate(epicenter0, epicenter)
                 hypocenter = epicenter
                 hypocenter.depth = hc_depth
-                rupture = ProbabilisticRupture(
+                rupture = ParametricProbabilisticRupture(
                     mag, rake, self.tectonic_region_type, hypocenter,
                     surface, type(self), occ_rate, temporal_occurrence_model
                 )

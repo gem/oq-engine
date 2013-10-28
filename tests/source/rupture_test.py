@@ -21,7 +21,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.source.rupture import Rupture, ProbabilisticRupture
+from openquake.hazardlib.source.rupture import Rupture, \
+ParametricProbabilisticRupture
 
 
 def make_rupture(rupture_class, **kwargs):
@@ -69,13 +70,13 @@ class RuptureCreationTestCase(unittest.TestCase):
         )
 
     def test_probabilistic_rupture_negative_occurrence_rate(self):
-        self.assert_failed_creation(ProbabilisticRupture, ValueError,
+        self.assert_failed_creation(ParametricProbabilisticRupture, ValueError,
             'occurrence rate must be positive',
             occurrence_rate=-1, temporal_occurrence_model=PoissonTOM(10)
         )
 
     def test_probabilistic_rupture_zero_occurrence_rate(self):
-        self.assert_failed_creation(ProbabilisticRupture, ValueError,
+        self.assert_failed_creation(ParametricProbabilisticRupture, ValueError,
             'occurrence rate must be positive',
             occurrence_rate=0, temporal_occurrence_model=PoissonTOM(10)
         )
@@ -83,7 +84,7 @@ class RuptureCreationTestCase(unittest.TestCase):
 
 class ProbabilisticRuptureTestCase(unittest.TestCase):
     def test_get_probability_one_or_more(self):
-        rupture = make_rupture(ProbabilisticRupture,
+        rupture = make_rupture(ParametricProbabilisticRupture,
                                occurrence_rate=1e-2,
                                temporal_occurrence_model=PoissonTOM(10))
         self.assertAlmostEqual(
@@ -91,7 +92,7 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
         )
 
     def test_get_probability_one_occurrence(self):
-        rupture = make_rupture(ProbabilisticRupture,
+        rupture = make_rupture(ParametricProbabilisticRupture,
                                occurrence_rate=0.4,
                                temporal_occurrence_model=PoissonTOM(10))
         self.assertAlmostEqual(rupture.get_probability_one_occurrence(),
@@ -102,7 +103,8 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
         rate = 0.01
         num_samples = 2000
         tom = PoissonTOM(time_span)
-        rupture = make_rupture(ProbabilisticRupture, occurrence_rate=rate,
+        rupture = make_rupture(ParametricProbabilisticRupture,
+                               occurrence_rate=rate,
                                temporal_occurrence_model=tom)
         numpy.random.seed(37)
         mean = sum(rupture.sample_number_of_occurrences()

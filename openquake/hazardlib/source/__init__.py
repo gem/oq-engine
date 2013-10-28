@@ -17,7 +17,8 @@
 Package :mod:`openquake.hazardlib.source` deals with various types
 of seismic sources.
 """
-from openquake.hazardlib.source.rupture import Rupture, ProbabilisticRupture
+from openquake.hazardlib.source.rupture import Rupture, \
+ParametricProbabilisticRupture
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.source.area import AreaSource
 from openquake.hazardlib.source.simple_fault import SimpleFaultSource
