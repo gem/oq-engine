@@ -112,7 +112,7 @@ def count(gmf_value, gmfs_site_one, gmfs_site_two,
 
 def compare_hazard_curve_with_csv(
         hc, sm_lt_path, gsim_lt_path, imt, sa_period, sa_damping,
-        csv_name, csv_delimiter=',', rtol=0.2):
+        csv_name, csv_delimiter, rtol):
     """
     This is useful in tests that compares the hazard curves in the db with
     the expected values in the csv. The csv is expected to have the form
