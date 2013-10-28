@@ -86,7 +86,7 @@ def hazard_curves_poissonian(
     for source, s_sites in source_site_filter(sources_sites):
         try:
             ruptures_sites = ((rupture, s_sites)
-                              for rupture in source.iter_ruptures(tom))
+                              for rupture in source.iter_ruptures())
             for rupture, r_sites in rupture_site_filter(ruptures_sites):
                 prob = rupture.get_probability_one_or_more_occurrences()
                 gsim = gsims[rupture.tectonic_region_type]

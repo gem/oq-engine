@@ -32,6 +32,7 @@ from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.scalerel import PeerMSR, PointMSR
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.calc import hazard_curves_poissonian as hazard_curves
+from openquake.hazardlib.tom import PoissonTOM
 
 from tests.acceptance import _peer_test_data as test_data
 
@@ -55,7 +56,8 @@ class Set1TestCase(unittest.TestCase):
             rupture_aspect_ratio=test_data.SET1_RUPTURE_ASPECT_RATIO,
             polygon=test_data.SET1_CASE10_SOURCE_POLYGON,
             area_discretization=10.0,
-            rupture_mesh_spacing=10.0
+            rupture_mesh_spacing=10.0,
+            temporal_occurrence_model=PoissonTOM(1.)
         )]
         sites = SiteCollection([
             test_data.SET1_CASE10_SITE1, test_data.SET1_CASE10_SITE2,
@@ -99,7 +101,8 @@ class Set1TestCase(unittest.TestCase):
             rupture_aspect_ratio=test_data.SET1_RUPTURE_ASPECT_RATIO,
             polygon=test_data.SET1_CASE11_SOURCE_POLYGON,
             area_discretization=10.0,
-            rupture_mesh_spacing=10.0
+            rupture_mesh_spacing=10.0,
+            temporal_occurrence_model=PoissonTOM(1.)
         )]
         sites = SiteCollection([
             test_data.SET1_CASE11_SITE1, test_data.SET1_CASE11_SITE2,
@@ -134,7 +137,8 @@ class Set1TestCase(unittest.TestCase):
             lower_seismogenic_depth=test_data.SET1_CASE1TO9_LOWER_SEISMOGENIC_DEPTH,
             fault_trace=test_data.SET1_CASE1TO9_FAULT_TRACE,
             dip=test_data.SET1_CASE1TO9_DIP,
-            rake=test_data.SET1_CASE1TO9_RAKE
+            rake=test_data.SET1_CASE1TO9_RAKE,
+            temporal_occurrence_model=PoissonTOM(1.)
         )]
         sites = SiteCollection([
             test_data.SET1_CASE1TO9_SITE1, test_data.SET1_CASE1TO9_SITE2,
@@ -178,7 +182,8 @@ class Set1TestCase(unittest.TestCase):
             lower_seismogenic_depth=test_data.SET1_CASE1TO9_LOWER_SEISMOGENIC_DEPTH,
             fault_trace=test_data.SET1_CASE1TO9_FAULT_TRACE,
             dip=test_data.SET1_CASE1TO9_DIP,
-            rake=test_data.SET1_CASE1TO9_RAKE
+            rake=test_data.SET1_CASE1TO9_RAKE,
+            temporal_occurrence_model=PoissonTOM(1.)
         )]
         sites = SiteCollection([
             test_data.SET1_CASE1TO9_SITE1, test_data.SET1_CASE1TO9_SITE2,
