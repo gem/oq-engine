@@ -191,7 +191,7 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
             tect_reg = trt_nums[tect_reg]
 
             ruptures_sites = ((rupture, s_sites)
-                              for rupture in source.iter_ruptures(tom))
+                              for rupture in source.iter_ruptures())
             for rupture, r_sites in rupture_site_filter(ruptures_sites):
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)

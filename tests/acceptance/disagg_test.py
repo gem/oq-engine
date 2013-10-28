@@ -47,7 +47,8 @@ class DisaggTestCase(unittest.TestCase):
             polygon=Polygon([Point(-0.5,-0.5), Point(-0.5,0.5),
                              Point(0.5,0.5), Point(0.5,-0.5)]),
             area_discretization=9.0,
-            rupture_mesh_spacing=1.0
+            rupture_mesh_spacing=1.0,
+            temporal_occurrence_model=PoissonTOM(50.)
         )
         site = Site(location=Point(0.0,0.0),
                     vs30=800.0,
