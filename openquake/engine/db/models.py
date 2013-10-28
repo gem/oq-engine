@@ -2565,7 +2565,7 @@ class LossFraction(djm.Model):
             sorted(
                 [(self.display_value(value, rc), (loss, loss / total))
                  for value, loss in cursor],
-                key=lambda kv: -kv[1][0]))
+                 key=lambda kv: -kv[1][0]))  # order by loss
 
     def iteritems(self):
         """
