@@ -53,20 +53,20 @@ class SimpleFaultSource(ParametricSeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
-    __slots__ = ParametricSeismicSource.__slots__ + '''rupture_mesh_spacing
-    magnitude_scaling_relationship rupture_aspect_ratio
-    upper_seismogenic_depth lower_seismogenic_depth
-    fault_trace dip rake'''.split()
+    __slots__ = ParametricSeismicSource.__slots__ + '''upper_seismogenic_depth
+    lower_seismogenic_depth fault_trace dip rake'''.split()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
+                 temporal_occurrence_model,
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  fault_trace, dip, rake):
         super(SimpleFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio
+            magnitude_scaling_relationship, rupture_aspect_ratio,
+            temporal_occurrence_model
         )
 
         NodalPlane.check_rake(rake)
@@ -108,7 +108,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         else:
             return polygon
 
-    def iter_ruptures(self, temporal_occurrence_model):
+    def iter_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
@@ -148,7 +148,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                     yield ParametricProbabilisticRupture(
                         mag, self.rake, self.tectonic_region_type, hypocenter,
                         surface, type(self),
-                        occurrence_rate, temporal_occurrence_model
+                        occurrence_rate, self.temporal_occurrence_model
                     )
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):

@@ -33,6 +33,7 @@ from tests.source import _simple_fault_test_data as test_data
 class _BaseFaultSourceTestCase(unittest.TestCase):
     TRT = TRT.ACTIVE_SHALLOW_CRUST
     RAKE = 0
+    TOM = PoissonTOM(50.)
 
     def _make_source(self, mfd, aspect_ratio, fault_trace=None, dip=45):
         source_id = name = 'test-source'
@@ -43,6 +44,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         lower_seismogenic_depth = 4.2426406871192848
         magnitude_scaling_relationship = PeerMSR()
         rupture_aspect_ratio = aspect_ratio
+        tom = self.TOM
         if fault_trace is None:
             fault_trace = Line([Point(0.0, 0.0),
                                 Point(0.0, 0.0359728811758),
@@ -51,7 +53,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
 
         sfs = SimpleFaultSource(
             source_id, name, trt, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio,
+            magnitude_scaling_relationship, rupture_aspect_ratio, tom,
             upper_seismogenic_depth, lower_seismogenic_depth,
             fault_trace, dip, rake
         )
@@ -59,11 +61,10 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         return sfs
 
     def _test_ruptures(self, expected_ruptures, source):
-        tom = PoissonTOM(time_span=50)
-        ruptures = list(source.iter_ruptures(tom))
+        ruptures = list(source.iter_ruptures())
         for rupture in ruptures:
             self.assertIsInstance(rupture, ParametricProbabilisticRupture)
-            self.assertIs(rupture.temporal_occurrence_model, tom)
+            self.assertIs(rupture.temporal_occurrence_model, self.TOM)
             self.assertIs(rupture.tectonic_region_type, self.TRT)
             self.assertEqual(rupture.rake, self.RAKE)
         self.assertEqual(len(expected_ruptures), len(ruptures))
@@ -136,12 +137,12 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
 
         fault = SimpleFaultSource(
             'ITCS057', 'Pago Veiano-Montaguto', TRT.ACTIVE_SHALLOW_CRUST, mfd,
-            rupture_mesh_spacing, scalerel, rupture_aspect_ratio,
+            rupture_mesh_spacing, scalerel, rupture_aspect_ratio, tom,
             upper_seismogenic_depth, lower_seismogenic_depth,
             fault_trace, dip, rake
         )
 
-        self.assertEqual(len(list(fault.iter_ruptures(tom))), 1)
+        self.assertEqual(len(list(fault.iter_ruptures())), 1)
 
 
 class SimpleFaultParametersChecksTestCase(_BaseFaultSourceTestCase):
