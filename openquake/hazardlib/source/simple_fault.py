@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import math
 
-from openquake.hazardlib.source.base import SeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
@@ -27,7 +27,7 @@ from openquake.hazardlib.slots import with_slots
 
 
 @with_slots
-class SimpleFaultSource(SeismicSource):
+class SimpleFaultSource(ParametricSeismicSource):
     """
     Simple fault source typology represents seismicity occurring on a fault
     surface with simple geometry.
@@ -53,7 +53,7 @@ class SimpleFaultSource(SeismicSource):
         fails, if rake value is invalid and if rupture mesh spacing is too high
         for the lowest magnitude value.
     """
-    __slots__ = SeismicSource.__slots__ + '''rupture_mesh_spacing
+    __slots__ = ParametricSeismicSource.__slots__ + '''rupture_mesh_spacing
     magnitude_scaling_relationship rupture_aspect_ratio
     upper_seismogenic_depth lower_seismogenic_depth
     fault_trace dip rake'''.split()

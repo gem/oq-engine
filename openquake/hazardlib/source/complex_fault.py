@@ -19,7 +19,7 @@ defines :class:`ComplexFaultSource`.
 """
 import numpy
 
-from openquake.hazardlib.source.base import SeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ProbabilisticRupture
@@ -27,7 +27,7 @@ from openquake.hazardlib.slots import with_slots
 
 
 @with_slots
-class ComplexFaultSource(SeismicSource):
+class ComplexFaultSource(ParametricSeismicSource):
     """
     Complex fault source typology represents seismicity occurring on a fault
     surface with an arbitrarily complex geometry.
@@ -47,7 +47,7 @@ class ComplexFaultSource(SeismicSource):
         fails or if rake value is invalid.
     """
 
-    __slots__ = SeismicSource.__slots__ + '''rupture_mesh_spacing
+    __slots__ = ParametricSeismicSource.__slots__ + '''rupture_mesh_spacing
     magnitude_scaling_relationship rupture_aspect_ratio
     edges rake'''.split()
 

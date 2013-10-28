@@ -20,7 +20,7 @@ import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
-from openquake.hazardlib.source.base import SeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import Polygon, Point, RectangularMesh
 from openquake.hazardlib.site import Site, SiteCollection
 
@@ -44,7 +44,7 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
     ]
 
     def setUp(self):
-        class FakeSource(SeismicSource):
+        class FakeSource(ParametricSeismicSource):
             iter_ruptures = None
             get_rupture_enclosing_polygon = None
         self.source_class = FakeSource
