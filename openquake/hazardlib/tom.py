@@ -17,6 +17,8 @@
 Module :mod:`openquake.hazardlib.tom` contains implementations of probability
 density functions for earthquake temporal occurrence modeling.
 """
+import abc
+
 import math
 
 import numpy
@@ -24,9 +26,67 @@ import scipy.stats
 
 from openquake.hazardlib.slots import with_slots
 
+@with_slots
+class BaseParametricTOM(object):
+    """
+    Base class representing a temporal occurrence model having a parametric
+    representation (that is through a functional form).
+
+    :param time_span:
+        The time interval of interest, in years.
+    :raises ValueError:
+        If ``time_span`` is not positive.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    __slots__ = ['time_span']
+
+    def __init__(self, time_span):
+        if time_span <= 0:
+            raise ValueError('time_span must be positive')
+        self.time_span = time_span
+
+    @abc.abstractmethod
+    def get_probability_one_or_more_occurrences(self, occurrence_rate):
+        """
+        Calculate and return the probability of event to happen one or more
+        times within the time range defined by constructor's ``time_span``
+        parameter value.
+
+        :param occurrence_rate:
+            The average number of events per year.
+        :return:
+            Float value between 0 and 1 inclusive.
+        """
+
+    @abc.abstractmethod
+    def get_probability_one_occurrence(self, occurrence_rate):
+        """
+        Calculate and return the probability of event to occur once
+        within the time range defined by the constructor's ``time_span``
+        parameter value.
+
+        :param occurrence_rate:
+            The average number of events per year.
+        :return:
+            Float value between 0 and 1 inclusive.
+        """
+
+    @abc.abstractmethod
+    def sample_number_of_occurrences(self, occurrence_rate):
+        """
+        Draw a random sample from the distribution and return a number
+        of events to occur.
+
+        :param occurrence_rate:
+            The average number of events per year.
+        :return:
+            Sampled integer number of events to occur within model's
+            time span.
+        """
 
 @with_slots
-class PoissonTOM(object):
+class PoissonTOM(BaseParametricTOM):
     """
     Poissonian temporal occurrence model.
 
