@@ -52,13 +52,13 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     set these parameters to ``None``.
     """
     __slots__ = ParametricSeismicSource.__slots__ + (
-        'rupture_mesh_spacing magnitude_scaling_relationship '
-        'rupture_aspect_ratio surface rake').split()
+        'surface rake').split()
 
     def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, surface, rake):
+                 mfd, temporal_occurrence_model, surface, rake):
         super(CharacteristicFaultSource, self).__init__(
-            source_id, name, tectonic_region_type, mfd, None, None, None
+            source_id, name, tectonic_region_type, mfd, None, None, None,
+            temporal_occurrence_model
         )
         NodalPlane.check_rake(rake)
         self.surface = surface
@@ -91,7 +91,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
 
         return poly.dilate(dilation)
 
-    def iter_ruptures(self, temporal_occurrence_model):
+    def iter_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
@@ -104,5 +104,5 @@ class CharacteristicFaultSource(ParametricSeismicSource):
             yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
                 self.surface, type(self), occurrence_rate,
-                temporal_occurrence_model
+                self.temporal_occurrence_model
             )
