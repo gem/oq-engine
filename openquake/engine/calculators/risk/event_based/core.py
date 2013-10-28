@@ -243,7 +243,6 @@ def disaggregate(outputs, rupture_ids, params):
     """
     def disaggregate_site(site, loss_ratios):
         for fraction, rupture_id in zip(loss_ratios, rupture_ids):
-
             rupture = models.SESRupture.objects.get(pk=rupture_id)
             s = rupture.surface
             m = mesh.Mesh(numpy.array([site.x]), numpy.array([site.y]), None)
@@ -263,8 +262,10 @@ def disaggregate(outputs, rupture_ids, params):
 
     for asset, losses in zip(outputs.assets, outputs.loss_matrix):
         if asset.site in params.sites_disagg:
-            disagg_matrix.extend(list(disaggregate_site(asset.site, losses)))
-            assets_disagg.append(asset)
+            fractions = list(disaggregate_site(asset.site, losses))
+            disagg_matrix.extend(fractions)
+            for _ in range(len(fractions)):
+                assets_disagg.append(asset)
     if assets_disagg:
         magnitudes, coordinates, fractions = zip(*disagg_matrix)
     else:
