@@ -41,13 +41,11 @@ class HazardCurvesTestCase(unittest.TestCase):
             self.time_span = time_span
             self.ruptures = ruptures
 
-        def iter_ruptures(self, tom):
-            assert tom.time_span is self.time_span
-            assert isinstance(tom, PoissonTOM)
+        def iter_ruptures(self):
             return iter(self.ruptures)
 
     class FailSource(FakeSource):
-        def iter_ruptures(self, tom):
+        def iter_ruptures(self):
             raise ValueError('Something bad happened')
 
     class FakeGSIM(object):
@@ -192,7 +190,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                 openquake.hazardlib.scalerel.PeerMSR(),
                 rupture_aspect_ratio=2,
                 rupture_mesh_spacing=1.0,
-                location=Point(10, 10)
+                location=Point(10, 10),
+                temporal_occurrence_model=PoissonTOM(1.)
             ),
             openquake.hazardlib.source.PointSource(
                 source_id='point2', name='point2',
@@ -212,7 +211,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                 openquake.hazardlib.scalerel.PeerMSR(),
                 rupture_aspect_ratio=2,
                 rupture_mesh_spacing=1.0,
-                location=Point(10, 11)
+                location=Point(10, 11),
+                temporal_occurrence_model=PoissonTOM(1.)
             ),
         ]
         sites = [openquake.hazardlib.site.Site(Point(11, 10), 1, True, 2, 3),

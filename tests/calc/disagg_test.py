@@ -59,13 +59,11 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.ruptures = ruptures
             self.tom = tom
             self.tectonic_region_type = tectonic_region_type
-        def iter_ruptures(self, tom):
-            assert isinstance(tom, type(self.tom))
-            assert tom.time_span == self.tom.time_span
+        def iter_ruptures(self):
             return iter(self.ruptures)
 
     class FailSource(FakeSource):
-        def iter_ruptures(self, tom):
+        def iter_ruptures(self):
             raise ValueError('Something bad happened')
 
     class FakeGSIM(object):
