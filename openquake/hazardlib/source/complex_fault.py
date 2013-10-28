@@ -47,18 +47,17 @@ class ComplexFaultSource(ParametricSeismicSource):
         fails or if rake value is invalid.
     """
 
-    __slots__ = ParametricSeismicSource.__slots__ + '''rupture_mesh_spacing
-    magnitude_scaling_relationship rupture_aspect_ratio
-    edges rake'''.split()
+    __slots__ = ParametricSeismicSource.__slots__ + '''edges rake'''.split()
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
-                 rupture_aspect_ratio,
+                 rupture_aspect_ratio, temporal_occurrence_model,
                  # complex fault specific parameters
                  edges, rake):
         super(ComplexFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio
+            magnitude_scaling_relationship, rupture_aspect_ratio,
+            temporal_occurrence_model
         )
 
         NodalPlane.check_rake(rake)
@@ -85,7 +84,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         else:
             return polygon
 
-    def iter_ruptures(self, temporal_occurrence_model):
+    def iter_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
@@ -125,7 +124,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                 yield ParametricProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
                     surface, type(self),
-                    occurrence_rate, temporal_occurrence_model
+                    occurrence_rate, self.temporal_occurrence_model
                 )
 
 
