@@ -221,7 +221,6 @@ def _compute_gmf(params, imt, gsims, site_coll, ruptures, rupture_seeds):
     :param rupture_seeds:
         a list with the seeds associated to the ruptures
     """
-    n_sites = len(site_coll)
     gmvs_per_site = collections.defaultdict(list)
     ruptures_per_site = collections.defaultdict(list)
 
@@ -241,7 +240,10 @@ def _compute_gmf(params, imt, gsims, site_coll, ruptures, rupture_seeds):
         numpy.random.seed(rupture_seeds[i])
         # there is a single imt => a single entry in the return dict
         [gmf_1_realiz] = gmf.ground_motion_fields(**gmf_calc_kwargs).values()
-        for site, gmv in zip(site_coll, gmf_1_realiz.reshape(n_sites)):
+        # since DEFAULT_GMF_REALIZATIONS is 1, gmf_1_realiz is a matrix
+        # with n_sites rows and 1 column
+        for site, gmv in zip(site_coll, gmf_1_realiz):
+            gmv = float(gmv)  # convert a 1x1 matrix into a float
             if gmv:  # nonzero contribution to site
                 gmvs_per_site[site.id].append(gmv)
                 ruptures_per_site[site.id].append(rupture.id)
