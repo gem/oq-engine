@@ -43,7 +43,8 @@ def make_area_source(polygon, discretization, **kwargs):
         'rupture_aspect_ratio': 1.333,
         'polygon': polygon,
         'area_discretization': discretization,
-        'rupture_mesh_spacing': 12.33
+        'rupture_mesh_spacing': 12.33,
+        'temporal_occurrence_model': PoissonTOM(50.)
     }
     default_arguments.update(kwargs)
     kwargs = default_arguments
@@ -64,7 +65,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                                                 Point(0, 0), Point(-2, 0)]),
                                        discretization=66.7,
                                        rupture_mesh_spacing=5)
-        ruptures = list(source.iter_ruptures(PoissonTOM(50)))
+        ruptures = list(source.iter_ruptures())
         self.assertEqual(len(ruptures), 9 * 2)
         # resulting 3x3 mesh has points in these coordinates:
         lons = [-1.4, -0.8, -0.2]
@@ -92,7 +93,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                            Point(-0.2248, -0.2248), Point(-0.2248, 0)])
         source = self.make_area_source(polygon, discretization=10, mfd=mfd)
         self.assertIs(source.mfd, mfd)
-        ruptures = list(source.iter_ruptures(PoissonTOM(1)))
+        ruptures = list(source.iter_ruptures())
         self.assertEqual(len(ruptures), 4)
         for rupture in ruptures:
             self.assertNotEqual(rupture.occurrence_rate, 3)

@@ -43,6 +43,7 @@ class AreaSource(PointSource):
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
+                 temporal_occurrence_model,
                  # point-specific parameters (excluding location)
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  nodal_plane_distribution, hypocenter_distribution,
@@ -51,8 +52,9 @@ class AreaSource(PointSource):
         super(AreaSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
-            upper_seismogenic_depth, lower_seismogenic_depth,
-            location=None, nodal_plane_distribution=nodal_plane_distribution,
+            temporal_occurrence_model, upper_seismogenic_depth,
+            lower_seismogenic_depth, location=None,
+            nodal_plane_distribution=nodal_plane_distribution,
             hypocenter_distribution=hypocenter_distribution,
         )
         self.polygon = polygon
@@ -70,7 +72,7 @@ class AreaSource(PointSource):
         max_rup_radius = self._get_max_rupture_projection_radius()
         return self.polygon.dilate(max_rup_radius + dilation)
 
-    def iter_ruptures(self, temporal_occurrence_model):
+    def iter_ruptures(self):
         """
         See :meth:`openquake.hazardlib.source.base.SeismicSource.iter_ruptures`
         for description of parameters and return value.
@@ -125,7 +127,8 @@ class AreaSource(PointSource):
                 hypocenter.depth = hc_depth
                 rupture = ParametricProbabilisticRupture(
                     mag, rake, self.tectonic_region_type, hypocenter,
-                    surface, type(self), occ_rate, temporal_occurrence_model
+                    surface, type(self), occ_rate,
+                    self.temporal_occurrence_model
                 )
                 yield rupture
 
