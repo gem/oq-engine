@@ -139,23 +139,6 @@ class PointSource(SeismicSource):
         radius += integration_distance
         return sites.filter(self.location.closer_than(sites.mesh, radius))
 
-    @classmethod
-    def filter_sites_by_distance_to_rupture(cls, rupture, integration_distance,
-                                            sites):
-        """
-        Filter sites that are closer than rupture's projection radius
-        plus integration distance along the great circle arc from rupture's
-        epicenter location. Overrides the :meth:`base class' method
-        <openquake.hazardlib.source.base.SeismicSource.filter_sites_by_distance_to_rupture>`.
-        """
-        rup_length, rup_width = rupture.surface.length, rupture.surface.width
-        rup_width = rup_width * math.cos(math.radians(rupture.surface.dip))
-        radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
-        radius += integration_distance
-        epicenter = Point(rupture.hypocenter.longitude,
-                          rupture.hypocenter.latitude)
-        return sites.filter(epicenter.closer_than(sites.mesh, radius))
-
     def iter_ruptures(self, temporal_occurrence_model):
         """
         See :meth:
