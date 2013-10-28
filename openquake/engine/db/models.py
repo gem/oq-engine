@@ -1182,7 +1182,7 @@ class RiskCalculation(djm.Model):
     hazard_calculation = djm.ForeignKey("HazardCalculation",
                                         null=True, blank=True)
 
-    hazard_investigation_time = djm.FloatField(
+    risk_investigation_time = djm.FloatField(
         help_text=('Override the time span (in years) with which the '
                    'hazard has been computed.'),
         null=True,
@@ -1382,7 +1382,7 @@ class RiskCalculation(djm.Model):
 
     @property
     def investigation_time(self):
-        return (self.hazard_investigation_time or
+        return (self.risk_investigation_time or
                 self.get_hazard_calculation().investigation_time)
 
 
