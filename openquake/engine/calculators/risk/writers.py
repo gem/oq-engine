@@ -170,7 +170,7 @@ def loss_fraction(loss_type, loss_fraction_id, assets, values, fractions):
     :param absolute_losses:
        the absolute loss contributions of `values` in `assets`
     """
-    for asset, value, fraction in zip(assets, values, fractions):
+    for asset, value, fraction in itertools.izip(assets, values, fractions):
         models.LossFractionData.objects.create(
             loss_fraction_id=loss_fraction_id,
             value=value,

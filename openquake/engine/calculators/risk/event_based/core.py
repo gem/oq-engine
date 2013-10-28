@@ -262,17 +262,18 @@ def disaggregate(outputs, rupture_ids, params):
 
     for asset, losses in zip(outputs.assets, outputs.loss_matrix):
         if asset.site in params.sites_disagg:
-            fractions = list(disaggregate_site(asset.site, losses))
-            disagg_matrix.extend(fractions)
-            for _ in range(len(fractions)):
-                assets_disagg.append(asset)
+            disagg_matrix.extend(list(disaggregate_site(asset.site, losses)))
+            assets_disagg = itertools.chain(
+                assets_disagg,
+                itertools.repeat(asset, len(rupture_ids)))
+
     if assets_disagg:
         magnitudes, coordinates, fractions = zip(*disagg_matrix)
     else:
         magnitudes, coordinates, fractions = [], [], []
 
     return DisaggregationOutputs(
-        assets_disagg, magnitudes, coordinates, fractions)
+        list(assets_disagg), magnitudes, coordinates, fractions)
 
 
 class EventBasedRiskCalculator(base.RiskCalculator):

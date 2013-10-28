@@ -48,6 +48,9 @@ class EventBaseQATestCase(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             output_type="loss_fraction",
             loss_fraction__variable="coordinate").loss_fraction.iteritems()
 
+        print outputs.get(
+            output_type="loss_fraction",
+            loss_fraction__variable="coordinate").loss_fraction.id
         disagg = list(disagg_gen)
 
         self.assertEqual(1, len(disagg))
