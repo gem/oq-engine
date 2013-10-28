@@ -31,8 +31,10 @@ class ClassicalHazardCase14TestCase(BaseQATestCase):
 
         compare_hazard_curve_with_csv(
             hc, ['simple_fault'], ['AbrahamsonSilva2008'], 'PGA', None, None,
-            os.path.join(CURRENTDIR, 'AS2008_expected_curves.dat'), ' ')
+            os.path.join(CURRENTDIR, 'AS2008_expected_curves.dat'), ' ',
+            rtol=0.01)
 
         compare_hazard_curve_with_csv(
             hc, ['simple_fault'], ['CampbellBozorgnia2008'], 'PGA', None, None,
-            os.path.join(CURRENTDIR, 'CB2008_expected_curves.dat'), ' ')
+            os.path.join(CURRENTDIR, 'CB2008_expected_curves.dat'), ' ',
+            rtol=0.01)
