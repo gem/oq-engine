@@ -1,1 +1,1 @@
-ALTER TABLE uiapi.risk_calculation ADD hazard_investigation_time float NULL;
+ALTER TABLE uiapi.risk_calculation ADD risk_investigation_time float NULL;
