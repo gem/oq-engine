@@ -24,6 +24,13 @@ import numpy
 from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.source.rupture import Rupture
+from openquake.hazardlib.site import Site
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
+from openquake.hazardlib.source.complex_fault import ComplexFaultSource
+from openquake.hazardlib.gsim import get_available_gsims
 
 from openquake.engine.db import models
 from openquake.engine.calculators.hazard.event_based import core
@@ -39,6 +46,71 @@ def make_mock_points(n):
         point.wkt2d = 'XXX'
         points.append(point)
     return points
+
+
+def make_site_coll(n):
+    assert n <= 1000
+    sites = []
+    for i in range(n):
+        lon = -78 - float(i) / 1000
+        site = Site(Point(lon, 15.5), 800., 'measured', 50., 2.5, i)
+        sites.append(site)
+    return models.SiteCollection(sites)
+
+
+class FakeRupture(object):
+    def __init__(self, id, trt, mag=5.0, rake=90.):
+        hypocenter = Point(17.788328, -77.219496, 7.8125)
+        lons = numpy.array(
+            [-78.18106621, -78.18013243, -78.17919864, -78.15399318,
+             -78.15305962, -78.15212606])
+        lats = numpy.array(
+            [15.615, 15.615, 15.615, 15.56553731,
+             15.56553731,  15.56553731])
+        surface = ComplexFaultSurface(Mesh(lons, lats, None))
+        self.rupture = Rupture(mag, rake, trt, hypocenter,
+                               surface, ComplexFaultSource)
+        self.id = id
+
+
+class EventBasedHazardTestCase(unittest.TestCase):
+    """Tests for the routines used by the event-based hazard calculator"""
+
+    # test a case with 5 sites and 2 ruptures
+    def test_compute_gmf(self):
+        hc = mock.Mock()
+        hc.ground_motion_correlation_model = None
+        hc.truncation_level = None
+        hc.maximum_distance = 200.
+
+        gsim = get_available_gsims()['AkkarBommer2010']()
+        site_coll = make_site_coll(5)
+        params = dict(truncation_level=3,
+                      correl_model=None,
+                      maximum_distance=200)
+        trt = 'Subduction Interface'
+        rupture_ids = range(2)
+        ruptures = [FakeRupture(i, trt) for i in rupture_ids]
+        rupture_seeds = rupture_ids
+        gmv_dict, rup_dict = core._compute_gmf(
+            params, PGA(), {trt: gsim}, site_coll, ruptures, rupture_seeds)
+        expected_rups = {
+            0: rupture_ids,
+            1: rupture_ids,
+            2: rupture_ids,
+            3: rupture_ids,
+            4: rupture_ids,
+        }
+        expected_gmvs = {
+            0: [0.122149047040728, 0.0813899249039753],
+            1: [0.0541662667863476, 0.02136369236082],
+            2: [0.0772246502768338, 0.0226182956091826],
+            3: [0.166062666449449, 0.0164127269047494],
+            4: [0.133588538354143, 0.0529987707352876]
+        }
+        numpy.testing.assert_equal(rup_dict, expected_rups)
+        for i, gmvs in expected_gmvs.iteritems():
+            numpy.testing.assert_allclose(gmvs, expected_gmvs[i])
 
 
 class EventBasedHazardCalculatorTestCase(unittest.TestCase):
