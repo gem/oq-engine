@@ -44,6 +44,18 @@ class BaseSeismicSource(object):
         self.name = name
         self.tectonic_region_type = tectonic_region_type
 
+
+    @abc.abstractmethod
+    def iter_ruptures(self):
+        """
+        Get a generator object that yields probabilistic ruptures the source
+        consists of.
+
+        :returns:
+            Generator of instances of sublclass of :class:
+            `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
+        """
+
     @abc.abstractmethod
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
@@ -171,6 +183,10 @@ class ParametricSeismicSource(BaseSeismicSource):
         than tall. Aspect ratio of 1 means ruptures have square shape,
         value below 1 means ruptures stretch vertically more than horizontally
         and vice versa.
+    :param temporal_occurrence_model:
+        Instance of
+        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal occurrence
+        model for calculating rupture occurrence probabilities
 
     :raises ValueError:
         If either rupture aspect ratio or rupture mesh spacing is not positive
@@ -178,11 +194,13 @@ class ParametricSeismicSource(BaseSeismicSource):
     """
     __metaclass__ = abc.ABCMeta
 
-    __slots__ = 'source_id name tectonic_region_type mfd'.split()
+    __slots__ = BaseSeismicSource.__slots__ + '''mfd rupture_mesh_spacing
+    magnitude_scaling_relationship rupture_aspect_ratio
+    temporal_occurrence_model'''.split()
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
-                 rupture_aspect_ratio):
+                 rupture_aspect_ratio, temporal_occurrence_model):
         super(ParametricSeismicSource, self). \
             __init__(source_id, name, tectonic_region_type)
 
@@ -196,21 +214,7 @@ class ParametricSeismicSource(BaseSeismicSource):
         self.rupture_mesh_spacing = rupture_mesh_spacing
         self.magnitude_scaling_relationship = magnitude_scaling_relationship
         self.rupture_aspect_ratio = rupture_aspect_ratio
-
-    @abc.abstractmethod
-    def iter_ruptures(self, temporal_occurrence_model):
-        """
-        Get a generator object that yields probabilistic ruptures the source
-        consists of.
-
-        :param temporal_occurrence_model:
-            Temporal occurrence model (supposedly
-            :class:`openquake.hazardlib.tom.PoissonTOM`). It is passed intact
-            to the probabilistic rupture constructor.
-        :returns:
-            Generator of instances of :class:
-            `~openquake.hazardlib.source.rupture.ProbabilisticRupture`.
-        """
+        self.temporal_occurrence_model = temporal_occurrence_model
 
     def get_annual_occurrence_rates(self, min_rate=0):
         """

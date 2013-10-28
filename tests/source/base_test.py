@@ -23,6 +23,7 @@ from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import Polygon, Point, RectangularMesh
 from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.tom import PoissonTOM
 
 
 class _BaseSeismicSourceTestCase(unittest.TestCase):
@@ -53,7 +54,8 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
         self.source = FakeSource('source_id', 'name', const.TRT.VOLCANIC,
                                  mfd=mfd, rupture_mesh_spacing=2,
                                  magnitude_scaling_relationship=PeerMSR(),
-                                 rupture_aspect_ratio=1)
+                                 rupture_aspect_ratio=1,
+                                 temporal_occurrence_model=PoissonTOM(50.))
         self.sitecol = SiteCollection(self.SITES)
 
 

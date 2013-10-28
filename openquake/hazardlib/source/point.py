@@ -58,22 +58,22 @@ class PointSource(ParametricSeismicSource):
         depth,  if one or more of hypocenter depth values is shallower
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
-    __slots__ = ParametricSeismicSource.__slots__ + '''rupture_mesh_spacing
-    magnitude_scaling_relationship rupture_aspect_ratio
-    upper_seismogenic_depth lower_seismogenic_depth
-    location nodal_plane_distribution hypocenter_distribution
+    __slots__ = ParametricSeismicSource.__slots__ + '''upper_seismogenic_depth
+    lower_seismogenic_depth location nodal_plane_distribution
+    hypocenter_distribution
     '''.split()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
+                 temporal_occurrence_model,
                  # point-specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  location, nodal_plane_distribution, hypocenter_distribution):
         super(PointSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio
-        )
+            magnitude_scaling_relationship, rupture_aspect_ratio,
+            temporal_occurrence_model)
 
         if upper_seismogenic_depth < 0:
             raise ValueError('upper seismogenic depth must be non-negative')
@@ -156,7 +156,7 @@ class PointSource(ParametricSeismicSource):
                           rupture.hypocenter.latitude)
         return sites.filter(epicenter.closer_than(sites.mesh, radius))
 
-    def iter_ruptures(self, temporal_occurrence_model):
+    def iter_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
@@ -164,7 +164,7 @@ class PointSource(ParametricSeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        return self._iter_ruptures_at_location(temporal_occurrence_model,
+        return self._iter_ruptures_at_location(self.temporal_occurrence_model,
                                                self.location)
 
     def _iter_ruptures_at_location(self, temporal_occurrence_model, location,
@@ -201,7 +201,7 @@ class PointSource(ParametricSeismicSource):
                     yield ParametricProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
                         surface, type(self),
-                        occurrence_rate, temporal_occurrence_model
+                        occurrence_rate, self.temporal_occurrence_model
                     )
 
     def _get_rupture_dimensions(self, mag, nodal_plane):
