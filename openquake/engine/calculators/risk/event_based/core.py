@@ -423,8 +423,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         motion field and the so-called time representative of the
         stochastic event set
         """
-        time_span = self.rc.investigation_time
-        return time_span, self.hc.ses_per_logic_tree_path * time_span
+        return (self.rc.investigation_time,
+                self.hc.ses_per_logic_tree_path * self.hc.investigation_time)
 
     @property
     def calculator_parameters(self):
