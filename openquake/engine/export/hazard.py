@@ -165,6 +165,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
             )
     elif output_type == 'disagg_matrix':
         # only logic trees, no stats
+
         out = '%s(%s)' % (output_type, result.poe)
         location = 'lon_%s-lat_%s' % (result.location.x, result.location.y)
 
