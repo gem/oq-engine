@@ -63,7 +63,8 @@ class SimpleCumulativeRate(BaseCatalogueCompleteness):
     Class to define the temporal variation in completess using simple 
     changes in cumulative rates in individual completeness bins
     '''
-    def completeness(self, catalogue, config, saveplot=False, filetype='png'):
+    def completeness(self, catalogue, config, saveplot=False, filetype='png',
+                     timeout=120):
         '''
                 
         :param catalogue:
@@ -85,17 +86,17 @@ class SimpleCumulativeRate(BaseCatalogueCompleteness):
         '''
         if saveplot and not isinstance(saveplot, str):
             raise ValueError('To save the figures enter a filename: ')
-        
+
         # Get magntitude bins
         magnitude_bins = self._get_magnitudes_from_spacing(
             catalogue.data['magnitude'],
             config['magnitude_bin'])
         dec_time = catalogue.get_decimal_time()
-        completeness_table = np.zeros([len(magnitude_bins) - 1, 2], 
+        completeness_table = np.zeros([len(magnitude_bins) - 1, 2],
                                       dtype=float)
         min_year = float(np.min(catalogue.data['year']))
         max_year = float(np.max(catalogue.data['year'])) + 1.0
-
+        has_completeness = np.zeros(len(magnitude_bins) - 1, dtype=bool)
         for iloc in range(0, len(magnitude_bins) - 1):
             lower_mag = magnitude_bins[iloc]
             upper_mag = magnitude_bins[iloc + 1]
@@ -103,12 +104,16 @@ class SimpleCumulativeRate(BaseCatalogueCompleteness):
                                  catalogue.data['magnitude'] < upper_mag)
             cumvals = np.cumsum(np.ones(np.sum(idx)))
             plt.plot(dec_time[idx], cumvals, '.')
-            plt.xlim(min_year, max_year)
+            plt.xlim(min_year, max_year + 5)
             title_string = 'Magnitude %5.2f to %5.2f' % (lower_mag, upper_mag)
             plt.title(title_string)
-            pts = pylab.ginput(1)[0]
+            pts = pylab.ginput(1, timeout=timeout)[0]
+            if pts[0] <= max_year:
+                 # Magnitude bin has no completeness!
+                has_completeness[iloc] = True
             completeness_table[iloc, 0] = np.floor(pts[0])
             completeness_table[iloc, 1] = magnitude_bins[iloc]
+            print completeness_table[iloc, :], has_completeness[iloc]
             if config['increment_lock'] and (iloc > 0) and \
                 (completeness_table[iloc, 0] > completeness_table[iloc - 1, 0]):
                     completeness_table[iloc, 0] = \
@@ -118,9 +123,9 @@ class SimpleCumulativeRate(BaseCatalogueCompleteness):
                     % upper_mag) + '.' + filetype
                 plt.savefig(filename, format=filetype)
             plt.close()
-        return completeness_table
-        
-        
+        return completeness_table[has_completeness, :]
+
+
     def _get_magnitudes_from_spacing(self, magnitudes, delta_m):
         '''If a single magnitude spacing is input then create the bins
     
@@ -136,11 +141,9 @@ class SimpleCumulativeRate(BaseCatalogueCompleteness):
         max_mag = np.max(magnitudes)
         if (max_mag - min_mag) < delta_m:
             raise ValueError('Bin width greater than magnitude range!')
-        
         mag_bins = np.arange(np.floor(min_mag), np.ceil(max_mag), delta_m)
         # Check to see if there are magnitudes in lower and upper bins
-        is_mag = np.logical_and(mag_bins - max_mag < delta_m, 
+        is_mag = np.logical_and(mag_bins - max_mag < delta_m,
                                 min_mag - mag_bins < delta_m)
         mag_bins = mag_bins[is_mag]
         return mag_bins
-    
