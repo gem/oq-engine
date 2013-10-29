@@ -22,7 +22,7 @@ import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import ProbabilisticRupture
 from openquake.hazardlib.slots import with_slots
 
 
@@ -121,7 +121,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                 except ValueError as e:
                     raise ValueError("Invalid source with id=%s. %s" % (
                         self.source_id, str(e)))
-                yield ParametricProbabilisticRupture(
+                yield ProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
                     surface, type(self),
                     occurrence_rate, self.temporal_occurrence_model

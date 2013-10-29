@@ -20,7 +20,7 @@ import numpy
 
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import ProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.scalerel.wc1994 import WC1994
@@ -354,8 +354,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
                 (actual_rupture.mag, actual_rupture.rake,
                  actual_rupture.hypocenter.depth)
             ]
-            self.assertTrue(isinstance(actual_rupture,
-                            ParametricProbabilisticRupture))
+            self.assertTrue(isinstance(actual_rupture, ProbabilisticRupture))
             self.assertEqual(actual_rupture.occurrence_rate,
                              expected_occurrence_rate)
             self.assertIs(actual_rupture.temporal_occurrence_model, tom)
@@ -598,7 +597,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         bottom_right = mid_right.point_at(hwidth, vwidth, azimuth=180)
         surface = PlanarSurface(1, 2, dip, top_left, top_right,
                                 bottom_right, bottom_left)
-        rupture = ParametricProbabilisticRupture(
+        rupture = ProbabilisticRupture(
             mag=1, rake=2, tectonic_region_type=TRT.VOLCANIC,
             hypocenter=self.hypocenter, surface=surface,
             source_typology=PointSource, occurrence_rate=3,
