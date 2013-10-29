@@ -184,9 +184,9 @@ class ParametricSeismicSource(BaseSeismicSource):
         value below 1 means ruptures stretch vertically more than horizontally
         and vice versa.
     :param temporal_occurrence_model:
-        Instance of
-        :class:`openquake.hazardlib.tom.PoissonTOM` defining temporal occurrence
-        model for calculating rupture occurrence probabilities
+        Instance of subclasses of
+        :class:`openquake.hazardlib.tom.BaseParametricTOM` defining temporal
+        occurrence model for calculating rupture occurrence probabilities
 
     :raises ValueError:
         If either rupture aspect ratio or rupture mesh spacing is not positive
