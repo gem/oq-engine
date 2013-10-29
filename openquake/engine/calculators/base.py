@@ -335,6 +335,7 @@ class Calculator(object):
                                 self.job.calculation.export_dir,
                                 export_type
                             )
+                            logs.LOG.info('exported %s', fname)
                             exported_files.append(fname)
 
         return exported_files
