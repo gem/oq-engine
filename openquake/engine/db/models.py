@@ -103,7 +103,7 @@ LOSS_TYPES = ["structural", "nonstructural", "fatalities", "contents"]
 
 
 #: relative tolerance to consider two risk outputs (almost) equal
-RISK_RTOL = 0.08
+RISK_RTOL = 0.05
 
 
 #: absolute tolerance to consider two risk outputs (almost) equal
@@ -143,6 +143,17 @@ def cost_type(loss_type):
 def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
     return numpy.testing.assert_allclose(
         numpy.array(key(o1)), numpy.array(key(o2)), rtol=rtol, atol=atol)
+
+
+def loss_curve_almost_equal(curve, expected_curve):
+    if curve.losses[curve.losses > 0].any():
+        poes = interpolate.interp1d(
+            curve.losses, curve.poes,
+            bounds_error=False, fill_value=0)(expected_curve.losses)
+    else:
+        poes = numpy.zeros(len(expected_curve.poes))
+
+    return risk_almost_equal(poes, expected_curve.poes)
 
 
 def getcursor(route):
@@ -696,10 +707,10 @@ class HazardCalculation(djm.Model):
     # A description for this config profile which is meaningful to a user.
     description = djm.TextField(default='', blank=True)
 
-    # The timeout is stored in seconds and is 1 hour by default.
+    # The timeout is stored in seconds and is 100 hours by default.
     no_progress_timeout = djm.IntegerField(
-        default=3600, help_text="what time period w/o any progress is "
-                                "acceptable for calculations?")
+        default=360000, help_text="what time period w/o any progress is "
+        "acceptable for calculations?")
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
@@ -1138,9 +1149,9 @@ class RiskCalculation(djm.Model):
     # A description for this config profile which is meaningful to a user.
     description = djm.TextField(default='', blank=True)
 
-    # The timeout is stored in seconds and is 1 hour by default.
+    # The timeout is stored in seconds and is 100 hours by default.
     no_progress_timeout = djm.IntegerField(
-        default=3600, help_text="what time period w/o any progress is "
+        default=360000, help_text="what time period w/o any progress is "
                                 "acceptable for calculations?")
 
     CALC_MODE_CHOICES = (
@@ -2835,14 +2846,7 @@ class LossCurveData(djm.Model):
         return self.loss_curve.output_hash + (self.asset_ref,)
 
     def assertAlmostEqual(self, data):
-        if self.losses[self.losses > 0].any():
-            poes = interpolate.interp1d(
-                self.losses, self.poes,
-                bounds_error=False, fill_value=0)(data.losses)
-        else:
-            poes = numpy.zeros(len(data.poes))
-
-        return risk_almost_equal(self.poes, poes)
+        return loss_curve_almost_equal(self, data)
 
 
 class AggregateLossCurveData(djm.Model):
@@ -2867,14 +2871,7 @@ class AggregateLossCurveData(djm.Model):
         return self.loss_curve.output_hash
 
     def assertAlmostEqual(self, data):
-        if self.losses[self.losses > 0].any():
-            poes = interpolate.interp1d(
-                self.losses, self.poes,
-                bounds_error=False, fill_value=0)(data.losses)
-        else:
-            poes = numpy.zeros(len(data.poes))
-
-        return risk_almost_equal(self.poes, poes)
+        return loss_curve_almost_equal(self, data)
 
 
 class EventLoss(djm.Model):

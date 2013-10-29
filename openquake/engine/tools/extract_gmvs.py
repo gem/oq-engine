@@ -42,12 +42,14 @@ def extract(hc_id, a_writer):
                 imt_type_fix = imt_type
                 sa_period_fix = sa_period
 
-            ruptures = [r.id
-                        for r in models.SESRupture.objects.filter(
-                                ses__ses_collection__lt_realization=lt)]
+            ruptures = sorted(
+                [r.id
+                 for r in models.SESRupture.objects.filter(
+                         ses__ses_collection__lt_realization=lt)])
 
             for site in hc.hazardsite_set.all().order_by('id'):
                 gmvs = []
+                gmvs_data = dict()
 
                 for ses in models.SES.objects.filter(
                         ses_collection__lt_realization=lt).order_by('id'):
@@ -57,16 +59,14 @@ def extract(hc_id, a_writer):
                             site=site,
                             imt=imt_type, sa_period=sa_period):
 
-                        gmvs_data = dict(zip(gmf.rupture_ids, gmf.gmvs))
-                        gmvs.extend([gmvs_data.get(r, 0.0)
-                                     for r in ruptures])
-
+                        gmvs_data.update(dict(zip(gmf.rupture_ids, gmf.gmvs)))
+                gmvs.extend([gmvs_data.get(r, 0.0) for r in ruptures])
                 a_writer.writerow([lt.id, site.location.x, site.location.y,
                                    imt_type_fix, sa_period_fix] + gmvs)
 
 
 if __name__ == "__main__":
-    if sys.argv[1] in ['-h', '--help'] or len(sys.argv) != 2:
+    if len(sys.argv) != 2 or sys.argv[1] in ['-h', '--help']:
         print "Usage:\n %s <hazard_calculation ID>" % sys.argv[0]
         sys.exit(1)
 
