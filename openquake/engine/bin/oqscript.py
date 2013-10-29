@@ -285,28 +285,26 @@ def list_inputs(input_type):
         print "%9d|%s|%12s" % (inp.id, inp.path, inp.last_update)
 
 
-def list_hazard_calculations():
+def list_calculations(calc_manager):
     """
-    Print a summary of past hazard calculations.
-    """
-    hcs = engine.get_hazard_calculations(getpass.getuser())
-    _print_calcs_summary(hcs)
+    Print a summary of past calculations.
 
+    :param calc_manager:
 
-def list_risk_calculations():
+       a django manager (e.g.
+       :class:`openquake.engine.db.models.RiskCalculation.objects`)
+       which provides calculation instances
     """
-    Print a summary of past risk calculations.
-    """
-    rcs = engine.get_risk_calculations(getpass.getuser())
-    _print_calcs_summary(rcs)
 
+    # FIXME(lp). As it might happen to have a calculation instance
+    # without a OqJob instance (e.g. when the user imports outputs
+    # directly from files) we filter out the calculation without the
+    # corresponding job
 
-def _print_calcs_summary(calcs):
-    """
-    :param calcs:
-        List of :class:`openquake.engine.db.models.HazardCalculation` or
-        :class:`openquake.engine.db.models.RiskCalculation` objects.
-    """
+    calcs = calc_manager.filter(
+        owner__user_name=getpass.getuser(),
+        oqjob__isnull=False).order_by('oqjob__last_update')
+
     if len(calcs) == 0:
         print 'None'
     else:
@@ -456,7 +454,7 @@ def main():
         list_inputs(args.list_inputs)
     # hazard
     elif args.list_hazard_calculations:
-        list_hazard_calculations()
+        list_calculations(models.HazardCalculation.objects)
     elif args.list_hazard_outputs is not None:
         engine.list_hazard_outputs(args.list_hazard_outputs)
     elif args.export_hazard is not None:
@@ -473,7 +471,7 @@ def main():
         del_haz_calc(args.delete_hazard_calculation, args.yes)
     # risk
     elif args.list_risk_calculations:
-        list_risk_calculations()
+        list_calculations(models.RiskCalculation.objects)
     elif args.list_risk_outputs is not None:
         engine.list_risk_outputs(args.list_risk_outputs)
     elif args.export_risk is not None:
