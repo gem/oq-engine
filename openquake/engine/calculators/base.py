@@ -130,7 +130,7 @@ class Calculator(object):
         self.tasksdone = 0
         self.percent = 0.0
         logs.LOG.progress(
-            'spawning %d tasks of kind %s, self.num_tasks, self.taskname)
+            'spawning %d tasks of kind %s', self.num_tasks, self.taskname)
         tasks.parallelize(task_func, arglist, self.log_percent)
 
     def log_percent(self, dummy):
