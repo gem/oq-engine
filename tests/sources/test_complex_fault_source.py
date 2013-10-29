@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -48,7 +48,7 @@
 # -*- coding: utf-8 -*-
 
 '''
-Tests the construction and methods within the :class: 
+Tests the construction and methods within the :class:
 hmtk.sources.complex_fault_source.mtkComplexFaultSource
 '''
 
@@ -62,11 +62,12 @@ from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
 
-SOURCE_ATTRIBUTES = ['fault_edges', 'mfd', 'name', 'geometry', 'rake', 
-                     'typology', 'upper_depth', 'catalogue', 
-                     'rupt_aspect_ratio', 'lower_depth', 'id', 'mag_scale_rel', 
-                     'trt']
-                     
+SOURCE_ATTRIBUTES = ['fault_edges', 'mfd', 'name', 'geometry', 'rake',
+                     'typology', 'upper_depth', 'catalogue',
+                     'rupt_aspect_ratio', 'lower_depth', 'id', 'mag_scale_rel',
+                     'dip', 'trt']
+
+
 class TestComplexFaultSource(unittest.TestCase):
     '''
     Test module for the hmtk.sources.complex_fault_source.mtkComplexFaultSource
@@ -86,7 +87,6 @@ class TestComplexFaultSource(unittest.TestCase):
                                           [1.0, 1.0, 45.],
                                           [0.0, 1.3, 42.]]))
 
-        
     def test_simple_fault_instantiation(self):
         '''
         Tests the core instantiation of the module
@@ -112,7 +112,7 @@ class TestComplexFaultSource(unittest.TestCase):
         self.fault_source._get_minmax_edges(self.trace_line[1])
         self.assertAlmostEqual(self.fault_source.upper_depth, 0.9)
         self.assertAlmostEqual(self.fault_source.lower_depth, 45.0)
-        
+
         # Check the same behaviour when input as array
         self.fault_source = mtkComplexFaultSource('101', 'A complex fault')
         # Test case simple edge
@@ -134,7 +134,7 @@ class TestComplexFaultSource(unittest.TestCase):
         # Use the dip as a simple indicator of geometrical success!
         self.assertAlmostEqual(self.fault_source.dip, 40.5398531, 2)
 
-        # Create a second instance 
+        # Create a second instance
         fault2 = mtkComplexFaultSource('101', 'A complex fault')
         fault2.create_geometry(self.trace_array, mesh_spacing = 2.0)
         self.assertIsInstance(fault2.geometry, ComplexFaultSurface)
@@ -144,7 +144,7 @@ class TestComplexFaultSource(unittest.TestCase):
         # If less than two edges are input ensure error is raised
         bad_traces = [line.Line([point.Point(1.0, 0.0, 3.0),
                                  point.Point(1.0, 0.0, 3.0)])]
-        
+
         self.fault_source = mtkComplexFaultSource('101', 'A complex fault')
         with self.assertRaises(ValueError) as ver:
             self.fault_source.create_geometry(bad_traces)
@@ -153,7 +153,7 @@ class TestComplexFaultSource(unittest.TestCase):
 
         # If an edge is not defined from either a nhlib.geo.line.Line instance
         # or numpy.ndarray then ensure error is raised
-        
+
         bad_traces = [line.Line([point.Point(1.0, 0.0, 3.0),
                                  point.Point(1.0, 0.0, 3.0)])]
         bad_traces.append('a bad input')
@@ -188,7 +188,7 @@ class TestComplexFaultSource(unittest.TestCase):
             np.arange(2, 14, 1))
 
         # Test when considering rupture distance
-        self.fault_source.select_catalogue(selector0, 
+        self.fault_source.select_catalogue(selector0,
                                                            50.,
                                                            'rupture')
         np.testing.assert_array_equal(
@@ -200,21 +200,21 @@ class TestComplexFaultSource(unittest.TestCase):
         selector0 = CatalogueSelector(self.catalogue)
         with self.assertRaises(ValueError) as ver:
             self.fault_source.select_catalogue(selector0, 40.0)
-        self.assertEqual(ver.exception.message, 
+        self.assertEqual(ver.exception.message,
                          'No events found in catalogue!')
-    
+
     def test_create_oqnmrl_complex_fault_source(self):
         '''
         Tests the conversion of a point source to an instance of the :class:
-        oqnrmllib.models.AreaSource 
+        oqnrmllib.models.AreaSource
         '''
         # Define a complete source
         complex_edges = [
             line.Line([point.Point(10., 10., 0.), point.Point(11., 10., 0.)]),
             line.Line([point.Point(10., 10., 20.), point.Point(11.5, 10., 21.)])
             ]
-        self.fault_source = mtkComplexFaultSource('001', 
-            'A Fault Source', 
+        self.fault_source = mtkComplexFaultSource('001',
+            'A Fault Source',
             trt='Active Shallow Crust',
             geometry = None,
             mag_scale_rel=None,
@@ -241,8 +241,8 @@ class TestComplexFaultSource(unittest.TestCase):
         self.assertTrue(isinstance(test_source, models.ComplexFaultSource))
         self.assertEqual(test_source.id, expected_source.id)
         self.assertEqual(test_source.name, expected_source.name)
-        self.assertAlmostEqual(test_source.mfd.b_val, 
+        self.assertAlmostEqual(test_source.mfd.b_val,
                                expected_source.mfd.b_val)
-    
+
     def tearDown(self):
         warnings.resetwarnings()

@@ -4,12 +4,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
 # 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -17,33 +17,33 @@
 #
 # DISCLAIMER
 # 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM’s OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM’s OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 #/usr/bin/env/python
 
@@ -93,7 +93,7 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.assertTrue(np.allclose(
             utils.decimal_year(self.year, self.month, self.day),
             np.array([1990., 1995.49315068, 2000.99726027])))
-    
+
     def test_decimal_time(self):
         '''Tests the function utils.decimal_time'''
         self.year = np.array([1990, 1995, 2000])
@@ -103,39 +103,39 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.minute = np.array([0, 30, 59])
         self.second = np.array([0.0, 30.0, 59.0])
         self.assertTrue(np.allclose(
-            utils.decimal_time(self.year, self.month, self.day, self.hour, 
+            utils.decimal_time(self.year, self.month, self.day, self.hour,
             self.minute, self.second),
             np.array([1990., 1995.49457858, 2000.99999997])))
-    
+
     def test_haversine(self):
         '''Tests the function utils.haversine
-        Distances tested against i) Matlab implementation of the haversine 
+        Distances tested against i) Matlab implementation of the haversine
                                     formula
                                 ii) Matlab "distance" function (also based on
-                                    the haversine formula (assumes 
-                                    Earth Radius = 6371.0 not 6371.227 as 
+                                    the haversine formula (assumes
+                                    Earth Radius = 6371.0 not 6371.227 as
                                     assumed here!)
         '''
         # Simple test
         self.longitude = np.arange(30., 40., 1.)
         self.latitude = np.arange(30., 40., 1.)
         distance = utils.haversine(self.longitude, self.latitude, 35.0, 35.0)
-        expected_distance = np.array([[727.09474718], 
+        expected_distance = np.array([[727.09474718],
                                       [580.39194024],
                                       [434.3102452],
                                       [288.87035021],
-                                      [144.09319874], 
+                                      [144.09319874],
                                       [0.],
                                       [143.38776088],
                                       [286.04831311],
                                       [427.95959077],
                                       [569.09922383]])
         self.assertTrue(np.allclose(distance, expected_distance))
-        
+
         # 2-D test
         self.longitude = np.array([30., 35., 40.])
         self.latitude = np.array([30., 35., 40.])
-        distance = utils.haversine(self.longitude, self.latitude, 
+        distance = utils.haversine(self.longitude, self.latitude,
                                     self.longitude, self.latitude)
         expected_distance = np.array([[ 0., 727.09474718, 1435.38402047],
                                       [727.09474718, 0., 709.44452948],
@@ -145,11 +145,11 @@ class TestSeismicityUtilities(unittest.TestCase):
         self.longitude = np.array([179.5, 180.0, -179.5])
         self.latitude = np.array([45., 45., 45.])
         distance = utils.haversine(self.longitude, self.latitude, 179.9, 45.)
-        expected_distance = np.array([[31.45176332], 
-                                      [7.86294832], 
+        expected_distance = np.array([[31.45176332],
+                                      [7.86294832],
                                       [47.1775851]])
         self.assertTrue(np.allclose(distance, expected_distance))
-        
+
     def test_piecewise_linear_function(self):
         '''Test the piecewise linear calculator'''
         # Good parameter set - 2 segments
@@ -157,7 +157,7 @@ class TestSeismicityUtilities(unittest.TestCase):
         values = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
         expected = [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 9.0, 8.0, 7.0, 6.0]
         for iloc, xval in enumerate(values):
-            self.assertAlmostEqual(expected[iloc], 
+            self.assertAlmostEqual(expected[iloc],
                                    utils.piecewise_linear_scalar(params, xval))
         # Odd-number of values in parameters - raise value error
         params = [2.0, -1.0, 5.0, 0.0, 3.4]
@@ -165,17 +165,17 @@ class TestSeismicityUtilities(unittest.TestCase):
             utils.piecewise_linear_scalar(params, 1.0)
         # Single segment test
         params1seg = [2.0, 0.0]
-        self.assertAlmostEqual(2.0, 
+        self.assertAlmostEqual(2.0,
                                utils.piecewise_linear_scalar(params1seg, 1.0))
         # 3- segment test
         params = np.array([2.0, -1.0, 3.0, 4.0, 8.0, 0.0])
         expected = [0.0, 2.0, 4.0, 6.0, 8.0, 7.0, 6.0, 5.0, 4.0, 7.0]
         for iloc, xval in enumerate(values):
-            self.assertAlmostEqual(expected[iloc], 
+            self.assertAlmostEqual(expected[iloc],
                                    utils.piecewise_linear_scalar(params, xval))
 
 
-    def _tester_for_truncated_gaussian(self, data, uncertainties, low_limit, 
+    def _tester_for_truncated_gaussian(self, data, uncertainties, low_limit,
                                        high_limit, number_samples=1000):
         """
         Tests that for a given data set and uncertainties that no values
@@ -185,12 +185,12 @@ class TestSeismicityUtilities(unittest.TestCase):
         xhigh = []
         for iloc in range(0, number_samples):
             xval = utils.sample_truncated_gaussian_vector(
-                data, 
+                data,
                 uncertainties,
                 (low_limit, high_limit))
             xlow.append(np.min(xval))
             xhigh.append(np.max(xval))
-        
+
         self.assertTrue(np.max(np.array(xhigh)) <= high_limit)
         self.assertTrue(np.min(np.array(xlow)) >= low_limit)
 
@@ -205,11 +205,11 @@ class TestSeismicityUtilities(unittest.TestCase):
         self._tester_for_truncated_gaussian(data, uncertainties, 5., 15.)
 
         # Test case with infinite bounds
-        self._tester_for_truncated_gaussian(data, 
-                                            uncertainties, 
-                                            -np.inf, 
+        self._tester_for_truncated_gaussian(data,
+                                            uncertainties,
+                                            -np.inf,
                                             np.inf)
-        
+
 
 
 
@@ -246,7 +246,7 @@ class TestBootstrapHistograms(unittest.TestCase):
         expected_array = expected_array / np.sum(expected_array)
         np.testing.assert_array_almost_equal(expected_array,
             utils.bootstrap_histogram_1D(self.x, x_range, normalisation=True))
-        
+
 
     def test_1D_bootstrap_with_uncertainty(self):
         """
@@ -256,8 +256,8 @@ class TestBootstrapHistograms(unittest.TestCase):
         expected_array = np.array([0.17, 0.22, 0.22, 0.22, 0.17])
         x_range = np.arange(0., 60., 10.)
         hist_values = utils.bootstrap_histogram_1D(
-            self.x, 
-            x_range, 
+            self.x,
+            x_range,
             uncertainties=self.x_sigma,
             number_bootstraps=1000,
             normalisation=True)
@@ -283,7 +283,7 @@ class TestBootstrapHistograms(unittest.TestCase):
         # With normalisation
         expected_array = expected_array / np.sum(expected_array)
         np.testing.assert_array_almost_equal(expected_array,
-            utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range, 
+            utils.bootstrap_histogram_2D(self.x, self.y, x_range, y_range,
                                          normalisation=True))
 
     def test_2D_bootstrap_with_uncertainty(self):
@@ -299,7 +299,7 @@ class TestBootstrapHistograms(unittest.TestCase):
                                    [3.0, 4.0, 4.0, 3.0],
                                    [3.0, 4.0, 4.0, 3.0],
                                    [3.0, 4.0, 4.0, 3.0]])
-        
+
         hist_values = utils.bootstrap_histogram_2D(
             self.x,
             self.y,
@@ -319,7 +319,7 @@ class TestBootstrapHistograms(unittest.TestCase):
                                   [0.05, 0.06, 0.06, 0.05],
                                   [0.05, 0.06, 0.06, 0.05],
                                   [0.04, 0.05, 0.05, 0.04]])
-       
+
         hist_values = utils.bootstrap_histogram_2D(
             self.x,
             self.y,
@@ -331,4 +331,3 @@ class TestBootstrapHistograms(unittest.TestCase):
             number_bootstraps=1000)
         array_diff = expected_array - hist_values
         self.assertTrue(np.all(np.fabs(array_diff) < 0.02))
-

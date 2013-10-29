@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -48,7 +48,7 @@
 # -*- coding: utf-8 -*-
 
 '''
-Tests the construction and methods within the :class: 
+Tests the construction and methods within the :class:
 hmtk.sources.simple_fault_source.mtkSimpleFaultSource
 '''
 
@@ -62,9 +62,9 @@ from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
 
-SOURCE_ATTRIBUTES = ['mfd', 'name', 'geometry', 'rake', 'fault_trace', 
-                     'typology', 'upper_depth', 'catalogue', 
-                     'rupt_aspect_ratio', 'lower_depth', 'id', 
+SOURCE_ATTRIBUTES = ['mfd', 'name', 'geometry', 'rake', 'fault_trace',
+                     'typology', 'upper_depth', 'catalogue',
+                     'rupt_aspect_ratio', 'lower_depth', 'id',
                      'mag_scale_rel', 'dip', 'trt']
 
 class TestSimpleFaultSource(unittest.TestCase):
@@ -76,35 +76,35 @@ class TestSimpleFaultSource(unittest.TestCase):
         warnings.simplefilter("ignore")
         self.catalogue = Catalogue()
         self.fault_source = None
-        
+
     def test_simple_fault_instantiation(self):
         '''
         Tests the core instantiation of the module
         '''
         # Simple instantiation - minimual data
         self.fault_source = mtkSimpleFaultSource('101', 'A simple fault')
-        self.assertListEqual(self.fault_source.__dict__.keys(), 
+        self.assertListEqual(self.fault_source.__dict__.keys(),
                              SOURCE_ATTRIBUTES)
         self.assertEqual(self.fault_source.id, '101')
         self.assertEqual(self.fault_source.name, 'A simple fault')
         self.assertEqual(self.fault_source.typology, 'SimpleFault')
 
         # Simple instantiation with dip
-        self.fault_source = mtkSimpleFaultSource('101', 
-                                                 'A simple fault', 
+        self.fault_source = mtkSimpleFaultSource('101',
+                                                 'A simple fault',
                                                  dip=60.)
         self.assertAlmostEqual(self.fault_source.dip, 60.)
         # Instantiation with an invalid dip range - raises AssertionError
-        self.assertRaises(AssertionError, 
-                          mtkSimpleFaultSource, 
+        self.assertRaises(AssertionError,
+                          mtkSimpleFaultSource,
                           identifier='101',
                           name='A simple fault',
                           dip=95.)
-        
+
 
     def test_check_seismogenic_depths(self):
         '''
-        Tests the check on seismogenic depths - behaviour different from 
+        Tests the check on seismogenic depths - behaviour different from
         equivalent function in area and point sources as simple faults cannot
         have an undefined lower seismogenic depth, and upper seismogenic
         depth with default to 0 if undefined
@@ -128,7 +128,7 @@ class TestSimpleFaultSource(unittest.TestCase):
                          'simple fault source!')
         # Test 4 - Raises error when lower depth is less than upper depth
         with self.assertRaises(ValueError) as ver:
-            self.fault_source._check_seismogenic_depths(upper_depth=20., 
+            self.fault_source._check_seismogenic_depths(upper_depth=20.,
                                                         lower_depth=15.)
         self.assertEqual(ver.exception.message,
                          'Lower seismogenic depth must take a greater value'
@@ -136,7 +136,7 @@ class TestSimpleFaultSource(unittest.TestCase):
 
         # Test 4 - Raises value error when upper depth is less than 0.
         with self.assertRaises(ValueError) as ver:
-            self.fault_source._check_seismogenic_depths(upper_depth=-0.5, 
+            self.fault_source._check_seismogenic_depths(upper_depth=-0.5,
                                                         lower_depth=15.)
         self.assertEqual(ver.exception.message,
                          'Upper seismogenic depth must be greater than or '
@@ -144,31 +144,31 @@ class TestSimpleFaultSource(unittest.TestCase):
 
     def test_create_fault_geometry(self):
         '''
-        Tests the creation of the fault geometry. Testing only behaviour 
-        for creating SimpleFaultSurface classes - not the values in the 
+        Tests the creation of the fault geometry. Testing only behaviour
+        for creating SimpleFaultSurface classes - not the values in the
         class (assumes nhlib implementation is correct)
         '''
         # Case 1 - trace input as instance of nhlib.geo.line.Line class
         self.fault_source = mtkSimpleFaultSource('101', 'A simple fault')
-        trace_as_line = line.Line([point.Point(2.0, 3.0), 
+        trace_as_line = line.Line([point.Point(2.0, 3.0),
                                    point.Point(3.0, 2.0)])
         self.fault_source.create_geometry(trace_as_line, 60., 0., 30.)
-        self.assertIsInstance(self.fault_source.geometry, 
+        self.assertIsInstance(self.fault_source.geometry,
                               SimpleFaultSurface)
 
         # Case 2 - trace input as numpy array
         trace_as_array = np.array([[2.0, 3.0], [3.0, 2.0]])
         self.fault_source = mtkSimpleFaultSource('101', 'A simple fault')
         self.fault_source.create_geometry(trace_as_array, 60., 0., 30.)
-        self.assertIsInstance(self.fault_source.geometry, 
+        self.assertIsInstance(self.fault_source.geometry,
                               SimpleFaultSurface)
         # Case 3 - raises error when something else is input
         with self.assertRaises(ValueError) as ver:
             self.fault_source.create_geometry('a bad input!', 60., 0., 30.)
         self.assertEqual(ver.exception.message,
                          'Unrecognised or unsupported geometry definition')
-        
-        
+
+
     def test_select_within_fault_distance(self):
         '''
         Tests the selection of events within a distance from the fault
@@ -180,7 +180,7 @@ class TestSimpleFaultSource(unittest.TestCase):
         self.catalogue.data['depth'] = np.zeros(11, dtype=float)
         self.catalogue.data['eventID'] = np.arange(0, 11, 1)
         self.fault_source = mtkSimpleFaultSource('101', 'A simple fault')
-        trace_as_line = line.Line([point.Point(2.0, 3.0), 
+        trace_as_line = line.Line([point.Point(2.0, 3.0),
                                    point.Point(3.0, 2.0)])
         self.fault_source.create_geometry(trace_as_line, 30., 0., 30.)
         selector0 = CatalogueSelector(self.catalogue)
@@ -209,7 +209,7 @@ class TestSimpleFaultSource(unittest.TestCase):
         fault1 = mtkSimpleFaultSource('102', 'A vertical fault')
         fault1.create_geometry(trace_as_line, 90., 0., 30.)
         self.fault_source.create_geometry(trace_as_line, 90., 0., 30.)
-       
+
         # Joyner-Boore
         self.fault_source.select_catalogue(selector0, 40.)
         # Rupture
@@ -228,18 +228,18 @@ class TestSimpleFaultSource(unittest.TestCase):
             self.fault_source.select_catalogue(selector0, 40.0)
         self.assertEqual(ver.exception.message,
                          'No events found in catalogue!')
-                         
+
     def test_create_oqnmrl_simple_fault_source(self):
         '''
         Tests the conversion of a point source to an instance of the :class:
-        oqnrmllib.models.SimpleFaultSource 
+        oqnrmllib.models.SimpleFaultSource
         '''
         trace = line.Line([point.Point(10., 10.), point.Point(11., 10.)])
         #sflt_geom = SimpleFaultSurface.from_fault_data(trace, 0., 20., 90., 1.)
 
         # Define a complete source
-        self.fault_source = mtkSimpleFaultSource('001', 
-            'A Fault Source', 
+        self.fault_source = mtkSimpleFaultSource('001',
+            'A Fault Source',
             trt='Active Shallow Crust',
             geometry = None,
             dip = 90.,
@@ -271,8 +271,8 @@ class TestSimpleFaultSource(unittest.TestCase):
         self.assertEqual(test_source.name, expected_source.name)
         self.assertDictEqual(test_source.geometry.__dict__,
                              expected_source.geometry.__dict__)
-        self.assertAlmostEqual(test_source.mfd.b_val, 
+        self.assertAlmostEqual(test_source.mfd.b_val,
                                expected_source.mfd.b_val)
-                         
+
     def tearDown(self):
         warnings.resetwarnings()

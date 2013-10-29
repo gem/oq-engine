@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -126,6 +126,15 @@ class Stepp1971(BaseCatalogueCompleteness):
         Resulting completeness table
     '''
 
+    def __init__(self):
+        BaseCatalogueCompleteness.__init__(self)
+        self.magnitude_bin = None
+        self.time_values = None
+        self.sigma = None
+        self.model_line = None
+        self.completeness_table = None
+        self.end_year = None
+
     def completeness(self, catalogue, config):
         '''Gets the completeness table
 
@@ -149,46 +158,41 @@ class Stepp1971(BaseCatalogueCompleteness):
         '''
         # If mag_bin is an array then bins are input, otherwise a single
         # parameter is input
-        dyear = decimal_time(catalogue.data['year'],
-		                     catalogue.data['month'],
-							 catalogue.data['day'],
-							 catalogue.data['hour'],
-							 catalogue.data['minute'],
-							 catalogue.data['second'])
+        dyear = decimal_time(
+            catalogue.data['year'],
+            catalogue.data['month'],
+            catalogue.data['day'],
+            catalogue.data['hour'],
+            catalogue.data['minute'],
+            catalogue.data['second'])
         mag = catalogue.data['magnitude']
 
         # Get magnitude bins
         self.magnitude_bin = self._get_magnitudes_from_spacing(
             catalogue.data['magnitude'],
-		    config['magnitude_bin'])
+            config['magnitude_bin'])
 
         # Get time bins
-        start_year, time_bin = self._get_time_limits_from_config(config, dyear)
+        _s_year, time_bin = self._get_time_limits_from_config(config, dyear)
 
         # Count magnitudes
-        self.sigma, counter, n_mags, n_times, self.time_values = \
-            self._count_magnitudes(mag, dyear, time_bin)
-
-        t_ref = 1.0 / np.sqrt(self.time_values)
+        self.sigma, _counter, n_mags, n_times, self.time_values = (
+            self._count_magnitudes(mag, dyear, time_bin))
 
         # Get completeness magnitudes
-        comp_time, gradient_2, self.model_line = \
+        comp_time, _gradient_2, self.model_line = (
             self.get_completeness_points(self.time_values, self.sigma, n_mags,
-                                         n_times)
-
-        mag_cents = (self.magnitude_bin[1:] + self.magnitude_bin[:-1]) / 2.
+                                         n_times))
 
         # If the increment lock is selected then ensure completeness time
         # does not decrease
         if config['increment_lock']:
             for iloc in range(0, len(comp_time)):
-                if (iloc > 0 and (comp_time[iloc] < comp_time[iloc - 1])) or\
-                    np.isnan(comp_time[iloc]):
+                cond = (
+                    (iloc > 0 and (comp_time[iloc] < comp_time[iloc - 1])) or
+                    np.isnan(comp_time[iloc]))
+                if cond:
                     comp_time[iloc] = comp_time[iloc - 1]
-
-        #self.completeness_table = np.column_stack([
-        #    np.floor(self.end_year - comp_time),
-        #    mag_cents])
 
         self.completeness_table = np.column_stack([
             np.floor(self.end_year - comp_time),
@@ -210,14 +214,15 @@ class Stepp1971(BaseCatalogueCompleteness):
             * start_year: Earliest year found in the catalogue
             * time_bin: Bin edges of the time windows
         '''
-        if isinstance(config['time_bin'], list) or \
-            isinstance(config['time_bin'], np.ndarray):
+        cond = (isinstance(config['time_bin'], list) or
+                isinstance(config['time_bin'], np.ndarray))
+        if cond:
             # Check to make sure input years are in order from recent to oldest
             for ival in range(1, len(config['time_bin'])):
-                if (config['time_bin'][ival] -
-                    config['time_bin'][ival - 1]) > 0.:
+                diff = config['time_bin'][ival] - config['time_bin'][ival - 1]
+                if diff > 0.:
                     raise ValueError('Configuration time windows must be '
-                        'ordered from recent to oldest!')
+                                     'ordered from recent to oldest!')
 
             self.end_year = config['time_bin'][0]
             start_year = config['time_bin'][-1]
@@ -227,7 +232,7 @@ class Stepp1971(BaseCatalogueCompleteness):
             start_year = np.floor(np.min(dec_year))
             if (self.end_year - start_year) < config['time_bin']:
                 raise ValueError('Catalogue duration smaller than time bin'
-                    ' width - change time window size!')
+                                 ' width - change time window size!')
             time_bin = np.arange(self.end_year - config['time_bin'],
                                  start_year - config['time_bin'],
                                  -config['time_bin'])
@@ -258,9 +263,9 @@ class Stepp1971(BaseCatalogueCompleteness):
         mag_bins = mag_bins[is_mag]
         return mag_bins
 
-
     def _count_magnitudes(self, mags, times, time_bin):
-        '''For each completeness magnitude-year counts the number of events
+        '''
+        For each completeness magnitude-year counts the number of events
         inside each magnitude bin.
 
         :param numpy.ndarray mags:
@@ -297,7 +302,6 @@ class Stepp1971(BaseCatalogueCompleteness):
                     np.sqrt(n_years[id0])
 
         return sigma, counter, n_mags, n_times, n_years
-
 
     def get_completeness_points(self, n_years, sigma, n_mags, n_time):
         '''Fits a bilinear model to each sigma-n_years combination
@@ -341,7 +345,6 @@ class Stepp1971(BaseCatalogueCompleteness):
                                                 np.log10(sigma[id0, iloc]))
         return comp_time, gradient_2, model_line
 
-
     def _fit_bilinear_to_stepp(self, xdata, ydata, initial_values=None):
         '''Returns the residuals of a bilinear fit subject to the following
         constraints: 1) gradient of slope 1 = 1 / sqrt(T)
@@ -363,9 +366,9 @@ class Stepp1971(BaseCatalogueCompleteness):
             * Gradient of the second slope
             * model_line: Expected Poisson model
         '''
-        fixed_slope = -0.5 # f'(log10(T^-0.5)) === 0.5
+        fixed_slope = -0.5  # f'(log10(T^-0.5)) === 0.5
         if isinstance(initial_values, list) or isinstance(initial_values,
-            np.ndarray):
+                                                          np.ndarray):
             x_0 = initial_values
         else:
             x_0 = [-1.0, xdata[len(xdata) / 2], xdata[0]]

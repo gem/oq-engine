@@ -1,11 +1,11 @@
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+#License as published by the Free Software Foundation, either version
 #3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -13,33 +13,33 @@
 #
 #DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-#is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-#Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+#is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+#Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+#ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 #for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 '''
 Test suite for the class htmk.strain.shift.Shift, the class to implement the
@@ -54,7 +54,7 @@ from hmtk.strain.geodetic_strain import GeodeticStrain
 from hmtk.strain.shift import Shift, BIRD_GLOBAL_PARAMETERS, IPL_PARAMS
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'strain_data')
-STRAIN_FILE = os.path.join(BASE_DATA_PATH, 
+STRAIN_FILE = os.path.join(BASE_DATA_PATH,
                            'simple_strain_values.csv')
 
 
@@ -104,7 +104,7 @@ class TestShift(unittest.TestCase):
 
     def test_reclassify_with_bird_data(self):
         '''
-        Tests the re-classification from the Kreemer classification (C, O, S, 
+        Tests the re-classification from the Kreemer classification (C, O, S,
         R and IPL) to the Bird & Liu (2007) classification:
         Region Type               Kreemer Code   Bird Code
         Intraplate                   IPL            IPL
@@ -119,23 +119,23 @@ class TestShift(unittest.TestCase):
                 (e1h + e2h >= 0)      R             OSRnor/OTFmed
         Ridge ((e1h * e2h < 0) and
                 (e1h + e2h < 0)       R             OCB/OTFmed
-        Ridge (any other)             R             OCB 
+        Ridge (any other)             R             OCB
         '''
         self.model = Shift(5.0)
         self.strain_model.data = {
         #   IPL SUB OCB CCB   CRB  CTF  CTF  OSRn OSRn  OSR1  OSR2 OCB
-            'err': np.array([0., 0., 0., 1.0, -1.0, 0.1, -0.1, 0.0, 0.0,  0.0, 
+            'err': np.array([0., 0., 0., 1.0, -1.0, 0.1, -0.1, 0.0, 0.0,  0.0,
                              0.0, 0.0]),
-            'e1h': np.array([0., 0., 0., 0.0, -1.0, 0.0, -1.0, 1.0, 0.0, -1.0, 
+            'e1h': np.array([0., 0., 0., 0.0, -1.0, 0.0, -1.0, 1.0, 0.0, -1.0,
                             -1.0, -1.0]),
-            'e2h': np.array([0., 0., 0., 1.0,  0.0, 1.0,  0.0, 1.0, 0.0,  2.0,  
+            'e2h': np.array([0., 0., 0., 1.0,  0.0, 1.0,  0.0, 1.0, 0.0,  2.0,
                              0.5, -1.0]),
             'region': np.array(['IPL', 'S', 'O', 'C', 'C', 'C', 'C', 'R', 'R',
                                 'R', 'R', 'R'], dtype='a13')}
-        
+
         self.model.strain = self.strain_model
-        expected_regions = ['IPL', 'SUB', 'OCB', 'CCB', 'CRB', 'CTF', 'CTF', 
-                            'OSRnor', 'OSRnor', 'OSR_special_1', 
+        expected_regions = ['IPL', 'SUB', 'OCB', 'CCB', 'CRB', 'CTF', 'CTF',
+                            'OSRnor', 'OSRnor', 'OSR_special_1',
                             'OSR_special_2', 'OCB']
         # Apply Bird Classification
         self.model._reclassify_Bird_regions_with_data()
@@ -145,7 +145,7 @@ class TestShift(unittest.TestCase):
 
     def test_continuum_seismicity(self):
         '''
-        Tests the function hmtk.strain.shift.Shift.continuum_seismicity - 
+        Tests the function hmtk.strain.shift.Shift.continuum_seismicity -
         the python implementation of the Subroutine Continuum Seismicity from
         the Fortran 90 code GSRM.f90
         '''
@@ -159,10 +159,10 @@ class TestShift(unittest.TestCase):
         self.strain_model.get_secondary_strain_data(test_data)
         self.model = Shift([5.66, 6.66])
         threshold_moment = moment_function(np.array([5.66, 6.66]))
-        
+
         expected_rate = np.array([[-14.43624419, -22.48168502],
                                   [-13.43624419, -21.48168502],
-                                  [-12.43624419, -20.48168502]]) 
+                                  [-12.43624419, -20.48168502]])
         np.testing.assert_array_almost_equal(
             expected_rate,
             np.log10(self.model.continuum_seismicity(
@@ -176,7 +176,7 @@ class TestShift(unittest.TestCase):
     def test_calculate_activity_rate(self):
         '''
         Tests for the calculation of the activity rate. At this point
-        this is really a circular test - an independent test would be 
+        this is really a circular test - an independent test would be
          helpful in future!
         '''
         parser0 = ReadStrainCsv(STRAIN_FILE)
@@ -192,11 +192,7 @@ class TestShift(unittest.TestCase):
             [4.07359524e-11], [2.16914046e-10], [4.74341943e-10],
             [1.99907599e-10], [3.55861556e-11], [1.69536101e-10],
             [1.69884622e-10], [1.70233341e-10], [5.06642764e-10]])
-       
+
         np.testing.assert_array_almost_equal(
             np.log10(expected_rate),
             np.log10(self.model.strain.seismicity_rate))
-
-
-
-

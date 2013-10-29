@@ -3,22 +3,22 @@
 #
 # Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
-# The Hazard Modeller's Toolkit (hmtk) is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public License 
-# as published by the Free Software Foundation, either version 3 of the 
+# The Hazard Modeller's Toolkit (hmtk) is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public License
+# as published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein is released as 
-# a prototype implementation on behalf of scientists and engineers working 
+#
+# The software Hazard Modeller's Toolkit (hmtk) provided herein is released as
+# a prototype implementation on behalf of scientists and engineers working
 # within the GEM Foundation (Global Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the hope that 
-# it will be useful to the scientific, engineering, disaster risk and software 
+# It is distributed for the purpose of open collaboration and in the hope that
+# it will be useful to the scientific, engineering, disaster risk and software
 # design communities.
 #
 # The software is NOT distributed as part of GEM's OpenQuake suite
@@ -28,17 +28,17 @@
 # subject to same level of critical review by professional software developers,
 # as GEM's OpenQuake software suite.
 #
-# Feedback and contribution to the software is welcome, and can be directed to 
+# Feedback and contribution to the software is welcome, and can be directed to
 # the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT ANY 
-# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
 #
-# The GEM Foundation, and the authors of the software, assume no liability for 
-# use of the software. 
+# The GEM Foundation, and the authors of the software, assume no liability for
+# use of the software.
 
 '''Prototype unittest code for mmax module'''
 
@@ -47,12 +47,12 @@ import warnings
 import unittest
 import numpy as np
 from hmtk.parsers.catalogue import CsvCatalogueParser
-from hmtk.seismicity.max_magnitude.base import (_get_observed_mmax, 
+from hmtk.seismicity.max_magnitude.base import (_get_observed_mmax,
                                               _get_magnitude_vector_properties)
 from hmtk.seismicity.max_magnitude.cumulative_moment_release import \
     CumulativeMoment
 from hmtk.seismicity.max_magnitude.kijko_sellevol_fixed_b import \
-    KijkoSellevolFixedb  
+    KijkoSellevolFixedb
 from hmtk.seismicity.max_magnitude.kijko_sellevol_bayes import \
     KijkoSellevolBayes
 from hmtk.seismicity.max_magnitude.kijko_nonparametric_gaussian import \
@@ -70,7 +70,7 @@ class MmaxTestCase(unittest.TestCase):
                        'input_mmax_uncertainty': None ,
                        'maximum_iterations': None ,
                        'tolerance': None,
-                       'input_mmin': None, 
+                       'input_mmin': None,
                        'b-value': 1.0,
                        'sigma-b': 0.1,
                        'number_samples': 51,
@@ -107,7 +107,7 @@ class MmaxTestCase(unittest.TestCase):
 
     def test_get_magnitude_vector_properties(self):
         '''
-        Tests the function to retreive mmin and number of earthquakes if 
+        Tests the function to retreive mmin and number of earthquakes if
         required for certain functions
         '''
         test_catalogue = {
@@ -117,14 +117,14 @@ class MmaxTestCase(unittest.TestCase):
         self.config['input_mmin'] = 4.0
         # Test 1: Finds the number of events from the catalogue with defined
         # minimum magnitude
-        neq, mmin = _get_magnitude_vector_properties(test_catalogue, 
+        neq, mmin = _get_magnitude_vector_properties(test_catalogue,
                                                      self.config)
         self.assertAlmostEqual(neq, 3.0)
         self.assertAlmostEqual(mmin, 4.0)
-        # Test 2 Finds the number of events from the catalogue with an 
+        # Test 2 Finds the number of events from the catalogue with an
         # unspecified minimum magnitude
-        self.config['input_mmin'] = None
-        neq, mmin = _get_magnitude_vector_properties(test_catalogue, 
+        del self.config['input_mmin']
+        neq, mmin = _get_magnitude_vector_properties(test_catalogue,
                                                      self.config)
         self.assertAlmostEqual(neq, 5.0)
         self.assertAlmostEqual(mmin, 3.4)
@@ -132,7 +132,7 @@ class MmaxTestCase(unittest.TestCase):
 
 class TestCumulativeMoment(unittest.TestCase):
     '''
-    Test suite for the 
+    Test suite for the
     :class: hmtk.seismicity.max_magnitude.cumulative_moment_release
     module
     '''
@@ -140,7 +140,7 @@ class TestCumulativeMoment(unittest.TestCase):
         filename = os.path.join(BASE_DATA_PATH,'completeness_test_cat.csv')
         parser0 = CsvCatalogueParser(filename)
         self.catalogue = parser0.read_file()
-        
+
         self.config = {'algorithm': None,
                        'number_bootstraps': None}
         self.model = CumulativeMoment()
@@ -161,7 +161,7 @@ class TestCumulativeMoment(unittest.TestCase):
         self.config['number_bootstraps'] = 1000
         fixed_config = self.model.check_config(self.config)
         self.assertEqual(1000, fixed_config['number_bootstraps'])
-        
+
     def test_cumulative_moment(self):
         '''
         Tests the cumulative moment function
@@ -185,14 +185,14 @@ class TestCumulativeMoment(unittest.TestCase):
         self.catalogue.data['backup'] = np.copy(
             self.catalogue.data['sigmaMagnitude'])
         self.catalogue.data['sigmaMagnitude'] = None
-        
+
         mmax, sigma_mmax = self.model.get_mmax(self.catalogue, self.config)
         self.assertAlmostEqual(7.4847335589, mmax)
         self.assertAlmostEqual(0.0, sigma_mmax)
         # Test 2: Case when one or no bootstraps are specified
         self.catalogue.data['sigmaMagnitude'] = self.catalogue.data['backup']
         self.config['number_bootstraps'] = 0
-        
+
         mmax, sigma_mmax = self.model.get_mmax(self.catalogue, self.config)
         self.assertAlmostEqual(7.4847335589, mmax)
         self.assertAlmostEqual(0.0, sigma_mmax)
@@ -228,7 +228,7 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
 
     def test_integral_function(self):
         '''
-        Tests the integral of the Kijko & Sellevol fixed-b estimator 
+        Tests the integral of the Kijko & Sellevol fixed-b estimator
         define in Equation 6 of Kijko  (2004)
         '''
         # Simple test case 1 - all good parameters
@@ -237,35 +237,35 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         mval = 6.5
         beta = np.log(10.)
         neq = 100.
-        self.assertAlmostEqual(self.model._ks_intfunc(mval, neq, mmax, mmin, 
+        self.assertAlmostEqual(self.model._ks_intfunc(mval, neq, mmax, mmin,
                                beta), 0.04151379)
 
-         
-        
+
+
         # Test case 4 - Number of earthquakes is 0
         mmax = 8.5
         mmin = 5.0
         neq = 0.
-        self.assertAlmostEqual(1.0, self.model._ks_intfunc(mval, neq, mmax, 
+        self.assertAlmostEqual(1.0, self.model._ks_intfunc(mval, neq, mmax,
                                                            mmin, beta))
 
         # Test case 5 - beta is negative
         neq = 100.
-        self.assertAlmostEqual(0.0, 
+        self.assertAlmostEqual(0.0,
             self.model._ks_intfunc(mval, neq, mmax, mmin, -0.5))
 
 
     def test_get_mmin(self):
         '''
         Tests the main method to calculate Mmax
-        
+
         BEHAVIOUR NOTE 1: the estimator of mmax is dependent on the mmin
         If mmin < mmin_observed then the integral will not reach stability
         (or give rubbish) therefore if the mmin specified in the config
         is less than mmin_obs it will be overwritten by mmin_observed
 
-        BEHAVIOUR NOTE 2: Negative or very small b-values (< 1E-16) will result 
-        in immediate stability of the integral, thus giving mmax == mmax_obs. 
+        BEHAVIOUR NOTE 2: Negative or very small b-values (< 1E-16) will result
+        in immediate stability of the integral, thus giving mmax == mmax_obs.
         If b-value == 0 then will give a divide by zero warning
         '''
         # Test good working case b = 1, mmin = 5.0
@@ -311,7 +311,7 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         neq = 100.
         with self.assertRaises(ValueError) as cm:
             self.model._ks_intfunc(mval, neq, mmax, mmin, beta)
-        self.assertEqual(cm.exception.message, 
+        self.assertEqual(cm.exception.message,
                 'Maximum magnitude smaller than minimum magnitude'
                 ' in Kijko & Sellevol (Fixed-b) integral')
 
@@ -327,7 +327,7 @@ class TestKijkoSellevolFixedb(unittest.TestCase):
         with self.assertRaises(ValueError) as ae:
             self.model._ks_intfunc(mval, neq, mmax, mmin, beta)
         exception = ae.exception
-        self.assertEqual(exception.message, 
+        self.assertEqual(exception.message,
                'Maximum magnitude smaller than minimum magnitude'
                ' in Kijko & Sellevol (Fixed-b) integral')
 
@@ -348,7 +348,7 @@ class TestKijkoSellevolBayes(unittest.TestCase):
                        'tolerance': 0.001,
                        'maximum_iterations': 1000}
         self.model = KijkoSellevolBayes()
-        
+
     def test_ksb_intfunc(self):
         '''
         Tests the integral function of the Kijko-Sellevol-Bayes estimator
@@ -360,16 +360,16 @@ class TestKijkoSellevolBayes(unittest.TestCase):
         # Good case b-value is 1.0, sigma-b is 0.05
         pval, qval = self._get_pval_qval(1.0, 0.05)
         self.assertAlmostEqual(
-            self.model._ksb_intfunc(mval, neq, mmin, pval, qval), 
+            self.model._ksb_intfunc(mval, neq, mmin, pval, qval),
             2.4676049E-5)
         # Bad case b-value is 0.0, sigma-b is 0,05
         pval0, qval0 = self._get_pval_qval(0.0, 0.05)
         self.assertAlmostEqual(
-            self.model._ksb_intfunc(mval, neq, mmin, pval0, qval0), 
+            self.model._ksb_intfunc(mval, neq, mmin, pval0, qval0),
             0.0)
         # Bad case neq = 0.
         self.assertAlmostEqual(
-            self.model._ksb_intfunc(mval, 0., mmin, pval0, qval0), 
+            self.model._ksb_intfunc(mval, 0., mmin, pval0, qval0),
             1.0)
 
         # Bad case mval < mmin
@@ -384,7 +384,7 @@ class TestKijkoSellevolBayes(unittest.TestCase):
         Tests the function to calculate mmax using the Kijko-Sellevol-Bayes
         operator
         '''
-        # Good case - b = 1., sigma_b = 0.05, mmin = 5.0 
+        # Good case - b = 1., sigma_b = 0.05, mmin = 5.0
         mmax, mmax_sigma = self.model.get_mmax(self.catalogue, self.config)
         self.assertAlmostEqual(mmax, 7.6902450)
         self.assertAlmostEqual(mmax_sigma, 0.30698886)
@@ -394,12 +394,12 @@ class TestKijkoSellevolBayes(unittest.TestCase):
         mmax, mmax_sigma = self.model.get_mmax(self.catalogue, self.config)
         self.assertAlmostEqual(mmax, 8.2371167)
         self.assertAlmostEqual(mmax_sigma, 0.84306841)
-        
+
         self.config['input_mmin'] = 4.0
         mmax_check, _ = self.model.get_mmax(self.catalogue, self.config)
         self.assertAlmostEqual(mmax, mmax_check)
 
-        # Good case 1 - input mmax 
+        # Good case 1 - input mmax
         self.config['input_mmin'] = 5.0
         self.config['input_mmax'] = 7.8
         self.config['input_mmax_uncertainty'] = 0.2
@@ -419,7 +419,7 @@ class TestKijkoSellevolBayes(unittest.TestCase):
         self.assertTrue(np.isnan(mmax))
         self.assertTrue(np.isnan(mmax_sigma))
 
-    
+
     def _get_pval_qval(self, bval, sigma_b):
         '''
         Get the p-value and q-value from b and sigma b
@@ -455,15 +455,15 @@ class TestKijkoNPG(unittest.TestCase):
         expected_output = np.array(
             [5.8, 5.87609089, 5.94679912, 6.01283617, 6.07478116, 6.13311177,
              6.18822664, 6.24046187, 6.29010351, 6.33739696, 6.38255438,
-             6.42576041, 6.46717674, 6.50694576, 6.5451935 , 6.58203209, 
-             6.61756168, 6.65187211, 6.68504428, 6.71715129, 6.74825943, 
-             6.77842898, 6.80771492, 6.83616754, 6.86383296, 6.89075356, 
-             6.9169684 , 6.94251354, 6.96742235, 6.99172576, 7.0154525, 
-             7.0386293 , 7.06128109, 7.08343111, 7.10510113, 7.1263115, 
-             7.14708132, 7.16742851, 7.18736994, 7.20692147, 7.22609806, 
-             7.24491382, 7.26338207, 7.28151542, 7.2993258, 7.31682451, 
+             6.42576041, 6.46717674, 6.50694576, 6.5451935 , 6.58203209,
+             6.61756168, 6.65187211, 6.68504428, 6.71715129, 6.74825943,
+             6.77842898, 6.80771492, 6.83616754, 6.86383296, 6.89075356,
+             6.9169684 , 6.94251354, 6.96742235, 6.99172576, 7.0154525,
+             7.0386293 , 7.06128109, 7.08343111, 7.10510113, 7.1263115,
+             7.14708132, 7.16742851, 7.18736994, 7.20692147, 7.22609806,
+             7.24491382, 7.26338207, 7.28151542, 7.2993258, 7.31682451,
              7.33402228, 7.35092928, 7.36755517, 7.38390916, 7.4])
-        self.assertTrue(np.allclose(expected_output, 
+        self.assertTrue(np.allclose(expected_output,
             _get_exponential_spaced_values(min_mag, max_mag, 51)))
 
 
@@ -475,7 +475,7 @@ class TestKijkoNPG(unittest.TestCase):
         mag = np.arange(4.5, 8.1, 0.1)
         self.assertAlmostEqual(self.model.h_smooth(mag), 0.46)
 
-        # Test 2: Bad magnitude 
+        # Test 2: Bad magnitude
         mag = np.array([6.5])
         self.assertAlmostEqual(self.model.h_smooth(mag), 0.0)
 
@@ -486,37 +486,37 @@ class TestKijkoNPG(unittest.TestCase):
         # Simple case where x = -3 to 3 with a step of 1.
         xvals = np.arange(-7., 8., 1.)
         yvals_expected = np.array(
-            [0.00000000e+00, 0.00000000e+00, 3.01100756e-05, 8.22638484e-04, 
-             2.36281702e-02, 2.06039365e-01, 3.39612064e-01, 5.00000000e-01, 
-             6.60387936e-01, 7.93960635e-01, 9.76371830e-01, 9.99177362e-01, 
+            [0.00000000e+00, 0.00000000e+00, 3.01100756e-05, 8.22638484e-04,
+             2.36281702e-02, 2.06039365e-01, 3.39612064e-01, 5.00000000e-01,
+             6.60387936e-01, 7.93960635e-01, 9.76371830e-01, 9.99177362e-01,
              9.99969890e-01, 1.00000000e+00, 1.00000000e+00])
-        self.assertTrue(np.allclose(yvals_expected, 
+        self.assertTrue(np.allclose(yvals_expected,
                                     self.model._gauss_cdf_hastings(xvals)))
 
     def test_kijko_npg_intfunc_simps(self):
         '''
         Tests the integration function using Simpson's rule
         '''
-        # Simple test using test catalogue data - verified against 
+        # Simple test using test catalogue data - verified against
         # implementation in Kijko's own code
-        
+
         # Get the largest 100 events from the catalogue
         idx = np.flipud(np.argsort(self.catalogue.data['magnitude']))
         test_mag = self.catalogue.data['magnitude'][idx[:100]]
         h_fact = self.model.h_smooth(test_mag)
-        mvals = _get_exponential_spaced_values(np.min(test_mag), 
-                                               np.max(test_mag), 
+        mvals = _get_exponential_spaced_values(np.min(test_mag),
+                                               np.max(test_mag),
                                                51)
-        
+
         self.assertAlmostEqual(0.11026752,
-            self.model._kijko_npg_intfunc_simps(mvals, test_mag, 
+            self.model._kijko_npg_intfunc_simps(mvals, test_mag,
             np.max(test_mag), h_fact, 100.))
 
-        
+
     def test_get_mmax(self):
         '''
         Tests the main get_mmax function. These test results are derived by
-        applying Kijko's implementation to the top 100 events in the test 
+        applying Kijko's implementation to the top 100 events in the test
         catalogue
         '''
 
@@ -524,4 +524,3 @@ class TestKijkoNPG(unittest.TestCase):
 
         self.assertAlmostEqual(mmax, 7.5434318)
         self.assertAlmostEqual(mmax_sig, 0.17485045)
-

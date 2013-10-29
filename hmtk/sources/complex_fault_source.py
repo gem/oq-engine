@@ -16,7 +16,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
 # DISCLAIMER
-# 
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
 # is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
@@ -47,9 +47,10 @@
 
 # -*- coding: utf-8 -*-
 '''
-Defines the :class hmtk.sources.complx_fault_source.mtkComplexFaultSource, which 
-represents the hmtk defition of a complex fault source. This extends the :class:
-nrml.models.ComplexFaultSource
+Defines the :class
+hmtk.sources.complex_fault_source.mtkComplexFaultSource, which
+represents the hmtk defition of a complex fault source. This extends
+the :class: nrml.models.ComplexFaultSource
 '''
 import warnings
 import numpy as np
@@ -60,11 +61,12 @@ from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 import hmtk.sources.source_conversion_utils as conv
 
+
 class mtkComplexFaultSource(object):
     '''
     New class to describe the mtk complex fault source object
-    
-    :param str identifier: 
+
+    :param str identifier:
         ID code for the source
     :param str name:
         Source name
@@ -77,29 +79,29 @@ class mtkComplexFaultSource(object):
     :param float rupt_aspect_ratio:
         Rupture aspect ratio
     :param mfd:
-        Magnitude frequency distribution as instance of 
-        :class: nrml.models.IncrementalMFD or 
+        Magnitude frequency distribution as instance of
+        :class: nrml.models.IncrementalMFD or
         :class: nrml.models.TGRMFD
     :param float rake:
         Rake of fault
     :param float upper_depth:
         Upper seismogenic depth (km)
-    :param float lower_depth: 
+    :param float lower_depth:
         Lower seismogenic depth (km)
-    :param catalogue: 
-        Earthquake catalogue associated to source as instance of 
+    :param catalogue:
+        Earthquake catalogue associated to source as instance of
         hmtk.seismicity.catalogue.Catalogue object
     '''
-    
-    def __init__(self, identifier, name, trt=None, geometry=None, 
-                 mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None, 
+
+    def __init__(self, identifier, name, trt=None, geometry=None,
+                 mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
                  rake=None):
         '''
         Instantiate class with just the basic attributes: identifier and name
         '''
         self.typology = 'ComplexFault'
         self.id = identifier
-        self.name = name 
+        self.name = name
         self.trt = trt
         self.geometry = geometry
         self.fault_edges = None
@@ -110,26 +112,27 @@ class mtkComplexFaultSource(object):
         self.upper_depth = None
         self.lower_depth = None
         self.catalogue = None
-        
+        self.dip = None
+
     def create_geometry(self, input_geometry,  mesh_spacing=1.0):
         '''
-        If geometry is defined as a numpy array then create instance of 
+        If geometry is defined as a numpy array then create instance of
         nhlib.geo.line.Line class, otherwise if already instance of class
         accept class
-        
+
         :param input_geometry:
-            List of at least two fault edges of the fault source from 
+            List of at least two fault edges of the fault source from
             shallowest to deepest. Each edge can be represented as as either
             i) instance of nhlib.geo.polygon.Polygon class
             ii) numpy.ndarray [Longitude, Latitude, Depth]
-        
+
         :param float mesh_spacing:
             Spacing of the fault mesh (km) {default = 1.0}
 
         '''
         if not isinstance(input_geometry, list) or len(input_geometry) < 2:
             raise ValueError('Complex fault geometry incorrectly defined')
-        
+
         self.fault_edges = []
         for edge in input_geometry:
             if not isinstance(edge, Line):
@@ -137,14 +140,14 @@ class mtkComplexFaultSource(object):
                     raise ValueError('Unrecognised or unsupported geometry '
                                      'definition')
                 else:
-                    self.fault_edges.append(Line([Point(row[0], row[1], row[2]) 
-                                             for row in edge]))
+                    self.fault_edges.append(Line([Point(row[0], row[1], row[2])
+                                                  for row in edge]))
             else:
                 self.fault_edges.append(edge)
             # Updates the upper and lower sesmogenic depths to reflect geometry
             self._get_minmax_edges(edge)
         # Build fault surface
-        self.geometry = ComplexFaultSurface.from_fault_data(self.fault_edges, 
+        self.geometry = ComplexFaultSurface.from_fault_data(self.fault_edges,
                                                             mesh_spacing)
         # Get a mean dip
         self.dip = self.geometry.get_dip()
@@ -158,47 +161,46 @@ class mtkComplexFaultSource(object):
             depth_vals = np.array([node.depth for node in edge.points])
         else:
             depth_vals = edge[:, 2]
-        
+
         temp_upper_depth = np.min(depth_vals)
         if not self.upper_depth:
             self.upper_depth = temp_upper_depth
         else:
             if temp_upper_depth < self.upper_depth:
                 self.upper_depth = temp_upper_depth
-        
+
         temp_lower_depth = np.max(depth_vals)
         if not self.lower_depth:
             self.lower_depth = temp_lower_depth
         else:
             if temp_lower_depth > self.lower_depth:
                 self.lower_depth = temp_lower_depth
-        
-    
-    def select_catalogue(self, selector, distance, 
-                         distance_metric='joyner-boore', upper_eq_depth=None, 
+
+    def select_catalogue(self, selector, distance,
+                         distance_metric='joyner-boore', upper_eq_depth=None,
                          lower_eq_depth=None):
         '''
         Selects earthquakes within a distance of the fault
         :param selector:
             Populated instance of hmtk.seismicity.selector.CatalogueSelector
-        
+
         :param distance:
             Distance from point (km) for selection
-        
+
         :param str distance_metric
             Choice of fault source distance metric 'joyner-boore' or 'rupture'
-        
+
         :param float upper_eq_depth:
             Upper hypocentral depth of hypocentres to be selected
-        
+
         :param float lower_eq_depth:
             Lower hypocentral depth of hypocentres to be selected
-        
+
         '''
         if selector.catalogue.get_number_events() < 1:
             raise ValueError('No events found in catalogue!')
-        
-        # If dip is != 90 and 'rupture' distance metric is selected 
+
+        # If dip is != 90 and 'rupture' distance metric is selected
         if ('rupture' in distance_metric) and (fabs(self.dip - 90) > 1E-5):
             # Use rupture distance
             self.catalogue = selector.within_rupture_distance(
@@ -213,12 +215,12 @@ class mtkComplexFaultSource(object):
                 distance,
                 upper_depth=upper_eq_depth,
                 lower_depth=lower_eq_depth)
-        
+
         if self.catalogue.get_number_events() < 5:
             # Throw a warning regarding the small number of earthquakes in
             # the source!
-            warnings.warn('Source %s (%s) has fewer than 5 events' 
-                %(self.id, self.name))
+            warnings.warn('Source %s (%s) has fewer than 5 events'
+                          % (self.id, self.name))
 
     def create_oqnrml_source(self, use_defaults=False):
         '''
@@ -227,7 +229,7 @@ class mtkComplexFaultSource(object):
 
         :param bool use_defaults:
             If set to True, will input default values of rupture aspect
-            ratio and magnitude scaling relation where missing. If false, 
+            ratio and magnitude scaling relation where missing. If false,
             value errors will be raised if information is missing.
         '''
         if not isinstance(self.rake, float):
@@ -239,10 +241,10 @@ class mtkComplexFaultSource(object):
 
         return models.ComplexFaultSource(
             self.id,
-            self.name, 
-            self.trt, 
-            complex_geometry, 
-            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults), 
-            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults), 
+            self.name,
+            self.trt,
+            complex_geometry,
+            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults),
+            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
             conv.render_mfd(self.mfd),
-            self.rake)  
+            self.rake)

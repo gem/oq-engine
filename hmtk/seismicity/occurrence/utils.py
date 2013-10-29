@@ -4,46 +4,46 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-# License as published by the Free Software Foundation, either version 
-# 3 of the License, or (at your option) any later version.
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-# is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-# Earthquake Model). 
+# DISCLAIMER
 #
-# It is distributed for the purpose of open collaboration and in the 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
+#
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM’s OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM’s OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
-# for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 # -*- coding: utf-8 -*-
 
@@ -51,6 +51,7 @@
 """
 
 import numpy as np
+
 
 def recurrence_table(mag, dmag, year, time_interval=None):
     """
@@ -62,11 +63,11 @@ def recurrence_table(mag, dmag, year, time_interval=None):
     Counts number and cumulative number of occurrences of
     each magnitude in catalogue
 
-    :param numpy.ndarray mag: 
+    :param numpy.ndarray mag:
         Catalog matrix magnitude column
-    :param numpy.ndarray dmag: 
+    :param numpy.ndarray dmag:
         Magnitude interval
-    :param numpy.ndarray year: 
+    :param numpy.ndarray year:
         Catalog matrix year column
 
     :returns numpy.ndarray recurrence table:
@@ -97,6 +98,7 @@ def recurrence_table(mag, dmag, year, time_interval=None):
                                  n_c_annual])
     return rec_table
 
+
 def input_checks(catalogue, config, completeness):
     """ Performs a basic set of input checks on the data
     """
@@ -117,7 +119,7 @@ def input_checks(catalogue, config, completeness):
         # Everything is valid - i.e. no completeness magnitude
         cmag = np.array(np.min(catalogue.data['magnitude']))
         ctime = np.array(np.min(catalogue.data['year']))
-     
+
     # Set reference magnitude - if not in config then default to M = 0.
     if not config:
         # use default reference magnitude of 0.0 and magnitude interval of 0.1
@@ -132,29 +134,20 @@ def input_checks(catalogue, config, completeness):
             config['reference_magnitude'] = None
         else:
             ref_mag = config['reference_magnitude']
-            
+
         if (not 'magnitude_interval' in config.keys()) or \
             not config['magnitude_interval']:
             dmag = 0.1
         else:
             dmag = config['magnitude_interval']
 
-#    if config is None or not 'reference_magnitude' in config:
-#        ref_mag = 0.0
-#    else:
-#        ref_mag = config['reference_magnitude']
-#
-#    if config is None or not 'magnitude_interval' in config:
-#        dmag = 0.1
-#    else:
-#        dmag = config['magnitude_interval']
-    
+ 
     return cmag, ctime, ref_mag, dmag, config
 
 
 def generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples):
     '''
-    Generate a random list of magnitudes distributed according to a 
+    Generate a random list of magnitudes distributed according to a
     truncated Gutenberg-Richter model
     :param float bval:
         b-value
@@ -170,13 +163,14 @@ def generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples):
     '''
     sampler = np.random.uniform(0., 1., nsamples)
     beta = bval * np.log(10.)
-    return (-1. / beta) * (np.log(1. - sampler * (1 - np.exp(-beta * (mmax - 
-        mmin))))) + mmin
+    return (-1. / beta) * (
+        np.log(1. - sampler * (1 - np.exp(-beta * (mmax - mmin))))) + mmin
+
 
 def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
     '''
     Generates a synthetic catalogue for a specified number of years, with
-    magnitudes distributed according to a truncated Gutenberg-Richter 
+    magnitudes distributed according to a truncated Gutenberg-Richter
     distribution
     :param float aval:
         a-value
@@ -196,4 +190,3 @@ def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
     # Get magnitudes
     mags = generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples)
     return {'magnitude': mags, 'year': np.sort(year)}
-

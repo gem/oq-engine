@@ -1,12 +1,12 @@
 #
 # LICENSE
 #
-# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani, 
+# Copyright (c) 2010-2013, GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
-# The Hazard Modeller's Toolkit is free software: you can redistribute 
-# it and/or modify it under the terms of the GNU Affero General Public 
-#License as published by the Free Software Foundation, either version 
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+#License as published by the Free Software Foundation, either version
 #3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -14,33 +14,33 @@
 #
 #DISCLAIMER
 #
-# The software Hazard Modeller's Toolkit (hmtk) provided herein 
-#is released as a prototype implementation on behalf of 
-# scientists and engineers working within the GEM Foundation (Global 
-#Earthquake Model). 
+# The software Hazard Modeller's Toolkit (hmtk) provided herein
+#is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+#Earthquake Model).
 #
-# It is distributed for the purpose of open collaboration and in the 
+# It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
-# risk and software design communities. 
-# 
-# The software is NOT distributed as part of GEM's OpenQuake suite 
-# (http://www.globalquakemodel.org/openquake) and must be considered as a 
-# separate entity. The software provided herein is designed and implemented 
-# by scientific staff. It is not developed to the design standards, nor 
-# subject to same level of critical review by professional software 
-# developers, as GEM's OpenQuake software suite.  
-# 
-# Feedback and contribution to the software is welcome, and can be 
-# directed to the hazard scientific staff of the GEM Model Facility 
-# (hazard@globalquakemodel.org). 
-# 
-# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM's OpenQuake suite
+# (http://www.globalquakemodel.org/openquake) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM's OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 # for more details.
-# 
-# The GEM Foundation, and the authors of the software, assume no 
-# liability for use of the software. 
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 '''
 Module to test :hmtk.faults.fault_model classes
@@ -66,7 +66,7 @@ from hmtk.faults.fault_models import (_update_slip_rates_with_aseismic,
                                       mtkActiveFault)
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'fault_data')
-FAULT_RATE_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH, 
+FAULT_RATE_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH,
                                 'recurrence_branches_results.txt'))
 
 COLLAPSE_DATA = np.genfromtxt(os.path.join(BASE_DATA_PATH,
@@ -118,16 +118,16 @@ class TestRecurrenceBranch(unittest.TestCase):
         # Area = 1200 km ^ 2, slip = 12 mm/yr, Rake = -90, Shear Mod =30. GPa
         self.model = RecurrenceBranch(1200., 12., self.msr, -90., 30.)
         expected_dict = {'area': 1200.0,
-                         'branch_id': None, 
-                         'disp_length_ratio': None, 
-                         'magnitudes': None, 
-                         'max_mag': None, 
-                         'msr': WC1994, 
+                         'branch_id': None,
+                         'disp_length_ratio': None,
+                         'magnitudes': None,
+                         'max_mag': None,
+                         'msr': WC1994,
                          'msr_sigma': 0.0,
-                         'rake': -90.0, 
-                         'recurrence': None, 
-                         'shear_modulus': 30.0, 
-                         'slip': 12.0, 
+                         'rake': -90.0,
+                         'recurrence': None,
+                         'shear_modulus': 30.0,
+                         'slip': 12.0,
                          'weight': 1.0}
         self.assertDictEqual(self.model.__dict__, expected_dict)
 
@@ -147,8 +147,8 @@ class TestRecurrenceBranch(unittest.TestCase):
         self.mfd_config = {'MFD_spacing': 0.1,
                            'Model_Name': 'Characteristic',
                            'Model_Weight': 1.0,
-                           'Maximum_Magnitude': None, 
-                           'Maximum_Uncertainty': None, 
+                           'Maximum_Magnitude': None,
+                           'Maximum_Uncertainty': None,
                            'Lower_Bound': -2.,
                            'Upper_Bound': 2., 'Sigma': 0.12}
 
@@ -187,22 +187,22 @@ class TestmtkActiveFault(unittest.TestCase):
         self.slip = [(10.0, 1.0)]
         x0 = Point(30., 30., 0.)
         x1 = x0.point_at(30., 0., 30.)
-        x2 = x1.point_at(30., 0., 60.)  
-        # Total length is 60 km 
-        self.trace = Line([x0, x1, x2]) 
-        self.dip = 90.                            
+        x2 = x1.point_at(30., 0., 60.)
+        # Total length is 60 km
+        self.trace = Line([x0, x1, x2])
+        self.dip = 90.
         self.upper_depth = 0.
         self.lower_depth = 20.
-        self.simple_fault = SimpleFaultGeometry(self.trace, 
-                                                self.dip, 
+        self.simple_fault = SimpleFaultGeometry(self.trace,
+                                                self.dip,
                                                 self.upper_depth,
                                                 self.lower_depth)
-                # Creates a trace ~60 km long made of 3 points                          
-        upper_edge = Line([x0, x1, x2]) 
-        lower_edge = Line([x0.point_at(40., 20., 130.), 
-                           x1.point_at(42., 25., 130.), 
-                           x2.point_at(41., 22., 130.)]) 
-        self.complex_fault = ComplexFaultGeometry([upper_edge, lower_edge], 
+                # Creates a trace ~60 km long made of 3 points
+        upper_edge = Line([x0, x1, x2])
+        lower_edge = Line([x0.point_at(40., 20., 130.),
+                           x1.point_at(42., 25., 130.),
+                           x2.point_at(41., 22., 130.)])
+        self.complex_fault = ComplexFaultGeometry([upper_edge, lower_edge],
                                                   2.0)
 
 
@@ -211,7 +211,7 @@ class TestmtkActiveFault(unittest.TestCase):
         Tests core instantiation of mtkActiveFault Class
         '''
 
-        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault, 
+        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
                                     self.slip, 0., 'Active Shallow Crust',
                                     aseismic=0.5)
         self.assertListEqual([(0., 1.0)], self.fault.msr_sigma)
@@ -223,21 +223,21 @@ class TestmtkActiveFault(unittest.TestCase):
         Tests the instantiation with a bad geometry input - should raise error
         '''
         with self.assertRaises(IOError) as ioe:
-            self.fault = mtkActiveFault('001', 'A Fault', 'Nonsense', 
+            self.fault = mtkActiveFault('001', 'A Fault', 'Nonsense',
                                     self.slip, 0., 'Active Shallow Crust')
         self.assertEqual(ioe.exception.message, 'Geometry must be instance '
                          'of hmtk.faults.fault_geometries.BaseFaultGeometry')
-        
+
     def test_mtk_active_fault_not_bad_input_slip(self):
         '''
-        Tests the instantiation with slip wieghts not equal to 1.0 - 
+        Tests the instantiation with slip wieghts not equal to 1.0 -
         should raise value error
         '''
         with self.assertRaises(ValueError) as ae:
-            self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault, 
-                                        [(5.0, 0.5), (7.0, 0.4)], 0., 
+            self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
+                                        [(5.0, 0.5), (7.0, 0.4)], 0.,
                                         'Active Shallow Crust')
-        self.assertEqual(ae.exception.message, 
+        self.assertEqual(ae.exception.message,
                          'Slip rate weightings must sum to 1.0')
 
     def test_get_tectonic_regionalisation(self):
@@ -250,9 +250,9 @@ class TestmtkActiveFault(unittest.TestCase):
         tect_reg.populate_regions(region_dict)
 
         # Test successful case
-        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault, 
+        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
                                     self.slip, 0., None)
-        self.fault.get_tectonic_regionalisation(tect_reg, 
+        self.fault.get_tectonic_regionalisation(tect_reg,
                                                 'Active Shallow Crust')
         self.assertEqual(self.fault.trt, 'Active Shallow Crust')
         # Should take default values
@@ -271,11 +271,11 @@ class TestmtkActiveFault(unittest.TestCase):
         tect_reg = TectonicRegionalisation()
         tect_reg.populate_regions(region_dict)
 
-        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault, 
+        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
                                     self.slip, 0., None)
-                           
+
         with self.assertRaises(ValueError) as ae:
-            self.fault.get_tectonic_regionalisation(tect_reg, None) 
+            self.fault.get_tectonic_regionalisation(tect_reg, None)
 
         self.assertEqual(ae.exception.message,
                         'Tectonic region classification missing or '
@@ -284,16 +284,16 @@ class TestmtkActiveFault(unittest.TestCase):
 
     def test_generate_config_set_as_dict(self):
         '''
-        Tests the function to generate a configuration tuple list from a 
+        Tests the function to generate a configuration tuple list from a
         single config dict
         '''
-        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault, 
+        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
             [(5., 1.0)], 0., None)
-        good_config = {'MFD_spacing': 0.1, 
+        good_config = {'MFD_spacing': 0.1,
                        'Maximum_Magnitude': None,
                        'Minimum_Magnitude': 5.0,
                        'Model_Name': 'AndersonLucoArbitrary',
-                       'Model_Weight': 1.0, 
+                       'Model_Weight': 1.0,
                        'Model_Type': 'First',
                        'b_value': [0.8, 0.05]}
         self.fault.generate_config_set(good_config)
@@ -304,19 +304,19 @@ class TestmtkActiveFault(unittest.TestCase):
 
     def test_generate_config_set_as_dict(self):
         '''
-        Tests the function to generate a configuration tuple list from a 
+        Tests the function to generate a configuration tuple list from a
         list of multiple config dicts
         '''
-        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault, 
+        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
             [(5., 1.0)], 0., None)
-        good_config = [{'MFD_spacing': 0.1, 
+        good_config = [{'MFD_spacing': 0.1,
                        'Maximum_Magnitude': None,
                        'Minimum_Magnitude': 5.0,
                         'Model_Name': 'AndersonLucoArbitrary',
-                        'Model_Weight': 0.7, 
+                        'Model_Weight': 0.7,
                         'Model_Type': 'First',
                         'b_value': [0.8, 0.05]},
-                       {'MFD_spacing': 0.1, 
+                       {'MFD_spacing': 0.1,
                         'Maximum_Magnitude': None,
                         'Maximum_Magnitude_Uncertainty': None,
                         'Minimum_Magnitude': 5.0,
@@ -336,11 +336,11 @@ class TestmtkActiveFault(unittest.TestCase):
         Tests that valueError is raised when the config is not input as either
         a list or dict
         '''
-        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault, 
+        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
             [(5., 1.0)], 0., None)
         with self.assertRaises(ValueError) as ae:
             self.fault.generate_config_set(None)
-        self.assertEqual(ae.exception.message, 
+        self.assertEqual(ae.exception.message,
                          'MFD config must be input as dictionary or list!')
 
 
@@ -350,16 +350,16 @@ class TestmtkActiveFault(unittest.TestCase):
         Tests that a valueError is raised when the config weights do not sum
         to 1.0
         '''
-        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault, 
+        self.fault = mtkActiveFault('001', 'A Fault', self.simple_fault,
             [(5., 1.0)], 0., None)
-        bad_config = [{'MFD_spacing': 0.1, 
+        bad_config = [{'MFD_spacing': 0.1,
                        'Maximum_Magnitude': None,
                        'Minimum_Magnitude': 5.0,
                         'Model_Name': 'AndersonLucoArbitrary',
-                        'Model_Weight': 0.5, 
+                        'Model_Weight': 0.5,
                         'Type': 'First',
                         'b_value': [0.8, 0.05]},
-                       {'MFD_spacing': 0.1, 
+                       {'MFD_spacing': 0.1,
                         'Maximum_Magnitude': None,
                         'Maximum_Magnitude_Uncertainty': None,
                         'Minimum_Magnitude': 5.0,
@@ -368,7 +368,7 @@ class TestmtkActiveFault(unittest.TestCase):
                         'b_value': [0.8, 0.05]}]
         with self.assertRaises(ValueError) as ae:
             self.fault.generate_config_set(bad_config)
-        self.assertEqual(ae.exception.message, 
+        self.assertEqual(ae.exception.message,
                          'MFD config weights do not sum to 1.0 for fault 001')
 
 
@@ -376,18 +376,18 @@ class TestmtkActiveFault(unittest.TestCase):
         '''
         Simple test to check that a correct branching index is raised
         Slip - 2 values
-        MSR - 1 value 
+        MSR - 1 value
         Shear Modulus - 2 value
         DLR - 1 value
         MSR_Sigma - 3 Values
         Config - 1 value
         '''
         self.fault = mtkActiveFault(
-            '001',  
-            'A Fault', 
-            self.simple_fault, 
+            '001',
+            'A Fault',
+            self.simple_fault,
             [(5., 0.5), (7., 0.5)],
-            0., 
+            0.,
             None,
             msr_sigma=[(-1.5, 0.15), (0., 0.7), (1.5, 0.15)],
             neotectonic_fault=None,
@@ -419,11 +419,11 @@ class TestmtkActiveFault(unittest.TestCase):
         Tests to ensure correct errors are raised when input is bad
         '''
         self.fault = mtkActiveFault(
-            '001',  
-            'A Fault', 
-            self.simple_fault, 
+            '001',
+            'A Fault',
+            self.simple_fault,
             [(5., 0.5), (7., 0.5)],
-            0., 
+            0.,
             None,
             msr_sigma=[(-1.5, 0.15), (0., 0.7), (1.5, 0.15)])
 
@@ -431,15 +431,15 @@ class TestmtkActiveFault(unittest.TestCase):
         bad_config = None
         with self.assertRaises(ValueError) as ae:
             self.fault.generate_recurrence_models(bad_config)
-            self.assertEqual(ae.exception.message, 
+            self.assertEqual(ae.exception.message,
                 'MFD configuration missing or incorrectly formatted')
         # Test 2 - Collapse is required but no msr set!
         with self.assertRaises(ValueError) as ae:
             self.fault.generate_recurrence_models(collapse=True)
-            self.assertEqual(ae.exception.message, 
+            self.assertEqual(ae.exception.message,
                 'Collapsing logic tree branches requires input '
                 'of a single msr for rendering sources')
-    
+
     def test_collapse_branches(self):
         '''
         Tests a simple collapsing of branches for uneven periods
@@ -449,7 +449,7 @@ class TestmtkActiveFault(unittest.TestCase):
         test_mfd = test_fault.collapse_branches(mmin, 0.1, mmax)
         np.testing.assert_array_almost_equal(test_mfd.occur_rates,
                                              expected_rates)
-        
+
 
     def _build_mock_recurrence_branches(self):
         '''
@@ -460,13 +460,13 @@ class TestmtkActiveFault(unittest.TestCase):
         mags = COLLAPSE_DATA[0, :-1]
         weights = COLLAPSE_DATA[1:-1, -1]
         rates = COLLAPSE_DATA[1:-1:, :-1]
-        expected_rate = COLLAPSE_DATA[-1, :-1] 
+        expected_rate = COLLAPSE_DATA[-1, :-1]
         test_fault = mtkActiveFault(
-            '001',  
-            'A Fault', 
-            self.simple_fault, 
+            '001',
+            'A Fault',
+            self.simple_fault,
             [(5.0, 1.0)],
-            0., 
+            0.,
             None)
         test_fault.mfd_models = []
         for (iloc, weight) in enumerate(weights):
@@ -481,15 +481,15 @@ class TestmtkActiveFault(unittest.TestCase):
 
     def test_generate_recurrence_models_no_collapse(self):
         '''
-        Tests the generate recurrence models option without collapsing 
+        Tests the generate recurrence models option without collapsing
         branches: simple example with two slip rates and two mfd configurations
         '''
         self.fault = mtkActiveFault(
-            '001',  
-            'A Fault', 
-            self.simple_fault, 
+            '001',
+            'A Fault',
+            self.simple_fault,
             [(5., 0.5), (7., 0.5)],
-            0., 
+            0.,
             None,
             aseismic=0.,
             msr_sigma=[(0.0, 1.0)],
@@ -498,14 +498,14 @@ class TestmtkActiveFault(unittest.TestCase):
             aspect_ratio=1.0,
             shear_modulus=[(30., 1.0)],
             disp_length_ratio=[(1.25E-5, 1.0)])
-        mfd_config = [{'MFD_spacing': 0.1, 
+        mfd_config = [{'MFD_spacing': 0.1,
                        'Maximum_Magnitude': None,
                        'Minimum_Magnitude': 5.0,
                         'Model_Name': 'AndersonLucoArbitrary',
-                        'Model_Weight': 0.7, 
+                        'Model_Weight': 0.7,
                         'Model_Type': 'First',
                         'b_value': [0.8, 0.05]},
-                       {'MFD_spacing': 0.1, 
+                       {'MFD_spacing': 0.1,
                         'Maximum_Magnitude': None,
                         'Maximum_Magnitude_Uncertainty': None,
                         'Minimum_Magnitude': 5.0,
@@ -518,7 +518,7 @@ class TestmtkActiveFault(unittest.TestCase):
         mfds = self.fault.mfd[0]
         weights = self.fault.mfd[1]
         np.testing.assert_array_almost_equal(
-            weights, 
+            weights,
             np.array([0.35, 0.15, 0.35, 0.15]))
         for (iloc, occur) in enumerate(mfds):
             np.testing.assert_array_almost_equal(
@@ -532,11 +532,11 @@ class TestmtkActiveFault(unittest.TestCase):
         '''
 
         self.fault = mtkActiveFault(
-            '001',  
-            'A Fault', 
-            self.simple_fault, 
+            '001',
+            'A Fault',
+            self.simple_fault,
             [(5., 0.5), (7., 0.5)],
-            0., 
+            0.,
             None,
             aseismic=0.,
             msr_sigma=[(0.0, 1.0)],
@@ -545,14 +545,14 @@ class TestmtkActiveFault(unittest.TestCase):
             aspect_ratio=1.0,
             shear_modulus=[(30., 1.0)],
             disp_length_ratio=[(1.25E-5, 1.0)])
-        mfd_config = [{'MFD_spacing': 0.1, 
+        mfd_config = [{'MFD_spacing': 0.1,
                        'Maximum_Magnitude': None,
                        'Minimum_Magnitude': 5.0,
                         'Model_Name': 'AndersonLucoArbitrary',
-                        'Model_Weight': 0.7, 
+                        'Model_Weight': 0.7,
                         'Model_Type': 'First',
                         'b_value': [0.8, 0.05]},
-                       {'MFD_spacing': 0.1, 
+                       {'MFD_spacing': 0.1,
                         'Maximum_Magnitude': None,
                         'Maximum_Magnitude_Uncertainty': None,
                         'Minimum_Magnitude': 5.0,
@@ -568,7 +568,7 @@ class TestmtkActiveFault(unittest.TestCase):
         expected_rates = 0.
         expected_weights = np.array([0.35, 0.15, 0.35, 0.15])
         for iloc in range(0, 4):
-            expected_rates = expected_rates + (expected_weights[iloc] * 
+            expected_rates = expected_rates + (expected_weights[iloc] *
                                                10. ** FAULT_RATE_DATA[iloc, :])
         np.testing.assert_array_almost_equal(
             np.log10(self.fault.mfd[0][0].occur_rates),
@@ -577,15 +577,15 @@ class TestmtkActiveFault(unittest.TestCase):
 
     def test_generate_fault_source_model_simple(self):
         '''
-        Tests the function to turn fault model into mtkSimpleFault or 
+        Tests the function to turn fault model into mtkSimpleFault or
         mtkComplexFault
         '''
         self.fault = mtkActiveFault(
-            '001',  
-            'A Fault', 
-            self.simple_fault, 
+            '001',
+            'A Fault',
+            self.simple_fault,
             [(5.0, 1.0)],
-            0., 
+            0.,
             None,
             aseismic=0.,
             msr_sigma=[(0.0, 1.0)],
@@ -609,19 +609,19 @@ class TestmtkActiveFault(unittest.TestCase):
             np.testing.assert_array_almost_equal(model.mfd.occurrence_rates,
                                                  rec_models[iloc].occur_rates)
             self.assertAlmostEqual(weights[iloc], 0.5)
-        
-    
+
+
     def test_generate_fault_source_model_complex(self):
         '''
-        Tests the function to turn fault model into mtkSimpleFault or 
+        Tests the function to turn fault model into mtkSimpleFault or
         mtkComplexFault
         '''
         self.fault = mtkActiveFault(
-            '001',  
-            'A Fault', 
-            self.complex_fault, 
+            '001',
+            'A Fault',
+            self.complex_fault,
             [(5.0, 1.0)],
-            0., 
+            0.,
             None,
             aseismic=0.,
             msr_sigma=[(0.0, 1.0)],
@@ -645,5 +645,3 @@ class TestmtkActiveFault(unittest.TestCase):
             np.testing.assert_array_almost_equal(model.mfd.occurrence_rates,
                                                  rec_models[iloc].occur_rates)
             self.assertAlmostEqual(weights[iloc], 0.5)
-
-        

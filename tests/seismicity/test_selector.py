@@ -5,7 +5,7 @@
 #
 
 '''
-Module :mod: tests.seismicity.test_selector.tests algorithms for 
+Module :mod: tests.seismicity.test_selector.tests algorithms for
 geographical selection of seismicity with respect to various source geometries
 '''
 
@@ -13,7 +13,7 @@ import unittest
 import numpy as np
 import datetime
 from hmtk.seismicity.catalogue import Catalogue
-from hmtk.seismicity.selector import (_check_depth_limits, 
+from hmtk.seismicity.selector import (_check_depth_limits,
                                       _get_decimal_from_datetime,
                                       CatalogueSelector)
 from openquake.hazardlib.geo.point import Point
@@ -40,10 +40,10 @@ class TestSelector(unittest.TestCase):
         '''
         test_dict = {'upper_depth': None, 'lower_depth': None}
         self.assertTupleEqual((0.0, np.inf), _check_depth_limits(test_dict))
-        
+
         test_dict = {'upper_depth': 2.0, 'lower_depth': None}
         self.assertTupleEqual((2.0, np.inf), _check_depth_limits(test_dict))
-        
+
         test_dict = {'upper_depth': None, 'lower_depth': 10.0}
         self.assertTupleEqual((0.0, 10.0), _check_depth_limits(test_dict))
 
@@ -56,12 +56,12 @@ class TestSelector(unittest.TestCase):
 
     def test_convert_datetime_to_decimal(self):
         '''
-        Tests the function to convert a time from a datetime object to a 
-        decimal - simple test to check conversion 
+        Tests the function to convert a time from a datetime object to a
+        decimal - simple test to check conversion
         NB Still will not work for BCE dates
         '''
         simple_time = datetime.datetime(1900, 6, 6, 1, 1, 1, 0)
-        self.assertAlmostEqual(_get_decimal_from_datetime(simple_time), 
+        self.assertAlmostEqual(_get_decimal_from_datetime(simple_time),
                                1900.42751335)
 
 
@@ -84,22 +84,22 @@ class TestSelector(unittest.TestCase):
         # All events selected
         flag_all = np.ones(5, dtype=bool)
         test_cat1 = selector0.select_catalogue(flag_all)
-        self.assertTrue(np.allclose(test_cat1.data['longitude'], 
+        self.assertTrue(np.allclose(test_cat1.data['longitude'],
                                     self.catalogue.data['longitude']))
-        self.assertTrue(np.allclose(test_cat1.data['latitude'], 
+        self.assertTrue(np.allclose(test_cat1.data['latitude'],
                                     self.catalogue.data['latitude']))
-        self.assertTrue(np.allclose(test_cat1.data['depth'], 
+        self.assertTrue(np.allclose(test_cat1.data['depth'],
                                     self.catalogue.data['depth']))
 
-        
-        # Some events selected    
+
+        # Some events selected
         flag_1 = np.array([True, False, True, False, True])
         test_cat1 = selector0.select_catalogue(flag_1)
-        self.assertTrue(np.allclose(test_cat1.data['longitude'], 
+        self.assertTrue(np.allclose(test_cat1.data['longitude'],
                                     np.array([1., 3., 5.])))
-        self.assertTrue(np.allclose(test_cat1.data['latitude'], 
+        self.assertTrue(np.allclose(test_cat1.data['latitude'],
                                     np.array([6., 8., 10])))
-        self.assertTrue(np.allclose(test_cat1.data['depth'], 
+        self.assertTrue(np.allclose(test_cat1.data['depth'],
                                     np.array([1., 1., 1.])))
 
 
@@ -117,23 +117,23 @@ class TestSelector(unittest.TestCase):
         # Simple case with nodes inside, outside and on the border of polygon
         selector0 = CatalogueSelector(self.catalogue)
         test_cat1 = selector0.within_polygon(polygon0)
-        self.assertTrue(np.allclose(test_cat1.data['longitude'], 
+        self.assertTrue(np.allclose(test_cat1.data['longitude'],
                                     np.array([5.0, 5.5, 6.0])))
-        self.assertTrue(np.allclose(test_cat1.data['latitude'], 
+        self.assertTrue(np.allclose(test_cat1.data['latitude'],
                                     np.array([5.0, 5.5, 6.0])))
-        self.assertTrue(np.allclose(test_cat1.data['depth'], 
+        self.assertTrue(np.allclose(test_cat1.data['depth'],
                                     np.array([1.0, 1.0, 1.0])))
-        # CASE 2: As case 1 with one of the inside nodes outside of the depths 
+        # CASE 2: As case 1 with one of the inside nodes outside of the depths
         self.catalogue.data['depth'] = \
             np.array([1.0, 1.0, 1.0, 50.0, 1.0, 1.0, 1.0], dtype=float)
         selector0 = CatalogueSelector(self.catalogue)
         test_cat1 = selector0.within_polygon(polygon0, upper_depth=0.0,
                                              lower_depth=10.0)
-        self.assertTrue(np.allclose(test_cat1.data['longitude'], 
+        self.assertTrue(np.allclose(test_cat1.data['longitude'],
                                     np.array([5.0, 6.0])))
-        self.assertTrue(np.allclose(test_cat1.data['latitude'], 
+        self.assertTrue(np.allclose(test_cat1.data['latitude'],
                                     np.array([5.0, 6.0])))
-        self.assertTrue(np.allclose(test_cat1.data['depth'], 
+        self.assertTrue(np.allclose(test_cat1.data['depth'],
                                     np.array([1.0])))
 
     def test_point_in_circular_distance(self):
@@ -226,13 +226,13 @@ class TestSelector(unittest.TestCase):
         selector0 = CatalogueSelector(self.catalogue)
         # Construct Fault
         trace0 = np.array([[5.5, 6.0], [5.5, 5.0]])
-        fault_trace = Line([Point(trace0[i, 0], trace0[i, 1]) 
+        fault_trace = Line([Point(trace0[i, 0], trace0[i, 1])
                            for i in range(0, 2)])
-        
+
         # Simple fault with vertical dip
-        fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 90., 
+        fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 90.,
                                                    1.)
-        
+
         # Within 100 km
         test_cat_100 = selector0.within_joyner_boore_distance(fault0, 100.)
         np.testing.assert_array_almost_equal(test_cat_100.data['longitude'],
@@ -243,9 +243,9 @@ class TestSelector(unittest.TestCase):
                                       np.array([1.0, 1.0, 1.0]))
 
         # Simple fault with 30 degree dip
-        fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 30., 
+        fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 30.,
                                                    1.)
-        
+
         # Within 100 km
         test_cat_100 = selector0.within_joyner_boore_distance(fault0, 100.)
         np.testing.assert_array_almost_equal(test_cat_100.data['longitude'],
@@ -254,8 +254,8 @@ class TestSelector(unittest.TestCase):
                                       np.array([4.5, 5.0, 5.5, 6.0]))
         np.testing.assert_array_almost_equal(test_cat_100.data['depth'],
                                       np.array([1.0, 1.0, 1.0, 1.0]))
-    
-    
+
+
     def test_within_rupture_distance(self):
         '''
         Tests the function to select within Joyner-Boore distance
@@ -266,13 +266,13 @@ class TestSelector(unittest.TestCase):
         selector0 = CatalogueSelector(self.catalogue)
         # Construct Fault
         trace0 = np.array([[5.5, 6.0], [5.5, 5.0]])
-        fault_trace = Line([Point(trace0[i, 0], trace0[i, 1]) 
+        fault_trace = Line([Point(trace0[i, 0], trace0[i, 1])
                            for i in range(0, 2)])
-        
+
         # Simple fault with vertical dip
-        fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 90., 
+        fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 90.,
                                                    1.)
-        
+
         # Within 100 km
         test_cat_100 = selector0.within_rupture_distance(fault0, 100.)
         np.testing.assert_array_almost_equal(test_cat_100.data['longitude'],
@@ -283,9 +283,9 @@ class TestSelector(unittest.TestCase):
                                       np.array([1.0, 1.0, 1.0]))
 
         # Simple fault with 30 degree dip
-        fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 30., 
+        fault0 = SimpleFaultSurface.from_fault_data(fault_trace, 0., 20., 30.,
                                                    1.)
-        
+
         # Within 100 km
         test_cat_100 = selector0.within_rupture_distance(fault0, 100.)
         np.testing.assert_array_almost_equal(test_cat_100.data['longitude'],
@@ -302,7 +302,7 @@ class TestSelector(unittest.TestCase):
         self.catalogue.data['year'] = np.arange(1900, 2010, 20)
         self.catalogue.data['month'] = np.arange(1, 12, 2)
         self.catalogue.data['day'] = np.ones(6, dtype=int)
-        self.catalogue.data['hour'] = np.ones(6, dtype=int) 
+        self.catalogue.data['hour'] = np.ones(6, dtype=int)
         self.catalogue.data['minute'] = np.zeros(6, dtype=int)
         self.catalogue.data['second'] = np.ones(6, dtype=float)
 
@@ -321,7 +321,7 @@ class TestSelector(unittest.TestCase):
                          'hour': np.array([1, 1]),
                          'minute': np.array([0, 0]),
                          'second': np.array([1., 1.])}
-        
+
         test_cat_1 = selector0.within_time_period(start_time=begin_time)
         self._compare_time_data_dictionaries(expected_data, test_cat_1.data)
 
@@ -334,7 +334,7 @@ class TestSelector(unittest.TestCase):
                          'hour': np.array([1, 1, 1, 1]),
                          'minute': np.array([0, 0, 0, 0]),
                          'second': np.array([1., 1., 1., 1.])}
-        
+
         test_cat_1 = selector0.within_time_period(end_time=finish_time)
         self._compare_time_data_dictionaries(expected_data, test_cat_1.data)
 
@@ -353,11 +353,11 @@ class TestSelector(unittest.TestCase):
 
     def _compare_time_data_dictionaries(self, expected, modelled):
         '''
-        Compares the relevent time and date information in the catalogue 
+        Compares the relevent time and date information in the catalogue
         data dictionaries
         '''
         time_keys = ['year', 'month', 'day', 'hour', 'minute', 'second']
-        
+
         for key in time_keys:
             # The second value is a float - all others are integers
             if 'second' in key:
@@ -365,7 +365,7 @@ class TestSelector(unittest.TestCase):
                                                      modelled[key])
             else:
                 np.testing.assert_array_equal(expected[key], modelled[key])
-        
+
 
     def test_select_within_depth_range(self):
         '''
@@ -391,7 +391,7 @@ class TestSelector(unittest.TestCase):
                                              np.array([25., 35., 45.]))
 
         # Test case 4: Both depth limits specified
-        test_cat_1 = selector0.within_depth_range(upper_depth=20., 
+        test_cat_1 = selector0.within_depth_range(upper_depth=20.,
                                                   lower_depth=40.)
         np.testing.assert_array_almost_equal(test_cat_1.data['depth'],
                                              np.array([25., 35.]))
@@ -421,7 +421,7 @@ class TestSelector(unittest.TestCase):
                                              np.array([4., 5.]))
 
         # Test case 4: Both depth limits specified
-        test_cat_1 = selector0.within_magnitude_range(upper_mag=7.5, 
+        test_cat_1 = selector0.within_magnitude_range(upper_mag=7.5,
                                                       lower_mag=5.5)
         np.testing.assert_array_almost_equal(test_cat_1.data['magnitude'],
                                              np.array([6., 7.]))

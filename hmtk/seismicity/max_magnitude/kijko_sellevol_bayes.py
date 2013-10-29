@@ -65,12 +65,11 @@ def check_config(config, data):
     for key in essential_keys:
         if not key in config.keys():
             raise ValueError('For KijkoSellevolBayes the key %s needs to '
-                'be set in the configuation' % key)
+                             'be set in the configuation' % key)
     if 'tolerance' not in config.keys() or not config['tolerance']:
         config['tolerance'] = 1E-5
 
-    if 'maximum_iterations' not in config.keys() \
-        or not config['maximum_iterations']:
+    if not config.get('maximum_iterations', False):
         config['maximum_iterations'] = 1000
 
     if config['input_mmin'] < np.min(data['magnitude']):
@@ -84,7 +83,10 @@ def check_config(config, data):
 
 @MAX_MAGNITUDE_METHODS.add(
     "get_mmax",
-    **{"input_mmin": np.float,
+    **{"input_mmin": lambda cat: np.min(cat.data['magnitude']),
+       "input_mmax": lambda cat: cat.data['magnitude'][
+           np.argmax(cat.data['magnitude'])],
+       "input_mmax_uncertainty": lambda cat: cat.get_observed_mmax_sigma(0.2),
        "b-value": np.float,
        "sigma-b": np.float,
        "maximum_iterations": 1000,
@@ -122,7 +124,7 @@ class KijkoSellevolBayes(BaseMaximumMagnitude):
             rval = pval / (pval + mmax - mmin)
             ldelt = (1. / (1. - (rval ** qval))) ** neq
             delta = ldelt * quadrature(self._ksb_intfunc, mmin, mmax,
-                                       args = (neq, mmin, pval, qval))[0]
+                                       args=(neq, mmin, pval, qval))[0]
 
             tmmax = obsmax + delta
             d_t = np.abs(tmmax - mmax)

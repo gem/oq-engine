@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -55,6 +55,7 @@ from hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
 
 @OCCURRENCE_METHODS.add(
     'calculate',
+    completeness=True,
     reference_magnitude=0.0,
     magnitude_interval=0.1)
 class KijkoSmit(SeismicityOccurrence):
@@ -84,45 +85,26 @@ class KijkoSmit(SeismicityOccurrence):
                 id1 = np.logical_and(
                     catalogue.data['year'] >= (ctime[ival] - tolerance),
                     catalogue.data['magnitude'] >= (m_c - tolerance))
-                nyr[ival] = 
-            elif ival == (number_intervals - 1):
+                nyr[ival] = float(catalogue.end_year) - ctime[ival] + 1.
+            else:
                 id1 = np.logical_and(
                     catalogue.data['year'] >= (ctime[ival] - tolerance),
                     catalogue.data['year'] < (ctime[ival - 1] - tolerance))
-
-
-#            if ival == number_intervals - 1:
-#                id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
-#                    catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
-#            else:
-#                id1 = np.logical_and(catalogue.data['year'] >= ctime[ival],
-#                                     catalogue.data['year'] < ctime[ival + 1])
-#                print ctime[ival], ctime[ival + 1], np.where(id1)[0]
-#                id1 = np.logical_and(id1,
-#                    catalogue.data['magnitude'] >= (m_c - mag_eq_tolerance))
-#
-#        while ival < number_intervals:
-#            id0 = np.abs(ctime - ctime[ival]) < mag_eq_tolerance
-#            m_c = np.min(cmag[id0])
-#            # Find events later than cut-off year, and with magnitude
-#            # greater than or equal to the corresponding completeness magnitude.
-#            # m_c - mag_eq_tolerance is required to correct floating point
-#            # differences.
-#            id1 = np.logical_and(catalogue['year'] >= ctime[ival],
-#                catalogue['magnitude'] >= (m_c - mag_eq_tolerance))
-            print id0, m_c, np.where(id1)[0]
-            nyr[ival] = np.float(np.max(catalogue.data['year'][id1]) -
-                                 np.min(catalogue.data['year'][id1]) + 1)
+                id1 = np.logical_and(id1,
+                    catalogue.data['magnitude'] > (m_c - tolerance))
+                nyr[ival] = ctime[ival - 1] - ctime[ival] + 1.
             neq[ival] = np.sum(id1)
+            print ival, m_c, ctime, neq, np.where(id1)[0]
             # Get a- and b- value for the selected events
             temp_rec_table = recurrence_table(catalogue.data['magnitude'][id1],
                                               dmag,
                                               catalogue.data['year'][id1])
 
             aki_ml = AkiMaxLikelihood()
-            b_est[ival]= aki_ml._aki_ml(temp_rec_table[:, 0],
-                                        temp_rec_table[:, 1],
-                                        dmag, m_c)[0]
+            b_est[ival] = aki_ml._aki_ml(temp_rec_table[:, 0],
+                                         temp_rec_table[:, 1],
+                                         dmag, m_c)[0]
+            #print ctime[ival], m_c, nyr[ival], b_est[ival]
             ival += 1
 
         total_neq = np.float(np.sum(neq))
