@@ -16,12 +16,15 @@
 import unittest
 
 import numpy
+from decimal import Decimal
 
 from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.source.rupture import Rupture, ProbabilisticRupture
+from openquake.hazardlib.source.rupture import Rupture, ProbabilisticRupture, \
+NonParametricProbabilisticRupture
+from openquake.hazardlib.pmf import PMF
 
 
 def make_rupture(rupture_class, **kwargs):
@@ -108,3 +111,35 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
         mean = sum(rupture.sample_number_of_occurrences()
                    for i in xrange(num_samples)) / float(num_samples)
         self.assertAlmostEqual(mean, rate * time_span, delta=2e-3)
+
+class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
+    def assert_failed_creation(self, rupture_class, exc, msg, **kwargs):
+        with self.assertRaises(exc) as ae:
+            make_rupture(rupture_class, **kwargs)
+        self.assertEqual(ae.exception.message, msg)
+
+    def test_creation(self):
+        pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.2'), 1)])
+        make_rupture(NonParametricProbabilisticRupture, pmf=pmf)
+
+    def test_minimum_number_of_ruptures_is_not_zero(self):
+        pmf = PMF([(Decimal('0.8'), 1), (Decimal('0.2'), 2)])
+        self.assert_failed_creation(NonParametricProbabilisticRupture,
+            ValueError, 'minimum number of ruptures must be zero', pmf=pmf)
+
+    def test_numbers_of_ruptures_not_in_increasing_order(self):
+        pmf = PMF(
+            [(Decimal('0.8'), 0), (Decimal('0.1'), 2), (Decimal('0.1'), 1)]
+        )
+        self.assert_failed_creation(NonParametricProbabilisticRupture,
+            ValueError,
+            'numbers of ruptures must be defined in increasing order', pmf=pmf)
+
+    def test_numbers_of_ruptures_not_defined_with_unit_step(self):
+        pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.2'), 2)])
+        self.assert_failed_creation(NonParametricProbabilisticRupture,
+            ValueError,
+            'numbers of ruptures must be defined with unit step', pmf=pmf)
+        
+
+

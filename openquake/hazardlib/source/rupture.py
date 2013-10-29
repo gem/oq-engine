@@ -17,9 +17,13 @@
 Module :mod:`openquake.hazardlib.source.rupture` defines classes
 :class:`Rupture` and its subclass :class:`ProbabilisticRupture`.
 """
+import abc
+import numpy
 from openquake.hazardlib.geo.nodalplane import NodalPlane
+from openquake.hazardlib.slots import with_slots
 
 
+@with_slots
 class Rupture(object):
     """
     Rupture object represents a single earthquake rupture.
@@ -47,6 +51,9 @@ class Rupture(object):
         If magnitude value is not positive, hypocenter is above the earth
         surface or tectonic region type is unknown.
     """
+    __slots__ = '''mag rake tectonic_region_type hypocenter surface
+    source_typology'''.split()
+
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
                  surface, source_typology):
         if not mag > 0:
@@ -60,6 +67,44 @@ class Rupture(object):
         self.hypocenter = hypocenter
         self.surface = surface
         self.source_typology = source_typology
+
+
+class BaseProbabilisticRupture(Rupture):
+    """
+    Base class for probabilistic rupture, that is a :class:`Rupture`
+    associated with a probability distribution for rupture occurrence in a
+    given time span.
+    """
+    __metaclass__ = abc.ABCMeta
+
+
+class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
+    """
+    Probabilistic rupture for which the probability distribution for rupture
+    occurrence is described through a generic probability mass function.
+
+    :param pmf:
+        Instance of :class:`openquake.hazardlib.pmf.PMF`. Values in the
+        abscissae represent number of rupture occurrences (in increasing order,
+        staring from 0) and values in the ordinates represent associated
+        probabilities
+    """
+    def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
+                 source_typology, pmf):
+        x = numpy.array([x for (y, x) in pmf.data])
+        if not x[0] == 0:
+            raise ValueError('minimum number of ruptures must be zero')
+        if not numpy.all(numpy.sort(x) == x):
+            raise ValueError(
+                'numbers of ruptures must be defined in increasing order')
+        if not numpy.all(numpy.diff(x) == 1):
+            raise ValueError(
+                'numbers of ruptures must be defined with unit step')
+        super(NonParametricProbabilisticRupture, self).__init__(
+            mag, rake, tectonic_region_type, hypocenter, surface,
+            source_typology
+        )
+        self.pmf = pmf
 
 
 class ProbabilisticRupture(Rupture):
