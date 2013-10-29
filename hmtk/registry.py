@@ -45,7 +45,7 @@
 
 import collections
 import functools
-from hmtk.decorator import decorator
+from decorator import decorator
 
 
 class Registry(collections.OrderedDict):
