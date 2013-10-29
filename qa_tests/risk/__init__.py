@@ -18,7 +18,6 @@ import pprint
 import os
 import sys
 import warnings
-from unittest.case import SkipTest
 import numpy
 import StringIO
 import shutil
@@ -230,11 +229,16 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
 
     def _get_queryset(self):
         return models.HazardCalculation.objects.filter(
-            description=self.hazard_calculation_fixture)
+            description=self.hazard_calculation_fixture,
+            oqjob__status="complete")
 
     def get_hazard_job(self):
         if not self._get_queryset().exists():
-            warnings.warn("fixture not loaded. skipping test")
-            raise SkipTest
+            warnings.warn("Computing Hazard input from scratch")
+            completed_job = helpers.run_hazard_job(
+                self._test_path('job_haz.ini'))
+            self.assertEqual('complete', completed_job.status)
+            return completed_job
         else:
-            return self._get_queryset()[0].oqjob
+            warnings.warn("Using existing Hazard input")
+            return self._get_queryset().latest('oqjob__last_update').oqjob
