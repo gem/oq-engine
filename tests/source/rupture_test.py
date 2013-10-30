@@ -112,6 +112,18 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
                    for i in xrange(num_samples)) / float(num_samples)
         self.assertAlmostEqual(mean, rate * time_span, delta=2e-3)
 
+    def test_get_probability_no_exceedance(self):
+        rupture = make_rupture(ProbabilisticRupture,
+                               occurrence_rate=0.01,
+                               temporal_occurrence_model=PoissonTOM(50))
+        poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
+        pne = rupture.get_probability_no_exceedance(poes)
+        numpy.testing.assert_allclose(
+            pne,
+            numpy.array([[0.4319364, 0.4741642, 0.5205202],
+                         [0.5714083, 0.6272713, 0.6885958]])
+        )
+
 class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def assert_failed_creation(self, rupture_class, exc, msg, **kwargs):
         with self.assertRaises(exc) as ae:
@@ -152,5 +164,3 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
             pne,
             numpy.array([[0.721, 0.744, 0.769], [0.796, 0.825, 0.856]])
         )
-
-

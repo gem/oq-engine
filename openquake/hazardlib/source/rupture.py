@@ -160,7 +160,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         return prob_no_exceed
 
 
-class ProbabilisticRupture(Rupture):
+class ProbabilisticRupture(BaseProbabilisticRupture):
     """
     :class:`Rupture` associated with an occurrence rate and a temporal
     occurrence model.
@@ -222,3 +222,16 @@ class ProbabilisticRupture(Rupture):
         return self.temporal_occurrence_model.sample_number_of_occurrences(
             self.occurrence_rate
         )
+
+    def get_probability_no_exceedance(self, poes):
+        """
+        See :meth:`superclass method
+        <.rupture.BaseProbabilisticRupture.get_probability_no_exceedance>`
+        for spec of input and result values.
+
+        Uses
+        :meth:`~openquake.hazardlib.tom.PoissonTOM.get_probability_no_exceedance`
+        """
+        tom = self.temporal_occurrence_model
+        rate = self.occurrence_rate
+        return tom.get_probability_no_exceedance(rate, poes)
