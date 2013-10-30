@@ -265,6 +265,12 @@ def disaggregate(outputs, rupture_ids, params):
     for asset, losses in zip(outputs.assets, outputs.loss_matrix):
         if asset.site in params.sites_disagg:
             disagg_matrix.extend(list(disaggregate_site(asset.site, losses)))
+
+            # FIXME. the functions in
+            # openquake.engine.calculators.risk.writers requires an
+            # asset per each row in the disaggregation matrix. To this
+            # aim, we repeat the assets that will be passed to such
+            # functions
             assets_disagg = itertools.chain(
                 assets_disagg,
                 itertools.repeat(asset, len(rupture_ids)))
