@@ -42,32 +42,3 @@ class EventBaseQATestCase(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
                 msg="loss for rupture %r is %s (expected %s)" % (
                     event_loss.rupture.tag, event_loss.aggregate_loss,
                     expected))
-
-        disagg_gen = outputs.get(
-            output_type="loss_fraction",
-            loss_fraction__variable="coordinate").loss_fraction.iteritems()
-
-        disagg = list(disagg_gen)
-
-        self.assertEqual(1, len(disagg))
-
-        [(coords, values)] = disagg
-
-        self.assertEqual((83.313823, 29.236172), coords)
-
-        expected = {
-            '80.0000,82.0000|28.0000,30.0000': (
-                0.985130816986, 0.01363457997306348),
-            '82.0000,84.0000|26.0000,28.0000': (
-                9.03711674298, 0.12507708502618373),
-            '82.0000,84.0000|28.0000,30.0000': (
-                0.2370355453371, 0.0032806608458816828),
-            '82.0000,84.0000|30.0000,32.0000': (
-                60.1784610501707, 0.8328924704180668),
-            '84.0000,86.0000|26.0000,28.0000': (0.0, 0.0),
-            '84.0000,86.0000|28.0000,30.0000': (
-                1.2079442408882, 0.016718401324385405),
-            '84.0000,86.0000|30.0000,32.0000': (
-                0.6066889362898, 0.008396802412418743)}
-
-        self.assertEqual(expected, dict(values))
