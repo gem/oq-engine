@@ -23,7 +23,8 @@ from openquake.hazardlib import imt
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.hazard_curve import hazard_curves_poissonian
+from openquake.hazardlib.calc.hazard_curve import hazard_curves_poissonian, \
+hazard_curves
 
 
 class HazardCurvesTestCase(unittest.TestCase):
@@ -35,11 +36,16 @@ class HazardCurvesTestCase(unittest.TestCase):
         def get_probability_one_or_more_occurrences(self):
             return self.probability
 
+        def get_probability_no_exceedance(self, poes):
+            return (1 - self.probability) ** numpy.array(poes)
+
     class FakeSource(object):
-        def __init__(self, source_id, ruptures, time_span):
+        def __init__(self, source_id, ruptures, time_span,
+                     tectonic_region_type):
             self.source_id = source_id
             self.time_span = time_span
             self.ruptures = ruptures
+            self.tectonic_region_type = tectonic_region_type
 
         def iter_ruptures(self):
             return iter(self.ruptures)
@@ -71,8 +77,10 @@ class HazardCurvesTestCase(unittest.TestCase):
         rup12 = self.FakeRupture(0.15, const.TRT.ACTIVE_SHALLOW_CRUST)
         rup21 = self.FakeRupture(0.04, const.TRT.VOLCANIC)
         self.source1 = self.FakeSource(1, [rup11, rup12],
-                                       time_span=self.time_span)
-        self.source2 = self.FakeSource(2, [rup21], time_span=self.time_span)
+            time_span=self.time_span,
+            tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST)
+        self.source2 = self.FakeSource(2, [rup21], time_span=self.time_span,
+            tectonic_region_type=const.TRT.VOLCANIC)
         self.sources = iter([self.source1, self.source2])
         site1 = Site(Point(10, 20), 1, True, 2, 3)
         site2 = Site(Point(20, 30), 2, False, 4, 5)
@@ -99,16 +107,12 @@ class HazardCurvesTestCase(unittest.TestCase):
         self.gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: gsim1,
                       const.TRT.VOLCANIC: gsim2}
 
-    def test1(self):
-        site1_pga_poe_expected = [0.0639157, 0.03320212, 0.02145989]
-        site2_pga_poe_expected = [0.06406232, 0.02965879, 0.01864331]
-        site1_pgd_poe_expected = [0.16146619, 0.1336553]
-        site2_pgd_poe_expected = [0.15445961, 0.13437589]
+        self.site1_pga_poe_expected = [0.0639157, 0.03320212, 0.02145989]
+        self.site2_pga_poe_expected = [0.06406232, 0.02965879, 0.01864331]
+        self.site1_pgd_poe_expected = [0.16146619, 0.1336553]
+        self.site2_pgd_poe_expected = [0.15445961, 0.13437589]
 
-        curves = hazard_curves_poissonian(self.sources, self.sites, self.imts,
-                                          self.time_span, self.gsims,
-                                          self.truncation_level)
-
+    def validate_curves(self, curves):
         self.assertIsInstance(curves, dict)
         self.assertEqual(set(curves.keys()), set([imt.PGA(), imt.PGD()]))
 
@@ -116,33 +120,55 @@ class HazardCurvesTestCase(unittest.TestCase):
         self.assertIsInstance(pga_curves, numpy.ndarray)
         self.assertEqual(pga_curves.shape, (2, 3))  # two sites, three IMLs
         site1_pga_poe, site2_pga_poe = pga_curves
-        self.assertTrue(numpy.allclose(site1_pga_poe, site1_pga_poe_expected),
-                        str(site1_pga_poe))
-        self.assertTrue(numpy.allclose(site2_pga_poe, site2_pga_poe_expected),
-                        str(site2_pga_poe))
+        self.assertTrue(numpy.allclose(site1_pga_poe,
+            self.site1_pga_poe_expected), str(site1_pga_poe))
+        self.assertTrue(numpy.allclose(site2_pga_poe,
+            self.site2_pga_poe_expected), str(site2_pga_poe))
 
         pgd_curves = curves[imt.PGD()]
         self.assertIsInstance(pgd_curves, numpy.ndarray)
         self.assertEqual(pgd_curves.shape, (2, 2))  # two sites, two IMLs
         site1_pgd_poe, site2_pgd_poe = pgd_curves
-        self.assertTrue(numpy.allclose(site1_pgd_poe, site1_pgd_poe_expected),
-                        str(site1_pgd_poe))
-        self.assertTrue(numpy.allclose(site2_pgd_poe, site2_pgd_poe_expected),
-                        str(site2_pgd_poe))
+        self.assertTrue(numpy.allclose(site1_pgd_poe,
+            self.site1_pgd_poe_expected), str(site1_pgd_poe))
+        self.assertTrue(numpy.allclose(site2_pgd_poe,
+            self.site2_pgd_poe_expected), str(site2_pgd_poe))
+
+    def test1(self):
+        curves = hazard_curves_poissonian(self.sources, self.sites, self.imts,
+                                          self.time_span, self.gsims,
+                                          self.truncation_level)
+        self.validate_curves(curves)
+
+    def test2(self):
+        curves = hazard_curves(self.sources, self.sites, self.imts, self.gsims,
+                               self.truncation_level)
+        self.validate_curves(curves)
 
     def test_source_errors(self):
-        # exercise `hazard_curves_poissonian` in the case of an exception,
-        # whereby we expect the source_id to be reported in the error message
+        # exercise `hazard_curves_poissonian` and `hazard_curves` in the case
+        # of an exception, whereby we expect the source_id to be reported in
+        # the error message
 
         fail_source = self.FailSource(self.source2.source_id,
                                       self.source2.ruptures,
-                                      self.source2.time_span)
+                                      self.source2.time_span,
+                                      self.source2.tectonic_region_type)
         sources = iter([self.source1, fail_source])
 
         with self.assertRaises(RuntimeError) as ae:
             hazard_curves_poissonian(sources, self.sites, self.imts,
                                      self.time_span, self.gsims,
                                      self.truncation_level)
+        expected_error = (
+            'An error occurred with source id=2. Error: Something bad happened'
+        )
+        self.assertEqual(expected_error, ae.exception.message)
+
+        sources = iter([self.source1, fail_source])
+        with self.assertRaises(RuntimeError) as ae:
+            hazard_curves(sources, self.sites, self.imts, self.gsims,
+                          self.truncation_level)
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
@@ -170,8 +196,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                 self.counts.append((rupture.mag, map(int, sites.vs30)))
                 yield rupture, sites
 
-    def test_point_sources(self):
-        sources = [
+    def setUp(self):
+        self.sources = [
             openquake.hazardlib.source.PointSource(
                 source_id='point1', name='point1',
                 tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
@@ -219,25 +245,27 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                  openquake.hazardlib.site.Site(Point(10, 16), 2, True, 2, 3),
                  openquake.hazardlib.site.Site(Point(10, 10.6), 3, True, 2, 3),
                  openquake.hazardlib.site.Site(Point(10, 10.7), 4, True, 2, 3)]
-        sitecol = openquake.hazardlib.site.SiteCollection(sites)
+        self.sitecol = openquake.hazardlib.site.SiteCollection(sites)
 
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
-        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
-        truncation_level = 1
-        time_span = 1.0
-        imts = {openquake.hazardlib.imt.PGA(): [0.1, 0.5, 1.3]}
+        self.gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        self.truncation_level = 1
+        self.time_span = 1.0
+        self.imts = {openquake.hazardlib.imt.PGA(): [0.1, 0.5, 1.3]}
 
         from openquake.hazardlib.calc import filters
-        source_site_filter = self.SitesCounterSourceFilter(
+        self.source_site_filter = self.SitesCounterSourceFilter(
             filters.source_site_distance_filter(30)
         )
-        rupture_site_filter = self.SitesCounterRuptureFilter(
+        self.rupture_site_filter = self.SitesCounterRuptureFilter(
             filters.rupture_site_distance_filter(30)
         )
+
+    def test_point_sources(self):
         hazard_curves_poissonian(
-            iter(sources), sitecol, imts, time_span, gsims, truncation_level,
-            source_site_filter=source_site_filter,
-            rupture_site_filter=rupture_site_filter
+            iter(self.sources), self.sitecol, self.imts, self.time_span, self.gsims, self.truncation_level,
+            source_site_filter=self.source_site_filter,
+            rupture_site_filter=self.rupture_site_filter
         )
         # there are two sources and four sites. first source should
         # be filtered completely since it is too far from all the sites.
@@ -246,7 +274,25 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         # the first one doesn't affect any of sites and should be ignored,
         # second only affects site (10, 10.7) and the last one affects all
         # three.
-        self.assertEqual(source_site_filter.counts,
+        self.assertEqual(self.source_site_filter.counts,
                          [('point2', [1, 3, 4])])
-        self.assertEqual(rupture_site_filter.counts,
+        self.assertEqual(self.rupture_site_filter.counts,
+                         [(6, [4]), (8, [1, 3, 4])])
+
+    def test_point_sources2(self):
+        hazard_curves(
+            iter(self.sources), self.sitecol, self.imts, self.gsims, self.truncation_level,
+            source_site_filter=self.source_site_filter,
+            rupture_site_filter=self.rupture_site_filter
+        )
+        # there are two sources and four sites. first source should
+        # be filtered completely since it is too far from all the sites.
+        # the second one should take only three sites -- all except (10, 16).
+        # it generates three ruptures with magnitudes 4, 6 and 8, from which
+        # the first one doesn't affect any of sites and should be ignored,
+        # second only affects site (10, 10.7) and the last one affects all
+        # three.
+        self.assertEqual(self.source_site_filter.counts,
+                         [('point2', [1, 3, 4])])
+        self.assertEqual(self.rupture_site_filter.counts,
                          [(6, [4]), (8, [1, 3, 4])])
