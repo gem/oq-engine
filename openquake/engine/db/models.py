@@ -2573,11 +2573,16 @@ class LossFraction(djm.Model):
 
         rc = self.output.oq_job.risk_calculation
 
+        loss_fraction = collections.namedtuple('loss_fraction', 'bin loss')
+
         return collections.OrderedDict(
             sorted(
-                [(self.display_value(value, rc), (loss, loss / total))
+                [loss_fraction(
+                    self.display_value(value, rc),
+                    (loss, loss / total))
                  for value, loss in cursor],
-                 key=lambda kv: -kv[1][0]))  # order by loss
+                key=operator.attrgetter('loss'),
+                reverse=True))
 
     def iteritems(self):
         """
