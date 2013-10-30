@@ -63,7 +63,7 @@ class PoissonTOMTestCase(unittest.TestCase):
         pne = tom.get_probability_no_exceedance(rate, poes)
         numpy.testing.assert_allclose(
             pne,
-            numpy.array([[0.4319364, 0.4741642, 0.5205202],
-                         [0.5714083, 0.6272713, 0.6885958]])
+            numpy.array([[0.6376282, 0.6703200, 0.7046881],
+                         [0.7408182, 0.7788008, 0.8187308]])
         )
         

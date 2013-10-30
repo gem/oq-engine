@@ -110,4 +110,4 @@ class PoissonTOM(object):
         """
         p = self.get_probability_one_or_more_occurrences(occurrence_rate)
 
-        return p ** poes
+        return (1 - p) ** poes
