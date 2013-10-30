@@ -344,19 +344,6 @@ class SiteCollection(openquake.hazardlib.site.SiteCollection):
 ## Tables in the 'admin' schema.
 
 
-class Organization(djm.Model):
-    '''
-    Organizations for grouping users
-    '''
-    name = djm.TextField()
-    address = djm.TextField(null=True)
-    url = djm.TextField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'admin\".\"organization'
-
-
 class OqUser(djm.Model):
     '''
     OpenQuake users
