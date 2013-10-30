@@ -140,6 +140,17 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
         self.assert_failed_creation(NonParametricProbabilisticRupture,
             ValueError,
             'numbers of ruptures must be defined with unit step', pmf=pmf)
-        
+
+    def test_get_probability_no_exceedance(self):
+        pmf = PMF(
+            [(Decimal('0.7'), 0), (Decimal('0.2'), 1), (Decimal('0.1'), 2)]
+        )
+        poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
+        rup = make_rupture(NonParametricProbabilisticRupture, pmf=pmf)
+        pne = rup.get_probability_no_exceedance(poes)
+        numpy.testing.assert_array_equal(
+            pne,
+            numpy.array([[0.721, 0.744, 0.769], [0.796, 0.825, 0.856]])
+        )
 
 
