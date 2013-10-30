@@ -22,7 +22,6 @@ SET client_min_messages TO WARNING;
 ------------------------------------------------------------------------
 -- Name space definitions go here
 ------------------------------------------------------------------------
-CREATE SCHEMA admin;
 CREATE SCHEMA hzrdi;
 CREATE SCHEMA hzrdr;
 CREATE SCHEMA riski;
@@ -44,19 +43,6 @@ CREATE TABLE admin.organization (
     name VARCHAR NOT NULL,
     address VARCHAR,
     url VARCHAR,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE admin_ts;
-
-
--- OpenQuake users
-CREATE TABLE admin.oq_user (
-    id SERIAL PRIMARY KEY,
-    user_name VARCHAR NOT NULL,
-    full_name VARCHAR NOT NULL,
-    organization_id INTEGER NOT NULL,
-    -- Whether the data owned by the user is visible to the general public.
-    data_is_open boolean NOT NULL DEFAULT TRUE,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
@@ -169,6 +155,7 @@ CREATE TABLE uiapi.model_content (
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    user_name VARCHAR NOT NULL,
     hazard_calculation_id INTEGER,  -- FK to uiapi.hazard_calculation
     risk_calculation_id INTEGER,  -- FK to uiapi.risk_calculation
     log_level VARCHAR NOT NULL DEFAULT 'progress' CONSTRAINT oq_job_log_level_check
@@ -326,7 +313,6 @@ CREATE TABLE uiapi.input2rcalc (
 
 CREATE TABLE uiapi.risk_calculation (
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,  -- FK to admin.oq_user
     -- Contains the absolute path to the directory containing the job config
     -- file
     base_path VARCHAR NOT NULL,
@@ -1050,9 +1036,6 @@ CREATE TABLE hzrdi.hazard_site (
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
 ------------------------------------------------------------------------
-ALTER TABLE admin.oq_user ADD CONSTRAINT admin_oq_user_organization_fk
-FOREIGN KEY (organization_id) REFERENCES admin.organization(id) ON DELETE RESTRICT;
-
 ALTER TABLE hzrdi.site_model ADD CONSTRAINT hzrdi_site_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
@@ -1062,9 +1045,6 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 ALTER TABLE hzrdi.parsed_rupture_model ADD CONSTRAINT hzrdi_parsed_rupture_model_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_hazard_calculation
 FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
@@ -1073,17 +1053,11 @@ ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_risk_calculation
 FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id)
 ON DELETE CASCADE;
 
-ALTER TABLE uiapi.hazard_calculation ADD CONSTRAINT uiapi_hazard_calculation_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_hazard_output_fk
 FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE RESTRICT;
@@ -1121,17 +1095,11 @@ FOREIGN KEY (hzrd_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_ltsrc_fk
 FOREIGN KEY (lt_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_model_content_fk
 FOREIGN KEY (model_content_id) REFERENCES uiapi.model_content(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
