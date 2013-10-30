@@ -160,7 +160,7 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         return prob_no_exceed
 
 
-class ProbabilisticRupture(BaseProbabilisticRupture):
+class ParametricProbabilisticRupture(BaseProbabilisticRupture):
     """
     :class:`Rupture` associated with an occurrence rate and a temporal
     occurrence model.
@@ -179,7 +179,7 @@ class ProbabilisticRupture(BaseProbabilisticRupture):
                  occurrence_rate, temporal_occurrence_model):
         if not occurrence_rate > 0:
             raise ValueError('occurrence rate must be positive')
-        super(ProbabilisticRupture, self).__init__(
+        super(ParametricProbabilisticRupture, self).__init__(
             mag, rake, tectonic_region_type, hypocenter, surface,
             source_typology
         )

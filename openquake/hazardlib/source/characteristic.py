@@ -22,7 +22,7 @@ import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import NodalPlane
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.slots import with_slots
 
 
@@ -101,7 +101,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         """
         hypocenter = self.surface.get_middle_point()
         for (mag, occurrence_rate) in self.get_annual_occurrence_rates():
-            yield ProbabilisticRupture(
+            yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
                 self.surface, type(self), occurrence_rate,
                 self.temporal_occurrence_model

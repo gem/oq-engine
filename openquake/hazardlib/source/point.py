@@ -21,7 +21,7 @@ import math
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.slots import with_slots
 
 
@@ -198,7 +198,7 @@ class PointSource(ParametricSeismicSource):
                                        * float(np_prob) * float(hc_prob))
                     occurrence_rate *= rate_scaling_factor
                     surface = self._get_rupture_surface(mag, np, hypocenter)
-                    yield ProbabilisticRupture(
+                    yield ParametricProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
                         surface, type(self),
                         occurrence_rate, self.temporal_occurrence_model
