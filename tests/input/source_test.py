@@ -16,7 +16,6 @@
 
 import decimal
 import os
-import StringIO
 import unittest
 
 from xml.etree import ElementTree
@@ -404,9 +403,9 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         ]
         area_hdd = [
             nrml_models.HypocentralDepth(probability=decimal.Decimal("0.5"),
-                                    depth=4.0),
+                                         depth=4.0),
             nrml_models.HypocentralDepth(probability=decimal.Decimal("0.5"),
-                                    depth=8.0),
+                                         depth=8.0),
         ]
         area_src = nrml_models.AreaSource(
             id='1', name='Quito', trt='Active Shallow Crust',
@@ -415,7 +414,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             hypo_depth_dist=area_hdd,
         )
 
-        with self.assertRaises(RuntimeError) as ar:
+        with self.assertRaises(Exception) as ar:
             source_input.nrml_to_hazardlib(area_src, MESH_SPACING, BIN_WIDTH,
                                            AREA_SRC_DISC)
         expected_error = (
@@ -435,26 +434,14 @@ class SourceDBWriterTestCase(unittest.TestCase):
         parser = nrml_parsers.SourceModelParser(MIXED_SRC_MODEL)
         source_model = parser.parse()
 
-        inp = models.Input(
-            owner=helpers.default_user(),
-            digest='fake',
-            path='fake',
-            input_type='source',
-            size=0
-        )
-        inp.save()
+        job = models.OqJob.objects.create(user_name='openquake')
 
         db_writer = source_input.SourceDBWriter(
-            inp, source_model, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
+            job, source_model, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
         db_writer.serialize()
 
         # Check that everything was saved properly.
-
-        # First, check the Input:
-        # refresh the record
-        [inp] = models.Input.objects.filter(id=inp.id)
-        self.assertEquals(source_model.name, inp.name)
 
         # re-reparse the test file for comparisons:
         nrml_sources = list(
@@ -462,13 +449,16 @@ class SourceDBWriterTestCase(unittest.TestCase):
         )
 
         parsed_sources = list(
-            models.ParsedSource.objects.filter(input=inp.id).order_by('id')
+            models.ParsedSource.objects.filter(job=job.id).order_by('id')
         )
 
-        # compare pristine nrml sources to those stored in pickled form in the
-        # database (by unpickling them first, of course):
+        # compare pristine nrml sources to the hazardlib sources stored
+        # in pickled form in the database (by unpickling them first, of course)
         for i, ns in enumerate(nrml_sources):
-            self.assertTrue(*helpers.deep_eq(ns, parsed_sources[i].nrml))
+            # comparing the ids; one could compare all the attributes
+            # but it looks overkill; the important thing is that we
+            # do not miss data in the db
+            self.assertEqual(ns.id, parsed_sources[i].nrml.source_id)
 
 
 class AreaSourceToPointSourcesTestCase(unittest.TestCase):
@@ -519,10 +509,9 @@ class AreaSourceToPointSourcesTestCase(unittest.TestCase):
             )
             self.expected.append(pt_source)
 
-
     def test_area_with_tgr_mfd(self):
         area_mfd = nrml_models.TGRMFD(a_val=-3.5, b_val=1.0,
-                                 min_mag=5.0, max_mag=6.5)
+                                      min_mag=5.0, max_mag=6.5)
         self.area_source_attrib['mfd'] = area_mfd
 
         area_source = nrml_models.AreaSource(**self.area_source_attrib)

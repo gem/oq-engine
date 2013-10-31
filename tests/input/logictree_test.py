@@ -23,8 +23,6 @@ import mock
 import numpy
 import os
 import os.path
-import shutil
-import tempfile
 import unittest
 
 from StringIO import StringIO
@@ -58,6 +56,9 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
         super(_TestableSourceModelLogicTree, self).__init__(
             content, basepath, filename, calc_id, validate
         )
+
+    def _get_source_model(self, filename):
+        return StringIO(self.files[filename])
 
     def __fail(self, *args, **kwargs):
         raise AssertionError("this method shouldn't be called")
@@ -176,21 +177,6 @@ def _whatever_sourcemodel_lt(sourcemodel_filename):
 
 
 class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
-
-    def setUp(self):
-        sm = _whatever_sourcemodel()
-        self.gsm_patch = mock.patch('openquake.engine.input.logictree'
-                                    '.SourceModelLogicTree._get_source_model')
-        self.gsm_mock = self.gsm_patch.start()
-        ret_val = Mock()
-        ret_val.model_content.raw_content = sm
-        ret_val.model_content.raw_content = sm
-        self.gsm_mock.return_value = ret_val
-
-    def tearDown(self):
-        self.gsm_mock.stop()
-        self.gsm_patch.stop()
-
     def _assert_logic_tree_error(self, filename, files, basepath,
                                  exc_class=logictree.LogicTreeError,
                                  exc_filename=None):
@@ -518,13 +504,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = """ololo"""
 
-        ret_val = Mock()
-        ret_val.model_content.raw_content = sm
-        self.gsm_mock.return_value = ret_val
-
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ParsingError,
-                                            exc_filename='sm')
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm': sm}, 'base',
+            logictree.ParsingError, exc_filename='sm')
 
     def test_source_model_schema_violation(self):
         lt = _make_nrml("""\
@@ -567,10 +549,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </simpleFaultSource>
         </sourceModel>
         """)
-        ret_val = Mock()
-        ret_val.model_content.raw_content = sm
-        self.gsm_mock.return_value = ret_val
-
         self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
                                       logictree.ParsingError,
                                       exc_filename='sm')
@@ -1782,7 +1760,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('classical_job.ini')
         job = helpers.get_hazard_job(cfg)
 
-        self.proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
+        self.proc = logictree.LogicTreeProcessor(job.hazard_calculation)
 
     def test_sample_source_model(self):
         sm_name, branch_ids = self.proc.sample_source_model_logictree(42)
@@ -1848,7 +1826,7 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
             self.uncertainties_applied.append(fingerprint)
         self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
         logictree.BranchSet.apply_uncertainty = apply_uncertainty
-        self.proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
+        self.proc = logictree.LogicTreeProcessor(job.hazard_calculation)
 
     def tearDown(self):
         logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
@@ -1895,7 +1873,7 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
         job = helpers.get_hazard_job(cfg)
         base_path = job.hazard_calculation.base_path
 
-        proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
+        proc = logictree.LogicTreeProcessor(job.hazard_calculation)
 
         [branch] = proc.source_model_lt.root_branchset.branches
         all_branches = proc.source_model_lt.branches

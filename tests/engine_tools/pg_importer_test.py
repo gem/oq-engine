@@ -48,8 +48,8 @@ class PGImporterTestCase(unittest.TestCase):
 
     def test_serial_updated(self):
         output_str = '''\
-$out1	1	\N	gmf-rlz-1	gmf	2013-04-11 03:08:46
-$out2	1	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
+$out1	\N	gmf-rlz-1	gmf	2013-04-11 03:08:46
+$out2	\N	gmf-rlz-2	gmf	2013-04-11 03:08:47
 '''
         out = Output.objects.latest('id')
         last_id = self.imp.import_templ('uiapi.output', output_str)
