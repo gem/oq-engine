@@ -451,7 +451,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         NOTE: Many tasks can contribute ruptures to the same SES.
         """
         output = models.Output.objects.create(
-            owner=self.job.owner,
             oq_job=self.job,
             display_name='ses-coll-rlz-%s' % lt_rlz.id,
             output_type='ses')
@@ -461,7 +460,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         if self.job.hazard_calculation.ground_motion_fields:
             output = models.Output.objects.create(
-                owner=self.job.owner,
                 oq_job=self.job,
                 display_name='gmf-rlz-%s' % lt_rlz.id,
                 output_type='gmf')
@@ -490,7 +488,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         # `complete logic tree` SES
         clt_ses_output = models.Output.objects.create(
-            owner=self.job.owner,
             oq_job=self.job,
             display_name='complete logic tree SES',
             output_type='complete_lt_ses')
@@ -504,7 +501,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         if self.hc.complete_logic_tree_gmf:
             clt_gmf_output = models.Output.objects.create(
-                owner=self.job.owner,
                 oq_job=self.job,
                 display_name='complete logic tree GMF',
                 output_type='complete_lt_gmf')

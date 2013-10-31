@@ -37,7 +37,6 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import exposure
-from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
@@ -66,14 +65,12 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
-def store_site_model(input_mdl, site_model_source):
+def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
 
-    :param input_mdl:
-        The `uiapi.input` record which the new `hzrdi.site_model` records
-        reference. This `input` record acts as a container for the site model
-        data.
+    :param job:
+        The job that is loading this site_model_source
     :param site_model_source:
         Filename or file-like object containing the site model XML data.
     :returns:
@@ -85,7 +82,7 @@ def store_site_model(input_mdl, site_model_source):
                              z1pt0=node.z1pt0,
                              z2pt5=node.z2pt5,
                              location=node.wkt,
-                             input_id=input_mdl.id)
+                             job_id=job.id)
             for node in parser.parse()]
     return writer.CacheInserter.saveall(data)
 
@@ -478,7 +475,8 @@ class BaseHazardCalculator(base.Calculator):
         source_paths = logictree.read_logic_trees(self.hc)
 
         for src_path in source_paths:
-            sm_parser = nrml_parsers.SourceModelParser(src_path)
+            sm_parser = nrml_parsers.SourceModelParser(
+                os.path.join(self.hc.base_path, src_path))
 
             # Covert
             src_db_writer = source.SourceDBWriter(
@@ -504,12 +502,10 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types_and_levels = dict()
             hc.intensity_measure_types = list()
 
-            for input_type in hc.vulnerability_models:
-                content = input_type.model_content.as_string_io
+            for vf in hc.vulnerability_models:
                 intensity_measure_types_and_levels = dict(
                     (record['IMT'], record['IML']) for record in
-                    parsers.VulnerabilityModelParser(content)
-                )
+                    parsers.VulnerabilityModelParser(vf))
 
                 for imt, levels in \
                         intensity_measure_types_and_levels.items():
@@ -560,30 +556,28 @@ class BaseHazardCalculator(base.Calculator):
         if 'exposure' in hc.inputs:
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
-                    hc).serialize(
-                        parsers.ExposureModelParser(hc.input['exposure'][0]))
+                    self.job).serialize(
+                        parsers.ExposureModelParser(hc.inputs['exposure'][0]))
 
     @EnginePerformanceMonitor.monitor
     def initialize_site_model(self):
         """
-        If a site model is specified in the calculation configuration, parse
-        it and load it into the `hzrdi.site_model` table. This includes a
-        validation step to ensure that the area covered by the site model
-        completely envelops the calculation geometry. (If this requirement is
-        not satisfied, an exception will be raised. See
-        :func:`openquake.engine.calculators.hazard.general.validate_site_model`.)
+        If a site model is specified in the calculation configuration,
+        parse it and load it into the `hzrdi.site_model` table. This
+        includes a validation step to ensure that the area covered by
+        the site model completely envelops the calculation geometry.
+        (If this requirement is not satisfied, an exception will be
+        raised. See :func:`validate_site_model`.)
         """
         logs.LOG.progress("initializing site model")
-        site_model_inp = models.get_site_model(self.hc.id)
+        site_model_inp = self.hc.site_model
         if site_model_inp:
             # Store `site_model` records:
-            store_site_model(
-                site_model_inp, site_model_inp.model_content.as_string_io
-            )
+            store_site_model(site_model_inp, file(site_model_inp).read())
 
             # Get the site model records we stored:
             site_model_data = models.SiteModel.objects.filter(
-                input=site_model_inp)
+                job=self.job)
 
             validate_site_model(
                 site_model_data, self.hc.points_to_compute(save_sites=True)
@@ -651,9 +645,8 @@ class BaseHazardCalculator(base.Calculator):
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
-        [smlt] = models.inputs4hcalc(hc.id,
-                                     input_type='source_model_logic_tree')
-        ltp = logictree.LogicTreeProcessor(hc.id)
+        [smlt] = self.hc.inputs['source_model_logic_tree']
+        ltp = logictree.LogicTreeProcessor(hc)
         hzrd_src_cache = {}
 
         for i, path_info in enumerate(ltp.enumerate_paths()):
@@ -672,8 +665,7 @@ class BaseHazardCalculator(base.Calculator):
 
             if not sm_name in hzrd_src_cache:
                 # Get the source model for this sample:
-                hzrd_src = models.Src2ltsrc.objects.get(
-                    lt_src=smlt.id, filename=sm_name).hzrd_src
+                hzrd_src = sm_name
                 # and cache it
                 hzrd_src_cache[sm_name] = hzrd_src
             else:
@@ -702,10 +694,9 @@ class BaseHazardCalculator(base.Calculator):
         seed = self.hc.random_seed
         rnd.seed(seed)
 
-        [smlt] = models.inputs4hcalc(self.hc.id,
-                                     input_type='source_model_logic_tree')
+        [smlt] = self.hc.inputs['source_model_logic_tree']
 
-        ltp = logictree.LogicTreeProcessor(self.hc.id)
+        ltp = logictree.LogicTreeProcessor(self.hc)
 
         hzrd_src_cache = {}
 
@@ -733,8 +724,7 @@ class BaseHazardCalculator(base.Calculator):
 
             if not sm_name in hzrd_src_cache:
                 # Get the source model for this sample:
-                hzrd_src = models.Src2ltsrc.objects.get(
-                    lt_src=smlt.id, filename=sm_name).hzrd_src
+                hzrd_src = sm_name
                 # and cache it
                 hzrd_src_cache[sm_name] = hzrd_src
             else:
@@ -773,10 +763,10 @@ class BaseHazardCalculator(base.Calculator):
         cursor.execute("""
             INSERT INTO "%s" (lt_realization_id, parsed_source_id, is_complete)
             SELECT %%s, id, FALSE
-            FROM "%s" WHERE input_id = %%s
+            FROM "%s" WHERE job_id = %%s
             ORDER BY id
             """ % (src_progress_tbl, parsed_src_tbl),
-            [lt_rlz.id, hzrd_src.id])
+            [lt_rlz.id, lt_rlz.hazard_calculation.oqjob.id])
         cursor.execute("""
             UPDATE "%s" SET total_items = (
                 SELECT count(1) FROM "%s" WHERE lt_realization_id = %%s

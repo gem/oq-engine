@@ -770,7 +770,7 @@ class HazardCalculation(djm.Model):
         :raises:
             :exc:`RuntimeError` if the calculation has more than 1 site model.
         """
-        site_model = self.inputs['site_model']
+        site_model = self.inputs.get('site_model', [])
 
         if len(site_model) == 0:
             return None
@@ -814,7 +814,7 @@ class HazardCalculation(djm.Model):
         LIMIT 1;"""
 
         raw_query_set = SiteModel.objects.raw(
-            query, ['SRID=4326; %s' % point.wkt2d, self.oq_job.id]
+            query, ['SRID=4326; %s' % point.wkt2d, self.oqjob.id]
         )
 
         site_model_data = list(raw_query_set)
@@ -842,7 +842,7 @@ class HazardCalculation(djm.Model):
             again.
         """
         if self._points_to_compute is None:
-            if self.pk and self.inputs.filter(input_type='exposure').exists():
+            if self.pk and 'exposure' in self.inputs:
                 assets = self.exposure_model.exposuredata_set.all().order_by(
                     'asset_ref')
 
@@ -891,7 +891,7 @@ class HazardCalculation(djm.Model):
         if self.id in SiteCollection.cache:
             return SiteCollection.cache[self.id]
 
-        site_model_inp = get_site_model(self.id)
+        site_model_inp = self.site_model
         hsites = HazardSite.objects.filter(
             hazard_calculation=self).order_by('id')
         # NB: the sites MUST be ordered. The issue is that the disaggregation
@@ -908,7 +908,7 @@ class HazardCalculation(djm.Model):
             pt = openquake.hazardlib.geo.point.Point(
                 hsite.location.x, hsite.location.y)
             if site_model_inp:
-                smd = get_closest_site_model_data(site_model_inp, pt)
+                smd = self.get_closest_site_model_data(pt)
                 measured = smd.vs30_type == 'measured'
                 vs30 = smd.vs30
                 z1pt0 = smd.z1pt0
@@ -928,8 +928,8 @@ class HazardCalculation(djm.Model):
 
     @property
     def exposure_model(self):
-        if self.inputs.filter(input_type='exposure').exists():
-            return self.inputs.get(input_type='exposure').exposuremodel
+        if self.oqjob.exposuremodel_set.exists():
+            return self.oqjob.exposuremodel_set.get()
 
     def get_imts(self):
         """
@@ -1015,7 +1015,8 @@ class RiskCalculation(djm.Model):
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
-    exposure_input = djm.ForeignKey('Input', null=True, blank=True)
+    preloaded_exposure_model = djm.ForeignKey(
+        'ExposureModel', null=True, blank=True)
 
     # the maximum distance for an hazard value with the corresponding
     # asset. Expressed in kilometers
@@ -1289,7 +1290,6 @@ class OutputManager(djm.Manager):
         `output_type` (default to hazard_curve)
         """
         return self.create(oq_job=job,
-                           owner=job.owner,
                            display_name=display_name,
                            output_type=output_type)
 
@@ -2943,7 +2943,7 @@ class ExposureModel(djm.Model):
     A risk exposure model
     '''
 
-    input = djm.OneToOneField("Input")
+    job = djm.ForeignKey("OqJob")
     name = djm.TextField()
     description = djm.TextField(null=True)
     category = djm.TextField()

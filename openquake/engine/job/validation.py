@@ -103,10 +103,10 @@ class BaseOQModelForm(ModelForm):
     for example, one of the types in :mod:`django.core.files.uploadedfile`.
 
     In this case, however, we expect `files` to be a dict of
-    :class:`openquake.engine.db.models.Input`, keyed by config file parameter
+    filenames, keyed by config file parameter
     for the input. For example::
 
-    {'site_model_file': <Input: 174||site_model||0xdeadbeef||>}
+    {'site_model_file': 'site_model.xml'}
     """
 
     # These fields require more complex validation.
@@ -115,6 +115,7 @@ class BaseOQModelForm(ModelForm):
     # At the moment, these are common to all hazard calculation modes.
     special_fields = (
         'export_dir',
+        'inputs',
     )
 
     def __init__(self, *args, **kwargs):
@@ -229,6 +230,7 @@ class BaseHazardModelForm(BaseOQModelForm):
         'reference_depth_to_2pt5km_per_sec',
         'reference_depth_to_1pt0km_per_sec',
         'export_dir',
+        'inputs',
     )
 
     def is_valid(self):
@@ -319,6 +321,7 @@ class ClassicalHazardForm(BaseHazardModelForm):
             'quantile_hazard_curves',
             'poes',
             'export_dir',
+            'inputs',
             'hazard_maps',
             'uniform_hazard_spectra',
             'export_multi_curves',
@@ -376,6 +379,7 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'quantile_hazard_curves',
             'poes',
             'export_dir',
+            'inputs',
             'hazard_maps',
             'export_multi_curves',
         )
@@ -485,6 +489,7 @@ class DisaggHazardForm(BaseHazardModelForm):
             'num_epsilon_bins',
             'poes_disagg',
             'export_dir',
+            'inputs',
         )
 
     def is_valid(self):
@@ -527,6 +532,7 @@ class ScenarioHazardForm(BaseHazardModelForm):
             'ground_motion_correlation_model',
             'ground_motion_correlation_params',
             'export_dir',
+            'inputs',
         )
 
     def is_valid(self):
@@ -560,6 +566,7 @@ class ClassicalRiskForm(BaseOQModelForm):
             'insured_losses',
             'poes_disagg',
             'export_dir',
+            'inputs',
         )
 
 
@@ -577,6 +584,7 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
             'interest_rate',
             'asset_life_expectancy',
             'export_dir',
+            'inputs',
         )
 
 
@@ -596,6 +604,7 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
             'interest_rate',
             'asset_life_expectancy',
             'export_dir',
+            'inputs',
         )
 
 
@@ -620,6 +629,7 @@ class EventBasedRiskForm(BaseOQModelForm):
             'distance_bin_width',
             'coordinate_bin_width',
             'export_dir',
+            'inputs',
         )
 
     def is_valid(self):
@@ -647,6 +657,7 @@ class ScenarioDamageRiskForm(BaseOQModelForm):
             'region_constraint',
             'maximum_distance',
             'export_dir',
+            'inputs',
         )
 
 
@@ -665,6 +676,7 @@ class ScenarioRiskForm(BaseOQModelForm):
             'insured_losses',
             'time_event',
             'export_dir',
+            'inputs',
         )
 
     def is_valid(self):
