@@ -8,6 +8,11 @@ from openquake.hazardlib.geo import Polygon, Point, Line
 from openquake.hazardlib.site import Site
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from openquake.hazardlib.source import SimpleFaultSource
+from openquake.hazardlib.pmf import PMF
+
+import numpy
+from decimal import Decimal
 
 
 IMT = PGA()
@@ -334,3 +339,41 @@ SET1_CASE5_SITE7_POES = [
     0, 0, 0, 0, 0,
     0
 ]
+
+# rupture-related data for case 2 source
+SET1_CASE2_SOURCE_DATA = {
+    'num_rups_strike': 12,
+    'num_rups_dip': 6,
+    'mag': 6.,
+    'rake': 0.,
+    'tectonic_region_type': 'Active Shallow Crust',
+    'source_typology': SimpleFaultSource,
+    'pmf': PMF([(Decimal('0.9997772'), 0), (Decimal('0.0002228'), 1)]),
+    'lons': numpy.zeros((8, 15)) - 122.,
+    'lats': [
+        numpy.tile(numpy.linspace(38.0, 38.126, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.009, 38.135, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.018, 38.144, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.027, 38.153, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.036, 38.162, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.045, 38.171, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.054, 38.180, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.063, 38.189, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.072, 38.198, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.081, 38.207, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.090, 38.216, 15), (8, 1)),
+        numpy.tile(numpy.linspace(38.099, 38.225, 15), (8, 1)),
+    ],
+    'depths':[
+        numpy.tile(numpy.linspace(0., 7., 8).reshape(-1, 1), (1, 15)),
+        numpy.tile(numpy.linspace(1., 8., 8).reshape(-1, 1), (1, 15)),
+        numpy.tile(numpy.linspace(2., 9., 8).reshape(-1, 1), (1, 15)),
+        numpy.tile(numpy.linspace(3., 10., 8).reshape(-1, 1), (1, 15)),
+        numpy.tile(numpy.linspace(4., 11., 8).reshape(-1, 1), (1, 15)),
+        numpy.tile(numpy.linspace(5., 12., 8).reshape(-1, 1), (1, 15)),
+    ],
+    'hypo_lons': numpy.zeros((6, 12)) - 122.,
+    'hypo_lats': numpy.tile(numpy.linspace(38.063, 38.162, 12), (6, 1)),
+    'hypo_depths': \
+        numpy.tile(numpy.linspace(3.5, 8.5, 6).reshape(-1, 1), (1, 12))
+}
