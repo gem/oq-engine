@@ -142,7 +142,7 @@ class BaseOQModelForm(ModelForm):
         :returns: True if a vulnerability file has been given
         """
         return [itype
-                for itype, _desc in models.Input.INPUT_TYPE_CHOICES
+                for itype, _desc in models.INPUT_TYPE_CHOICES
                 if (itype.endswith('vulnerability') and
                     "%s_file" % itype in self.files)]
 
