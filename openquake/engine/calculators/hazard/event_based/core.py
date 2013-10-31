@@ -95,6 +95,9 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     lt_rlz = ses.ses_collection.lt_realization
+    ltp = logictree.LogicTreeProcessor(hc.id)
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+        lt_rlz.sm_lt_path)
 
     # complete_logic_tree_ses flag
     cmplt_lt_ses = None
@@ -105,8 +108,8 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
 
     with EnginePerformanceMonitor(
             'reading sources', job_id, compute_ses):
-        sources = [s.nrml for s in models.ParsedSource.objects.filter(
-                   pk__in=src_ids)]
+        sources = [apply_uncertainties(s.nrml)
+                   for s in models.ParsedSource.objects.filter(pk__in=src_ids)]
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF

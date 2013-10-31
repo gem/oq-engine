@@ -82,6 +82,8 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     ltp = logictree.LogicTreeProcessor(hc.id)
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
 
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
     parsed_sources = models.ParsedSource.objects.filter(pk__in=src_ids)
@@ -93,7 +95,8 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     calc_kwargs = {'gsims': gsims,
                    'truncation_level': hc.truncation_level,
                    'time_span': hc.investigation_time,
-                   'sources': [s.nrml for s in parsed_sources],
+                   'sources': [apply_uncertainties(s.nrml)
+                               for s in parsed_sources],
                    'imts': imts,
                    'sites': hc.site_collection}
 
