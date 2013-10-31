@@ -69,7 +69,7 @@ patch = functools.partial(mock_module.patch, mocksignature=True)
 
 def default_user():
     """Return the default user to be used for test setups."""
-    return models.OqUser.objects.get(user_name="openquake")
+    return "openquake"
 
 
 def insert_inputs(job, inputs):
@@ -760,7 +760,7 @@ def populate_gmf_data_from_csv(job, fname):
 
 
 def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
-                      username=None):
+                      username="openquake"):
     """
     Takes in input the paths to a risk job config file and a hazard job config
     file.
@@ -772,7 +772,6 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
 
     :param output_type: gmf, gmf_scenario, or curve
     """
-    username = username if username is not None else default_user().user_name
 
     hazard_job = get_hazard_job(hazard_cfg, username)
     hc = hazard_job.hazard_calculation
@@ -828,7 +827,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
 
     params.update(dict(hazard_output_id=hazard_output.output.id))
 
-    risk_calc = engine.create_risk_calculation(job.owner, params, files)
+    risk_calc = engine.create_risk_calculation(params, files)
     job.risk_calculation = risk_calc
     job.save()
     error_message = validate(job, 'risk', params, files, [])

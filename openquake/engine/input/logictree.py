@@ -843,7 +843,7 @@ class SourceModelLogicTree(BaseLogicTree):
                                for tagname in self.SOURCE_TYPES)
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
 
-        fh = file(os.path.join(self.hc.base_path, source_model))
+        fh = file(os.path.join(self.basepath, source_model))
         eventstream = etree.iterparse(fh, tag='{%s}*' % self.NRML,
                                       schema=self.get_xmlschema())
         while True:

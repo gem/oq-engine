@@ -29,14 +29,13 @@ class ExposureDBWriter(object):
     """
     Serialize the exposure model to database
 
-    :attr exposure_input:
-        an instance of :class:`openquake.engine.db.models.Input` representing
-        an exposure input
+    :attr job:
+        an instance of :class:`openquake.engine.db.models.OqJob`
     """
 
-    def __init__(self, exposure_input):
+    def __init__(self, job):
         """Create a new serializer"""
-        self.exposure_input = exposure_input
+        self.job = job
         self.model = None
         self.cost_types = {}
 
@@ -66,7 +65,7 @@ class ExposureDBWriter(object):
             :class:`openquake.nrmllib.risk.parsers.ExposureMetadata`
         """
         exposure_model = models.ExposureModel.objects.create(
-            input=self.exposure_input,
+            job=self.job,
             name=model.exposure_id,
             description=model.description,
             taxonomy_source=model.taxonomy_source,
