@@ -19,7 +19,6 @@ calculations."""
 import ConfigParser
 import csv
 import getpass
-import md5
 import os
 import sys
 import warnings
@@ -62,9 +61,7 @@ def prepare_job(user_name="openquake", log_level='progress'):
     :returns:
         :class:`openquake.engine.db.models.OqJob` instance.
     """
-    # See if the current user exists
-    # If not, create a record for them
-    job = models.OqJob(
+    return models.OqJob.objects.create(
         user_name=user_name,
         log_level=log_level,
         oq_version=openquake.engine.__version__,
@@ -72,8 +69,6 @@ def prepare_job(user_name="openquake", log_level='progress'):
         hazardlib_version=hazardlib.__version__,
         risklib_version=risklib.__version__,
     )
-    job.save()
-    return job
 
 
 def parse_config(source):
@@ -93,7 +88,7 @@ def parse_config(source):
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), source.name))
     params = dict(base_path=base_path)
-    files = dict()
+    params['inputs'] = dict()
 
     # Directory containing the config file we're parsing.
     base_path = os.path.dirname(os.path.abspath(source.name))
@@ -121,11 +116,21 @@ def parse_config(source):
                     # It's a relative path.
                     path = os.path.join(base_path, path)
 
-                files[key] = path
+                params['inputs'][input_type] = path
             else:
                 params[key] = value
 
-    return params, files
+    # convert back to dict as defaultdict is not pickleable
+    params['inputs'] = dict(params['inputs'])
+
+    # load source inputs (the paths are the source_model_logic_tree)
+    smlt = params['inputs'].get('source_model_logic_tree')
+    if smlt:
+        params['inputs']['source'] = [
+            os.path.join(base_path, src_path)
+            for src_path in _collect_source_model_paths(smlt)]
+
+    return params
 
 
 def _parse_sites_csv(fh):
@@ -147,74 +152,36 @@ def _parse_sites_csv(fh):
     return 'MULTIPOINT(%s)' % ', '.join(coords)
 
 
-def _file_digest(path):
-    """Return a 32 character digest for the file with the given pasth.
-
-    :param str path:
-        File path
-    :returns:
-        A 32 character string with the md5sum digest of the file.
-    """
-    checksum = md5.new()
-    with open(path) as fh:
-        checksum.update(fh.read())
-        return checksum.hexdigest()
-
-
-def _get_content_type(path):
-    """Given the path to a file, guess the content type by looking at the file
-    extension. If there is none, simply return 'unknown'.
-    """
-    _, ext = os.path.splitext(path)
-    if ext == '':
-        return 'unknown'
-    else:
-        # This gives us the . and extension (such as '.xml').
-        # Don't include the period.
-        return ext[1:]
-
-
-def create_hazard_calculation(params, files):
+def create_calculation(model, params):
     """
     Given a params `dict` parsed from the config file, create a
     :class:`~openquake.engine.db.models.HazardCalculation`.
 
+    :param model:
+        a Calculation class object
     :param dict params:
         Dictionary of parameter names and values. Parameter names should match
         exactly the field names of
         :class:`openquake.engine.db.model.HazardCalculation`.
-    :param list files:
-        List of :class:`~openquake.engine.db.models.Input` objects to be
-        linked to the calculation.
     :returns:
-        :class:`openquake.engine.db.model.HazardCalculation` object.
-        A corresponding record will obviously be saved to the database.
+        an instance of a newly created `model`
     """
     if "export_dir" in params:
         params["export_dir"] = os.path.abspath(params["export_dir"])
 
-    haz_calc_fields = models.HazardCalculation._meta.get_all_field_names()
-    for param in set(params) - set(haz_calc_fields):
+    calc_fields = model._meta.get_all_field_names()
+
+    # FIXME(lp). Django 1.3 does not allow using _id fields in model
+    # __init__. We will check these fields in pre-execute phase
+    ID_FIELDS = set(['preloaded_exposure_model_id', 'hazard_output_id'])
+
+    for param in set(params) - set(calc_fields) - ID_FIELDS:
         msg = "Unknown parameter '%s'. Ignoring."
         msg %= param
         warnings.warn(msg, RuntimeWarning)
         params.pop(param)
 
-    # manage inputs
-    params['inputs'] = dict(
-        [(file_key[:-5], [input_path])
-         for file_key, input_path in files.iteritems()])
-
-    hc = models.HazardCalculation(**params)
-
-    # load source inputs
-    smlt = files.get('source_model_logic_tree_file')
-    gsimlt = files.get('gsim_logic_tree_file')
-    if not None in (smlt, gsimlt):
-        hc.inputs['source'] = [
-            os.path.join(hc.base_path, src_path)
-            for src_path in _collect_source_model_paths(smlt)]
-
+    hc = model(**params)
     hc.full_clean()
     hc.save()
 
@@ -238,35 +205,6 @@ def _collect_source_model_paths(smlt):
                     namespaces=nrmllib.PARSE_NS_MAP):
                 src_paths.append(branch.text)
     return sorted(list(set(src_paths)))
-
-
-def create_risk_calculation(params, files):
-    """Given a params `dict` parsed from the config file, create a
-    :class:`~openquake.engine.db.models.RiskCalculation`.
-
-    :param dict params:
-        Dictionary of parameter names and values. Parameter names should match
-        exactly the field names of
-        :class:`openquake.engine.db.model.RiskCalculation`.
-    :param list files:
-        List of :class:`~openquake.engine.db.models.Input` objects to be
-        linked to the calculation.
-    :returns:
-        :class:`openquake.engine.db.model.RiskCalculation` object.
-        A corresponding record will obviously be saved to the database.
-    """
-    if "export_dir" in params:
-        params["export_dir"] = os.path.abspath(params["export_dir"])
-
-    rc = models.RiskCalculation(**params)
-    rc.full_clean()
-    rc.save()
-
-    for file_key, input_path in files.iteritems():
-        input_type = file_key[:-5]
-        get_or_create_input(input_path, input_type, risk_calc_id=rc.id)
-
-    return rc
 
 
 def _create_job_stats(job):
@@ -322,7 +260,7 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
         if not job_pid:
             # calculation executor process
             try:
-                _job_exec(job, log_level, log_file, exports, job_type, calc)
+                _job_exec(job, log_level, exports, job_type, calc)
             except Exception, ex:
                 logs.LOG.critical("Calculation failed with exception: '%s'"
                                   % str(ex))
@@ -350,7 +288,7 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
         os.waitpid(supervisor_pid, 0)
     else:
         try:
-            _job_exec(job, log_level, log_file, exports, job_type, calc)
+            _job_exec(job, log_level, exports, job_type, calc)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
                               % str(ex))
@@ -472,7 +410,7 @@ def del_haz_calc(hc_id):
                            'ID=%s does not exist' % hc_id)
 
     user = getpass.getuser()
-    if hc.oq_job.user_name == user:
+    if hc.oqjob.user_name == user:
         # we are allowed to delete this
 
         # but first, check if any risk calculations are referencing any of our
@@ -595,12 +533,13 @@ def haz_job_from_file(cfg_file_path, username, log_level, exports):
     job = prepare_job(user_name=username, log_level=log_level)
 
     # read calculation params and create the calculation profile
-    params, files = parse_config(open(cfg_file_path, 'r'))
-    job.hazard_calculation = create_hazard_calculation(params, files)
+    params = parse_config(open(cfg_file_path, 'r'))
+    job.hazard_calculation = create_calculation(
+        models.HazardCalculation, params)
     job.save()
 
     # validate and raise if there are any problems
-    error_message = validate(job, 'hazard', params, files, exports)
+    error_message = validate(job, 'hazard', params, exports)
     if error_message:
         raise RuntimeError(error_message)
 
@@ -750,7 +689,7 @@ def risk_job_from_file(cfg_file_path, username, log_level, exports,
     params.update(dict(hazard_output_id=hazard_output_id,
                        hazard_calculation_id=hazard_calculation_id))
 
-    calculation = create_risk_calculation(params, files)
+    calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()
 

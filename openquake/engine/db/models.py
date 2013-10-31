@@ -129,7 +129,7 @@ INPUT_TYPE_CHOICES = (
     (u'structural_vulnerability_retrofitted',
      u'Structural Vulnerability Retrofitted'))
 
-VULNERABILITY_TYPE_CHOICES = [choice
+VULNERABILITY_TYPE_CHOICES = [choice[0]
                               for choice in INPUT_TYPE_CHOICES
                               if choice[0].endswith('vulnerability')]
 
@@ -495,7 +495,7 @@ class HazardCalculation(djm.Model):
         (u'scenario', u'Scenario'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
-    inputs = fields.PickleField()
+    inputs = fields.PickleField(blank=True)
 
     # For the calculation geometry, choose either `region` (with
     # `region_grid_spacing`) or `sites`.
@@ -758,9 +758,9 @@ class HazardCalculation(djm.Model):
 
     @property
     def vulnerability_models(self):
-        return sum([self.inputs.get(vf_type, [])
-                    for vf_type, _desc
-                    in VULNERABILITY_TYPE_CHOICES], [])
+        return [self.inputs[vf_type]
+                for vf_type in VULNERABILITY_TYPE_CHOICES
+                if vf_type in self.inputs]
 
     @property
     def site_model(self):
@@ -843,8 +843,8 @@ class HazardCalculation(djm.Model):
         """
         if self._points_to_compute is None:
             if self.pk and 'exposure' in self.inputs:
-                assets = self.exposure_model.exposuredata_set.all().order_by(
-                    'asset_ref')
+                assets = self.oqjob.exposuremodel.exposuredata_set.all(
+                    ).order_by('asset_ref')
 
                 # the points here must be sorted
                 lons, lats = zip(*sorted(set((asset.site.x, asset.site.y)
@@ -926,11 +926,6 @@ class HazardCalculation(djm.Model):
             SiteCollection(sites) if sites else None
         return sitecoll
 
-    @property
-    def exposure_model(self):
-        if self.oqjob.exposuremodel_set.exists():
-            return self.oqjob.exposuremodel_set.get()
-
     def get_imts(self):
         """
         Returns intensity mesure types or
@@ -1011,7 +1006,7 @@ class RiskCalculation(djm.Model):
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
-    inputs = fields.PickleField()
+    inputs = fields.PickleField(blank=True)
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
@@ -1183,7 +1178,7 @@ class RiskCalculation(djm.Model):
         # if we are computing hazard at exact location we set the
         # maximum_distance to a very small number in order to help the
         # query to find the results.
-        if hc.inputs.filter(input_type='exposure').exists():
+        if 'exposure' in hc.inputs:
             dist = 0.001
         return dist
 
@@ -1193,17 +1188,7 @@ class RiskCalculation(djm.Model):
 
     @property
     def exposure_model(self):
-        try:
-            return self.get_exposure_input().exposuremodel
-        except ObjectDoesNotExist:
-            return None
-
-    def get_exposure_input(self):
-        try:
-            return self.exposure_input or self.inputs.get(
-                input_type="exposure")
-        except ObjectDoesNotExist:
-            raise RuntimeError("Calculation has no exposure associated with")
+        return self.preloaded_exposure_model or self.oqjob.exposuremodel
 
     def vulnerability_inputs(self, retrofitted):
         for loss_type in LOSS_TYPES:
@@ -1219,9 +1204,7 @@ class RiskCalculation(djm.Model):
         else:
             input_type = "%s_vulnerability" % ctype
 
-        queryset = self.inputs.filter(input_type=input_type)
-        if queryset.exists():
-            return queryset[0]
+        return self.inputs.get(input_type)
 
 
 def _prep_geometry(kwargs):
@@ -2943,7 +2926,7 @@ class ExposureModel(djm.Model):
     A risk exposure model
     '''
 
-    job = djm.ForeignKey("OqJob")
+    job = djm.OneToOneField("OqJob")
     name = djm.TextField()
     description = djm.TextField(null=True)
     category = djm.TextField()

@@ -87,35 +87,6 @@ def store_site_model(job, site_model_source):
     return writer.CacheInserter.saveall(data)
 
 
-def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
-                width_of_mfd_bin, area_source_discretization):
-    """
-    Hazardlib source objects generator for a given set of sources.
-
-    Performs lazy loading, converting and processing of sources.
-
-    :param src_ids:
-        A list of IDs for :class:`openquake.engine.db.models.ParsedSource`
-        records.
-    :param apply_uncertainties:
-        A function to be called on each generated source. See
-        :meth:`openquake.engine.input.logictree.LogicTreeProcessor.\
-parse_source_model_logictree_path`
-
-    For information about the other parameters, see
-    :func:`openquake.engine.input.source.nrml_to_hazardlib`.
-    """
-    for src_id in src_ids:
-        parsed_source = models.ParsedSource.objects.get(id=src_id)
-
-        hazardlib_source = source.nrml_to_hazardlib(
-            parsed_source.nrml, rupture_mesh_spacing, width_of_mfd_bin,
-            area_source_discretization)
-
-        apply_uncertainties(hazardlib_source)
-        yield hazardlib_source
-
-
 def im_dict_to_hazardlib(im_dict):
     """
     Given the dict of intensity measure types and levels, convert them to a
@@ -463,6 +434,14 @@ class BaseHazardCalculator(base.Calculator):
                         [self.hc.id, rlz.id, haz_curve.id, imt, lons, lats]
                     )
 
+    def get_source_filter_condition(self):
+        """
+        Return a filter function, i.e. a function source -> boolean to filter
+        the sources to save; by default it returns always True and no sources
+        are filtered.
+        """
+        return lambda src: True
+
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
@@ -482,8 +461,8 @@ class BaseHazardCalculator(base.Calculator):
             src_db_writer = source.SourceDBWriter(
                 self.job, sm_parser.parse(), self.hc.rupture_mesh_spacing,
                 self.hc.width_of_mfd_bin,
-                self.hc.area_source_discretization
-            )
+                self.hc.area_source_discretization,
+                self.get_source_filter_condition())
             src_db_writer.serialize()
 
     @EnginePerformanceMonitor.monitor
@@ -557,7 +536,7 @@ class BaseHazardCalculator(base.Calculator):
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
                     self.job).serialize(
-                        parsers.ExposureModelParser(hc.inputs['exposure'][0]))
+                        parsers.ExposureModelParser(hc.inputs['exposure']))
 
     @EnginePerformanceMonitor.monitor
     def initialize_site_model(self):
@@ -645,7 +624,7 @@ class BaseHazardCalculator(base.Calculator):
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
-        [smlt] = self.hc.inputs['source_model_logic_tree']
+        smlt = self.hc.inputs['source_model_logic_tree']
         ltp = logictree.LogicTreeProcessor(hc)
         hzrd_src_cache = {}
 
@@ -694,7 +673,7 @@ class BaseHazardCalculator(base.Calculator):
         seed = self.hc.random_seed
         rnd.seed(seed)
 
-        [smlt] = self.hc.inputs['source_model_logic_tree']
+        smlt = self.hc.inputs['source_model_logic_tree']
 
         ltp = logictree.LogicTreeProcessor(self.hc)
 

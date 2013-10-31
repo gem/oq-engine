@@ -31,7 +31,7 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims().keys()
 
 
 # used in bin/openquake
-def validate(job, job_type, params, files, exports):
+def validate(job, job_type, params, exports):
     """
     Validate a job of type 'hazard' or 'risk' by instantiating its
     form class with the given files and exports.
@@ -42,8 +42,6 @@ def validate(job, job_type, params, files, exports):
         "hazard" or "risk"
     :param dict params:
         The raw dictionary of parameters parsed from the config file.
-    :param dict files:
-        {fname: :class:`openquake.engine.db.models.Input` obj}
     :param exports:
         a list of export types
     :returns:
@@ -57,6 +55,8 @@ def validate(job, job_type, params, files, exports):
         form_class = globals()[formname]
     except KeyError:
         return 'Could not find form class for "%s"' % calc_mode
+
+    files = set(params['inputs'])
     form = form_class(instance=calculation, files=files, exports=exports)
 
     # Check for superfluous params and raise warnings:

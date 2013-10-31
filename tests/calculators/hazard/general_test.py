@@ -291,9 +291,9 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         job = engine.prepare_job(username)
 
         cfg = helpers.get_data_path('classical_job-sd-imt.ini')
-        params, files = engine.parse_config(open(cfg, 'r'))
+        params = engine.parse_config(open(cfg, 'r'))
 
-        haz_calc = engine.create_hazard_calculation(params, files)
+        haz_calc = engine.create_calculation(models.HazardCalculation, params)
         haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
         job.hazard_calculation = haz_calc
         job.is_running = True
@@ -325,7 +325,8 @@ class ParseRiskModelsTestCase(unittest.TestCase):
                           for point in haz_calc.points_to_compute()])
         self.assertEqual(['PGA'], haz_calc.get_imts())
 
-        self.assertEqual(3, haz_calc.exposure_model.exposuredata_set.count())
+        self.assertEqual(
+            3, haz_calc.oqjob.exposuremodel.exposuredata_set.count())
 
         for i, m in enumerate(mocks):
             m.stop()
