@@ -460,7 +460,6 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
 
-        ltp = logictree.LogicTreeProcessor(self.hc.id)
         [smlt] = models.inputs4hcalc(
             self.hc.id, input_type='source_model_logic_tree')
         [gsimlt] = models.inputs4hcalc(
@@ -469,28 +468,20 @@ class BaseHazardCalculator(base.Calculator):
         source_paths = logictree.read_logic_trees_from_db(self.hc.id)
 
         for src_path in source_paths:
+            # and rows to Input and Src2ltsrc
             full_path = os.path.join(self.hc.base_path, src_path)
-
-            # Get the 'source' Input:
             inp = engine.get_or_create_input(
                 full_path, 'source', self.hc.owner, haz_calc_id=self.hc.id
             )
 
             models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
                                             filename=src_path)
+
+            # convert nrmllib sources and save hazardlib sources
             src_content = inp.model_content.as_string_io
             sm_parser = nrml_parsers.SourceModelParser(src_content)
-
-            smlt_instance = logictree.SourceModelLogicTree(
-                smlt.model_content.raw_content,
-                self.hc.base_path, src_path, self.hc.id)
-            lt_path = [branch.branch_id for branch in
-                       smlt_instance.root_branchset.branches]
-
-            # Convert and save
             src_db_writer = source.SourceDBWriter(
                 inp, sm_parser.parse(),
-                ltp.parse_source_model_logictree_path(lt_path),
                 self.hc.rupture_mesh_spacing,
                 self.hc.width_of_mfd_bin,
                 self.hc.area_source_discretization,
