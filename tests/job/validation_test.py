@@ -62,7 +62,6 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
 
     def setUp(self):
         self.hc = models.HazardCalculation(
-            owner=helpers.default_user(),
             description='',
             region=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -180,7 +179,6 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         }
 
         hc = models.HazardCalculation(
-            owner=helpers.default_user(),
             description='',
             region=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -336,7 +334,6 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         subset_iml_imt.pop('PGA')
 
         self.hc = models.HazardCalculation(
-            owner=helpers.default_user(),
             description='',
             region=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -533,7 +530,6 @@ class DisaggHazardFormTestCase(unittest.TestCase):
 
     def setUp(self):
         self.hc = models.HazardCalculation(
-            owner=helpers.default_user(),
             description='',
             sites='MULTIPOINT((-122.114 38.113))',
             calculation_mode='disaggregation',
@@ -645,7 +641,6 @@ class ScenarioFormTestCase(unittest.TestCase):
 
     def setUp(self):
         self.hc = models.HazardCalculation(
-            owner=helpers.default_user(),
             description='',
             sites='MULTIPOINT((-122.114 38.113))',
             calculation_mode='scenario',
@@ -717,7 +712,6 @@ class ClassicalRiskFormTestCase(unittest.TestCase):
             lrem_steps_per_interval=5)
         self.other_args = dict(
             calculation_mode="classical",
-            owner=helpers.default_user(),
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
                 '-122.0 38.113))'),
@@ -769,7 +763,6 @@ class ClassicalBCRRiskFormTestCase(unittest.TestCase):
             asset_life_expectancy=40)
 
         self.other_args = dict(
-            owner=helpers.default_user(),
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
                 '-122.0 38.113))'),
@@ -818,7 +811,6 @@ class EventBasedBCRRiskForm(unittest.TestCase):
 
         rc = models.RiskCalculation(
             calculation_mode="event_based_bcr",
-            owner=helpers.default_user(),
             region_constraint=region_constraint,
             hazard_output=self.job.risk_calculation.hazard_output,
             interest_rate=0.05,
@@ -838,7 +830,6 @@ class EventBasedBCRRiskForm(unittest.TestCase):
 
         rc = models.RiskCalculation(
             calculation_mode="event_based_bcr",
-            owner=helpers.default_user(),
             region_constraint=region_constraint,
             hazard_output=self.job.risk_calculation.hazard_output,
         )
@@ -859,7 +850,6 @@ class EventBasedRiskValidationTestCase(unittest.TestCase):
     def test_valid_form_with_default_resolution(self):
         rc = models.RiskCalculation(
             calculation_mode="event_based",
-            owner=helpers.default_user(),
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
                 '-122.0 38.113))'),
@@ -872,7 +862,6 @@ class EventBasedRiskValidationTestCase(unittest.TestCase):
     def test_valid_form_with_custom_resolution(self):
         rc = models.RiskCalculation(
             calculation_mode="event_based",
-            owner=helpers.default_user(),
             loss_curve_resolution=60,
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -886,7 +875,6 @@ class EventBasedRiskValidationTestCase(unittest.TestCase):
     def test_invalid_form(self):
         rc = models.RiskCalculation(
             calculation_mode="event_based",
-            owner=helpers.default_user(),
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
                 '-122.0 38.113))'),
@@ -918,7 +906,6 @@ class ScenarioRiskValidationTestCase(unittest.TestCase):
     def test_invalid_form(self):
         rc = models.RiskCalculation(
             calculation_mode='scenario',
-            owner=helpers.default_user(),
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
                 '-122.0 38.113))'),
@@ -956,18 +943,17 @@ class ValidateTestCase(unittest.TestCase):
         # warning should be raised.
         cfg_file = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = engine.prepare_job()
-        params, files = engine.parse_config(open(cfg_file, 'r'))
+        params = engine.parse_config(open(cfg_file, 'r'))
         # Add a few superfluous parameters:
         params['ses_per_logic_tree_path'] = 5
         params['ground_motion_correlation_model'] = 'JB2009'
-        calculation = engine.create_hazard_calculation(
-            job.owner.user_name, params, files
-        )
+        calculation = engine.create_calculation(
+            models.HazardCalculation, params)
         job.hazard_calculation = calculation
         job.save()
 
         with warnings.catch_warnings(record=True) as w:
-            validation.validate(job, 'hazard', params, files, ['xml'])
+            validation.validate(job, 'hazard', params, ['xml'])
 
         expected_warnings = [
             "Unknown parameter '%s' for calculation mode 'classical'."

@@ -30,7 +30,6 @@ from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import core as classical
 from openquake.engine.db import models
 from openquake.engine.input import logictree
-from openquake.engine.input import source
 from openquake.engine.utils import general as general_utils
 from openquake.engine.utils import stats
 from openquake.engine.utils import tasks as utils_tasks
@@ -122,11 +121,14 @@ def compute_disagg(job_id, sites, lt_rlz_id):
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
-    sources = list(_prepare_sources(hc, lt_rlz_id))
-    for src in sources:
-        apply_uncertainties(src)
+    src_ids = models.SourceProgress.objects.filter(lt_realization=lt_rlz)\
+        .order_by('id').values_list('parsed_source_id', flat=True)
+    sources = [apply_uncertainties(s.nrml)
+               for s in models.ParsedSource.objects.filter(pk__in=src_ids)]
 
     # Make filters for distance to source and distance to rupture:
+    # a better approach would be to filter the sources on distance
+    # before, see the comment in the classical calculator
     src_site_filter = openquake.hazardlib.calc.filters.\
         source_site_distance_filter(hc.maximum_distance)
     rup_site_filter = openquake.hazardlib.calc.filters.\
@@ -269,32 +271,6 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
     )
 
 
-def _prepare_sources(hc, lt_rlz_id):
-    """
-    Helper function to prepare hazardlib source objects for a calculation.
-
-    :param hc:
-        :class:`openquake.engine.db.models.HazardCalculation`
-    :param int lt_rlz_id:
-        ID of a :class:`openquake.engine.db.models.LtRealization`
-
-    :returns:
-        A generator of hazardlib source objects for the given realization of
-        the given calculation. See :mod:`openquake.hazardlib.source` for more
-        info about the source types.
-    """
-    source_progress = models.SourceProgress.objects.filter(
-        lt_realization=lt_rlz_id)
-    sources = (
-        source.nrml_to_hazardlib(x.parsed_source.nrml,
-                                 hc.rupture_mesh_spacing,
-                                 hc.width_of_mfd_bin,
-                                 hc.area_source_discretization)
-        for x in source_progress)
-
-    return sources
-
-
 class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
     """
     A calculator which performs disaggregation calculations in a distributed /
@@ -331,12 +307,12 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         # Parse risk models.
         self.parse_risk_models()
 
-        # Parse logic trees and create source Inputs.
-        self.initialize_sources()
-
         # Deal with the site model and compute site data for the calculation
         # (if a site model was specified, that is).
         self.initialize_site_model()
+
+        # Parse logic trees and create source Inputs.
+        self.initialize_sources()
 
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach

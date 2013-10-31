@@ -7,11 +7,11 @@ ALTER TABLE uiapi.hazard_calculation DROP owner_id;
 ALTER TABLE uiapi.input DROP owner_id;
 ALTER TABLE uiapi.oq_job DROP owner_id;
 ALTER TABLE uiapi.output DROP owner_id;
-DROP TRIGGER admin_oq_user_refresh_last_update_trig;
+DROP TRIGGER admin_oq_user_refresh_last_update_trig ON admin.oq_user;
 DROP TABLE admin.oq_user;
 
 -- OQ_ORGANIZATION
-DROP TRIGGER admin_organization_refresh_last_update_trig;
+DROP TRIGGER admin_organization_refresh_last_update_trig ON admin.organization;
 DROP TABLE admin.organization;
 
 
@@ -59,7 +59,7 @@ WHERE exposure_input_id IS NOT NULL;
 ALTER TABLE uiapi.risk_calculation DROP exposure_input_id;
 
 ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_exposure_model_fk
-FOREIGN KEY (exposure_model_id) REFERENCES riski.exposure_model(id) ON DELETE RESTRICT;
+FOREIGN KEY (preloaded_exposure_model_id) REFERENCES riski.exposure_model(id) ON DELETE RESTRICT;
 
 
 ALTER TABLE riski.exposure_model ADD job_id INTEGER NULL;

@@ -832,6 +832,9 @@ class SourceModelLogicTree(BaseLogicTree):
             super(SourceModelLogicTree, self).apply_branchset(branchset_node,
                                                               branchset)
 
+    def _get_source_model(self, source_model_file):
+        return file(os.path.join(self.basepath, source_model_file))
+
     def collect_source_model_data(self, source_model):
         """
         Parse source model file and collect information about source ids,
@@ -843,7 +846,7 @@ class SourceModelLogicTree(BaseLogicTree):
                                for tagname in self.SOURCE_TYPES)
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
 
-        fh = file(os.path.join(self.basepath, source_model))
+        fh = self._get_source_model(source_model)
         eventstream = etree.iterparse(fh, tag='{%s}*' % self.NRML,
                                       schema=self.get_xmlschema())
         while True:
@@ -998,8 +1001,8 @@ def read_logic_trees(hc, validate=True):
     :param calc:
         a :class:`openquake.engine.db.models.HazardCalculation`.
     """
-    [smlt_file] = hc.inputs['source_model_logic_tree']
-    [gsimlt_file] = hc.inputs['gsim_logic_tree']
+    smlt_file = hc.inputs['source_model_logic_tree']
+    gsimlt_file = hc.inputs['gsim_logic_tree']
 
     smlt = SourceModelLogicTree(
         file(smlt_file).read(), hc.base_path, smlt_file, hc,
@@ -1021,10 +1024,10 @@ class LogicTreeProcessor(object):
         a :class:`openquake.engine.db.models.HazardCalculation`.
     """
     def __init__(self, calc):
-        [smlt_input] = calc.inputs['source_model_logic_tree']
+        smlt_input = calc.inputs['source_model_logic_tree']
         smlt_content = file(smlt_input).read()
 
-        [gmpelt_input] = calc.inputs['gsim_logic_tree']
+        gmpelt_input = calc.inputs['gsim_logic_tree']
         gmpelt_content = file(gmpelt_input).read()
 
         self.source_model_lt = SourceModelLogicTree(
@@ -1128,7 +1131,7 @@ class LogicTreeProcessor(object):
         def apply_uncertainties(source):
             for branchset, value in branchsets_and_uncertainties:
                 branchset.apply_uncertainty(value, source)
-
+            return source
         return apply_uncertainties
 
     def parse_gmpe_logictree_path(self, branch_ids):
