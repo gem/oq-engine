@@ -393,30 +393,25 @@ class LossMapWriterTestCase(unittest.TestCase):
         _utils.assert_xml_equal(expected, self.filename)
         self.assertTrue(_utils.validates_against_xml_schema(self.filename))
 
+    maxDiff = None
     def test_serialize_a_model_geojson(self):
         expected = {
-            'oqtype': 'LossMap',
-            'oqnrmlversion': '0.4',
-            'oqmetadata': {
-                'investigationTime': '10.0',
-                'poE': '0.8',
-                'statistics': 'mean',
-            },
-            'type': 'FeatureCollection',
-            'features': [
-                {'geometry': {'coordinates': [1.0, 1.5], 'type': 'Point'},
-                 'properties': {'losses': [
-                    {'assetRef': 'asset_1', 'value': 15.23},
-                    {'assetRef': 'asset_2', 'value': 16.23},
-                 ]},
-                 'type': 'Feature'},
-                {'geometry': {'coordinates': [2.0, 2.5], 'type': 'Point'},
-                 'properties': {'losses': [
-                    {'assetRef': 'asset_3', 'value': 17.23},
-                 ]},
-                 'type': 'Feature'},
-            ],
-        }
+            u'features': [
+                {u'geometry': {u'coordinates': [1.0, 1.5], u'type': u'Point'},
+                 u'properties': {u'asset_ref': u'asset_1', u'loss': 15.23},
+                 u'type': u'Feature'},
+                {u'geometry': {u'coordinates': [1.0, 1.5], u'type': u'Point'},
+                 u'properties': {u'asset_ref': u'asset_2', u'loss': 16.23},
+                 u'type': u'Feature'},
+                {u'geometry': {u'coordinates': [2.0, 2.5], u'type': u'Point'},
+                 u'properties': {u'asset_ref': u'asset_3', u'loss': 17.23},
+                 u'type': u'Feature'}],
+            u'oqmetadata': {u'investigationTime': u'10.0',
+                            u'poE': u'0.8',
+                            u'statistics': u'mean'},
+            u'oqnrmlversion': u'0.4',
+            u'oqtype': u'LossMap',
+            u'type': u'FeatureCollection'}
         writer = writers.LossMapGeoJSONWriter(
             self.filename, investigation_time=10.0, poe=0.8,
             statistics="mean"
@@ -461,25 +456,21 @@ class LossMapWriterTestCase(unittest.TestCase):
 
     def test_serialize_optional_metadata_geojson(self):
         expected = {
-            'oqtype': 'LossMap',
-            'oqnrmlversion': '0.4',
-            'oqmetadata': {
-                'investigationTime': '10.0',
-                'poE': '0.8',
-                'statistics': 'quantile',
-                'quantileValue': '0.5',
-                'unit': 'USD',
-                'lossCategory': 'economic',
-            },
-            'type': 'FeatureCollection',
-            'features': [
-                {'geometry': {'coordinates': [1.0, 1.5], 'type': 'Point'},
-                 'properties': {'losses': [
-                    {'assetRef': 'asset_1', 'mean': 15.23, 'stdDev': 2.0},
-                 ]},
-                 'type': 'Feature'},
-            ],
-        }
+            u'features': [
+                {u'geometry': {u'coordinates': [1.0, 1.5], u'type': u'Point'},
+                 u'properties': {u'asset_ref': u'asset_1',
+                                 u'loss': 15.23,
+                                 u'std_dev': 2.0},
+                 u'type': u'Feature'}],
+            u'oqmetadata': {u'investigationTime': u'10.0',
+                            u'lossCategory': u'economic',
+                            u'poE': u'0.8',
+                            u'quantileValue': u'0.5',
+                            u'statistics': u'quantile',
+                            u'unit': u'USD'},
+            u'oqnrmlversion': u'0.4',
+            u'oqtype': u'LossMap',
+            u'type': u'FeatureCollection'}
 
         writer = writers.LossMapGeoJSONWriter(
             self.filename,
@@ -528,25 +519,21 @@ class LossMapWriterTestCase(unittest.TestCase):
 
     def test_serialize_using_hazard_realization_geojson(self):
         expected = {
-            'oqtype': 'LossMap',
-            'oqnrmlversion': '0.4',
-            'oqmetadata': {
-                'investigationTime': '10.0',
-                'poE': '0.8',
-                'sourceModelTreePath': 'b1|b2',
-                'gsimTreePath': 'b3|b4',
-                'unit': 'USD',
-                'lossCategory': 'economic',
-            },
-            'type': 'FeatureCollection',
-            'features': [
-                {'geometry': {'coordinates': [1.0, 1.5], 'type': 'Point'},
-                 'properties': {'losses': [
-                    {'assetRef': 'asset_1', 'mean': 15.23, 'stdDev': 2.0},
-                 ]},
-                 'type': 'Feature'},
-            ],
-        }
+            u'features': [
+                {u'geometry': {u'coordinates': [1.0, 1.5], u'type': u'Point'},
+                 u'properties': {u'asset_ref': u'asset_1',
+                                 u'loss': 15.23,
+                                 u'std_dev': 2.0},
+                                 u'type': u'Feature'}],
+            u'oqmetadata': {u'gsimTreePath': u'b3|b4',
+                            u'investigationTime': u'10.0',
+                            u'lossCategory': u'economic',
+                            u'poE': u'0.8',
+                            u'sourceModelTreePath': u'b1|b2',
+                            u'unit': u'USD'},
+            u'oqnrmlversion': u'0.4',
+            u'oqtype': u'LossMap',
+            u'type': u'FeatureCollection'}
 
         writer = writers.LossMapGeoJSONWriter(
             self.filename,
