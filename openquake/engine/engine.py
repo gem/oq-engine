@@ -18,7 +18,6 @@ calculations."""
 
 import ConfigParser
 import csv
-import zlib
 import getpass
 import md5
 import os

@@ -35,10 +35,6 @@ class StoreSiteModelTestCase(unittest.TestCase):
 
     def test_store_site_model(self):
         # Setup
-        inp = models.Input(
-            owner=models.OqUser.objects.get(id=1), path='fake_path',
-            digest='fake_digest', input_type='site_model', size=0)
-        inp.save()
         site_model = helpers.get_data_path('site_model.xml')
 
         exp_site_model = [
@@ -54,10 +50,11 @@ class StoreSiteModelTestCase(unittest.TestCase):
                  z1pt0=104.0, z2pt5=5.4),
         ]
 
-        ids = general.store_site_model(inp, site_model)
+        job = models.OqJob.objects.create(user_name="openquake")
+        ids = general.store_site_model(job, site_model)
 
         actual_site_model = models.SiteModel.objects.filter(
-            input=inp.id).order_by('id')
+            job=job).order_by('id')
 
         for i, exp in enumerate(exp_site_model):
             act = actual_site_model[i]
@@ -71,8 +68,8 @@ class StoreSiteModelTestCase(unittest.TestCase):
 
         # last, check that the `store_site_model` function returns all of the
         # newly-inserted records
-        for i, id in enumerate(ids):
-            self.assertEqual(id, actual_site_model[i].id)
+        for i, s in enumerate(ids):
+            self.assertEqual(s, actual_site_model[i].id)
 
 
 class ValidateSiteModelTestCase(unittest.TestCase):
@@ -193,90 +190,15 @@ validate_site_model`.
                               self.site_model_nodes, mesh)
 
 
-class GetSiteModelTestCase(unittest.TestCase):
-
-    @classmethod
-    def _create_haz_calc(cls):
-        params = {
-            'base_path': 'a/fake/path',
-            'calculation_mode': 'classical',
-            'region': '1 1 2 2 3 3',
-            'width_of_mfd_bin': '1',
-            'rupture_mesh_spacing': '1',
-            'area_source_discretization': '2',
-            'investigation_time': 50,
-            'truncation_level': 0,
-            'maximum_distance': 200,
-            'number_of_logic_tree_samples': 1,
-            'intensity_measure_types_and_levels': dict(PGA=[1, 2, 3, 4]),
-            'random_seed': 37,
-        }
-        owner = helpers.default_user()
-        hc = engine.create_hazard_calculation(owner.user_name, params, {})
-        return hc
-
-    def test_get_site_model(self):
-        haz_calc = self._create_haz_calc()
-
-        site_model_inp = models.Input(
-            owner=haz_calc.owner, digest='fake', path='fake',
-            input_type='site_model', size=0
-        )
-        site_model_inp.save()
-
-        # The link has not yet been made in the input2haz_calc table.
-        self.assertIsNone(models.get_site_model(haz_calc.id))
-
-        # Complete the link:
-        models.Input2hcalc(
-            input=site_model_inp, hazard_calculation=haz_calc).save()
-
-        actual_site_model = models.get_site_model(haz_calc.id)
-        self.assertEqual(site_model_inp, actual_site_model)
-
-    def test_get_site_model_too_many_site_models(self):
-        haz_calc = self._create_haz_calc()
-
-        site_model_inp1 = models.Input(
-            owner=haz_calc.owner, digest='fake', path='fake',
-            input_type='site_model', size=0
-        )
-        site_model_inp1.save()
-        site_model_inp2 = models.Input(
-            owner=haz_calc.owner, digest='fake', path='fake',
-            input_type='site_model', size=0
-        )
-        site_model_inp2.save()
-
-        # link both site models to the calculation:
-        models.Input2hcalc(
-            input=site_model_inp1, hazard_calculation=haz_calc).save()
-        models.Input2hcalc(
-            input=site_model_inp2, hazard_calculation=haz_calc).save()
-
-        with self.assertRaises(RuntimeError) as assert_raises:
-            models.get_site_model(haz_calc.id)
-
-        self.assertEqual('Only 1 site model per job is allowed, found 2.',
-                         assert_raises.exception.message)
-
-
 class ClosestSiteModelTestCase(unittest.TestCase):
 
     def setUp(self):
-        owner = engine.prepare_user('openquake')
-        self.site_model_inp = models.Input(
-            owner=owner, digest='fake', path='fake',
-            input_type='site_model', size=0
-        )
-        self.site_model_inp.save()
-
-    def test_get_closest_site_model_data_no_data(self):
-        # We haven't yet linked any site model data to this input, so we
-        # expect a result of `None`.
-        self.assertIsNone(models.get_closest_site_model_data(
-            self.site_model_inp, hazardlib_geo.Point(0, 0))
-        )
+        self.hc = models.HazardCalculation.objects.create(
+            maximum_distance=200,
+            calculation_mode="classical",
+            inputs={'site_model': ['fake']})
+        self.job = models.OqJob.objects.create(
+            user_name="openquake", hazard_calculation=self.hc)
 
     def test_get_closest_site_model_data(self):
         # This test scenario is the following:
@@ -293,12 +215,12 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         #  d        s s        d
 
         sm1 = models.SiteModel(
-            input=self.site_model_inp, vs30_type='measured', vs30=0.0000001,
+            job=self.job, vs30_type='measured', vs30=0.0000001,
             z1pt0=0.0000001, z2pt5=0.0000001, location='POINT(-1 0)'
         )
         sm1.save()
         sm2 = models.SiteModel(
-            input=self.site_model_inp, vs30_type='inferred', vs30=0.0000002,
+            job=self.job, vs30_type='inferred', vs30=0.0000002,
             z1pt0=0.0000002, z2pt5=0.0000002, location='POINT(1 0)'
         )
         sm2.save()
@@ -313,8 +235,8 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         point1 = hazardlib_geo.Point(-0.0000001, 0)
         point2 = hazardlib_geo.Point(0.0000001, 0)
 
-        res1 = models.get_closest_site_model_data(self.site_model_inp, point1)
-        res2 = models.get_closest_site_model_data(self.site_model_inp, point2)
+        res1 = self.hc.get_closest_site_model_data(point1)
+        res2 = self.hc.get_closest_site_model_data(point2)
 
         self.assertEqual(sm1, res1)
         self.assertEqual(sm2, res2)
@@ -364,15 +286,14 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         # check that if risk models are provided, then the ``points to
         # compute`` and the imls are got from there
 
-        username = helpers.default_user().user_name
+        username = helpers.default_user()
 
         job = engine.prepare_job(username)
 
         cfg = helpers.get_data_path('classical_job-sd-imt.ini')
         params, files = engine.parse_config(open(cfg, 'r'))
 
-        haz_calc = engine.create_hazard_calculation(
-            job.owner.user_name, params, files)
+        haz_calc = engine.create_hazard_calculation(params, files)
         haz_calc = models.HazardCalculation.objects.get(id=haz_calc.id)
         job.hazard_calculation = haz_calc
         job.is_running = True

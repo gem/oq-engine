@@ -75,24 +75,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initalize_sources(self):
         self.calc.initialize_sources()
 
-        # The source model logic tree for this configuration has only 1 source
-        # model:
-        [source] = models.inputs4hcalc(
-            self.job.hazard_calculation.id, input_type='source')
-
-        parsed_sources = models.ParsedSource.objects.filter(input=source)
-        # This source model contains 118 sources:
-        self.assertEqual(118, len(parsed_sources))
-
-        # Finally, check the Src2ltsrc linkage:
-        [smlt] = models.inputs4hcalc(
-            self.job.hazard_calculation.id,
-            input_type='source_model_logic_tree')
-        [src2ltsrc] = models.Src2ltsrc.objects.filter(
-            hzrd_src=source, lt_src=smlt)
-        # Make sure the `filename` is exactly as it apprears in the logic tree.
-        # This is import for the logic tree processing we need to do later on.
-        self.assertEqual('dissFaultModel.xml', src2ltsrc.filename)
+        # The source model contains 118 sources:
+        self.assertEqual(
+            118,
+            models.ParsedSource.objects.filter(job=self.calc.job).count())
 
     @attr('slow')
     def test_initialize_site_model(self):
