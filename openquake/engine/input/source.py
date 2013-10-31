@@ -84,27 +84,20 @@ def _nrml_source_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
 
     Parameters and return values are the same as :func:`nrml_to_hazardlib`.
     """
-    try:
-        # The ordering of the switch here matters because:
-        #   - AreaSource inherits from PointSource
-        #   - ComplexFaultSource inherits from SimpleFaultSource
-        if isinstance(src, nrml_models.AreaSource):
-            return _area_to_hazardlib(src, mesh_spacing, bin_width,
-                                      area_src_disc)
-        elif isinstance(src, nrml_models.PointSource):
-            return _point_to_hazardlib(src, mesh_spacing, bin_width)
-        elif isinstance(src, nrml_models.ComplexFaultSource):
-            return _complex_to_hazardlib(src, mesh_spacing, bin_width)
-        elif isinstance(src, nrml_models.SimpleFaultSource):
-            return _simple_to_hazardlib(src, mesh_spacing, bin_width)
-        elif isinstance(src, nrml_models.CharacteristicSource):
-            return _characteristic_to_hazardlib(src, mesh_spacing, bin_width)
-    except Exception, err:
-        msg = (
-            "The following error has occurred with source id='%s', name='%s': "
-            "%s" % (src.id, src.name, err.message)
-        )
-        raise RuntimeError(msg)
+    # The ordering of the switch here matters because:
+    #   - AreaSource inherits from PointSource
+    #   - ComplexFaultSource inherits from SimpleFaultSource
+    if isinstance(src, nrml_models.AreaSource):
+        return _area_to_hazardlib(src, mesh_spacing, bin_width,
+                                  area_src_disc)
+    elif isinstance(src, nrml_models.PointSource):
+        return _point_to_hazardlib(src, mesh_spacing, bin_width)
+    elif isinstance(src, nrml_models.ComplexFaultSource):
+        return _complex_to_hazardlib(src, mesh_spacing, bin_width)
+    elif isinstance(src, nrml_models.SimpleFaultSource):
+        return _simple_to_hazardlib(src, mesh_spacing, bin_width)
+    elif isinstance(src, nrml_models.CharacteristicSource):
+        return _characteristic_to_hazardlib(src, mesh_spacing, bin_width)
 
 
 def _nrml_rupture_to_hazardlib(src, mesh_spacing):
@@ -498,9 +491,6 @@ class SourceDBWriter(object):
         :class:`openquake.nrmllib.models.SourceModel` object, which is an
         Iterable of NRML source model objects (parsed from NRML XML). This
         also includes the name of the source model.
-    :param apply_uncertainties:
-        A function to apply the uncertaintes to the hazardlib source, as
-        returned by :method:`openquake.engine.input.logictree.LogicTreeProcessor.parse_source_model_logictree_path`
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
     :param float bin_width:
@@ -515,12 +505,11 @@ class SourceDBWriter(object):
         by default it returns always True and no sources are filtered.
     """
 
-    def __init__(self, inp, source_model, apply_uncertainties,
+    def __init__(self, inp, source_model,
                  mesh_spacing, bin_width, area_src_disc,
                  condition=lambda src: True):
         self.inp = inp
         self.source_model = source_model
-        self.apply_uncertainties = apply_uncertainties
         self.mesh_spacing = mesh_spacing
         self.bin_width = bin_width
         self.area_src_disc = area_src_disc
@@ -542,7 +531,6 @@ class SourceDBWriter(object):
         for src in self.source_model:
             hazardlib_source = nrml_to_hazardlib(
                 src, self.mesh_spacing, self.bin_width, self.area_src_disc)
-            self.apply_uncertainties(hazardlib_source)
             if self.condition(hazardlib_source):
                 models.ParsedSource.objects.create(
                     input=self.inp, source_type=_source_type(src),

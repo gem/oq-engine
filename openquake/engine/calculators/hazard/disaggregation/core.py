@@ -30,7 +30,6 @@ from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import core as classical
 from openquake.engine.db import models
 from openquake.engine.input import logictree
-from openquake.engine.input import source
 from openquake.engine.utils import general as general_utils
 from openquake.engine.utils import stats
 from openquake.engine.utils import tasks as utils_tasks
@@ -118,12 +117,14 @@ def compute_disagg(job_id, sites, lt_rlz_id):
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
 
     ltp = logictree.LogicTreeProcessor(hc.id)
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
     src_ids = models.SourceProgress.objects.filter(lt_realization=lt_rlz)\
         .order_by('id').values_list('parsed_source_id', flat=True)
-    sources = [s.nrml for s in models.ParsedSource.objects.filter(
-               pk__in=src_ids)]
+    sources = [apply_uncertainties(s.nrml)
+               for s in models.ParsedSource.objects.filter(pk__in=src_ids)]
 
     # Make filters for distance to source and distance to rupture:
     # a better approach would be to filter the sources on distance
