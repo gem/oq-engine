@@ -16,7 +16,7 @@
 """Saves source model data (parsed from a NRML file) to the
 'hzrdi.parsed_source' table.
 """
-
+import sys
 import math
 
 from django.db import router
@@ -87,17 +87,24 @@ def _nrml_source_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
     # The ordering of the switch here matters because:
     #   - AreaSource inherits from PointSource
     #   - ComplexFaultSource inherits from SimpleFaultSource
-    if isinstance(src, nrml_models.AreaSource):
-        return _area_to_hazardlib(src, mesh_spacing, bin_width,
-                                  area_src_disc)
-    elif isinstance(src, nrml_models.PointSource):
-        return _point_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.ComplexFaultSource):
-        return _complex_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.SimpleFaultSource):
-        return _simple_to_hazardlib(src, mesh_spacing, bin_width)
-    elif isinstance(src, nrml_models.CharacteristicSource):
-        return _characteristic_to_hazardlib(src, mesh_spacing, bin_width)
+    try:
+        if isinstance(src, nrml_models.AreaSource):
+            return _area_to_hazardlib(src, mesh_spacing, bin_width,
+                                      area_src_disc)
+        elif isinstance(src, nrml_models.PointSource):
+            return _point_to_hazardlib(src, mesh_spacing, bin_width)
+        elif isinstance(src, nrml_models.ComplexFaultSource):
+            return _complex_to_hazardlib(src, mesh_spacing, bin_width)
+        elif isinstance(src, nrml_models.SimpleFaultSource):
+            return _simple_to_hazardlib(src, mesh_spacing, bin_width)
+        elif isinstance(src, nrml_models.CharacteristicSource):
+            return _characteristic_to_hazardlib(src, mesh_spacing, bin_width)
+    except:
+        etype, err, tb = sys.exc_info()
+        msg = (
+            "The following error has occurred with source id='%s', name='%s': "
+            "%s" % (src.id, src.name, err.message))
+        raise etype, msg, tb
 
 
 def _nrml_rupture_to_hazardlib(src, mesh_spacing):

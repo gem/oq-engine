@@ -453,10 +453,6 @@ class BaseHazardCalculator(base.Calculator):
         :class:`~openquake.engine.db.models.Input` records for all of them,
         parse then, and save the parsed sources to the `parsed_source` table
         (see :class:`openquake.engine.db.models.ParsedSource`).
-
-        :param condition:
-            A function source -> boolean to filter the sources to save;
-            by default it returns always True and no sources are filtered.
         """
         logs.LOG.progress("initializing sources")
 
