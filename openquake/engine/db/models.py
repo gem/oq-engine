@@ -25,7 +25,6 @@
 Model representations of the OpenQuake DB tables.
 '''
 
-import StringIO
 import collections
 import itertools
 import operator
@@ -108,6 +107,31 @@ RISK_RTOL = 0.05
 
 #: absolute tolerance to consider two risk outputs (almost) equal
 RISK_ATOL = 0.01
+
+# TODO: these want to be dictionaries
+INPUT_TYPE_CHOICES = (
+    (u'unknown', u'Unknown'),
+    (u'source', u'Source Model'),
+    (u'source_model_logic_tree', u'Source Model Logic Tree'),
+    (u'gsim_logic_tree', u'Ground Shaking Intensity Model Logic Tree'),
+    (u'exposure', u'Exposure'),
+    (u'fragility', u'Fragility'),
+    (u'site_model', u'Site Model'),
+    (u'rupture_model', u'Rupture Model'),
+
+    # vulnerability models
+    (u'structural_vulnerability', u'Structural Vulnerability'),
+    (u'nonstructural_vulnerability', u'Non Structural Vulnerability'),
+    (u'contents_vulnerability', u'Contents Vulnerability'),
+    (u'business_interruption_vulnerability',
+     u'Business Interruption Vulnerability'),
+    (u'occupants_vulnerability', u'Occupants Vulnerability'),
+    (u'structural_vulnerability_retrofitted',
+     u'Structural Vulnerability Retrofitted'))
+
+VULNERABILITY_TYPE_CHOICES = [choice
+                              for choice in INPUT_TYPE_CHOICES
+                              if choice[0].endswith('vulnerability')]
 
 
 #: Hold both a Vulnerability function or a fragility function set and
@@ -196,114 +220,6 @@ def queryset_iter(queryset, chunk_size):
             offset += chunk_size
 
 
-def inputs4hcalc(calc_id, input_type=None):
-    """
-    Get all of the inputs for a given hazard calculation.
-
-    :param int calc_id:
-        ID of a :class:`HazardCalculation`.
-    :param input_type:
-        A valid input type (optional). Leave as `None` if you want all inputs
-        for a given calculation.
-    :returns:
-        A list of :class:`Input` instances.
-    """
-    result = Input.objects.filter(input2hcalc__hazard_calculation=calc_id)
-    if input_type is not None:
-        result = result.filter(input_type=input_type)
-    return result
-
-
-def inputs4rcalc(calc_id, input_type=None):
-    """
-    Get all of the inputs for a given risk calculation.
-
-    :param int calc_id:
-        ID of a :class:`RiskCalculation`.
-    :param input_type:
-        A valid input type (optional). Leave as `None` if you want all inputs
-        for a given calculation.
-    :returns:
-        A list of :class:`Input` instances.
-    """
-    result = Input.objects.filter(input2rcalc__risk_calculation=calc_id)
-    if input_type is not None:
-        result = result.filter(input_type=input_type)
-    return result
-
-
-def get_site_model(hc_id):
-    """Get the site model :class:`~openquake.engine.db.models.Input` record
-    for the given job id.
-
-    :param int hc_id:
-        The id of a :class:`~openquake.engine.db.models.HazardCalculation`.
-
-    :returns:
-        The site model :class:`~openquake.engine.db.models.Input` record for
-        this job.
-    :raises:
-        :exc:`RuntimeError` if the job has more than 1 site model.
-    """
-    site_model = inputs4hcalc(hc_id, input_type='site_model')
-
-    if len(site_model) == 0:
-        return None
-    elif len(site_model) > 1:
-        # Multiple site models for 1 job are not allowed.
-        raise RuntimeError("Only 1 site model per job is allowed, found %s."
-                           % len(site_model))
-
-    # There's only one site model.
-    return site_model[0]
-
-
-## TODO: this could be implemented with a view, now that there is a site table
-def get_closest_site_model_data(input_model, point):
-    """Get the closest available site model data from the database for a given
-    site model :class:`~openquake.engine.db.models.Input` and
-    :class:`openquake.hazardlib.geo.point.Point`.
-
-    :param input_model:
-        :class:`openquake.engine.db.models.Input` with `input_type` of
-        'site_model'.
-    :param site:
-        :class:`openquake.hazardlib.geo.point.Point` instance.
-
-    :returns:
-        The closest :class:`openquake.engine.db.models.SiteModel` for the given
-        ``input_model`` and ``point`` of interest.
-
-        This function uses the PostGIS `ST_Distance_Sphere
-        <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
-        function to calculate distance.
-
-        If there is no site model data, return `None`.
-    """
-    query = """
-    SELECT
-        hzrdi.site_model.*,
-        min(ST_Distance_Sphere(location, %s))
-            AS min_distance
-    FROM hzrdi.site_model
-    WHERE input_id = %s
-    GROUP BY id
-    ORDER BY min_distance
-    LIMIT 1;"""
-
-    raw_query_set = SiteModel.objects.raw(
-        query, ['SRID=4326; %s' % point.wkt2d, input_model.id]
-    )
-
-    site_model_data = list(raw_query_set)
-
-    assert len(site_model_data) <= 1, (
-        "This query should return at most 1 record.")
-
-    if len(site_model_data) == 1:
-        return site_model_data[0]
-
-
 # FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
 # the issue is the reset of the depts; we need QA tests for that
 class SiteCollection(openquake.hazardlib.site.SiteCollection):
@@ -344,23 +260,6 @@ class SiteCollection(openquake.hazardlib.site.SiteCollection):
 ## Tables in the 'admin' schema.
 
 
-class OqUser(djm.Model):
-    '''
-    OpenQuake users
-    '''
-    user_name = djm.TextField()
-    full_name = djm.TextField()
-    organization = djm.ForeignKey('Organization')
-    data_is_open = djm.BooleanField(default=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    def __str__(self):
-        return "%s||%s" % (self.user_name, self.organization.id)
-
-    class Meta:
-        db_table = 'admin\".\"oq_user'
-
-
 class RevisionInfo(djm.Model):
     '''
     Revision information
@@ -380,7 +279,7 @@ class RevisionInfo(djm.Model):
 class ParsedSource(djm.Model):
     """Stores parsed hazard input model sources in serialized python object
        tree format."""
-    input = djm.ForeignKey('Input')
+    job = djm.ForeignKey('OqJob')
     SRC_TYPE_CHOICES = (
         (u'area', u'Area'),
         (u'point', u'Point'),
@@ -402,7 +301,7 @@ class SiteModel(djm.Model):
     Used in Hazard calculations.
     '''
 
-    input = djm.ForeignKey('Input')
+    job = djm.ForeignKey('OqJob')
     # Average shear wave velocity for top 30 m. Units m/s.
     vs30 = djm.FloatField()
     # 'measured' or 'inferred'. Identifies if vs30 value has been measured or
@@ -428,7 +327,7 @@ class SiteModel(djm.Model):
 class ParsedRupture(djm.Model):
     """Stores parsed hazard rupture model in serialized python object
        tree format."""
-    input = djm.ForeignKey('Input')
+    job = djm.ForeignKey('OqJob')
     RUPTURE_TYPE_CHOICES = (
         (u'complex_fault', u'Complex Fault'),
         (u'simple_fault', u'Simple Fault'),)
@@ -442,119 +341,11 @@ class ParsedRupture(djm.Model):
 
 ## Tables in the 'uiapi' schema.
 
-
-class Input(djm.Model):
-    '''
-    A single OpenQuake input file uploaded by the user.
-    '''
-    owner = djm.ForeignKey('OqUser')
-    model_content = djm.ForeignKey('ModelContent', null=True)
-    name = djm.TextField(null=True)
-    digest = djm.TextField(help_text="32 byte md5sum digest, used to "
-                                     "detect identical input model files")
-    path = djm.TextField()
-    INPUT_TYPE_CHOICES = (
-        (u'unknown', u'Unknown'),
-        (u'source', u'Source Model'),
-        (u'source_model_logic_tree', u'Source Model Logic Tree'),
-        (u'gsim_logic_tree', u'Ground Shaking Intensity Model Logic Tree'),
-        (u'exposure', u'Exposure'),
-        (u'fragility', u'Fragility'),
-        (u'site_model', u'Site Model'),
-        (u'rupture_model', u'Rupture Model'),
-
-        # vulnerability models
-        (u'structural_vulnerability', u'Structural Vulnerability'),
-        (u'nonstructural_vulnerability', u'Non Structural Vulnerability'),
-        (u'contents_vulnerability', u'Contents Vulnerability'),
-        (u'business_interruption_vulnerability',
-         u'Business Interruption Vulnerability'),
-        (u'occupants_vulnerability', u'Occupants Vulnerability'),
-        (u'structural_vulnerability_retrofitted',
-         u'Structural Vulnerability Retrofitted'))
-
-    VULNERABILITY_TYPE_CHOICES = [choice
-                                  for choice in INPUT_TYPE_CHOICES
-                                  if choice[0].endswith('vulnerability')]
-
-    input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
-
-    hazard_calculations = djm.ManyToManyField('HazardCalculation',
-                                              through='Input2hcalc',
-                                              related_name="inputs")
-    risk_calculations = djm.ManyToManyField(
-        'RiskCalculation', through='Input2rcalc', related_name="inputs")
-
-    # Number of bytes in the file:
-    size = djm.IntegerField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    def __str__(self):
-        path_suffix = "/".join(self.path.rsplit(os.sep, 2)[1:])
-        return "%s||%s||%s||%s" % (
-            self.id, self.input_type, self.digest[:16], path_suffix)
-
-    class Meta:
-        db_table = 'uiapi\".\"input'
-
-
-class ModelContent(djm.Model):
-    '''
-    Stores raw content for the various input model files.
-    '''
-
-    # contains the raw text of a gzipped UTF-8 input file
-    raw_content = fields.GzippedField()
-    # `content_type` should be used to indicate the file format
-    # (xml, csv, etc.)
-    content_type = djm.TextField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"model_content'
-
-    @property
-    def as_string_io(self):
-        """
-        Return a `StringIO` object containing the `raw_content` as utf-8 text.
-        """
-        return StringIO.StringIO(self.raw_content)
-
-
-class Input2job(djm.Model):
-    '''
-    Associates input model files and jobs.
-    '''
-    input = djm.ForeignKey('Input')
-    oq_job = djm.ForeignKey('OqJob')
-
-    class Meta:
-        db_table = 'uiapi\".\"input2job'
-
-
-class Src2ltsrc(djm.Model):
-    '''
-    Associate an "source_model_logic_tree" type input (a logic tree source)
-    with "source" type inputs (hazard sources referenced by the logic tree
-    source). This is needed for worker-side logic tree processing.
-    '''
-    hzrd_src = djm.ForeignKey("Input", related_name='+',
-                              help_text="Hazard source input referenced "
-                                        "by the logic tree source")
-    lt_src = djm.ForeignKey("Input", related_name='+',
-                            help_text="Logic tree source input")
-    filename = djm.TextField(
-        help_text="Name of the referenced hazard source file")
-
-    class Meta:
-        db_table = 'uiapi\".\"src2ltsrc'
-
-
 class OqJob(djm.Model):
     '''
     An OpenQuake engine run started by the user
     '''
-    owner = djm.ForeignKey('OqUser')
+    user_name = djm.TextField()
     hazard_calculation = djm.OneToOneField('HazardCalculation', null=True)
     risk_calculation = djm.OneToOneField('RiskCalculation', null=True)
     LOG_LEVEL_CHOICES = (
@@ -681,7 +472,6 @@ class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
     '''
-    owner = djm.ForeignKey('OqUser')
     # Contains the absolute path to the directory containing the job config
     # file.
     base_path = djm.TextField()
@@ -705,6 +495,8 @@ class HazardCalculation(djm.Model):
         (u'scenario', u'Scenario'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
+    inputs = fields.PickleField()
+
     # For the calculation geometry, choose either `region` (with
     # `region_grid_spacing`) or `sites`.
     region = djm.PolygonField(srid=DEFAULT_SRID, null=True, blank=True)
@@ -964,6 +756,75 @@ class HazardCalculation(djm.Model):
         realizations_nr = self.ltrealization_set.count()
         return realizations_nr
 
+    @property
+    def vulnerability_models(self):
+        return sum([self.inputs.get(vf_type, [])
+                    for vf_type, _desc
+                    in VULNERABILITY_TYPE_CHOICES], [])
+
+    @property
+    def site_model(self):
+        """
+        Get the site model filename for this calculation
+
+        :raises:
+            :exc:`RuntimeError` if the calculation has more than 1 site model.
+        """
+        site_model = self.inputs['site_model']
+
+        if len(site_model) == 0:
+            return None
+        elif len(site_model) > 1:
+            # Multiple site models for 1 job are not allowed.
+            raise RuntimeError(
+                "Only 1 site model per job is allowed, found %s." % len(
+                    site_model))
+
+        # There's only one site model.
+        return site_model[0]
+
+    ## TODO: this could be implemented with a view, now that there is
+    ## a site table
+    def get_closest_site_model_data(self, point):
+        """Get the closest available site model data from the database
+        for a given site model and :class:`openquake.hazardlib.geo.point.Point`
+
+        :param site:
+            :class:`openquake.hazardlib.geo.point.Point` instance.
+
+        :returns:
+            The closest :class:`openquake.engine.db.models.SiteModel`
+            for the given ``point`` of interest.
+
+            This function uses the PostGIS `ST_Distance_Sphere
+            <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
+            function to calculate distance.
+
+            If there is no site model data, return `None`.
+        """
+        query = """
+        SELECT
+            hzrdi.site_model.*,
+            min(ST_Distance_Sphere(location, %s))
+                AS min_distance
+        FROM hzrdi.site_model
+        WHERE job_id = %s
+        GROUP BY id
+        ORDER BY min_distance
+        LIMIT 1;"""
+
+        raw_query_set = SiteModel.objects.raw(
+            query, ['SRID=4326; %s' % point.wkt2d, self.oq_job.id]
+        )
+
+        site_model_data = list(raw_query_set)
+
+        assert len(site_model_data) <= 1, (
+            "This query should return at most 1 record.")
+
+        if len(site_model_data) == 1:
+            return site_model_data[0]
+
     def points_to_compute(self, save_sites=True):
         """
         Generate a :class:`~openquake.hazardlib.geo.mesh.Mesh` of points.
@@ -1123,7 +984,6 @@ class RiskCalculation(djm.Model):
     #: Default maximum asset-hazard distance in km
     DEFAULT_MAXIMUM_DISTANCE = 5
 
-    owner = djm.ForeignKey('OqUser')
     # Contains the absolute path to the directory containing the job config
     # file.
     base_path = djm.TextField()
@@ -1138,8 +998,9 @@ class RiskCalculation(djm.Model):
 
     # The timeout is stored in seconds and is 100 hours by default.
     no_progress_timeout = djm.IntegerField(
-        default=360000, help_text="what time period w/o any progress is "
-                                "acceptable for calculations?")
+        default=360000,
+        help_text=("what time period w/o any progress is "
+                   "acceptable for calculations?"))
 
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
@@ -1150,6 +1011,7 @@ class RiskCalculation(djm.Model):
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
+    inputs = fields.PickleField()
     region_constraint = djm.PolygonField(
         srid=DEFAULT_SRID, null=True, blank=True)
 
@@ -1417,30 +1279,6 @@ def _prep_geometry(kwargs):
     return kwargs
 
 
-class Input2hcalc(djm.Model):
-    '''
-    `input` to `hazard_calculation` link table.
-    '''
-
-    input = djm.ForeignKey('Input')
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
-
-    class Meta:
-        db_table = 'uiapi\".\"input2hcalc'
-
-
-class Input2rcalc(djm.Model):
-    '''
-    `input` to `risk_calculation` link table.
-    '''
-
-    input = djm.ForeignKey('Input')
-    risk_calculation = djm.ForeignKey('RiskCalculation')
-
-    class Meta:
-        db_table = 'uiapi\".\"input2rcalc'
-
-
 class OutputManager(djm.Manager):
     """
     Manager class to filter and create Output objects
@@ -1479,7 +1317,6 @@ class Output(djm.Model):
         'statistical_params',
         'statistics quantile')
 
-    owner = djm.ForeignKey('OqUser')
     oq_job = djm.ForeignKey('OqJob')  # nullable in the case of an output
     # coming from an external source, with no job associated
     display_name = djm.TextField()
