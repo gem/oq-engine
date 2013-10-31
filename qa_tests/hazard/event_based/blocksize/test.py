@@ -29,33 +29,52 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # if the test fails and you want to debug it, set this flag:
     # then you will see in /tmp a few files which you can diff
     # to see the problem
-    expected_tags = ['rlz=00|ses=0001|src=1|i=000',
-                     'rlz=00|ses=0001|src=1|i=001',
-                     'rlz=00|ses=0001|src=1|i=002',
-                     'rlz=00|ses=0001|src=1|i=003',
-                     'rlz=00|ses=0001|src=1|i=004',
-                     'rlz=00|ses=0001|src=2|i=000']
-
+    expected_tags = [
+        'rlz=00|ses=0001|src=1|i=000',
+        'rlz=00|ses=0001|src=1|i=001',
+        'rlz=00|ses=0001|src=1|i=002',
+        'rlz=00|ses=0001|src=1|i=003',
+        'rlz=00|ses=0001|src=1|i=004',
+        'rlz=00|ses=0001|src=1|i=005',
+        'rlz=00|ses=0001|src=1|i=006',
+        'rlz=00|ses=0001|src=2|i=000',
+        'rlz=00|ses=0001|src=2|i=001',
+        'rlz=00|ses=0001|src=2|i=002',
+        'rlz=00|ses=0001|src=2|i=003',
+        'rlz=00|ses=0001|src=2|i=004',
+        'rlz=00|ses=0001|src=2|i=005',
+        'rlz=00|ses=0001|src=2|i=006',
+        'rlz=00|ses=0001|src=2|i=007',
+        'rlz=00|ses=0001|src=2|i=008',
+        'rlz=00|ses=0001|src=2|i=009',
+        'rlz=00|ses=0001|src=2|i=010',
+        'rlz=00|ses=0001|src=2|i=011',
+        'rlz=00|ses=0001|src=2|i=012',
+        'rlz=00|ses=0001|src=2|i=013',
+        'rlz=00|ses=0001|src=2|i=014',
+        'rlz=00|ses=0001|src=2|i=015',
+        'rlz=00|ses=0001|src=2|i=016',
+        'rlz=00|ses=0001|src=2|i=017',
+        'rlz=00|ses=0001|src=2|i=018',
+        'rlz=00|ses=0001|src=2|i=019',
+    ]
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=50.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=000
-<X=131.00000, Y= 40.00000, GMV=0.0104328>
-<X=131.00000, Y= 40.10000, GMV=0.0091073>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=001
-<X=131.00000, Y= 40.00000, GMV=0.0091769>
-<X=131.00000, Y= 40.10000, GMV=0.0116606>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=002
-<X=131.00000, Y= 40.00000, GMV=0.0058289>
-<X=131.00000, Y= 40.10000, GMV=0.0074472>)
+<X=131.00000, Y= 40.00000, GMV=0.0038241>
+<X=131.00000, Y= 40.10000, GMV=0.0057085>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=003
-<X=131.00000, Y= 40.00000, GMV=0.0012500>
-<X=131.00000, Y= 40.10000, GMV=0.0042969>)
+<X=131.00000, Y= 40.00000, GMV=0.0064609>
+<X=131.00000, Y= 40.10000, GMV=0.0252534>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=004
-<X=131.00000, Y= 40.00000, GMV=0.0093603>
-<X=131.00000, Y= 40.10000, GMV=0.0078026>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=2|i=000
-<X=131.00000, Y= 40.00000, GMV=0.0025278>
-<X=131.00000, Y= 40.10000, GMV=0.0015732>))'''
+<X=131.00000, Y= 40.00000, GMV=0.0088918>
+<X=131.00000, Y= 40.10000, GMV=0.0082802>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=005
+<X=131.00000, Y= 40.00000, GMV=0.0096766>
+<X=131.00000, Y= 40.10000, GMV=0.0054453>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=006
+<X=131.00000, Y= 40.00000, GMV=0.0044107>
+<X=131.00000, Y= 40.10000, GMV=0.0009798>))'''
 
     @attr('qa', 'hazard', 'event_based')
     def test_64(self):
