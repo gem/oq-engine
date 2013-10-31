@@ -41,7 +41,6 @@ from openquake.engine.db import models
 # pylint: disable=W0212
 
 
-
 def nrml_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
     """
     Convert a seismic source or rupture object from the NRML representation to
@@ -485,7 +484,8 @@ def _source_type(src_model):
 
 
 class SourceDBWriter(object):
-    """Takes a sequence of seismic source objects and saves them to the
+    """Takes a sequence of seismic source objects from nrmllib, convert them
+    to hazardlib objects, optionally filter them and saves the result to the
     `hzrdi.parsed_source` table in the database.
 
     The source object data will be stored in the database in pickled blob form.
@@ -498,6 +498,9 @@ class SourceDBWriter(object):
         :class:`openquake.nrmllib.models.SourceModel` object, which is an
         Iterable of NRML source model objects (parsed from NRML XML). This
         also includes the name of the source model.
+    :param apply_uncertainties:
+        A function to apply the uncertaintes to the hazardlib source, as
+        returned by :method:`openquake.engine.input.logictree.LogicTreeProcessor.parse_source_model_logictree_path`
     :param float mesh_spacing:
         Rupture mesh spacing, in km.
     :param float bin_width:
@@ -507,23 +510,27 @@ class SourceDBWriter(object):
         Area source discretization, in km. Applies only to area sources.
         If the input source is known to be a type other than an area source,
         you can specify `area_src_disc=None`.
+    :param condition:
+        A function hazard source -> boolean to filter the sources to save;
+        by default it returns always True and no sources are filtered.
     """
 
-    def __init__(self, inp, source_model, mesh_spacing, bin_width,
-                 area_src_disc):
+    def __init__(self, inp, source_model, apply_uncertainties,
+                 mesh_spacing, bin_width, area_src_disc,
+                 condition=lambda src: True):
         self.inp = inp
         self.source_model = source_model
-
+        self.apply_uncertainties = apply_uncertainties
         self.mesh_spacing = mesh_spacing
         self.bin_width = bin_width
         self.area_src_disc = area_src_disc
+        self.condition = condition
 
     @transaction.commit_on_success(router.db_for_write(models.ParsedSource))
     def serialize(self):
-        """Save NRML sources to the database along with
+        """Save NRML sources to the database in hazardlib format along with
         'rupture-enclosing polygon' geometry for each source.
         """
-
         assert self.inp.input_type == 'source', (
             "`Input` object has the wrong `input_type`. Expected: 'source'."
             "Got: '%s'."
@@ -533,10 +540,13 @@ class SourceDBWriter(object):
         self.inp.save()
 
         for src in self.source_model:
-            ps = models.ParsedSource(
-                input=self.inp, source_type=_source_type(src), nrml=src
-            )
-            ps.save()
+            hazardlib_source = nrml_to_hazardlib(
+                src, self.mesh_spacing, self.bin_width, self.area_src_disc)
+            self.apply_uncertainties(hazardlib_source)
+            if self.condition(hazardlib_source):
+                models.ParsedSource.objects.create(
+                    input=self.inp, source_type=_source_type(src),
+                    nrml=hazardlib_source)
 
 
 class RuptureDBWriter(object):
