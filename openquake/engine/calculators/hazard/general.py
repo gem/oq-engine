@@ -469,37 +469,20 @@ class BaseHazardCalculator(base.Calculator):
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
-        Parse and validation logic trees (source and gsim). Then get all
-        sources referenced in the the source model logic tree, create
-        :class:`~openquake.engine.db.models.Input` records for all of them,
-        parse then, and save the parsed sources to the `parsed_source` table
-        (see :class:`openquake.engine.db.models.ParsedSource`).
+        Parse and validation source logic trees. Save the parsed
+        sources to the `parsed_source` table (see
+        :class:`openquake.engine.db.models.ParsedSource`).
         """
         logs.LOG.progress("initializing sources")
 
-        [smlt] = models.inputs4hcalc(
-            self.hc.id, input_type='source_model_logic_tree')
-        [gsimlt] = models.inputs4hcalc(
-            self.hc.id, input_type='gsim_logic_tree')
-
-        source_paths = logictree.read_logic_trees_from_db(self.hc.id)
+        source_paths = logictree.read_logic_trees(self.hc)
 
         for src_path in source_paths:
-            full_path = os.path.join(self.hc.base_path, src_path)
-
-            # Get the 'source' Input:
-            inp = engine.get_or_create_input(
-                full_path, 'source', self.hc.owner, haz_calc_id=self.hc.id
-            )
-
-            models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
-                                            filename=src_path)
-            src_content = inp.model_content.as_string_io
-            sm_parser = nrml_parsers.SourceModelParser(src_content)
+            sm_parser = nrml_parsers.SourceModelParser(src_path)
 
             # Covert
             src_db_writer = source.SourceDBWriter(
-                inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+                self.job, sm_parser.parse(), self.hc.rupture_mesh_spacing,
                 self.hc.width_of_mfd_bin,
                 self.hc.area_source_discretization
             )
@@ -515,17 +498,13 @@ class BaseHazardCalculator(base.Calculator):
         vulnerability model (if there is one)
         """
         hc = self.hc
-        queryset = self.hc.inputs.filter(
-            input_type__in=[vf_type
-                            for vf_type, _desc
-                            in models.Input.VULNERABILITY_TYPE_CHOICES])
-        if queryset.exists():
+        if hc.vulnerability_models:
             logs.LOG.progress("parsing risk models")
 
             hc.intensity_measure_types_and_levels = dict()
             hc.intensity_measure_types = list()
 
-            for input_type in queryset:
+            for input_type in hc.vulnerability_models:
                 content = input_type.model_content.as_string_io
                 intensity_measure_types_and_levels = dict(
                     (record['IMT'], record['IML']) for record in
@@ -556,16 +535,11 @@ class BaseHazardCalculator(base.Calculator):
                               hc.intensity_measure_types_and_levels,
                               hc.intensity_measure_types))
 
-        queryset = self.hc.inputs.filter(input_type='fragility')
-        if queryset.exists():
+        if 'fragility' in hc.inputs:
             hc.intensity_measure_types_and_levels = dict()
             hc.intensity_measure_types = list()
 
-            parser = iter(
-                parsers.FragilityModelParser(
-                    queryset.all()[0].model_content.as_string_io
-                )
-            )
+            parser = iter(parsers.FragilityModelParser(hc.fragility_model))
             hc = self.hc
 
             fragility_format, _limit_states = parser.next()
@@ -582,14 +556,12 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types.extend(
                 hc.intensity_measure_types_and_levels)
             hc.save()
-        queryset = self.hc.inputs.filter(input_type='exposure')
-        if queryset.exists():
-            exposure_model_input = queryset.all()[0]
-            content = exposure_model_input.model_content.as_string_io
+
+        if 'exposure' in hc.inputs:
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
-                    exposure_model_input).serialize(
-                        parsers.ExposureModelParser(content))
+                    hc).serialize(
+                        parsers.ExposureModelParser(hc.input['exposure'][0]))
 
     @EnginePerformanceMonitor.monitor
     def initialize_site_model(self):
