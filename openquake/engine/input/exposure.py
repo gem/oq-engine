@@ -50,6 +50,7 @@ class ExposureDBWriter(object):
                 self.model, self.cost_types = (
                     self.insert_model(asset_data.exposure_metadata))
             self.insert_datum(asset_data)
+        return self.model
 
     def insert_model(self, model):
         """
