@@ -81,7 +81,7 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-    ltp = logictree.LogicTreeProcessor(hc.id)
+    ltp = logictree.LogicTreeProcessor(hc)
 
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)

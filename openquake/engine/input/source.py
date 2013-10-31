@@ -41,7 +41,6 @@ from openquake.engine.db import models
 # pylint: disable=W0212
 
 
-
 def nrml_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
     """
     Convert a seismic source or rupture object from the NRML representation to
@@ -490,10 +489,8 @@ class SourceDBWriter(object):
 
     The source object data will be stored in the database in pickled blob form.
 
-    :param inp:
-        :class:`~openquake.engine.db.models.Input` object, the top-level
-        container for the sources written to the database. Should have an
-        `input_type` of 'source'.
+    :param job:
+        :class:`~openquake.engine.db.models.OqJob` object.
     :param source_model:
         :class:`openquake.nrmllib.models.SourceModel` object, which is an
         Iterable of NRML source model objects (parsed from NRML XML). This
@@ -509,9 +506,9 @@ class SourceDBWriter(object):
         you can specify `area_src_disc=None`.
     """
 
-    def __init__(self, inp, source_model, mesh_spacing, bin_width,
+    def __init__(self, job, source_model, mesh_spacing, bin_width,
                  area_src_disc):
-        self.inp = inp
+        self.job = job
         self.source_model = source_model
 
         self.mesh_spacing = mesh_spacing
@@ -524,19 +521,9 @@ class SourceDBWriter(object):
         'rupture-enclosing polygon' geometry for each source.
         """
 
-        assert self.inp.input_type == 'source', (
-            "`Input` object has the wrong `input_type`. Expected: 'source'."
-            "Got: '%s'."
-        ) % self.inp.input_type
-        # First, set the input name to the source model name
-        self.inp.name = self.source_model.name
-        self.inp.save()
-
         for src in self.source_model:
-            ps = models.ParsedSource(
-                input=self.inp, source_type=_source_type(src), nrml=src
-            )
-            ps.save()
+            models.ParsedSource.objects.create(
+                job=self.job, source_type=_source_type(src), nrml=src)
 
 
 class RuptureDBWriter(object):
