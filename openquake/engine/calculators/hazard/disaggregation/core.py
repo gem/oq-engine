@@ -38,7 +38,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 @utils_tasks.oqtask
 @stats.count_progress('h')
-def disagg_task(job_id, block, lt_rlz_id, calc_type):
+def disagg_task(job_id, block, lt_rlz_id, ltp, calc_type):
     """
     Task wrapper around core hazard curve/disaggregation computation functions.
 
@@ -58,15 +58,17 @@ compute_hazard_curves`
     :param lt_rlz_id:
         ID of the :class:`openquake.engine.db.models.LtRealization` for this
         part of the computation.
+    :param ltp:
+        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     :param calc_type:
         'hazard_curve' or 'disagg'. This indicates more or less the calculation
         phase; first we must computed all of the hazard curves, then we can
         compute the disaggregation histograms.
     """
     if calc_type == 'hazard_curve':
-        classical.compute_hazard_curves(job_id, block, lt_rlz_id)
+        classical.compute_hazard_curves(job_id, block, lt_rlz_id, ltp)
     elif calc_type == 'disagg':
-        compute_disagg(job_id, block, lt_rlz_id)
+        compute_disagg(job_id, block, lt_rlz_id, ltp)
     else:
         msg = ('Invalid calculation type "%s";'
                ' expected "hazard_curve" or "disagg"')
@@ -373,13 +375,14 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         """
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc, is_complete=False)
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
             for block in general_utils.block_splitter(self.hc.site_collection,
                                                       block_size):
                 # job_id, Site block, lt rlz, calc_type
-                yield (self.job.id, block, lt_rlz.id, 'disagg')
+                yield (self.job.id, block, lt_rlz.id, ltp, 'disagg')
 
     def get_task_complete_callback(self, hc_task_arg_gen, block_size,
                                    concurrent_tasks):
