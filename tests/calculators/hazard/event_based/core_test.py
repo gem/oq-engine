@@ -397,8 +397,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                 return dic[src_id]
 
         def process_args(arg_gen):
-            for job_id, source_ids, ses, task_seed in arg_gen:
-                yield map(src_no, source_ids), ses, task_seed
+            for _job_id, source_ids, ses, task_seed, ltp in arg_gen:
+                yield map(src_no, source_ids), ses, task_seed, ltp
 
         actual = list(process_args(self.calc.task_arg_gen()))
-        self.assertEqual(expected, actual)
+        # do not check the ltp
+        self.assertEqual(expected, [(x, y, z) for x, y, z, _w in actual])
