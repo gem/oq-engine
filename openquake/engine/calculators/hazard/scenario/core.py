@@ -140,6 +140,10 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     core_calc_task = gmfs
     output = None  # defined in pre_execute
 
+    def __init__(self, *args, **kwargs):
+        super(ScenarioHazardCalculator, self).__init__(*args, **kwargs)
+        self.gmfcoll = None
+
     def initialize_sources(self):
         """
         Get the rupture_model file from the job.ini file, and store a
@@ -185,7 +189,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # create an associated gmf record
         self.gmfcoll = models.Gmf.objects.create(output=output)
 
-    def task_arg_gen(self, block_size):
+    def task_arg_gen(self, block_size, _check_num_task=True):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
