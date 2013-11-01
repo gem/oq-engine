@@ -173,6 +173,12 @@ def set_up_arg_parser():
         help='Delete a hazard calculation and all associated outputs',
         metavar='HAZARD_CALCULATION_ID')
 
+    hazard_grp.add_argument(
+        '--delete-uncompleted-calculations',
+        '--duc',
+        action='store_true',
+        help='Delete all the uncompleted calculations')
+
     risk_grp = parser.add_argument_group('Risk')
     risk_grp.add_argument(
         '--run-risk',
@@ -302,7 +308,7 @@ def list_calculations(calc_manager):
     # corresponding job
 
     calcs = calc_manager.filter(
-        owner__user_name=getpass.getuser(),
+        oqjob__user_name=getpass.getuser(),
         oqjob__isnull=False).order_by('oqjob__last_update')
 
     if len(calcs) == 0:
@@ -373,6 +379,18 @@ def _touch_log_file(log_file):
     'append' mode ('a'). If the specified file is not writable, an
     :exc:`IOError` will be raised."""
     open(abspath(log_file), 'a').close()
+
+
+def delete_uncompleted_calculations():
+    for rc in models.RiskCalculation.objects.filter(
+            oqjob__user_name=getpass.getuser()).exclude(
+            oqjob__status="successful"):
+        del_risk_calc(rc.id, True)
+
+    for hc in models.HazardCalculation.objects.filter(
+            oqjob__user_name=getpass.getuser()).exclude(
+            oqjob__status="successful"):
+        del_haz_calc(hc.id, True)
 
 
 def del_haz_calc(hc_id, confirmed=False):
@@ -501,6 +519,8 @@ def main():
                 % (out.id, out.output_type, hc.id)
     elif args.list_imported_outputs:
         list_imported_outputs()
+    elif args.delete_uncompleted_calculations:
+        delete_uncompleted_calculations()
     else:
         arg_parser.print_usage()
 

@@ -538,7 +538,7 @@ class RuptureDBWriter(object):
     `hzrdi.parsed_rupture_model` table in the database, in pickled blob form.
 
     :param inp:
-        :class:`~openquake.engine.db.models.Input` object, the top-level
+        :class:`~openquake.engine.db.models.OqJob` object, the top-level
         container for the sources written to the database. Should have an
         `input_type` of 'simple_fault' or 'complex_fault'.
     :param rupture_model:
@@ -546,15 +546,15 @@ class RuptureDBWriter(object):
         :class:`openquake.nrmllib.models.ComplexFaultRuptureModel`
     """
 
-    def __init__(self, inp, rupture_model):
-        self.inp = inp
+    def __init__(self, job, rupture_model):
+        self.job = job
         self.rupture_model = rupture_model
 
     @transaction.commit_on_success(router.db_for_write(models.ParsedRupture))
     def serialize(self):
         """
         Serialize the rupture_model in hzrdi.parsed_rupture_model, with a
-        reference to the `openquake.engine.db.models.Input` object.
+        reference to the `openquake.engine.db.models.OqJob` object.
         """
         src = self.rupture_model
         if isinstance(src, openquake.nrmllib.models.SimpleFaultRuptureModel):
@@ -566,7 +566,7 @@ class RuptureDBWriter(object):
             raise TypeError(
                 'Expected Simple or Complex FaultRuptureModel, got %r' % src)
         models.ParsedRupture(
-            input=self.inp, rupture_type=rupture_type, nrml=src).save()
+            job=self.job, rupture_type=rupture_type, nrml=src).save()
 
 
 def area_source_to_point_sources(area_src, area_src_disc):

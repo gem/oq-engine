@@ -177,9 +177,3 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - bcr_distribution';
 COMMENT ON COLUMN uiapi.output.oq_job_id IS 'The job that produced this output;
 NULL if the output was imported from an external source';
-
-
--- uiapi.error_msg
-COMMENT ON TABLE uiapi.error_msg IS 'A place to store error information in the case of a job failure.';
-COMMENT ON COLUMN uiapi.error_msg.brief IS 'Summary of the error message.';
-COMMENT ON COLUMN uiapi.error_msg.detailed IS 'The full error message.';
