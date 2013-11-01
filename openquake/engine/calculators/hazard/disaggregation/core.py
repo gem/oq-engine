@@ -77,7 +77,7 @@ compute_hazard_curves`
         job_id=job_id, num_items=len(block), calc_type=calc_type)
 
 
-def compute_disagg(job_id, sites, lt_rlz_id):
+def compute_disagg(job_id, sites, lt_rlz_id, ltp):
     """
     Calculate disaggregation histograms and saving the results to the database.
 
@@ -105,6 +105,8 @@ def compute_disagg(job_id, sites, lt_rlz_id):
         we want to compute disaggregation histograms. This realization will
         determine which hazard curve results to use as a basis for the
         calculation.
+    :param ltp:
+        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
@@ -115,8 +117,6 @@ def compute_disagg(job_id, sites, lt_rlz_id):
     job = models.OqJob.objects.get(id=job_id)
     hc = job.hazard_calculation
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-
-    ltp = logictree.LogicTreeProcessor(hc)
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)

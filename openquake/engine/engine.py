@@ -171,21 +171,22 @@ def create_calculation(model, params):
 
     calc_fields = model._meta.get_all_field_names()
 
-    # FIXME(lp). Django 1.3 does not allow using _id fields in model
-    # __init__. We will check these fields in pre-execute phase
-    ID_FIELDS = set(['preloaded_exposure_model_id', 'hazard_output_id'])
+    for param in set(params) - set(calc_fields):
+        # FIXME(lp). Django 1.3 does not allow using _id fields in model
+        # __init__. We will check these fields in pre-execute phase
+        if param not in [
+                'preloaded_exposure_model_id', 'hazard_output_id',
+                'hazard_calculation_id']:
+            msg = "Unknown parameter '%s'. Ignoring."
+            msg %= param
+            warnings.warn(msg, RuntimeWarning)
+            params.pop(param)
 
-    for param in set(params) - set(calc_fields) - ID_FIELDS:
-        msg = "Unknown parameter '%s'. Ignoring."
-        msg %= param
-        warnings.warn(msg, RuntimeWarning)
-        params.pop(param)
+    calc = model(**params)
+    calc.full_clean()
+    calc.save()
 
-    hc = model(**params)
-    hc.full_clean()
-    hc.save()
-
-    return hc
+    return calc
 
 
 def _collect_source_model_paths(smlt):
@@ -684,7 +685,7 @@ def risk_job_from_file(cfg_file_path, username, log_level, exports,
     job = prepare_job(user_name=username, log_level=log_level)
 
     # read calculation params and create the calculation profile
-    params, files = parse_config(open(cfg_file_path, 'r'))
+    params = parse_config(open(cfg_file_path, 'r'))
     # Add the hazard output id to the risk calculation constructor args
     params.update(dict(hazard_output_id=hazard_output_id,
                        hazard_calculation_id=hazard_calculation_id))
@@ -693,7 +694,7 @@ def risk_job_from_file(cfg_file_path, username, log_level, exports,
     job.risk_calculation = calculation
     job.save()
 
-    error_message = validate(job, 'risk', params, files,  exports)
+    error_message = validate(job, 'risk', params,  exports)
     if error_message:
         raise RuntimeError(error_message)
 

@@ -26,6 +26,7 @@ from openquake.engine.calculators import base
 from openquake.engine.calculators.hazard.classical import core
 from openquake.engine.db import models
 from openquake.engine.utils import stats
+from openquake.engine.input import logictree
 from tests.utils import helpers
 
 
@@ -396,7 +397,10 @@ store_site_model'
             task_signal_queue(conn.channel()).declare()
             with conn.Consumer(task_signal_queue, callbacks=[test_callback]):
                 # call the task as a normal function
-                core.hazard_curves(self.job.id, [src_id], lt_rlz.id)
+                core.hazard_curves(
+                    self.job.id, [src_id], lt_rlz.id,
+                    logictree.LogicTreeProcessor.from_hc(
+                        self.job.hazard_calculation))
                 # wait for the completion signal
                 conn.drain_events()
 
