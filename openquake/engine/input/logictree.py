@@ -327,8 +327,6 @@ class BaseLogicTree(object):
         Name of logic tree file, supposed to be relative to ``basepath``.
         That filename together with ``basepath`` are only used for reporting
         errors, the actual data is read from ``content``.
-    :param hc:
-        a :class:`openquake.engine.db.models.HazardCalculation`.
     :param validate:
         Boolean indicating whether or not the tree should be validated
         while parsed. This should be set to ``True`` on initial load
@@ -364,10 +362,9 @@ class BaseLogicTree(object):
                 file=openquake.nrmllib.nrml_schema_file())
         return cls._xmlschema
 
-    def __init__(self, content, basepath, filename, calc, validate=True):
+    def __init__(self, content, basepath, filename, validate=True):
         self.basepath = basepath
         self.filename = filename
-        self.hc = calc
         parser = etree.XMLParser(schema=self.get_xmlschema())
         self.branches = {}
         self.open_ends = set()
@@ -998,46 +995,40 @@ def read_logic_trees(hc, validate=True):
     :param bool validate:
         Defaults to `True`. If `True`, do a full validation when reading the
         logic trees.
-    :param calc:
+    :param hc:
         a :class:`openquake.engine.db.models.HazardCalculation`.
     """
     smlt_file = hc.inputs['source_model_logic_tree']
     gsimlt_file = hc.inputs['gsim_logic_tree']
 
     smlt = SourceModelLogicTree(
-        file(smlt_file).read(), hc.base_path, smlt_file, hc,
-        validate=validate
-    )
+        file(smlt_file).read(), hc.base_path, smlt_file, validate=validate)
     GMPELogicTree(
         smlt.tectonic_region_types, file(gsimlt_file).read(), hc.base_path,
-        gsimlt_file, hc, validate=validate
-    )
+        gsimlt_file, validate=validate)
     return [branch.value for branch in smlt.root_branchset.branches]
 
 
 class LogicTreeProcessor(object):
     """
     Logic tree processor. High-level interface to dealing with logic trees
-    that are already in the database.
 
-    :param calc:
-        a :class:`openquake.engine.db.models.HazardCalculation`.
+    :param str smlt_content:
+        the content of the source model logic tree
+    :param str gmpelt_content:
+        the content of the gmpe logic tree
     """
-    def __init__(self, calc):
-        smlt_input = calc.inputs['source_model_logic_tree']
-        smlt_content = file(smlt_input).read()
-
-        gmpelt_input = calc.inputs['gsim_logic_tree']
-        gmpelt_content = file(gmpelt_input).read()
-
+    def __init__(self, smlt_content, gmpelt_content):
         self.source_model_lt = SourceModelLogicTree(
-            smlt_content, basepath=None, filename=None, calc=calc,
-            validate=False
-        )
+            smlt_content, basepath=None, filename=None, validate=False)
         self.gmpe_lt = GMPELogicTree(
             tectonic_region_types=[], content=gmpelt_content,
-            basepath=None, filename=None, calc=calc, validate=False
-        )
+            basepath=None, filename=None, validate=False)
+
+    @classmethod
+    def from_hc(cls, hc):
+        return cls(file(hc.inputs['source_model_logic_tree']).read(),
+                   file(hc.inputs['gsim_logic_tree']).read())
 
     def sample_source_model_logictree(self, random_seed):
         """

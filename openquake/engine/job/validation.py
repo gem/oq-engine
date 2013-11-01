@@ -247,8 +247,7 @@ class BaseHazardModelForm(BaseOQModelForm):
             self._add_error('region', err)
         # At least one must be specified (region OR sites)
         elif not (hc.region is not None or
-                  hc.sites is not None or
-                  self.files.get('exposure') is not None):
+                  hc.sites is not None or 'exposure' in self.files):
             all_valid = False
             err = 'Must specify either `region`, `sites` or `exposure_file`.'
             self._add_error('region', err)
