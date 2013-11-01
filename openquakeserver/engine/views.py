@@ -49,6 +49,7 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Max-Age': 1000,
                   'Access-Control-Allow-Headers': '*'}
 
+
 # Credit for this decorator to https://gist.github.com/aschem/1308865.
 def cross_domain_ajax(func):
     def wrap(request, *args, **kwargs):
