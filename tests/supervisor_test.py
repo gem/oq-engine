@@ -21,7 +21,6 @@ import unittest
 from datetime import datetime
 
 from openquake.engine import engine
-from openquake.engine.db.models import ErrorMsg
 from openquake.engine.db.models import JobStats
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import stats
@@ -73,11 +72,7 @@ class SupervisorHelpersTestCase(unittest.TestCase):
                     self.assertEqual(exp_revoke_args, revoke.call_args_list)
 
     def test_update_job_status_and_error_msg(self):
-        error_msg = 'a test message'
-        supervisor.update_job_status_and_error_msg(self.job.id, error_msg)
-
-        self.assertEqual(
-            error_msg, ErrorMsg.objects.get(oq_job=self.job.id).detailed)
+        supervisor.update_job_status_and_error_msg(self.job.id)
 
 
 class SupervisorTestCase(unittest.TestCase):
@@ -162,7 +157,7 @@ record_job_stop_time')
                 1,
                 self.update_job_status_and_error_msg.call_count)
             self.assertEqual(
-                ((self.job.id, 'a msg'), {}),
+                ((self.job.id,), {}),
                 self.update_job_status_and_error_msg.call_args)
 
     def test_actions_after_job_process_termination(self):
@@ -236,8 +231,7 @@ record_job_stop_time')
         # the status in the job record is updated
         self.assertEqual(1, self.update_job_status_and_error_msg.call_count)
         self.assertEqual(
-            ((self.job.id,),
-             {'error_msg': 'job process 1 crashed or terminated'}),
+            ((self.job.id,), {}),
             self.update_job_status_and_error_msg.call_args)
 
 

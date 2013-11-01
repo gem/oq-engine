@@ -362,17 +362,6 @@ CREATE TABLE uiapi.output (
 ) TABLESPACE uiapi_ts;
 
 
--- A place to store error information in the case of a job failure.
-CREATE TABLE uiapi.error_msg (
-    id SERIAL PRIMARY KEY,
-    oq_job_id INTEGER NOT NULL,
-    -- Summary of the error message.
-    brief VARCHAR NOT NULL,
-    -- The full error message.
-    detailed VARCHAR NOT NULL
-) TABLESPACE uiapi_ts;
-
-
 -- Complete hazard map
 CREATE TABLE hzrdr.hazard_map (
     id SERIAL PRIMARY KEY,
@@ -981,9 +970,6 @@ ALTER TABLE uiapi.cnode_stats ADD CONSTRAINT  uiapi_cnode_stats_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.hazard_map

@@ -95,7 +95,7 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     lt_rlz = ses.ses_collection.lt_realization
-    ltp = logictree.LogicTreeProcessor(hc.id)
+    ltp = logictree.LogicTreeProcessor(hc)
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
 
@@ -388,7 +388,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             truncation_level=self.hc.truncation_level,
             maximum_distance=self.hc.maximum_distance)
         for lt_rlz in self._get_realizations():
-            ltp = logictree.LogicTreeProcessor(self.hc.id)
+            ltp = logictree.LogicTreeProcessor(self.hc)
             gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
             all_ses = models.SES.objects.filter(
                 ses_collection__lt_realization=lt_rlz,

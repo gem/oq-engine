@@ -84,3 +84,5 @@ DROP TABLE uiapi.input2rcalc;
 
 DROP TABLE uiapi.input;
 
+
+DROP TABLE uiapi.error_msg;
