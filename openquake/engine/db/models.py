@@ -327,7 +327,7 @@ class SiteModel(djm.Model):
 class ParsedRupture(djm.Model):
     """Stores parsed hazard rupture model in serialized python object
        tree format."""
-    job = djm.ForeignKey('OqJob')
+    job = djm.OneToOneField('OqJob')
     RUPTURE_TYPE_CHOICES = (
         (u'complex_fault', u'Complex Fault'),
         (u'simple_fault', u'Simple Fault'),)
@@ -766,22 +766,8 @@ class HazardCalculation(djm.Model):
     def site_model(self):
         """
         Get the site model filename for this calculation
-
-        :raises:
-            :exc:`RuntimeError` if the calculation has more than 1 site model.
         """
-        site_model = self.inputs.get('site_model', [])
-
-        if len(site_model) == 0:
-            return None
-        elif len(site_model) > 1:
-            # Multiple site models for 1 job are not allowed.
-            raise RuntimeError(
-                "Only 1 site model per job is allowed, found %s." % len(
-                    site_model))
-
-        # There's only one site model.
-        return site_model[0]
+        return self.inputs.get('site_model')
 
     ## TODO: this could be implemented with a view, now that there is
     ## a site table
@@ -1436,18 +1422,6 @@ class Output(djm.Model):
         return self.HazardMetadata(investigation_time,
                                    statistics, quantile,
                                    sm_lt_path, gsim_lt_path)
-
-
-class ErrorMsg(djm.Model):
-    '''
-    Error information associated with a job failure
-    '''
-    oq_job = djm.ForeignKey('OqJob')
-    brief = djm.TextField()
-    detailed = djm.TextField()
-
-    class Meta:
-        db_table = 'uiapi\".\"error_msg'
 
 
 ## Tables in the 'hzrdr' schema.

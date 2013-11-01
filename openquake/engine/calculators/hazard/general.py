@@ -391,13 +391,11 @@ class BaseHazardCalculator(base.Calculator):
             for imt, imls in im.items():
                 hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
-                hco = models.Output(
-                    owner=self.hc.owner,
+                hco = models.Output.objects.create(
                     oq_job=self.job,
                     display_name="hc-rlz-%s" % rlz.id,
                     output_type='hazard_curve',
                 )
-                hco.save()
 
                 haz_curve = models.HazardCurve(
                     output=hco,
@@ -552,15 +550,12 @@ class BaseHazardCalculator(base.Calculator):
         site_model_inp = self.hc.site_model
         if site_model_inp:
             # Store `site_model` records:
-            store_site_model(site_model_inp, file(site_model_inp).read())
+            store_site_model(self.job, site_model_inp)
 
             # Get the site model records we stored:
-            site_model_data = models.SiteModel.objects.filter(
-                job=self.job)
-
             validate_site_model(
-                site_model_data, self.hc.points_to_compute(save_sites=True)
-            )
+                self.job.sitemodel_set.all(),
+                self.hc.points_to_compute(save_sites=True))
         else:
             self.hc.points_to_compute(save_sites=True)
 
@@ -624,14 +619,12 @@ class BaseHazardCalculator(base.Calculator):
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
-        smlt = self.hc.inputs['source_model_logic_tree']
         ltp = logictree.LogicTreeProcessor(hc)
-        hzrd_src_cache = {}
 
         for i, path_info in enumerate(ltp.enumerate_paths()):
-            sm_name, weight, sm_lt_path, gsim_lt_path = path_info
+            _, weight, sm_lt_path, gsim_lt_path = path_info
 
-            lt_rlz = models.LtRealization(
+            lt_rlz = models.LtRealization.objects.create(
                 hazard_calculation=hc,
                 ordinal=i,
                 seed=None,
@@ -640,18 +633,9 @@ class BaseHazardCalculator(base.Calculator):
                 gsim_lt_path=gsim_lt_path,
                 # we will update total_items in initialize_source_progress()
                 total_items=-1)
-            lt_rlz.save()
-
-            if not sm_name in hzrd_src_cache:
-                # Get the source model for this sample:
-                hzrd_src = sm_name
-                # and cache it
-                hzrd_src_cache[sm_name] = hzrd_src
-            else:
-                hzrd_src = hzrd_src_cache[sm_name]
 
             # Create source_progress objects
-            self.initialize_source_progress(lt_rlz, hzrd_src)
+            self.initialize_source_progress(lt_rlz)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -673,23 +657,19 @@ class BaseHazardCalculator(base.Calculator):
         seed = self.hc.random_seed
         rnd.seed(seed)
 
-        smlt = self.hc.inputs['source_model_logic_tree']
-
         ltp = logictree.LogicTreeProcessor(self.hc)
-
-        hzrd_src_cache = {}
 
         # The first realization gets the seed we specified in the config file.
         for i in xrange(self.hc.number_of_logic_tree_samples):
             # Sample source model logic tree branch paths:
-            sm_name, sm_lt_path = ltp.sample_source_model_logictree(
+            _, sm_lt_path = ltp.sample_source_model_logictree(
                 rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
             # Sample GSIM logic tree branch paths:
             gsim_lt_path = ltp.sample_gmpe_logictree(
                 rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
-            lt_rlz = models.LtRealization(
+            lt_rlz = models.LtRealization.objects.create(
                 hazard_calculation=self.hc,
                 ordinal=i,
                 seed=seed,
@@ -699,18 +679,9 @@ class BaseHazardCalculator(base.Calculator):
                 # we will update total_items in initialize_source_progress()
                 total_items=-1
             )
-            lt_rlz.save()
-
-            if not sm_name in hzrd_src_cache:
-                # Get the source model for this sample:
-                hzrd_src = sm_name
-                # and cache it
-                hzrd_src_cache[sm_name] = hzrd_src
-            else:
-                hzrd_src = hzrd_src_cache[sm_name]
 
             # Create source_progress objects
-            self.initialize_source_progress(lt_rlz, hzrd_src)
+            self.initialize_source_progress(lt_rlz)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -723,7 +694,7 @@ class BaseHazardCalculator(base.Calculator):
             rnd.seed(seed)
 
     @staticmethod
-    def initialize_source_progress(lt_rlz, hzrd_src):
+    def initialize_source_progress(lt_rlz):
         """
         Create ``source_progress`` models for given logic tree realization
         and set total sources of realization.
@@ -731,9 +702,6 @@ class BaseHazardCalculator(base.Calculator):
         :param lt_rlz:
             :class:`openquake.engine.db.models.LtRealization` object to
             initialize source progress for.
-        :param hztd_src:
-            :class:`openquake.engine.db.models.Input` object that needed parsed
-            sources are referencing.
         """
         cursor = connections['reslt_writer'].cursor()
         src_progress_tbl = models.SourceProgress._meta.db_table

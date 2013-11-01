@@ -312,7 +312,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         # as `intensity_measure_types_and_levels`
         form = validation.ClassicalHazardForm(
             instance=self.hc, files=dict(
-                structural_vulnerability_file=object())
+                structural_vulnerability=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
@@ -493,7 +493,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
 
         form = validation.EventBasedHazardForm(
             instance=self.hc, files=dict(
-                structural_vulnerability_file=object())
+                structural_vulnerability=object())
         )
 
         with warnings.catch_warnings(record=True) as w:
@@ -525,6 +525,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
+
 
 class DisaggHazardFormTestCase(unittest.TestCase):
 
@@ -615,15 +616,13 @@ class DisaggHazardFormTestCase(unittest.TestCase):
         form = validation.DisaggHazardForm(instance=self.hc, files=None)
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        helpers.deep_eq(expected_errors, dict(form.errors))
 
     def test_is_valid_warns(self):
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types_and_levels`
         form = validation.DisaggHazardForm(
-            instance=self.hc, files=dict(
-                structural_vulnerability_file=object())
-        )
+            instance=self.hc, files=dict(structural_vulnerability=object()))
 
         with warnings.catch_warnings(record=True) as w:
             form.is_valid()
@@ -686,9 +685,7 @@ openquake.hazardlib.gsim"],
         # `is_valid` should warn if we specify a `vulnerability_file` as well
         # as `intensity_measure_types`
         form = validation.ScenarioHazardForm(
-            instance=self.hc, files=dict(
-                structural_vulnerability_file=object())
-        )
+            instance=self.hc, files=dict(structural_vulnerability=object()))
 
         with warnings.catch_warnings(record=True) as w:
             form.is_valid()
@@ -917,7 +914,7 @@ class ScenarioRiskValidationTestCase(unittest.TestCase):
 
         form = validation.ScenarioRiskForm(
             instance=rc,
-            files=dict(occupants_vulnerability_file=object())
+            files=dict(occupants_vulnerability=object())
         )
 
         expected_errors = {

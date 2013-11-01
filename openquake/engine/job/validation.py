@@ -106,7 +106,7 @@ class BaseOQModelForm(ModelForm):
     filenames, keyed by config file parameter
     for the input. For example::
 
-    {'site_model_file': 'site_model.xml'}
+    {'site_model': 'site_model.xml'}
     """
 
     # These fields require more complex validation.
@@ -144,8 +144,7 @@ class BaseOQModelForm(ModelForm):
         """
         return [itype
                 for itype, _desc in models.INPUT_TYPE_CHOICES
-                if (itype.endswith('vulnerability') and
-                    "%s_file" % itype in self.files)]
+                if itype.endswith('vulnerability') and itype in self.files]
 
     def _add_error(self, field_name, error_msg):
         """
@@ -249,7 +248,7 @@ class BaseHazardModelForm(BaseOQModelForm):
         # At least one must be specified (region OR sites)
         elif not (hc.region is not None or
                   hc.sites is not None or
-                  self.files.get('exposure_file') is not None):
+                  self.files.get('exposure') is not None):
             all_valid = False
             err = 'Must specify either `region`, `sites` or `exposure_file`.'
             self._add_error('region', err)
@@ -276,7 +275,7 @@ class BaseHazardModelForm(BaseOQModelForm):
             all_valid &= valid
             self._add_error('sites', errs)
 
-        if 'site_model_file' not in self.files:
+        if 'site_model' not in self.files:
             # make sure the reference parameters are defined and valid
 
             for field in (
@@ -683,7 +682,7 @@ class ScenarioRiskForm(BaseOQModelForm):
         super_valid = super(ScenarioRiskForm, self).is_valid()
         rc = self.instance          # RiskCalculation instance
 
-        if 'occupants_vulnerability_file' in self.files:
+        if 'occupants_vulnerability' in self.files:
             if not rc.time_event:
                 self._add_error('time_event', "Scenario Risk requires "
                                 "time_event when an occupants vulnerability "

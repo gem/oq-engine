@@ -93,9 +93,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # `RuntimeError` should be raised here
 
         # Okay, it's all good. Now check the count of the site model records.
-        [site_model_inp] = models.inputs4hcalc(
-            self.job.hazard_calculation.id, input_type='site_model')
-        sm_nodes = models.SiteModel.objects.filter(input=site_model_inp)
+        sm_nodes = models.SiteModel.objects.filter(job=self.job)
 
         self.assertEqual(2601, len(sm_nodes))
 
