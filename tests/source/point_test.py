@@ -607,39 +607,52 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         return rupture
 
     def test_zero_integration_distance(self):
-        rup = self._make_rupture(10, 15, 45)  # 8 km radius
+        rup = self._make_rupture(10, 15, 45)
+        # the JB distances are [8.29156163, 5.05971598, 15.13297135,
+        # 495.78630103, 496.89812309], so given that the integration
+        # distance is 0 all sites are filtered out
         filtered = PointSource.filter_sites_by_distance_to_rupture(
             rup, integration_distance=0, sites=self.sitecol
         )
-        self.assertIsInstance(filtered, SiteCollection)
-        self.assertIsNot(filtered, self.sitecol)
-        numpy.testing.assert_array_equal(filtered.indices, [0])
-        numpy.testing.assert_array_equal(filtered.vs30, [0.1])
-
-        rup = self._make_rupture(50, 30, 90)  # 14.8 km radius
-        filtered = PointSource.filter_sites_by_distance_to_rupture(
-            rup, integration_distance=0, sites=self.sitecol
-        )
-        numpy.testing.assert_array_equal(filtered.indices, [0, 1])
+        self.assertIs(filtered, None)
 
     def test_495_km(self):
-        rup = self._make_rupture(5, 8, 5)  # 4.68 km radius
+        rup = self._make_rupture(7, 10, 30)
+        # the JB distance area [5.84700762, 6.8290327, 14.53519629,
+        # 496.25926891, 497.37116174] so given that the integration
+        # distance is 495 only the first 3 sites are kept
         filtered = PointSource.filter_sites_by_distance_to_rupture(
             rup, integration_distance=495, sites=self.sitecol
         )
-        numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2, 3])
-
-        rup = self._make_rupture(7, 10, 30)  # 5.8 km radius
-        filtered = PointSource.filter_sites_by_distance_to_rupture(
-            rup, integration_distance=495, sites=self.sitecol
+        expected_filtered = SiteCollection(self.SITES[:3])
+        numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2])
+        numpy.testing.assert_array_equal(
+            filtered.vs30, expected_filtered.vs30
         )
-        self.assertIs(filtered.indices, None)
-        self.assertIs(filtered, self.sitecol)
+        numpy.testing.assert_array_equal(
+            filtered.vs30measured, expected_filtered.vs30measured
+        )
+        numpy.testing.assert_array_equal(
+            filtered.z1pt0, expected_filtered.z1pt0
+        )
+        numpy.testing.assert_array_equal(
+            filtered.z2pt5, expected_filtered.z2pt5
+        )
+        numpy.testing.assert_array_equal(
+            filtered.mesh.lons, expected_filtered.mesh.lons
+        )
+        numpy.testing.assert_array_equal(
+            filtered.mesh.lats, expected_filtered.mesh.lats
+        )
+        numpy.testing.assert_array_equal(
+            filtered.mesh.depths, expected_filtered.mesh.depths
+        )
 
     def test_filter_all_out(self):
-        rup = self._make_rupture(50, 80, 9)  # 46.64 km radius
-        self.hypocenter.longitude = 11.515
-        for int_dist in (0, 1, 10, 100, 1000):
+        rup = self._make_rupture(50, 80, 9)
+        # the JB distances are [47.0074159, 37.99716685, 40.7944923,
+        #  476.2521365, 477.36015879]
+        for int_dist in (0, 1, 10, 20, 37.99):
             filtered = PointSource.filter_sites_by_distance_to_rupture(
                 rup, integration_distance=int_dist, sites=self.sitecol
             )
