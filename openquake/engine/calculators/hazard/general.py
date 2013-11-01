@@ -288,6 +288,8 @@ class BaseHazardCalculator(base.Calculator):
         realizations = self._get_realizations()
 
         n = 0  # number of yielded arguments
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
+
         for lt_rlz in realizations:
             # separate point sources from all the other types, since
             # we distribution point sources in different sized chunks
@@ -296,14 +298,14 @@ class BaseHazardCalculator(base.Calculator):
 
             for block in block_splitter(point_source_ids,
                                         point_source_block_size):
-                task_args = (self.job.id, block, lt_rlz.id)
+                task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
             # now for area and fault sources
             other_source_ids = self._get_source_ids(lt_rlz)
 
             for block in block_splitter(other_source_ids, block_size):
-                task_args = (self.job.id, block, lt_rlz.id)
+                task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
 
@@ -619,7 +621,7 @@ class BaseHazardCalculator(base.Calculator):
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
-        ltp = logictree.LogicTreeProcessor(hc)
+        ltp = logictree.LogicTreeProcessor.from_hc(hc)
 
         for i, path_info in enumerate(ltp.enumerate_paths()):
             _, weight, sm_lt_path, gsim_lt_path = path_info
@@ -657,7 +659,7 @@ class BaseHazardCalculator(base.Calculator):
         seed = self.hc.random_seed
         rnd.seed(seed)
 
-        ltp = logictree.LogicTreeProcessor(self.hc)
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         # The first realization gets the seed we specified in the config file.
         for i in xrange(self.hc.number_of_logic_tree_samples):
