@@ -148,16 +148,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
 
         # Get the rupture model in input
-        [inp] = models.inputs4hcalc(self.hc.id, input_type='rupture_model')
-
-        # Associate the source input to the calculation:
-        models.Input2hcalc.objects.get_or_create(
-            input=inp, hazard_calculation=self.hc)
-
-        # Store the ParsedRupture record
-        src_content = inp.model_content.as_string_io
-        rupt_parser = RuptureModelParser(src_content)
-        src_db_writer = source.RuptureDBWriter(inp, rupt_parser.parse())
+        src_db_writer = source.RuptureDBWriter(
+            self.job, RuptureModelParser(
+                self.hc.inputs['rupture_model']).parse())
         src_db_writer.serialize()
 
     def pre_execute(self):
@@ -185,7 +178,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
         # create a record in the output table
         output = models.Output.objects.create(
-            owner=self.job.owner,
             oq_job=self.job,
             display_name="gmf_scenario",
             output_type="gmf_scenario")
@@ -208,9 +200,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
 
-        inp = models.inputs4hcalc(self.hc.id, 'rupture_model')[0]
-        ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
-        rupture_id = [rupture.id for rupture in ruptures][0]  # only one
+        rupture_id = self.job.parsedrupture.id
 
         for sites in block_splitter(self.hc.site_collection, BLOCK_SIZE):
             task_seed = rnd.randint(0, models.MAX_SINT_32)

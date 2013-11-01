@@ -604,30 +604,28 @@ def get_hazard_job(cfg, username="openquake"):
     return engine.haz_job_from_file(cfg, username, 'error', [])
 
 
-def get_risk_job(cfg, username=None, hazard_calculation_id=None,
+def get_risk_job(cfg, username="openquake", hazard_calculation_id=None,
                  hazard_output_id=None):
     """
     Given a path to a config file and a hazard_calculation_id
     (or, alternatively, a hazard_output_id, create a
     :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
-    username = username if username is not None else default_user().user_name
-
     # You can't specify both a hazard output and hazard calculation
     # Pick one
     assert not (hazard_calculation_id is not None
                 and hazard_output_id is not None)
 
     job = engine.prepare_job(username)
-    params, files = engine.parse_config(open(cfg, 'r'))
+    params = engine.parse_config(open(cfg, 'r'))
 
     params.update(
         dict(hazard_output_id=hazard_output_id,
              hazard_calculation_id=hazard_calculation_id)
     )
 
-    risk_calc = engine.create_risk_calculation(
-        job.owner, params, files)
+    risk_calc = engine.create_calculation(
+        models.RiskCalculation, params)
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
     job.save()
