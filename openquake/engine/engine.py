@@ -173,7 +173,8 @@ def create_calculation(model, params):
 
     # FIXME(lp). Django 1.3 does not allow using _id fields in model
     # __init__. We will check these fields in pre-execute phase
-    ID_FIELDS = set(['preloaded_exposure_model_id', 'hazard_output_id'])
+    ID_FIELDS = set(['preloaded_exposure_model_id', 'hazard_output_id',
+                     'hazard_calculation_id'])
 
     for param in set(params) - set(calc_fields) - ID_FIELDS:
         msg = "Unknown parameter '%s'. Ignoring."
