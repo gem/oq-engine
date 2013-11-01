@@ -27,7 +27,7 @@ METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
 JSON = 'application/json'
 
-IGNORE_FIELDS = ('base_path', 'export_dir', 'owner')
+IGNORE_FIELDS = ('base_path', 'export_dir')
 GEOM_FIELDS = ('region', 'sites', 'region_constraint', 'sites_disagg')
 RISK_INPUTS = ('hazard_calculation', 'hazard_output')
 
@@ -169,19 +169,6 @@ def run_hazard_calc(request):
         )
         hc = job.hazard_calculation
 
-        # We need to explicitly load all source model input files before the
-        # calculation is run. They need to be stored in the database (not on
-        # the filesystem) before we start the job. Otherwise, the calculation
-        # will attempt to load these models "too late" from the filesystem,
-        # at which point we will fail since each calculation is run by a remote
-        # worker which does not necessarily have access to the same file
-        # system.
-        # See :func:`_load_source_models` for more details.
-        _load_source_models(sorted(files.values()), job.owner, hc.id)
-
-        # Before running the calculation, clean up the temp dir.
-        shutil.rmtree(temp_dir)
-
         migration_callback_url = request.POST.get('migration_callback_url')
         owner_user = request.POST.get('owner_user')
 
@@ -196,33 +183,6 @@ def run_hazard_calc(request):
         )
 
         return redirect('/v1/calc/hazard/%s' % hc.id)
-
-
-def _load_source_models(files, owner, hc_id):
-    """
-    Given a list of file paths to any type of hazard input models, check if
-    they are source models (which are soft-linked in a source model logic tree,
-    and will otherwise get missed when a calculation profile is loaded) and if
-    they are, load them into the oq-engine DB and link them to the calculation
-    profile given by ``hc_id``.
-
-    :param list files:
-        List of input model file paths.
-    :param owner:
-        Owner DB record object. See :class:`openquake.engine.db.models.OqUser`.
-    :param int hc_id:
-        Hazard calculation ID.
-    """
-    for input_model in files:
-        # Check if it is a source model.
-        if _is_source_model(open(input_model, 'r')):
-            # Load it into the DB.
-            oq_engine.get_or_create_input(
-                input_model,
-                'source',
-                owner,
-                haz_calc_id=hc_id,
-            )
 
 
 def _is_source_model(tempfile):
