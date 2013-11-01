@@ -50,7 +50,7 @@ class PointSource(ParametricSeismicSource):
         numbers in km representing the depth of the hypocenter. Latitude
         and longitude of the hypocenter is always set to ones of ``location``.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource`
+    See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
 
     :raises ValueError:
@@ -121,7 +121,7 @@ class PointSource(ParametricSeismicSource):
         :meth:`_get_max_rupture_projection_radius`.
 
         See :meth:`superclass method
-        <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
         for parameter and return value definition.
         """
         max_rup_radius = self._get_max_rupture_projection_radius()
@@ -132,7 +132,7 @@ class PointSource(ParametricSeismicSource):
         Filter sites that are closer than maximum rupture projection radius
         plus integration distance along the great circle arc from source's
         epicenter location. Overrides :meth:`base class' method
-        <openquake.hazardlib.source.base.SeismicSource.filter_sites_by_distance_to_source>`
+        <openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source>`
         in order to avoid using polygon.
         """
         radius = self._get_max_rupture_projection_radius()
@@ -146,7 +146,7 @@ class PointSource(ParametricSeismicSource):
         Filter sites that are closer than rupture's projection radius
         plus integration distance along the great circle arc from rupture's
         epicenter location. Overrides the :meth:`base class' method
-        <openquake.hazardlib.source.base.SeismicSource.filter_sites_by_distance_to_rupture>`.
+        <openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_rupture>`.
         """
         rup_length, rup_width = rupture.surface.length, rupture.surface.width
         rup_width = rup_width * math.cos(math.radians(rupture.surface.dip))
@@ -159,7 +159,7 @@ class PointSource(ParametricSeismicSource):
     def iter_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
 
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.

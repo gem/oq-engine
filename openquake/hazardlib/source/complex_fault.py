@@ -39,7 +39,7 @@ class ComplexFaultSource(ParametricSeismicSource):
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource`
+    See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
 
     :raises ValueError:
@@ -73,7 +73,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         method passing in ``dilation`` parameter.
 
         See :meth:`superclass method
-        <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
         for parameter and return value definition.
         """
         polygon = ComplexFaultSurface.surface_projection_from_fault_data(
@@ -87,7 +87,7 @@ class ComplexFaultSource(ParametricSeismicSource):
     def iter_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
 
         Uses :func:`_float_ruptures` for finding possible rupture locations
         on the whole fault surface.

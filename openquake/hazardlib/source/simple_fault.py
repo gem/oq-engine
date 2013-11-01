@@ -45,7 +45,7 @@ class SimpleFaultSource(ParametricSeismicSource):
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource`
+    See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource`
     for description of other parameters.
 
     :raises ValueError:
@@ -96,7 +96,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         method passing in ``dilation`` parameter.
 
         See :meth:`superclass method
-        <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
         for parameter and return value definition.
         """
         polygon = SimpleFaultSurface.surface_projection_from_fault_data(
@@ -111,7 +111,7 @@ class SimpleFaultSource(ParametricSeismicSource):
     def iter_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
 
         Generates a ruptures using the "floating" algorithm: for all the
         magnitude values of assigned MFD calculates the rupture size with

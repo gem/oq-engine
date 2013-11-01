@@ -30,7 +30,7 @@ class MultiSurface(BaseSurface):
 
     :param surfaces:
         List of instances of subclasses of
-        :class:`~openquake.hazardlib.geo.surface.BaseSurface`
+        :class:`~openquake.hazardlib.geo.surface.base.BaseSurface`
         each representing a surface geometry element.
     """
     def __init__(self, surfaces):
@@ -235,7 +235,7 @@ class MultiSurface(BaseSurface):
         and alternative definitions may be possible. However, this method is
         mostly used to define the hypocenter location for ruptures described
         by a multi surface
-        (see :meth:`openquake.hazardlib.source.CharacteristicFaultSource.iter_ruptures`).
+        (see :meth:`openquake.hazardlib.source.characteristic.CharacteristicFaultSource.iter_ruptures`).
         This is needed because when creating fault based sources, the rupture's
         hypocenter locations are not explicitly defined, and therefore an
         automated way to define them is required.

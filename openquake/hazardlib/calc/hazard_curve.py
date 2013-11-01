@@ -1,3 +1,4 @@
+# coding: utf-8
 # The Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
@@ -15,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 :mod:`openquake.hazardlib.calc.hazard_curve` implements
-:func:`hazard_curves_poissonian`.
+:func:`hazard_curves` and :func:`hazard_curves_poissonian`
 """
 import numpy
 
@@ -117,9 +118,27 @@ def hazard_curves(
     considered in the seismic sources). No assumtions are made on sources'
     temporal occurrence models.
 
+    Probability of ground motion exceedance is computed using the following
+    formula ::
+
+        P(X≥x|T) = 1 - ∏ ∏ Prup_ij(X<x|T)
+
+    where ``P(X≥x|T)`` is the probability that the ground motion parameter
+    ``X`` is exceeding level ``x`` one or more times in a time span ``T``, and
+    ``Prup_ij(X<x|T)`` is the probability that the j-th rupture of the i-th
+    source is not producing any ground motion exceedance in time span ``T``.
+    The first product ``∏`` is done over sources, while the second one is done
+    over ruptures in a source.
+
+    The above formula computes the probability of having at least one ground
+    motion exceedance in a time span as 1 minus the probability that none of
+    the ruptures in none of the sources is causing a ground motion exceedance
+    in the same time span. The basic assumption is that seismic sources are
+    independent, and ruptures in a seismic source are also independent.
+
     :param sources:
         An iterator of seismic sources objects (instances of subclasses
-        of :class:`~openquake.hazardlib.source.base.SeismicSource`).
+        of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
     :param sites:
         Instance of :class:`~openquake.hazardlib.site.SiteCollection` object,
         representing sites of interest.

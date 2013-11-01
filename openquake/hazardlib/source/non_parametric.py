@@ -31,7 +31,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
     """
     Non Parametric Seismic Source explicitly defines earthquake ruptures in the
     constructor. That is earthquake ruptures are not generated algorithmically
-    from a number of source parameters.
+    from a set of source parameters.
 
     Ruptures' rectonic region types are overwritten by source tectonic region
     type.

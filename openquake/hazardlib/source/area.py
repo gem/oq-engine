@@ -66,7 +66,7 @@ class AreaSource(PointSource):
         :meth:`~openquake.hazardlib.source.point.PointSource._get_max_rupture_projection_radius`.
 
         See :meth:`superclass method
-        <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
         for parameter and return value definition.
         """
         max_rup_radius = self._get_max_rupture_projection_radius()
@@ -74,7 +74,7 @@ class AreaSource(PointSource):
 
     def iter_ruptures(self):
         """
-        See :meth:`openquake.hazardlib.source.base.SeismicSource.iter_ruptures`
+        See :meth:`openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`
         for description of parameters and return value.
 
         Area sources are treated as a collection of point sources
@@ -137,7 +137,7 @@ class AreaSource(PointSource):
         Overrides :meth:`implementation
         <openquake.hazardlib.source.point.PointSource.filter_sites_by_distance_to_source>`
         of the point source class just to call the :meth:`base class one
-        <openquake.hazardlib.source.base.SeismicSource.filter_sites_by_distance_to_source>`.
+        <openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source>`.
         """
         return super(PointSource, self).filter_sites_by_distance_to_source(
             integration_distance, sites

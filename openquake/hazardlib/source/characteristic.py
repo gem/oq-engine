@@ -44,7 +44,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource` for
+    See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource` for
     description of other parameters.
 
     Note that a ``CharacteristicFaultSource`` does not need any mesh spacing,
@@ -80,7 +80,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         ``dilation`` parameter.
 
         See :meth:`superclass method
-        <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
         for parameter and return value definition.
         """
         west, east, north, south = self.surface.get_bounding_box()
@@ -94,7 +94,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     def iter_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
 
         For each magnitude value in the given MFD, return an earthquake
         rupture with a surface always equal to the given surface.

@@ -22,8 +22,8 @@ and return generators. There are two different kinds of filter functions:
 
 1. Source-site filters. Those functions take a generator of two-item tuples,
    each pair consists of seismic source object (that is, an instance of
-   a subclass of :class:`~openquake.hazardlib.source.base.SeismicSource`) and a
-   site collection (instance of
+   a subclass of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`)
+   and a site collection (instance of
    :class:`~openquake.hazardlib.site.SiteCollection`).
 2. Rupture-site filters. Those also take a generator of pairs, but in this
    case the first item in the pair is a rupture object (instance of
@@ -60,7 +60,7 @@ def source_site_distance_filter(integration_distance):
 
     :param integration_distance:
         Threshold distance in km, this value gets passed straight to
-        :meth:`openquake.hazardlib.source.base.SeismicSource.filter_sites_by_distance_to_source`
+        :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`
         which is what is actually used for filtering.
     """
     def filter_func(sources_sites):
@@ -80,7 +80,7 @@ def rupture_site_distance_filter(integration_distance):
 
     :param integration_distance:
         Threshold distance in km, this value gets passed straight to
-        :meth:`openquake.hazardlib.source.base.SeismicSource.filter_sites_by_distance_to_rupture`
+        :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_rupture`
         which is what is actually used for filtering.
     """
     def filter_func(ruptures_sites):

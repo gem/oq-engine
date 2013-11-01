@@ -16,7 +16,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module :mod:`openquake.hazardlib.source.rupture` defines classes
-:class:`Rupture` and its subclass :class:`ProbabilisticRupture`.
+:class:`Rupture`, :class:`BaseProbabilisticRupture` and its subclasses
+:class:`NonParametricProbabilisticRupture` and
+:class:`ParametricProbabilisticRupture`
 """
 import abc
 import numpy
@@ -44,7 +46,7 @@ class Rupture(object):
         :class:`~openquake.hazardlib.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
     :param source_typology:
-        Subclass of :class:`~openquake.hazardlib.source.base.SeismicSource`
+        Subclass of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`
         (class object, not an instance) referencing the typology
         of the source that produced this rupture.
 
@@ -114,7 +116,15 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         Instance of :class:`openquake.hazardlib.pmf.PMF`. Values in the
         abscissae represent number of rupture occurrences (in increasing order,
         staring from 0) and values in the ordinates represent associated
-        probabilities
+        probabilities. Example: if, for a given time span, a rupture has
+        probability ``0.8`` to not occurre, ``0.15`` to occur once, and
+        ``0.05`` to occur twice, the ``pmf`` can be defined as ::
+
+            pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.15'), 1), Decimal('0.05', 2)])
+
+    :raises ValueError:
+        If number of ruptures in ``pmf`` do not start from 0, are not defined
+        in increasing order, and if they are not defined with unit step
     """
     def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
                  source_typology, pmf):
