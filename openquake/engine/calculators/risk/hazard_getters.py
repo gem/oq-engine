@@ -199,11 +199,12 @@ class GroundMotionValuesGetter(HazardGetter):
     with a set of assets all of the same taxonomy.
     """
 
-    def __init__(self, hazard, assets, max_distance, imt, seeds=None):
+    def __init__(self, hazard, assets, max_distance, imt, seeds=None, ltp=None):
         super(GroundMotionValuesGetter, self).__init__(
             hazard, assets, max_distance, imt)
         assert hazard[0].output_type != "ses" or seeds is not None
         self.seeds = seeds or [None] * len(hazard)
+        self.logic_tree_processor = ltp
 
     def __call__(self, monitor=None):
         """
@@ -326,8 +327,7 @@ GROUP BY site_id ORDER BY site_id;
         # get needed hazard calculation params from the db
         hc = hazard_output.output.oq_job.hazard_calculation
         truncation_level = hc.truncation_level
-        gsims = logictree.LogicTreeProcessor.from_hc(
-            self.rc).parse_gmpe_logictree_path(
+        gsims = self.logic_tree_processor.parse_gmpe_logictree_path(
                 hazard_output.lt_realization.gsim_lt_path)
         if hc.ground_motion_correlation_model is not None:
             model = general.get_correl_model(hc)
