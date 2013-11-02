@@ -39,6 +39,14 @@ UPDATE hzrdi.parsed_source SET job_id=(
        WHERE i2h.input_id = hzrdi.parsed_source.input_id) WHERE job_id IS NULL;
 ALTER TABLE hzrdi.parsed_source ADD CONSTRAINT hzrdi_parsed_source_job_fk
 FOREIGN KEY (job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
+
+-- add a reference to the source model in parsed_source
+ALTER TABLE hzrdi.parsed_source ADD source_model_filename VARCHAR;
+UPDATE hzrdi.parsed_source SET source_model_filename=(
+       SELECT input.path FROM uiapi.input AS input
+       WHERE input.input_id = hzrdi.parsed_source.input_id)
+WHERE source_model_filename IS NULL;
+ALTER TABLE hzrdi.parsed_source ALTER source_model_filename SET NOT NULL;
 ALTER TABLE hzrdi.parsed_source DROP input_id;
 
 -- parsed_rupture_model
@@ -77,6 +85,7 @@ UPDATE riski.exposure_model SET job_id=(
 ALTER TABLE riski.exposure_model ADD CONSTRAINT riski_exposure_model_job_fk
 FOREIGN KEY (job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
 ALTER TABLE riski.exposure_model DROP input_id;
+
 
 DROP TABLE uiapi.src2ltsrc;
 DROP TABLE uiapi.input2job;
