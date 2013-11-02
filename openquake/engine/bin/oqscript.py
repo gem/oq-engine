@@ -272,23 +272,21 @@ def list_inputs(input_type):
     Print a list of available input models
     """
 
-    available_input_types = ["exposure"]
-
-    if input_type not in available_input_types:
+    if input_type == "exposure":
+        model = models.ExposureModel
+    else:
         engine.complain_and_exit(
-            "Wrong input type. Available input types: %s"
-            % (", ".join(available_input_types))
-        )
-    inputs = models.Input.objects.filter(
-        input_type=input_type).order_by('-last_update')
+            "Wrong input type. Available input types: exposure")
+
+    inputs = model.objects.all()
 
     if not inputs.count():
         print "No inputs found of type %s" % input_type
         return
-    print ('model id | source path | last update')
+    print ('model id | name')
 
     for inp in inputs:
-        print "%9d|%s|%12s" % (inp.id, inp.path, inp.last_update)
+        print "%9d|%s" % (inp.id, inp.name)
 
 
 def list_calculations(calc_manager):
