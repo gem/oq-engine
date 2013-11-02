@@ -451,19 +451,16 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
 
-        source_paths = logictree.read_logic_trees(self.hc)
-
-        for src_path in source_paths:
-            sm_parser = nrml_parsers.SourceModelParser(
-                os.path.join(self.hc.base_path, src_path))
-
-            # Covert
-            src_db_writer = source.SourceDBWriter(
-                self.job, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+        for src_path in logictree.read_logic_trees(self.hc):
+            source.SourceDBWriter(
+                self.job,
+                src_path,
+                nrml_parsers.SourceModelParser(
+                    os.path.join(self.hc.base_path, src_path)).parse(),
+                self.hc.rupture_mesh_spacing,
                 self.hc.width_of_mfd_bin,
                 self.hc.area_source_discretization,
-                self.get_source_filter_condition())
-            src_db_writer.serialize()
+                self.get_source_filter_condition()).serialize()
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -624,7 +621,7 @@ class BaseHazardCalculator(base.Calculator):
         ltp = logictree.LogicTreeProcessor.from_hc(hc)
 
         for i, path_info in enumerate(ltp.enumerate_paths()):
-            _, weight, sm_lt_path, gsim_lt_path = path_info
+            source_model_filename, weight, sm_lt_path, gsim_lt_path = path_info
 
             lt_rlz = models.LtRealization.objects.create(
                 hazard_calculation=hc,
@@ -637,7 +634,7 @@ class BaseHazardCalculator(base.Calculator):
                 total_items=-1)
 
             # Create source_progress objects
-            self.initialize_source_progress(lt_rlz)
+            self.initialize_source_progress(lt_rlz, source_model_filename)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -664,8 +661,9 @@ class BaseHazardCalculator(base.Calculator):
         # The first realization gets the seed we specified in the config file.
         for i in xrange(self.hc.number_of_logic_tree_samples):
             # Sample source model logic tree branch paths:
-            _, sm_lt_path = ltp.sample_source_model_logictree(
-                rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
+            source_model_filename, sm_lt_path = (
+                ltp.sample_source_model_logictree(
+                    rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)))
 
             # Sample GSIM logic tree branch paths:
             gsim_lt_path = ltp.sample_gmpe_logictree(
@@ -683,7 +681,7 @@ class BaseHazardCalculator(base.Calculator):
             )
 
             # Create source_progress objects
-            self.initialize_source_progress(lt_rlz)
+            self.initialize_source_progress(lt_rlz, source_model_filename)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -696,7 +694,7 @@ class BaseHazardCalculator(base.Calculator):
             rnd.seed(seed)
 
     @staticmethod
-    def initialize_source_progress(lt_rlz):
+    def initialize_source_progress(lt_rlz, source_model_filename):
         """
         Create ``source_progress`` models for given logic tree realization
         and set total sources of realization.
@@ -704,6 +702,10 @@ class BaseHazardCalculator(base.Calculator):
         :param lt_rlz:
             :class:`openquake.engine.db.models.LtRealization` object to
             initialize source progress for.
+
+        :param str source_model_filename:
+            the path of the source_model associated with the
+            logic tree realization
         """
         cursor = connections['reslt_writer'].cursor()
         src_progress_tbl = models.SourceProgress._meta.db_table
@@ -712,10 +714,12 @@ class BaseHazardCalculator(base.Calculator):
         cursor.execute("""
             INSERT INTO "%s" (lt_realization_id, parsed_source_id, is_complete)
             SELECT %%s, id, FALSE
-            FROM "%s" WHERE job_id = %%s
+            FROM "%s" WHERE job_id = %%s AND source_model_filename=%%s
             ORDER BY id
             """ % (src_progress_tbl, parsed_src_tbl),
-            [lt_rlz.id, lt_rlz.hazard_calculation.oqjob.id])
+            [lt_rlz.id,
+             lt_rlz.hazard_calculation.oqjob.id,
+             source_model_filename])
         cursor.execute("""
             UPDATE "%s" SET total_items = (
                 SELECT count(1) FROM "%s" WHERE lt_realization_id = %%s
