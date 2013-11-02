@@ -511,7 +511,8 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types_and_levels = dict()
             hc.intensity_measure_types = list()
 
-            parser = iter(parsers.FragilityModelParser(hc.fragility_model))
+            parser = iter(parsers.FragilityModelParser(
+                hc.inputs['fragility']))
             hc = self.hc
 
             fragility_format, _limit_states = parser.next()
