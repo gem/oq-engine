@@ -159,9 +159,20 @@ class RequireEventBasedHazardTestCase(unittest.TestCase):
     def test_get_error(self):
         calc = mock.Mock()
 
+        output = mock.Mock()
+        output.output_type = "gmf"
+        calc.rc.hazard_outputs.return_value = [output]
+
         val = validation.RequireEventBasedHazard(calc)
 
         calc.rc.hazard_calculation.calculation_mode = 'event_based'
+        self.assertIsNone(val.get_error())
+
+        output.output_type = "ses"
+        calc.rc.inputs = {}
+        self.assertIsNotNone(val.get_error())
+
+        calc.rc.inputs = {'source_model_logic_tree': None}
         self.assertIsNone(val.get_error())
 
         calc.rc.hazard_calculation.calculation_mode = 'classical'

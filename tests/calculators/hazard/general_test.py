@@ -16,7 +16,7 @@
 
 
 import unittest
-
+import mock
 import openquake.hazardlib
 
 from collections import namedtuple
@@ -342,12 +342,12 @@ class TaskArgGenTestCase(unittest.TestCase):
     The default implementation splits the calculation into blocks of sources.
     """
 
-    Job = namedtuple('Job', 'id')
+    Job = namedtuple('Job', 'id hazard_calculation')
     Rlz = namedtuple('Realization', 'id')
 
     def test_task_arg_gen(self):
         # Test the logic of `BaseHazardCalculator.task_arg_gen`.
-        job = self.Job(1776)
+        job = self.Job(1776, mock.Mock())
 
         base_path = (
             'openquake.engine.calculators.hazard.general.BaseHazardCalculator'
@@ -355,6 +355,12 @@ class TaskArgGenTestCase(unittest.TestCase):
         calc = general.BaseHazardCalculator(job)
 
         # Set up mocks:
+        # ltp
+        ltp_patch = mock.patch(
+            'openquake.engine.input.logictree.LogicTreeProcessor.from_hc')
+        ltp_mock = ltp_patch.start()
+        ltp_mock.return_value = mock.Mock()
+
         # point_source_block_size
         pt_src_block_size_patch = helpers.patch(
             '%s.%s' % (base_path, 'point_source_block_size')
@@ -396,23 +402,27 @@ class TaskArgGenTestCase(unittest.TestCase):
             (1776, [104], 6),
         ]
 
+        expected = [exp + (ltp_mock.return_value,) for exp in expected]
+
         try:
             actual = list(calc.task_arg_gen(
                           block_size=2, check_num_task=False))
             self.assertEqual(expected, actual)
-        finally:
             self.assertEqual(1, pt_src_block_size_mock.call_count)
+            self.assertEqual(1, get_rlz_mock.call_count)
+            self.assertEqual(2, get_src_mock.call_count)
+        finally:
             pt_src_block_size_mock.stop()
             pt_src_block_size_patch.stop()
 
-            self.assertEqual(1, get_rlz_mock.call_count)
             get_rlz_mock.stop()
             get_rlz_patch.stop()
 
-            self.assertEqual(2, get_pt_mock.call_count)
             get_pt_mock.stop()
             get_pt_patch.stop()
 
-            self.assertEqual(2, get_src_mock.call_count)
             get_src_mock.stop()
             get_src_patch.stop()
+
+            ltp_patch.stop()
+
