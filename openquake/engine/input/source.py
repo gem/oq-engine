@@ -510,10 +510,12 @@ class SourceDBWriter(object):
         by default it returns always True and no sources are filtered.
     """
 
-    def __init__(self, job, source_model, mesh_spacing, bin_width,
+    def __init__(self, job, source_model_filename, source_model,
+                 mesh_spacing, bin_width,
                  area_src_disc, condition=lambda src: True):
         self.job = job
         self.source_model = source_model
+        self.source_model_filename = source_model_filename
         self.mesh_spacing = mesh_spacing
         self.bin_width = bin_width
         self.area_src_disc = area_src_disc
@@ -521,16 +523,15 @@ class SourceDBWriter(object):
 
     @transaction.commit_on_success(router.db_for_write(models.ParsedSource))
     def serialize(self):
-        """Save NRML sources to the database in hazardlib format along with
-        'rupture-enclosing polygon' geometry for each source.
-        """
+        """Save NRML sources to the database in hazardlib format"""
         for src in self.source_model:
             hazardlib_source = nrml_to_hazardlib(
                 src, self.mesh_spacing, self.bin_width, self.area_src_disc)
             if self.condition(hazardlib_source):
                 models.ParsedSource.objects.create(
                     job=self.job, source_type=_source_type(src),
-                    nrml=hazardlib_source)
+                    nrml=hazardlib_source,
+                    source_model_filename=self.source_model_filename)
 
 
 class RuptureDBWriter(object):

@@ -288,6 +288,7 @@ class ParsedSource(djm.Model):
         (u'characteristic', u'Characteristic'),
     )
     source_type = djm.TextField(choices=SRC_TYPE_CHOICES)
+    source_model_filename = djm.TextField(null=False)
     nrml = fields.PickleField(help_text="NRML object representing the source")
 
     class Meta:

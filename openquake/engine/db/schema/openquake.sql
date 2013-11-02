@@ -89,6 +89,7 @@ CREATE TABLE hzrdi.parsed_source (
         CONSTRAINT enforce_source_type CHECK
         (source_type IN ('area', 'point', 'complex', 'simple', 'characteristic')),
     nrml BYTEA NOT NULL,
+    source_model_filename VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE hzrdi_ts;
