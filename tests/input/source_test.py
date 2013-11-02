@@ -437,7 +437,8 @@ class SourceDBWriterTestCase(unittest.TestCase):
         job = models.OqJob.objects.create(user_name='openquake')
 
         db_writer = source_input.SourceDBWriter(
-            job, source_model, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
+            job, MIXED_SRC_MODEL, source_model,
+            MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
         db_writer.serialize()
 
