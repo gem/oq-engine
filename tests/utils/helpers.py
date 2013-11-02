@@ -72,16 +72,6 @@ def default_user():
     return "openquake"
 
 
-def insert_inputs(job, inputs):
-    """Insert the input records for the given data and job."""
-    for imt, imp in inputs:
-        iobj = models.Input(path=imp, input_type=imt, owner=job.owner,
-                            size=random.randint(1024, 16 * 1024))
-        iobj.save()
-        i2j = models.Input2job(input=iobj, oq_job=job)
-        i2j.save()
-
-
 def _patched_mocksignature(func, mock=None, skipfirst=False):
     """
     Fixes arguments order and support of staticmethods in mock.mocksignature.
