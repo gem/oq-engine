@@ -85,8 +85,7 @@ def vulnerability(vulnerability_file):
 
 
 def fragility(risk_calculation, fragility_input):
-    damage_states, risk_models = _parse_fragility(
-        fragility_input.model_content.as_string_io)
+    damage_states, risk_models = _parse_fragility(fragility_input)
 
     for lsi, dstate in enumerate(damage_states):
         DmgState.objects.get_or_create(
