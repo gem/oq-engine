@@ -44,7 +44,7 @@ FOREIGN KEY (job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
 ALTER TABLE hzrdi.parsed_source ADD source_model_filename VARCHAR;
 UPDATE hzrdi.parsed_source SET source_model_filename=(
        SELECT input.path FROM uiapi.input AS input
-       WHERE input.input_id = hzrdi.parsed_source.input_id)
+       WHERE input.id = hzrdi.parsed_source.input_id)
 WHERE source_model_filename IS NULL;
 ALTER TABLE hzrdi.parsed_source ALTER source_model_filename SET NOT NULL;
 ALTER TABLE hzrdi.parsed_source DROP input_id;
