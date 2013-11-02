@@ -29,8 +29,13 @@ ON hzrdi.hazard_site(hazard_calculation_id);
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_job_id_idx ON hzrdi.site_model(job_id);
 
+-- hzrdi.parsed_source
+CREATE INDEX hzrdi_parsed_source_job_id_idx ON hzrdi.parsed_source(job_id);
+CREATE INDEX hzrdi_parsed_rupture_model_job_id_idx ON hzrdi.parsed_rupture_model(job_id);
+
 -- indexes for the uiapi.performance table
 CREATE INDEX uiapi_performance_oq_job_id_idx ON uiapi.performance(oq_job_id);
+CREATE INDEX uiapi_oq_job_user_name_idx ON uiapi.oq_job(user_name);
 CREATE INDEX uiapi_performance_operation_idx ON uiapi.performance(operation);
 
 CREATE INDEX uiapi_oq_job_status_running on uiapi.oq_job(status) WHERE status = 'running';
@@ -84,6 +89,7 @@ CREATE INDEX riskr_dmg_state_lsi_idx on riskr.dmg_state(lsi);
 
 -- riski indexes
 CREATE INDEX riski_exposure_data_site_idx ON riski.exposure_data USING gist(site);
+CREATE INDEX riski_exposure_model_job_id_idx ON riski.exposure_model(job_id);
 CREATE INDEX riski_exposure_data_taxonomy_idx ON riski.exposure_data(taxonomy);
 CREATE INDEX riski_exposure_data_exposure_model_id_idx on riski.exposure_data(exposure_model_id);
 CREATE INDEX riski_exposure_data_site_stx_idx ON riski.exposure_data(ST_X(geometry(site)));
