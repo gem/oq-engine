@@ -177,10 +177,6 @@ CREATE TABLE uiapi.job_phase_stats (
 
 
 CREATE TABLE uiapi.hazard_calculation (
-    -- TODO(larsbutler): At the moment, this model only contains Classical
-    -- hazard parameters.
-    -- We'll need to update fields and constraints as we add the other
-    -- calculation modes.
     id SERIAL PRIMARY KEY,
     -- Contains the absolute path to the directory containing the job config
     -- file

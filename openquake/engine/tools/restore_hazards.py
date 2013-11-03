@@ -14,34 +14,16 @@ BLOCKSIZE = 1000  # restore blocks of 1,000 lines each
 log = logging.getLogger()
 
 
-def clean_tablename(schema, tname):
-    if schema.startswith("\""):
-        schema = schema[1:-1]
-    if tname.startswith("\""):
-        tname = tname[1:-1]
-
-    return schema, tname
+def quote_unwrap(name):
+    if name.startswith("\""):
+        return name[1:-1]
+    else:
+        return name
 
 
 def restore_tablename(original_tablename):
-    schema, tname = clean_tablename(*original_tablename.split('.'))
+    schema, tname = map(quote_unwrap, original_tablename.split('.'))
     return "%s.restore_%s" % (schema, tname)
-
-
-def model_table(model, restore=False):
-    original_tablename = "\"%s\"" % model._meta.db_table
-
-    if restore:
-        return restore_tablename(original_tablename)
-    else:
-        schema, tname = clean_tablename(*original_tablename.split('.'))
-        return "%s.%s" % (schema, tname)
-
-
-def model_fields(model):
-    return ", ".join([f.column for f in model._meta.fields
-                      if f.column != "id"
-                      if not isinstance(f, fields.related.ForeignKey)])
 
 
 class CSVInserter(object):
@@ -71,8 +53,9 @@ class CSVInserter(object):
         self.io.seek(0)
         conn = self.curs.connection
         try:
+            self.curs.execute("DROP TABLE IF EXISTS %s" % self.tablename)
             self.curs.execute(
-                "CREATE TABLE %s AS SELECT * FROM %s" % (
+                "CREATE TABLE %s AS SELECT * FROM %s WHERE 0 = 1" % (
                     self.tablename, self.original_tablename))
             self.curs.copy_from(self.io, self.tablename)
         except Exception as e:
@@ -93,51 +76,64 @@ class CSVInserter(object):
             self.insert()
 
 
-def transfer_data(curs, model, fk=None, id_mapping=None):
-    conn = curs.connection
-    try:
-        curs.execute(
-            "ALTER TABLE %s ADD restore_id INT" % model_table(model))
-        args = dict(
-            table=model_table(model),
-            fields=model_fields(model),
-            restore_table=model_table(model, restore=True))
-
-        if fk is not None:
-            curs.execute("CREATE TABLE restore_fk_translation("
-                         "%s INT NOT NULL, new_id INT NOT NULL)" % fk)
-            curs.execute("""
-            INSERT INTO restore_fk_translation VALUES
-            %s""" % ", ".join(["(%d, %d)" % (old_id, new_id)
-                               for old_id, new_id in id_mapping]))
-
-            args['fk_field'] = ", %s" % fk
-            args['fk_join'] = "JOIN restore_fk_translation USING(%s)" % fk
-            args['new_fk_id'] = ", new_id"
+def transfer_data(curs, model, **foreign_keys):
+    def model_table(model, restore=False):
+        original_tablename = "\"%s\"" % model._meta.db_table
+        if restore:
+            return restore_tablename(original_tablename)
         else:
-            args['fk_field'] = ""
-            args['fk_join'] = ""
-            args['new_fk_id'] = ""
+            return "{}.{}".format(
+                *map(quote_unwrap, original_tablename.split('.')))
 
-        query = """
-    INSERT INTO %(table)s (restore_id, %(fields)s %(fk_field)s)
-    SELECT id, %(fields)s %(new_fk_id)s
-    FROM %(restore_table)s AS restore
-    %(fk_join)s
-    RETURNING  restore_id, %(table)s.id
-    """ % args
-        curs.execute(query)
-        old_new_ids = tuple(curs.fetchall())
-    except Exception as e:
-        log.error(str(e))
-        conn.rollback()
-        raise
-    finally:
-        curs.execute(
-            "ALTER TABLE %s DROP restore_id" % model_table(model))
+    def model_fields(model):
+        fs = ", ".join([f.column for f in model._meta.fields
+                        if f.column != "id"
+                        if not isinstance(f, fields.related.ForeignKey)])
+        if fs:
+            fs = ", " + fs
+        return fs
 
-        if fk is not None:
-            curs.execute("DROP TABLE restore_fk_translation")
+    conn = curs.connection
+
+    curs.execute(
+        "ALTER TABLE %s ADD restore_id INT" % model_table(model))
+    args = dict(
+        table=model_table(model),
+        fields=model_fields(model),
+        restore_table=model_table(model, restore=True),
+        fk_fields="", fk_joins="", new_fk_ids="")
+
+    if foreign_keys:
+        for fk, id_mapping in foreign_keys.iteritems():
+            if fk is not None:
+                curs.execute(
+                    "CREATE TABLE temp_%s_translation("
+                    "%s INT NOT NULL, new_id INT NOT NULL)" % (fk, fk))
+                ids = ", ".join(["(%d, %d)" % (old_id, new_id)
+                                 for old_id, new_id in id_mapping])
+                curs.execute(
+                    "INSERT INTO temp_%s_translation VALUES %s" % (fk, ids))
+
+                args['fk_fields'] += ", %s" % fk
+                args['fk_joins'] += (
+                    "JOIN temp_%s_translation USING(%s) " % (fk, fk))
+                args['new_fk_ids'] += ", temp_%s_translation.new_id" % fk
+
+    query = """
+INSERT INTO %(table)s (restore_id %(fields)s %(fk_fields)s)
+SELECT id %(fields)s %(new_fk_ids)s
+FROM %(restore_table)s AS restore
+%(fk_joins)s
+RETURNING  restore_id, %(table)s.id
+""" % args
+
+    curs.execute(query)
+    old_new_ids = tuple(curs.fetchall())
+    curs.execute(
+        "ALTER TABLE %s DROP restore_id" % model_table(model))
+
+    for fk in foreign_keys:
+        curs.execute("DROP TABLE temp_%s_translation" % fk)
 
     conn.commit()
 
@@ -179,49 +175,49 @@ def hazard_restore(conn, directory):
     curs = conn.cursor()
 
     created = []
-    try:
-        for line in open(filenames):
-            fname = line.rstrip()
-            tname = fname[:-7]  # strip .csv.gz
+    for line in open(filenames):
+        fname = line.rstrip()
+        tname = fname[:-7]  # strip .csv.gz
 
-            curs.execute("DROP TABLE IF EXISTS %s" % restore_tablename(tname))
+        fullname = os.path.join(directory, fname)
+        with gzip.GzipFile(fname, fileobj=open(fullname)) as f:
+            log.info('Importing %s...', fname)
+            created.append(tname)
+            imported, total = safe_restore(curs, f, tname)
+            if imported != total:
+                raise RuntimeError(
+                    "ID Clash detected. The database might be corrupted")
+            log.info(
+                "Created %s rows in %s" % (
+                    imported, restore_tablename(tname)))
+    hc_ids = transfer_data(curs, models.HazardCalculation)
+    lt_ids = transfer_data(
+        curs, models.LtRealization, hazard_calculation_id=hc_ids)
+    job_ids = transfer_data(
+        curs, models.OqJob, hazard_calculation_id=hc_ids)
+    out_ids = transfer_data(
+        curs, models.Output, oq_job_id=job_ids)
+    ses_collection_ids = transfer_data(
+        curs, models.SESCollection,
+        output_id=out_ids, lt_realization_id=lt_ids)
+    ses_ids = transfer_data(
+        curs, models.SES, ses_collection_id=ses_collection_ids)
+    transfer_data(curs, models.SESRupture, ses_id=ses_ids)
 
-            fullname = os.path.join(directory, fname)
-            with gzip.GzipFile(fname, fileobj=open(fullname)) as f:
-                log.info('Importing %s...', fname)
-                created.append(tname)
-                imported, total = safe_restore(curs, f, tname)
-                if imported != total:
-                    raise RuntimeError(
-                        "ID Clash detected. The database might be corrupted")
-        hc_ids = transfer_data(curs, models.HazardCalculation)
-        lt_ids = transfer_data(
-            curs, models.LtRealization, "hazard_calculation_id", hc_ids)
-        site_ids = transfer_data(
-            curs, models.HazardSite, "hazard_calculation_id", hc_ids)
-        job_ids = transfer_data(
-            curs, models.OqJob, "hazard_calculation_id", hc_ids)
-
-    except Exception as e:
-        log.error(str(e))
-        raise
-    finally:
-        for tname in reversed(created):
-            try:
-                curs.execute(
-                    "DROP TABLE IF EXISTS %s" % restore_tablename(tname))
-            except Exception as e:
-                log.error(str(e))
-                raise
-            print "yo"
-            log.info("Dropped %s" % restore_tablename(tname))
+    curs = conn.cursor()
+    for tname in reversed(created):
+        query = "DROP TABLE %s" % restore_tablename(tname)
+        curs.execute(query)
+        log.info("Dropped %s" % restore_tablename(tname))
+    conn.commit()
     log.info('Restored %s', directory)
+    return [new_id for _, new_id in hc_ids]
 
 
 def hazard_restore_remote(tar, host, dbname, user, password, port):
     conn = psycopg2.connect(
         host=host, dbname=dbname, user=user, password=password, port=port)
-    hazard_restore(conn, tar)
+    return hazard_restore(conn, tar)
 
 
 def hazard_restore_local(*argv):
@@ -250,10 +246,11 @@ def hazard_restore_local(*argv):
     p.add_argument('port', nargs='?', default=port, help=h(port))
     arg = p.parse_args(argv)
 
-    hazard_restore_remote(arg.directory, arg.host, arg.dbname,
-                          arg.user, arg.password, arg.port)
+    return hazard_restore_remote(arg.directory, arg.host, arg.dbname,
+                                 arg.user, arg.password, arg.port)
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.WARN)
+    logging.basicConfig(level=logging.DEBUG)
+    log.warn("This script restore only Stochastic event set outputs")
     hazard_restore_local(*sys.argv[1:])
