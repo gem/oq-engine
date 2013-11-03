@@ -52,12 +52,13 @@ GRANT SELECT ON spatial_ref_sys            TO GROUP openquake;
 -- `oq_admin` has full SELECT/INSERT/UPDATE/DELETE access to all tables.
 -- In fact, `oq_admin` is the only user that can delete records,
 -- with the exception the `htemp` schema space. See below.
-GRANT ALL TABLES IN SCHEMA admin TO oq_admin;
-GRANT ALL TABLES IN SCHEMA htemp TO oq_admin;
-GRANT ALL TABLES IN SCHEMA hzrdi TO oq_admin;
-GRANT ALL TABLES IN SCHEMA hzrdr TO oq_admin;
-GRANT ALL TABLES IN SCHEMA riski TO oq_admin;
-GRANT ALL TABLES IN SCHEMA riskr TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA admin TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA htemp TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdi TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdr TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riski TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riskr TO oq_admin;
+GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
 
 GRANT ALL ON SCHEMA admin TO oq_admin;
 GRANT ALL ON SCHEMA htemp TO oq_admin;
