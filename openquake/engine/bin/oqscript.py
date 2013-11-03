@@ -98,6 +98,7 @@ from openquake.engine.export import risk as risk_export
 from openquake.engine.input import source
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
+from openquake.engine.tools import dump_hazards, restore_hazards
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
@@ -236,6 +237,17 @@ def set_up_arg_parser():
         help=('Use with --export-hazard or --export-risk, specify the '
               'desired output format. Defaults to "xml".')
     )
+
+    dump_restore_grp = parser.add_argument_group('Dump/Restore')
+    dump_restore_grp.add_argument(
+        '--dump-hazard-calculation',
+        help=('Dump a hazard calculation to a new created directory.'),
+        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'DUMP_DIR'))
+    dump_restore_grp.add_argument(
+        '--restore-hazard-calculation',
+        help=("Restore a hazard calculation from a dump. "
+              "Only SES outputs currently supported"),
+        metavar=('DUMP_DIR'))
 
     import_grp = parser.add_argument_group('Import')
     import_grp.add_argument(
@@ -519,6 +531,12 @@ def main():
         list_imported_outputs()
     elif args.delete_uncompleted_calculations:
         delete_uncompleted_calculations()
+    elif args.dump_hazard_calculation:
+        dump_hazards.main(*args.dump_hazard_calculation)
+    elif args.restore_hazard_calculation:
+        hc_ids = restore_hazards.hazard_restore_local(
+            args.restore_hazard_calculation)
+        print "Restore hazard calculation with IDs: %s" % hc_ids
     else:
         arg_parser.print_usage()
 

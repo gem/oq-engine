@@ -285,11 +285,19 @@ class HazardDumper(object):
 
 
 def main(hazard_calculation_id, outdir=None,
-         host='localhost', dbname='openquake',
-         user='admin', password='', port=None):
+         host=None, dbname=None, user=None, password=None, port=None):
     """
     Dump a hazard_calculation and its relative outputs
     """
+    from openquake.engine.db.models import set_django_settings_module
+    set_django_settings_module()
+    from django.conf import settings
+    default_cfg = settings.DATABASES['default']
+    host = host or default_cfg.get('HOST', 'localhost')
+    dbname = dbname or default_cfg.get('NAME', 'openquake')
+    user = default_cfg.get('USER', 'oq_admin')
+    password = default_cfg.get('PASSWORD', 'openquake')
+    port = port or str(default_cfg.get('PORT', 5432))
     # this is not using the predefined Django connections since
     # the typical use case is to dump from a remote database
     logging.basicConfig(level=logging.INFO)
@@ -302,13 +310,14 @@ def main(hazard_calculation_id, outdir=None,
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
+
     p.add_argument('hazard_calculation_id')
     p.add_argument('outdir')
-    p.add_argument('host', nargs='?', default='localhost')
-    p.add_argument('dbname', nargs='?', default='openquake')
-    p.add_argument('user', nargs='?', default='oq_admin')
-    p.add_argument('password', nargs='?', default='openquake')
-    p.add_argument('port', nargs='?', default='5432')
+    p.add_argument('host', nargs='?')
+    p.add_argument('dbname', nargs='?')
+    p.add_argument('user', nargs='?')
+    p.add_argument('password', nargs='?')
+    p.add_argument('port', nargs='?')
     arg = p.parse_args()
     main(arg.hazard_calculation_id, arg.outdir, arg.host,
          arg.dbname, arg.user, arg.password, arg.port)
