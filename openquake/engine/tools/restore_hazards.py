@@ -6,15 +6,49 @@ import io
 import os
 import sys
 
+from openquake.engine.db import models
+from django.db.models import fields
+
 BLOCKSIZE = 1000  # restore blocks of 1,000 lines each
 
 log = logging.getLogger()
 
 
+def clean_tablename(schema, tname):
+    if schema.startswith("\""):
+        schema = schema[1:-1]
+    if tname.startswith("\""):
+        tname = tname[1:-1]
+
+    return schema, tname
+
+
+def restore_tablename(original_tablename):
+    schema, tname = clean_tablename(*original_tablename.split('.'))
+    return "%s.restore_%s" % (schema, tname)
+
+
+def model_table(model, restore=False):
+    original_tablename = "\"%s\"" % model._meta.db_table
+
+    if restore:
+        return restore_tablename(original_tablename)
+    else:
+        schema, tname = clean_tablename(*original_tablename.split('.'))
+        return "%s.%s" % (schema, tname)
+
+
+def model_fields(model):
+    return ", ".join([f.column for f in model._meta.fields
+                      if f.column != "id"
+                      if not isinstance(f, fields.related.ForeignKey)])
+
+
 class CSVInserter(object):
-    def __init__(self, curs, tablename, blocksize):
+    def __init__(self, curs, original_tablename, blocksize):
         self.curs = curs
-        self.tablename = tablename
+        self.original_tablename = original_tablename
+        self.tablename = restore_tablename(original_tablename)
         self.blocksize = blocksize
         self.max_id = 0
         self.io = io.StringIO()
@@ -37,13 +71,13 @@ class CSVInserter(object):
         self.io.seek(0)
         conn = self.curs.connection
         try:
-            self.curs.copy_from(self.io, self.tablename)
-
             self.curs.execute(
-                "select setval('%s_id_seq', (select max(id) from %s))" % (
-                    self.tablename, self.tablename))
-        except:
+                "CREATE TABLE %s AS SELECT * FROM %s" % (
+                    self.tablename, self.original_tablename))
+            self.curs.copy_from(self.io, self.tablename)
+        except Exception as e:
             conn.rollback()
+            log.error(str(e))
             raise
         else:
             conn.commit()
@@ -57,6 +91,57 @@ class CSVInserter(object):
     def __exit__(self, etype, exc, tb):
         if self.max_id:  # some remaining line
             self.insert()
+
+
+def transfer_data(curs, model, fk=None, id_mapping=None):
+    conn = curs.connection
+    try:
+        curs.execute(
+            "ALTER TABLE %s ADD restore_id INT" % model_table(model))
+        args = dict(
+            table=model_table(model),
+            fields=model_fields(model),
+            restore_table=model_table(model, restore=True))
+
+        if fk is not None:
+            curs.execute("CREATE TABLE restore_fk_translation("
+                         "%s INT NOT NULL, new_id INT NOT NULL)" % fk)
+            curs.execute("""
+            INSERT INTO restore_fk_translation VALUES
+            %s""" % ", ".join(["(%d, %d)" % (old_id, new_id)
+                               for old_id, new_id in id_mapping]))
+
+            args['fk_field'] = ", %s" % fk
+            args['fk_join'] = "JOIN restore_fk_translation USING(%s)" % fk
+            args['new_fk_id'] = ", new_id"
+        else:
+            args['fk_field'] = ""
+            args['fk_join'] = ""
+            args['new_fk_id'] = ""
+
+        query = """
+    INSERT INTO %(table)s (restore_id, %(fields)s %(fk_field)s)
+    SELECT id, %(fields)s %(new_fk_id)s
+    FROM %(restore_table)s AS restore
+    %(fk_join)s
+    RETURNING  restore_id, %(table)s.id
+    """ % args
+        curs.execute(query)
+        old_new_ids = tuple(curs.fetchall())
+    except Exception as e:
+        log.error(str(e))
+        conn.rollback()
+        raise
+    finally:
+        curs.execute(
+            "ALTER TABLE %s DROP restore_id" % model_table(model))
+
+        if fk is not None:
+            curs.execute("DROP TABLE restore_fk_translation")
+
+    conn.commit()
+
+    return old_new_ids
 
 
 def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
@@ -73,16 +158,13 @@ def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
     :param int blocksize: number of lines in a block
     """
     # keep in memory the already taken ids
-    curs.execute('select id from %s' % tablename)
-    ids = set(r[0] for r in curs.fetchall())
     with CSVInserter(curs, tablename, blocksize) as csvi:
         total = 0
         for line in gzfile:
             total += 1
             sid, rest = line.split('\t', 1)
             id_ = int(sid)
-            if id_ not in ids:
-                csvi.write(id_, rest)
+            csvi.write(id_, rest)
     return csvi.nlines, total
 
 
@@ -95,19 +177,44 @@ def hazard_restore(conn, directory):
     """
     filenames = os.path.join(directory, 'FILENAMES.txt')
     curs = conn.cursor()
-    for line in open(filenames):
-        fname = line.rstrip()
-        tname = fname[:-7]  # strip .csv.gz
-        fullname = os.path.join(directory, fname)
-        with gzip.GzipFile(fname, fileobj=open(fullname)) as f:
-            log.info('Importing %s...', fname)
-            imported, total = safe_restore(curs, f, tname)
-            if imported != total:
-                log.warn(
-                    '%s:\ncould not import %d row(s), id(s) already taken',
-                    fullname, total - imported)
-            else:
-                log.info('Imported %d new rows', imported)
+
+    created = []
+    try:
+        for line in open(filenames):
+            fname = line.rstrip()
+            tname = fname[:-7]  # strip .csv.gz
+
+            curs.execute("DROP TABLE IF EXISTS %s" % restore_tablename(tname))
+
+            fullname = os.path.join(directory, fname)
+            with gzip.GzipFile(fname, fileobj=open(fullname)) as f:
+                log.info('Importing %s...', fname)
+                created.append(tname)
+                imported, total = safe_restore(curs, f, tname)
+                if imported != total:
+                    raise RuntimeError(
+                        "ID Clash detected. The database might be corrupted")
+        hc_ids = transfer_data(curs, models.HazardCalculation)
+        lt_ids = transfer_data(
+            curs, models.LtRealization, "hazard_calculation_id", hc_ids)
+        site_ids = transfer_data(
+            curs, models.HazardSite, "hazard_calculation_id", hc_ids)
+        job_ids = transfer_data(
+            curs, models.OqJob, "hazard_calculation_id", hc_ids)
+
+    except Exception as e:
+        log.error(str(e))
+        raise
+    finally:
+        for tname in reversed(created):
+            try:
+                curs.execute(
+                    "DROP TABLE IF EXISTS %s" % restore_tablename(tname))
+            except Exception as e:
+                log.error(str(e))
+                raise
+            print "yo"
+            log.info("Dropped %s" % restore_tablename(tname))
     log.info('Restored %s', directory)
 
 
