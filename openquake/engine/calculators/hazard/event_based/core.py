@@ -94,6 +94,10 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
         sets and ground motion fields from the sources
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    lt_rlz = ses.ses_collection.lt_realization
+    ltp = logictree.LogicTreeProcessor(hc.id)
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+        lt_rlz.sm_lt_path)
 
     # complete_logic_tree_ses flag
     cmplt_lt_ses = None
@@ -102,24 +106,10 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
             ses_collection__output__oq_job=job_id,
             ordinal=None)
 
-    ltp = logictree.LogicTreeProcessor(hc.id)
-    lt_rlz = ses.ses_collection.lt_realization
-
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
-
-    src_filter = filters.source_site_distance_filter(hc.maximum_distance)
-    rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
-
-    with EnginePerformanceMonitor(
-            'reading site collection', job_id, compute_ses):
-        site_collection = hc.site_collection
-
     with EnginePerformanceMonitor(
             'reading sources', job_id, compute_ses):
-        sources = list(haz_general.gen_sources(
-            src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-            hc.width_of_mfd_bin, hc.area_source_discretization))
+        sources = [apply_uncertainties(s.nrml)
+                   for s in models.ParsedSource.objects.filter(pk__in=src_ids)]
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -131,8 +121,7 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
             # then make copies of the hazardlib ruptures (which may contain
             # duplicates): the copy is needed to keep the tags distinct
             rupts = map(copy.copy, stochastic.stochastic_event_set_poissonian(
-                        [src], hc.investigation_time, site_collection,
-                        src_filter, rup_filter))
+                        [src], hc.investigation_time))
             # set the tag for each copy
             for i, r in enumerate(rupts):
                 r.tag = 'rlz=%02d|ses=%04d|src=%s|i=%03d' % (
@@ -510,6 +499,18 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 output_type='complete_lt_gmf')
             models.Gmf.objects.create(output=clt_gmf_output)
 
+    def get_source_filter_condition(self):
+        """
+        Return a function filtering on the maximum_distance
+        """
+        src_filter = filters.source_site_distance_filter(
+            self.hc.maximum_distance)
+
+        def filter_on_distance(src):
+            """True if the source is relevant for the site collection"""
+            return bool(list(src_filter([(src, self.hc.site_collection)])))
+        return filter_on_distance
+
     def pre_execute(self):
         """
         Do pre-execution work. At the moment, this work entails:
@@ -522,13 +523,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         # Parse risk models.
         self.parse_risk_models()
 
-        # Parse logic trees and create source Inputs.
-        self.initialize_sources()
-
         # Deal with the site model and compute site data for the calculation
         # If no site model file was specified, reference parameters are used
         # for all sites.
         self.initialize_site_model()
+
+        # Parse logic trees and create source Inputs.
+        self.initialize_sources()
 
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach
