@@ -22,8 +22,8 @@ def quote_unwrap(name):
 
 
 def restore_tablename(original_tablename):
-    schema, tname = map(quote_unwrap, original_tablename.split('.'))
-    return "%s.restore_%s" % (schema, tname)
+    _schema, tname = map(quote_unwrap, original_tablename.split('.'))
+    return "htemp.restore_%s" % (schema, tname)
 
 
 class CSVInserter(object):
@@ -55,7 +55,7 @@ class CSVInserter(object):
         try:
             self.curs.execute("DROP TABLE IF EXISTS %s" % self.tablename)
             self.curs.execute(
-                "CREATE TABLE %s AS SELECT * FROM %s WHERE 0 = 1" % (
+                "CREATE TEMPORARY TABLE %s AS SELECT * FROM %s WHERE 0 = 1" % (
                     self.tablename, self.original_tablename))
             self.curs.copy_from(self.io, self.tablename)
         except Exception as e:
@@ -107,7 +107,7 @@ def transfer_data(curs, model, **foreign_keys):
         for fk, id_mapping in foreign_keys.iteritems():
             if fk is not None:
                 curs.execute(
-                    "CREATE TABLE temp_%s_translation("
+                    "CREATE TEMPORARY TABLE temp_%s_translation("
                     "%s INT NOT NULL, new_id INT NOT NULL)" % (fk, fk))
                 ids = ", ".join(["(%d, %d)" % (old_id, new_id)
                                  for old_id, new_id in id_mapping])
@@ -217,7 +217,17 @@ def hazard_restore(conn, directory):
 def hazard_restore_remote(tar, host, dbname, user, password, port):
     conn = psycopg2.connect(
         host=host, dbname=dbname, user=user, password=password, port=port)
-    return hazard_restore(conn, tar)
+    ret = hazard_restore(conn, tar)
+    conn.close()
+    return ret
+
+
+def django_restore(tar):
+    from django.db import connection
+    if connection.connection:
+        return hazard_restore(connection.connection, tar)
+    else:
+        return hazard_restore_local(tar)
 
 
 def hazard_restore_local(*argv):
