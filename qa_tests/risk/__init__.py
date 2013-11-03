@@ -248,8 +248,20 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             job = self._get_queryset().latest('oqjob__last_update').oqjob
 
         if self.dump_restore:
+            # Close the opened transactions
+            dumped_calculation = dump_hazards.main(job.hazard_calculation.id)
+
+            # FIXME Here on, to avoid deadlocks due to stale
+            # transactions, we commit all the opened transactions. We
+            # should find who is responsible for the eventual opened
+            # transaction
+            try:
+                models.getcursor('job_init').connection.commit()
+            except:
+                pass
+            [restored_calculation] = restore_hazards.django_restore(
+                    dumped_calculation)
             return models.OqJob.objects.get(
-                hazard_calculation_id=restore_hazards.django_restore(
-                    dump_hazards.main(job.hazard_calculation.id)))
+                hazard_calculation__id=restored_calculation)
         else:
             return job
