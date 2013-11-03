@@ -306,6 +306,8 @@ def main(hazard_calculation_id, outdir=None,
     hc = HazardDumper(conn, outdir)
     hc.dump(hazard_calculation_id)
     log.info('Written %s' % hc.outdir)
+    conn.close()
+    return hc.outdir
 
 
 if __name__ == '__main__':

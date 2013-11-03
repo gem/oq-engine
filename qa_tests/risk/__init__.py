@@ -27,6 +27,7 @@ from tests.utils import helpers
 
 from openquake.engine import export
 from openquake.engine.db import models
+from openquake.engine.tools import dump_hazards, restore_hazards
 
 
 class BaseRiskQATestCase(qa_utils.BaseQATestCase):
@@ -227,6 +228,10 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
     #: derived qa test must override this
     hazard_calculation_fixture = None
 
+    # if True, we will dump and restore the computed hazard
+    # calculation and run the risk calculation from the restored one
+    dump_restore = False
+
     def _get_queryset(self):
         return models.HazardCalculation.objects.filter(
             description=self.hazard_calculation_fixture,
@@ -235,10 +240,16 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
     def get_hazard_job(self):
         if not self._get_queryset().exists():
             warnings.warn("Computing Hazard input from scratch")
-            completed_job = helpers.run_hazard_job(
+            job = helpers.run_hazard_job(
                 self._test_path('job_haz.ini'))
-            self.assertEqual('complete', completed_job.status)
-            return completed_job
+            self.assertEqual('complete', job.status)
         else:
             warnings.warn("Using existing Hazard input")
-            return self._get_queryset().latest('oqjob__last_update').oqjob
+            job = self._get_queryset().latest('oqjob__last_update').oqjob
+
+        if self.dump_restore:
+            return models.OqJob.objects.get(
+                hazard_calculation_id=restore_hazards.django_restore(
+                    dump_hazards.main(job.hazard_calculation.id)))
+        else:
+            return job
