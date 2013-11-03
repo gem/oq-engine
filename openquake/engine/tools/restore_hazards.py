@@ -23,7 +23,7 @@ def quote_unwrap(name):
 
 def restore_tablename(original_tablename):
     _schema, tname = map(quote_unwrap, original_tablename.split('.'))
-    return "htemp.restore_%s" % (schema, tname)
+    return "htemp.restore_%s" % tname
 
 
 class CSVInserter(object):
@@ -55,7 +55,7 @@ class CSVInserter(object):
         try:
             self.curs.execute("DROP TABLE IF EXISTS %s" % self.tablename)
             self.curs.execute(
-                "CREATE TEMPORARY TABLE %s AS SELECT * FROM %s WHERE 0 = 1" % (
+                "CREATE TABLE %s AS SELECT * FROM %s WHERE 0 = 1" % (
                     self.tablename, self.original_tablename))
             self.curs.copy_from(self.io, self.tablename)
         except Exception as e:
@@ -107,7 +107,7 @@ def transfer_data(curs, model, **foreign_keys):
         for fk, id_mapping in foreign_keys.iteritems():
             if fk is not None:
                 curs.execute(
-                    "CREATE TEMPORARY TABLE temp_%s_translation("
+                    "CREATE TABLE temp_%s_translation("
                     "%s INT NOT NULL, new_id INT NOT NULL)" % (fk, fk))
                 ids = ", ".join(["(%d, %d)" % (old_id, new_id)
                                  for old_id, new_id in id_mapping])
@@ -193,6 +193,8 @@ def hazard_restore(conn, directory):
     hc_ids = transfer_data(curs, models.HazardCalculation)
     lt_ids = transfer_data(
         curs, models.LtRealization, hazard_calculation_id=hc_ids)
+    transfer_data(
+        curs, models.HazardSite, hazard_calculation_id=hc_ids)
     job_ids = transfer_data(
         curs, models.OqJob, hazard_calculation_id=hc_ids)
     out_ids = transfer_data(

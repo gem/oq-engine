@@ -300,7 +300,7 @@ def main(hazard_calculation_id, outdir=None,
     port = port or str(default_cfg.get('PORT', 5432))
     # this is not using the predefined Django connections since
     # the typical use case is to dump from a remote database
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARN)
     conn = psycopg2.connect(
         host=host, database=dbname, user=user, password=password, port=port)
     hc = HazardDumper(conn, outdir)
