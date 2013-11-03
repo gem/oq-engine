@@ -1159,7 +1159,7 @@ class LogicTreeProcessor(object):
         def apply_uncertainties(source):
             for branchset, value in branchsets_and_uncertainties:
                 branchset.apply_uncertainty(value, source)
-
+            return source
         return apply_uncertainties
 
     def parse_gmpe_logictree_path(self, branch_ids):
