@@ -534,7 +534,7 @@ def main():
     elif args.dump_hazard_calculation:
         dump_hazards.main(*args.dump_hazard_calculation)
     elif args.restore_hazard_calculation:
-        hc_ids = restore_hazards.hazard_restore_local(
+        hc_ids = restore_hazards.django_restore(
             args.restore_hazard_calculation)
         print "Restore hazard calculation with IDs: %s" % hc_ids
     else:
