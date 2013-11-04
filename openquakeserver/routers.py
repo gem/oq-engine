@@ -4,7 +4,6 @@ APPS = (
     'sessions',
     'sites',
     'admin',
-    'south',
 )
 
 class DefaultRouter(object):
