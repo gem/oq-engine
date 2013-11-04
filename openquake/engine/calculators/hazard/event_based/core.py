@@ -32,6 +32,7 @@ For more information on computing ground motion fields, see
 """
 
 import copy
+import math
 import random
 import collections
 
@@ -43,7 +44,7 @@ from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.calc import stochastic
 
-from openquake.engine import writer
+from openquake.engine import writer, logs
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
@@ -309,7 +310,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                            ses_collection__lt_realization=lt_rlz,
                            ordinal__isnull=False).order_by('ordinal'))
 
-            for src_ids in block_splitter(sources, 1):
+            for src_ids in block_splitter(sources, self.preferred_block_size):
                 for ses in all_ses:
                     # compute seeds for the sources
                     src_seeds = [rnd.randint(0, models.MAX_SINT_32)
