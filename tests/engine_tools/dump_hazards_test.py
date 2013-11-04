@@ -28,9 +28,9 @@ class DumperTestCase(unittest.TestCase):
     def setUpClass(cls):
         connections['admin'].cursor()  # open a connection
         cls.conn = connections['admin'].connection
-        cls.output, cls.hc = import_gmf_scenario(test_data, 'openquake')
+        cls.output, cls.hc = import_gmf_scenario(test_data)
         cls.output.oq_job = OqJob.objects.create(
-            owner_id=1, hazard_calculation=cls.hc)  # fake job
+            user_name='openquake', hazard_calculation=cls.hc)  # fake job
         cls.output.save()
 
     def test_dump_and_restore(self):

@@ -39,7 +39,6 @@ class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
             helpers.get_data_path("event_based_hazard/job.ini"))
 
         job.hazard_calculation = models.HazardCalculation.objects.create(
-            owner=job.hazard_calculation.owner,
             truncation_level=job.hazard_calculation.truncation_level,
             maximum_distance=job.hazard_calculation.maximum_distance,
             intensity_measure_types_and_levels=(
