@@ -144,14 +144,16 @@ def save_individual_outputs(containers, outputs, disagg_outputs, params):
         output_type="loss_map")
 
     if disagg_outputs is not None:
+        # FIXME. We should avoid synthetizing the generator
+        assets = list(disagg_outputs.assets_disagg)
         containers.write(
-            disagg_outputs.assets_disagg,
+            assets,
             disagg_outputs.magnitude_distance,
             disagg_outputs.fractions,
             output_type="loss_fraction",
             variable="magnitude_distance")
         containers.write(
-            disagg_outputs.assets_disagg,
+            assets,
             disagg_outputs.coordinate, disagg_outputs.fractions,
             output_type="loss_fraction",
             variable="coordinate")
@@ -243,7 +245,6 @@ def disaggregate(outputs, rupture_ids, params):
     """
     def disaggregate_site(site, loss_ratios):
         for fraction, rupture_id in zip(loss_ratios, rupture_ids):
-
             rupture = models.SESRupture.objects.get(pk=rupture_id)
             s = rupture.surface
             m = mesh.Mesh(numpy.array([site.x]), numpy.array([site.y]), None)
@@ -264,7 +265,16 @@ def disaggregate(outputs, rupture_ids, params):
     for asset, losses in zip(outputs.assets, outputs.loss_matrix):
         if asset.site in params.sites_disagg:
             disagg_matrix.extend(list(disaggregate_site(asset.site, losses)))
-            assets_disagg.append(asset)
+
+            # FIXME. the functions in
+            # openquake.engine.calculators.risk.writers requires an
+            # asset per each row in the disaggregation matrix. To this
+            # aim, we repeat the assets that will be passed to such
+            # functions
+            assets_disagg = itertools.chain(
+                assets_disagg,
+                itertools.repeat(asset, len(rupture_ids)))
+
     if assets_disagg:
         magnitudes, coordinates, fractions = zip(*disagg_matrix)
     else:
