@@ -69,7 +69,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def compute_ses(job_id, src_ids, ses, src_seeds):
+def compute_ses(job_id, src_ids, ses, src_seeds, ltp):
     """
     Celery task for the stochastic event set calculator.
 
@@ -92,10 +92,11 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
     :param int src_seeds:
         Values for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields from the sources
+    :param ltp:
+        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     lt_rlz = ses.ses_collection.lt_realization
-    ltp = logictree.LogicTreeProcessor(hc.id)
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
 
@@ -345,7 +346,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         return int(sum(num_tasks))
 
-    def task_arg_gen(self):
+    def task_arg_gen(self, _block_size=None):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -357,6 +358,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rnd.seed(hc.random_seed)
         realizations = self._get_realizations()
 
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_rlz in realizations:
             sources = models.SourceProgress.objects\
                 .filter(is_complete=False, lt_realization=lt_rlz)\
@@ -372,7 +374,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                     # compute seeds for the sources
                     src_seeds = [rnd.randint(0, models.MAX_SINT_32)
                                  for _ in src_ids]
-                    yield self.job.id, src_ids, ses, src_seeds
+                    yield self.job.id, src_ids, ses, src_seeds, ltp
 
     def compute_gmf_arg_gen(self):
         """
@@ -388,7 +390,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             truncation_level=self.hc.truncation_level,
             maximum_distance=self.hc.maximum_distance)
         for lt_rlz in self._get_realizations():
-            ltp = logictree.LogicTreeProcessor(self.hc.id)
+            ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
             gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
             all_ses = models.SES.objects.filter(
                 ses_collection__lt_realization=lt_rlz,
@@ -440,7 +442,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         NOTE: Many tasks can contribute ruptures to the same SES.
         """
         output = models.Output.objects.create(
-            owner=self.job.owner,
             oq_job=self.job,
             display_name='ses-coll-rlz-%s' % lt_rlz.id,
             output_type='ses')
@@ -450,7 +451,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         if self.job.hazard_calculation.ground_motion_fields:
             output = models.Output.objects.create(
-                owner=self.job.owner,
                 oq_job=self.job,
                 display_name='gmf-rlz-%s' % lt_rlz.id,
                 output_type='gmf')
@@ -479,7 +479,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         # `complete logic tree` SES
         clt_ses_output = models.Output.objects.create(
-            owner=self.job.owner,
             oq_job=self.job,
             display_name='complete logic tree SES',
             output_type='complete_lt_ses')
@@ -493,7 +492,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         if self.hc.complete_logic_tree_gmf:
             clt_gmf_output = models.Output.objects.create(
-                owner=self.job.owner,
                 oq_job=self.job,
                 display_name='complete logic tree GMF',
                 output_type='complete_lt_gmf')

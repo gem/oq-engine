@@ -69,17 +69,7 @@ patch = functools.partial(mock_module.patch, mocksignature=True)
 
 def default_user():
     """Return the default user to be used for test setups."""
-    return models.OqUser.objects.get(user_name="openquake")
-
-
-def insert_inputs(job, inputs):
-    """Insert the input records for the given data and job."""
-    for imt, imp in inputs:
-        iobj = models.Input(path=imp, input_type=imt, owner=job.owner,
-                            size=random.randint(1024, 16 * 1024))
-        iobj.save()
-        i2j = models.Input2job(input=iobj, oq_job=job)
-        i2j.save()
+    return "openquake"
 
 
 def _patched_mocksignature(func, mock=None, skipfirst=False):
@@ -596,40 +586,36 @@ def _deep_eq(a, b, decimal, exclude=None):
             assert a == b, "%s != %s" % (a, b)
 
 
-def get_hazard_job(cfg, username=None):
+def get_hazard_job(cfg, username="openquake"):
     """
     Given a path to a config file, create a
     :class:`openquake.engine.db.models.OqJob` object for a hazard calculation.
     """
-    username = username if username is not None else default_user().user_name
-
     return engine.haz_job_from_file(cfg, username, 'error', [])
 
 
-def get_risk_job(cfg, username=None, hazard_calculation_id=None,
+def get_risk_job(cfg, username="openquake", hazard_calculation_id=None,
                  hazard_output_id=None):
     """
     Given a path to a config file and a hazard_calculation_id
     (or, alternatively, a hazard_output_id, create a
     :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
-    username = username if username is not None else default_user().user_name
-
     # You can't specify both a hazard output and hazard calculation
     # Pick one
     assert not (hazard_calculation_id is not None
                 and hazard_output_id is not None)
 
     job = engine.prepare_job(username)
-    params, files = engine.parse_config(open(cfg, 'r'))
+    params = engine.parse_config(open(cfg, 'r'))
 
     params.update(
         dict(hazard_output_id=hazard_output_id,
              hazard_calculation_id=hazard_calculation_id)
     )
 
-    risk_calc = engine.create_risk_calculation(
-        job.owner, params, files)
+    risk_calc = engine.create_calculation(
+        models.RiskCalculation, params)
     risk_calc = models.RiskCalculation.objects.get(id=risk_calc.id)
     job.risk_calculation = risk_calc
     job.save()
@@ -760,7 +746,7 @@ def populate_gmf_data_from_csv(job, fname):
 
 
 def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
-                      username=None):
+                      username="openquake"):
     """
     Takes in input the paths to a risk job config file and a hazard job config
     file.
@@ -772,7 +758,6 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
 
     :param output_type: gmf, gmf_scenario, or curve
     """
-    username = username if username is not None else default_user().user_name
 
     hazard_job = get_hazard_job(hazard_cfg, username)
     hc = hazard_job.hazard_calculation
@@ -824,20 +809,20 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     hazard_job.status = "complete"
     hazard_job.save()
     job = engine.prepare_job(username)
-    params, files = engine.parse_config(open(risk_cfg, 'r'))
+    params = engine.parse_config(open(risk_cfg, 'r'))
 
     params.update(dict(hazard_output_id=hazard_output.output.id))
 
-    risk_calc = engine.create_risk_calculation(job.owner, params, files)
+    risk_calc = engine.create_calculation(models.RiskCalculation, params)
     job.risk_calculation = risk_calc
     job.save()
-    error_message = validate(job, 'risk', params, files, [])
+    error_message = validate(job, 'risk', params, [])
 
     # reload risk calculation to have all the types converted properly
     job.risk_calculation = models.RiskCalculation.objects.get(id=risk_calc.id)
     if error_message:
         raise RuntimeError(error_message)
-    return job, files
+    return job, set(params['inputs'])
 
 
 def get_ruptures(job, ses_collection, num):

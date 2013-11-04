@@ -490,10 +490,8 @@ class SourceDBWriter(object):
 
     The source object data will be stored in the database in pickled blob form.
 
-    :param inp:
-        :class:`~openquake.engine.db.models.Input` object, the top-level
-        container for the sources written to the database. Should have an
-        `input_type` of 'source'.
+    :param job:
+        :class:`~openquake.engine.db.models.OqJob` object.
     :param source_model:
         :class:`openquake.nrmllib.models.SourceModel` object, which is an
         Iterable of NRML source model objects (parsed from NRML XML). This
@@ -512,11 +510,12 @@ class SourceDBWriter(object):
         by default it returns always True and no sources are filtered.
     """
 
-    def __init__(self, inp, source_model,
-                 mesh_spacing, bin_width, area_src_disc,
-                 condition=lambda src: True):
-        self.inp = inp
+    def __init__(self, job, source_model_filename, source_model,
+                 mesh_spacing, bin_width,
+                 area_src_disc, condition=lambda src: True):
+        self.job = job
         self.source_model = source_model
+        self.source_model_filename = source_model_filename
         self.mesh_spacing = mesh_spacing
         self.bin_width = bin_width
         self.area_src_disc = area_src_disc
@@ -524,24 +523,15 @@ class SourceDBWriter(object):
 
     @transaction.commit_on_success(router.db_for_write(models.ParsedSource))
     def serialize(self):
-        """Save NRML sources to the database in hazardlib format along with
-        'rupture-enclosing polygon' geometry for each source.
-        """
-        assert self.inp.input_type == 'source', (
-            "`Input` object has the wrong `input_type`. Expected: 'source'."
-            "Got: '%s'."
-        ) % self.inp.input_type
-        # First, set the input name to the source model name
-        self.inp.name = self.source_model.name
-        self.inp.save()
-
+        """Save NRML sources to the database in hazardlib format"""
         for src in self.source_model:
             hazardlib_source = nrml_to_hazardlib(
                 src, self.mesh_spacing, self.bin_width, self.area_src_disc)
             if self.condition(hazardlib_source):
                 models.ParsedSource.objects.create(
-                    input=self.inp, source_type=_source_type(src),
-                    nrml=hazardlib_source)
+                    job=self.job, source_type=_source_type(src),
+                    nrml=hazardlib_source,
+                    source_model_filename=self.source_model_filename)
 
 
 class RuptureDBWriter(object):
@@ -549,7 +539,7 @@ class RuptureDBWriter(object):
     `hzrdi.parsed_rupture_model` table in the database, in pickled blob form.
 
     :param inp:
-        :class:`~openquake.engine.db.models.Input` object, the top-level
+        :class:`~openquake.engine.db.models.OqJob` object, the top-level
         container for the sources written to the database. Should have an
         `input_type` of 'simple_fault' or 'complex_fault'.
     :param rupture_model:
@@ -557,15 +547,15 @@ class RuptureDBWriter(object):
         :class:`openquake.nrmllib.models.ComplexFaultRuptureModel`
     """
 
-    def __init__(self, inp, rupture_model):
-        self.inp = inp
+    def __init__(self, job, rupture_model):
+        self.job = job
         self.rupture_model = rupture_model
 
     @transaction.commit_on_success(router.db_for_write(models.ParsedRupture))
     def serialize(self):
         """
         Serialize the rupture_model in hzrdi.parsed_rupture_model, with a
-        reference to the `openquake.engine.db.models.Input` object.
+        reference to the `openquake.engine.db.models.OqJob` object.
         """
         src = self.rupture_model
         if isinstance(src, openquake.nrmllib.models.SimpleFaultRuptureModel):
@@ -577,7 +567,7 @@ class RuptureDBWriter(object):
             raise TypeError(
                 'Expected Simple or Complex FaultRuptureModel, got %r' % src)
         models.ParsedRupture(
-            input=self.inp, rupture_type=rupture_type, nrml=src).save()
+            job=self.job, rupture_type=rupture_type, nrml=src).save()
 
 
 def area_source_to_point_sources(area_src, area_src_disc):
