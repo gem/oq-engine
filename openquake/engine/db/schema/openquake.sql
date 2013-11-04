@@ -384,9 +384,9 @@ CREATE TABLE hzrdr.hazard_map (
             ((imt = 'SA') AND (sa_damping IS NOT NULL))
             OR ((imt != 'SA') AND (sa_damping IS NULL))),
     poe float NOT NULL,
-    lons bytea NOT NULL,
-    lats bytea NOT NULL,
-    imls bytea NOT NULL
+    lons float[] NOT NULL,
+    lats float[] NOT NULL,
+    imls float[] NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 

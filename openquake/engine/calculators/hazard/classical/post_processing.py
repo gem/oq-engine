@@ -159,9 +159,9 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             sa_period=hc.sa_period,
             sa_damping=hc.sa_damping,
             poe=poe,
-            lons=lons,
-            lats=lats,
-            imls=map_values,
+            lons=lons.tolist(),
+            lats=lats.tolist(),
+            imls=map_values.tolist(),
         )
 
 hazard_curves_to_hazard_map_task = tasks.oqtask(hazard_curves_to_hazard_map)
