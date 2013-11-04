@@ -270,6 +270,8 @@ CREATE TABLE uiapi.risk_calculation (
     hazard_output_id INTEGER NULL,  -- FK to uiapi.output
     hazard_calculation_id INTEGER NULL,  -- FK to uiapi.hazard_calculation
 
+    risk_investigation_time float NULL,
+
     quantile_loss_curves float[],
     conditional_loss_poes float[],
 
