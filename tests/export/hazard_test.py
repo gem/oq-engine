@@ -61,7 +61,7 @@ class GetResultExportDestTestCase(unittest.TestCase):
         )
         self.FakeDisagg = namedtuple(
             'Disagg',
-            'output, lt_realization, imt, sa_period, location'
+            'output, lt_realization, imt, sa_period, location, poe'
         )
         self.FakeGMF = namedtuple(
             'GMF',
@@ -210,17 +210,18 @@ class GetResultExportDestTestCase(unittest.TestCase):
 
         matrices = [
             self.FakeDisagg(output, self.ltr_mc, 'PGA', None,
-                            self.Location(33.333, -89.999001)),
+                            self.Location(33.333, -89.999001), 0.1),
             self.FakeDisagg(output, self.ltr_enum, 'SA', 0.025,
-                            self.Location(40.1, 10.1)),
+                            self.Location(40.1, 10.1), 0.02),
         ]
 
         expected_paths = [
             '%s/calc_7/disagg_matrix/PGA/'
-            'disagg_matrix-lon_33.333-lat_-89.999001-smltp_B1_B3-'
+            'disagg_matrix(0.1)-lon_33.333-lat_-89.999001-smltp_B1_B3-'
             'gsimltp_B2_B4-ltr_3.xml',
             '%s/calc_7/disagg_matrix/SA-0.025/'
-            'disagg_matrix-lon_40.1-lat_10.1-smltp_B10_B9-gsimltp_B7_B8.xml'
+            'disagg_matrix(0.02)-lon_40.1-lat_10.1-'
+            'smltp_B10_B9-gsimltp_B7_B8.xml'
         ]
         expected_paths = [x % self.target_dir for x in expected_paths]
 

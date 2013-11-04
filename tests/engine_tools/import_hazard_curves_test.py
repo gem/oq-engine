@@ -12,7 +12,7 @@ class ImportHazardCurvesTestCase(unittest.TestCase):
         repodir = os.path.dirname(os.path.dirname(nrmllib.__path__[0]))
         fileobj = open(os.path.join(
                        repodir, 'examples', 'hazard-curves-pga.xml'))
-        out, hcalc = import_hazard_curves(fileobj, 'openquake')
+        out, hcalc = import_hazard_curves(fileobj)
         [hc] = HazardCurve.objects.filter(output=out)
         data = HazardCurveData.objects.filter(hazard_curve=hc)
         self.assertEqual(len(data), 2)  # 2 rows entered
@@ -23,7 +23,7 @@ class ImportHazardCurvesTestCase(unittest.TestCase):
         repodir = os.path.dirname(os.path.dirname(nrmllib.__path__[0]))
         fileobj = open(os.path.join(
                        repodir, 'examples', 'hazard-curves-sa.xml'))
-        out, hcalc = import_hazard_curves(fileobj, 'openquake')
+        out, hcalc = import_hazard_curves(fileobj)
         [hc] = HazardCurve.objects.filter(output=out)
         data = HazardCurveData.objects.filter(hazard_curve=hc)
         self.assertEqual(len(data), 2)  # 2 rows entered

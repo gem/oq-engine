@@ -34,6 +34,7 @@ from openquake.engine.calculators.risk import (
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs, writer
+from openquake.engine.input import logictree
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.base import signal_task_complete
 
@@ -144,14 +145,16 @@ def save_individual_outputs(containers, outputs, disagg_outputs, params):
         output_type="loss_map")
 
     if disagg_outputs is not None:
+        # FIXME. We should avoid synthetizing the generator
+        assets = list(disagg_outputs.assets_disagg)
         containers.write(
-            disagg_outputs.assets_disagg,
+            assets,
             disagg_outputs.magnitude_distance,
             disagg_outputs.fractions,
             output_type="loss_fraction",
             variable="magnitude_distance")
         containers.write(
-            disagg_outputs.assets_disagg,
+            assets,
             disagg_outputs.coordinate, disagg_outputs.fractions,
             output_type="loss_fraction",
             variable="coordinate")
@@ -243,7 +246,6 @@ def disaggregate(outputs, rupture_ids, params):
     """
     def disaggregate_site(site, loss_ratios):
         for fraction, rupture_id in zip(loss_ratios, rupture_ids):
-
             rupture = models.SESRupture.objects.get(pk=rupture_id)
             s = rupture.surface
             m = mesh.Mesh(numpy.array([site.x]), numpy.array([site.y]), None)
@@ -264,7 +266,16 @@ def disaggregate(outputs, rupture_ids, params):
     for asset, losses in zip(outputs.assets, outputs.loss_matrix):
         if asset.site in params.sites_disagg:
             disagg_matrix.extend(list(disaggregate_site(asset.site, losses)))
-            assets_disagg.append(asset)
+
+            # FIXME. the functions in
+            # openquake.engine.calculators.risk.writers requires an
+            # asset per each row in the disaggregation matrix. To this
+            # aim, we repeat the assets that will be passed to such
+            # functions
+            assets_disagg = itertools.chain(
+                assets_disagg,
+                itertools.repeat(asset, len(rupture_ids)))
+
     if assets_disagg:
         magnitudes, coordinates, fractions = zip(*disagg_matrix)
     else:
@@ -396,6 +407,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         time_span, tses = self.hazard_times()
 
+        # If we are computing ground motion values on the fly we need
+        # logic trees
+        if self.rc.hazard_outputs()[0].output_type == "ses":
+            ltp = logictree.LogicTreeProcessor.from_hc(self.rc)
+        else:
+            ltp = None
+
         return workflows.CalculationUnit(
             loss_type,
             workflows.ProbabilisticEventBased(
@@ -411,7 +429,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 assets,
                 self.rc.best_maximum_distance,
                 risk_model.imt,
-                self.hazard_seeds))
+                self.hazard_seeds,
+                ltp))
 
     def hazard_times(self):
         """

@@ -165,6 +165,8 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
             )
     elif output_type == 'disagg_matrix':
         # only logic trees, no stats
+
+        out = '%s(%s)' % (output_type, result.poe)
         location = 'lon_%s-lat_%s' % (result.location.x, result.location.y)
 
         ltr = result.lt_realization
@@ -173,12 +175,12 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
         if ltr.weight is None:
             # Monte-Carlo logic tree sampling
             filename = '%s-%s-smltp_%s-gsimltp_%s-ltr_%s.%s' % (
-                output_type, location, sm_ltp, gsim_ltp, ltr.ordinal, file_ext
+                out, location, sm_ltp, gsim_ltp, ltr.ordinal, file_ext
             )
         else:
             # End Branch Enumeration
             filename = '%s-%s-smltp_%s-gsimltp_%s.%s' % (
-                output_type, location, sm_ltp, gsim_ltp, file_ext
+                out, location, sm_ltp, gsim_ltp, file_ext
             )
     else:
         filename = '%s.%s' % (output_type, file_ext)

@@ -49,19 +49,6 @@ CREATE TABLE admin.organization (
 ) TABLESPACE admin_ts;
 
 
--- OpenQuake users
-CREATE TABLE admin.oq_user (
-    id SERIAL PRIMARY KEY,
-    user_name VARCHAR NOT NULL,
-    full_name VARCHAR NOT NULL,
-    organization_id INTEGER NOT NULL,
-    -- Whether the data owned by the user is visible to the general public.
-    data_is_open boolean NOT NULL DEFAULT TRUE,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE admin_ts;
-
-
 -- Revision information
 CREATE TABLE admin.revision_info (
     id SERIAL PRIMARY KEY,
@@ -77,7 +64,7 @@ CREATE TABLE admin.revision_info (
 -- Site-specific parameters for hazard calculations.
 CREATE TABLE hzrdi.site_model (
     id SERIAL PRIMARY KEY,
-    input_id INTEGER NOT NULL,
+    job_id INTEGER NOT NULL,
     -- Average shear wave velocity for top 30 m. Units m/s.
     vs30 float NOT NULL CONSTRAINT site_model_vs30
         CHECK(vs30 > 0.0),
@@ -97,11 +84,12 @@ SELECT AddGeometryColumn('hzrdi', 'site_model', 'location', 4326, 'POINT', 2);
 -- Parsed sources
 CREATE TABLE hzrdi.parsed_source (
     id SERIAL PRIMARY KEY,
-    input_id INTEGER NOT NULL,
+    job_id INTEGER NOT NULL,
     source_type VARCHAR NOT NULL
         CONSTRAINT enforce_source_type CHECK
         (source_type IN ('area', 'point', 'complex', 'simple', 'characteristic')),
     nrml BYTEA NOT NULL,
+    source_model_filename VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE hzrdi_ts;
@@ -110,7 +98,7 @@ CREATE TABLE hzrdi.parsed_source (
 -- Parsed Rupture models
 CREATE TABLE hzrdi.parsed_rupture_model (
     id SERIAL PRIMARY KEY,
-    input_id INTEGER NOT NULL,
+    job_id INTEGER NOT NULL,
     rupture_type VARCHAR NOT NULL
         CONSTRAINT enforce_rupture_type CHECK
         (rupture_type IN ('complex_fault', 'simple_fault')),
@@ -120,55 +108,10 @@ CREATE TABLE hzrdi.parsed_rupture_model (
 ) TABLESPACE hzrdi_ts;
 
 
--- A single OpenQuake input file imported by the user
-CREATE TABLE uiapi.input (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    model_content_id INTEGER,
-    -- Optional name for the input.
-    name VARCHAR,
-    -- The full path of the input file on the server
-    path VARCHAR NOT NULL,
-    digest VARCHAR(32) NOT NULL,
-    -- Input file type, one of:
-    --      source model file (source)
-    --      source logic tree (source_model_logic_tree)
-    --      GSIM logic tree (gsim_logic_tree)
-    --      exposure file (exposure)
-    --      vulnerability file (vulnerability)
-    --      rupture file (rupture)
-    input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('unknown', 'source',
-                             'source_model_logic_tree', 'gsim_logic_tree',
-                             'exposure', 'fragility', 'rupture_model',
-                             'structural_vulnerability',
-                             'contents_vulnerability',
-                             'nonstructural_vulnerability',
-                             'business_interruption_vulnerability',
-                             'occupants_vulnerability',
-                             'structural_vulnerability_retrofitted',
-                             'site_model')),
-    -- Number of bytes in file
-    size INTEGER NOT NULL DEFAULT 0,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE uiapi_ts;
-
-
-CREATE TABLE uiapi.model_content (
-    id SERIAL PRIMARY KEY,
-    -- contains the raw text of an input file
-    raw_content BYTEA NOT NULL,
-    content_type VARCHAR NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE uiapi_ts;
-
-
 -- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
+    user_name VARCHAR NOT NULL,
     hazard_calculation_id INTEGER,  -- FK to uiapi.hazard_calculation
     risk_calculation_id INTEGER,  -- FK to uiapi.risk_calculation
     log_level VARCHAR NOT NULL DEFAULT 'progress' CONSTRAINT oq_job_log_level_check
@@ -239,7 +182,6 @@ CREATE TABLE uiapi.hazard_calculation (
     -- We'll need to update fields and constraints as we add the other
     -- calculation modes.
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
     -- Contains the absolute path to the directory containing the job config
     -- file
     base_path VARCHAR NOT NULL,
@@ -248,8 +190,8 @@ CREATE TABLE uiapi.hazard_calculation (
     -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',
     -- what time period w/o any progress is acceptable for calculations?
-    -- The timeout is stored in seconds and is 1 hour by default.
-    no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
+    -- The timeout is stored in seconds and is 100 hours by default.
+    no_progress_timeout INTEGER NOT NULL DEFAULT 360000,
     calculation_mode VARCHAR NOT NULL CONSTRAINT haz_calc_mode
         CHECK(calculation_mode IN (
             'classical',
@@ -257,6 +199,7 @@ CREATE TABLE uiapi.hazard_calculation (
             'disaggregation',
             'scenario'
         )),
+    inputs BYTEA,  -- stored as a pickled Python `dict`
     region_grid_spacing float,
     -- logic tree parameters:
     random_seed INTEGER,
@@ -310,23 +253,8 @@ SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'region', 4326, 'POLYGON
 SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'sites', 4326, 'MULTIPOINT', 2);
 
 
-CREATE TABLE uiapi.input2hcalc (
-    id SERIAL PRIMARY KEY,
-    input_id INTEGER NOT NULL,
-    hazard_calculation_id INTEGER NOT NULL
-) TABLESPACE uiapi_ts;
-
-
-CREATE TABLE uiapi.input2rcalc (
-    id SERIAL PRIMARY KEY,
-    input_id INTEGER NOT NULL,
-    risk_calculation_id INTEGER NOT NULL
-) TABLESPACE uiapi_ts;
-
-
 CREATE TABLE uiapi.risk_calculation (
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,  -- FK to admin.oq_user
     -- Contains the absolute path to the directory containing the job config
     -- file
     base_path VARCHAR NOT NULL,
@@ -334,13 +262,14 @@ CREATE TABLE uiapi.risk_calculation (
     -- general parameters:
     description VARCHAR NOT NULL DEFAULT '',
     -- what time period w/o any progress is acceptable for calculations?
-    -- The timeout is stored in seconds and is 1 hour by default.
-    no_progress_timeout INTEGER NOT NULL DEFAULT 3600,
+    -- The timeout is stored in seconds and is 100 hours by default.
+    no_progress_timeout INTEGER NOT NULL DEFAULT 360000,
     calculation_mode VARCHAR NOT NULL,
+    inputs BYTEA,  -- stored as a pickled Python `dict`
 
     maximum_distance FLOAT NULL,
 
-    exposure_input_id INTEGER,
+    preloaded_exposure_model_id INTEGER,
 
     hazard_output_id INTEGER NULL,  -- FK to uiapi.output
     hazard_calculation_id INTEGER NULL,  -- FK to uiapi.hazard_calculation
@@ -399,7 +328,6 @@ CREATE TABLE uiapi.cnode_stats (
 -- or in the database.
 CREATE TABLE uiapi.output (
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
     oq_job_id INTEGER,
     -- The full path of the output file on the server, optional and only set
     -- for outputs with NRML/XML files.
@@ -432,40 +360,6 @@ CREATE TABLE uiapi.output (
         )),
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE uiapi_ts;
-
-
--- A place to store error information in the case of a job failure.
-CREATE TABLE uiapi.error_msg (
-    id SERIAL PRIMARY KEY,
-    oq_job_id INTEGER NOT NULL,
-    -- Summary of the error message.
-    brief VARCHAR NOT NULL,
-    -- The full error message.
-    detailed VARCHAR NOT NULL
-) TABLESPACE uiapi_ts;
-
-
--- Associate inputs and jobs
-CREATE TABLE uiapi.input2job (
-    id SERIAL PRIMARY KEY,
-    input_id INTEGER NOT NULL,
-    oq_job_id INTEGER NOT NULL,
-    UNIQUE (input_id, oq_job_id)
-) TABLESPACE uiapi_ts;
-
-
--- Associate an 'source_model_logic_tree' type input (a logic tree source) with 'source'
--- type inputs (hazard sources referenced by the logic tree source).
--- This is needed for worker-side logic tree processing.
-CREATE TABLE uiapi.src2ltsrc (
-    id SERIAL PRIMARY KEY,
-    -- foreign key to the input of type 'source'
-    hzrd_src_id INTEGER NOT NULL,
-    -- foreign key to the input of type 'source_model_logic_tree'
-    lt_src_id INTEGER NOT NULL,
-    filename VARCHAR NOT NULL,
-    UNIQUE (hzrd_src_id, lt_src_id)
 ) TABLESPACE uiapi_ts;
 
 
@@ -934,7 +828,7 @@ CREATE TABLE riskr.dmg_dist_total (
 CREATE TABLE riski.exposure_model (
     id SERIAL PRIMARY KEY,
     -- Associates the risk exposure model with an input record
-    input_id INTEGER NOT NULL,
+    job_id INTEGER NOT NULL,
     name VARCHAR NOT NULL,
     description VARCHAR,
     -- the taxonomy system used to classify the assets
@@ -1050,21 +944,6 @@ CREATE TABLE hzrdi.hazard_site (
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
 ------------------------------------------------------------------------
-ALTER TABLE admin.oq_user ADD CONSTRAINT admin_oq_user_organization_fk
-FOREIGN KEY (organization_id) REFERENCES admin.organization(id) ON DELETE RESTRICT;
-
-ALTER TABLE hzrdi.site_model ADD CONSTRAINT hzrdi_site_model_input_fk
-FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
-
-ALTER TABLE hzrdi.parsed_source ADD CONSTRAINT hzrdi_parsed_source_input_fk
-FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
-
-ALTER TABLE hzrdi.parsed_rupture_model ADD CONSTRAINT hzrdi_parsed_rupture_model_input_fk
-FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_hazard_calculation
 FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
@@ -1073,29 +952,11 @@ ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_risk_calculation
 FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id)
 ON DELETE CASCADE;
 
-ALTER TABLE uiapi.hazard_calculation ADD CONSTRAINT uiapi_hazard_calculation_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_input_fk
-FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_hazard_calculation_fk
-FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_hazard_output_fk
 FOREIGN KEY (hazard_output_id) REFERENCES uiapi.output(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_input_fk
-FOREIGN KEY (exposure_input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input2rcalc ADD CONSTRAINT uiapi_input2rcalc_input_fk
-FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input2rcalc ADD CONSTRAINT uiapi_input2rcalc_risk_calculation_fk
-FOREIGN KEY (risk_calculation_id) REFERENCES uiapi.risk_calculation(id) ON DELETE RESTRICT;
+ALTER TABLE uiapi.risk_calculation ADD CONSTRAINT uiapi_risk_calculation_preloaded_exposure_model_fk
+FOREIGN KEY (preloaded_exposure_model_id) REFERENCES riski.exposure_model(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.performance ADD CONSTRAINT uiapi_performance_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
@@ -1109,35 +970,8 @@ FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 ALTER TABLE uiapi.cnode_stats ADD CONSTRAINT  uiapi_cnode_stats_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_input_fk
-FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_src_fk
-FOREIGN KEY (hzrd_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_ltsrc_fk
-FOREIGN KEY (lt_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_model_content_fk
-FOREIGN KEY (model_content_id) REFERENCES uiapi.model_content(id) ON DELETE RESTRICT;
-
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE riski.exposure_model ADD CONSTRAINT riski_exposure_model_input_fk
-FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_map
 ADD CONSTRAINT hzrdr_hazard_map_output_fk
