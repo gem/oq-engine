@@ -1678,10 +1678,12 @@ class SESRupture(djm.Model):
     #: instance
     rupture = fields.PickleField()
 
+    magnitude = djm.FloatField(null=True)
+    hypocenter = djm.PointField(srid=DEFAULT_SRID)
+
     # a tag with rlz, ses, src and ordinal info
     tag = djm.TextField()
 
-    old_magnitude = djm.FloatField(null=True)
     old_strike = djm.FloatField(null=True)
     old_dip = djm.FloatField(null=True)
     old_rake = djm.FloatField(null=True)
@@ -1845,10 +1847,6 @@ class SESRupture(djm.Model):
     @old_field_property
     def surface(self):
         return self.rupture.surface
-
-    @old_field_property
-    def magnitude(self):
-        return self.rupture.mag
 
     @old_field_property
     def strike(self):
