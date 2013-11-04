@@ -143,39 +143,6 @@ class HazardDumper(object):
                   to stdout with (format '%s')""" % (ids, self.format),
             self.outdir, 'hzrdi.hazard_site.csv', 'w')
 
-        # model_content, inputs
-
-        # at this moment, only logic tree content is needed
-        self.curs.copy(
-            """copy (select mc.* from uiapi.model_content mc
-                     join uiapi.input as input
-                     on input.model_content_id = mc.id
-                     join uiapi.input2hcalc h2c
-                     on h2c.input_id = input.id
-                     where h2c.hazard_calculation_id = %s
-                     and input.input_type in ('source_model_logic_tree',
-                                              'gsim_logic_tree'))
-               to stdout with (format '%s')""" % (ids, self.format),
-            self.outdir, 'uiapi.model_content.csv', 'w')
-
-        input_ids = self.curs.tuplestr(
-            """select i.* from uiapi.input i
-                     join uiapi.input2hcalc h2c
-                     on h2c.input_id = i.id
-                     where hazard_calculation_id in %s
-                     and input_type in ('source_model_logic_tree',
-                                        'gsim_logic_tree')""" % ids)
-        if input_ids != "()":  # scenario calcs do not have logic tree inputs
-            self.curs.copy(
-                """copy (select * from uiapi.input where id in %s)
-                   to stdout with (format '%s')""" % (input_ids, self.format),
-                self.outdir, 'uiapi.input.csv', 'w')
-
-            self.curs.copy(
-                """copy (select * from uiapi.input2hcalc where input_id in %s)
-                   to stdout with (format '%s')""" % (input_ids, self.format),
-                self.outdir, 'uiapi.input2hcalc.csv', 'w')
-
     def performance(self, *job_ids):
         """Dump performance"""
         ids = _tuplestr(job_ids)
@@ -186,21 +153,7 @@ class HazardDumper(object):
             self.outdir, 'uiapi.performance.csv', 'w')
 
     def oq_job(self, ids):
-        """Dump organization, oq_user, hazard_calculation, oq_job"""
-        owner_ids = self.curs.tuplestr(
-            'select owner_id from uiapi.oq_job where id in %s' % ids)
-        org_ids = self.curs.tuplestr(
-            'select organization_id from admin.oq_user where id in %s'
-            % owner_ids)
-        self.curs.copy(
-            """copy (select * from admin.organization where id in %s)
-               to stdout with (format '%s')""" %
-            (org_ids, self.format), self.outdir, 'admin.organization.csv', 'w')
-        self.curs.copy(
-            """copy (select * from admin.oq_user where id in %s)
-               to stdout with (format '%s')""" % (owner_ids, self.format),
-            self.outdir, 'admin.oq_user.csv', 'w')
-
+        """Dump hazard_calculation, oq_job"""
         hc_ids = self.curs.tuplestr(
             'select hazard_calculation_id from uiapi.oq_job where id in %s'
             % ids)

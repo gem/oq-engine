@@ -203,7 +203,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         Load fragility model and store damage states
         """
         risk_models, damage_state_ids = loaders.fragility(
-            self.rc, self.rc.inputs.get(input_type='fragility'))
+            self.rc, self.rc.inputs['fragility'])
 
         self.damage_state_ids = damage_state_ids
         return risk_models

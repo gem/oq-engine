@@ -63,10 +63,6 @@ GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
 ----------------------------------------------
 -- Specific permissions for individual tables:
 ----------------------------------------------
--- admin schema
-GRANT SELECT,INSERT,UPDATE ON admin.oq_user      TO oq_admin;
-GRANT SELECT,INSERT,UPDATE ON admin.organization TO oq_admin;
-
 -- htemp schema
 GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.source_progress       TO oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.hazard_curve_progress TO oq_reslt_writer;
@@ -116,10 +112,6 @@ GRANT SELECT,INSERT,UPDATE ON riskr.event_loss                TO oq_reslt_writer
 GRANT SELECT,INSERT,UPDATE ON riskr.event_loss_data           TO oq_reslt_writer;
 
 -- uiapi schema
-GRANT SELECT,INSERT,UPDATE ON uiapi.input              TO oq_job_init;
-GRANT SELECT,INSERT        ON uiapi.model_content      TO oq_job_init;
-GRANT SELECT,INSERT        ON uiapi.input2job          TO oq_job_init;
-GRANT SELECT,INSERT        ON uiapi.src2ltsrc          TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job             TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_phase_stats    TO oq_job_init;
 -- oq_job_init is granted write access to record job start time and other job stats at job init time
@@ -127,13 +119,10 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.job_stats          TO oq_job_init;
 -- oq_job_superv is granted write access so that the job supervisor can record job completion time
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_stats          TO oq_job_superv;
 GRANT SELECT,INSERT,UPDATE ON uiapi.hazard_calculation TO oq_job_init;
-GRANT SELECT,INSERT        ON uiapi.input2hcalc        TO oq_job_init;
 GRANT SELECT,INSERT        ON uiapi.risk_calculation   TO oq_job_init;
-GRANT SELECT,INSERT        ON uiapi.input2rcalc        TO oq_job_init;
 -- what nodes became available/unavailable at what time?
 GRANT SELECT,INSERT,UPDATE ON uiapi.cnode_stats        TO oq_job_superv;
 GRANT SELECT,INSERT,UPDATE ON uiapi.output             TO oq_reslt_writer;
-GRANT SELECT,INSERT        ON uiapi.error_msg          TO oq_job_superv;
 GRANT SELECT,INSERT        ON uiapi.performance        TO oq_job_init;
 
 
