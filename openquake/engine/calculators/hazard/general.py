@@ -37,7 +37,6 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import exposure
-from openquake.engine import engine
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
@@ -66,14 +65,12 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
-def store_site_model(input_mdl, site_model_source):
+def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
 
-    :param input_mdl:
-        The `uiapi.input` record which the new `hzrdi.site_model` records
-        reference. This `input` record acts as a container for the site model
-        data.
+    :param job:
+        The job that is loading this site_model_source
     :param site_model_source:
         Filename or file-like object containing the site model XML data.
     :returns:
@@ -85,38 +82,9 @@ def store_site_model(input_mdl, site_model_source):
                              z1pt0=node.z1pt0,
                              z2pt5=node.z2pt5,
                              location=node.wkt,
-                             input_id=input_mdl.id)
+                             job_id=job.id)
             for node in parser.parse()]
     return writer.CacheInserter.saveall(data)
-
-
-def gen_sources(src_ids, apply_uncertainties, rupture_mesh_spacing,
-                width_of_mfd_bin, area_source_discretization):
-    """
-    Hazardlib source objects generator for a given set of sources.
-
-    Performs lazy loading, converting and processing of sources.
-
-    :param src_ids:
-        A list of IDs for :class:`openquake.engine.db.models.ParsedSource`
-        records.
-    :param apply_uncertainties:
-        A function to be called on each generated source. See
-        :meth:`openquake.engine.input.logictree.LogicTreeProcessor.\
-parse_source_model_logictree_path`
-
-    For information about the other parameters, see
-    :func:`openquake.engine.input.source.nrml_to_hazardlib`.
-    """
-    for src_id in src_ids:
-        parsed_source = models.ParsedSource.objects.get(id=src_id)
-
-        hazardlib_source = source.nrml_to_hazardlib(
-            parsed_source.nrml, rupture_mesh_spacing, width_of_mfd_bin,
-            area_source_discretization)
-
-        apply_uncertainties(hazardlib_source)
-        yield hazardlib_source
 
 
 def im_dict_to_hazardlib(im_dict):
@@ -320,6 +288,8 @@ class BaseHazardCalculator(base.Calculator):
         realizations = self._get_realizations()
 
         n = 0  # number of yielded arguments
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
+
         for lt_rlz in realizations:
             # separate point sources from all the other types, since
             # we distribution point sources in different sized chunks
@@ -328,14 +298,14 @@ class BaseHazardCalculator(base.Calculator):
 
             for block in block_splitter(point_source_ids,
                                         point_source_block_size):
-                task_args = (self.job.id, block, lt_rlz.id)
+                task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
             # now for area and fault sources
             other_source_ids = self._get_source_ids(lt_rlz)
 
             for block in block_splitter(other_source_ids, block_size):
-                task_args = (self.job.id, block, lt_rlz.id)
+                task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
 
@@ -423,13 +393,11 @@ class BaseHazardCalculator(base.Calculator):
             for imt, imls in im.items():
                 hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
-                hco = models.Output(
-                    owner=self.hc.owner,
+                hco = models.Output.objects.create(
                     oq_job=self.job,
                     display_name="hc-rlz-%s" % rlz.id,
                     output_type='hazard_curve',
                 )
-                hco.save()
 
                 haz_curve = models.HazardCurve(
                     output=hco,
@@ -466,44 +434,33 @@ class BaseHazardCalculator(base.Calculator):
                         [self.hc.id, rlz.id, haz_curve.id, imt, lons, lats]
                     )
 
+    def get_source_filter_condition(self):
+        """
+        Return a filter function, i.e. a function source -> boolean to filter
+        the sources to save; by default it returns always True and no sources
+        are filtered.
+        """
+        return lambda src: True
+
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
-        Parse and validation logic trees (source and gsim). Then get all
-        sources referenced in the the source model logic tree, create
-        :class:`~openquake.engine.db.models.Input` records for all of them,
-        parse then, and save the parsed sources to the `parsed_source` table
-        (see :class:`openquake.engine.db.models.ParsedSource`).
+        Parse and validation source logic trees. Save the parsed
+        sources to the `parsed_source` table (see
+        :class:`openquake.engine.db.models.ParsedSource`).
         """
         logs.LOG.progress("initializing sources")
 
-        [smlt] = models.inputs4hcalc(
-            self.hc.id, input_type='source_model_logic_tree')
-        [gsimlt] = models.inputs4hcalc(
-            self.hc.id, input_type='gsim_logic_tree')
-
-        source_paths = logictree.read_logic_trees_from_db(self.hc.id)
-
-        for src_path in source_paths:
-            full_path = os.path.join(self.hc.base_path, src_path)
-
-            # Get the 'source' Input:
-            inp = engine.get_or_create_input(
-                full_path, 'source', self.hc.owner, haz_calc_id=self.hc.id
-            )
-
-            models.Src2ltsrc.objects.create(hzrd_src=inp, lt_src=smlt,
-                                            filename=src_path)
-            src_content = inp.model_content.as_string_io
-            sm_parser = nrml_parsers.SourceModelParser(src_content)
-
-            # Covert
-            src_db_writer = source.SourceDBWriter(
-                inp, sm_parser.parse(), self.hc.rupture_mesh_spacing,
+        for src_path in logictree.read_logic_trees(self.hc):
+            source.SourceDBWriter(
+                self.job,
+                src_path,
+                nrml_parsers.SourceModelParser(
+                    os.path.join(self.hc.base_path, src_path)).parse(),
+                self.hc.rupture_mesh_spacing,
                 self.hc.width_of_mfd_bin,
-                self.hc.area_source_discretization
-            )
-            src_db_writer.serialize()
+                self.hc.area_source_discretization,
+                self.get_source_filter_condition()).serialize()
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -515,22 +472,16 @@ class BaseHazardCalculator(base.Calculator):
         vulnerability model (if there is one)
         """
         hc = self.hc
-        queryset = self.hc.inputs.filter(
-            input_type__in=[vf_type
-                            for vf_type, _desc
-                            in models.Input.VULNERABILITY_TYPE_CHOICES])
-        if queryset.exists():
+        if hc.vulnerability_models:
             logs.LOG.progress("parsing risk models")
 
             hc.intensity_measure_types_and_levels = dict()
             hc.intensity_measure_types = list()
 
-            for input_type in queryset:
-                content = input_type.model_content.as_string_io
+            for vf in hc.vulnerability_models:
                 intensity_measure_types_and_levels = dict(
                     (record['IMT'], record['IML']) for record in
-                    parsers.VulnerabilityModelParser(content)
-                )
+                    parsers.VulnerabilityModelParser(vf))
 
                 for imt, levels in \
                         intensity_measure_types_and_levels.items():
@@ -556,16 +507,12 @@ class BaseHazardCalculator(base.Calculator):
                               hc.intensity_measure_types_and_levels,
                               hc.intensity_measure_types))
 
-        queryset = self.hc.inputs.filter(input_type='fragility')
-        if queryset.exists():
+        if 'fragility' in hc.inputs:
             hc.intensity_measure_types_and_levels = dict()
             hc.intensity_measure_types = list()
 
-            parser = iter(
-                parsers.FragilityModelParser(
-                    queryset.all()[0].model_content.as_string_io
-                )
-            )
+            parser = iter(parsers.FragilityModelParser(
+                hc.inputs['fragility']))
             hc = self.hc
 
             fragility_format, _limit_states = parser.next()
@@ -582,40 +529,33 @@ class BaseHazardCalculator(base.Calculator):
             hc.intensity_measure_types.extend(
                 hc.intensity_measure_types_and_levels)
             hc.save()
-        queryset = self.hc.inputs.filter(input_type='exposure')
-        if queryset.exists():
-            exposure_model_input = queryset.all()[0]
-            content = exposure_model_input.model_content.as_string_io
+
+        if 'exposure' in hc.inputs:
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
-                    exposure_model_input).serialize(
-                        parsers.ExposureModelParser(content))
+                    self.job).serialize(
+                        parsers.ExposureModelParser(hc.inputs['exposure']))
 
     @EnginePerformanceMonitor.monitor
     def initialize_site_model(self):
         """
-        If a site model is specified in the calculation configuration, parse
-        it and load it into the `hzrdi.site_model` table. This includes a
-        validation step to ensure that the area covered by the site model
-        completely envelops the calculation geometry. (If this requirement is
-        not satisfied, an exception will be raised. See
-        :func:`openquake.engine.calculators.hazard.general.validate_site_model`.)
+        If a site model is specified in the calculation configuration,
+        parse it and load it into the `hzrdi.site_model` table. This
+        includes a validation step to ensure that the area covered by
+        the site model completely envelops the calculation geometry.
+        (If this requirement is not satisfied, an exception will be
+        raised. See :func:`validate_site_model`.)
         """
         logs.LOG.progress("initializing site model")
-        site_model_inp = models.get_site_model(self.hc.id)
+        site_model_inp = self.hc.site_model
         if site_model_inp:
             # Store `site_model` records:
-            store_site_model(
-                site_model_inp, site_model_inp.model_content.as_string_io
-            )
+            store_site_model(self.job, site_model_inp)
 
             # Get the site model records we stored:
-            site_model_data = models.SiteModel.objects.filter(
-                input=site_model_inp)
-
             validate_site_model(
-                site_model_data, self.hc.points_to_compute(save_sites=True)
-            )
+                self.job.sitemodel_set.all(),
+                self.hc.points_to_compute(save_sites=True))
         else:
             self.hc.points_to_compute(save_sites=True)
 
@@ -679,15 +619,12 @@ class BaseHazardCalculator(base.Calculator):
             See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
-        [smlt] = models.inputs4hcalc(hc.id,
-                                     input_type='source_model_logic_tree')
-        ltp = logictree.LogicTreeProcessor(hc.id)
-        hzrd_src_cache = {}
+        ltp = logictree.LogicTreeProcessor.from_hc(hc)
 
         for i, path_info in enumerate(ltp.enumerate_paths()):
-            sm_name, weight, sm_lt_path, gsim_lt_path = path_info
+            source_model_filename, weight, sm_lt_path, gsim_lt_path = path_info
 
-            lt_rlz = models.LtRealization(
+            lt_rlz = models.LtRealization.objects.create(
                 hazard_calculation=hc,
                 ordinal=i,
                 seed=None,
@@ -696,19 +633,9 @@ class BaseHazardCalculator(base.Calculator):
                 gsim_lt_path=gsim_lt_path,
                 # we will update total_items in initialize_source_progress()
                 total_items=-1)
-            lt_rlz.save()
-
-            if not sm_name in hzrd_src_cache:
-                # Get the source model for this sample:
-                hzrd_src = models.Src2ltsrc.objects.get(
-                    lt_src=smlt.id, filename=sm_name).hzrd_src
-                # and cache it
-                hzrd_src_cache[sm_name] = hzrd_src
-            else:
-                hzrd_src = hzrd_src_cache[sm_name]
 
             # Create source_progress objects
-            self.initialize_source_progress(lt_rlz, hzrd_src)
+            self.initialize_source_progress(lt_rlz, source_model_filename)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -730,24 +657,20 @@ class BaseHazardCalculator(base.Calculator):
         seed = self.hc.random_seed
         rnd.seed(seed)
 
-        [smlt] = models.inputs4hcalc(self.hc.id,
-                                     input_type='source_model_logic_tree')
-
-        ltp = logictree.LogicTreeProcessor(self.hc.id)
-
-        hzrd_src_cache = {}
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         # The first realization gets the seed we specified in the config file.
         for i in xrange(self.hc.number_of_logic_tree_samples):
             # Sample source model logic tree branch paths:
-            sm_name, sm_lt_path = ltp.sample_source_model_logictree(
-                rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
+            source_model_filename, sm_lt_path = (
+                ltp.sample_source_model_logictree(
+                    rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)))
 
             # Sample GSIM logic tree branch paths:
             gsim_lt_path = ltp.sample_gmpe_logictree(
                 rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
-            lt_rlz = models.LtRealization(
+            lt_rlz = models.LtRealization.objects.create(
                 hazard_calculation=self.hc,
                 ordinal=i,
                 seed=seed,
@@ -757,19 +680,9 @@ class BaseHazardCalculator(base.Calculator):
                 # we will update total_items in initialize_source_progress()
                 total_items=-1
             )
-            lt_rlz.save()
-
-            if not sm_name in hzrd_src_cache:
-                # Get the source model for this sample:
-                hzrd_src = models.Src2ltsrc.objects.get(
-                    lt_src=smlt.id, filename=sm_name).hzrd_src
-                # and cache it
-                hzrd_src_cache[sm_name] = hzrd_src
-            else:
-                hzrd_src = hzrd_src_cache[sm_name]
 
             # Create source_progress objects
-            self.initialize_source_progress(lt_rlz, hzrd_src)
+            self.initialize_source_progress(lt_rlz, source_model_filename)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -782,7 +695,7 @@ class BaseHazardCalculator(base.Calculator):
             rnd.seed(seed)
 
     @staticmethod
-    def initialize_source_progress(lt_rlz, hzrd_src):
+    def initialize_source_progress(lt_rlz, source_model_filename):
         """
         Create ``source_progress`` models for given logic tree realization
         and set total sources of realization.
@@ -790,9 +703,10 @@ class BaseHazardCalculator(base.Calculator):
         :param lt_rlz:
             :class:`openquake.engine.db.models.LtRealization` object to
             initialize source progress for.
-        :param hztd_src:
-            :class:`openquake.engine.db.models.Input` object that needed parsed
-            sources are referencing.
+
+        :param str source_model_filename:
+            the path of the source_model associated with the
+            logic tree realization
         """
         cursor = connections['reslt_writer'].cursor()
         src_progress_tbl = models.SourceProgress._meta.db_table
@@ -801,10 +715,12 @@ class BaseHazardCalculator(base.Calculator):
         cursor.execute("""
             INSERT INTO "%s" (lt_realization_id, parsed_source_id, is_complete)
             SELECT %%s, id, FALSE
-            FROM "%s" WHERE input_id = %%s
+            FROM "%s" WHERE job_id = %%s AND source_model_filename=%%s
             ORDER BY id
             """ % (src_progress_tbl, parsed_src_tbl),
-            [lt_rlz.id, hzrd_src.id])
+            [lt_rlz.id,
+             lt_rlz.hazard_calculation.oqjob.id,
+             source_model_filename])
         cursor.execute("""
             UPDATE "%s" SET total_items = (
                 SELECT count(1) FROM "%s" WHERE lt_realization_id = %%s

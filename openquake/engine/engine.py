@@ -18,9 +18,7 @@ calculations."""
 
 import ConfigParser
 import csv
-import zlib
 import getpass
-import md5
 import os
 import sys
 import time
@@ -45,7 +43,7 @@ from openquake import risklib
 from openquake import nrmllib
 
 
-INPUT_TYPES = dict(models.Input.INPUT_TYPE_CHOICES)
+INPUT_TYPES = dict(models.INPUT_TYPE_CHOICES)
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
@@ -64,47 +62,14 @@ def prepare_job(user_name="openquake", log_level='progress'):
     :returns:
         :class:`openquake.engine.db.models.OqJob` instance.
     """
-    # See if the current user exists
-    # If not, create a record for them
-    owner = prepare_user(user_name)
-    job = models.OqJob(
-        owner=owner,
+    return models.OqJob.objects.create(
+        user_name=user_name,
         log_level=log_level,
         oq_version=openquake.engine.__version__,
         nrml_version=nrmllib.__version__,
         hazardlib_version=hazardlib.__version__,
         risklib_version=risklib.__version__,
     )
-    job.save()
-    return job
-
-
-def prepare_user(user_name):
-    """
-    Make sure user with the given name exists, return it.
-    """
-    # See if the current user exists
-    # If not, create a record for them
-    try:
-        user = models.OqUser.objects.get(user_name=user_name)
-    except exceptions.ObjectDoesNotExist:
-        # This user doesn't exist; let's fix that.
-        # NOTE: The Organization is currently hardcoded to 1.
-        # This org is added when the database is bootstrapped.
-        user = models.OqUser(
-            user_name=user_name, full_name=user_name, organization_id=1
-        )
-        user.save()
-    return user
-
-
-def get_current_user():
-    """
-    Utilty function for getting the :class:`openquake.engine.db.models.OqUser`
-    for the the current user. If the user record doesn't exist, it will be
-    created.
-    """
-    return prepare_user(getpass.getuser())
 
 
 def parse_config(source):
@@ -124,7 +89,7 @@ def parse_config(source):
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), source.name))
     params = dict(base_path=base_path)
-    files = dict()
+    params['inputs'] = dict()
 
     # Directory containing the config file we're parsing.
     base_path = os.path.dirname(os.path.abspath(source.name))
@@ -152,11 +117,21 @@ def parse_config(source):
                     # It's a relative path.
                     path = os.path.join(base_path, path)
 
-                files[key] = path
+                params['inputs'][input_type] = path
             else:
                 params[key] = value
 
-    return params, files
+    # convert back to dict as defaultdict is not pickleable
+    params['inputs'] = dict(params['inputs'])
+
+    # load source inputs (the paths are the source_model_logic_tree)
+    smlt = params['inputs'].get('source_model_logic_tree')
+    if smlt:
+        params['inputs']['source'] = [
+            os.path.join(base_path, src_path)
+            for src_path in _collect_source_model_paths(smlt)]
+
+    return params
 
 
 def _parse_sites_csv(fh):
@@ -178,200 +153,41 @@ def _parse_sites_csv(fh):
     return 'MULTIPOINT(%s)' % ', '.join(coords)
 
 
-def _file_digest(path):
-    """Return a 32 character digest for the file with the given pasth.
-
-    :param str path:
-        File path
-    :returns:
-        A 32 character string with the md5sum digest of the file.
-    """
-    checksum = md5.new()
-    with open(path) as fh:
-        checksum.update(fh.read())
-        return checksum.hexdigest()
-
-
-def _get_content_type(path):
-    """Given the path to a file, guess the content type by looking at the file
-    extension. If there is none, simply return 'unknown'.
-    """
-    _, ext = os.path.splitext(path)
-    if ext == '':
-        return 'unknown'
-    else:
-        # This gives us the . and extension (such as '.xml').
-        # Don't include the period.
-        return ext[1:]
-
-
-def get_or_create_input(path, input_type, owner, name=None,
-                        haz_calc_id=None, risk_calc_id=None):
-    """
-    Get or create an :class:`~openquake.engine.db.models.Input` object for the
-    given file (``path``) associated with a particular calculation. You must
-    specify either ``haz_calc_id`` or ``risk_calc_id``.
-
-    :param str path:
-        Path to the input file.
-    :param str input_type:
-        The type of input. See :class:`openquake.engine.db.models.Input` for
-        a list of valid types.
-    :param owner:
-        The :class:`~openquake.engine.db.models.OqUser` who will own the input
-        that will be created.
-    :param str name:
-        Optional name to help idenfity this input.
-    :param haz_calc_id:
-        ID of a hazard calculation.
-    :param risk_calc_id:
-        ID of a risk calculation.
-    :returns:
-        :class:`openquake.engine.db.models.Input` object to represent the
-        input. As a side effect, this function will also store a full raw copy
-        of the input file
-        (see :class:`openquake.engine.db.models.ModelContent`)
-        and associate it to the `Input`.
-    """
-    assert not [haz_calc_id, risk_calc_id] == [None, None], (
-        "Must specify one of either `haz_calc_id` or `risk_calc_id`."
-    )
-
-    try:
-        # Try to get a preloaded model
-        if haz_calc_id is not None:
-            i2c = models.Input2hcalc.objects.get(
-                hazard_calculation=haz_calc_id,
-                input__path=path,
-                input__input_type=input_type,
-                input__owner=owner,
-            )
-        elif risk_calc_id is not None:
-            i2c = models.Input2rcalc.objects.get(
-                risk_calculation=risk_calc_id,
-                input__path=path,
-                input__input_type=input_type,
-                input__owner=owner,
-            )
-        if name is not None:
-            i2c = i2c.filter(input__name=name)
-        inp = i2c.input
-    except exceptions.ObjectDoesNotExist:
-        # It doesn't exist yet. Let's create it.
-        inp = create_input(path, input_type, owner, name=name)
-
-        # Now that the input is created, associate it with the specified
-        # calculation:
-        if haz_calc_id is not None:
-            hc = models.HazardCalculation.objects.get(id=haz_calc_id)
-            models.Input2hcalc.objects.create(
-                input=inp, hazard_calculation=hc
-            )
-        elif risk_calc_id is not None:
-            rc = models.RiskCalculation.objects.get(id=risk_calc_id)
-            models.Input2rcalc.objects.create(
-                input=inp, risk_calculation=rc
-            )
-
-    return inp
-
-
-def create_input(path, input_type, owner, name=None):
-    """
-    Create a :class:`~openquake.engine.db.models.Input` object from the
-    given file (``path``).
-
-    :param str path:
-        Path to the input file.
-    :param str input_type:
-        The type of input. See :class:`openquake.engine.db.models.Input` for
-        a list of valid types.
-    :param owner:
-        The :class:`~openquake.engine.db.models.OqUser` who will own the input
-        that will be created.
-    :param str name:
-        Optional name to help idenfity this input.
-    :returns:
-        :class:`openquake.engine.db.models.Input` object to represent the
-        input. As a side effect, this function will also store a full raw copy
-        of the input file
-        (see :class:`openquake.engine.db.models.ModelContent`)
-        and associate it to the `Input`.
-    """
-    digest = _file_digest(path)
-
-    with open(path, 'rb') as fh:  # assume UTF-8 encoding
-        zipped = zlib.compress(fh.read())
-        model_content = models.ModelContent(raw_content=zipped)
-    # Try to guess the content type:
-    model_content.content_type = _get_content_type(path)
-    model_content.save()
-
-    inp = models.Input(
-        path=path, input_type=input_type, owner=owner,
-        size=os.path.getsize(path), digest=digest,
-        model_content=model_content, name=name
-    )
-    inp.save()
-    return inp
-
-
-def create_hazard_calculation(username, params, files):
+def create_calculation(model, params):
     """
     Given a params `dict` parsed from the config file, create a
     :class:`~openquake.engine.db.models.HazardCalculation`.
 
-    :param username:
-        Username of the user who will own this calculation profile.
+    :param model:
+        a Calculation class object
     :param dict params:
         Dictionary of parameter names and values. Parameter names should match
         exactly the field names of
         :class:`openquake.engine.db.model.HazardCalculation`.
-    :param list files:
-        List of :class:`~openquake.engine.db.models.Input` objects to be
-        linked to the calculation.
     :returns:
-        :class:`openquake.engine.db.model.HazardCalculation` object.
-        A corresponding record will obviously be saved to the database.
+        an instance of a newly created `model`
     """
-    owner = prepare_user(username)
     if "export_dir" in params:
         params["export_dir"] = os.path.abspath(params["export_dir"])
 
-    haz_calc_fields = models.HazardCalculation._meta.get_all_field_names()
-    for param in set(params) - set(haz_calc_fields):
-        msg = "Unknown parameter '%s'. Ignoring."
-        msg %= param
-        warnings.warn(msg, RuntimeWarning)
-        params.pop(param)
+    calc_fields = model._meta.get_all_field_names()
 
-    hc = models.HazardCalculation(**params)
-    hc.owner = owner
-    hc.full_clean()
-    hc.save()
+    for param in set(params) - set(calc_fields):
+        # FIXME(lp). Django 1.3 does not allow using _id fields in model
+        # __init__. We will check these fields in pre-execute phase
+        if param not in [
+                'preloaded_exposure_model_id', 'hazard_output_id',
+                'hazard_calculation_id']:
+            msg = "Unknown parameter '%s'. Ignoring."
+            msg %= param
+            warnings.warn(msg, RuntimeWarning)
+            params.pop(param)
 
-    # Load the other input files into the database.
-    # This also links the inputs to the calculation via the `input2hcalc`
-    # table.
-    for file_key, input_path in files.iteritems():
-        input_type = file_key[:-5]
-        get_or_create_input(input_path, input_type, owner, haz_calc_id=hc.id)
+    calc = model(**params)
+    calc.full_clean()
+    calc.save()
 
-    smlt = files.get('source_model_logic_tree_file')
-    gsimlt = files.get('gsim_logic_tree_file')
-    if not None in (smlt, gsimlt):
-
-        src_paths = _collect_source_model_paths(smlt)
-
-        for src_path in src_paths:
-            get_or_create_input(
-                os.path.join(hc.base_path, src_path),
-                'source',
-                hc.owner,
-                haz_calc_id=hc.id
-            )
-
-    return hc
+    return calc
 
 
 def _collect_source_model_paths(smlt):
@@ -391,39 +207,6 @@ def _collect_source_model_paths(smlt):
                     namespaces=nrmllib.PARSE_NS_MAP):
                 src_paths.append(branch.text)
     return sorted(list(set(src_paths)))
-
-
-def create_risk_calculation(owner, params, files):
-    """Given a params `dict` parsed from the config file, create a
-    :class:`~openquake.engine.db.models.RiskCalculation`.
-
-    :param owner:
-        The :class:`~openquake.engine.db.models.OqUser` who will own this
-        profile.
-    :param dict params:
-        Dictionary of parameter names and values. Parameter names should match
-        exactly the field names of
-        :class:`openquake.engine.db.model.RiskCalculation`.
-    :param list files:
-        List of :class:`~openquake.engine.db.models.Input` objects to be
-        linked to the calculation.
-    :returns:
-        :class:`openquake.engine.db.model.RiskCalculation` object.
-        A corresponding record will obviously be saved to the database.
-    """
-    if "export_dir" in params:
-        params["export_dir"] = os.path.abspath(params["export_dir"])
-
-    rc = models.RiskCalculation(**params)
-    rc.owner = owner
-    rc.full_clean()
-    rc.save()
-
-    for file_key, input_path in files.iteritems():
-        input_type = file_key[:-5]
-        get_or_create_input(input_path, input_type, owner, risk_calc_id=rc.id)
-
-    return rc
 
 
 def _create_job_stats(job):
@@ -479,7 +262,7 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
         if not job_pid:
             # calculation executor process
             try:
-                _job_exec(job, log_level, log_file, exports, job_type, calc)
+                _job_exec(job, log_level, exports, job_type, calc)
             except Exception, ex:
                 logs.LOG.critical("Calculation failed with exception: '%s'"
                                   % str(ex))
@@ -507,7 +290,7 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
         os.waitpid(supervisor_pid, 0)
     else:
         try:
-            _job_exec(job, log_level, log_file, exports, job_type, calc)
+            _job_exec(job, log_level, exports, job_type, calc)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
                               % str(ex))
@@ -531,7 +314,7 @@ def _get_job(job_id):
     return models.OqJob.objects.get(id=job_id)
 
 
-def _job_exec(job, log_level, log_file, exports, job_type, calc):
+def _job_exec(job, log_level, exports, job_type, calc):
     """
     Abstraction of some general job execution procedures.
 
@@ -628,8 +411,8 @@ def del_haz_calc(hc_id):
         raise RuntimeError('Unable to delete hazard calculation: '
                            'ID=%s does not exist' % hc_id)
 
-    user = get_current_user()
-    if hc.owner == user:
+    user = getpass.getuser()
+    if hc.oqjob.user_name == user:
         # we are allowed to delete this
 
         # but first, check if any risk calculations are referencing any of our
@@ -676,8 +459,7 @@ def del_risk_calc(rc_id):
         raise RuntimeError('Unable to delete risk calculation: '
                            'ID=%s does not exist' % rc_id)
 
-    user = get_current_user()
-    if rc.owner == user:
+    if rc.oqjob.user_name == getpass.getuser():
         # we are allowed to delete this
         rc.delete(using='admin')
     else:
@@ -754,15 +536,13 @@ def haz_job_from_file(cfg_file_path, username, log_level, exports):
     job = prepare_job(user_name=username, log_level=log_level)
 
     # read calculation params and create the calculation profile
-    params, files = parse_config(open(cfg_file_path, 'r'))
-    calculation = create_hazard_calculation(
-        username, params, files
-    )
-    job.hazard_calculation = calculation
+    params = parse_config(open(cfg_file_path, 'r'))
+    job.hazard_calculation = create_calculation(
+        models.HazardCalculation, params)
     job.save()
 
     # validate and raise if there are any problems
-    error_message = validate(job, 'hazard', params, files, exports)
+    error_message = validate(job, 'hazard', params, exports)
     if error_message:
         raise RuntimeError(error_message)
 
@@ -914,18 +694,16 @@ def risk_job_from_file(cfg_file_path, username, log_level, exports,
     job = prepare_job(user_name=username, log_level=log_level)
 
     # read calculation params and create the calculation profile
-    params, files = parse_config(open(cfg_file_path, 'r'))
+    params = parse_config(open(cfg_file_path, 'r'))
     # Add the hazard output id to the risk calculation constructor args
     params.update(dict(hazard_output_id=hazard_output_id,
                        hazard_calculation_id=hazard_calculation_id))
 
-    calculation = create_risk_calculation(
-        job.owner, params, files
-    )
+    calculation = create_calculation(models.RiskCalculation, params)
     job.risk_calculation = calculation
     job.save()
 
-    error_message = validate(job, 'risk', params, files,  exports)
+    error_message = validate(job, 'risk', params,  exports)
     if error_message:
         raise RuntimeError(error_message)
 
