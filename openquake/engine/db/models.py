@@ -1445,9 +1445,9 @@ class HazardMap(djm.Model):
     poe = djm.FloatField()
     # lons, lats, and imls are stored as numpy arrays with a uniform size and
     # shape
-    lons = fields.PickleField()
-    lats = fields.PickleField()
-    imls = fields.PickleField()
+    lons = fields.FloatArrayField()
+    lats = fields.FloatArrayField()
+    imls = fields.FloatArrayField()
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_map'
