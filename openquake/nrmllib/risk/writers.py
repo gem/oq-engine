@@ -354,9 +354,6 @@ class LossMapWriter(object):
         self._investigation_time = investigation_time
         self._source_model_tree_path = source_model_tree_path
 
-        self._loss_map = None
-        self._loss_nodes = {}
-
     def serialize(self, data):
         """
         Serialize a collection of losses.
@@ -395,21 +392,19 @@ class LossMapXMLWriter(LossMapWriter):
             root = etree.Element("nrml",
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
 
+            loss_map_el = self._create_loss_map_elem(root)
+
+            current_location = None
+            current_node = None
             for loss in data:
-                if self._loss_map is None:
-                    self._create_loss_map_elem(root)
 
-                # FIXME(lp). This implementation clearly implies that
-                # all the map data will be stored into memory. So, it
-                # will never scale well
-                loss_node = self._loss_nodes.get(loss.location.wkt)
+                if (current_location is None or
+                    loss.location.wkt != current_location):
+                    current_node = etree.SubElement(loss_map_el, "node")
+                    current_location = _append_location(
+                        current_node, loss.location)
 
-                if loss_node is None:
-                    loss_node = etree.SubElement(self._loss_map, "node")
-                    _append_location(loss_node, loss.location)
-                    self._loss_nodes[loss.location.wkt] = loss_node
-
-                loss_elem = etree.SubElement(loss_node, "loss")
+                loss_elem = etree.SubElement(current_node, "loss")
                 loss_elem.set("assetRef", str(loss.asset_ref))
 
                 if loss.std_dev is not None:
@@ -427,28 +422,30 @@ class LossMapXMLWriter(LossMapWriter):
         Create the <lossMap /> element with associated attributes.
         """
 
-        self._loss_map = etree.SubElement(root, "lossMap")
-        self._loss_map.set("investigationTime", str(self._investigation_time))
-        self._loss_map.set("poE", str(self._poe))
+        loss_map = etree.SubElement(root, "lossMap")
+        loss_map.set("investigationTime", str(self._investigation_time))
+        loss_map.set("poE", str(self._poe))
 
         if self._source_model_tree_path is not None:
-            self._loss_map.set("sourceModelTreePath",
-                               str(self._source_model_tree_path))
+            loss_map.set("sourceModelTreePath",
+                         str(self._source_model_tree_path))
 
         if self._gsim_tree_path is not None:
-            self._loss_map.set("gsimTreePath", str(self._gsim_tree_path))
+            loss_map.set("gsimTreePath", str(self._gsim_tree_path))
 
         if self._statistics is not None:
-            self._loss_map.set("statistics", str(self._statistics))
+            loss_map.set("statistics", str(self._statistics))
 
         if self._quantile_value is not None:
-            self._loss_map.set("quantileValue", str(self._quantile_value))
+            loss_map.set("quantileValue", str(self._quantile_value))
 
         if self._loss_category is not None:
-            self._loss_map.set("lossCategory", str(self._loss_category))
+            loss_map.set("lossCategory", str(self._loss_category))
 
         if self._unit is not None:
-            self._loss_map.set("unit", str(self._unit))
+            loss_map.set("unit", str(self._unit))
+
+        return loss_map
 
 
 class LossMapGeoJSONWriter(LossMapWriter):
@@ -479,31 +476,20 @@ class LossMapGeoJSONWriter(LossMapWriter):
 
         for loss in data:
             loc = loss.location
-            loss_node = self._loss_nodes.get(loc.wkt)
 
-            if loss_node is None:
-                loss_node = {
-                    'type': 'Feature',
-                    'geometry': {
-                        'type': 'Point',
-                        'coordinates': [float(loc.x), float(loc.y)]
-                    },
-                    'properties': {'losses': []},
-                }
-                self._loss_nodes[loss.location.wkt] = loss_node
-                feature_coll['features'].append(loss_node)
+            loss_node = {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Point',
+                    'coordinates': [float(loc.x), float(loc.y)]
+                },
+                'properties': {'loss': float(loss.value),
+                               'asset_ref': loss.asset_ref},
+            }
+            feature_coll['features'].append(loss_node)
 
             if loss.std_dev is not None:
-                loss_node['properties']['losses'].append({
-                    'assetRef': str(loss.asset_ref),
-                    'mean': float(loss.value),
-                    'stdDev': float(loss.std_dev),
-                })
-            else:
-                loss_node['properties']['losses'].append({
-                    'assetRef': str(loss.asset_ref),
-                    'value': float(loss.value),
-                })
+                loss_node['properties']['std_dev'] = float(loss.std_dev)
 
         with NRMLFile(self._dest, 'w') as fh:
             json.dump(feature_coll, fh, sort_keys=True, indent=4,
@@ -1117,6 +1103,8 @@ def _append_location(element, location):
     gml_point = etree.SubElement(element, "{%s}Point" % gml_ns)
     gml_pos = etree.SubElement(gml_point, "{%s}pos" % gml_ns)
     gml_pos.text = "%s %s" % (location.x, location.y)
+
+    return location.wkt
 
 
 def validate_hazard_metadata(gsim_tree_path=None, source_model_tree_path=None,
