@@ -299,7 +299,6 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     """
     output = models.Output(
         oq_job=job,
-        owner=job.owner,
         output_type='uh_spectra'
     )
     uhs = models.UHS(

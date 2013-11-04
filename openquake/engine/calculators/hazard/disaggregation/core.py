@@ -38,7 +38,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 @utils_tasks.oqtask
 @stats.count_progress('h')
-def disagg_task(job_id, block, lt_rlz_id, calc_type):
+def disagg_task(job_id, block, lt_rlz_id, ltp, calc_type):
     """
     Task wrapper around core hazard curve/disaggregation computation functions.
 
@@ -58,15 +58,17 @@ compute_hazard_curves`
     :param lt_rlz_id:
         ID of the :class:`openquake.engine.db.models.LtRealization` for this
         part of the computation.
+    :param ltp:
+        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     :param calc_type:
         'hazard_curve' or 'disagg'. This indicates more or less the calculation
         phase; first we must computed all of the hazard curves, then we can
         compute the disaggregation histograms.
     """
     if calc_type == 'hazard_curve':
-        classical.compute_hazard_curves(job_id, block, lt_rlz_id)
+        classical.compute_hazard_curves(job_id, block, lt_rlz_id, ltp)
     elif calc_type == 'disagg':
-        compute_disagg(job_id, block, lt_rlz_id)
+        compute_disagg(job_id, block, lt_rlz_id, ltp)
     else:
         msg = ('Invalid calculation type "%s";'
                ' expected "hazard_curve" or "disagg"')
@@ -77,7 +79,7 @@ compute_hazard_curves`
         job_id=job_id, num_items=len(block), calc_type=calc_type)
 
 
-def compute_disagg(job_id, sites, lt_rlz_id):
+def compute_disagg(job_id, sites, lt_rlz_id, ltp):
     """
     Calculate disaggregation histograms and saving the results to the database.
 
@@ -105,6 +107,8 @@ def compute_disagg(job_id, sites, lt_rlz_id):
         we want to compute disaggregation histograms. This realization will
         determine which hazard curve results to use as a basis for the
         calculation.
+    :param ltp:
+        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
@@ -115,8 +119,6 @@ def compute_disagg(job_id, sites, lt_rlz_id):
     job = models.OqJob.objects.get(id=job_id)
     hc = job.hazard_calculation
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-
-    ltp = logictree.LogicTreeProcessor(hc.id)
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
@@ -373,13 +375,14 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         """
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc, is_complete=False)
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
             for block in general_utils.block_splitter(self.hc.site_collection,
                                                       block_size):
                 # job_id, Site block, lt rlz, calc_type
-                yield (self.job.id, block, lt_rlz.id, 'disagg')
+                yield (self.job.id, block, lt_rlz.id, ltp, 'disagg')
 
     def get_task_complete_callback(self, hc_task_arg_gen, block_size,
                                    concurrent_tasks):
