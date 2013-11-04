@@ -16,7 +16,7 @@
 """Saves source model data (parsed from a NRML file) to the
 'hzrdi.parsed_source' table.
 """
-
+import sys
 import math
 
 from django.db import router
@@ -39,7 +39,6 @@ from openquake.engine.db import models
 
 # Silencing 'Access to protected member' (WRT hazardlib polygons)
 # pylint: disable=W0212
-
 
 
 def nrml_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
@@ -85,10 +84,10 @@ def _nrml_source_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
 
     Parameters and return values are the same as :func:`nrml_to_hazardlib`.
     """
+    # The ordering of the switch here matters because:
+    #   - AreaSource inherits from PointSource
+    #   - ComplexFaultSource inherits from SimpleFaultSource
     try:
-        # The ordering of the switch here matters because:
-        #   - AreaSource inherits from PointSource
-        #   - ComplexFaultSource inherits from SimpleFaultSource
         if isinstance(src, nrml_models.AreaSource):
             return _area_to_hazardlib(src, mesh_spacing, bin_width,
                                       area_src_disc)
@@ -100,12 +99,12 @@ def _nrml_source_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
             return _simple_to_hazardlib(src, mesh_spacing, bin_width)
         elif isinstance(src, nrml_models.CharacteristicSource):
             return _characteristic_to_hazardlib(src, mesh_spacing, bin_width)
-    except Exception, err:
+    except:
+        etype, err, tb = sys.exc_info()
         msg = (
             "The following error has occurred with source id='%s', name='%s': "
-            "%s" % (src.id, src.name, err.message)
-        )
-        raise RuntimeError(msg)
+            "%s" % (src.id, src.name, err.message))
+        raise etype, msg, tb
 
 
 def _nrml_rupture_to_hazardlib(src, mesh_spacing):
@@ -485,7 +484,8 @@ def _source_type(src_model):
 
 
 class SourceDBWriter(object):
-    """Takes a sequence of seismic source objects and saves them to the
+    """Takes a sequence of seismic source objects from nrmllib, convert them
+    to hazardlib objects, optionally filter them and saves the result to the
     `hzrdi.parsed_source` table in the database.
 
     The source object data will be stored in the database in pickled blob form.
@@ -507,23 +507,26 @@ class SourceDBWriter(object):
         Area source discretization, in km. Applies only to area sources.
         If the input source is known to be a type other than an area source,
         you can specify `area_src_disc=None`.
+    :param condition:
+        A function hazard source -> boolean to filter the sources to save;
+        by default it returns always True and no sources are filtered.
     """
 
-    def __init__(self, inp, source_model, mesh_spacing, bin_width,
-                 area_src_disc):
+    def __init__(self, inp, source_model,
+                 mesh_spacing, bin_width, area_src_disc,
+                 condition=lambda src: True):
         self.inp = inp
         self.source_model = source_model
-
         self.mesh_spacing = mesh_spacing
         self.bin_width = bin_width
         self.area_src_disc = area_src_disc
+        self.condition = condition
 
     @transaction.commit_on_success(router.db_for_write(models.ParsedSource))
     def serialize(self):
-        """Save NRML sources to the database along with
+        """Save NRML sources to the database in hazardlib format along with
         'rupture-enclosing polygon' geometry for each source.
         """
-
         assert self.inp.input_type == 'source', (
             "`Input` object has the wrong `input_type`. Expected: 'source'."
             "Got: '%s'."
@@ -533,10 +536,12 @@ class SourceDBWriter(object):
         self.inp.save()
 
         for src in self.source_model:
-            ps = models.ParsedSource(
-                input=self.inp, source_type=_source_type(src), nrml=src
-            )
-            ps.save()
+            hazardlib_source = nrml_to_hazardlib(
+                src, self.mesh_spacing, self.bin_width, self.area_src_disc)
+            if self.condition(hazardlib_source):
+                models.ParsedSource.objects.create(
+                    input=self.inp, source_type=_source_type(src),
+                    nrml=hazardlib_source)
 
 
 class RuptureDBWriter(object):

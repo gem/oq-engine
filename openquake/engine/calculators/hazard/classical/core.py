@@ -78,17 +78,14 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
         Id of logic tree realization model to calculate for.
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-
-    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     ltp = logictree.LogicTreeProcessor(hc.id)
+    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
 
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
 
-    sources = haz_general.gen_sources(
-        src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-        hc.width_of_mfd_bin, hc.area_source_discretization)
+    parsed_sources = models.ParsedSource.objects.filter(pk__in=src_ids)
 
     imts = haz_general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
@@ -97,12 +94,20 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
     calc_kwargs = {'gsims': gsims,
                    'truncation_level': hc.truncation_level,
                    'time_span': hc.investigation_time,
-                   'sources': sources,
+                   'sources': [apply_uncertainties(s.nrml)
+                               for s in parsed_sources],
                    'imts': imts,
                    'sites': hc.site_collection}
 
     if hc.maximum_distance:
         dist = hc.maximum_distance
+        # NB: a better approach could be to filter the sources by distance
+        # at the beginning and to sore into the database only the relevant
+        # sources, as we do in the event based calculator: I am not doing that
+        # for the classical calculators because I wonder about the performance
+        # impact in in SHARE-like calculations. So at the moment we store
+        # everything in the database and we filter on the workers. This
+        # will probably change in the future.
         calc_kwargs['source_site_filter'] = (
             openquake.hazardlib.calc.filters.source_site_distance_filter(dist))
         calc_kwargs['rupture_site_filter'] = (
@@ -213,12 +218,12 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         # Parse vulnerability and exposure model
         self.parse_risk_models()
 
-        # Parse logic trees and create source Inputs.
-        self.initialize_sources()
-
         # Deal with the site model and compute site data for the calculation
         # (if a site model was specified, that is).
         self.initialize_site_model()
+
+        # Parse logic trees and create source Inputs.
+        self.initialize_sources()
 
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach
