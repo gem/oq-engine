@@ -85,13 +85,11 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
         print self.compl
         print self.compl.shape
 
-        #self.compl = compl
-
         numobs = np.around(numobs)
         print numobs
 
-        magnitude = np.zeros( (np.sum(numobs)) )
-        year = np.zeros( (np.sum(numobs)) ) * 1999
+        magnitude = np.zeros((np.sum(numobs)))
+        year = np.zeros((np.sum(numobs))) * 1999
 
         lidx = 0
         for mag, nobs in zip(self.mval, numobs):
@@ -100,7 +98,8 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
             year_low = compl[0,np.min(np.nonzero(compl[1,:] < mag)[0])]
             year[lidx:uidx] = (year_low + np.random.rand(uidx-lidx) *
                     (2000-year_low))
-            print '%.2f %.0f %.0f' % (mag,np.min(year[lidx:uidx]), np.max(year[lidx:uidx]))
+            print '%.2f %.0f %.0f' % (mag,np.min(year[lidx:uidx]),
+                                      np.max(year[lidx:uidx]))
             lidx = uidx
 
         self.catalogue = Catalogue.make_from_dict(

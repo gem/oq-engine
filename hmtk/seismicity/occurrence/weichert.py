@@ -66,8 +66,9 @@ class Weichert(SeismicityOccurrence):
     def calculate(self, catalogue, config, completeness=None):
         '''Calculates recurrence using the Weichert (1980) method'''
         # Input checks
-        cmag, ctime, ref_mag, dmag = input_checks(catalogue, config,
-                                                  completeness)
+        cmag, ctime, ref_mag, dmag, config = input_checks(catalogue,
+                                                          config,
+                                                          completeness)
         # Apply Weichert preparation
         cent_mag, t_per, n_obs = self._weichert_prep(
             catalogue.data['year'],
@@ -82,15 +83,13 @@ class Weichert(SeismicityOccurrence):
             config['itstab'] = 1E-5
         if (not 'maxiter' in key_list) or (not config['maxiter']):
             config['maxiter'] = 1000
-
-        bval, sigma_b, rate, sigma_rate, aval, sigma_a = (
-            self.weichert_algorithm(
-                t_per, cent_mag, n_obs, ref_mag,
-                config['bvalue'], config['itstab'], config['maxiter']))
-
-        if not 'reference_magnitude' in config:
+        bval, sigma_b, rate, sigma_rate, aval, sigma_a = \
+            self.weichert_algorithm(t_per, cent_mag, n_obs, ref_mag,
+            config['bvalue'], config['itstab'], config['maxiter'])
+       
+        if not config['reference_magnitude']:
             rate = np.log10(aval)
-            sigma_rate = np.log10(sigma_a)
+            sigma_rate = np.log10(aval + sigma_a) - np.log10(aval)
 
         return bval, sigma_b, rate, sigma_rate
 
@@ -215,10 +214,6 @@ class Weichert(SeismicityOccurrence):
                 fngtm0 = nkount * (sumexp / sumtex)
                 fn0 = fngtm0 * np.exp((beta) * (fmag[0] - (d_m / 2.0)))
                 stdfn0 = fn0 / np.sqrt(nkount)
-                #if mrate == 0.:
-                #    a_m = fn0
-                #    siga_m = stdfn0
-                #else:
                 a_m = fngtm0 * np.exp((-beta) * (mrate -
                                                 (fmag[0] - (d_m / 2.0))))
                 siga_m = a_m / np.sqrt(nkount)

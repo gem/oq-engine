@@ -79,7 +79,7 @@ class KijkoSmitTest(unittest.TestCase):
         numobs[22:] *= 100
 
         compl = np.array([[1900, 1950, 1980, 1990], [6.34, 5.44, 4.74, 3.0]])
-        self.compl = compl.transpose()
+        self.compl = np.flipud(compl.transpose())
         numobs = np.around(numobs)
 
         magnitude = np.zeros( (np.sum(numobs)) )
@@ -99,7 +99,7 @@ class KijkoSmitTest(unittest.TestCase):
         self.ks_ml = KijkoSmit()
         self.config = {'Average Type' : 'Weighted'}
 
-    def test_kijko_smith_maximum_likelihood(self):
+    def test_kijko_smit_maximum_likelihood(self):
         """
         Tests that the computed b value corresponds to the same value
         used to generate the test data set
@@ -109,9 +109,10 @@ class KijkoSmitTest(unittest.TestCase):
         print bval, sigma_b
         self.assertAlmostEqual(self.bval, bval, 1)
 
-    def test_kijko_smith_set_reference_magnitude(self):
+    def test_kijko_smit_set_reference_magnitude(self):
         completeness_table = np.array([[1900, 1.0]])
         catalogue = Catalogue.make_from_dict(
-            {'magnitude': np.array([5.0, 6.0]), 'year': np.array([2000, 2000])})
+            {'magnitude': np.array([5.0, 6.0]), 
+             'year': np.array([2000, 2000])})
         config = {'reference_magnitude' : 0.0}
         self.ks_ml.calculate(catalogue, config, completeness_table)

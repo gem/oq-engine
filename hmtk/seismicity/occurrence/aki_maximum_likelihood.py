@@ -76,8 +76,8 @@ class AkiMaxLikelihood(SeismicityOccurrence):
             Standard deviation of the GR b-value
         """
         # Input checks
-        _cmag, _ctime, _ref_mag, dmag = input_checks(catalogue, config,
-                                                     completeness)
+        _cmag, _ctime, _ref_mag, dmag, config = input_checks(catalogue, config,
+                                                             completeness)
         rt = recurrence_table(
             catalogue.data['magnitude'], dmag, catalogue.data['year'])
         bval, sigma_b = self._aki_ml(rt[:, 0], rt[:, 1])
