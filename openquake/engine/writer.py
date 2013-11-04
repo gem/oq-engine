@@ -217,7 +217,8 @@ class CacheInserter(object):
                 col = 'SRID=4326;' + col.wkt
             elif isinstance(col, GeometryField):
                 col = col.wkt()
-            elif isinstance(col, list):  # for numeric arrays; this is fragile
+            elif isinstance(col, (tuple, list)):
+                # for numeric arrays; this is fragile
                 col = self.array_to_pgstring(col)
             else:
                 col = unicode(col).encode('utf8')

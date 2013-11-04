@@ -18,7 +18,6 @@ import pprint
 import os
 import sys
 import warnings
-from unittest.case import SkipTest
 import numpy
 import StringIO
 import shutil

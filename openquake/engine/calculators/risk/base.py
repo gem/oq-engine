@@ -63,8 +63,9 @@ class RiskCalculator(base.Calculator):
         """
         with logs.tracing('get exposure'):
             self.taxonomies_asset_count = (
-                (self.rc.exposure_model or loaders.exposure(
-                    self.rc.get_exposure_input())).taxonomies_in(
+                (self.rc.preloaded_exposure_model or loaders.exposure(
+                    self.job,
+                    self.rc.inputs['exposure'])).taxonomies_in(
                         self.rc.region_constraint))
 
         with logs.tracing('parse risk models'):

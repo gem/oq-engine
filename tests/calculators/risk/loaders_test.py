@@ -57,7 +57,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 </nrml>
 """)
         with self.assertRaises(ValueError) as ar:
-            loaders._parse_vulnerability(vuln_content)
+            loaders.vulnerability(vuln_content)
         expected_error = ('Error creating vulnerability function for taxonomy '
                           'A. A taxonomy can not be associated with different '
                           'vulnerability functions')
@@ -85,7 +85,7 @@ class ParseVulnerabilityModelTestCase(unittest.TestCase):
 </nrml>
 """)
         with self.assertRaises(ValueError) as ar:
-            loaders._parse_vulnerability(vuln_content)
+            loaders.vulnerability(vuln_content)
         expected_error = ("Invalid vulnerability function with ID 'A': It is "
                           "not valid to define a loss ratio = 0.0 with a "
                           "corresponding coeff. of varation > 0.0")

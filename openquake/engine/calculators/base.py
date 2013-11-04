@@ -112,12 +112,11 @@ class Calculator(object):
 
     def parallelize(self, task_func, task_arg_gen):
         """
-        Given a callable and a task arg generator, apply the callable to
-        the arguments in parallel. For efficiency the tasks are spawned in
-        chunks. Here is how it works.
+        Given a callable and a task arg generator, build an argument list and
+        apply the callable to the arguments in parallel. The order is not preserved.
 
-        Suppose you are running a computation with 100,000 sources and 10
-        realizations: then 1,000,000 arguments are generated (if the
+        Every time a task completes the method .log_percent() is called
+        and a progress message is displayed if the percentage has changed.
         calculation is an event based one this number must be multiplied
         by the number of stochastic event sets). Generating a million
         tasks would be foolish an inefficient: the number of tasks should
@@ -148,17 +147,13 @@ class Calculator(object):
         tasks are run sequentially in the current process.
         """
         self.taskname = task_func.__name__
-        maxtasks = self.concurrent_tasks() * 10
         arglist = list(task_arg_gen)
-        chunksize = int(math.ceil(float(len(arglist)) / maxtasks))
-        chunks = list(general.block_splitter(arglist, chunksize))
-        self.num_tasks = len(chunks)
+        self.num_tasks = len(arglist)
         self.tasksdone = 0
         self.percent = 0.0
         logs.LOG.progress(
-            'spawning %d tasks of kind %s, chunksize=%d',
-            self.num_tasks, self.taskname, chunksize)
-        tasks.parallelize(task_func, chunks, self.log_percent)
+            'spawning %d tasks of kind %s', self.num_tasks, self.taskname)
+        tasks.parallelize(task_func, arglist, self.log_percent)
 
     def log_percent(self, dummy):
         """Log the percentage of tasks completed"""
@@ -362,6 +357,7 @@ class Calculator(object):
                                 self.job.calculation.export_dir,
                                 export_type
                             )
+                            logs.LOG.info('exported %s', fname)
                             exported_files.append(fname)
 
         return exported_files
