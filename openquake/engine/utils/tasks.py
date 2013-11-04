@@ -124,7 +124,7 @@ def oqtask(task_func):
         # job_id is always assumed to be the first argument passed to the task
         # this is the only required argument
         with EnginePerformanceMonitor(
-                'totals per task', job_id, tsk, flush=True):
+                'total task ' + task_func.__name__, job_id, tsk, flush=True):
             job = models.OqJob.objects.get(id=job_id)
 
             # it is important to save the task ids soon, so that

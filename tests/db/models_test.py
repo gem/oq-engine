@@ -17,74 +17,16 @@
 import getpass
 import unittest
 import mock
-import zlib
 
 import numpy
 
 from nose.plugins.attrib import attr
 
-from openquake.engine import engine
 from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.calculators.hazard.scenario import core as scen_core
 from openquake.engine.db import models
 
 from tests.utils import helpers
-from tests.utils.helpers import get_data_path
-
-
-class Inputs4HazCalcTestCase(unittest.TestCase):
-
-    def test_no_inputs(self):
-        self.assertEqual([], list(models.inputs4hcalc(-1)))
-
-    def test_a_few_inputs(self):
-        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
-        params, files = engine.parse_config(open(cfg, 'r'))
-        owner = helpers.default_user()
-        hc = engine.create_hazard_calculation(
-            owner.user_name, params, files
-        )
-
-        inputs = models.inputs4hcalc(hc.id)
-        # We expect 3: the two logic trees and one source model
-        self.assertEqual(3, inputs.count())
-
-    def test_with_input_type(self):
-        cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
-        params, files = engine.parse_config(open(cfg, 'r'))
-        owner = helpers.default_user()
-        hc = engine.create_hazard_calculation(
-            owner.user_name, params, files
-        )
-
-        inputs = models.inputs4hcalc(
-            hc.id, input_type='source_model_logic_tree'
-        )
-        self.assertEqual(1, inputs.count())
-
-
-class Inputs4RiskCalcTestCase(unittest.TestCase):
-
-    def test_no_inputs(self):
-        self.assertEqual([], list(models.inputs4rcalc(-1)))
-
-    def test_a_few_inputs(self):
-        job, files = helpers.get_fake_risk_job(
-            get_data_path('classical_psha_based_risk/job.ini'),
-            get_data_path('simple_fault_demo_hazard/job.ini'))
-        rc = job.risk_calculation
-
-        inputs = models.inputs4rcalc(rc.id)
-        self.assertEqual(2, inputs.count())
-
-    def test_with_input_type(self):
-        job, files = helpers.get_fake_risk_job(
-            get_data_path('classical_psha_based_risk/job.ini'),
-            get_data_path('simple_fault_demo_hazard/job.ini'))
-        rc = job.risk_calculation
-
-        inputs = models.inputs4rcalc(rc.id, input_type='exposure')
-        self.assertEqual(1, inputs.count())
 
 
 class HazardCalculationGeometryTestCase(unittest.TestCase):
@@ -224,8 +166,7 @@ class SESRuptureTestCase(unittest.TestCase):
             hazard_calculation=job.hazard_calculation, ordinal=0, seed=0,
             sm_lt_path='foo', gsim_lt_path='bar', total_items=0)
         output = models.Output.objects.create(
-            oq_job=job, owner=job.owner, display_name='test',
-            output_type='ses')
+            oq_job=job, display_name='test', output_type='ses')
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_realization=lt_rlz)
         ses = models.SES.objects.create(
@@ -541,14 +482,3 @@ class LossFractionTestCase(unittest.TestCase):
                          lf.display_value("7, 21", rc))
         self.assertEqual("0.0000,0.5000|0.0000,0.5000",
                          lf.display_value("0.0, 0.0", rc))
-
-
-class ModelContentTestCase(unittest.TestCase):
-    def test_compress_decompress(self):
-        # test the gzip functionality for the raw_content field
-        xml = u'<nrml>così</nrml>'.encode('utf-8')
-        mc = models.ModelContent(
-            raw_content=zlib.compress(xml), content_type='text/xml')
-        mc.save()  # calls GzippedField.get_prep_value
-        saved = models.ModelContent.objects.get(pk=mc.id)
-        self.assertEqual(saved.raw_content, xml)
