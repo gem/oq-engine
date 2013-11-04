@@ -1014,6 +1014,13 @@ class RiskCalculation(djm.Model):
     hazard_calculation = djm.ForeignKey("HazardCalculation",
                                         null=True, blank=True)
 
+    risk_investigation_time = djm.FloatField(
+        help_text=('Override the time span (in years) with which the '
+                   'hazard has been computed.'),
+        null=True,
+        blank=True,
+    )
+
     # A seed used to generate random values to be applied to
     # vulnerability functions
     master_seed = djm.IntegerField(null=True, blank=True)
@@ -1192,6 +1199,11 @@ class RiskCalculation(djm.Model):
             input_type = "%s_vulnerability" % ctype
 
         return self.inputs.get(input_type)
+
+    @property
+    def investigation_time(self):
+        return (self.risk_investigation_time or
+                self.get_hazard_calculation().investigation_time)
 
 
 def _prep_geometry(kwargs):
