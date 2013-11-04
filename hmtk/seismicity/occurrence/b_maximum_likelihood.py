@@ -124,12 +124,9 @@ class BMaxLikelihood(SeismicityOccurrence):
                                            temp_rec_table[:, 1], dmag, m_c)
 
             if ival == 0:
-                #gr_pars = np.array([np.hstack([bval, sigma_b, rate, sigrate])])
                 gr_pars = np.array([np.hstack([bval, sigma_b])])
                 neq = np.sum(id1)  # Number of events
             else:
-                #gr_pars = np.vstack([gr_pars, np.hstack([bval, sigma_b, rate,
-                #                                         sigrate])])
                 gr_pars = np.vstack([gr_pars, np.hstack([bval, sigma_b])])
                 neq = np.hstack([neq, np.sum(id1)])
             ival = ival + np.sum(id0)
@@ -156,7 +153,6 @@ class BMaxLikelihood(SeismicityOccurrence):
                    sigma_b,\
                    aval,\
                    sigma_a - aval
-                   #np.log10((10. ** sigma_a) - (10. ** aval))
         else:
             rate = 10. ** (aval - bval * config['reference_magnitude'])
             sigma_rate =  10. ** (sigma_a - 
@@ -203,7 +199,6 @@ class BMaxLikelihood(SeismicityOccurrence):
         beta = bvalue * np.log(10.)
         rate_mmin = nvalue * np.sum(np.exp(-beta * target_mag)) /\
             np.sum(nyear * np.exp(-beta * target_mag))
-        #print mmin, mmax, target_mag, nyear, beta, rate_mmin
         return np.log10(rate_mmin) + bvalue * mmin
 
     def _weighted_mean(self, parameters, neq):

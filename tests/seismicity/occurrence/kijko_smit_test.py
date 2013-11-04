@@ -79,10 +79,6 @@ class KijkoSmitTest(unittest.TestCase):
         numobs[22:] *= 100
 
         compl = np.array([[1900, 1950, 1980, 1990], [6.34, 5.44, 4.74, 3.0]])
-        #self.compl = np.array([[1990., 3.0],
-        #                       [1980., 4.74],
-        #                       [1950., 5.44],
-        #                       [1900., 6.34]])
         self.compl = np.flipud(compl.transpose())
         numobs = np.around(numobs)
 
@@ -116,6 +112,7 @@ class KijkoSmitTest(unittest.TestCase):
     def test_kijko_smit_set_reference_magnitude(self):
         completeness_table = np.array([[1900, 1.0]])
         catalogue = Catalogue.make_from_dict(
-            {'magnitude': np.array([5.0, 6.0]), 'year': np.array([2000, 2000])})
+            {'magnitude': np.array([5.0, 6.0]), 
+             'year': np.array([2000, 2000])})
         config = {'reference_magnitude' : 0.0}
         self.ks_ml.calculate(catalogue, config, completeness_table)

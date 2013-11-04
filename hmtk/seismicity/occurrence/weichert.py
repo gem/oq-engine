@@ -214,10 +214,6 @@ class Weichert(SeismicityOccurrence):
                 fngtm0 = nkount * (sumexp / sumtex)
                 fn0 = fngtm0 * np.exp((beta) * (fmag[0] - (d_m / 2.0)))
                 stdfn0 = fn0 / np.sqrt(nkount)
-                #if mrate == 0.:
-                #    a_m = fn0
-                #    siga_m = stdfn0
-                #else:
                 a_m = fngtm0 * np.exp((-beta) * (mrate -
                                                 (fmag[0] - (d_m / 2.0))))
                 siga_m = a_m / np.sqrt(nkount)

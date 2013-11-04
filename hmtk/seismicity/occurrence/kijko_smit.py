@@ -104,7 +104,6 @@ class KijkoSmit(SeismicityOccurrence):
             b_est[ival] = aki_ml._aki_ml(temp_rec_table[:, 0],
                                          temp_rec_table[:, 1],
                                          dmag, m_c)[0]
-            #print ctime[ival], m_c, nyr[ival], b_est[ival]
             ival += 1
 
         total_neq = np.float(np.sum(neq))
