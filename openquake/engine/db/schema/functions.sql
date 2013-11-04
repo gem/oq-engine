@@ -70,10 +70,6 @@ CREATE TRIGGER uiapi_cnode_stats_before_update_trig
 BEFORE UPDATE ON uiapi.cnode_stats
 FOR EACH ROW EXECUTE PROCEDURE uiapi.pcount_cnode_failures();
 
-CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER admin_oq_user_refresh_last_update_trig BEFORE UPDATE ON admin.oq_user FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
 
 /*
  * For a given realization and IMT, extract hazard curves from the temporary

@@ -19,12 +19,9 @@
 Tests for python logic tree processor.
 """
 
-import mock
 import numpy
 import os
 import os.path
-import shutil
-import tempfile
 import unittest
 
 from StringIO import StringIO
@@ -43,11 +40,9 @@ from openquake.engine.input.source import nrml_to_hazardlib
 
 from tests.utils import helpers
 
-FAKE_CALC_ID = 7
-
 
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
-    def __init__(self, filename, files, basepath, calc_id, validate=True):
+    def __init__(self, filename, files, basepath, validate=True):
         self.files = files
         if not validate:
             self.validate_branchset = self.__fail
@@ -56,8 +51,10 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
             self.validate_uncertainty_value = self.__fail
         content = files[filename]
         super(_TestableSourceModelLogicTree, self).__init__(
-            content, basepath, filename, calc_id, validate
-        )
+            content, basepath, filename, validate)
+
+    def _get_source_model(self, filename):
+        return StringIO(self.files[filename])
 
     def __fail(self, *args, **kwargs):
         raise AssertionError("this method shouldn't be called")
@@ -65,16 +62,14 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
 
 class _TestableGMPELogicTree(logictree.GMPELogicTree):
     def __init__(self, filename, content, basepath, tectonic_region_types,
-                 calc_id, validate=True):
+                 validate=True):
         if not validate:
             self.validate_branchset = self.__fail
             self.validate_tree = self.__fail
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
         super(_TestableGMPELogicTree, self).__init__(
-            tectonic_region_types, content, basepath, filename, calc_id,
-            validate
-        )
+            tectonic_region_types, content, basepath, filename, validate)
 
     def __fail(self, *args, **kwargs):
         raise AssertionError("this method shouldn't be called")
@@ -176,27 +171,11 @@ def _whatever_sourcemodel_lt(sourcemodel_filename):
 
 
 class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
-
-    def setUp(self):
-        sm = _whatever_sourcemodel()
-        self.gsm_patch = mock.patch('openquake.engine.input.logictree'
-                                    '.SourceModelLogicTree._get_source_model')
-        self.gsm_mock = self.gsm_patch.start()
-        ret_val = Mock()
-        ret_val.model_content.raw_content = sm
-        ret_val.model_content.raw_content = sm
-        self.gsm_mock.return_value = ret_val
-
-    def tearDown(self):
-        self.gsm_mock.stop()
-        self.gsm_patch.stop()
-
     def _assert_logic_tree_error(self, filename, files, basepath,
                                  exc_class=logictree.LogicTreeError,
                                  exc_filename=None):
         with self.assertRaises(exc_class) as arc:
-            _TestableSourceModelLogicTree(filename, files, basepath,
-                                          FAKE_CALC_ID)
+            _TestableSourceModelLogicTree(filename, files, basepath)
         exc = arc.exception
         self.assertEqual(exc.filename, exc_filename or filename)
         self.assertEqual(exc.basepath, basepath)
@@ -518,13 +497,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = """ololo"""
 
-        ret_val = Mock()
-        ret_val.model_content.raw_content = sm
-        self.gsm_mock.return_value = ret_val
-
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ParsingError,
-                                            exc_filename='sm')
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm': sm}, 'base',
+            logictree.ParsingError, exc_filename='sm')
 
     def test_source_model_schema_violation(self):
         lt = _make_nrml("""\
@@ -567,10 +542,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </simpleFaultSource>
         </sourceModel>
         """)
-        ret_val = Mock()
-        ret_val.model_content.raw_content = sm
-        self.gsm_mock.return_value = ret_val
-
         self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
                                       logictree.ParsingError,
                                       exc_filename='sm')
@@ -852,7 +823,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                 error = "uncertainty of type %r must define 'applyToSources'" \
                         " with only one source id" % uncertainty
                 self.assertEqual(exc.message, error,
-                                "wrong exception message: %s" % exc.message)
+                                 "wrong exception message: %s" % exc.message)
 
 
 class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
@@ -860,8 +831,8 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                  tectonic_region_types,
                                  exc_class=logictree.LogicTreeError):
         with self.assertRaises(exc_class) as arc:
-            _TestableGMPELogicTree(filename, content, basepath,
-                                    tectonic_region_types, FAKE_CALC_ID)
+            _TestableGMPELogicTree(
+                filename, content, basepath, tectonic_region_types)
         exc = arc.exception
         self.assertEqual(exc.filename, filename)
         self.assertEqual(exc.basepath, basepath)
@@ -869,8 +840,8 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
 
     def test_invalid_xml(self):
         gmpe = """zxc<nrml></nrml>"""
-        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
-                                            logictree.ParsingError)
+        self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
+                                      logictree.ParsingError)
 
     def test_schema_violation(self):
         gmpe = _make_nrml("<logicTree></logicTree>")
@@ -1127,8 +1098,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm},
-            'basepath', FAKE_CALC_ID, validate=False
-        )
+            'basepath', validate=False)
         self.assert_branchset_equal(lt.root_branchset, 'sourceModel', {},
                                     [('b1', '0.6', 'sm1'),
                                      ('b2', '0.4', 'sm2')])
@@ -1163,8 +1133,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
-            FAKE_CALC_ID, validate=False
-        )
+            validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', 'sm',
@@ -1205,7 +1174,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
-            FAKE_CALC_ID, validate=False)
+            validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', 'sm',
@@ -1258,9 +1227,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
-            'lt', {'lt': source_model_logic_tree, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base',
-            FAKE_CALC_ID, validate=False
-        )
+            'lt', {'lt': source_model_logic_tree,
+                   'sm1': sm, 'sm2': sm, 'sm3': sm},
+            '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('sb1', '0.6', 'sm1',
@@ -1308,8 +1277,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sm = _whatever_sourcemodel()
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm': sm},
-            '/base', FAKE_CALC_ID, validate=False
-        )
+            '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', 'sm')]
@@ -1391,7 +1359,7 @@ class GMPELogicTreeTestCase(unittest.TestCase):
         """)
         trts = ['Subduction Interface', 'Active Shallow Crust', 'Volcanic']
         gmpe_lt = _TestableGMPELogicTree('gmpe', gmpe, '/base', trts,
-                                         FAKE_CALC_ID, validate=False)
+                                         validate=False)
         self.assert_result(gmpe_lt, {
             'Subduction Interface': [
                 ('b1', '0.7', SadighEtAl1997),
@@ -1782,7 +1750,8 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('classical_job.ini')
         job = helpers.get_hazard_job(cfg)
 
-        self.proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
+        self.proc = logictree.LogicTreeProcessor.from_hc(
+            job.hazard_calculation)
 
     def test_sample_source_model(self):
         sm_name, branch_ids = self.proc.sample_source_model_logictree(42)
@@ -1848,7 +1817,8 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
             self.uncertainties_applied.append(fingerprint)
         self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
         logictree.BranchSet.apply_uncertainty = apply_uncertainty
-        self.proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
+        self.proc = logictree.LogicTreeProcessor.from_hc(
+            job.hazard_calculation)
 
     def tearDown(self):
         logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
@@ -1895,7 +1865,8 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
         job = helpers.get_hazard_job(cfg)
         base_path = job.hazard_calculation.base_path
 
-        proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
+        proc = logictree.LogicTreeProcessor.from_hc(
+            job.hazard_calculation)
 
         [branch] = proc.source_model_lt.root_branchset.branches
         all_branches = proc.source_model_lt.branches
@@ -1913,15 +1884,15 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
 
         expected_result_path = os.path.join(base_path, expected_result)
         e_nrml_sources = SourceModelParser(expected_result_path).parse()
-        e_hazardlib_sources = [nrml_to_hazardlib(
-                source, **self.NRML_TO_HAZARDLIB_PARAMS)
-                               for source in e_nrml_sources]
+        e_hazardlib_sources = [
+            nrml_to_hazardlib(source, **self.NRML_TO_HAZARDLIB_PARAMS)
+            for source in e_nrml_sources]
 
         original_sm_path = os.path.join(base_path, sm_path)
         a_nrml_sources = SourceModelParser(original_sm_path).parse()
-        a_hazardlib_sources = [nrml_to_hazardlib(
-                source, **self.NRML_TO_HAZARDLIB_PARAMS)
-                               for source in a_nrml_sources]
+        a_hazardlib_sources = [
+            nrml_to_hazardlib(source, **self.NRML_TO_HAZARDLIB_PARAMS)
+            for source in a_nrml_sources]
         for i, source in enumerate(a_hazardlib_sources):
             modify_source(source)
 

@@ -34,6 +34,7 @@ from openquake.engine.calculators.risk import (
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine import logs, writer
+from openquake.engine.input import logictree
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.base import signal_task_complete
 
@@ -406,6 +407,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         time_span, tses = self.hazard_times()
 
+        # If we are computing ground motion values on the fly we need
+        # logic trees
+        if self.rc.hazard_outputs()[0].output_type == "ses":
+            ltp = logictree.LogicTreeProcessor.from_hc(self.rc)
+        else:
+            ltp = None
+
         return workflows.CalculationUnit(
             loss_type,
             workflows.ProbabilisticEventBased(
@@ -421,7 +429,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 assets,
                 self.rc.best_maximum_distance,
                 risk_model.imt,
-                self.hazard_seeds))
+                self.hazard_seeds,
+                ltp))
 
     def hazard_times(self):
         """

@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2013, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -48,12 +48,12 @@ def make_mock_points(n):
     return points
 
 
-def make_site_coll(n):
+def make_site_coll(lon, lat, n):
     assert n <= 1000
     sites = []
     for i in range(n):
-        lon = -78 - float(i) / 1000
-        site = Site(Point(lon, 15.5), 800., 'measured', 50., 2.5, i)
+        site = Site(Point(lon - float(i) / 1000, lat),
+                    800., 'measured', 50., 2.5, i)
         sites.append(site)
     return models.SiteCollection(sites)
 
@@ -84,7 +84,7 @@ class EventBasedHazardTestCase(unittest.TestCase):
         hc.maximum_distance = 200.
 
         gsim = get_available_gsims()['AkkarBommer2010']()
-        site_coll = make_site_coll(5)
+        site_coll = make_site_coll(-78, 15.5, n=5)
         params = dict(truncation_level=3,
                       correl_model=None,
                       maximum_distance=200)
@@ -122,6 +122,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.cfg = helpers.get_data_path('event_based_hazard/job_2.ini')
         self.job = helpers.get_hazard_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
+        hc_id = self.job.hazard_calculation.id
+        models.SiteCollection.cache[hc_id] = make_site_coll(0, 0, n=5)
         models.JobStats.objects.create(oq_job=self.job)
 
     @unittest.skip  # temporarily skipped
@@ -395,8 +397,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                 return dic[src_id]
 
         def process_args(arg_gen):
-            for job_id, source_ids, ses, task_seed in arg_gen:
-                yield map(src_no, source_ids), ses, task_seed
+            for _job_id, source_ids, ses, task_seed, ltp in arg_gen:
+                yield map(src_no, source_ids), ses, task_seed, ltp
 
         actual = list(process_args(self.calc.task_arg_gen()))
-        self.assertEqual(expected, actual)
+        # do not check the ltp
+        self.assertEqual(expected, [(x, y, z) for x, y, z, _w in actual])

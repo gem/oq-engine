@@ -69,7 +69,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def compute_ses(job_id, src_ids, ses, src_seeds):
+def compute_ses(job_id, src_ids, ses, src_seeds, ltp):
     """
     Celery task for the stochastic event set calculator.
 
@@ -92,8 +92,13 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
     :param int src_seeds:
         Values for seeding numpy/scipy in the computation of stochastic event
         sets and ground motion fields from the sources
+    :param ltp:
+        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    lt_rlz = ses.ses_collection.lt_realization
+    apply_uncertainties = ltp.parse_source_model_logictree_path(
+        lt_rlz.sm_lt_path)
 
     # complete_logic_tree_ses flag
     cmplt_lt_ses = None
@@ -102,24 +107,10 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
             ses_collection__output__oq_job=job_id,
             ordinal=None)
 
-    ltp = logictree.LogicTreeProcessor(hc.id)
-    lt_rlz = ses.ses_collection.lt_realization
-
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
-
-    src_filter = filters.source_site_distance_filter(hc.maximum_distance)
-    rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
-
-    with EnginePerformanceMonitor(
-            'reading site collection', job_id, compute_ses):
-        site_collection = hc.site_collection
-
     with EnginePerformanceMonitor(
             'reading sources', job_id, compute_ses):
-        sources = list(haz_general.gen_sources(
-            src_ids, apply_uncertainties, hc.rupture_mesh_spacing,
-            hc.width_of_mfd_bin, hc.area_source_discretization))
+        sources = [apply_uncertainties(s.nrml)
+                   for s in models.ParsedSource.objects.filter(pk__in=src_ids)]
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -131,8 +122,7 @@ def compute_ses(job_id, src_ids, ses, src_seeds):
             # then make copies of the hazardlib ruptures (which may contain
             # duplicates): the copy is needed to keep the tags distinct
             rupts = map(copy.copy, stochastic.stochastic_event_set_poissonian(
-                        [src], hc.investigation_time, site_collection,
-                        src_filter, rup_filter))
+                        [src], hc.investigation_time))
             # set the tag for each copy
             for i, r in enumerate(rupts):
                 r.tag = 'rlz=%02d|ses=%04d|src=%s|i=%03d' % (
@@ -356,7 +346,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         return int(sum(num_tasks))
 
-    def task_arg_gen(self):
+    def task_arg_gen(self, _block_size=None):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -368,6 +358,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rnd.seed(hc.random_seed)
         realizations = self._get_realizations()
 
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_rlz in realizations:
             sources = models.SourceProgress.objects\
                 .filter(is_complete=False, lt_realization=lt_rlz)\
@@ -383,7 +374,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                     # compute seeds for the sources
                     src_seeds = [rnd.randint(0, models.MAX_SINT_32)
                                  for _ in src_ids]
-                    yield self.job.id, src_ids, ses, src_seeds
+                    yield self.job.id, src_ids, ses, src_seeds, ltp
 
     def compute_gmf_arg_gen(self):
         """
@@ -399,7 +390,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             truncation_level=self.hc.truncation_level,
             maximum_distance=self.hc.maximum_distance)
         for lt_rlz in self._get_realizations():
-            ltp = logictree.LogicTreeProcessor(self.hc.id)
+            ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
             gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
             all_ses = models.SES.objects.filter(
                 ses_collection__lt_realization=lt_rlz,
@@ -451,7 +442,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         NOTE: Many tasks can contribute ruptures to the same SES.
         """
         output = models.Output.objects.create(
-            owner=self.job.owner,
             oq_job=self.job,
             display_name='ses-coll-rlz-%s' % lt_rlz.id,
             output_type='ses')
@@ -461,7 +451,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         if self.job.hazard_calculation.ground_motion_fields:
             output = models.Output.objects.create(
-                owner=self.job.owner,
                 oq_job=self.job,
                 display_name='gmf-rlz-%s' % lt_rlz.id,
                 output_type='gmf')
@@ -490,7 +479,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         # `complete logic tree` SES
         clt_ses_output = models.Output.objects.create(
-            owner=self.job.owner,
             oq_job=self.job,
             display_name='complete logic tree SES',
             output_type='complete_lt_ses')
@@ -504,11 +492,22 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         if self.hc.complete_logic_tree_gmf:
             clt_gmf_output = models.Output.objects.create(
-                owner=self.job.owner,
                 oq_job=self.job,
                 display_name='complete logic tree GMF',
                 output_type='complete_lt_gmf')
             models.Gmf.objects.create(output=clt_gmf_output)
+
+    def get_source_filter_condition(self):
+        """
+        Return a function filtering on the maximum_distance
+        """
+        src_filter = filters.source_site_distance_filter(
+            self.hc.maximum_distance)
+
+        def filter_on_distance(src):
+            """True if the source is relevant for the site collection"""
+            return bool(list(src_filter([(src, self.hc.site_collection)])))
+        return filter_on_distance
 
     def pre_execute(self):
         """
@@ -522,13 +521,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         # Parse risk models.
         self.parse_risk_models()
 
-        # Parse logic trees and create source Inputs.
-        self.initialize_sources()
-
         # Deal with the site model and compute site data for the calculation
         # If no site model file was specified, reference parameters are used
         # for all sites.
         self.initialize_site_model()
+
+        # Parse logic trees and create source Inputs.
+        self.initialize_sources()
 
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach
