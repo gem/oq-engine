@@ -125,11 +125,24 @@ def input_checks(catalogue, config, completeness):
         # use default reference magnitude of 0.0 and magnitude interval of 0.1
         ref_mag = 0.0
         dmag = 0.1
+        config = {'reference_magnitude': None,
+                  'magnitude_interval': 0.1}
     else:
-        ref_mag = config.get('reference_magnitude', 0.0)
-        dmag = config.get('magnitude_interval', 0.1)
+        if (not 'reference_magnitude' in config.keys()) or\
+            (config['reference_magnitude'] is None):
+            ref_mag = 0.
+            config['reference_magnitude'] = None
+        else:
+            ref_mag = config['reference_magnitude']
 
-    return cmag, ctime, ref_mag, dmag
+        if (not 'magnitude_interval' in config.keys()) or \
+            not config['magnitude_interval']:
+            dmag = 0.1
+        else:
+            dmag = config['magnitude_interval']
+
+ 
+    return cmag, ctime, ref_mag, dmag, config
 
 
 def generate_trunc_gr_magnitudes(bval, mmin, mmax, nsamples):
