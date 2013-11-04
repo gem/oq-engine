@@ -57,7 +57,11 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                 [[el.aggregate_loss
                  for el in models.EventLossData.objects.filter(
                 event_loss__output__oq_job=job).order_by(
-                    '-aggregate_loss')[0:10]]])
+                    '-aggregate_loss')[0:10]]] +
+                list(
+                    models.LossFraction.objects.get(
+                        variable="coordinate",
+                        output__oq_job=job).iteritems())[0][1].values())
 
     def expected_data(self):
 
@@ -87,7 +91,8 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
                                      94.89922324]
 
         return [poes_1, poes_2, poes_3, losses_1, losses_2, losses_3,
-                expected_aggregate_losses, expected_event_loss_table]
+                expected_aggregate_losses, expected_event_loss_table,
+                [2.84407157e+03, 1.00000000e+00]]
 
     def actual_xml_outputs(self, job):
         """
