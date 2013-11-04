@@ -3,7 +3,6 @@ import argparse
 from openquake.nrmllib.hazard.parsers import GMFScenarioParser
 from openquake.engine.db import models
 from openquake.engine import writer
-from openquake.engine.engine import get_current_user
 
 
 def import_rows(hc, gmf_coll, rows):
@@ -28,7 +27,7 @@ def import_rows(hc, gmf_coll, rows):
     writer.CacheInserter.saveall(gmfs)
 
 
-def import_gmf_scenario(fileobj, user=None):
+def import_gmf_scenario(fileobj):
     """
     Parse the file with the GMF fields and import it into the table
     gmf_scenario. It also creates a new output record, unrelated to a job.
@@ -40,19 +39,14 @@ def import_gmf_scenario(fileobj, user=None):
     """
     fname = fileobj.name
 
-    owner = models.OqUser.objects.get(user_name=user) \
-        if user else get_current_user()
-
     hc = models.HazardCalculation.objects.create(
-        owner=owner,
         base_path=os.path.dirname(fname),
         description='Scenario importer, file %s' % os.path.basename(fname),
         calculation_mode='scenario', maximum_distance=100)
     # XXX: probably the maximum_distance should be entered by the user
 
     out = models.Output.objects.create(
-        owner=owner, display_name='Imported from %r' % fname,
-        output_type='gmf_scenario')
+       display_name='Imported from %r' % fname, output_type='gmf_scenario')
 
     gmf_coll = models.Gmf.objects.create(output=out)
 

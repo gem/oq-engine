@@ -29,7 +29,6 @@ from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
 from openquake.engine.db import models
-from openquake.engine.input import logictree
 from openquake.engine.utils import stats
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -37,15 +36,18 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 @utils_tasks.oqtask
 @stats.count_progress('h')
-def hazard_curves(job_id, src_ids, lt_rlz_id):
+def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     """
     A celery task wrapper function around :func:`compute_hazard_curves`.
     See :func:`compute_hazard_curves` for parameter definitions.
+
+    :param ltp:
+        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
                    % (job_id, lt_rlz_id))
 
-    compute_hazard_curves(job_id, src_ids, lt_rlz_id)
+    compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp)
     # Last thing, signal back the control node to indicate the completion of
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
@@ -55,7 +57,7 @@ def hazard_curves(job_id, src_ids, lt_rlz_id):
 
 # Silencing 'Too many local variables'
 # pylint: disable=R0914
-def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
+def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     """
     Celery task for hazard curve calculator.
 
@@ -77,9 +79,11 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id):
         List of ids of parsed source models to take into account.
     :param lt_rlz_id:
         Id of logic tree realization model to calculate for.
+    :param ltp:
+        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    ltp = logictree.LogicTreeProcessor(hc.id)
+
     lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
 
     apply_uncertainties = ltp.parse_source_model_logictree_path(

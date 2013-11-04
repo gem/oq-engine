@@ -44,7 +44,6 @@ try:
 except ImportError:
     setproctitle = lambda title: None  # pylint: disable=C0103
 
-from openquake.engine.db.models import ErrorMsg
 from openquake.engine.db.models import JobStats
 from openquake.engine.db.models import OqJob
 from openquake.engine.db.models import Performance
@@ -142,7 +141,7 @@ def get_job_status(job_id):
     return OqJob.objects.get(id=job_id).status
 
 
-def update_job_status_and_error_msg(job_id, error_msg=None):
+def update_job_status_and_error_msg(job_id):
     """
     Store in the database the status of a job and optionally an error message.
 
@@ -154,10 +153,6 @@ def update_job_status_and_error_msg(job_id, error_msg=None):
     job = OqJob.objects.get(id=job_id)
     job.is_running = False
     job.save()
-
-    if error_msg:
-        ErrorMsg.objects.using('job_superv')\
-                        .create(oq_job=job, detailed=error_msg)
 
 
 def _update_log_record(self, record):
@@ -304,7 +299,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
         terminate_job(self.job_pid)
 
-        update_job_status_and_error_msg(self.job_id, record.getMessage())
+        update_job_status_and_error_msg(self.job_id)
 
         record_job_stop_time(self.job_id)
 
@@ -362,7 +357,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                 # status in the database, or it has been running even though
                 # there were failures. We update the job status here.
                 self.selflogger.error(message)
-                update_job_status_and_error_msg(self.job_id, error_msg=message)
+                update_job_status_and_error_msg(self.job_id)
 
             record_job_stop_time(self.job_id)
             cleanup_after_job(self.job_id)

@@ -29,30 +29,21 @@ from openquake.engine.input.exposure import ExposureDBWriter
 from openquake.engine.db.models import RiskModel, DmgState
 
 
-def exposure(exposure_model_input):
+def exposure(job, exposure_model_input):
     """
     Load exposure assets and write them to database.
 
     :param exposure_model_input:
-        a :class:`openquake.engine.db.models.Input` object with input
-        type `exposure`
+        the pathname to an exposure file
     """
-
-    content = exposure_model_input.model_content.as_string_io
-    ExposureDBWriter(exposure_model_input).serialize(
-        parsers.ExposureModelParser(content))
-    return exposure_model_input.exposuremodel
+    return ExposureDBWriter(job).serialize(
+        parsers.ExposureModelParser(exposure_model_input))
 
 
-def vulnerability(vulnerability_input):
-    return _parse_vulnerability(
-        vulnerability_input.model_content.as_string_io)
-
-
-def _parse_vulnerability(vuln_content):
+def vulnerability(vulnerability_file):
     """
-    :param vuln_content:
-        File-like object containg the vulnerability model XML.
+    :param vulnerability_file:
+        the pathname to a vulnerability file
     :returns:
         an assoc list between taxonomies and `RiskModel` instances
     :raises:
@@ -60,7 +51,7 @@ def _parse_vulnerability(vuln_content):
     """
     vfs = dict()
 
-    for record in parsers.VulnerabilityModelParser(vuln_content):
+    for record in parsers.VulnerabilityModelParser(vulnerability_file):
         taxonomy = record['ID']
         imt = record['IMT']
         loss_ratios = record['lossRatio']
@@ -94,8 +85,7 @@ def _parse_vulnerability(vuln_content):
 
 
 def fragility(risk_calculation, fragility_input):
-    damage_states, risk_models = _parse_fragility(
-        fragility_input.model_content.as_string_io)
+    damage_states, risk_models = _parse_fragility(fragility_input)
 
     for lsi, dstate in enumerate(damage_states):
         DmgState.objects.get_or_create(
