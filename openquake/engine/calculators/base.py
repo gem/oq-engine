@@ -117,28 +117,6 @@ class Calculator(object):
 
         Every time a task completes the method .log_percent() is called
         and a progress message is displayed if the percentage has changed.
-        calculation is an event based one this number must be multiplied
-        by the number of stochastic event sets). Generating a million
-        tasks would be foolish an inefficient: the number of tasks should
-        not be much bigger than the number of available cores. Such number
-        is more or less given by the configuration parameter `concurrent_tasks`
-        (usually we set it to twice the number of the cores). This method
-        implements a chunking mechanism to collect the arguments and generate
-        a total number of tasks which is always lower than
-
-         `maxtasks = concurrent_tasks * 10`
-
-        which is a good heuristic number. In the cluster the number of
-        concurrent_tasks is set to 512, so that maxtasks is 5120. If there
-        are 1,000,000 arguments the algorithm divides num_args / maxtasks
-        and finds out a chunksize of 196, by rounding to the closest upper
-        integer. That means that we will generated 1,000,000 / 196 = 5103
-        tasks (the division is rounded to the closest upper integer) each
-        with 196 arguments except the last one which will have 8 arguments.
-        Each task will call the task_func with its arguments.
-
-        Every time a task completes the method .log_percent() is called
-        and a progress message is displayed if the percentage has changed.
 
         :param task_func: a `celery` task callable
         :param task_args: an iterable over positional arguments
