@@ -286,6 +286,65 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
     core_calc_task = compute_ses
 
+    preferred_block_size = 1  # will be overridden in calc_num_tasks
+
+    def calc_num_tasks(self):
+        """
+        The number of tasks is inferred from the configuration parameter
+        concurrent_tasks (c), from the number of sources per realization
+        (n) and from the number of stochastic event sets (s) by using
+        the formula::
+
+                     N * n
+         num_tasks = ----- * s
+                       b
+
+        where N is the number of realizations and b is the block_size,
+        defined as::
+
+             N * n * s
+         b = ---------
+              10 * c
+
+        The divisions are intended rounded to the closest upper integer
+        (ceil). The mechanism is intended to generate a number of tasks
+        close to 10 * c independently on the number of sources and SES.
+        For instance, with c = 512, you should expect the engine to
+        generate at most 5120 tasks; they could be much less in case
+        of few sources and few SES; the minimum number of tasks generated
+        is::
+
+          num_tasks_min = N * n * s
+
+        To have good concurrency the number of tasks must be bigger than
+        the number of the cores (which is essentially c) but not too big,
+        otherwise all the time would be wasted in passing arguments.
+        Generating 10 times more tasks than cores gives a nice progress
+        percentage. There is no more motivation than that.
+        """
+        preferred_num_tasks = self.concurrent_tasks() * 10
+        num_ses = self.hc.ses_per_logic_tree_path
+
+        num_sources = []  # number of sources per realization
+        for lt_rlz in self._get_realizations():
+            n = models.SourceProgress.objects.filter(
+                lt_realization=lt_rlz).count()
+            num_sources.append(n)
+            logs.LOG.info('Found %d sources for realization %d',
+                          n, lt_rlz.id)
+        total_sources = sum(num_sources)
+
+        if len(num_sources) > 1:
+            logs.LOG.info('Total number of sources: %d', total_sources)
+
+        self.preferred_block_size = int(
+            math.ceil(float(total_sources * num_ses) / preferred_num_tasks))
+        logs.LOG.warn('Using block size: %d', self.preferred_block_size)
+
+        num_tasks = [math.ceil(float(n) / self.preferred_block_size) * num_ses
+                     for n in num_sources]
+
+        return int(sum(num_tasks))
 
     def task_arg_gen(self, _block_size=None):
         """
