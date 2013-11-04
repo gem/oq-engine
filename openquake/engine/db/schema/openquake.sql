@@ -466,7 +466,7 @@ CREATE TABLE hzrdr.ses (
 CREATE TABLE hzrdr.ses_rupture (
     id SERIAL PRIMARY KEY,
     ses_id INTEGER NOT NULL,
-    old_magnitude float NULL,
+
     old_strike float NULL,
     old_dip float NULL,
     old_rake float NULL,
@@ -477,9 +477,12 @@ CREATE TABLE hzrdr.ses_rupture (
     old_lats BYTEA NULL,
     old_depths BYTEA NULL,
     old_surface BYTEA NULL,
+
     rupture BYTEA NOT NULL DEFAULT 'not computed',
-    tag VARCHAR
+    tag VARCHAR,
+    magnitude float NOT NULL
 ) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'ses_rupture', 'hypocenter', 4326, 'POINT', 2);
 
 
 CREATE TABLE hzrdr.gmf (
