@@ -59,16 +59,17 @@ from hmtk.seismicity.max_magnitude.kijko_nonparametric_gaussian import \
     KijkoNonParametricGaussian, _get_exponential_spaced_values
 
 
-BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), './../completeness/data')
+BASE_DATA_PATH = os.path.join(os.path.dirname(__file__),
+                              './../completeness/data')
 
 class MmaxTestCase(unittest.TestCase):
     '''Testing class for Mmax functions'''
     def setUp(self):
         '''Set up the test class'''
         self.config = {'algorithm': None,
-                       'input_mmax': None ,
-                       'input_mmax_uncertainty': None ,
-                       'maximum_iterations': None ,
+                       'input_mmax': None,
+                       'input_mmax_uncertainty': None,
+                       'maximum_iterations': None,
                        'tolerance': None,
                        'input_mmin': None,
                        'b-value': 1.0,
@@ -78,10 +79,11 @@ class MmaxTestCase(unittest.TestCase):
                        'number_bootstraps': None }
         #self.completeness = np.array([])
 
-    def test_get_observed_mmax(self):
-        '''
-        Tests the function to _get_observed_mmax from data
-        '''
+    def test_get_observed_mmax_good_data(self):
+        """
+        Asserts that the observed Mmax and corresponding sigma MMax are
+        returned when data are availavle
+        """
         test_catalogue = {
             'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
             'sigmaMagnitude': np.array([0.1, 0.2, 0.3, 0.2, 0.1])
@@ -91,18 +93,129 @@ class MmaxTestCase(unittest.TestCase):
         self.assertAlmostEqual(mmax, 7.6)
         self.assertAlmostEqual(mmax_sig, 0.3)
 
-        # Test 2: Finds the mmax from the catalogue with default sigma (0.2)
-        test_catalogue['sigmaMagnitude'] = None
-        mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
-        self.assertAlmostEqual(mmax, 7.6)
-        self.assertAlmostEqual(mmax_sig, 0.2)
-
+    def test_get_observed_mmax_from_input(self):
+        """
+        Tests that the input mmax and its uncertainty are returned when
+        specified in the config
+        """
         # Test 3: Finds the mmax from the input file
         self.config['input_mmax'] = 8.5
         self.config['input_mmax_uncertainty'] = 0.35
+        test_catalogue = {
+            'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
+            'sigmaMagnitude': None
+            }
         mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
         self.assertAlmostEqual(mmax, 8.5)
         self.assertAlmostEqual(mmax_sig, 0.35)
+
+    def test_get_observed_max_no_sigma_error(self):
+        """
+        When an input mmax is given in the config, but no uncertainty is 
+        specified assert that this raises an error
+        """
+        self.config['input_mmax'] = 8.5
+        self.config['input_mmax_uncertainty'] = None
+        test_catalogue = {
+            'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
+            'sigmaMagnitude': None
+            }
+        self._get_observed_mmax_error(test_catalogue, self.config)
+
+    def test_bad_sigma_magnitude_mmax_error(self):
+        """
+        If reading mmax from the catalogue, three criteria must be met
+        in order to retreive the uncertainty. sigmaMagnitude must be a
+        numpy.ndarray, have the same length as magnitude and not consist
+        entirely of NaNs
+        """
+        self.config['input_mmax'] = None
+        self.config['input_mmax_uncertainty'] = None
+        # 1st case - sigmaMagnitude is not an np.ndarray
+        test_catalogue = {
+            'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
+            'sigmaMagnitude': None
+            }
+        self._get_observed_mmax_error(test_catalogue, self.config)
+        # 2nd case - sigmaMagnitude is different from that of magnitude
+        test_catalogue = {
+            'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
+            'sigmaMagnitude': np.array([])
+            }
+        self._get_observed_mmax_error(test_catalogue, self.config)
+
+        # 3rd case, is np.ndarray of equal length to magnitude but entirely
+        # NaNs
+        test_catalogue = {
+            'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
+            'sigmaMagnitude': np.array([np.nan, np.nan, np.nan, np.nan, np.nan])
+            }
+        self._get_observed_mmax_error(test_catalogue, self.config)
+
+    def test_observed_mmax_catalogue_uncertainty_config(self):
+        """
+        Tests the case when the observed Mmax must be read from the catalogue
+        but the uncertainty is specified in the config
+        """
+        self.config['input_mmax'] = None
+        self.config['input_mmax_uncertainty'] = 0.5
+        test_catalogue = {
+            'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
+            'sigmaMagnitude': np.array([])
+            }
+        mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
+        self.assertAlmostEqual(mmax, 7.6)
+        self.assertAlmostEqual(mmax_sig, 0.5)
+
+    def test_mmax_uncertainty_largest_in_catalogue(self):
+        """
+        When largest mmax has a NaN sigmaMagnitude, take the largest
+        sigmaMagnitude found in catalogue
+        """
+        self.config['input_mmax'] = None
+        self.config['input_mmax_uncertainty'] = None
+        test_catalogue = {
+            'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
+            'sigmaMagnitude': np.array([0.1, 0.4, np.nan, 0.2, 0.1])
+            }
+        mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
+        self.assertAlmostEqual(mmax, 7.6)
+        self.assertAlmostEqual(mmax_sig, 0.4)
+
+    def _get_observed_mmax_error(self, test_catalogue, test_config):
+        """
+        Tests the get_observed_mmax exceptions are raised
+        """
+        with self.assertRaises(ValueError) as ae:
+            mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
+        self.assertEqual(ae.exception.message,
+                         'Input mmax uncertainty must be specified!')
+
+#    def test_get_observed_mmax(self):
+#        '''
+#        Tests the function to _get_observed_mmax from data
+#        '''
+#        test_catalogue = {
+#            'magnitude': np.array([3.4, 4.5, 7.6, 5.4, 4.3]),
+#            'sigmaMagnitude': np.array([0.1, 0.2, 0.3, 0.2, 0.1])
+#            }
+#        # Test 1: Finds the mmax from the catalogue with defined sigma
+#        mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
+#        self.assertAlmostEqual(mmax, 7.6)
+#        self.assertAlmostEqual(mmax_sig, 0.3)
+#
+#        # Test 2: Finds the mmax from the catalogue with default sigma (0.2)
+#        test_catalogue['sigmaMagnitude'] = None
+#        mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
+#        self.assertAlmostEqual(mmax, 7.6)
+#        self.assertAlmostEqual(mmax_sig, 0.2)
+#
+#        # Test 3: Finds the mmax from the input file
+#        self.config['input_mmax'] = 8.5
+#        self.config['input_mmax_uncertainty'] = 0.35
+#        mmax, mmax_sig = _get_observed_mmax(test_catalogue, self.config)
+#        self.assertAlmostEqual(mmax, 8.5)
+#        self.assertAlmostEqual(mmax_sig, 0.35)
 
 
     def test_get_magnitude_vector_properties(self):
@@ -167,9 +280,9 @@ class TestCumulativeMoment(unittest.TestCase):
         Tests the cumulative moment function
         '''
         # Test 1: Ordinary behaviour using the completeness_test_cat.csv
-        self.assertAlmostEqual(7.4847335589, self.model.cumulative_moment(
+        self.assertAlmostEqual(7.5, self.model.cumulative_moment(
             self.catalogue.data['year'],
-            self.catalogue.data['magnitude']))
+            self.catalogue.data['magnitude']), 1)
 
         # Test 2: If catalogue is less than or equal to 1 year duration
         id0 = self.catalogue.data['year'].astype(int)  == 1990
@@ -187,14 +300,14 @@ class TestCumulativeMoment(unittest.TestCase):
         self.catalogue.data['sigmaMagnitude'] = None
 
         mmax, sigma_mmax = self.model.get_mmax(self.catalogue, self.config)
-        self.assertAlmostEqual(7.4847335589, mmax)
+        self.assertAlmostEqual(7.4847335589, mmax, 1)
         self.assertAlmostEqual(0.0, sigma_mmax)
         # Test 2: Case when one or no bootstraps are specified
         self.catalogue.data['sigmaMagnitude'] = self.catalogue.data['backup']
         self.config['number_bootstraps'] = 0
 
         mmax, sigma_mmax = self.model.get_mmax(self.catalogue, self.config)
-        self.assertAlmostEqual(7.4847335589, mmax)
+        self.assertAlmostEqual(7.4847335589, mmax, 1)
         self.assertAlmostEqual(0.0, sigma_mmax)
 
         # Test 3: Ordinary test case with uncertainty - seeded random generator
@@ -202,10 +315,8 @@ class TestCumulativeMoment(unittest.TestCase):
                 # Can fix the seed (used for testing!)
         np.random.seed(123456)
         mmax, sigma_mmax = self.model.get_mmax(self.catalogue, self.config)
-
         self.assertAlmostEqual(7.518906927, mmax)
         self.assertAlmostEqual(0.058204597, sigma_mmax)
-        #self.assertAlmostEqual(0.015204597, sigma_mmax)
 
 
 class TestKijkoSellevolFixedb(unittest.TestCase):

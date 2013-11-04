@@ -54,19 +54,49 @@ from hmtk.registry import CatalogueFunctionRegistry
 def _get_observed_mmax(catalogue, config):
     '''Check see if observed mmax values are input, if not then take
     from the catalogue'''
-
-    if not config['input_mmax']:
-        # If maxmag is False then maxmag is maximum from magnitude list
-        max_location = np.argmax(catalogue['magnitude'])
-        obsmax = catalogue['magnitude'][max_location]
-        if not isinstance(catalogue['sigmaMagnitude'], np.ndarray):
-            obsmaxsig = 0.2
-        else:
-            obsmaxsig = catalogue['sigmaMagnitude'][max_location]
-    else:
-        obsmaxsig = config['input_mmax_uncertainty']
+    if config['input_mmax']:
         obsmax = config['input_mmax']
-    return obsmax, obsmaxsig
+        if config['input_mmax_uncertainty']:
+            return config['input_mmax'], config['input_mmax_uncertainty']
+        else:
+            raise ValueError('Input mmax uncertainty must be specified!')
+
+
+    max_location = np.argmax(catalogue['magnitude'])
+    obsmax = catalogue['magnitude'][max_location]
+    cond = isinstance(catalogue['sigmaMagnitude'], np.ndarray) and\
+           len(catalogue['sigmaMagnitude']) > 0 and not\
+           np.all(np.isnan(catalogue['sigmaMagnitude']))
+
+    if cond:
+        if not np.isnan(catalogue['sigmaMagnitude'][max_location]):
+            return obsmax, catalogue['sigmaMagnitude'][max_location]
+        else:
+            print 'Uncertainty not given on observed Mmax'
+            print 'Taking largest magnitude uncertainty found in catalogue'
+            return obsmax, np.nanmax(catalogue['sigmaMagnitude'])
+    elif config['input_mmax_uncertainty']:
+        return obsmax, config['input_mmax_uncertainty']
+    else:
+        raise ValueError('Input mmax uncertainty must be specified!')
+
+#    if not config['input_mmax']:
+#        # If maxmag is False then maxmag is maximum from magnitude list
+#        max_location = np.argmax(catalogue['magnitude'])
+#        obsmax = catalogue['magnitude'][max_location]
+#        if not isinstance(catalogue['sigmaMagnitude'], np.ndarray):
+#            obsmaxsig = 0.2
+#        else:
+#            obsmaxsig = catalogue['sigmaMagnitude'][max_location]
+#    else:
+#        obsmaxsig = config['input_mmax_uncertainty']
+#        obsmax = config['input_mmax']
+#    if not obsmaxsig or np.isnan(obsmaxsig):
+#        print 'Uncertainty on observed Mmax is not specified'
+#        if not np.all(np.isnan(catalogue['sigmaMagnitude'])):
+#            print 'Taking from largest magnitude uncertainty in catalogue'
+#            
+#    return obsmax, obsmaxsig
 
 
 def _get_magnitude_vector_properties(catalogue, config):

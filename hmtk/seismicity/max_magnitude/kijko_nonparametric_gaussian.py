@@ -129,7 +129,12 @@ class KijkoNonParametricGaussian(BaseMaximumMagnitude):
         # Therefore, only observed mmax is considered
         max_loc = np.argmax(catalogue.data['magnitude'])
         obsmax = catalogue.data['magnitude'][max_loc]
-        obsmaxsig = catalogue.data['sigmaMagnitude'][max_loc]
+        if not(isinstance(catalogue.data['sigmaMagnitude'], np.ndarray)) or\
+            (len(catalogue.data['sigmaMagnitude']) == 0) or\
+            np.all(np.isnan(catalogue.data['sigmaMagnitude'])):
+            obsmaxsig = 0.
+        else:
+            obsmaxsig = catalogue.data['sigmaMagnitude'][max_loc]
 
         # Find number_eqs largest events
         n_evts = np.shape(catalogue.data['magnitude'])[0]
