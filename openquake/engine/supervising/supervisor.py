@@ -115,7 +115,7 @@ def cleanup_after_job(job_id):
     if not task_ids:  # this is normal when OQ_NO_DISTRIBUTE=1
         logs.LOG.debug('No task to revoke')
     for tid in task_ids:
-        celery.task.control.revoke(tid, terminate=True)
+        celery.task.control.revoke(tid)
         logs.LOG.debug('Revoked task %s', tid)
 
 

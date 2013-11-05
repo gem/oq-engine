@@ -67,8 +67,8 @@ class SupervisorHelpersTestCase(unittest.TestCase):
                     self.assertEqual(((self.job.id, ), {}), gti.call_args)
 
                     self.assertEqual(2, revoke.call_count)
-                    exp_revoke_args = [(('task-id-1',), {'terminate': True}),
-                                       (('task-id-2',), {'terminate': True})]
+                    exp_revoke_args = [(('task-id-1',), {}),
+                                       (('task-id-2',), {})]
                     self.assertEqual(exp_revoke_args, revoke.call_args_list)
 
     def test_update_job_status_and_error_msg(self):
