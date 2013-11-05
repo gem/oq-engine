@@ -2,52 +2,8 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-"""OpenQuake: software for seismic hazard and risk assessment
-
-It receives its inputs through a configuration file plus input data in .xml
-format and stores the results in .xml format.
-
-Available Hazard Analysis
-
-  Classical PSHA
-    Input   Source Model Logic Tree
-            GMPE Logic Tree
-
-    Output  Hazard maps
-            Hazard curves
-
-  Event-Based PSHA
-    Input   Source Model Logic Tree
-            GMPE Logic Tree
-
-    Output  Ground Motion fields
-
-  Scenario SHA
-    Input   Rupture Model
-
-    Output  Ground Motion fields
-
-Available Risk Analysis
-
-  Classical PSHA-based
-    Input   Exposure (a value per asset)
-            Vulnerability curves (a list of vulnerability functions)
-            Seismic hazard input: hazard curves
-
-    Output  A grid of loss-ratio curves
-            A grid of loss curves
-            A map of losses at each interval
-
-  Probabilistic event-based
-    Input   Exposure (a value per asset)
-            Vulnerability curves (a list of vulnerability functions)
-            Seismic hazard input: sets of ground motion fields
-
-    Output  A grid of loss-ratio curves
-            A grid of loss curves
-            A map of losses at each interval
-            An aggregated loss curve
-
+"""
+OpenQuake: software for seismic hazard and risk assessment
 """
 
 import argparse
