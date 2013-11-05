@@ -1004,8 +1004,8 @@ class RiskCalculation(djm.Model):
     # asset. Expressed in kilometers
     maximum_distance = djm.FloatField(
         null=True, blank=True, default=DEFAULT_MAXIMUM_DISTANCE)
-    # the hazard output (it can point to an HazardCurve or to a
-    # Gmf) used by the risk calculation
+    # the hazard output (it can point to an HazardCurvem, to a
+    # Gmf or to a SES collection) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
 
     # the HazardCalculation object used by the risk calculation when
