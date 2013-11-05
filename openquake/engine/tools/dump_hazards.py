@@ -43,7 +43,6 @@ sufficient permissions). Then run again ``restore_hazards.py``.
 import os
 import shutil
 import tarfile
-import gzip
 import argparse
 import psycopg2
 import tempfile
@@ -60,7 +59,7 @@ def _tuplestr(tup):
 class Copier(object):
     """
     Small wrapper around a psycopg2 cursor, which a .copy method
-    writing directly to .gz files. It remembers the copied filenames,
+    writing directly to csv files. It remembers the copied filenames,
     which are stored in the attribute .filenames.
     """
     def __init__(self, psycopg2_cursor):
@@ -79,22 +78,20 @@ class Copier(object):
 
     def copy(self, query, dest, name, mode):
         """
-        Performs a COPY TO/FROM operation. <Works directly with gzipped files.
+        Performs a COPY TO/FROM operation. <Works directly with csv files.
 
         :param str query: the COPY query
         :param str dest: the destination directory
-        :param str name: the destination file name (no .gz)
+        :param str name: the destination file name
         :param chr mode: 'w' (for COPY TO) or 'r' (for COPY FROM)
         """
-        fname = os.path.join(dest, name + '.gz')
+        fname = os.path.join(dest, name)
         log.info('%s\n(-> %s)', query, fname)
-        TIMESTAMP = 1378800715.0  # some fake timestamp
         # here is some trick to avoid storing filename and timestamp info
         with open(fname, mode) as fileobj:
-            with gzip.GzipFile('', fileobj=fileobj, mtime=TIMESTAMP) as z:
-                self._cursor.copy_expert(query, z)
-                if fname not in self.filenames:
-                    self.filenames.append(fname)
+            self._cursor.copy_expert(query, fileobj)
+            if fname not in self.filenames:
+                self.filenames.append(fname)
 
 
 class HazardDumper(object):
@@ -110,33 +107,34 @@ class HazardDumper(object):
     def __init__(self, conn, outdir=None):
         self.conn = conn
         self.curs = Copier(conn.cursor())
-        if outdir:
-            if os.path.exists(outdir):
-                # cleanup previously dumped archives, if any
-                for fname in os.listdir(outdir):
-                    if fname.endswith('.gz'):
-                        os.remove(os.path.join(outdir, fname))
-            else:
-                os.mkdir(outdir)
+        outdir = outdir or "/tmp/hc-dump"
+        if os.path.exists(outdir):
+            # cleanup previously dumped archives, if any
+            for fname in os.listdir(outdir):
+                if fname.endswith('.csv'):
+                    os.remove(os.path.join(outdir, fname))
         else:
-            outdir = tempfile.mkdtemp(prefix='hazard_calculation-')
+            os.mkdir(outdir)
         self.outdir = outdir
 
     def hazard_calculation(self, ids):
         """Dump hazard_calculation, lt_realization, hazard_site"""
         self.curs.copy(
             """copy (select * from uiapi.hazard_calculation where id in %s)
-                  to stdout with (format 'text')""" % ids,
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % ids,
             self.outdir, 'uiapi.hazard_calculation.csv', 'w')
         self.curs.copy(
             """copy (select * from hzrdr.lt_realization
-                  where hazard_calculation_id in %s)
-                  to stdout with (format 'text')""" % ids,
+               where hazard_calculation_id in %s)
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % ids,
             self.outdir, 'hzrdr.lt_realization.csv', 'w')
         self.curs.copy(
             """copy (select * from hzrdi.hazard_site
-                  where hazard_calculation_id in %s)
-                  to stdout with (format 'text')""" % ids,
+               where hazard_calculation_id in %s)
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % ids,
             self.outdir, 'hzrdi.hazard_site.csv', 'w')
 
     def oq_job(self, ids):
@@ -150,21 +148,24 @@ class HazardDumper(object):
         self.hazard_calculation(hc_ids)
         self.curs.copy(
             """copy (select * from uiapi.oq_job where id in %s)
-               to stdout with (format 'text')""" % ids,
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % ids,
             self.outdir, 'uiapi.oq_job.csv', 'w')
 
     def output(self, ids):
         """Dump output"""
         self.curs.copy(
             """copy (select * from uiapi.output where id in %s)
-                  to stdout with (format 'text')""" % ids,
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % ids,
             self.outdir, 'uiapi.output.csv', 'w')
 
     def hazard_curve(self, output):
         """Dump hazard_curve, hazard_curve_data"""
         self.curs.copy(
             """copy (select * from hzrdr.hazard_curve where output_id in %s)
-                  to stdout with (format 'text')""" % output,
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % output,
             self.outdir, 'hzrdr.hazard_curve.csv', 'a')
 
         ids = self.curs.tuplestr(
@@ -172,40 +173,46 @@ class HazardDumper(object):
 
         self.curs.copy(
             """copy (select * from hzrdr.hazard_curve_data
-                  where hazard_curve_id in {})
-                  to stdout with (format 'text')""".format(ids),
+               where hazard_curve_id in {})
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""".format(
+                       ids),
             self.outdir, 'hzrdr.hazard_curve_data.csv', 'a')
 
     def gmf(self, output):
         """Dump gmf, gmf_data"""
         self.curs.copy(
             """copy (select * from hzrdr.gmf
-                  where output_id in %s)
-                  to stdout with (format 'text')""" % output,
+               where output_id in %s)
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % output,
             self.outdir, 'hzrdr.gmf.csv', 'a')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.gmf '
                                       'where output_id in %s' % output)
         self.curs.copy(
             """copy (select * from hzrdr.gmf_data
-                  where gmf_id in %s)
-                  to stdout with (format 'text')""" % coll_ids,
+               where gmf_id in %s)
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % coll_ids,
             self.outdir, 'hzrdr.gmf_data.csv', 'a')
 
     def ses(self, output):
         """Dump ses_collection, ses, ses_rupture"""
         self.curs.copy(
             """copy (select * from hzrdr.ses_collection
-                  where output_id in %s)
-                  to stdout with (format 'text')""" % output,
+               where output_id in %s)
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % output,
             self.outdir, 'hzrdr.ses_collection.csv', 'a')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.ses_collection '
                                       'where output_id in %s' % output)
         self.curs.copy(
             """copy (select * from hzrdr.ses
-                  where ses_collection_id in %s)
-                  to stdout with (format 'text')""" % coll_ids,
+               where ses_collection_id in %s)
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % coll_ids,
             self.outdir, 'hzrdr.ses.csv', 'a')
 
         ses_ids = self.curs.tuplestr(
@@ -213,8 +220,9 @@ class HazardDumper(object):
             % coll_ids)
         self.curs.copy(
             """copy (select * from hzrdr.ses_rupture
-                  where ses_id in %s)
-                  to stdout with (format 'text')""" % ses_ids,
+               where ses_id in %s)
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % ses_ids,
             self.outdir, 'hzrdr.ses_rupture.csv', 'a')
 
     def dump(self, *hazard_calculation_ids):
@@ -255,7 +263,7 @@ class HazardDumper(object):
         self.output(_tuplestr(all_outs))
         for output_type, output_ids in outputs:
             ids = _tuplestr(output_ids)
-            print "Dumping %s %s" % (output_type, ids)
+            print "Dumping %s %s in %s" % (output_type, ids, self.outdir)
             if output_type in ['hazard_curve', 'hazard_curve_multi']:
                 self.hazard_curve(ids)
             elif output_type in ('gmf', 'gmf_scenario'):
@@ -314,7 +322,7 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
 
     p.add_argument('hazard_calculation_id')
-    p.add_argument('outdir')
+    p.add_argument('outdir', nargs='?')
     p.add_argument('host', nargs='?')
     p.add_argument('dbname', nargs='?')
     p.add_argument('user', nargs='?')
