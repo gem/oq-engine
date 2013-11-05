@@ -1,4 +1,3 @@
-import gzip
 import psycopg2
 import argparse
 import logging
@@ -8,8 +7,6 @@ import sys
 
 from openquake.engine.db import models
 from django.db.models import fields
-
-BLOCKSIZE = 1000  # restore blocks of 1,000 lines each
 
 log = logging.getLogger()
 
@@ -24,56 +21,6 @@ def quote_unwrap(name):
 def restore_tablename(original_tablename):
     _schema, tname = map(quote_unwrap, original_tablename.split('.'))
     return "htemp.restore_%s" % tname
-
-
-class CSVInserter(object):
-    def __init__(self, curs, original_tablename, blocksize):
-        self.curs = curs
-        self.original_tablename = original_tablename
-        self.tablename = restore_tablename(original_tablename)
-        self.blocksize = blocksize
-        self.max_id = 0
-        self.io = io.StringIO()
-        self.nlines = 0
-
-    def write(self, id_, line):
-        """
-        Add a csv line.
-        """
-        self.max_id = max(self.max_id, id_)
-        self.io.write('%d\t%s' % (id_, line.decode('utf8')))
-        self.nlines += 1
-        if self.max_id % self.blocksize == 0:
-            self.insert()
-
-    def insert(self):
-        """
-        Bulk insert into the database in a single transaction
-        """
-        self.io.seek(0)
-        conn = self.curs.connection
-        try:
-            self.curs.execute("DROP TABLE IF EXISTS %s" % self.tablename)
-            self.curs.execute(
-                "CREATE TABLE %s AS SELECT * FROM %s WHERE 0 = 1" % (
-                    self.tablename, self.original_tablename))
-            self.curs.copy_from(self.io, self.tablename)
-        except Exception as e:
-            conn.rollback()
-            log.error(str(e))
-            raise
-        else:
-            conn.commit()
-        self.io.truncate(0)
-        self.io.seek(0)
-        self.max_id = 0
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        if self.max_id:  # some remaining line
-            self.insert()
 
 
 def transfer_data(curs, model, **foreign_keys):
@@ -140,28 +87,36 @@ RETURNING  restore_id, %(table)s.id
     return old_new_ids
 
 
-def safe_restore(curs, gzfile, tablename, blocksize=BLOCKSIZE):
+def safe_restore(curs, filename, original_tablename):
     """
-    Restore a gzipped postgres table into the database, by skipping
-    the ids which are already taken. Assume that the first field of
-    the table is an integer id and that gzfile.name has the form
-    '/some/path/tablename.csv.gz'
-    The file is restored in blocks to avoid memory issues.
+    Restore a postgres table into the database, by skipping the ids
+    which are already taken. Assume that the first field of the table
+    is an integer id and that gzfile.name has the form
+    '/some/path/tablename.csv.gz' The file is restored in blocks to
+    avoid memory issues.
 
     :param curs: a psycopg2 cursor
-    :param gzfile: a file object
+    :param filename: the path to the csv dump
     :param str tablename: full table name
-    :param int blocksize: number of lines in a block
     """
     # keep in memory the already taken ids
-    with CSVInserter(curs, tablename, blocksize) as csvi:
-        total = 0
-        for line in gzfile:
-            total += 1
-            sid, rest = line.split('\t', 1)
-            id_ = int(sid)
-            csvi.write(id_, rest)
-    return csvi.nlines, total
+    conn = curs.connection
+    tablename = restore_tablename(original_tablename)
+    try:
+        curs.execute("DROP TABLE IF EXISTS %s" % tablename)
+        curs.execute(
+            "CREATE TABLE %s AS SELECT * FROM %s WHERE 0 = 1" % (
+                tablename, original_tablename))
+        curs.execute(
+            """COPY %s FROM '%s'
+               WITH (FORMAT 'csv', HEADER true, ENCODING 'utf8')""" % (
+                       tablename, os.path.abspath(filename)))
+    except Exception as e:
+        conn.rollback()
+        log.error(str(e))
+        raise
+    else:
+        conn.commit()
 
 
 def hazard_restore(conn, directory):
@@ -177,19 +132,12 @@ def hazard_restore(conn, directory):
     created = []
     for line in open(filenames):
         fname = line.rstrip()
-        tname = fname[:-7]  # strip .csv.gz
+        tname = fname[:-4]  # strip .csv
 
         fullname = os.path.join(directory, fname)
-        with gzip.GzipFile(fname, fileobj=open(fullname)) as f:
-            log.info('Importing %s...', fname)
-            created.append(tname)
-            imported, total = safe_restore(curs, f, tname)
-            if imported != total:
-                raise RuntimeError(
-                    "ID Clash detected. The database might be corrupted")
-            log.info(
-                "Created %s rows in %s" % (
-                    imported, restore_tablename(tname)))
+        log.info('Importing %s...', fname)
+        created.append(tname)
+        safe_restore(curs, fullname, tname)
     hc_ids = transfer_data(curs, models.HazardCalculation)
     lt_ids = transfer_data(
         curs, models.LtRealization, hazard_calculation_id=hc_ids)
