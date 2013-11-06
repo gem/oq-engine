@@ -102,8 +102,7 @@ def cleanup_after_job(job_id):
     """
     Release the resources used by an openquake job.
 
-    :param job_id: the job id
-    :type job_id: int
+    :param int job_id: the job id
     """
     logging.debug('Cleaning up after job %s', job_id)
 
@@ -112,7 +111,9 @@ def cleanup_after_job(job_id):
     # Using the celery API, terminate and revoke and terminate any running
     # tasks associated with the current job.
     task_ids = _get_task_ids(job_id)
-    if not task_ids:  # this is normal when OQ_NO_DISTRIBUTE=1
+    if task_ids:
+        logs.LOG.warn('Revoking %d tasks', len(task_ids))
+    else:  # this is normal when OQ_NO_DISTRIBUTE=1
         logs.LOG.debug('No task to revoke')
     for tid in task_ids:
         celery.task.control.revoke(tid, terminate=True)
@@ -141,14 +142,11 @@ def get_job_status(job_id):
     return OqJob.objects.get(id=job_id).status
 
 
-def update_job_status_and_error_msg(job_id):
+def update_job_status(job_id):
     """
-    Store in the database the status of a job and optionally an error message.
+    Store in the database the status of a job.
 
-    :param job_id: the id of the job
-    :type job_id: int
-    :param error_msg: the error message, if any
-    :type error_msg: string or None
+    :param int job_id: the id of the job
     """
     job = OqJob.objects.get(id=job_id)
     job.is_running = False
@@ -299,7 +297,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
         terminate_job(self.job_pid)
 
-        update_job_status_and_error_msg(self.job_id)
+        update_job_status(self.job_id)
 
         record_job_stop_time(self.job_id)
 
@@ -357,7 +355,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                 # status in the database, or it has been running even though
                 # there were failures. We update the job status here.
                 self.selflogger.error(message)
-                update_job_status_and_error_msg(self.job_id)
+                update_job_status(self.job_id)
 
             record_job_stop_time(self.job_id)
             cleanup_after_job(self.job_id)
