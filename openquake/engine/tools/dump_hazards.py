@@ -41,11 +41,7 @@ sufficient permissions). Then run again ``restore_hazards.py``.
 """
 
 import os
-import shutil
-import tarfile
-import argparse
 import psycopg2
-import tempfile
 import logging
 
 log = logging.getLogger()
@@ -117,25 +113,26 @@ class HazardDumper(object):
             os.mkdir(outdir)
         self.outdir = outdir
 
+    def _copy(self, query, filename, mode='w'):
+        self.curs.copy(
+            """copy (%s)
+               to stdout
+               with (format 'csv', header true, encoding 'utf8')""" % query,
+            self.outdir, filename, mode)
+
     def hazard_calculation(self, ids):
         """Dump hazard_calculation, lt_realization, hazard_site"""
-        self.curs.copy(
-            """copy (select * from uiapi.hazard_calculation where id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % ids,
-            self.outdir, 'uiapi.hazard_calculation.csv', 'w')
-        self.curs.copy(
-            """copy (select * from hzrdr.lt_realization
-               where hazard_calculation_id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % ids,
-            self.outdir, 'hzrdr.lt_realization.csv', 'w')
-        self.curs.copy(
-            """copy (select * from hzrdi.hazard_site
-               where hazard_calculation_id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % ids,
-            self.outdir, 'hzrdi.hazard_site.csv', 'w')
+        self._copy(
+            "select * from uiapi.hazard_calculation where id in %s" % ids,
+            'uiapi.hazard_calculation.csv')
+        self._copy(
+            """select * from hzrdr.lt_realization
+               where hazard_calculation_id in %s""" % ids,
+            'hzrdr.lt_realization.csv')
+        self._copy(
+            """select * from hzrdi.hazard_site
+               where hazard_calculation_id in %s""" % ids,
+               'hzrdi.hazard_site.csv')
 
     def oq_job(self, ids):
         """Dump hazard_calculation, oq_job"""
@@ -146,84 +143,63 @@ class HazardDumper(object):
             raise TypeError('Job %s is not associated to a hazard calculation!'
                             % ids)
         self.hazard_calculation(hc_ids)
-        self.curs.copy(
-            """copy (select * from uiapi.oq_job where id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % ids,
-            self.outdir, 'uiapi.oq_job.csv', 'w')
+        self._copy(
+            """select * from uiapi.oq_job where id in %s""" % ids,
+            'uiapi.oq_job.csv')
 
     def output(self, ids):
         """Dump output"""
-        self.curs.copy(
-            """copy (select * from uiapi.output where id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % ids,
-            self.outdir, 'uiapi.output.csv', 'w')
+        self._copy(
+            """select * from uiapi.output where id in %s""" % ids,
+            'uiapi.output.csv')
 
     def hazard_curve(self, output):
         """Dump hazard_curve, hazard_curve_data"""
-        self.curs.copy(
-            """copy (select * from hzrdr.hazard_curve where output_id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % output,
-            self.outdir, 'hzrdr.hazard_curve.csv', 'a')
+        self._copy(
+            """select * from hzrdr.hazard_curve
+               where output_id in %s""" % output,
+            'hzrdr.hazard_curve.csv', mode='a')
 
         ids = self.curs.tuplestr(
             'select id from hzrdr.hazard_curve where output_id in %s' % output)
 
-        self.curs.copy(
-            """copy (select * from hzrdr.hazard_curve_data
-               where hazard_curve_id in {})
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""".format(
-                       ids),
-            self.outdir, 'hzrdr.hazard_curve_data.csv', 'a')
+        self._copy(
+            """select * from hzrdr.hazard_curve_data
+               where hazard_curve_id in {}""".format(ids),
+            'hzrdr.hazard_curve_data.csv', mode='a')
 
     def gmf(self, output):
         """Dump gmf, gmf_data"""
-        self.curs.copy(
-            """copy (select * from hzrdr.gmf
-               where output_id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % output,
-            self.outdir, 'hzrdr.gmf.csv', 'a')
+        self._copy(
+            """select * from hzrdr.gmf where output_id in %s)""" % output,
+               'hzrdr.gmf.csv', mode='a')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.gmf '
                                       'where output_id in %s' % output)
-        self.curs.copy(
-            """copy (select * from hzrdr.gmf_data
-               where gmf_id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % coll_ids,
-            self.outdir, 'hzrdr.gmf_data.csv', 'a')
+        self._copy(
+            """select * from hzrdr.gmf_data where gmf_id in %s""" % coll_ids,
+            'hzrdr.gmf_data.csv', mode='a')
 
     def ses(self, output):
         """Dump ses_collection, ses, ses_rupture"""
-        self.curs.copy(
-            """copy (select * from hzrdr.ses_collection
-               where output_id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % output,
-            self.outdir, 'hzrdr.ses_collection.csv', 'a')
+        self._copy(
+            """select * from hzrdr.ses_collection
+               where output_id in %s""" % output,
+            'hzrdr.ses_collection.csv', 'a')
 
         coll_ids = self.curs.tuplestr('select id from hzrdr.ses_collection '
                                       'where output_id in %s' % output)
-        self.curs.copy(
-            """copy (select * from hzrdr.ses
-               where ses_collection_id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % coll_ids,
-            self.outdir, 'hzrdr.ses.csv', 'a')
+        self._copy(
+            """select * from hzrdr.ses
+               where ses_collection_id in %s""" % coll_ids,
+            'hzrdr.ses.csv', mode='a')
 
         ses_ids = self.curs.tuplestr(
             'select id from hzrdr.ses where ses_collection_id in %s'
             % coll_ids)
-        self.curs.copy(
-            """copy (select * from hzrdr.ses_rupture
-               where ses_id in %s)
-               to stdout
-               with (format 'csv', header true, encoding 'utf8')""" % ses_ids,
-            self.outdir, 'hzrdr.ses_rupture.csv', 'a')
+        self._copy(
+            """select * from hzrdr.ses_rupture where ses_id in %s""" % ses_ids,
+            'hzrdr.ses_rupture.csv', 'a')
 
     def dump(self, *hazard_calculation_ids):
         """
@@ -276,21 +252,6 @@ class HazardDumper(object):
         with open(filenames, 'w') as f:
             f.write('\n'.join(map(os.path.basename, self.curs.filenames)))
 
-    # this is not used right now; the functionality could be restored in
-    # the future (optionally)
-    def mktar(self):
-        """
-        Tar the contents of outdir into a tarfile and remove the directory
-        """
-        # tar outdir
-        with tarfile.open(self.outdir + '.tar', 'w') as t:
-            t.add(self.outdir)
-        shutil.rmtree(self.outdir)
-        # return pathname of the generated tarfile
-        tarname = self.outdir + '.tar'
-        logging.info('Generated %s', tarname)
-        return tarname
-
 
 def main(hazard_calculation_id, outdir=None,
          host=None, dbname=None, user=None, password=None, port=None):
@@ -316,18 +277,3 @@ def main(hazard_calculation_id, outdir=None,
     log.info('Written %s' % hc.outdir)
     conn.close()
     return hc.outdir
-
-
-if __name__ == '__main__':
-    p = argparse.ArgumentParser()
-
-    p.add_argument('hazard_calculation_id')
-    p.add_argument('outdir', nargs='?')
-    p.add_argument('host', nargs='?')
-    p.add_argument('dbname', nargs='?')
-    p.add_argument('user', nargs='?')
-    p.add_argument('password', nargs='?')
-    p.add_argument('port', nargs='?')
-    arg = p.parse_args()
-    main(arg.hazard_calculation_id, arg.outdir, arg.host,
-         arg.dbname, arg.user, arg.password, arg.port)

@@ -1,9 +1,26 @@
-import psycopg2
-import argparse
+"""
+Restore Hazard Calculations dump produced with the
+--dump-hazard-calculation option.
+
+The general workflow to restore a calculation is the following:
+
+1) Create a "staging" table for each target table (e.g. restore_gmf,
+restore_oq_job, etc.)
+
+2) Use "COPY FROM" statements to populate such table from the content
+of the dump
+
+3) INSERT the data SELECTed from the temporary tables INTO the
+effective tables in the proper order RETURNING the id of the newly
+created rows.
+
+4) If the table is referenced in other tables, we create a temporary
+table which maps the old id to the new one. Such table is used in the
+SELECT at step 3 to insert the proper foreign key values
+"""
+
 import logging
-import io
 import os
-import sys
 
 from openquake.engine.db import models
 from django.db.models import fields
@@ -75,7 +92,7 @@ RETURNING  restore_id, %(table)s.id
 """ % args
 
     curs.execute(query)
-    old_new_ids = tuple(curs.fetchall())
+    old_new_ids = curs.fetchall()
     curs.execute(
         "ALTER TABLE %s DROP restore_id" % model_table(model))
 
@@ -107,10 +124,10 @@ def safe_restore(curs, filename, original_tablename):
         curs.execute(
             "CREATE TABLE %s AS SELECT * FROM %s WHERE 0 = 1" % (
                 tablename, original_tablename))
-        curs.execute(
-            """COPY %s FROM '%s'
+        curs.copy_expert(
+            """COPY %s FROM stdin
                WITH (FORMAT 'csv', HEADER true, ENCODING 'utf8')""" % (
-                       tablename, os.path.abspath(filename)))
+                       tablename), file(os.path.abspath(filename)))
     except Exception as e:
         conn.rollback()
         log.error(str(e))
@@ -155,62 +172,14 @@ def hazard_restore(conn, directory):
     transfer_data(curs, models.SESRupture, ses_id=ses_ids)
 
     curs = conn.cursor()
-    for tname in reversed(created):
-        query = "DROP TABLE %s" % restore_tablename(tname)
-        curs.execute(query)
-        log.info("Dropped %s" % restore_tablename(tname))
-    conn.commit()
+    try:
+        for tname in reversed(created):
+            query = "DROP TABLE %s" % restore_tablename(tname)
+            curs.execute(query)
+            log.info("Dropped %s" % restore_tablename(tname))
+    except:
+        conn.rollback()
+    else:
+        conn.commit()
     log.info('Restored %s', directory)
     return [new_id for _, new_id in hc_ids]
-
-
-def hazard_restore_remote(tar, host, dbname, user, password, port):
-    conn = psycopg2.connect(
-        host=host, dbname=dbname, user=user, password=password, port=port)
-    ret = hazard_restore(conn, tar)
-    conn.close()
-    return ret
-
-
-def django_restore(tar):
-    from django.db import connection
-    if connection.connection:
-        return hazard_restore(connection.connection, tar)
-    else:
-        return hazard_restore_local(tar)
-
-
-def hazard_restore_local(*argv):
-    """
-    Use the current django settings to restore hazard
-    """
-    from openquake.engine.db.models import set_django_settings_module
-    set_django_settings_module()
-    from django.conf import settings
-    default_cfg = settings.DATABASES['default']
-    host = default_cfg['HOST'] or 'localhost'
-    name = default_cfg['NAME']
-    user = default_cfg['USER']
-    pwd = default_cfg['PASSWORD']
-    port = str(default_cfg['PORT'] or 5432)
-
-    def h(dflt):
-        return 'default: %s' % dflt
-
-    p = argparse.ArgumentParser()
-    p.add_argument('directory', help='mandatory argument')
-    p.add_argument('host', nargs='?', default=host, help=h(host))
-    p.add_argument('dbname', nargs='?', default=name, help=h(name))
-    p.add_argument('user', nargs='?', default=user, help=h(user))
-    p.add_argument('password', nargs='?', default=pwd, help=h(pwd))
-    p.add_argument('port', nargs='?', default=port, help=h(port))
-    arg = p.parse_args(argv)
-
-    return hazard_restore_remote(arg.directory, arg.host, arg.dbname,
-                                 arg.user, arg.password, arg.port)
-
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    log.warn("This script restore only Stochastic event set outputs")
-    hazard_restore_local(*sys.argv[1:])
