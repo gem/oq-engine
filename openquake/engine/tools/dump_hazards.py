@@ -41,11 +41,7 @@ sufficient permissions). Then run again ``restore_hazards.py``.
 """
 
 import os
-import shutil
-import tarfile
-import argparse
 import psycopg2
-import tempfile
 import logging
 
 log = logging.getLogger()
