@@ -616,6 +616,7 @@ class EventBasedRiskForm(BaseOQModelForm):
             'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
+            'risk_investigation_time',
             'loss_curve_resolution',
             'conditional_loss_poes',
             'insured_losses',
@@ -1224,4 +1225,14 @@ def uniform_hazard_spectra_is_valid(mdl):
 
 def time_event_is_valid(_mdl):
     # Any string is allowed, or `None`.
+    return True, []
+
+
+def risk_investigation_time_is_valid(_mdl):
+    if _mdl.calculation_mode != 'event_based':
+        return False, ['`risk_investigation_time` is only used '
+                       'in event based calculations']
+    if _mdl.risk_investigation_time is not None:
+        if _mdl.risk_investigation_time <= 0:
+            return False, ['Risk investigation time must be > 0']
     return True, []
