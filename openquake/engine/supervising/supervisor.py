@@ -208,33 +208,6 @@ class SupervisorLogFileHandler(logging.FileHandler):
         super(SupervisorLogFileHandler, self).emit(record)
 
 
-def abort_due_to_failed_nodes(job_id):
-    """Should the job be aborted due to failed compute nodes?
-
-    The job should be aborted when the following conditions coincide:
-        - we observed failed compute nodes
-        - the "no progress" timeout has been exceeded
-
-    :param int job_id: the id of the job in question
-    :returns: the number of failed compute nodes if the job should be aborted
-        zero otherwise.
-    """
-    result = 0
-
-    job = OqJob.objects.get(id=job_id)
-    failed_nodes = monitor.count_failed_nodes(job)
-
-    if failed_nodes:
-        logging.debug(">> failed_nodes: %s", failed_nodes)
-        no_progress_period, timeout = stats.get_progress_timing_data(job)
-        logging.debug(">> no_progress_period: %s", no_progress_period)
-        logging.debug(">> timeout: %s", timeout)
-        if no_progress_period > timeout:
-            result = failed_nodes
-
-    return result
-
-
 class SupervisorLogMessageConsumer(logs.AMQPLogSource):
     """
     Supervise an OpenQuake job by:
@@ -307,6 +280,12 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
         self.stop()
 
+    # NB: we should remove the timeout functionality from the engine;
+    # if we want it (for instance on OATH jobs should not run
+    # for more than X minutes) we can rely on the celery options
+    # --soft-time-limit/CELERYD_TASK_TIME_LIMIT
+    # currently I have raised the no_progress_timeout to 100 hours so this
+	# method is never invoked (MS)
     def timeout_callback(self):
         """
         On timeout expiration check if the job process is still running
@@ -331,19 +310,8 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         elif failure_counters_need_check():
             # Job process is still running.
             failures = stats.failure_counters(self.job_id)
-            failed_nodes = None
             if failures:
                 message = "job terminated with failures: %s" % failures
-            else:
-                # Don't check for failed nodes if distribution is disabled.
-                # In this case, we don't expect any nodes to be present, and
-                # thus, there are none that can fail.
-                if not openquake.engine.no_distribute():
-                    failed_nodes = abort_due_to_failed_nodes(self.job_id)
-                    if failed_nodes:
-                        message = ("job terminated due to %s failed nodes" %
-                                   failed_nodes)
-            if failures or failed_nodes:
                 terminate_job(self.job_pid)
                 job_failed = True
 
