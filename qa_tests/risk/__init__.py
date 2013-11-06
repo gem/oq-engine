@@ -255,12 +255,12 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             # transactions, we commit all the opened transactions. We
             # should find who is responsible for the eventual opened
             # transaction
-            try:
-                models.getcursor('job_init').connection.commit()
-            except:
-                pass
-            [restored_calculation] = restore_hazards.django_restore(
-                    dumped_calculation)
+            connection = models.getcursor('job_init').connection
+            if connection is not None:
+                connection.commit()
+
+            [restored_calculation] = restore_hazards.hazard_restore(
+                models.getcursor('admin').connection, dumped_calculation)
             return models.OqJob.objects.get(
                 hazard_calculation__id=restored_calculation)
         else:
