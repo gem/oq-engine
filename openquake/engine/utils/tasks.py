@@ -146,6 +146,13 @@ def oqtask(task_func):
                 return res
             finally:
                 CacheInserter.flushall()
+                # the task finished, we can remove from the performance
+                # table the associated row 'storing task id', then the
+                # supervisor will not try revoke it without need
+                models.Performance.objects.filter(
+                    oq_job=job,
+                    operation='storing task id',
+                    task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, ignore_result=True, queue=celery_queue)
     return tsk
