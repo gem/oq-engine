@@ -171,7 +171,7 @@ Files:
 Parameters:
 
     * migration_callback_url: optional; post to this URL to initiate post-calculation migration of results; see documentation for the oq-platform Icebox (TODO: link) for more information
-    * owner_user: optional, required with migration_callback_url; specifies the username of the user who will own the migrated results
+    * foreign_calculation_id: optional, required with migration_callback_url; specifies the id of the calculation on the icebox side
 
 Response: Redirects to [/v1/calc/hazard/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
 
@@ -195,7 +195,7 @@ Files:
 Parameters:
 
     * migration_callback_url: optional; post to this URL to initiate post-calculation migration of results; see documentation for the oq-platform Icebox (TODO: link) for more information
-    * owner_user: optional, required with migration_callback_url; specifies the username of the user who will own the migrated results
+    * foreign_calculation_id: optional, required with migration_callback_url; specifies the id of the calculation on the icebox side
     * hazard_calc: the hazard calculation ID upon which to run this risk calculation; specify this or hazard_result
     * hazard_result: the hazard results ID upon which to run this risk calculation; specify this or hazard_calc
 

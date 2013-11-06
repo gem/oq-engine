@@ -164,21 +164,22 @@ class CalcToResponseDataTestCase(unittest.TestCase):
         expected = {
             'description': 'the description',
             'maximum_distance': 195.5,
+            'owner': self.calc.owner,
             'region': {
-                'coordinates': [[[1, 1], [2, 3], [3, 1], [1, 1]]],
-                'type': 'Polygon',
+                u'coordinates': [[[1, 1], [2, 3], [3, 1], [1, 1]]],
+                u'type': u'Polygon',
             },
             'region_constraint': {
-                'coordinates': [[[2, 2], [3, 4], [4, 1], [1, 1]]],
-                'type': 'Polygon',
+                u'coordinates': [[[2, 2], [3, 4], [4, 1], [1, 1]]],
+                u'type': u'Polygon',
             },
             'sites': {
-                'coordinates': [[100.0, 0.0], [101.0, 1.0]],
-                'type': 'MultiPoint',
+                u'coordinates': [[100.0, 0.0], [101.0, 1.0]],
+                u'type': u'MultiPoint',
             },
             'sites_disagg': {
-                'coordinates': [[100.1, 0.1], [101.1, 1.1]],
-                'type': 'MultiPoint',
+                u'coordinates': [[100.1, 0.1], [101.1, 1.1]],
+                u'type': u'MultiPoint',
             },
         }
 
@@ -192,7 +193,6 @@ class CalcHazardResultsTestCase(BaseViewTestCase):
     def setUp(self):
         self.request = self.factory.get('/v1/calc/hazard/1/results')
         self.request.META['HTTP_HOST'] = 'www.openquake.org'
-
 
     def test(self):
         expected_content = [
@@ -517,9 +517,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         mocks = dict(
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
-            rmtree='shutil.rmtree',
             job_from_file='openquake.engine.engine.haz_job_from_file',
-            load_sm='engine.views._load_source_models',
             run_hazard_task='engine.tasks.run_hazard_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
@@ -536,15 +534,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         ]
         jff_exp_call_args = (
             (pathjoin(temp_dir, fake_job_file.name), 'openquake', 'progress',
-             []),
-            {}
-        )
-
-        load_sm_exp_call_args = (
-            ([pathjoin(temp_dir, fake_model_2.name),
-              pathjoin(temp_dir, fake_model_3.name),
-              pathjoin(temp_dir, fake_model_1.name)],
-             FakeUser(1), 666),
+             ['dblink']),
             {}
         )
 
@@ -576,26 +566,15 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             self.assertEqual(move_exp_call_args,
                              multi_mock['move'].call_args_list)
 
-            self.assertEqual(1, multi_mock['rmtree'].call_count)
-            self.assertEqual(((temp_dir, ), {}),
-                             multi_mock['rmtree'].call_args)
-
             self.assertEqual(1, multi_mock['job_from_file'].call_count)
             self.assertEqual(jff_exp_call_args,
                              multi_mock['job_from_file'].call_args)
-
-            self.assertEqual(1, multi_mock['load_sm'].call_count)
-            self.assertEqual(load_sm_exp_call_args,
-                             multi_mock['load_sm'].call_args)
 
             self.assertEqual(
                 {'count': 1,
                  'args': (
                      (666, ),
-                     {'migration_callback_url': None,
-                      'owner_user': None,
-                      'results_url': ('http://www.openquake.org/'
-                                      'v1/calc/hazard/666/results')})},
+                     {'migration_callback_url': None})},
                 aa_call_data
             )
 
@@ -633,7 +612,6 @@ class RunRiskCalcTestCase(BaseViewTestCase):
         mocks = dict(
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
-            rmtree='shutil.rmtree',
             job_from_file='openquake.engine.engine.risk_job_from_file',
             run_risk_task='engine.tasks.run_risk_calc',
         )
@@ -650,7 +628,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
         ]
         jff_exp_call_args = (
             (pathjoin(temp_dir, fake_job_file.name), 'openquake', 'progress',
-             []),
+             ['dblink']),
             {'hazard_calculation_id': 666, 'hazard_output_id': None}
         )
 
@@ -682,10 +660,6 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             self.assertEqual(move_exp_call_args,
                              multi_mock['move'].call_args_list)
 
-            self.assertEqual(1, multi_mock['rmtree'].call_count)
-            self.assertEqual(((temp_dir, ), {}),
-                             multi_mock['rmtree'].call_args)
-
             self.assertEqual(1, multi_mock['job_from_file'].call_count)
             self.assertEqual(jff_exp_call_args,
                              multi_mock['job_from_file'].call_args)
@@ -694,10 +668,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
                 {'count': 1,
                  'args': (
                      (777,),
-                     {'migration_callback_url': None,
-                      'owner_user': None,
-                      'results_url': ('https://www.openquake.org/'
-                                      'v1/calc/risk/777/results')})},
+                     {'migration_callback_url': None})},
                 aa_call_data
             )
         finally:

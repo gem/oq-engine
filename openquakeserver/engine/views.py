@@ -150,7 +150,7 @@ def run_hazard_calc(request):
         return render(
             request,
             'run_calc.html',
-            {'post_url': request.build_absolute_uri(), 'form': form}
+            {'form': form}
         )
     else:
         # POST: run a new calculation
@@ -170,17 +170,11 @@ def run_hazard_calc(request):
         hc = job.hazard_calculation
 
         migration_callback_url = request.POST.get('migration_callback_url')
-        owner_user = request.POST.get('owner_user')
+        foreign_calc_id = request.POST.get('foreign_calculation_id')
 
-        base_url = _get_base_url(request)
         tasks.run_hazard_calc.apply_async(
-            (hc.id, ),
-            dict(migration_callback_url=migration_callback_url,
-                 owner_user=owner_user,
-                 results_url=urlparse.urljoin(
-                     base_url, 'v1/calc/hazard/%s/results' % hc.id
-                 ))
-        )
+            (hc.id, ), dict(migration_callback_url=migration_callback_url,
+                            foreign_calc_id=foreign_calc_id))
 
         return redirect('/v1/calc/hazard/%s' % hc.id)
 
@@ -348,11 +342,7 @@ def run_risk_calc(request):
     """
     if request.method == 'GET':
         form = forms.RiskForm()
-        return render(
-            request,
-            'run_calc.html',
-            {'post_url': request.build_absolute_uri(), 'form': form}
-        )
+        return render(request, 'run_calc.html', {'form': form})
     else:
         # POST: run a new calculation
         temp_dir = tempfile.mkdtemp()
@@ -370,21 +360,12 @@ def run_risk_calc(request):
         )
         rc = job.risk_calculation
 
-        # Before running the calculation, clean up the temp dir.
-        shutil.rmtree(temp_dir)
-
         migration_callback_url = request.POST.get('migration_callback_url')
-        owner_user = request.POST.get('owner_user')
+        foreign_calc_id = request.POST.get('foreign_calculation_id')
 
-        base_url = _get_base_url(request)
         tasks.run_risk_calc.apply_async(
-            (rc.id, ),
-            dict(migration_callback_url=migration_callback_url,
-                 owner_user=owner_user,
-                 results_url=urlparse.urljoin(
-                     base_url, 'v1/calc/risk/%s/results' % rc.id
-                 ))
-        )
+            (rc.id, ), dict(migration_callback_url=migration_callback_url,
+                            foreign_calc_id=foreign_calc_id))
 
         return redirect('/v1/calc/risk/%s' % rc.id)
 

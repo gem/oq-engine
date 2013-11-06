@@ -10,7 +10,7 @@ DEFAULT_LOG_LEVEL = 'progress'
 
 
 @task(ignore_result=True)
-def run_hazard_calc(calc_id, migration_callback_url=None, owner_user=None,
+def run_hazard_calc(calc_id, migration_callback_url=None, foreign_calc_id=None,
                     results_url=None):
     """
     Run a hazard calculation given the calculation ID. It is assumed that the
@@ -28,12 +28,13 @@ def run_hazard_calc(calc_id, migration_callback_url=None, owner_user=None,
 
     # If requested to, signal job completion and trigger a migration of
     # results.
-    if not None in (migration_callback_url, owner_user, results_url):
-        _trigger_migration(migration_callback_url, owner_user, results_url)
+    if not None in (migration_callback_url, foreign_calc_id, results_url):
+        _trigger_migration(
+            migration_callback_url, foreign_calc_id, results_url)
 
 
 @task(ignore_result=True)
-def run_risk_calc(calc_id, migration_callback_url=None, owner_user=None,
+def run_risk_calc(calc_id, migration_callback_url=None, foreign_calc_id=None,
                   results_url=None):
     """
     Run a risk calculation given the calculation ID. It is assumed that the
@@ -51,11 +52,12 @@ def run_risk_calc(calc_id, migration_callback_url=None, owner_user=None,
 
     # If requested to, signal job completion and trigger a migration of
     # results.
-    if not None in (migration_callback_url, owner_user, results_url):
-        _trigger_migration(migration_callback_url, owner_user, results_url)
+    if not None in (migration_callback_url, foreign_calc_id, results_url):
+        _trigger_migration(
+            migration_callback_url, foreign_calc_id, results_url)
 
 
-def _trigger_migration(callback_url, owner, import_url):
+def _trigger_migration(callback_url, foreign_calc_id, import_url):
     """
     Helper function to initiate a post-calculation migration of results.
 
@@ -72,7 +74,11 @@ def _trigger_migration(callback_url, owner, import_url):
         `http://whatever.foo/v1/calc/hazard/1234/results`. See oq-engine-server
         docs for more details.
     """
-    params = urllib.urlencode(dict(import_url=import_url, owner=owner))
+    # TODO. Migrate outputs to icebox
+    raise NotImplementedError
+
+    params = urllib.urlencode(
+        dict(import_url=import_url, foreign_calc_id=foreign_calc_id))
     try:
         # post to an external service, asking it to pull calculation results
         url = urllib2.urlopen(callback_url, params)

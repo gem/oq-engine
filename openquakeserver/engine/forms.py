@@ -9,9 +9,9 @@ class BaseForm(forms.Form):
         required=False,
         label='URL to notify of calc completion',
     )
-    owner_user = forms.CharField(
+    foreign_calculation_id = forms.CharField(
         required=False,
-        label='Owner username of calculation results',
+        label='Identifier of the foreign calculation',
     )
 
 
