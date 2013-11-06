@@ -151,14 +151,6 @@ Response:
 
 The requested result as a blob of text. If the desired `export_type` is not supported, an HTTP 404 error is returned.
 
-#### GET /v1/calc/hazard/run
-
-Get an HTML form for posting new hazard calculations.
-
-Parameters: None
-
-Response: A basic HTML form for posting files and parameters for new hazard calculations.
-
 #### POST /v1/calc/hazard/run
 
 Run a new hazard calculation with the specified job config file, input models, and other parameters.
@@ -174,14 +166,6 @@ Parameters:
     * foreign_calculation_id: optional, required with migration_callback_url; specifies the id of the calculation on the icebox side
 
 Response: Redirects to [/v1/calc/hazard/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
-
-#### GET /v1/calc/risk/run
-
-Get an HTML form for posting new hazard calculations.
-
-Parameters: None
-
-Response: A basic HTML form for posting files and parameters for new hazard calculations.
 
 #### POST /v1/calc/risk/run
 
