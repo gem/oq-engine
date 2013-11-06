@@ -175,11 +175,15 @@ def hazard_restore(conn, directory):
     transfer_data(curs, models.SESRupture, ses_id=ses_ids)
 
     curs = conn.cursor()
-    for tname in reversed(created):
-        query = "DROP TABLE %s" % restore_tablename(tname)
-        curs.execute(query)
-        log.info("Dropped %s" % restore_tablename(tname))
-    conn.commit()
+    try:
+        for tname in reversed(created):
+            query = "DROP TABLE %s" % restore_tablename(tname)
+            curs.execute(query)
+            log.info("Dropped %s" % restore_tablename(tname))
+    except:
+        conn.rollback()
+    else:
+        conn.commit()
     log.info('Restored %s', directory)
     return [new_id for _, new_id in hc_ids]
 
