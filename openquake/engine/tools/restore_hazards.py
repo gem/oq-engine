@@ -19,11 +19,8 @@ table which maps the old id to the new one. Such table is used in the
 SELECT at step 3 to insert the proper foreign key values
 """
 
-import psycopg2
-import argparse
 import logging
 import os
-import sys
 
 from openquake.engine.db import models
 from django.db.models import fields
@@ -127,10 +124,10 @@ def safe_restore(curs, filename, original_tablename):
         curs.execute(
             "CREATE TABLE %s AS SELECT * FROM %s WHERE 0 = 1" % (
                 tablename, original_tablename))
-        curs.execute(
-            """COPY %s FROM '%s'
+        curs.copy_expert(
+            """COPY %s FROM stdin
                WITH (FORMAT 'csv', HEADER true, ENCODING 'utf8')""" % (
-                       tablename, os.path.abspath(filename)))
+                       tablename), file(os.path.abspath(filename)))
     except Exception as e:
         conn.rollback()
         log.error(str(e))
