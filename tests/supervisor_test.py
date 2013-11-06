@@ -71,8 +71,8 @@ class SupervisorHelpersTestCase(unittest.TestCase):
                                        (('task-id-2',), {'terminate': True})]
                     self.assertEqual(exp_revoke_args, revoke.call_args_list)
 
-    def test_update_job_status_and_error_msg(self):
-        supervisor.update_job_status_and_error_msg(self.job.id)
+    def test_update_job_status(self):
+        supervisor.update_job_status(self.job.id)
 
 
 class SupervisorTestCase(unittest.TestCase):
@@ -99,7 +99,7 @@ record_job_stop_time')
         start_patch('openquake.engine.supervising.supervisor.terminate_job')
         start_patch('openquake.engine.supervising.supervisor.get_job_status')
         start_patch('openquake.engine.supervising.supervisor'
-                    '.update_job_status_and_error_msg')
+                    '.update_job_status')
 
         logging.root.setLevel(logging.CRITICAL)
 
@@ -155,10 +155,10 @@ record_job_stop_time')
             # the status in the job record is updated
             self.assertEqual(
                 1,
-                self.update_job_status_and_error_msg.call_count)
+                self.update_job_status.call_count)
             self.assertEqual(
                 ((self.job.id,), {}),
-                self.update_job_status_and_error_msg.call_args)
+                self.update_job_status.call_args)
 
     def test_actions_after_job_process_termination(self):
         # the job process is *not* running
@@ -229,10 +229,10 @@ record_job_stop_time')
             self.cleanup_after_job.call_args)
 
         # the status in the job record is updated
-        self.assertEqual(1, self.update_job_status_and_error_msg.call_count)
+        self.assertEqual(1, self.update_job_status.call_count)
         self.assertEqual(
             ((self.job.id,), {}),
-            self.update_job_status_and_error_msg.call_args)
+            self.update_job_status.call_args)
 
 
 class AbortDueToFailedNodesTestCase(unittest.TestCase):
