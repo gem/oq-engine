@@ -111,14 +111,17 @@ def oqtask(task_func):
         # the task, or a keyword argument
         # this is the only required argument
         job_id = kwargs.get('job_id') or args[0]
+        job = models.OqJob.objects.get(id=job_id)
+        if job.is_running is False:
+            # the job was killed, it is useless to run the task
+            return
+
+        # it is important to save the task ids soon, so that
+        # the revoke functionality implemented in supervisor.py can work
+        EnginePerformanceMonitor.store_task_id(job_id, tsk)
 
         with EnginePerformanceMonitor(
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
-            job = models.OqJob.objects.get(id=job_id)
-
-            # it is important to save the task ids soon, so that
-            # the revoke functionality implemented in supervisor.py can work
-            EnginePerformanceMonitor.store_task_id(job_id, tsk)
 
             with EnginePerformanceMonitor(
                     'loading calculation object', job_id, tsk, flush=True):
@@ -133,9 +136,6 @@ def oqtask(task_func):
                 logs.init_logs_amqp_send(level=job.log_level,
                                          calc_domain='risk',
                                          calc_id=calculation.id)
-            if job.is_running is False:
-                # the job was killed, it is useless to run the task
-                return
             try:
                 res = task_func(*args, **kwargs)
             except Exception, err:
