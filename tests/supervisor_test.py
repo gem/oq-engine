@@ -30,6 +30,8 @@ from tests.utils.helpers import get_data_path
 from tests.utils.helpers import get_hazard_job
 from tests.utils.helpers import patch
 
+terminate = supervisor.SupervisorLogMessageConsumer.terminate
+
 
 class SupervisorHelpersTestCase(unittest.TestCase):
 
@@ -165,7 +167,7 @@ record_job_stop_time')
             # the cleanup is triggered
             self.assertEqual(1, self.cleanup_after_job.call_count)
             self.assertEqual(
-                ((self.job.id, True), {}),
+                ((self.job.id, terminate), {}),
                 self.cleanup_after_job.call_args)
 
             # the status in the job record is updated
@@ -192,7 +194,7 @@ record_job_stop_time')
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
         self.assertEqual(
-            ((self.job.id, True), {}),
+            ((self.job.id, terminate), {}),
             self.cleanup_after_job.call_args)
 
     def test_actions_after_job_process_failures(self):
@@ -221,7 +223,7 @@ record_job_stop_time')
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
         self.assertEqual(
-            ((self.job.id, True), {}),
+            ((self.job.id, terminate), {}),
             self.cleanup_after_job.call_args)
 
     def test_actions_after_job_process_crash(self):
@@ -241,7 +243,7 @@ record_job_stop_time')
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
         self.assertEqual(
-            ((self.job.id, True), {}),
+            ((self.job.id, terminate), {}),
             self.cleanup_after_job.call_args)
 
         # the status in the job record is updated
