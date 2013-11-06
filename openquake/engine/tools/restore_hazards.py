@@ -95,7 +95,7 @@ RETURNING  restore_id, %(table)s.id
 """ % args
 
     curs.execute(query)
-    old_new_ids = tuple(curs.fetchall())
+    old_new_ids = curs.fetchall()
     curs.execute(
         "ALTER TABLE %s DROP restore_id" % model_table(model))
 
