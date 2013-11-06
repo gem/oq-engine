@@ -33,6 +33,7 @@ import os
 import signal
 
 import openquake.engine
+from openquake.engine.utils import config, general
 
 from datetime import datetime
 
@@ -98,11 +99,12 @@ def record_job_stop_time(job_id):
     job_stats.save(using='job_superv')
 
 
-def cleanup_after_job(job_id):
+def cleanup_after_job(job_id, terminate):
     """
     Release the resources used by an openquake job.
 
     :param int job_id: the job id
+    :param bool terminate: the celery revoke command terminate flag
     """
     logging.debug('Cleaning up after job %s', job_id)
 
@@ -116,7 +118,7 @@ def cleanup_after_job(job_id):
     else:  # this is normal when OQ_NO_DISTRIBUTE=1
         logs.LOG.debug('No task to revoke')
     for tid in task_ids:
-        celery.task.control.revoke(tid, terminate=True)
+        celery.task.control.revoke(tid, terminate=terminate)
         logs.LOG.debug('Revoked task %s', tid)
 
 
@@ -243,6 +245,8 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
     # Failure counter check delay, translates to 60 seconds with the current
     # settings.
     FCC_DELAY = 60
+    terminate = general.str2bool(
+        config.get('celery', 'terminate_workers_on_revoke'))
 
     def __init__(self, job_id, job_pid, timeout=1):
         self.job_id = job_id
@@ -301,7 +305,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
         record_job_stop_time(self.job_id)
 
-        cleanup_after_job(self.job_id)
+        cleanup_after_job(self.job_id, self.terminate)
 
         self.stop()
 
@@ -358,7 +362,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                 update_job_status(self.job_id)
 
             record_job_stop_time(self.job_id)
-            cleanup_after_job(self.job_id)
+            cleanup_after_job(self.job_id, self.terminate)
             raise StopIteration()
 
 
