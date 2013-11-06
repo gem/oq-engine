@@ -259,8 +259,8 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             if connection is not None:
                 connection.commit()
 
-            [restored_calculation] = restore_hazards.django_restore(
-                    dumped_calculation)
+            [restored_calculation] = restore_hazards.hazard_restore(
+                models.getcursor('admin').connection, dumped_calculation)
             return models.OqJob.objects.get(
                 hazard_calculation__id=restored_calculation)
         else:
