@@ -534,7 +534,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         ]
         jff_exp_call_args = (
             (pathjoin(temp_dir, fake_job_file.name), 'openquake', 'progress',
-             ['dblink']),
+             []),
             {}
         )
 
@@ -574,7 +574,8 @@ class RunHazardCalcTestCase(BaseViewTestCase):
                 {'count': 1,
                  'args': (
                      (666, ),
-                     {'migration_callback_url': None})},
+                     {'foreign_calc_id': None,
+                      'migration_callback_url': None})},
                 aa_call_data
             )
 
@@ -628,7 +629,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
         ]
         jff_exp_call_args = (
             (pathjoin(temp_dir, fake_job_file.name), 'openquake', 'progress',
-             ['dblink']),
+             []),
             {'hazard_calculation_id': 666, 'hazard_output_id': None}
         )
 
@@ -668,7 +669,8 @@ class RunRiskCalcTestCase(BaseViewTestCase):
                 {'count': 1,
                  'args': (
                      (777,),
-                     {'migration_callback_url': None})},
+                     {'foreign_calc_id': None,
+                      'migration_callback_url': None})},
                 aa_call_data
             )
         finally:
