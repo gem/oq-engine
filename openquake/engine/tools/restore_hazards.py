@@ -1,7 +1,27 @@
+"""
+Restore Hazard Calculations dump produced with the
+--dump-hazard-calculation option.
+
+The general workflow to restore a calculation is the following:
+
+1) Create a "staging" table for each target table (e.g. restore_gmf,
+restore_oq_job, etc.)
+
+2) Use "COPY FROM" statements to populate such table from the content
+of the dump
+
+3) INSERT the data SELECTed from the temporary tables INTO the
+effective tables in the proper order RETURNING the id of the newly
+created rows.
+
+4) If the table is referenced in other tables, we create a temporary
+table which maps the old id to the new one. Such table is used in the
+SELECT at step 3 to insert the proper foreign key values
+"""
+
 import psycopg2
 import argparse
 import logging
-import io
 import os
 import sys
 
