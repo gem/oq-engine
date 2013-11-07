@@ -420,11 +420,8 @@ class JobStats(djm.Model):
     stop_time = djm.DateTimeField(editable=False)
     # The number of total sites in job
     num_sites = djm.IntegerField(null=True)
-    # The total number of tasks in a job
-    num_tasks = djm.IntegerField(null=True)
-    # The number of logic tree samples
-    # (for hazard jobs of all types except scenario)
-    num_realizations = djm.IntegerField(null=True)
+    # The disk space occupation in bytes
+    disk_space = djm.IntegerField(null=True)
 
     class Meta:
         db_table = 'uiapi\".\"job_stats'
