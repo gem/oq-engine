@@ -29,13 +29,11 @@ from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
 from openquake.engine.db import models
-from openquake.engine.utils import stats
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @utils_tasks.oqtask
-@stats.count_progress('h')
 def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     """
     A celery task wrapper function around :func:`compute_hazard_curves`.
@@ -53,6 +51,7 @@ def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
     base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
+hazard_curves.ignore_result = False
 
 
 # Silencing 'Too many local variables'
@@ -247,6 +246,13 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         self.progress['total'] = num_sources
 
         self.initialize_pr_data()
+
+    def execute(self):
+        """
+        Run hazard_curves in parallel.
+        """
+        self.parallelize(
+            self.core_calc_task, self.task_arg_gen(self.block_size()))
 
     def post_execute(self):
         """
