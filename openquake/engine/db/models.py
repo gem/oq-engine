@@ -325,21 +325,6 @@ class SiteModel(djm.Model):
         db_table = 'hzrdi\".\"site_model'
 
 
-class ParsedRupture(djm.Model):
-    """Stores parsed hazard rupture model in serialized python object
-       tree format."""
-    job = djm.OneToOneField('OqJob')
-    RUPTURE_TYPE_CHOICES = (
-        (u'complex_fault', u'Complex Fault'),
-        (u'simple_fault', u'Simple Fault'),)
-    rupture_type = djm.TextField(choices=RUPTURE_TYPE_CHOICES)
-    nrml = fields.PickleField(help_text="NRML object representing the rupture"
-                                        " model")
-
-    class Meta:
-        db_table = 'hzrdi\".\"parsed_rupture_model'
-
-
 ## Tables in the 'uiapi' schema.
 
 class OqJob(djm.Model):
