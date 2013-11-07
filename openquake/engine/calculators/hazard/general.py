@@ -269,7 +269,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
-    def task_arg_gen(self, block_size, check_num_task=True):
+    def task_arg_gen(self, block_size):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -308,13 +308,6 @@ class BaseHazardCalculator(base.Calculator):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
-
-        # this sanity check should go into a unit test, and will likely
-        # go there in the future
-        if check_num_task:
-            num_tasks = models.JobStats.objects.get(
-                oq_job=self.job.id).num_tasks
-            assert num_tasks == n, 'Expected %d tasks, got %d' % (num_tasks, n)
 
     def _get_realizations(self):
         """

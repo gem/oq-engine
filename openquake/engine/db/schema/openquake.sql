@@ -143,10 +143,8 @@ CREATE TABLE uiapi.job_stats (
     stop_time timestamp without time zone,
     -- The number of total sites in the calculation
     num_sites INTEGER,
-    -- The number of tasks in a job
-    num_tasks INTEGER,
-    -- The number of logic tree samples
-    num_realizations INTEGER
+    disk_space BIGINT
+    -- The disk space occupation in bytes
 ) TABLESPACE uiapi_ts;
 
 
