@@ -57,7 +57,12 @@ def save_job_stats(job, disk_space=None):
     """
     js = models.JobStats.objects.get(oq_job=job)
     js.disk_space = disk_space
-    js.num_sites = len(job.hazard_calculation.site_collection)
+
+    if job.risk_calculation:
+        hc = job.risk_calculation.hazard_calculation
+    else:
+        hc = job.hazard_calculation
+    js.num_sites = len(hc.site_collection)
     js.save()
 
 
