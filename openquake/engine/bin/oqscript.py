@@ -93,7 +93,6 @@ import openquake.engine
 from openquake.engine import __version__
 from openquake.engine import engine
 from openquake.engine.db import models
-from django.db import connection
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 from openquake.engine.input import source
@@ -536,7 +535,7 @@ def main():
         dump_hazards.main(*args.dump_hazard_calculation)
     elif args.restore_hazard_calculation:
         hc_ids = restore_hazards.hazard_restore(
-            connection.connection, args.restore_hazard_calculation)
+            models.getcursor('admin').connection, args.restore_hazard_calculation)
         print "Restore hazard calculation with IDs: %s" % hc_ids
     else:
         arg_parser.print_usage()
