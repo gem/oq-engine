@@ -27,7 +27,7 @@ from tests.utils import helpers
 
 from openquake.engine import export
 from openquake.engine.db import models
-from openquake.engine.tools import dump_hazards, restore_hazards
+from openquake.engine.tools import save_hazards, load_hazards
 
 
 class BaseRiskQATestCase(qa_utils.BaseQATestCase):
@@ -228,9 +228,9 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
     #: derived qa test must override this
     hazard_calculation_fixture = None
 
-    # if True, we will dump and restore the computed hazard
-    # calculation and run the risk calculation from the restored one
-    dump_restore = False
+    # if True, we will save and load the computed hazard
+    # calculation and run the risk calculation from the load one
+    save_load = False
 
     def _get_queryset(self):
         return models.HazardCalculation.objects.filter(
@@ -247,9 +247,9 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             warnings.warn("Using existing Hazard input")
             job = self._get_queryset().latest('oqjob__last_update').oqjob
 
-        if self.dump_restore:
+        if self.save_load:
             # Close the opened transactions
-            dumped_calculation = dump_hazards.main(job.hazard_calculation.id)
+            saved_calculation = save_hazards.main(job.hazard_calculation.id)
 
             # FIXME Here on, to avoid deadlocks due to stale
             # transactions, we commit all the opened transactions. We
@@ -259,9 +259,9 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
             if connection is not None:
                 connection.commit()
 
-            [restored_calculation] = restore_hazards.hazard_restore(
-                models.getcursor('admin').connection, dumped_calculation)
+            [load_calculation] = load_hazards.hazard_load(
+                models.getcursor('admin').connection, saved_calculation)
             return models.OqJob.objects.get(
-                hazard_calculation__id=restored_calculation)
+                hazard_calculation__id=load_calculation)
         else:
             return job
