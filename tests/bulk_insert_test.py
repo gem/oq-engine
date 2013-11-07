@@ -30,10 +30,16 @@ class DummyConnection(object):
     def connection(self):
         return self
 
+    @property
+    def description(self):
+        # a mock to the test insertion in the GmfData table
+        return [['id'], ['gmf_id'], ['ses_id'], ['imt'], ['sa_period'],
+                ['sa_damping'], ['gmvs'], ['rupture_ids'], ['site_id']]
+
     def cursor(self):
         return self
 
-    def execute(self, sql, values):
+    def execute(self, sql, values=()):
         self.sql = sql
         self.values = values
 

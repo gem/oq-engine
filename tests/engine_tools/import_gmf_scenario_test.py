@@ -13,7 +13,7 @@ class ImportGMFScenarioTestCase(unittest.TestCase):
     def test_import_gmf_scenario(self):
         repodir = os.path.dirname(os.path.dirname(nrmllib.__path__[0]))
         fileobj = open(os.path.join(repodir, 'examples', 'gmf-scenario.xml'))
-        out, hc = import_gmf_scenario.import_gmf_scenario(fileobj, 'openquake')
+        out, hc = import_gmf_scenario.import_gmf_scenario(fileobj)
         n = models.GmfData.objects.filter(gmf__output=out).count()
         assert_equal(n, 9)  # 9 rows entered
         assert_equal(hc.description,
@@ -32,7 +32,6 @@ PGV	\N	\N	{0.2}	POINT(0.0 0.0)
 PGV	\N	\N	{1.4}	POINT(1.0 0.0)
 '''))
         test_data.name = 'test_data'
-        out, _hc = import_gmf_scenario.import_gmf_scenario(
-            test_data, 'openquake')
+        out, _hc = import_gmf_scenario.import_gmf_scenario(test_data)
         n = models.GmfData.objects.filter(gmf__output=out).count()
         assert_equal(n, 8)  # 8 rows entered

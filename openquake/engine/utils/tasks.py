@@ -92,44 +92,36 @@ def parallelize(task_func, task_args, side_effect=lambda val: None):
     _map_reduce(task_func, task_args, noagg, None)
 
 
-class JobCompletedError(Exception):
-    """
-    Exception to be thrown by :func:`oqtask` in case of dealing with already
-    completed job.
-    """
-
-
 def oqtask(task_func):
     """
     Task function decorator which sets up logging and catches (and logs) any
     errors which occur inside the task. Also checks to make sure the job is
-    actually still running. If it is not running, raise a
-    :exc:`JobCompletedError`. (This also means that the task doesn't get
-    executed, so we don't do useless computation.)
+    actually still running. If it is not running, the task doesn't get
+    executed, so we don't do useless computation.
     """
+
     @wraps(task_func)
-    def wrapped(*args):
+    def wrapped(*args, **kwargs):
         """
         Initialize logs, make sure the job is still running, and run the task
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # TEMPORARY hack: args can be a tuple of tuples of just
-        # a tuple with the job_id as first argument
-        if isinstance(args[0], long):  # the job_id, convert into a tuple
-            chunks = (args,)
-        else:
-            chunks = args
-        job_id = chunks[0][0]
-        # job_id is always assumed to be the first argument passed to the task
+        # job_id is always assumed to be the first argument passed to
+        # the task, or a keyword argument
         # this is the only required argument
-        with EnginePerformanceMonitor(
-                'totals per task', job_id, tsk, flush=True):
-            job = models.OqJob.objects.get(id=job_id)
+        job_id = kwargs.get('job_id') or args[0]
+        job = models.OqJob.objects.get(id=job_id)
+        if job.is_running is False:
+            # the job was killed, it is useless to run the task
+            return
 
-            # it is important to save the task ids soon, so that
-            # the revoke functionality implemented in supervisor.py can work
-            EnginePerformanceMonitor.store_task_id(job_id, tsk)
+        # it is important to save the task ids soon, so that
+        # the revoke functionality implemented in supervisor.py can work
+        EnginePerformanceMonitor.store_task_id(job_id, tsk)
+
+        with EnginePerformanceMonitor(
+                'total ' + task_func.__name__, job_id, tsk, flush=True):
 
             with EnginePerformanceMonitor(
                     'loading calculation object', job_id, tsk, flush=True):
@@ -144,27 +136,23 @@ def oqtask(task_func):
                 logs.init_logs_amqp_send(level=job.log_level,
                                          calc_domain='risk',
                                          calc_id=calculation.id)
-
             try:
-                # Tasks can be used in the `execute` or `post-process` phase
-                if job.is_running is False:
-                    raise JobCompletedError('Job %d was killed' % job_id)
-                elif job.status not in ('executing', 'post_processing'):
-                    raise JobCompletedError(
-                        'The status of job %d is %s, should be executing or '
-                        'post_processing' % (job_id, job.status))
-                # else continue with task execution
-                for args in chunks:
-                    task_func(*args)
-            # TODO: should we do something different with JobCompletedError?
+                res = task_func(*args, **kwargs)
             except Exception, err:
                 logs.LOG.critical('Error occurred in task: %s', err)
                 logs.LOG.exception(err)
                 raise
             else:
-                return
+                return res
             finally:
                 CacheInserter.flushall()
+                # the task finished, we can remove from the performance
+                # table the associated row 'storing task id', then the
+                # supervisor will not try revoke it without need
+                models.Performance.objects.filter(
+                    oq_job=job,
+                    operation='storing task id',
+                    task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, ignore_result=True, queue=celery_queue)
     return tsk
