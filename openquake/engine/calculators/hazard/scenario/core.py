@@ -189,7 +189,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # create an associated gmf record
         self.gmfcoll = models.Gmf.objects.create(output=output)
 
-    def task_arg_gen(self, block_size, _check_num_task=True):
+    def task_arg_gen(self, block_size):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
