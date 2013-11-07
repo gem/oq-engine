@@ -405,8 +405,7 @@ class TaskArgGenTestCase(unittest.TestCase):
         expected = [exp + (ltp_mock.return_value,) for exp in expected]
 
         try:
-            actual = list(calc.task_arg_gen(
-                          block_size=2, check_num_task=False))
+            actual = list(calc.task_arg_gen(block_size=2))
             self.assertEqual(expected, actual)
             self.assertEqual(1, pt_src_block_size_mock.call_count)
             self.assertEqual(1, get_rlz_mock.call_count)
