@@ -21,6 +21,7 @@ import csv
 import getpass
 import os
 import sys
+import time
 import warnings
 from contextlib import contextmanager
 
@@ -522,16 +523,17 @@ def run_hazard(cfg_file, log_level, log_file, exports):
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
+        t0 = time.time()
         completed_job = run_calc(
             job, log_level, log_file, exports, 'hazard'
         )
+        duration = time.time() - t0
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
-                print 'Calculation %d results:' % (
-                    completed_job.hazard_calculation.id)
-                list_hazard_outputs(completed_job.hazard_calculation.id)
+                print_results(completed_job.hazard_calculation.id,
+                              duration, list_hazard_outputs)
             else:
                 complain_and_exit('Calculation %d failed'
                                   % completed_job.hazard_calculation.id,
@@ -620,6 +622,12 @@ def complain_and_exit(msg, exit_code=0):
     sys.exit(exit_code)
 
 
+def print_results(calc_id, duration, list_outputs):
+    print 'Calculation %d completed in %d seconds. Results:' % (
+        calc_id, duration)
+    list_outputs(calc_id)
+
+
 def print_outputs_summary(outputs):
     """
     List of :class:`openquake.engine.db.models.Output` objects.
@@ -662,16 +670,17 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
+        t0 = time.time()
         completed_job = run_calc(
             job, log_level, log_file, exports, 'risk'
         )
+        duration = time.time() - t0
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
-                print 'Calculation %d results:' % (
-                    completed_job.risk_calculation.id)
-                list_risk_outputs(completed_job.risk_calculation.id)
+                print_results(completed_job.risk_calculation.id,
+                              duration, list_risk_outputs)
             else:
                 complain_and_exit('Calculation %s failed'
                                   % completed_job.risk_calculation.id,

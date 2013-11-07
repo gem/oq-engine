@@ -50,17 +50,7 @@ ALTER TABLE hzrdi.parsed_source ALTER source_model_filename SET NOT NULL;
 ALTER TABLE hzrdi.parsed_source DROP input_id;
 
 -- parsed_rupture_model
-ALTER TABLE hzrdi.parsed_rupture_model ADD job_id INTEGER NULL;
-CREATE INDEX hzrdi_parsed_rupture_model_job_id_idx ON hzrdi.parsed_rupture_model(job_id);
-UPDATE hzrdi.parsed_rupture_model SET job_id=(
-       SELECT job.id FROM uiapi.oq_job AS job
-       JOIN uiapi.hazard_calculation AS hc ON hc.id = job.hazard_calculation_id
-       JOIN uiapi.input2hcalc AS i2h ON i2h.hazard_calculation_id = hc.id
-       WHERE i2h.input_id = hzrdi.parsed_rupture_model.input_id)
-WHERE job_id IS NULL;
-ALTER TABLE hzrdi.parsed_rupture_model ADD CONSTRAINT hzrdi_parsed_rupture_model_job_fk
-FOREIGN KEY (job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
-ALTER TABLE hzrdi.parsed_rupture_model DROP input_id;
+DROP TABLE hzrdi.parsed_rupture_model;
 
 -- risk_calculation. Here we replace exposure_input_id with
 -- preloaded_exposure_model_id
