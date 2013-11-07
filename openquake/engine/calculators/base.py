@@ -82,25 +82,6 @@ class Calculator(object):
         Subclasses must implement this.
         """
 
-    def record_init_stats(self):
-        """
-        Record some basic job stats, including the number of sites,
-        realizations (end branches), and total number of tasks for the job.
-
-        This should be run between the `pre-execute` and `execute` phases, once
-        the job has been fully initialized.
-        """
-        # Record num sites, num realizations, and num tasks.
-        num_sites = len(self.hc.points_to_compute())
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc.id)
-        num_rlzs = realizations.count()
-
-        [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
-        job_stats.num_sites = num_sites
-        job_stats.num_realizations = num_rlzs
-        job_stats.save()
-
     def parallelize(self, task_func, task_arg_gen):
         """
         Given a callable and a task arg generator, build an argument list and
