@@ -256,12 +256,6 @@ if [ -r $security_file ]; then
     psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $security_file
 fi
 
-# Loading test fixtures if present
-if [ -r "$fixtures" ]; then
-    echo ".. Loading test fixtures"
-    python -c "from openquake.engine.tools.restore_hazards import hazard_restore_local; hazard_restore_local('$fixtures')"
-fi
-
 # Apply database table indexes if present.
 indexes_file="$schema_path/indexes.sql"
 if [ -r $indexes_file ]; then
