@@ -31,7 +31,6 @@ CREATE INDEX hzrdi_site_model_job_id_idx ON hzrdi.site_model(job_id);
 
 -- hzrdi.parsed_source
 CREATE INDEX hzrdi_parsed_source_job_id_idx ON hzrdi.parsed_source(job_id);
-CREATE INDEX hzrdi_parsed_rupture_model_job_id_idx ON hzrdi.parsed_rupture_model(job_id);
 
 -- indexes for the uiapi.performance table
 CREATE INDEX uiapi_performance_oq_job_id_idx ON uiapi.performance(oq_job_id);
