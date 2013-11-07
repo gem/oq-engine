@@ -66,7 +66,7 @@ class RiskCalculator(base.Calculator):
                 (self.rc.preloaded_exposure_model or loaders.exposure(
                     self.job,
                     self.rc.inputs['exposure'])).taxonomies_in(
-                        self.rc.region_constraint))
+                    self.rc.region_constraint))
 
         with logs.tracing('parse risk models'):
             self.risk_models = self.get_risk_models()
