@@ -44,17 +44,17 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 @tasks.oqtask
 @stats.count_progress('h')
-def gmfs(job_id, sites, rupture_id, gmfcoll_id, task_seed, realizations):
+def gmfs(job_id, sites, rupture, gmf_id, task_seed, realizations):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
     """
     numpy.random.seed(task_seed)
-    compute_gmfs(job_id, sites, rupture_id, gmfcoll_id, realizations)
+    compute_gmfs(job_id, sites, rupture, gmf_id, realizations)
     base.signal_task_complete(job_id=job_id, num_items=len(sites))
 
 
-def compute_gmfs(job_id, sites, rupture_id, gmfcoll_id, realizations):
+def compute_gmfs(job_id, sites, rupture, gmf_id, realizations):
     """
     Compute ground motion fields and store them in the db.
 
@@ -62,19 +62,15 @@ def compute_gmfs(job_id, sites, rupture_id, gmfcoll_id, realizations):
         ID of the currently running job.
     :param sites:
         The subset of the full SiteCollection scanned by this task
-    :param rupture_id:
-        The parsed rupture model from which we will generate
+    :param rupture:
+        The hazardlib rupture from which we will generate
         ground motion fields.
-    :param gmfcoll_id:
+    :param gmf_id:
         the id of a :class:`openquake.engine.db.models.Gmf` record
     :param realizations:
         Number of realizations to create.
     """
-
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    rupture_mdl = source.nrml_to_hazardlib(
-        models.ParsedRupture.objects.get(id=rupture_id).nrml,
-        hc.rupture_mesh_spacing, None, None)
     imts = [haz_general.imt_to_hazardlib(x)
             for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
@@ -82,19 +78,19 @@ def compute_gmfs(job_id, sites, rupture_id, gmfcoll_id, realizations):
 
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
         gmf = ground_motion_fields(
-            rupture_mdl, sites, imts, gsim,
+            rupture, sites, imts, gsim,
             hc.truncation_level, realizations=realizations,
             correlation_model=correlation_model)
     with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
-        save_gmf(gmfcoll_id, gmf, sites)
+        save_gmf(gmf_id, gmf, sites)
 
 
 @transaction.commit_on_success(using='reslt_writer')
-def save_gmf(gmfcoll_id, gmf_dict, sites):
+def save_gmf(gmf_id, gmf_dict, sites):
     """
     Helper method to save computed GMF data to the database.
 
-    :param int gmfcoll_id:
+    :param int gmf_id:
         the id of a :class:`openquake.engine.db.models.Gmf` record
     :param dict gmf_dict:
         The GMF results during the calculation
@@ -120,7 +116,7 @@ def save_gmf(gmfcoll_id, gmf_dict, sites):
 
         for i, site in enumerate(sites):
             inserter.add(models.GmfData(
-                gmf_id=gmfcoll_id,
+                gmf_id=gmf_id,
                 ses_id=None,
                 imt=imt_name,
                 sa_period=sa_period,
@@ -140,25 +136,19 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
     core_calc_task = gmfs
     output = None  # defined in pre_execute
 
+    def __init__(self, *args, **kwargs):
+        super(ScenarioHazardCalculator, self).__init__(*args, **kwargs)
+        self.gmf = None
+        self.rupture = None
+
     def initialize_sources(self):
         """
-        Get the rupture_model file from the job.ini file, and store a
-        parsed version of it in the database (see
-        :class:`openquake.engine.db.models.ParsedRupture``) in pickle format.
+        Get the rupture_model file from the job.ini file, and set the
+        attribute self.rupture.
         """
-
-        # Get the rupture model in input
-        [inp] = models.inputs4hcalc(self.hc.id, input_type='rupture_model')
-
-        # Associate the source input to the calculation:
-        models.Input2hcalc.objects.get_or_create(
-            input=inp, hazard_calculation=self.hc)
-
-        # Store the ParsedRupture record
-        src_content = inp.model_content.as_string_io
-        rupt_parser = RuptureModelParser(src_content)
-        src_db_writer = source.RuptureDBWriter(inp, rupt_parser.parse())
-        src_db_writer.serialize()
+        nrml = RuptureModelParser(self.hc.inputs['rupture_model']).parse()
+        rms = self.job.hazard_calculation.rupture_mesh_spacing
+        self.rupture = source.nrml_to_hazardlib(nrml, rms, None, None)
 
     def pre_execute(self):
         """
@@ -185,13 +175,12 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
         # create a record in the output table
         output = models.Output.objects.create(
-            owner=self.job.owner,
             oq_job=self.job,
             display_name="gmf_scenario",
             output_type="gmf_scenario")
 
         # create an associated gmf record
-        self.gmfcoll = models.Gmf.objects.create(output=output)
+        self.gmf = models.Gmf.objects.create(output=output)
 
     def task_arg_gen(self, block_size):
         """
@@ -199,7 +188,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         task arg tuples. Each tuple of args applies to a single task.
 
         Yielded results are 6-uples of the form (job_id,
-        sites, rupture_id, gmfcoll_id, task_seed, realizations)
+        sites, rupture_id, gmf_id, task_seed, realizations)
         (task_seed will be used to seed numpy for temporal occurence sampling).
 
         :param int block_size:
@@ -207,13 +196,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-
-        inp = models.inputs4hcalc(self.hc.id, 'rupture_model')[0]
-        ruptures = models.ParsedRupture.objects.filter(input__id=inp.id)
-        rupture_id = [rupture.id for rupture in ruptures][0]  # only one
-
         for sites in block_splitter(self.hc.site_collection, BLOCK_SIZE):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
             yield (self.job.id, models.SiteCollection(sites),
-                   rupture_id, self.gmfcoll.id, task_seed,
+                   self.rupture, self.gmf.id, task_seed,
                    self.hc.number_of_ground_motion_fields)

@@ -28,7 +28,6 @@ from django.core import exceptions
 
 from openquake.engine import engine
 from openquake.engine.db import models
-from openquake.engine.job import validation
 
 from tests.utils import helpers
 
@@ -38,7 +37,7 @@ class PrepareJobTestCase(unittest.TestCase):
     def test_prepare_job_default_user(self):
         job = engine.prepare_job()
 
-        self.assertEqual('openquake', job.owner.user_name)
+        self.assertEqual('openquake', job.user_name)
         self.assertEqual('pre_executing', job.status)
         self.assertEqual('progress', job.log_level)
 
@@ -52,7 +51,7 @@ class PrepareJobTestCase(unittest.TestCase):
         user_name = helpers.random_string()
         job = engine.prepare_job(user_name=user_name)
 
-        self.assertEqual(user_name, job.owner.user_name)
+        self.assertEqual(user_name, job.user_name)
         self.assertEqual('pre_executing', job.status)
         self.assertEqual('progress', job.log_level)
 
@@ -68,34 +67,6 @@ class PrepareJobTestCase(unittest.TestCase):
         job = engine.prepare_job(log_level='debug')
 
         self.assertEqual('debug', job.log_level)
-
-
-class PrepareUserTestCase(unittest.TestCase):
-
-    def test_prepare_user_exists(self):
-        user_name = helpers.random_string()
-        existing_user = models.OqUser(
-            user_name=user_name, full_name=user_name, organization_id=1
-        )
-        existing_user.save()
-
-        user = engine.prepare_user(user_name)
-        self.assertEqual(existing_user.id, user.id)
-
-    def test_prepare_user_does_not_exist(self):
-        user_name = helpers.random_string()
-
-        # Sanity check; make sure the user doesn't exist yet.
-        self.assertEqual(
-            0, len(models.OqUser.objects.filter(user_name=user_name))
-        )
-
-        engine.prepare_user(user_name)
-
-        # Now the user should exist.
-        self.assertEqual(
-            1, len(models.OqUser.objects.filter(user_name=user_name))
-        )
 
 
 class ParseConfigTestCase(unittest.TestCase):
@@ -121,9 +92,10 @@ bar = baz
             'calculation_mode': 'classical',
             'region': '1 1 2 2 3 3',
             'bar': 'baz',
+            'inputs': {},
         }
 
-        params, _ = engine.parse_config(source)
+        params = engine.parse_config(source)
 
         self.assertEqual(expected_params, params)
 
@@ -148,13 +120,14 @@ random_seed=0
                 'calculation_mode': 'classical',
                 'truncation_level': '0',
                 'random_seed': '0',
-                'maximum_distance': '0'
+                'maximum_distance': '0',
+                'inputs': {'site_model': site_model_input},
             }
 
-            params, files = engine.parse_config(open(job_config, 'r'))
+            params = engine.parse_config(open(job_config, 'r'))
             self.assertEqual(expected_params, params)
-            self.assertEqual(['site_model_file'], files.keys())
-            self.assertEqual([site_model_input], files.values())
+            self.assertEqual(['site_model'], params['inputs'].keys())
+            self.assertEqual([site_model_input], params['inputs'].values())
         finally:
             shutil.rmtree(temp_dir)
 
@@ -191,26 +164,14 @@ random_seed=5
                 'calculation_mode': 'classical',
                 'truncation_level': '3',
                 'random_seed': '5',
-                'maximum_distance': '0'
+                'maximum_distance': '0',
+                'inputs': {},
             }
 
-            params, _ = engine.parse_config(source)
+            params = engine.parse_config(source)
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
-
-
-class GetContentTypeTestCase(unittest.TestCase):
-
-    def test__get_content_type(self):
-        # no file extension
-        self.assertEqual('unknown', engine._get_content_type('/foo/bar/baz'))
-        # xml file extension
-        self.assertEqual('xml', engine._get_content_type('/foo/bar/baz.xml'))
-        # hdf5 file extension
-        self.assertEqual(
-            'HDF5', engine._get_content_type('/foo/bar/baz.HDF5')
-        )
 
 
 class CreateHazardCalculationTestCase(unittest.TestCase):
@@ -233,23 +194,8 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
             'random_seed': 37,
         }
 
-        self.owner = helpers.default_user()
-
-        self.site_model = models.Input(digest='123', path='/foo/bar', size=0,
-                                  input_type='site_model', owner=self.owner)
-        self.site_model.save()
-        self.files = dict(site_model_file='/foo/bar')
-
     def test_create_hazard_calculation(self):
-        with mock.patch('openquake.engine.engine.get_or_create_input') as goci:
-            hc = engine.create_hazard_calculation(
-                self.owner.user_name, self.params, self.files
-            )
-
-        self.assertEqual(1, goci.call_count)
-        exp_args = (('/foo/bar', 'site_model', self.owner),
-                    {'haz_calc_id': hc.id})
-        self.assertEqual(exp_args, goci.call_args)
+        hc = engine.create_calculation(models.HazardCalculation, self.params)
 
         # Normalize/clean fields by fetching a fresh copy from the db.
         hc = models.HazardCalculation.objects.get(id=hc.id)
@@ -277,11 +223,8 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         ]
 
         with warnings.catch_warnings(record=True) as w:
-            with mock.patch(
-                    'openquake.engine.engine.get_or_create_input') as goci:
-                engine.create_hazard_calculation(
-                    self.owner.user_name, self.params, self.files
-                )
+            engine.create_calculation(
+                models.HazardCalculation, self.params)
         actual_warnings = [msg.message.message for msg in w]
         self.assertEqual(sorted(expected_warnings), sorted(actual_warnings))
 
@@ -315,33 +258,8 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
             'region_constraint': '-0.5 0.5, 0.5 0.5, 0.5 -0.5, -0.5, -0.5',
         }
 
-        owner = helpers.default_user()
+        rc = engine.create_calculation(models.RiskCalculation, params)
 
-        vuln_file = models.Input(digest='123', path='/foo/bar', size=0,
-                                 input_type='structural_vulnerability',
-                                 owner=owner)
-        vuln_file.save()
-        exposure_file = models.Input(digest='456', path='/foo/baz', size=0,
-                                     input_type='exposure', owner=owner)
-        exposure_file.save()
-
-        files = [vuln_file, exposure_file]
-        files = dict(
-            structural_vulnerability_file='/foo/bar',
-            exposure_file='/foo/baz',
-        )
-
-        with mock.patch('openquake.engine.engine.get_or_create_input') as goci:
-            rc = engine.create_risk_calculation(owner, params, files)
-
-        self.assertEqual(2, goci.call_count)
-        exp_args = [
-            (('/foo/baz', 'exposure', owner),
-             {'risk_calc_id': rc.id}),
-            (('/foo/bar', 'structural_vulnerability', owner),
-             {'risk_calc_id': rc.id}),
-        ]
-        self.assertEqual(exp_args, goci.call_args_list)
         # Normalize/clean fields by fetching a fresh copy from the db.
         rc = models.RiskCalculation.objects.get(id=rc.id)
 
@@ -666,6 +584,7 @@ class RunCalcTestCase(unittest.TestCase):
                 return self.job.id == other.job.id
 
         mocks = dict(
+            save_job_stats='openquake.engine.engine.save_job_stats',
             get_calc='openquake.engine.engine.get_calculator_class',
             job_stats='openquake.engine.engine._create_job_stats',
             job_exec='openquake.engine.engine._job_exec',
@@ -709,7 +628,7 @@ class RunCalcTestCase(unittest.TestCase):
 
         self.assertEqual(1, mm['job_exec'].call_count)
         self.assertEqual(
-            ((self.job, 'debug', 'oq.log', ['geojson'], 'hazard',
+            ((self.job, 'debug', ['geojson'], 'hazard',
               self.calc_instance),
              {}),
             mm['job_exec'].call_args
@@ -725,6 +644,8 @@ class RunCalcTestCase(unittest.TestCase):
             engine.run_calc(self.job, 'debug', 'oq.log', ['geojson'], 'hazard',
                             supervised=False)
 
+        self.assertEqual(1, mm['save_job_stats'].call_count)
+
         # Check the intermediate function calls and the flow of data:
         self.assertEqual(1, mm['get_calc'].call_count)
         self.assertEqual((('hazard', 'classical'), {}),
@@ -735,8 +656,7 @@ class RunCalcTestCase(unittest.TestCase):
 
         self.assertEqual(1, mm['job_exec'].call_count)
         self.assertEqual(
-            ((self.job, 'debug', 'oq.log', ['geojson'], 'hazard',
-              self.calc_instance),
+            ((self.job, 'debug', ['geojson'], 'hazard', self.calc_instance),
              {}),
             mm['job_exec'].call_args
         )
