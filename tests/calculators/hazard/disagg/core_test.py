@@ -206,12 +206,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
     def setUp(self):
         self.job, self.calc = self._setup_a_new_calculator()
-        models.JobStats.objects.create(
-            oq_job=self.job,
-            num_sites=0,
-            num_tasks=0,
-            num_realizations=0
-        )
+        models.JobStats.objects.create(oq_job=self.job, num_sites=0)
 
     def _setup_a_new_calculator(self):
         cfg = helpers.get_data_path('disaggregation/job.ini')
@@ -252,9 +247,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         self.calc.pre_execute()
 
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
-        self.assertEqual(2, job_stats.num_realizations)
         self.assertEqual(2, job_stats.num_sites)
-        self.assertEqual(12, job_stats.num_tasks)
 
         self.assertEqual(
             {'hc_computed': 0, 'total': 12, 'hc_total': 8, 'computed': 0,
