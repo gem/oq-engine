@@ -215,10 +215,6 @@ class RiskCalculator(base.Calculator):
         stats.pk_set(self.job.id, "nrisk_total", total)
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
-        job_stats = models.JobStats.objects.get(oq_job=self.job)
-        job_stats.num_sites = total
-        job_stats.save()
-
     def get_risk_models(self, retrofitted=False):
         """
         Parse vulnerability models for each loss type in
