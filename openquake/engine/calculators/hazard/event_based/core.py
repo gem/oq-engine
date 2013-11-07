@@ -539,8 +539,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         if self.job.hazard_calculation.complete_logic_tree_ses:
             self.initialize_complete_lt_ses_db_records()
 
-        self.record_init_stats()
-
         num_sources = models.SourceProgress.objects.filter(
             is_complete=False,
             lt_realization__hazard_calculation=self.hc).count()
