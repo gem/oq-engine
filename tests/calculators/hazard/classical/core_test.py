@@ -25,7 +25,9 @@ from nose.plugins.attrib import attr
 from openquake.engine.calculators import base
 from openquake.engine.calculators.hazard.classical import core
 from openquake.engine.db import models
+from openquake.engine.engine import save_job_stats
 from openquake.engine.utils import stats
+from openquake.engine.input import logictree
 from tests.utils import helpers
 
 
@@ -53,12 +55,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             '%s.%s' % (base_path, 'initialize_sources'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
-        record_stats_patch = helpers.patch(
-            '%s.%s' % (base_path, 'record_init_stats'))
+
         init_pr_data_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_pr_data'))
-        patches = (init_src_patch, init_rlz_patch,
-                   record_stats_patch, init_pr_data_patch)
+        patches = (init_src_patch, init_rlz_patch, init_pr_data_patch)
 
         mocks = [p.start() for p in patches]
 
@@ -75,24 +75,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initalize_sources(self):
         self.calc.initialize_sources()
 
-        # The source model logic tree for this configuration has only 1 source
-        # model:
-        [source] = models.inputs4hcalc(
-            self.job.hazard_calculation.id, input_type='source')
-
-        parsed_sources = models.ParsedSource.objects.filter(input=source)
-        # This source model contains 118 sources:
-        self.assertEqual(118, len(parsed_sources))
-
-        # Finally, check the Src2ltsrc linkage:
-        [smlt] = models.inputs4hcalc(
-            self.job.hazard_calculation.id,
-            input_type='source_model_logic_tree')
-        [src2ltsrc] = models.Src2ltsrc.objects.filter(
-            hzrd_src=source, lt_src=smlt)
-        # Make sure the `filename` is exactly as it apprears in the logic tree.
-        # This is import for the logic tree processing we need to do later on.
-        self.assertEqual('dissFaultModel.xml', src2ltsrc.filename)
+        # The source model contains 118 sources:
+        self.assertEqual(
+            118,
+            models.ParsedSource.objects.filter(job=self.calc.job).count())
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -107,9 +93,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # `RuntimeError` should be raised here
 
         # Okay, it's all good. Now check the count of the site model records.
-        [site_model_inp] = models.inputs4hcalc(
-            self.job.hazard_calculation.id, input_type='site_model')
-        sm_nodes = models.SiteModel.objects.filter(input=site_model_inp)
+        sm_nodes = models.SiteModel.objects.filter(job=self.job)
 
         self.assertEqual(2601, len(sm_nodes))
 
@@ -237,12 +221,12 @@ store_site_model'
         hc = self.job.hazard_calculation
 
         self.calc.pre_execute()
+        save_job_stats(self.job)
+
         # Test the job stats:
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
         # num sources * num lt samples / block size (items per task):
-        self.assertEqual(236, job_stats.num_tasks)
         self.assertEqual(120, job_stats.num_sites)
-        self.assertEqual(2, job_stats.num_realizations)
 
         # Check the calculator total/progress counters as well:
         self.assertEqual(0, self.calc.progress['computed'])
@@ -412,7 +396,10 @@ store_site_model'
             task_signal_queue(conn.channel()).declare()
             with conn.Consumer(task_signal_queue, callbacks=[test_callback]):
                 # call the task as a normal function
-                core.hazard_curves(self.job.id, [src_id], lt_rlz.id)
+                core.hazard_curves(
+                    self.job.id, [src_id], lt_rlz.id,
+                    logictree.LogicTreeProcessor.from_hc(
+                        self.job.hazard_calculation))
                 # wait for the completion signal
                 conn.drain_events()
 

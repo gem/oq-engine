@@ -27,13 +27,6 @@ COMMENT ON SCHEMA uiapi IS 'Data required by the API presented to the various Op
 
 
 -- admin schema tables ------------------------------------------
-COMMENT ON TABLE admin.organization IS 'An organization that is utilising the OpenQuake database';
-
-
-COMMENT ON TABLE admin.oq_user IS 'An OpenQuake user that is utilising the OpenQuake database';
-COMMENT ON COLUMN admin.oq_user.data_is_open IS 'Whether the data owned by the user is visible to the general public.';
-
-
 COMMENT ON TABLE admin.revision_info IS 'Facilitates the keeping of revision information for the OpenQuake database and/or its artefacts (schemas, tables etc.)';
 COMMENT ON COLUMN admin.revision_info.artefact IS 'The name of the database artefact for which we wish to store revision information.';
 COMMENT ON COLUMN admin.revision_info.revision IS 'The revision information for the associated database artefact.';
@@ -45,15 +38,7 @@ COMMENT ON COLUMN admin.revision_info.last_update IS 'The date/time when the rev
 
 COMMENT ON TABLE hzrdi.parsed_source IS 'Stores parsed hazard input model sources in serialized python object tree format';
 COMMENT ON COLUMN hzrdi.parsed_source.nrml IS 'NRML object representing the source';
-COMMENT ON COLUMN hzrdi.parsed_source.input_id IS 'The foreign key to the associated input model file';
 COMMENT ON COLUMN hzrdi.parsed_source.source_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
-
-
-COMMENT ON TABLE hzrdi.parsed_rupture_model IS 'Stores parsed hazard rupture model in serialized python object tree format';
-COMMENT ON COLUMN hzrdi.parsed_rupture_model.nrml IS 'NRML object representing the rupture';
-COMMENT ON COLUMN hzrdi.parsed_rupture_model.input_id IS 'The foreign key to the associated input rupture model file';
-COMMENT ON COLUMN hzrdi.parsed_rupture_model.rupture_type IS 'The rupture''s seismic input type: can be one of: complex_fault or simple_fault.';
-
 
 
 -- hzrdr schema tables ------------------------------------------
@@ -96,7 +81,6 @@ COMMENT ON COLUMN riski.exposure_model.area_type IS 'area type. one of: aggregat
 COMMENT ON COLUMN riski.exposure_model.area_unit IS 'area unit of measure e.g. sqm';
 COMMENT ON COLUMN riski.exposure_model.category IS 'The risk category modelled';
 COMMENT ON COLUMN riski.exposure_model.description IS 'An optional description of the risk exposure model at hand';
-COMMENT ON COLUMN riski.exposure_model.input_id IS 'The foreign key to the associated input model file';
 
 COMMENT ON COLUMN riski.exposure_model.name IS 'The exposure model name';
 
@@ -154,19 +138,6 @@ COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ra
 COMMENT ON TABLE riskr.dmg_state IS 'Holds the damage_states associated to a given output';
 
 -- uiapi schema tables ------------------------------------------
-COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file imported by the user';
-COMMENT ON COLUMN uiapi.input.digest IS '32 byte md5sum digest, used to detect identical input model files';
-COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
-    - source model file (source)
-    - source logic tree (source_model_logic_tree)
-    - GSIM (Ground Shaking Intensity Model) logic tree (gsim_logic_tree)
-    - exposure file (exposure)
-    - vulnerability file (vulnerability)
-    - rupture file (rupture)';
-COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
-COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
-
-COMMENT ON TABLE uiapi.input2job IS 'Associate inputs and jobs';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
@@ -182,7 +153,7 @@ COMMENT ON COLUMN uiapi.performance.pgmemory IS 'Memory occupation in Postgres (
 
 COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
 COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
-COMMENT ON COLUMN uiapi.job_stats.num_realizations IS 'The number of logic tree samples in the calculation';
+COMMENT ON COLUMN uiapi.job_stats.disk_space IS 'How much the disk space occupation increased during the computation (in bytes)';
 
 
 COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
@@ -200,15 +171,3 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - bcr_distribution';
 COMMENT ON COLUMN uiapi.output.oq_job_id IS 'The job that produced this output;
 NULL if the output was imported from an external source';
-
-
-COMMENT ON TABLE uiapi.src2ltsrc IS '
-Associate an "source_model_logic_tree" type input (a logic tree source) with "source"
-type inputs (hazard sources referenced by the logic tree source).
-This is needed for worker-side logic tree processing.';
-
-
--- uiapi.error_msg
-COMMENT ON TABLE uiapi.error_msg IS 'A place to store error information in the case of a job failure.';
-COMMENT ON COLUMN uiapi.error_msg.brief IS 'Summary of the error message.';
-COMMENT ON COLUMN uiapi.error_msg.detailed IS 'The full error message.';

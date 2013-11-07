@@ -33,85 +33,6 @@ from django.contrib.gis.geos.point import Point
 LOGGER = logging.getLogger('serializer')
 
 
-# pylint: disable=W0212
-class BulkInserter(object):
-    """Handle bulk object insertion"""
-
-    def __init__(self, dj_model, max_cache_size=None):
-        """
-        Create a new bulk inserter for a Django model class
-
-        :param dj_model:
-            Django model class
-        :param int max_cache_size:
-            The number of entries to cache before flushing/inserting. This
-            helps to limit memory consumption for large sets of inserts.
-
-            The default value is `None`, which means there is no maximum.
-        """
-        self.table = dj_model
-        self.max_cache_size = max_cache_size
-        self.fields = None
-        self.values = []
-        self.count = 0
-
-    def add_entry(self, **kwargs):
-        """
-        Add a new entry to be inserted
-
-        The first time the method is called the field list is stored;
-        subsequent add_entry() calls must provide the same set of
-        keyword arguments.
-
-        Handles PostGIS/GeoDjango types.
-        """
-        if not self.fields:
-            self.fields = kwargs.keys()
-        assert set(self.fields) == set(kwargs.keys())
-        for k in self.fields:
-            self.values.append(kwargs[k])
-        self.count += 1
-
-        # If we have hit the `max_cache_size` is set,
-        if self.max_cache_size is not None:
-            # check if we have hit the maximum insert the current batch.
-            if len(self.values) >= self.max_cache_size:
-                self.flush()
-
-    def flush(self):
-        """Inserts the entries in the database using a bulk insert query"""
-        if not self.values:
-            return
-
-        alias = router.db_for_write(self.table)
-        cursor = connections[alias].cursor()
-        value_args = []
-
-        field_map = dict()
-        for f in self.table._meta.fields:
-            field_map[f.column] = f
-
-        for f in self.fields:
-            col = field_map[f]
-            if isinstance(col, GeometryField):
-                value_args.append('GeomFromText(%%s, %d)' % col.srid)
-            else:
-                value_args.append('%s')
-
-        sql = "INSERT INTO \"%s\" (%s) VALUES " % (
-            self.table._meta.db_table, ", ".join(self.fields)) + \
-            ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
-        cursor.execute(sql, self.values)
-        transaction.set_dirty(using=alias)
-
-        self.fields = None
-        self.values = []
-        self.count = 0
-
-
-# In the future this class may replace openquake.engine.writer.BulkInserter
-# since it is much more efficient (even hundreds of times for bulky updates)
-# being based on COPY FROM. CacheInserter objects are not thread-safe.
 class CacheInserter(object):
     """
     Bulk insert bunches of Django objects by converting them in strings
@@ -128,13 +49,13 @@ class CacheInserter(object):
             instance.flush()
 
     @classmethod
-    def saveall(cls, objects):
+    def saveall(cls, objects, block_size=1000):
         """
         Save a sequence of Django objects in the database in a single
         transaction, by using a COPY FROM. Returns the ids of the inserted
         objects.
         """
-        self = cls(objects[0].__class__, 1000)
+        self = cls(objects[0].__class__, block_size)
         curs = connections[self.alias].cursor()
         seq = self.tname.replace('"', '') + '_id_seq'
         with transaction.commit_on_success(using=self.alias):
@@ -154,15 +75,30 @@ class CacheInserter(object):
         self.table = dj_model
         self.max_cache_size = max_cache_size
         self.alias = router.db_for_write(dj_model)
-        meta = dj_model._meta
-        self.tname = '"%s"' % meta.db_table
-        meta._fill_fields_cache()
-        self.fields = [f.attname for f in meta._field_name_cache[1:]]
-        # skip the first field, the id
-
+        self.tname = '"%s"' % dj_model._meta.db_table
+        self._fields = {}
         self.nlines = 0
         self.stringio = StringIO()
         self.instances.add(self)
+
+    @property
+    def fields(self):
+        """
+        Returns the field names as introspected from the db, except the
+        id field. The introspection is done only once per table.
+        NB: we cannot trust the ordering in the Django model.
+        """
+        try:
+            return self._fields[self.tname]
+        except KeyError:
+            # introspect the field names from the database
+            # by relying on the DB API 2.0
+            # NB: we cannot trust the ordering in the Django model
+            curs = connections[self.alias].cursor()
+            curs.execute('select * from %s where 1=0' % self.tname)
+            names = self._fields[self.tname] = [
+                r[0] for r in curs.description if r[0] != 'id']
+            return names
 
     def add(self, obj):
         """
@@ -217,7 +153,8 @@ class CacheInserter(object):
                 col = 'SRID=4326;' + col.wkt
             elif isinstance(col, GeometryField):
                 col = col.wkt()
-            elif isinstance(col, list):  # for numeric arrays; this is fragile
+            elif isinstance(col, (tuple, list)):
+                # for numeric arrays; this is fragile
                 col = self.array_to_pgstring(col)
             else:
                 col = unicode(col).encode('utf8')
