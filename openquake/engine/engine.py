@@ -281,48 +281,20 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
 
     # Create job stats, which implicitly records the start time for the job
     _create_job_stats(job)
-    with job_stats(job):
-        # Closing all db connections to make sure they're not shared between
-        # supervisor and job executor processes.
-        # Otherwise, if one of them closes the connection it immediately
-        # becomes unavailable for others.
-        if supervised:
-            django_db.close_connection()
+    # Closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes.
+    # Otherwise, if one of them closes the connection it immediately
+    # becomes unavailable for others.
+    if supervised:
+        django_db.close_connection()
 
-            job_pid = os.fork()
+        job_pid = os.fork()
 
-            if not job_pid:
-                # calculation executor process
-                try:
-                    _job_exec(job, log_level, exports, job_type, calc)
-                except Exception, ex:
-                    logs.LOG.critical("Calculation failed with exception: '%s'"
-                                      % str(ex))
-                    raise
-                finally:
-                    job.is_running = False
-                    job.save()
-                return
-
-            supervisor_pid = os.fork()
-            if not supervisor_pid:
-                # supervisor process
-                logs.set_logger_level(logs.logging.root, log_level)
-                # TODO: deal with KVS garbage collection
-                supervisor.supervise(job_pid, job.id, log_file=log_file)
-                return
-
-            # parent process
-
-            # ignore Ctrl-C as well as supervisor process does. thus only
-            # job executor terminates on SIGINT
-            supervisor.ignore_sigint()
-            # wait till both child processes are done
-            os.waitpid(job_pid, 0)
-            os.waitpid(supervisor_pid, 0)
-        else:
+        if not job_pid:
+            # calculation executor process
             try:
-                _job_exec(job, log_level, exports, job_type, calc)
+                with job_stats(job):
+                    _job_exec(job, log_level, exports, job_type, calc)
             except Exception, ex:
                 logs.LOG.critical("Calculation failed with exception: '%s'"
                                   % str(ex))
@@ -330,9 +302,38 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
             finally:
                 job.is_running = False
                 job.save()
-                # Normally the supervisor process does this, but since we don't
-                # have one in this case, we have to call the cleanup manually.
-                supervisor.cleanup_after_job(job.id)
+            return
+
+        supervisor_pid = os.fork()
+        if not supervisor_pid:
+            # supervisor process
+            logs.set_logger_level(logs.logging.root, log_level)
+            # TODO: deal with KVS garbage collection
+            supervisor.supervise(job_pid, job.id, log_file=log_file)
+            return
+
+        # parent process
+
+        # ignore Ctrl-C as well as supervisor process does. thus only
+        # job executor terminates on SIGINT
+        supervisor.ignore_sigint()
+        # wait till both child processes are done
+        os.waitpid(job_pid, 0)
+        os.waitpid(supervisor_pid, 0)
+    else:
+        try:
+            with job_stats(job):
+                _job_exec(job, log_level, exports, job_type, calc)
+        except Exception, ex:
+            logs.LOG.critical("Calculation failed with exception: '%s'"
+                              % str(ex))
+            raise
+        finally:
+            job.is_running = False
+            job.save()
+            # Normally the supervisor process does this, but since we don't
+            # have one in this case, we have to call the cleanup manually.
+            supervisor.cleanup_after_job(job.id)
 
     # Refresh the job record, in case we are forking and another process has
     # modified the job state.
