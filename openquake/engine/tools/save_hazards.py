@@ -240,12 +240,10 @@ class HazardDumper(object):
         for output_type, output_ids in outputs:
             ids = _tuplestr(output_ids)
             print "Dumping %s %s in %s" % (output_type, ids, self.outdir)
-            if output_type in ['hazard_curve', 'hazard_curve_multi']:
-                self.hazard_curve(ids)
-            elif output_type in ('gmf', 'gmf_scenario'):
-                self.gmf(ids)
-            elif output_type == 'ses':
+            if output_type == 'ses':
                 self.ses(ids)
+            else:
+                log.warn("Unsupported output type %s" % output_type)
         # save FILENAMES.txt
         filenames = os.path.join(
             self.outdir, 'FILENAMES.txt')
