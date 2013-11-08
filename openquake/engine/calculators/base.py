@@ -76,12 +76,6 @@ class Calculator(object):
         """
         raise NotImplementedError()
 
-    def calc_num_tasks(self):
-        """
-        Number of tasks to spawn.
-        Subclasses must implement this.
-        """
-
     def parallelize(self, task_func, task_arg_gen):
         """
         Given a callable and a task arg generator, build an argument list and
