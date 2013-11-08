@@ -325,21 +325,6 @@ class SiteModel(djm.Model):
         db_table = 'hzrdi\".\"site_model'
 
 
-class ParsedRupture(djm.Model):
-    """Stores parsed hazard rupture model in serialized python object
-       tree format."""
-    job = djm.OneToOneField('OqJob')
-    RUPTURE_TYPE_CHOICES = (
-        (u'complex_fault', u'Complex Fault'),
-        (u'simple_fault', u'Simple Fault'),)
-    rupture_type = djm.TextField(choices=RUPTURE_TYPE_CHOICES)
-    nrml = fields.PickleField(help_text="NRML object representing the rupture"
-                                        " model")
-
-    class Meta:
-        db_table = 'hzrdi\".\"parsed_rupture_model'
-
-
 ## Tables in the 'uiapi' schema.
 
 class OqJob(djm.Model):
@@ -420,11 +405,8 @@ class JobStats(djm.Model):
     stop_time = djm.DateTimeField(editable=False)
     # The number of total sites in job
     num_sites = djm.IntegerField(null=True)
-    # The total number of tasks in a job
-    num_tasks = djm.IntegerField(null=True)
-    # The number of logic tree samples
-    # (for hazard jobs of all types except scenario)
-    num_realizations = djm.IntegerField(null=True)
+    # The disk space occupation in bytes
+    disk_space = djm.IntegerField(null=True)
 
     class Meta:
         db_table = 'uiapi\".\"job_stats'
