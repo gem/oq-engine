@@ -311,7 +311,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
             preferred_block_size = int(
                 math.ceil(float(len(sources) * len(all_ses)) /
-                          (self.concurrent_tasks() * 10)))
+                          self.concurrent_tasks()))
             logs.LOG.info('Using block size %d', preferred_block_size)
             for src_ids in block_splitter(sources, preferred_block_size):
                 for ses in all_ses:
