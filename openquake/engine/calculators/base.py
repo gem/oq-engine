@@ -76,12 +76,6 @@ class Calculator(object):
         """
         raise NotImplementedError()
 
-    def calc_num_tasks(self):
-        """
-        Number of tasks to spawn.
-        Subclasses must implement this.
-        """
-
     def record_init_stats(self):
         """
         Record some basic job stats, including the number of sites,
