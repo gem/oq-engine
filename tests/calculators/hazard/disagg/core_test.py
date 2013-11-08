@@ -206,12 +206,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
     def setUp(self):
         self.job, self.calc = self._setup_a_new_calculator()
-        models.JobStats.objects.create(
-            oq_job=self.job,
-            num_sites=0,
-            num_tasks=0,
-            num_realizations=0
-        )
+        models.JobStats.objects.create(oq_job=self.job, num_sites=0)
 
     def _setup_a_new_calculator(self):
         cfg = helpers.get_data_path('disaggregation/job.ini')
@@ -226,12 +221,9 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
             '%s.%s' % (base_path, 'initialize_sources'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
-        record_stats_patch = helpers.patch(
-            '%s.%s' % (base_path, 'record_init_stats'))
         init_pr_data_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_pr_data'))
-        patches = (init_src_patch, init_rlz_patch,
-                   record_stats_patch, init_pr_data_patch)
+        patches = (init_src_patch, init_rlz_patch, init_pr_data_patch)
 
         mocks = [p.start() for p in patches]
 
@@ -250,11 +242,9 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         # Test `pre_execute` to ensure that all stats are properly initialized.
         # Then test the core disaggregation function.
         self.calc.pre_execute()
-
+        engine.save_job_stats(self.job)
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
-        self.assertEqual(2, job_stats.num_realizations)
         self.assertEqual(2, job_stats.num_sites)
-        self.assertEqual(12, job_stats.num_tasks)
 
         self.assertEqual(
             {'hc_computed': 0, 'total': 12, 'hc_total': 8, 'computed': 0,

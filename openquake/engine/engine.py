@@ -21,7 +21,9 @@ import csv
 import getpass
 import os
 import sys
+import time
 import warnings
+from contextlib import contextmanager
 
 import openquake.engine
 
@@ -36,6 +38,7 @@ from openquake.engine.job.validation import validate
 from openquake.engine.supervising import supervisor
 from openquake.engine.utils import monitor, get_calculator_class
 from openquake.engine.writer import CacheInserter
+from openquake.engine.settings import DATABASES
 
 from openquake import hazardlib
 from openquake import risklib
@@ -45,6 +48,41 @@ from openquake import nrmllib
 INPUT_TYPES = dict(models.INPUT_TYPE_CHOICES)
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
+
+
+def save_job_stats(job, disk_space=None):
+    """
+    Save the job_stats for the given job. Can be called only after
+    the site_collection has been initialized.
+    """
+    js = models.JobStats.objects.get(oq_job=job)
+    js.disk_space = disk_space
+
+    if job.risk_calculation:
+        hc = job.risk_calculation.hazard_calculation
+    else:
+        hc = job.hazard_calculation
+    js.num_sites = len(hc.site_collection)
+    js.save()
+
+
+@contextmanager
+def job_stats(job):
+    """
+    A context manager saving information such as the number of sites
+    and the disk space occupation in the job_stats table. The information
+    is saved at the end of the job, even if the job fails.
+    """
+    dbname = DATABASES['default']['NAME']
+    curs = models.getcursor('job_init')
+    curs.execute("select pg_database_size(%s)", (dbname,))
+    dbsize = curs.fetchall()[0][0]
+    try:
+        yield
+    finally:
+        curs.execute("select pg_database_size(%s)", (dbname,))
+        new_dbsize = curs.fetchall()[0][0]
+        save_job_stats(job, new_dbsize - dbsize)
 
 
 def prepare_job(user_name="openquake", log_level='progress'):
@@ -248,11 +286,10 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
 
     # Create job stats, which implicitly records the start time for the job
     _create_job_stats(job)
-
     # Closing all db connections to make sure they're not shared between
     # supervisor and job executor processes.
-    # Otherwise, if one of them closes the connection it immediately becomes
-    # unavailable for others.
+    # Otherwise, if one of them closes the connection it immediately
+    # becomes unavailable for others.
     if supervised:
         django_db.close_connection()
 
@@ -261,7 +298,8 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
         if not job_pid:
             # calculation executor process
             try:
-                _job_exec(job, log_level, exports, job_type, calc)
+                with job_stats(job):
+                    _job_exec(job, log_level, exports, job_type, calc)
             except Exception, ex:
                 logs.LOG.critical("Calculation failed with exception: '%s'"
                                   % str(ex))
@@ -289,7 +327,8 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
         os.waitpid(supervisor_pid, 0)
     else:
         try:
-            _job_exec(job, log_level, exports, job_type, calc)
+            with job_stats(job):
+                _job_exec(job, log_level, exports, job_type, calc)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
                               % str(ex))
@@ -369,7 +408,6 @@ def _do_run_calc(job, exports, calc, job_type):
     :returns:
         The input job object when the calculation completes.
     """
-    # - Run the calculation
     _switch_to_job_phase(job, job_type, "pre_executing")
 
     calc.pre_execute()
@@ -491,16 +529,17 @@ def run_hazard(cfg_file, log_level, log_file, exports):
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
+        t0 = time.time()
         completed_job = run_calc(
             job, log_level, log_file, exports, 'hazard'
         )
+        duration = time.time() - t0
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
-                print 'Calculation %d results:' % (
-                    completed_job.hazard_calculation.id)
-                list_hazard_outputs(completed_job.hazard_calculation.id)
+                print_results(completed_job.hazard_calculation.id,
+                              duration, list_hazard_outputs)
             else:
                 complain_and_exit('Calculation %d failed'
                                   % completed_job.hazard_calculation.id,
@@ -589,6 +628,12 @@ def complain_and_exit(msg, exit_code=0):
     sys.exit(exit_code)
 
 
+def print_results(calc_id, duration, list_outputs):
+    print 'Calculation %d completed in %d seconds. Results:' % (
+        calc_id, duration)
+    list_outputs(calc_id)
+
+
 def print_outputs_summary(outputs):
     """
     List of :class:`openquake.engine.db.models.Output` objects.
@@ -631,16 +676,17 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
 
         # Initialize the supervisor, instantiate the calculator,
         # and run the calculation.
+        t0 = time.time()
         completed_job = run_calc(
             job, log_level, log_file, exports, 'risk'
         )
+        duration = time.time() - t0
         if completed_job is not None:
             # We check for `None` here because the supervisor and executor
             # process forks return to here as well. We want to ignore them.
             if completed_job.status == 'complete':
-                print 'Calculation %d results:' % (
-                    completed_job.risk_calculation.id)
-                list_risk_outputs(completed_job.risk_calculation.id)
+                print_results(completed_job.risk_calculation.id,
+                              duration, list_risk_outputs)
             else:
                 complain_and_exit('Calculation %s failed'
                                   % completed_job.risk_calculation.id,

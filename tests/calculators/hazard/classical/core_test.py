@@ -25,6 +25,7 @@ from nose.plugins.attrib import attr
 from openquake.engine.calculators import base
 from openquake.engine.calculators.hazard.classical import core
 from openquake.engine.db import models
+from openquake.engine.engine import save_job_stats
 from openquake.engine.utils import stats
 from openquake.engine.input import logictree
 from tests.utils import helpers
@@ -54,12 +55,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             '%s.%s' % (base_path, 'initialize_sources'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
-        record_stats_patch = helpers.patch(
-            '%s.%s' % (base_path, 'record_init_stats'))
+
         init_pr_data_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_pr_data'))
-        patches = (init_src_patch, init_rlz_patch,
-                   record_stats_patch, init_pr_data_patch)
+        patches = (init_src_patch, init_rlz_patch, init_pr_data_patch)
 
         mocks = [p.start() for p in patches]
 
@@ -222,12 +221,12 @@ store_site_model'
         hc = self.job.hazard_calculation
 
         self.calc.pre_execute()
+        save_job_stats(self.job)
+
         # Test the job stats:
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
         # num sources * num lt samples / block size (items per task):
-        self.assertEqual(236, job_stats.num_tasks)
         self.assertEqual(120, job_stats.num_sites)
-        self.assertEqual(2, job_stats.num_realizations)
 
         # Check the calculator total/progress counters as well:
         self.assertEqual(0, self.calc.progress['computed'])
