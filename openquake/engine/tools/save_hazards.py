@@ -40,6 +40,7 @@ with all of its outputs, then remove it by using ``bin/openquake
 sufficient permissions). Then run again ``restore_hazards.py``.
 """
 
+import gzip
 import itertools
 import os
 from openquake.engine.db import models
@@ -82,10 +83,10 @@ class Copier(object):
         :param str name: the destination file name
         :param chr mode: 'w' (for COPY TO) or 'r' (for COPY FROM)
         """
-        fname = os.path.join(dest, name)
+        fname = os.path.join(dest, name + ".gz")
         log.info('%s\n(-> %s)', query, fname)
         # here is some trick to avoid storing filename and timestamp info
-        with open(fname, mode) as fileobj:
+        with gzip.GzipFile(fname, mode) as fileobj:
             self._cursor.copy_expert(query, fileobj)
             if fname not in self.filenames:
                 self.filenames.append(fname)
@@ -108,7 +109,7 @@ class HazardDumper(object):
         if os.path.exists(outdir):
             # cleanup previously dumped archives, if any
             for fname in os.listdir(outdir):
-                if fname.endswith('.csv'):
+                if fname.endswith('.csv.gz'):
                     os.remove(os.path.join(outdir, fname))
         else:
             os.mkdir(outdir)
