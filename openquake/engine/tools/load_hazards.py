@@ -60,6 +60,9 @@ def transfer_data(curs, model, **foreign_keys):
 
     conn = curs.connection
 
+    # FIXME(lp). In order to avoid alter the table, we should use a
+    # data modifying CTE. I am not using data modifying CTE as I
+    # consider it a maintenance nightmare at this moment.
     curs.execute(
         "ALTER TABLE %s ADD load_id INT" % model_table(model))
     args = dict(
