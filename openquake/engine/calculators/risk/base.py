@@ -20,7 +20,7 @@
 import collections
 
 from openquake.engine import logs, export
-from openquake.engine.utils import config, stats, tasks
+from openquake.engine.utils import config, stats
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import writers, validation, loaders
@@ -252,13 +252,6 @@ def get_num_items(units):
     # from the first unit. A getter keeps a reference to the list of
     # assets we want to consider
     return len(units[0].getter.assets)
-
-
-def risk_task(task):
-    tsk = tasks.oqtask(task)
-    tsk.ignore_result = False
-    return tsk
-
 
 #: Calculator parameters are used to compute derived outputs like loss
 #: maps, disaggregation plots, quantile/mean curves. See
