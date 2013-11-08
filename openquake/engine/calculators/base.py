@@ -18,9 +18,7 @@
 import kombu
 
 import openquake.engine
-
 from openquake.engine import logs
-from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import config, tasks
 
@@ -100,8 +98,20 @@ class Calculator(object):
             'spawning %d tasks of kind %s', self.num_tasks, self.taskname)
         tasks.parallelize(task_func, arglist, self.log_percent)
 
-    def log_percent(self, dummy):
-        """Log the percentage of tasks completed"""
+    def task_completed(self, task_result):
+        """
+        Method called when a task is completed. It is used to aggregate
+        the partial results of a computation.
+
+        :param task_result: the result of the task (often None)
+
+        To be overridden in subclasses.
+        """
+
+    def log_percent(self, task_result):
+        """Run the method task_completed and log the percentage"""
+        self.task_completed(task_result)
+
         self.tasksdone += 1
         percent = int(float(self.tasksdone) / self.num_tasks * 100)
         if percent > self.percent:
