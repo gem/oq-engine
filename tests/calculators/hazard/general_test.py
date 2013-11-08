@@ -307,12 +307,10 @@ class ParseRiskModelsTestCase(unittest.TestCase):
             '%s.%s' % (base_path, 'initialize_site_model'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
-        record_stats_patch = helpers.patch(
-            '%s.%s' % (base_path, 'record_init_stats'))
         init_pr_data_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_pr_data'))
         patches = (init_src_patch, init_sm_patch, init_rlz_patch,
-                   record_stats_patch, init_pr_data_patch)
+                   init_pr_data_patch)
 
         mocks = [p.start() for p in patches]
 
@@ -405,8 +403,7 @@ class TaskArgGenTestCase(unittest.TestCase):
         expected = [exp + (ltp_mock.return_value,) for exp in expected]
 
         try:
-            actual = list(calc.task_arg_gen(
-                          block_size=2, check_num_task=False))
+            actual = list(calc.task_arg_gen(block_size=2))
             self.assertEqual(expected, actual)
             self.assertEqual(1, pt_src_block_size_mock.call_count)
             self.assertEqual(1, get_rlz_mock.call_count)
