@@ -17,8 +17,6 @@
 """
 Disaggregation calculator core functionality
 """
-
-import math
 import openquake.hazardlib
 import numpy
 
@@ -325,8 +323,6 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         # work is complete.
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
-
-        self.record_init_stats()
 
         # Set the progress counters:
         num_sources = models.SourceProgress.objects.filter(
