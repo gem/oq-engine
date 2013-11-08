@@ -35,10 +35,10 @@ from openquake.engine.db import models
 from openquake.engine import logs, writer
 from openquake.engine.input import logictree
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.calculators.base import signal_task_complete
+from openquake.engine.utils import tasks
 
 
-@base.risk_task
+@tasks.oqtask
 def event_based(job_id, units, containers, params):
     """
     Celery task for the event based risk calculator.
@@ -53,11 +53,11 @@ def event_based(job_id, units, containers, params):
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
+    :returns:
+      A dictionary {loss_type: event_loss_table}
     """
-
-    def profile(name):
-        return EnginePerformanceMonitor(
-            name, job_id, event_based, tracing=True)
+    monitor = EnginePerformanceMonitor(
+        None, job_id, event_based, tracing=True)
 
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
@@ -66,9 +66,11 @@ def event_based(job_id, units, containers, params):
     with db.transaction.commit_on_success(using='reslt_writer'):
         for unit in units:
             event_loss_tables[unit.loss_type] = do_event_based(
-                unit,
-                containers.with_args(loss_type=unit.loss_type),
-                params, profile)
+                unit, containers.with_args(loss_type=unit.loss_type),
+                params, monitor.copy)
+    return event_loss_tables
+
+event_based.ignore_result = False
 
 
 def do_event_based(unit, containers, params, profile):
@@ -314,12 +316,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.hazard_seeds = [rnd.randint(0, models.MAX_SINT_32)
                              for _ in self.rc.hazard_outputs()]
 
-    def task_completed_hook(self, message):
+    def task_completed(self, event_loss_tables):
         """
         Updates the event loss table
         """
         for loss_type in models.loss_types(self.risk_models):
-            task_loss_table = message['event_loss_tables'][loss_type]
+            task_loss_table = event_loss_tables[loss_type]
             self.event_loss_tables[loss_type] += task_loss_table
 
     def post_process(self):

@@ -27,9 +27,10 @@ from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.utils import tasks
 
 
-@base.risk_task
+@tasks.oqtask
 def scenario(job_id, units, containers, _params):
     """
     Celery task for the scenario risk calculator.
@@ -45,8 +46,7 @@ def scenario(job_id, units, containers, _params):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     """
-    def profile(name):
-        return EnginePerformanceMonitor(name, job_id, scenario, tracing=True)
+    monitor = EnginePerformanceMonitor(None, job_id, scenario, tracing=True)
 
     agg = dict()
     insured = dict()
@@ -57,8 +57,10 @@ def scenario(job_id, units, containers, _params):
                 containers.with_args(
                     loss_type=unit.loss_type,
                     output_type="loss_map"),
-                profile)
+                monitor.copy)
     return agg, insured
+
+scenario.ignore_result = False
 
 
 def do_scenario(unit, containers, profile):
