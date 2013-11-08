@@ -27,13 +27,11 @@ from openquake.risklib import workflows
 from openquake.engine.calculators.base import signal_task_complete
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
-from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
-@tasks.oqtask
-@base.count_progress_risk('r')
+@base.risk_tasks
 def scenario(job_id, units, containers, _params):
     """
     Celery task for the scenario risk calculator.

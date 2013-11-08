@@ -32,15 +32,13 @@ from openquake.engine.calculators import post_processing
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
 from openquake.engine.db import models
-from openquake.engine.utils import tasks
 from openquake.engine import logs, writer
 from openquake.engine.input import logictree
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.calculators.base import signal_task_complete
 
 
-@tasks.oqtask
-@base.count_progress_risk('r')
+@base.risk_task
 def event_based(job_id, units, containers, params):
     """
     Celery task for the event based risk calculator.
@@ -71,11 +69,6 @@ def event_based(job_id, units, containers, params):
                 unit,
                 containers.with_args(loss_type=unit.loss_type),
                 params, profile)
-    num_items = base.get_num_items(units)
-    signal_task_complete(job_id=job_id,
-                         num_items=num_items,
-                         event_loss_tables=event_loss_tables)
-event_based.ignore_result = False
 
 
 def do_event_based(unit, containers, params, profile):
