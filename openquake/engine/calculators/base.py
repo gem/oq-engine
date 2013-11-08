@@ -103,7 +103,7 @@ class Calculator(object):
         Method called when a task is completed. It is used to aggregate
         the partial results of a computation.
 
-        :param task_result: the result of the task (often None)
+        :param task_result: the result of the task
 
         To be overridden in subclasses.
         """

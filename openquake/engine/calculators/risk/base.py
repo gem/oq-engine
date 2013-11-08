@@ -240,19 +240,6 @@ class RiskCalculator(base.Calculator):
 
         return risk_models
 
-
-def get_num_items(units):
-    """
-    :param units:
-        a not empty lists of
-        :class:`openquake.engine.calculators.risk.base.CalculationUnit`
-        instances
-    """
-    # Get the getter (an instance of `..hazard_getters.HazardGetter`)
-    # from the first unit. A getter keeps a reference to the list of
-    # assets we want to consider
-    return len(units[0].getter.assets)
-
 #: Calculator parameters are used to compute derived outputs like loss
 #: maps, disaggregation plots, quantile/mean curves. See
 #: :class:`openquake.engine.db.models.RiskCalculation` for a description
