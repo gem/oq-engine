@@ -277,12 +277,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         """
         Wrap superclass' method just to add cleanup.
         """
-        started = datetime.utcnow()
         super(SupervisorLogMessageConsumer, self).run()
-        stopped = datetime.utcnow()
-        self.selflogger.info('%s calc %s finished in %s'
-                             % (self.calc_domain, self.calc_id,
-                                stopped - started))
         self.joblogger.removeHandler(self.jobhandler)
         self.selflogger.debug('Exiting supervisor for %s calc %s'
                               % (self.calc_domain, self.calc_id))
