@@ -242,18 +242,6 @@ class RiskCalculator(base.Calculator):
         return risk_models
 
 
-class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
-    """
-    Extend :class:`openquake.engine.utils.stats.count_progress` to work with
-    celery task where the number of items (i.e. assets) are embedded in
-    calculation units.
-    """
-    def get_task_data(self, job_id, units, *_args):
-        num_items = get_num_items(units)
-
-        return job_id, num_items
-
-
 def get_num_items(units):
     """
     :param units:
@@ -268,14 +256,9 @@ def get_num_items(units):
 
 
 def risk_task(task):
-    @wraps(task)
-    def fn(job_id, units, *args):
-        task(job_id, units, *args)
-        num_items = get_num_items(units)
-        base.signal_task_complete(job_id=job_id, num_items=num_items)
-    fn.ignore_result = False
-
-    return tasks.oqtask(count_progress_risk('r')(fn))
+    tsk = tasks.oqtask(task)
+    tsk.ignore_result = False
+    return tsk
 
 
 #: Calculator parameters are used to compute derived outputs like loss
