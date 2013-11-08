@@ -17,8 +17,6 @@
 """
 Disaggregation calculator core functionality
 """
-
-import math
 import openquake.hazardlib
 import numpy
 
@@ -326,8 +324,6 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
 
-        self.record_init_stats()
-
         # Set the progress counters:
         num_sources = models.SourceProgress.objects.filter(
             is_complete=False,
@@ -341,14 +337,6 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         num_points = len(self.hc.points_to_compute())
         self.progress['total'] += num_rlzs * num_points
 
-        # Update stats to consider the disagg tasks as well:
-        [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
-        block_size = self.block_size()
-        job_stats.num_tasks += int(
-            math.ceil(float(num_points) * num_rlzs / block_size)
-        )
-        job_stats.save()
-
         # Update the progress info on the realizations, to include the disagg
         # phase:
         for rlz in realizations:
@@ -358,8 +346,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         self.initialize_pr_data()
 
     def task_arg_gen(self, block_size):
-        arg_gen = super(DisaggHazardCalculator, self).task_arg_gen(
-            block_size, check_num_task=False)
+        arg_gen = super(DisaggHazardCalculator, self).task_arg_gen(block_size)
         for args in arg_gen:
             yield args + ('hazard_curve', )
 

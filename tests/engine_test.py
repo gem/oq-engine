@@ -584,6 +584,7 @@ class RunCalcTestCase(unittest.TestCase):
                 return self.job.id == other.job.id
 
         mocks = dict(
+            save_job_stats='openquake.engine.engine.save_job_stats',
             get_calc='openquake.engine.engine.get_calculator_class',
             job_stats='openquake.engine.engine._create_job_stats',
             job_exec='openquake.engine.engine._job_exec',
@@ -642,6 +643,8 @@ class RunCalcTestCase(unittest.TestCase):
 
             engine.run_calc(self.job, 'debug', 'oq.log', ['geojson'], 'hazard',
                             supervised=False)
+
+        self.assertEqual(1, mm['save_job_stats'].call_count)
 
         # Check the intermediate function calls and the flow of data:
         self.assertEqual(1, mm['get_calc'].call_count)
