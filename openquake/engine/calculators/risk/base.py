@@ -17,7 +17,6 @@
 
 """Base RiskCalculator class."""
 
-from functools import wraps
 import collections
 
 from openquake.engine import logs, export
