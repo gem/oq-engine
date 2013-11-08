@@ -95,19 +95,6 @@ CREATE TABLE hzrdi.parsed_source (
 ) TABLESPACE hzrdi_ts;
 
 
--- Parsed Rupture models
-CREATE TABLE hzrdi.parsed_rupture_model (
-    id SERIAL PRIMARY KEY,
-    job_id INTEGER NOT NULL,
-    rupture_type VARCHAR NOT NULL
-        CONSTRAINT enforce_rupture_type CHECK
-        (rupture_type IN ('complex_fault', 'simple_fault')),
-    nrml BYTEA NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE hzrdi_ts;
-
-
 -- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
@@ -156,10 +143,8 @@ CREATE TABLE uiapi.job_stats (
     stop_time timestamp without time zone,
     -- The number of total sites in the calculation
     num_sites INTEGER,
-    -- The number of tasks in a job
-    num_tasks INTEGER,
-    -- The number of logic tree samples
-    num_realizations INTEGER
+    disk_space BIGINT
+    -- The disk space occupation in bytes
 ) TABLESPACE uiapi_ts;
 
 

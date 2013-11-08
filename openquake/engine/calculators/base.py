@@ -13,10 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """Base code for calculator classes."""
-
-import math
 
 import kombu
 
@@ -25,7 +22,7 @@ import openquake.engine
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
-from openquake.engine.utils import config, tasks, general
+from openquake.engine.utils import config, tasks
 
 # Routing key format string for communication between tasks and the control
 # node.
@@ -79,41 +76,11 @@ class Calculator(object):
         """
         raise NotImplementedError()
 
-    def calc_num_tasks(self):
-        """
-        Number of tasks to spawn.
-        Subclasses must implement this.
-        """
-
-    # NB: there is an issue here, because a single calculation can run
-    # two bunches of parallel tasks: one in the execute phase and one
-    # in the post-processing phase; however the job_stats table has
-    # room only for a single num_tasks column;
-    # see https://bugs.launchpad.net/oq-engine/+bug/1239529
-    def record_init_stats(self, num_tasks=None):
-        """
-        Record some basic job stats, including the number of sites,
-        realizations (end branches), and total number of tasks for the job.
-
-        This should be run between the `pre-execute` and `execute` phases, once
-        the job has been fully initialized.
-        """
-        # Record num sites, num realizations, and num tasks.
-        num_sites = len(self.hc.points_to_compute())
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc.id)
-        num_rlzs = realizations.count()
-
-        [job_stats] = models.JobStats.objects.filter(oq_job=self.job.id)
-        job_stats.num_sites = num_sites
-        job_stats.num_tasks = num_tasks or self.calc_num_tasks()
-        job_stats.num_realizations = num_rlzs
-        job_stats.save()
-
     def parallelize(self, task_func, task_arg_gen):
         """
         Given a callable and a task arg generator, build an argument list and
-        apply the callable to the arguments in parallel. The order is not preserved.
+        apply the callable to the arguments in parallel. The order is not
+        preserved.
 
         Every time a task completes the method .log_percent() is called
         and a progress message is displayed if the percentage has changed.
