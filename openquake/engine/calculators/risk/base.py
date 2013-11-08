@@ -66,7 +66,7 @@ class RiskCalculator(base.Calculator):
                 (self.rc.preloaded_exposure_model or loaders.exposure(
                     self.job,
                     self.rc.inputs['exposure'])).taxonomies_in(
-                        self.rc.region_constraint))
+                    self.rc.region_constraint))
 
         with logs.tracing('parse risk models'):
             self.risk_models = self.get_risk_models()
@@ -214,10 +214,6 @@ class RiskCalculator(base.Calculator):
         stats.pk_set(self.job.id, "lvr", 0)
         stats.pk_set(self.job.id, "nrisk_total", total)
         stats.pk_set(self.job.id, "nrisk_done", 0)
-
-        job_stats = models.JobStats.objects.get(oq_job=self.job)
-        job_stats.num_sites = total
-        job_stats.save()
 
     def get_risk_models(self, retrofitted=False):
         """
