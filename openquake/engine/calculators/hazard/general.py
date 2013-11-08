@@ -772,44 +772,6 @@ class BaseHazardCalculator(base.Calculator):
         """
         return hazard_export.export(output_id, export_dir, export_type)
 
-    def calc_num_tasks(self):
-        """
-        The number of tasks is inferred from the number of sources
-        per realization by using the formula::
-
-                     N * n   N * n0
-         num_tasks = ----- + ------
-                       b       b0
-
-        where:
-
-          N is the number of realizations
-          n is the number of complex source
-          n0 is the number of point sources
-          b is the the block_size
-          b0 is the the point_source_block_size
-
-        The divisions are intended rounded to the closest upper integer
-        (ceil).
-        """
-        num_tasks = 0
-        block_size = self.block_size()
-        point_source_block_size = self.point_source_block_size()
-        total_sources = 0
-        for lt_rlz in self._get_realizations():
-            n = len(self._get_source_ids(lt_rlz))
-            n0 = len(self._get_point_source_ids(lt_rlz))
-            logs.LOG.debug('complex sources: %s, point sources: %d', n, n0)
-            total_sources += n + n0
-            ntasks = math.ceil(float(n) / block_size)
-            ntasks0 = math.ceil(float(n0) / point_source_block_size)
-            logs.LOG.debug(
-                'complex sources tasks: %s, point sources tasks: %d',
-                ntasks, ntasks0)
-            num_tasks += ntasks + ntasks0
-        logs.LOG.info('Total number of sources: %d', total_sources)
-        return int(num_tasks)
-
     @EnginePerformanceMonitor.monitor
     def do_aggregate_post_proc(self):
         """
