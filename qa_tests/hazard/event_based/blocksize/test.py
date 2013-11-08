@@ -85,6 +85,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=00
             open('/tmp/64-exp.txt', 'w').write(self.expected_gmfs)
         self.assertEqual(gmfs_64, self.expected_gmfs)
 
+    @attr('qa', 'hazard', 'event_based')
     def test_32(self):
         tags_32, gmfs_32 = self.run_with_concurrent_tasks(32)
         self.assertEqual(tags_32, self.expected_tags)
