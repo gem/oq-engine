@@ -19,6 +19,7 @@ table which maps the old id to the new one. Such table is used in the
 SELECT at step 3 to insert the proper foreign key values
 """
 
+import gzip
 import logging
 import os
 
@@ -127,7 +128,7 @@ def safe_load(curs, filename, original_tablename):
         curs.copy_expert(
             """COPY %s FROM stdin
                WITH (FORMAT 'csv', HEADER true, ENCODING 'utf8')""" % (
-                       tablename), file(os.path.abspath(filename)))
+                       tablename), gzip.GzipFile(os.path.abspath(filename)))
     except Exception as e:
         conn.rollback()
         log.error(str(e))
@@ -149,7 +150,7 @@ def hazard_load(conn, directory):
     created = []
     for line in open(filenames):
         fname = line.rstrip()
-        tname = fname[:-4]  # strip .csv
+        tname = fname[:-7]  # strip .csv.gz
 
         fullname = os.path.join(directory, fname)
         log.info('Importing %s...', fname)
