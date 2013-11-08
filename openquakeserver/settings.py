@@ -22,6 +22,15 @@ DATABASES['default'] = {
     'PORT': '',
 }
 
+DATABASES['platform'] = {
+    'ENGINE': 'django.contrib.gis.db.backends.postgis',
+    'HOST': 'localhost',
+    'NAME': "oqplatform",
+    'USER': 'oqplatform',
+    'PASSWORD': 'openquake',
+    'PORT': 5432
+}
+
 DATABASE_ROUTERS = [
     'openquakeserver.routers.DefaultRouter',
     'openquake.engine.db.routers.OQRouter',
@@ -158,13 +167,13 @@ LOGGING = {
     },
     'loggers': {
         'django.request': {
-            'handlers': ['mail_admins'],
+            'handlers': ['mail_admins', 'console'],
             'level': 'ERROR',
             'propagate': True,
         },
         'openquakeserver': {
             'handlers': ['console'],
-            'level': 'ERROR',
+            'level': 'DEBUG',
             'propagate': True,
         },
     },
