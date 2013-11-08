@@ -40,6 +40,7 @@ with all of its outputs, then remove it by using ``bin/openquake
 sufficient permissions). Then run again ``restore_hazards.py``.
 """
 
+import itertools
 import os
 from openquake.engine.db import models
 import logging
@@ -120,32 +121,22 @@ class HazardDumper(object):
                with (format 'csv', header true, encoding 'utf8')""" % query,
             self.outdir, filename, mode)
 
-    def hazard_calculation(self, ids):
-        """Dump hazard_calculation, lt_realization, hazard_site"""
+    def hazard_calculation(self, hc_id, job_id):
+        """Dump hazard_calculation, oqjob, lt_realization, hazard_site"""
         self._copy(
-            "select * from uiapi.hazard_calculation where id in %s" % ids,
+            "select * from uiapi.hazard_calculation where id = %s" % hc_id,
             'uiapi.hazard_calculation.csv')
         self._copy(
+            """select * from uiapi.oq_job where id = %s""" % job_id,
+            'uiapi.oq_job.csv')
+        self._copy(
             """select * from hzrdr.lt_realization
-               where hazard_calculation_id in %s""" % ids,
+               where hazard_calculation_id = %s""" % hc_id,
             'hzrdr.lt_realization.csv')
         self._copy(
             """select * from hzrdi.hazard_site
-               where hazard_calculation_id in %s""" % ids,
+               where hazard_calculation_id = %s""" % hc_id,
                'hzrdi.hazard_site.csv')
-
-    def oq_job(self, ids):
-        """Dump hazard_calculation, oq_job"""
-        hc_ids = self.curs.tuplestr(
-            'select hazard_calculation_id from uiapi.oq_job where id in %s'
-            % ids)
-        if 'None' in hc_ids:
-            raise TypeError('Job %s is not associated to a hazard calculation!'
-                            % ids)
-        self.hazard_calculation(hc_ids)
-        self._copy(
-            """select * from uiapi.oq_job where id in %s""" % ids,
-            'uiapi.oq_job.csv')
 
     def output(self, ids):
         """Dump output"""
@@ -201,27 +192,18 @@ class HazardDumper(object):
             """select * from hzrdr.ses_rupture where ses_id in %s""" % ses_ids,
             'hzrdr.ses_rupture.csv', 'a')
 
-    def dump(self, *hazard_calculation_ids):
+    def dump(self, hazard_calculation_id):
         """
         Dump all the data associated to a given hazard_calculation_id
         and relevant for risk.
         """
-        ids = _tuplestr(hazard_calculation_ids)
-        curs = self.curs
+        hc = models.HazardCalculation.objects.get(pk=hazard_calculation_id)
 
-        # retrieve the last job associated to the given calculation
-        jobs = curs.tuplestr(
-            'select max(id) from uiapi.oq_job '
-            'where hazard_calculation_id in %s' % ids)
+        outputs = hc.oqjob.output_set.all().values_list('output_type', 'id')
 
-        outputs = curs.fetchall("""\
-        select output_type, array_agg(id) from uiapi.output
-        where oq_job_id in %s group by output_type
-        having output_type in ('hazard_curve', 'hazard_curve_multi',
-                               'ses', 'gmf', 'gmf_scenario')
-           """ % jobs)
         if not outputs:
-            raise RuntimeError('No outputs for job %s' % jobs)
+            raise RuntimeError(
+                'No outputs for hazard calculation %s' % hazard_calculation_id)
 
         # sort the outputs to prevent foreign key errors
         ordering = {
@@ -234,10 +216,12 @@ class HazardDumper(object):
         outputs = sorted(outputs, key=lambda o: ordering[o[0]])
 
         # dump data and collect generated filenames
-        self.oq_job(jobs)
-        all_outs = sum([output_ids for output_type, output_ids in outputs], [])
+        self.hazard_calculation(hc.id, hc.oqjob.id)
+        all_outs = [output_id for _output_type, output_id in outputs]
         self.output(_tuplestr(all_outs))
-        for output_type, output_ids in outputs:
+
+        for output_type, output_group in itertools.groupby(outputs, lambda x: x[0]):
+            output_ids = [output_id for output_type, output_id in output_group]
             ids = _tuplestr(output_ids)
             print "Dumping %s %s in %s" % (output_type, ids, self.outdir)
             if output_type == 'ses':
