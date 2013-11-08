@@ -256,6 +256,11 @@ def main(hazard_calculation_id, outdir=None):
     Dump a hazard_calculation and its relative outputs
     """
     logging.basicConfig(level=logging.WARN)
+
+    assert models.HazardCalculation.objects.filter(
+        pk=hazard_calculation_id).exists(), ("The provided hazard calculation "
+                                             "does not exist")
+
     hc = HazardDumper(models.getcursor('admin').connection, outdir)
     hc.dump(hazard_calculation_id)
     log.info('Written %s' % hc.outdir)
