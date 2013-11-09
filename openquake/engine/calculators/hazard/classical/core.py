@@ -37,18 +37,8 @@ def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     """
     A celery task wrapper function around :func:`compute_hazard_curves`.
     See :func:`compute_hazard_curves` for parameter definitions.
-
-    :param ltp:
-        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
-    logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
-                   % (job_id, lt_rlz_id))
-
     compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp)
-    # Last thing, signal back the control node to indicate the completion of
-    # task. The control node needs this to manage the task distribution and
-    # keep track of progress.
-    logs.LOG.debug('< task complete, signalling completion')
 hazard_curves.ignore_result = False
 
 
