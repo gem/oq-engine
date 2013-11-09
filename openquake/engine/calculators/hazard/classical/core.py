@@ -24,7 +24,6 @@ import openquake.hazardlib.imt
 from django.db import transaction
 
 from openquake.engine import logs
-from openquake.engine.calculators import base
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
@@ -38,19 +37,8 @@ def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     """
     A celery task wrapper function around :func:`compute_hazard_curves`.
     See :func:`compute_hazard_curves` for parameter definitions.
-
-    :param ltp:
-        a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
-    logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
-                   % (job_id, lt_rlz_id))
-
     compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp)
-    # Last thing, signal back the control node to indicate the completion of
-    # task. The control node needs this to manage the task distribution and
-    # keep track of progress.
-    logs.LOG.debug('< task complete, signalling completion')
-    base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 hazard_curves.ignore_result = False
 
 
@@ -106,12 +94,12 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     if hc.maximum_distance:
         dist = hc.maximum_distance
         # NB: a better approach could be to filter the sources by distance
-        # at the beginning and to sore into the database only the relevant
+        # at the beginning and to store into the database only the relevant
         # sources, as we do in the event based calculator: I am not doing that
-        # for the classical calculators because I wonder about the performance
+        # for the classical calculator because I wonder about the performance
         # impact in in SHARE-like calculations. So at the moment we store
         # everything in the database and we filter on the workers. This
-        # will probably change in the future.
+        # will probably change in the future (MS).
         calc_kwargs['source_site_filter'] = (
             openquake.hazardlib.calc.filters.source_site_distance_filter(dist))
         calc_kwargs['rupture_site_filter'] = (
