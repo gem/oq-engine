@@ -52,7 +52,7 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 
 def save_job_stats(job, disk_space=None):
     """
-    Save the job_stats for the given job. Can be called only after
+    Save the job_stats for the given job. Should be called only after
     the site_collection has been initialized.
     """
     js = models.JobStats.objects.get(oq_job=job)
@@ -62,7 +62,7 @@ def save_job_stats(job, disk_space=None):
         hc = job.risk_calculation.hazard_calculation
     else:
         hc = job.hazard_calculation
-    js.num_sites = len(hc.site_collection)
+    js.num_sites = len(hc.site_collection) if hc.site_collection else None
     js.save()
 
 

@@ -320,6 +320,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         Updates the event loss table
         """
+        self.log_percent(event_loss_tables)
         for loss_type in models.loss_types(self.risk_models):
             task_loss_table = event_loss_tables[loss_type]
             self.event_loss_tables[loss_type] += task_loss_table

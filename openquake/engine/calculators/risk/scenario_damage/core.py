@@ -118,7 +118,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
         # let's define a dictionary taxonomy -> fractions
-        # updated in task_completed_hook when the fractions per taxonomy
+        # updated in task_completed method when the fractions per taxonomy
         # becomes available, as computed by the workers
         self.ddpt = {}
         self.damage_state_ids = None
@@ -153,6 +153,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         :param task_result:
             A pair (fractions, taxonomy)
         """
+        self.log_percent(task_result)
         fractions, taxonomy = task_result
 
         if fractions is not None:
