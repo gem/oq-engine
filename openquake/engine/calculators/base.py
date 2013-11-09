@@ -80,8 +80,8 @@ class Calculator(object):
         apply the callable to the arguments in parallel. The order is not
         preserved.
 
-        Every time a task completes the method .log_percent() is called
-        and a progress message is displayed if the percentage has changed.
+        Every time a task completes the method .task_completed() is called
+        which by default simply display the progress percentage.
 
         :param task_func: a `celery` task callable
         :param task_args: an iterable over positional arguments
@@ -96,22 +96,20 @@ class Calculator(object):
         self.percent = 0.0
         logs.LOG.progress(
             'spawning %d tasks of kind %s', self.num_tasks, self.taskname)
-        tasks.parallelize(task_func, arglist, self.log_percent)
+        tasks.parallelize(task_func, arglist, self.task_completed)
 
     def task_completed(self, task_result):
         """
-        Method called when a task is completed. It is used to aggregate
-        the partial results of a computation.
+        Method called when a task is completed. It can be overridden
+        to aggregate the partial results of a computation. By default
+        it just calls the method .log_percent.
 
         :param task_result: the result of the task
-
-        To be overridden in subclasses.
         """
+        self.log_percent(task_result)
 
     def log_percent(self, task_result):
-        """Run the method task_completed and log the percentage"""
-        self.task_completed(task_result)
-
+        """Log the progress percentage"""
         self.tasksdone += 1
         percent = int(float(self.tasksdone) / self.num_tasks * 100)
         if percent > self.percent:
