@@ -88,13 +88,6 @@ class RiskCalculator(base.Calculator):
                 raise ValueError("""Problems in calculator configuration:
                                  %s""" % error)
 
-    def execute(self):
-        """
-        Use the parallelize mechanism
-        """
-        self.parallelize(self.core_calc_task,
-                         self.task_arg_gen(self.block_size()))
-
     def block_size(self):
         """
         Number of assets handled per task.
