@@ -117,6 +117,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.rnd.seed(self.rc.master_seed)
 
     def task_completed(self, task_result):
+        self.log_percent(task_result)
         aggregate_losses_dict, insured_losses_dict = task_result
 
         for loss_type in models.loss_types(self.risk_models):

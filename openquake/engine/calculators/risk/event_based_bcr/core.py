@@ -140,6 +140,7 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         """
         No need to update event loss tables in the BCR calculator
         """
+        self.log_percent(event_loss_tables)
 
     def pre_execute(self):
         """
