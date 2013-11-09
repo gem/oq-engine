@@ -32,11 +32,9 @@ from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine import logs
-from openquake.engine.calculators.base import signal_task_complete
 
 
 @tasks.oqtask
-@base.count_progress_risk('r')
 def scenario_damage(job_id, units, containers, params):
     """
     Celery task for the scenario damage risk calculator.
@@ -50,24 +48,21 @@ def scenario_damage(job_id, units, containers, params):
     :param params:
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
+   :returns:
+      A matrix of fractions and a taxonomy string
     """
-    def profile(name):
-        return EnginePerformanceMonitor(
-            name, job_id, scenario_damage, tracing=True)
+    monitor = EnginePerformanceMonitor(
+        None, job_id, scenario_damage, tracing=True)
 
     # in scenario damage calculation we have only ONE calculation unit
-    unit = units[0]
+    [unit] = units
 
     # and NO containes
     assert len(containers) == 0
 
     with db.transaction.commit_on_success(using='reslt_writer'):
-        fractions, taxonomy = do_scenario_damage(unit, params, profile)
+        return do_scenario_damage(unit, params, monitor.copy)
 
-    num_items = base.get_num_items(units)
-    signal_task_complete(
-        job_id=job_id, num_items=num_items,
-        fractions=fractions, taxonomy=taxonomy)
 scenario_damage.ignore_result = False
 
 
@@ -123,7 +118,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
         # let's define a dictionary taxonomy -> fractions
-        # updated in task_completed_hook when the fractions per taxonomy
+        # updated in task_completed method when the fractions per taxonomy
         # becomes available, as computed by the workers
         self.ddpt = {}
         self.damage_state_ids = None
@@ -149,17 +144,17 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                 model.imt))
         return ret
 
-    def task_completed_hook(self, message):
+    def task_completed(self, task_result):
         """
         Update the dictionary self.ddpt, i.e. aggregate the damage distribution
         by taxonomy; called every time a block of assets is computed for each
-        taxonomy. Fractions and taxonomy are extracted from the message.
+        taxonomy. Fractions and taxonomy are extracted from task_result
 
-        :param dict message:
-            The message sent by the worker
+        :param task_result:
+            A pair (fractions, taxonomy)
         """
-        taxonomy = message['taxonomy']
-        fractions = message.get('fractions')
+        self.log_percent(task_result)
+        fractions, taxonomy = task_result
 
         if fractions is not None:
             if taxonomy not in self.ddpt:
