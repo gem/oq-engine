@@ -59,7 +59,6 @@ def event_based_bcr(job_id, units, containers, _params):
                 unit,
                 containers.with_args(loss_type=unit.loss_type),
                 monitor.copy)
-event_based_bcr.ignore_result = False
 
 
 def do_event_based_bcr(unit, containers, profile):

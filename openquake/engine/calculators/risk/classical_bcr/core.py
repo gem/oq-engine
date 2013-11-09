@@ -57,7 +57,6 @@ def classical_bcr(job_id, units, containers, _params):
             do_classical_bcr(
                 unit,
                 containers.with_args(loss_type=unit.loss_type), monitor.copy)
-classical_bcr.ignore_result = False
 
 
 def do_classical_bcr(unit, containers, profile):

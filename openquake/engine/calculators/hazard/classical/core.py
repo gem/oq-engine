@@ -49,7 +49,6 @@ def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
-hazard_curves.ignore_result = False
 
 
 # Silencing 'Too many local variables'
@@ -244,13 +243,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         self.progress['total'] = num_sources
 
         self.initialize_pr_data()
-
-    def execute(self):
-        """
-        Run hazard_curves in parallel.
-        """
-        self.parallelize(
-            self.core_calc_task, self.task_arg_gen(self.block_size()))
 
     def post_execute(self):
         """
