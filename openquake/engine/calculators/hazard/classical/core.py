@@ -21,8 +21,6 @@ import openquake.hazardlib
 import openquake.hazardlib.calc
 import openquake.hazardlib.imt
 
-from django.db import transaction
-
 from openquake.engine import logs
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
@@ -30,6 +28,10 @@ from openquake.engine.calculators.hazard.classical import (
 from openquake.engine.db import models
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.performance import EnginePerformanceMonitor
+
+# the following import must go after from openquake.engine.db import models
+# so that the variable DJANGO_SETTINGS_MODULE is properly set
+from django.db import transaction
 
 
 @utils_tasks.oqtask
