@@ -70,8 +70,6 @@ def event_based(job_id, units, containers, params):
                 params, monitor.copy)
     return event_loss_tables
 
-event_based.ignore_result = False
-
 
 def do_event_based(unit, containers, params, profile):
     """

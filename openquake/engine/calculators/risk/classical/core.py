@@ -56,7 +56,6 @@ def classical(job_id, units, containers, params):
                 containers.with_args(loss_type=unit.loss_type),
                 params,
                 monitor.copy)
-classical.ignore_result = False
 
 
 def do_classical(unit, containers, params, profile):

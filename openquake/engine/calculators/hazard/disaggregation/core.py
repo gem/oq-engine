@@ -40,7 +40,6 @@ def compute_hazard_curves_task(job_id, src_ids, lt_rlz_id, ltp):
     `openquake.engine.calculators.hazard.classical.core.compute_hazard_curves`.
     """
     core.compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp)
-compute_hazard_curves_task.ignore_result = False
 
 
 @utils_tasks.oqtask
@@ -50,7 +49,6 @@ def disagg_task(job_id, sites, lt_rlz_id, ltp):
     `openquake.engine.calculators.hazard.disaggregation.core.compute_disagg`.
     """
     compute_disagg(job_id, sites, lt_rlz_id, ltp)
-disagg_task.ignore_result = False
 
 
 def compute_disagg(job_id, sites, lt_rlz_id, ltp):
@@ -306,10 +304,6 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
                 yield self.job.id, sites, lt_rlz.id, ltp
-
-    def execute(self):
-        self.parallelize(self.core_calc_task,
-                         self.task_arg_gen(self.block_size()))
 
     def post_execute(self):
         """

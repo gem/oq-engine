@@ -60,8 +60,6 @@ def scenario(job_id, units, containers, _params):
                 monitor.copy)
     return agg, insured
 
-scenario.ignore_result = False
-
 
 def do_scenario(unit, containers, profile):
     """
