@@ -66,11 +66,6 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     transaction, to prevent race conditions) in the
     `htemp.hazard_curve_progress` table.
 
-    Once all of this work is complete, a signal will be sent via AMQP to let
-    the control node know that the work is complete. (If there is any work left
-    to be dispatched, this signal will indicate to the control node that more
-    work can be enqueued.)
-
     :param int job_id:
         ID of the currently running job.
     :param src_ids:
