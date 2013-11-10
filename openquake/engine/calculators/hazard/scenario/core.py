@@ -28,8 +28,7 @@ from openquake.hazardlib.calc import ground_motion_fields
 import openquake.hazardlib.gsim
 
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.calculators import base
-from openquake.engine.utils import tasks, stats
+from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
@@ -43,7 +42,6 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
 @tasks.oqtask
-@stats.count_progress('h')
 def gmfs(job_id, sites, rupture, gmf_id, task_seed, realizations):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
@@ -51,7 +49,6 @@ def gmfs(job_id, sites, rupture, gmf_id, task_seed, realizations):
     """
     numpy.random.seed(task_seed)
     compute_gmfs(job_id, sites, rupture, gmf_id, realizations)
-    base.signal_task_complete(job_id=job_id, num_items=len(sites))
 
 
 def compute_gmfs(job_id, sites, rupture, gmf_id, realizations):
