@@ -399,6 +399,7 @@ _pkgtest_innervm_run () {
         # run all of the hazard and risk demos
         ssh $lxc_ip "set -e ; cd demos
         for ini in \$(find ./hazard -name job.ini); do
+            echo \"Running \$ini\"
             openquake --run-hazard  \$ini --exports xml
         done
 
