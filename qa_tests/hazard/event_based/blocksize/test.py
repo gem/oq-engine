@@ -17,13 +17,16 @@ import os
 from nose.plugins.attrib import attr
 from qa_tests import _utils as qa_utils
 from openquake.engine.db import models
-
 from openquake.engine.calculators.hazard.event_based.core import \
     EventBasedHazardCalculator
 
 
-# test independence from the parameter concurrent_tasks
-# it is using a source model with 398 sources and a single SES
+# here we are using a source model with 398 sources and a single SES
+# but due to the distance filtering only 7 sources are relevant
+# we test the independence from the parameter concurrent_tasks, which
+# determines the preferred_block_size = ceil(num_sources/concurrent_tasks)
+# with 8 concurrent tasks the preferred_block_size is 1;
+# with 4 concurrent tasks the preferred_block_size is 2;
 class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     DEBUG = False
     # if the test fails and you want to debug it, set this flag:
@@ -31,68 +34,41 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # to see the problem
     expected_tags = [
         'rlz=00|ses=0001|src=1|i=000',
-        'rlz=00|ses=0001|src=1|i=001',
-        'rlz=00|ses=0001|src=1|i=002',
-        'rlz=00|ses=0001|src=1|i=003',
-        'rlz=00|ses=0001|src=1|i=004',
-        'rlz=00|ses=0001|src=1|i=005',
-        'rlz=00|ses=0001|src=1|i=006',
         'rlz=00|ses=0001|src=2|i=000',
-        'rlz=00|ses=0001|src=2|i=001',
-        'rlz=00|ses=0001|src=2|i=002',
-        'rlz=00|ses=0001|src=2|i=003',
-        'rlz=00|ses=0001|src=2|i=004',
-        'rlz=00|ses=0001|src=2|i=005',
-        'rlz=00|ses=0001|src=2|i=006',
-        'rlz=00|ses=0001|src=2|i=007',
-        'rlz=00|ses=0001|src=2|i=008',
-        'rlz=00|ses=0001|src=2|i=009',
-        'rlz=00|ses=0001|src=2|i=010',
-        'rlz=00|ses=0001|src=2|i=011',
-        'rlz=00|ses=0001|src=2|i=012',
-        'rlz=00|ses=0001|src=2|i=013',
-        'rlz=00|ses=0001|src=2|i=014',
-        'rlz=00|ses=0001|src=2|i=015',
-        'rlz=00|ses=0001|src=2|i=016',
-        'rlz=00|ses=0001|src=2|i=017',
-        'rlz=00|ses=0001|src=2|i=018',
-        'rlz=00|ses=0001|src=2|i=019',
+        'rlz=00|ses=0001|src=398|i=000',
+        'rlz=00|ses=0001|src=398|i=001',
+        'rlz=00|ses=0001|src=398|i=002',
+        'rlz=00|ses=0001|src=3|i=000'
     ]
     expected_gmfs = '''\
-GMFsPerSES(investigation_time=50.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=002
-<X=131.00000, Y= 40.00000, GMV=0.0038241>
-<X=131.00000, Y= 40.10000, GMV=0.0057085>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=003
-<X=131.00000, Y= 40.00000, GMV=0.0064609>
-<X=131.00000, Y= 40.10000, GMV=0.0252534>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=004
-<X=131.00000, Y= 40.00000, GMV=0.0088918>
-<X=131.00000, Y= 40.10000, GMV=0.0082802>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=005
-<X=131.00000, Y= 40.00000, GMV=0.0096766>
-<X=131.00000, Y= 40.10000, GMV=0.0054453>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=006
-<X=131.00000, Y= 40.00000, GMV=0.0044107>
-<X=131.00000, Y= 40.10000, GMV=0.0009798>))'''
+GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=000
+<X=131.00000, Y= 40.00000, GMV=0.0131284>
+<X=131.00000, Y= 40.10000, GMV=0.0096460>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=2|i=000
+<X=131.00000, Y= 40.00000, GMV=0.0002624>
+<X=131.00000, Y= 40.10000, GMV=0.0003190>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=3|i=000
+<X=131.00000, Y= 40.00000, GMV=0.0004269>
+<X=131.00000, Y= 40.10000, GMV=0.0002599>))'''
 
     @attr('qa', 'hazard', 'event_based')
-    def test_64(self):
-        tags_64, gmfs_64 = self.run_with_concurrent_tasks(64)
-        self.assertEqual(tags_64, self.expected_tags)
+    def test_8(self):
+        tags_8, gmfs_8 = self.run_with_concurrent_tasks(8)
+        self.assertEqual(tags_8, self.expected_tags)
         if self.DEBUG:  # write the output on /tmp so you can diff it
-            open('/tmp/64-got.txt', 'w').write(gmfs_64)
-            open('/tmp/64-exp.txt', 'w').write(self.expected_gmfs)
-        self.assertEqual(gmfs_64, self.expected_gmfs)
+            open('/tmp/8-got.txt', 'w').write(gmfs_8)
+            open('/tmp/8-exp.txt', 'w').write(self.expected_gmfs)
+        self.assertEqual(gmfs_8, self.expected_gmfs)
 
     @attr('qa', 'hazard', 'event_based')
-    def test_32(self):
-        tags_32, gmfs_32 = self.run_with_concurrent_tasks(32)
-        self.assertEqual(tags_32, self.expected_tags)
+    def test_4(self):
+        tags_4, gmfs_4 = self.run_with_concurrent_tasks(4)
+        self.assertEqual(tags_4, self.expected_tags)
         if self.DEBUG:  # write the output on /tmp so you can diff it
-            open('/tmp/32-got.txt', 'w').write(gmfs_32)
-            open('/tmp/32-exp.txt', 'w').write(self.expected_gmfs)
-        self.assertEqual(gmfs_32, self.expected_gmfs)
+            open('/tmp/4-got.txt', 'w').write(gmfs_4)
+            open('/tmp/4-exp.txt', 'w').write(self.expected_gmfs)
+        self.assertEqual(gmfs_4, self.expected_gmfs)
 
     def run_with_concurrent_tasks(self, n):
         orig = EventBasedHazardCalculator.concurrent_tasks.im_func
