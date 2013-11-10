@@ -52,7 +52,7 @@ def _db_cfg(db_name):
         USER=DB_SECTION.get('%s_user' % db_name, 'openquake'),
         PASSWORD=DB_SECTION.get('%s_password' % db_name, ''),
         HOST=DB_SECTION.get('host', ''),
-        PORT=DB_SECTION.get('port', ''),
+        PORT=DB_SECTION.get('port', '5432'),
     )
 
 
@@ -73,7 +73,7 @@ DATABASES['default'] = {
     'USER': DB_SECTION.get('%s_user' % DEFAULT_USER, 'oq_admin'),
     'PASSWORD': DB_SECTION.get('%s_password' % DEFAULT_USER, 'openquake'),
     'HOST': '',
-    'PORT': '',
+    'PORT': '5432',
 }
 
 DATABASE_ROUTERS = ['openquake.engine.db.routers.OQRouter']
