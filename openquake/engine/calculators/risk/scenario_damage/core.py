@@ -63,8 +63,6 @@ def scenario_damage(job_id, units, containers, params):
     with db.transaction.commit_on_success(using='reslt_writer'):
         return do_scenario_damage(unit, params, monitor.copy)
 
-scenario_damage.ignore_result = False
-
 
 def do_scenario_damage(unit, params, profile):
     with profile('getting hazard'):

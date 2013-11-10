@@ -134,8 +134,6 @@ def compute_ses(job_id, src_ids, ses, src_seeds, ltp):
     with EnginePerformanceMonitor('saving ses', job_id, compute_ses):
         _save_ses_ruptures(ses, ruptures, cmplt_lt_ses)
 
-compute_ses.ignore_result = False  # essential
-
 
 def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
     """
@@ -183,8 +181,6 @@ def compute_gmf(job_id, params, imt, gsims, ses, site_coll,
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
         _save_gmfs(ses, imt, gmvs_per_site, ruptures_per_site, site_coll)
-
-compute_gmf.ignore_result = False  # essential
 
 
 # NB: I tried to return a single dictionary {site_id: [(gmv, rupt_id),...]}
@@ -365,11 +361,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                             yield (self.job.id, params, imt, gsims, ses,
                                    site_coll, rupts, seeds)
 
-    def execute(self):
+    def post_execute(self):
         """
-        Run compute_ses and optionally compute_gmf in parallel.
+        Optionally compute_gmf in parallel.
         """
-        self.parallelize(self.core_calc_task, self.task_arg_gen())
         if self.hc.ground_motion_fields:
             self.parallelize(compute_gmf, self.compute_gmf_arg_gen())
 
