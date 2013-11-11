@@ -155,13 +155,17 @@ def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
     with transaction.commit_on_success(using='reslt_writer'):
         for r in ruptures:
             models.SESRupture.objects.create(
-                ses=ses, rupture=r, tag=r.tag)
+                ses=ses, rupture=r, tag=r.tag,
+                hypocenter=r.hypocenter.wkt2d,
+                magnitude=r.mag)
 
         if complete_logic_tree_ses is not None:
-            for rupture in ruptures:
+            for r in ruptures:
                 models.SESRupture.objects.create(
                     ses=complete_logic_tree_ses,
-                    rupture=rupture)
+                    rupture=r,
+                    hypocenter=r.hypocenter.wkt2d,
+                    magnitude=r.mag)
 
 
 @tasks.oqtask
