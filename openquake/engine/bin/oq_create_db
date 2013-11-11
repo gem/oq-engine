@@ -269,4 +269,12 @@ if [ -r $indexes_file ]; then
     psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $indexes_file
 fi
 
+echo ".. Setting table ownership"
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER DATABASE $db_name OWNER TO oq_admin"
+for schema in $tspace_list; do
+    for tbl in `psql -qAt -c "select tablename from pg_tables where schemaname = '$schema';" $db_name`; do 
+        psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "alter table $schema.$tbl owner to oq_admin"
+    done
+done
+
 echo ".. Done .."

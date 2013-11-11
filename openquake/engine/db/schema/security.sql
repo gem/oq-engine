@@ -60,6 +60,14 @@ GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riski TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riskr TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
 
+GRANT ALL ON SCHEMA admin TO oq_admin;
+GRANT ALL ON SCHEMA htemp TO oq_admin;
+GRANT ALL ON SCHEMA hzrdi TO oq_admin;
+GRANT ALL ON SCHEMA hzrdr TO oq_admin;
+GRANT ALL ON SCHEMA riski TO oq_admin;
+GRANT ALL ON SCHEMA riskr TO oq_admin;
+GRANT ALL ON SCHEMA uiapi TO oq_admin;
+
 ----------------------------------------------
 -- Specific permissions for individual tables:
 ----------------------------------------------
