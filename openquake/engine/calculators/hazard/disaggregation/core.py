@@ -37,7 +37,7 @@ def compute_hazard_curves_task(job_id, src_ids, lt_rlz_id, ltp):
     """
     Task wrapper around
 
-    `openquake.engine.calculators.hazard.classical.core.compute_hazard_curves`.
+    :func:`openquake.engine.calculators.hazard.classical.core.compute_hazard_curves`.
     """
     core.compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp)
 
@@ -46,7 +46,7 @@ def compute_hazard_curves_task(job_id, src_ids, lt_rlz_id, ltp):
 def disagg_task(job_id, sites, lt_rlz_id, ltp):
     """
     Task wrapper around
-    `openquake.engine.calculators.hazard.disaggregation.core.compute_disagg`.
+    :func:`openquake.engine.calculators.hazard.disaggregation.core.compute_disagg`.
     """
     compute_disagg(job_id, sites, lt_rlz_id, ltp)
 
