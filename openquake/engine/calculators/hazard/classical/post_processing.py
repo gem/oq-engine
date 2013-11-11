@@ -165,7 +165,6 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
         )
 
 hazard_curves_to_hazard_map_task = tasks.oqtask(hazard_curves_to_hazard_map)
-hazard_curves_to_hazard_map_task.ignore_result = False  # this is essential
 
 
 def hazard_curves_to_hazard_map_task_arg_gen(job):
