@@ -27,6 +27,7 @@ from tests.utils import helpers
 
 from openquake.engine import export
 from openquake.engine.db import models
+from openquake.engine.tools import save_hazards, load_hazards
 
 
 class BaseRiskQATestCase(qa_utils.BaseQATestCase):
@@ -227,6 +228,10 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
     #: derived qa test must override this
     hazard_calculation_fixture = None
 
+    # if True, we will save and load the computed hazard
+    # calculation and run the risk calculation from the load one
+    save_load = False
+
     def _get_queryset(self):
         return models.HazardCalculation.objects.filter(
             description=self.hazard_calculation_fixture,
@@ -235,10 +240,28 @@ class FixtureBasedQATestCase(LogicTreeBasedTestCase, BaseRiskQATestCase):
     def get_hazard_job(self):
         if not self._get_queryset().exists():
             warnings.warn("Computing Hazard input from scratch")
-            completed_job = helpers.run_hazard_job(
+            job = helpers.run_hazard_job(
                 self._test_path('job_haz.ini'))
-            self.assertEqual('complete', completed_job.status)
-            return completed_job
+            self.assertEqual('complete', job.status)
         else:
             warnings.warn("Using existing Hazard input")
-            return self._get_queryset().latest('oqjob__last_update').oqjob
+            job = self._get_queryset().latest('oqjob__last_update').oqjob
+
+        if self.save_load:
+            # Close the opened transactions
+            saved_calculation = save_hazards.main(job.hazard_calculation.id)
+
+            # FIXME Here on, to avoid deadlocks due to stale
+            # transactions, we commit all the opened transactions. We
+            # should find who is responsible for the eventual opened
+            # transaction
+            connection = models.getcursor('job_init').connection
+            if connection is not None:
+                connection.commit()
+
+            [load_calculation] = load_hazards.hazard_load(
+                models.getcursor('admin').connection, saved_calculation)
+            return models.OqJob.objects.get(
+                hazard_calculation__id=load_calculation)
+        else:
+            return job
