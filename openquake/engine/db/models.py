@@ -986,8 +986,8 @@ class RiskCalculation(djm.Model):
     # asset. Expressed in kilometers
     maximum_distance = djm.FloatField(
         null=True, blank=True, default=DEFAULT_MAXIMUM_DISTANCE)
-    # the hazard output (it can point to an HazardCurve or to a
-    # Gmf) used by the risk calculation
+    # the hazard output (it can point to an HazardCurvem, to a
+    # Gmf or to a SES collection) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
 
     # the HazardCalculation object used by the risk calculation when
@@ -1439,9 +1439,9 @@ class HazardMap(djm.Model):
     poe = djm.FloatField()
     # lons, lats, and imls are stored as numpy arrays with a uniform size and
     # shape
-    lons = fields.PickleField()
-    lats = fields.PickleField()
-    imls = fields.PickleField()
+    lons = fields.FloatArrayField()
+    lats = fields.FloatArrayField()
+    imls = fields.FloatArrayField()
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_map'
@@ -1672,10 +1672,12 @@ class SESRupture(djm.Model):
     #: instance
     rupture = fields.PickleField()
 
+    magnitude = djm.FloatField(null=True)
+    hypocenter = djm.PointField(srid=DEFAULT_SRID)
+
     # a tag with rlz, ses, src and ordinal info
     tag = djm.TextField()
 
-    old_magnitude = djm.FloatField(null=True)
     old_strike = djm.FloatField(null=True)
     old_dip = djm.FloatField(null=True)
     old_rake = djm.FloatField(null=True)
@@ -1839,10 +1841,6 @@ class SESRupture(djm.Model):
     @old_field_property
     def surface(self):
         return self.rupture.surface
-
-    @old_field_property
-    def magnitude(self):
-        return self.rupture.mag
 
     @old_field_property
     def strike(self):
