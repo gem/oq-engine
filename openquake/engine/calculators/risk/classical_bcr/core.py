@@ -17,17 +17,17 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
-
+from django.db import transaction
 from openquake.risklib import workflows
 
 from openquake.engine.calculators.risk import (
-    base, hazard_getters, writers, validation)
+    hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.classical import core as classical
 from openquake.engine.performance import EnginePerformanceMonitor
-from django.db import transaction
+from openquake.engine.utils import tasks
 
 
-@base.risk_task
+@tasks.oqtask
 def classical_bcr(job_id, units, containers, _params):
     """
     Celery task for the BCR risk calculator based on the classical
@@ -47,10 +47,8 @@ def classical_bcr(job_id, units, containers, _params):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     """
-
-    def profile(name):
-        return EnginePerformanceMonitor(
-            name, job_id, classical_bcr, tracing=True)
+    monitor = EnginePerformanceMonitor(
+        None, job_id, classical_bcr, tracing=True)
 
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
@@ -58,7 +56,7 @@ def classical_bcr(job_id, units, containers, _params):
         for unit in units:
             do_classical_bcr(
                 unit,
-                containers.with_args(loss_type=unit.loss_type), profile)
+                containers.with_args(loss_type=unit.loss_type), monitor.copy)
 
 
 def do_classical_bcr(unit, containers, profile):
