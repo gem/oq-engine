@@ -62,7 +62,8 @@ def save_job_stats(job, disk_space=None):
         hc = job.risk_calculation.hazard_calculation
     else:
         hc = job.hazard_calculation
-    js.num_sites = len(hc.site_collection) if hc.site_collection else None
+    if hc:  # can be None if the option --hazard-output-id is used
+        js.num_sites = len(hc.site_collection) if hc.site_collection else None
     js.save()
 
 

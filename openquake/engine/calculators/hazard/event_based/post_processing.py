@@ -169,7 +169,6 @@ def gmf_to_hazard_curve_task(job_id, site, lt_rlz_id, imt, imls, hc_coll_id,
     models.HazardCurveData.objects.create(
         hazard_curve_id=hc_coll_id, poes=hc_poes, location=site.location,
         weight=lt_rlz.weight)
-gmf_to_hazard_curve_task.ignore_result = False  # essential
 
 
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
