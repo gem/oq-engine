@@ -12,6 +12,16 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+This is a regression test with the goal of avoiding the reintroduction
+of a dependence from the configuration parameter concurrent_tasks.
+We use a source model with 398 sources and a single SES.
+Due to the distance filtering only 7 sources are relevant.
+We test the independence from the parameter concurrent_tasks, which
+determines the preferred_block_size = ceil(num_sources/concurrent_tasks)
+with 8 concurrent tasks the preferred_block_size is 1;
+with 4 concurrent tasks the preferred_block_size is 2.
+"""
 
 import os
 from nose.plugins.attrib import attr
@@ -21,12 +31,6 @@ from openquake.engine.calculators.hazard.event_based.core import \
     EventBasedHazardCalculator
 
 
-# here we are using a source model with 398 sources and a single SES
-# but due to the distance filtering only 7 sources are relevant
-# we test the independence from the parameter concurrent_tasks, which
-# determines the preferred_block_size = ceil(num_sources/concurrent_tasks)
-# with 8 concurrent tasks the preferred_block_size is 1;
-# with 4 concurrent tasks the preferred_block_size is 2;
 class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     DEBUG = False
     # if the test fails and you want to debug it, set this flag:

@@ -17,7 +17,6 @@
 import os
 import getpass
 import unittest
-import itertools
 import mock
 import numpy
 
@@ -249,86 +248,60 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(250.0, complete_lt_ses.investigation_time)
         self.assertIsNone(complete_lt_ses.ordinal)
 
-    def _patch_calc(self):
-        """
-        Patch the stochastic functions and the save-to-db functions in the
-        calculator to make the test faster and independent on the stochastic
-        number generator
-        """
-        rupture1 = mock.Mock()
-        rupture1.tectonic_region_type = 'Active Shallow Crust'
-        rupture2 = mock.Mock()
-        rupture2.tectonic_region_type = 'Active Shallow Crust'
-        self.patch_ses = mock.patch(
-            'openquake.hazardlib.calc.stochastic.'
-            'stochastic_event_set_poissonian',
-            mock.MagicMock(return_value=[rupture1, rupture2]))
-        self.patch_save_rup = mock.patch(
-            'openquake.engine.calculators.hazard.'
-            'event_based.core._save_ses_ruptures',
-            mock.MagicMock(return_value=[1, 2]))
-        self.patch_ses.start()
-        self.patch_save_rup.start()
-
-    def _unpatch_calc(self):
-        "Remove the patches"
-        self.patch_ses.stop()
-        self.patch_save_rup.stop()
-
     @attr('slow')
     def test_complete_event_based_calculation_cycle(self):
-        self._patch_calc()
+        # run the calculation in process (to easy debugging)
+        # and check the outputs
+        os.environ['OQ_NO_DISTRIBUTE'] = '1'
         try:
-            from openquake.hazardlib import calc
-            from openquake.engine.calculators.hazard.event_based import core
-            ses_mock = calc.stochastic.stochastic_event_set_poissonian
-            save_rup_mock = core._save_ses_ruptures
-
-            # run the calculation in process (to easy debugging)
-            # and check the outputs; notice that since the save_ses
-            # part is mocked the gmf won't be computed
-            os.environ['OQ_NO_DISTRIBUTE'] = '1'
-            try:
-                job = helpers.run_hazard_job(self.cfg)
-            finally:
-                del os.environ['OQ_NO_DISTRIBUTE']
-            hc = job.hazard_calculation
-            rlz1, rlz2 = models.LtRealization.objects.filter(
-                hazard_calculation=hc.id).order_by('ordinal')
-
-            # check that the parameters are read correctly from the files
-            self.assertEqual(hc.ses_per_logic_tree_path, 5)
-
-            # check that we called the right number of times the patched
-            # functions: 40 = 2 Lt * 4 sources * 5 ses = 8 tasks * 5 ses
-            self.assertEqual(ses_mock.call_count, 40)
-            self.assertEqual(save_rup_mock.call_count, 40)  # 2 rupt per ses
-
-            # Check the complete logic tree SES
-            complete_lt_ses = models.SES.objects.get(
-                ses_collection__output__oq_job=job.id,
-                ses_collection__output__output_type='complete_lt_ses',
-                ordinal=None)
-
-            # Test the computed `investigation_time`
-            # 2 lt realizations * 5 ses_per_logic_tree_path * 50.0 years
-            self.assertEqual(500.0, complete_lt_ses.investigation_time)
-
-            self.assertIsNone(complete_lt_ses.ordinal)
-
-            # Now check for the correct number of hazard curves:
-            curves = models.HazardCurve.objects.filter(output__oq_job=job)
-            # ((2 IMTs * 2 real) + (2 IMTs * (1 mean + 2 quantiles))) = 10
-            # + 3 mean and quantiles multi-imt curves
-            self.assertEqual(13, curves.count())
-
-            # Finally, check for the correct number of hazard maps:
-            maps = models.HazardMap.objects.filter(output__oq_job=job)
-            # ((2 poes * 2 realizations * 2 IMTs)
-            # + (2 poes * 2 IMTs * (1 mean + 2 quantiles))) = 20
-            self.assertEqual(20, maps.count())
+            job = helpers.run_hazard_job(self.cfg)
         finally:
-            self._unpatch_calc()
+            del os.environ['OQ_NO_DISTRIBUTE']
+        hc = job.hazard_calculation
+        rlz1, rlz2 = models.LtRealization.objects.filter(
+            hazard_calculation=hc.id).order_by('ordinal')
+
+        # check that the parameters are read correctly from the files
+        self.assertEqual(hc.ses_per_logic_tree_path, 5)
+
+        # check that we generated the right number of ruptures
+        # (this is fixed if the seeds are fixed correctly)
+        num_ruptures = models.SESRupture.objects.filter(
+            ses__ses_collection__output__oq_job=job.id).count()
+        self.assertEqual(num_ruptures, 404)
+
+        # check that we generated the right number of rows in GmfData
+        # 1210 = 121 sites * 5 ses * 2 IMTs
+        num_gmf1 = models.GmfData.objects.filter(
+            gmf__lt_realization=rlz1).count()
+        num_gmf2 = models.GmfData.objects.filter(
+            gmf__lt_realization=rlz2).count()
+        self.assertEqual(num_gmf1, 1210)
+        self.assertEqual(num_gmf2, 1210)
+
+        # Check the complete logic tree SES
+        complete_lt_ses = models.SES.objects.get(
+            ses_collection__output__oq_job=job.id,
+            ses_collection__output__output_type='complete_lt_ses',
+            ordinal=None)
+
+        # Test the computed `investigation_time`
+        # 2 lt realizations * 5 ses_per_logic_tree_path * 50.0 years
+        self.assertEqual(500.0, complete_lt_ses.investigation_time)
+
+        self.assertIsNone(complete_lt_ses.ordinal)
+
+        # Now check for the correct number of hazard curves:
+        curves = models.HazardCurve.objects.filter(output__oq_job=job)
+        # ((2 IMTs * 2 real) + (2 IMTs * (1 mean + 2 quantiles))) = 10
+        # + 3 mean and quantiles multi-imt curves
+        self.assertEqual(13, curves.count())
+
+        # Finally, check for the correct number of hazard maps:
+        maps = models.HazardMap.objects.filter(output__oq_job=job)
+        # ((2 poes * 2 realizations * 2 IMTs)
+        # + (2 poes * 2 IMTs * (1 mean + 2 quantiles))) = 20
+        self.assertEqual(20, maps.count())
 
     def test_task_arg_gen(self):
         hc = self.job.hazard_calculation

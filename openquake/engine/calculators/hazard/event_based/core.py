@@ -31,7 +31,6 @@ For more information on computing ground motion fields, see
 :mod:`openquake.hazardlib.calc.gmf`.
 """
 
-import copy
 import math
 import random
 import itertools
