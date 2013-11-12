@@ -662,7 +662,8 @@ class RunCalcTestCase(unittest.TestCase):
         )
 
         self.assertEqual(1, mm['cleanup'].call_count)
-        self.assertEqual(((1984, ), {}), mm['cleanup'].call_args)
+        self.assertEqual(((1984, ), {'terminate': False}),
+                         mm['cleanup'].call_args)
 
         self.assertEqual(1, mm['get_job'].call_count)
         self.assertEqual(((1984, ), {}), mm['get_job'].call_args)
