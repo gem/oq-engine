@@ -2,11 +2,11 @@ import collections
 import os
 import tempfile
 import psycopg2
+import urllib
 import urllib2
 
 from celery.task import task
 
-from openquakeserver import settings
 from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
 
@@ -19,29 +19,35 @@ logger = logging.getLogger(__name__)
 
 
 @task(ignore_result=True)
-def run_hazard_calc(calc_id, migration_callback_url=None, foreign_calc_id=None):
+def run_hazard_calc(
+        calc_id, migration_callback_url=None, foreign_calc_id=None):
     """
     Run a hazard calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
     and is ready to execute.
     """
     job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
-    update_calculation_status(migration_callback_url, "0%")
+    update_calculation(migration_callback_url, status="0%")
     exports = []
     # TODO: Log to file somewhere. But where?
     log_file = None
+
+    def progress_handler(status, calculation):
+        update_calculation(
+            migration_callback_url,
+            status=status,
+            engine_id=calculation.id,
+            description=calculation.description)
+
     # NOTE: Supervision MUST be turned off, or else the celeryd cluster
     # handling this task will leak processes!!!
     engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'hazard',
-                    supervised=False)
-    update_calculation_status(migration_callback_url, "transfering outputs")
+                    supervised=False, progress_handler=progress_handler)
 
     # If requested to, signal job completion and trigger a migration of
     # results.
     if not None in (migration_callback_url, foreign_calc_id):
         _trigger_migration(job, migration_callback_url, foreign_calc_id)
-
-    update_calculation_status(migration_callback_url, "creating layers")
 
 
 @task(ignore_result=True)
@@ -78,6 +84,14 @@ def _trigger_migration(job, callback_url, foreign_calc_id):
     :param str foreign_calc_id:
         The id of the foreign calculation
     """
+    # direct import of settings to avoid starting celery with the
+    # wrong settings module (it should use the engine one)
+    update_calculation(
+        callback_url,
+        description=job.calculation.description,
+        status="transfering outputs")
+
+    from openquakeserver import settings
     platform_connection = psycopg2.connect(
         host=settings.DATABASES['platform']['HOST'],
         database=settings.DATABASES['platform']['NAME'],
@@ -87,22 +101,27 @@ def _trigger_migration(job, callback_url, foreign_calc_id):
 
     for output in job.output_set.all():
         copy_output(platform_connection, output, foreign_calc_id)
-
+    update_calculation(callback_url, status="creating layers")
     platform_connection.close()
-    update_calculation_status(callback_url)
 
 
-def update_calculation_status(callback_url, status=None):
-    if status is None:
-        data = ""
+def update_calculation(callback_url, **query):
+    """
+    Update a foreign calculation by POSTing `query` data to
+    `callback_url`.
+    """
+    if query:
+        data = urllib.urlencode(query)
     else:
-        data = "status=%s" % status
+        data = ""
+
     try:
         # post to an external service, asking it to finalize
         # calculation results
         url = urllib2.urlopen(callback_url, data=data)
-    except urllib2.HTTPError:
+    except urllib2.HTTPError as e:
         # TODO: better logging/signalling of such an error?
+        print e.code, e.reason
         raise
     else:
         url.close()
@@ -299,6 +318,7 @@ def copy_output(platform_connection, output, foreign_calculation_id):
         iface = DBINTERFACE.get(output.output_type)
 
         if iface is None:
+            # FIXME. Implement proper logging
             print "Output type %s not supported" % output.output_type
             return
 
@@ -335,6 +355,7 @@ def copy_output(platform_connection, output, foreign_calculation_id):
             platform_cursor.execute("""
             DROP TABLE IF EXISTS %s""" % temp_table)
         except Exception as e:
+            # FIXME. Implement proper logging
             print str(e)
             platform_connection.rollback()
             raise
