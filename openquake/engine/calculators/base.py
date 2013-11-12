@@ -134,7 +134,6 @@ class Calculator(object):
         if percent > self.percent:
             logs.LOG.progress('> %s %3d%% complete', self.taskname, percent)
             self.percent = percent
-        if self.progress_handler is not None:
             self.progress_handler("%3d%%" % percent, self.hc)
 
     def pre_execute(self):
