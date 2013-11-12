@@ -17,7 +17,6 @@
 import os
 import getpass
 import unittest
-import itertools
 import mock
 import numpy
 
@@ -249,86 +248,60 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(250.0, complete_lt_ses.investigation_time)
         self.assertIsNone(complete_lt_ses.ordinal)
 
-    def _patch_calc(self):
-        """
-        Patch the stochastic functions and the save-to-db functions in the
-        calculator to make the test faster and independent on the stochastic
-        number generator
-        """
-        rupture1 = mock.Mock()
-        rupture1.tectonic_region_type = 'Active Shallow Crust'
-        rupture2 = mock.Mock()
-        rupture2.tectonic_region_type = 'Active Shallow Crust'
-        self.patch_ses = mock.patch(
-            'openquake.hazardlib.calc.stochastic.'
-            'stochastic_event_set_poissonian',
-            mock.MagicMock(return_value=[rupture1, rupture2]))
-        self.patch_save_rup = mock.patch(
-            'openquake.engine.calculators.hazard.'
-            'event_based.core._save_ses_ruptures',
-            mock.MagicMock(return_value=[1, 2]))
-        self.patch_ses.start()
-        self.patch_save_rup.start()
-
-    def _unpatch_calc(self):
-        "Remove the patches"
-        self.patch_ses.stop()
-        self.patch_save_rup.stop()
-
     @attr('slow')
     def test_complete_event_based_calculation_cycle(self):
-        self._patch_calc()
+        # run the calculation in process (to easy debugging)
+        # and check the outputs
+        os.environ['OQ_NO_DISTRIBUTE'] = '1'
         try:
-            from openquake.hazardlib import calc
-            from openquake.engine.calculators.hazard.event_based import core
-            ses_mock = calc.stochastic.stochastic_event_set_poissonian
-            save_rup_mock = core._save_ses_ruptures
-
-            # run the calculation in process (to easy debugging)
-            # and check the outputs; notice that since the save_ses
-            # part is mocked the gmf won't be computed
-            os.environ['OQ_NO_DISTRIBUTE'] = '1'
-            try:
-                job = helpers.run_hazard_job(self.cfg)
-            finally:
-                del os.environ['OQ_NO_DISTRIBUTE']
-            hc = job.hazard_calculation
-            rlz1, rlz2 = models.LtRealization.objects.filter(
-                hazard_calculation=hc.id).order_by('ordinal')
-
-            # check that the parameters are read correctly from the files
-            self.assertEqual(hc.ses_per_logic_tree_path, 5)
-
-            # check that we called the right number of times the patched
-            # functions: 40 = 2 Lt * 4 sources * 5 ses = 8 tasks * 5 ses
-            self.assertEqual(ses_mock.call_count, 40)
-            self.assertEqual(save_rup_mock.call_count, 40)  # 2 rupt per ses
-
-            # Check the complete logic tree SES
-            complete_lt_ses = models.SES.objects.get(
-                ses_collection__output__oq_job=job.id,
-                ses_collection__output__output_type='complete_lt_ses',
-                ordinal=None)
-
-            # Test the computed `investigation_time`
-            # 2 lt realizations * 5 ses_per_logic_tree_path * 50.0 years
-            self.assertEqual(500.0, complete_lt_ses.investigation_time)
-
-            self.assertIsNone(complete_lt_ses.ordinal)
-
-            # Now check for the correct number of hazard curves:
-            curves = models.HazardCurve.objects.filter(output__oq_job=job)
-            # ((2 IMTs * 2 real) + (2 IMTs * (1 mean + 2 quantiles))) = 10
-            # + 3 mean and quantiles multi-imt curves
-            self.assertEqual(13, curves.count())
-
-            # Finally, check for the correct number of hazard maps:
-            maps = models.HazardMap.objects.filter(output__oq_job=job)
-            # ((2 poes * 2 realizations * 2 IMTs)
-            # + (2 poes * 2 IMTs * (1 mean + 2 quantiles))) = 20
-            self.assertEqual(20, maps.count())
+            job = helpers.run_hazard_job(self.cfg)
         finally:
-            self._unpatch_calc()
+            del os.environ['OQ_NO_DISTRIBUTE']
+        hc = job.hazard_calculation
+        rlz1, rlz2 = models.LtRealization.objects.filter(
+            hazard_calculation=hc.id).order_by('ordinal')
+
+        # check that the parameters are read correctly from the files
+        self.assertEqual(hc.ses_per_logic_tree_path, 5)
+
+        # check that we generated the right number of ruptures
+        # (this is fixed if the seeds are fixed correctly)
+        num_ruptures = models.SESRupture.objects.filter(
+            ses__ses_collection__output__oq_job=job.id).count()
+        self.assertEqual(num_ruptures, 404)
+
+        # check that we generated the right number of rows in GmfData
+        # 1210 = 121 sites * 5 ses * 2 IMTs
+        num_gmf1 = models.GmfData.objects.filter(
+            gmf__lt_realization=rlz1).count()
+        num_gmf2 = models.GmfData.objects.filter(
+            gmf__lt_realization=rlz2).count()
+        self.assertEqual(num_gmf1, 1210)
+        self.assertEqual(num_gmf2, 1210)
+
+        # Check the complete logic tree SES
+        complete_lt_ses = models.SES.objects.get(
+            ses_collection__output__oq_job=job.id,
+            ses_collection__output__output_type='complete_lt_ses',
+            ordinal=None)
+
+        # Test the computed `investigation_time`
+        # 2 lt realizations * 5 ses_per_logic_tree_path * 50.0 years
+        self.assertEqual(500.0, complete_lt_ses.investigation_time)
+
+        self.assertIsNone(complete_lt_ses.ordinal)
+
+        # Now check for the correct number of hazard curves:
+        curves = models.HazardCurve.objects.filter(output__oq_job=job)
+        # ((2 IMTs * 2 real) + (2 IMTs * (1 mean + 2 quantiles))) = 10
+        # + 3 mean and quantiles multi-imt curves
+        self.assertEqual(13, curves.count())
+
+        # Finally, check for the correct number of hazard maps:
+        maps = models.HazardMap.objects.filter(output__oq_job=job)
+        # ((2 poes * 2 realizations * 2 IMTs)
+        # + (2 poes * 2 IMTs * (1 mean + 2 quantiles))) = 20
+        self.assertEqual(20, maps.count())
 
     def test_task_arg_gen(self):
         hc = self.job.hazard_calculation
@@ -342,64 +315,55 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         [s1, s2, s3, s4, s5] = self.calc.initialize_ses_db_records(rlz1)
         [t1, t2, t3, t4, t5] = self.calc.initialize_ses_db_records(rlz2)
 
-        expected = [  # sources, ses_id, seed
-            ([1], s1, [1711655216]),
-            ([1], s2, [1038305917]),
-            ([1], s3, [836289861]),
-            ([1], s4, [1781144172]),
-            ([1], s5, [1869241528]),
-            ([2], s1, [215682727]),
-            ([2], s2, [1101399957]),
-            ([2], s3, [2054512780]),
-            ([2], s4, [1550095676]),
-            ([2], s5, [1537531637]),
-            ([3], s1, [834081132]),
-            ([3], s2, [2109160433]),
-            ([3], s3, [1527803099]),
-            ([3], s4, [1876252834]),
-            ([3], s5, [1712942246]),
-            ([4], s1, [219667398]),
-            ([4], s2, [332999334]),
-            ([4], s3, [1017801655]),
-            ([4], s4, [1577927432]),
-            ([4], s5, [1810736590]),
-            ([1], t1, [745519017]),
-            ([1], t2, [2107357950]),
-            ([1], t3, [1305437041]),
-            ([1], t4, [75519567]),
-            ([1], t5, [179387370]),
-            ([2], t1, [1653492095]),
-            ([2], t2, [176278337]),
-            ([2], t3, [777508283]),
-            ([2], t4, [718002527]),
-            ([2], t5, [1872666256]),
-            ([3], t1, [796266430]),
-            ([3], t2, [646033314]),
-            ([3], t3, [289567826]),
-            ([3], t4, [1964698790]),
-            ([3], t5, [613832594]),
-            ([4], t1, [1858181087]),
-            ([4], t2, [195127891]),
-            ([4], t3, [1761641849]),
-            ([4], t4, [259827383]),
-            ([4], t5, [1464146382]),
+        expected = [  # source_id, ses_id, seed
+            ('1', s1, 1711655216),
+            ('1', s2, 1038305917),
+            ('1', s3, 836289861),
+            ('1', s4, 1781144172),
+            ('1', s5, 1869241528),
+            ('2', s1, 215682727),
+            ('2', s2, 1101399957),
+            ('2', s3, 2054512780),
+            ('2', s4, 1550095676),
+            ('2', s5, 1537531637),
+            ('3', s1, 834081132),
+            ('3', s2, 2109160433),
+            ('3', s3, 1527803099),
+            ('3', s4, 1876252834),
+            ('3', s5, 1712942246),
+            ('4', s1, 219667398),
+            ('4', s2, 332999334),
+            ('4', s3, 1017801655),
+            ('4', s4, 1577927432),
+            ('4', s5, 1810736590),
+            ('1', t1, 745519017),
+            ('1', t2, 2107357950),
+            ('1', t3, 1305437041),
+            ('1', t4, 75519567),
+            ('1', t5, 179387370),
+            ('2', t1, 1653492095),
+            ('2', t2, 176278337),
+            ('2', t3, 777508283),
+            ('2', t4, 718002527),
+            ('2', t5, 1872666256),
+            ('3', t1, 796266430),
+            ('3', t2, 646033314),
+            ('3', t3, 289567826),
+            ('3', t4, 1964698790),
+            ('3', t5, 613832594),
+            ('4', t1, 1858181087),
+            ('4', t2, 195127891),
+            ('4', t3, 1761641849),
+            ('4', t4, 259827383),
+            ('4', t5, 1464146382),
         ]
 
-        # utilities to present the generated arguments in a nicer way
-        dic = {}
-        counter = itertools.count(1)
-
-        def src_no(src_id):
-            try:
-                return dic[src_id]
-            except KeyError:
-                dic[src_id] = counter.next()
-                return dic[src_id]
-
+        # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for _job_id, source_ids, ses, task_seed, ltp in arg_gen:
-                yield map(src_no, source_ids), ses, task_seed, ltp
+            for job_id, sss, rlz, ltp in arg_gen:
+                for src_id, ses, seed in sss:
+                    src = models.ParsedSource.objects.get(pk=src_id)
+                    yield src.nrml.source_id, ses, seed
 
         actual = list(process_args(self.calc.task_arg_gen()))
-        # do not check the ltp
-        self.assertEqual(expected, [(x, y, z) for x, y, z, _w in actual])
+        self.assertEqual(expected, actual)
