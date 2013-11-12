@@ -339,7 +339,7 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
             job.save()
             # Normally the supervisor process does this, but since we don't
             # have one in this case, we have to call the cleanup manually.
-            supervisor.cleanup_after_job(job.id)
+            supervisor.cleanup_after_job(job.id, terminate=False)
 
     # Refresh the job record, in case we are forking and another process has
     # modified the job state.
