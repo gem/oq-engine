@@ -6,3 +6,6 @@ Lin and Lee 2008
 
 .. autoclass:: Lin2009
     :members:
+
+.. autoclass:: Lin2009AdjustedSigma
+    :members:
