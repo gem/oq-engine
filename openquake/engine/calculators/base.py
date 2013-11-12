@@ -39,6 +39,10 @@ class Calculator(object):
         self.job = job
         self.num_tasks = None
         self.progress = dict(total=0, computed=0, in_queue=0)
+        self.progress_handler = lambda _p, _c: None
+
+    def register_progress_handler(self, fn):
+        self.progress_handler = fn
 
     def monitor(self, operation):
         return EnginePerformanceMonitor(
@@ -117,6 +121,8 @@ class Calculator(object):
         if percent > self.percent:
             logs.LOG.progress('> %s %3d%% complete', self.taskname, percent)
             self.percent = percent
+        if self.progress_handler is not None:
+            self.progress_handler("%3d%%" % percent, self.hc)
 
     def pre_execute(self):
         """
