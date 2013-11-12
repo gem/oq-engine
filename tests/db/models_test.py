@@ -185,7 +185,7 @@ class SESRuptureTestCase(unittest.TestCase):
         self.ps_depths = [0.1, 0.2, 0.3, 0.4]
 
         self.fault_rupture = models.SESRupture.objects.create(
-            ses=ses, old_magnitude=5, old_strike=0, old_dip=0, old_rake=0,
+            ses=ses, magnitude=5, old_strike=0, old_dip=0, old_rake=0,
             old_tectonic_region_type='Active Shallow Crust',
             old_is_from_fault_source=True, old_lons=self.mesh_lons,
             old_is_multi_surface=False,
