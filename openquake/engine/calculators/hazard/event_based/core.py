@@ -309,7 +309,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             preferred_block_size = int(
                 math.ceil(float(len(sources) * len(all_ses)) /
                           self.concurrent_tasks()))
-            preferred_block_size = 1
             logs.LOG.info('Using block size %d', preferred_block_size)
             for block in block_splitter(sss, preferred_block_size):
                 yield self.job.id, block, lt_rlz, ltp
