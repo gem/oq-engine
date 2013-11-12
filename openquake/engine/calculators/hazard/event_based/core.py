@@ -105,7 +105,7 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
 
     with EnginePerformanceMonitor(
             'reading sources', job_id, compute_ses):
-        src_ids = set(row[0] for row in src_ses_seeds)
+        src_ids = set(src_id for src_id, ses, seed in src_ses_seeds)
         source = dict(
             (s.id, apply_uncertainties(s.nrml))
             for s in models.ParsedSource.objects.filter(pk__in=src_ids))
@@ -116,10 +116,7 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
         ruptures = []
         for src_id, ses, seed in src_ses_seeds:
             src = source[src_id]
-            # first set the seed for the specific source
             numpy.random.seed(seed)
-            # then make copies of the hazardlib ruptures (which may contain
-            # duplicates): the copy is needed to keep the tags distinct
             rupts = stochastic.stochastic_event_set_poissonian(
                 [src], hc.investigation_time)
             # set the tag for each copy
@@ -135,6 +132,7 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
                 ruptures.append(rup)
         if not ruptures:
             return
+        source.clear()  # save a little memory
 
     with EnginePerformanceMonitor('saving ses', job_id, compute_ses):
         _save_ses_ruptures(ruptures, cmplt_lt_ses)
