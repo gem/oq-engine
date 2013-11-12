@@ -67,11 +67,13 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         for imt, expected_result in expected_results.items():
             mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
                                                       imt, stddev_types)
+            
             if result_type == 'MEAN':
                 result = numpy.exp(mean)
             else:
-                [result] = stddevs
+                [result] = stddevs 
             assert isinstance(result, numpy.ndarray), result_type
+
             discrep_percentage = numpy.abs(
                 result / expected_result * 100 - 100
             )

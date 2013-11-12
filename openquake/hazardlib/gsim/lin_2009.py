@@ -21,7 +21,7 @@ from __future__ import division
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib.gsim import const
+from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
@@ -57,7 +57,7 @@ class Lin2009(GMPE):
 
     #: Required rupture parameters are magnitude, and focal depth, see
     #: equation 4.1 page 46.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
 
     #: Required distance measure is rupture distance, see equation 4.1
     #: page 46.
@@ -71,30 +71,30 @@ class Lin2009(GMPE):
         """
         C = self.COEFFS[imt]
         mean = (
-            self._get_magnitude_term(C, rup.mag, rup.hypo_depth) +
-            self._get_distance_term(C, rup.mag, dists.rrup, rup.hypo_depth) +
+            self._get_magnitude_term(C, rup.mag) +
+            self._get_distance_term(C, rup.mag, dists.rrup) +
             self._get_style_of_faulting_term(C, rup.rake) +
             self._get_site_response_term(C, sites.vs30))
 
         stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
         return mean, stddevs
 
-    def _get_magnitude_term(self, C, mag, hypo_depth):
+    def _get_magnitude_term(self, C, mag):
         """
         Returns the magnitude scaling term.
         """
         lny = C['C1'] + (C['C3'] * ((8.5 - mag) ** 2.))
         if mag > 6.3:
-            return lny + (-hypo_depth * C['C5']) * (mag - 6.3)
+            return lny + (-C['H'] * C['C5']) * (mag - 6.3)
         else:
             return lny + C['C2'] * (mag - 6.3)
 
-    def _get_distance_term(self, C, mag, rrup, hypo_depth):
+    def _get_distance_term(self, C, mag, rrup):
         """
         Returns the distance scaling term
         """
         return (C['C4'] + C['C5'] * (mag - 6.3)) *\
-            np.log(np.sqrt(rrup ** 2. + np.exp(hypo_depth) ** 2.))
+            np.log(np.sqrt(rrup ** 2. + np.exp(C['H']) ** 2.))
 
     def _get_style_of_faulting_term(self, C, rake):
         """
@@ -105,15 +105,15 @@ class Lin2009(GMPE):
 
     def _get_fault_type_dummy_variables(self, rake):
         """
-        Uses the classification of Wells & Coppersmith (1994) to classify
-        the rupture in terms of normal, strike-slip or thrust faulting
-        based on rake
+        Defines the fault type dummy variables for normal faulting (f_n) and
+        reverse faulting (f_r) from rake. Classification based on that
+        found in the original fortran code of Lin (2009)
         """
         f_n, f_r = 0, 0
-        if rake >= -135 and rake <= -45:
+        if rake >= -120 and rake <= -60:
             # normal
             f_n = 1
-        elif rake >= 45 and rake <= 135:
+        elif rake >= 30 and rake <= 150:
             # reverse
             f_r = 1
         return f_n, f_r
@@ -132,13 +132,56 @@ class Lin2009(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma'] + np.zeros(nsites))
-            else:
-                pass
+                stddevs.append(C['sigma'] + np.zeros(nsites, dtype=float))
         return stddevs
 
     #: Coefficient table for rock sites, see table 3 page 227.
-    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(sa_damping=0.05, table="""\
+    IMT       C1      C2       C3       C4      C5       H       C6      C7       C8  sigma
+    pga   1.0109  0.3822   0.0000  -1.1634  0.1722  1.5184  -0.1907  0.1322  -0.4741  0.5363
+    0.01  1.0209  0.3822  -0.0003  -1.1633  0.1722  1.5184  -0.1922  0.1314  -0.4738  0.5360
+    0.02  1.0416  0.3822   0.0017  -1.1668  0.1722  1.5184  -0.1942  0.1311  -0.4700  0.5349
+    0.03  1.1961  0.3822   0.0038  -1.2028  0.1722  1.5184  -0.1990  0.1314  -0.4741  0.5419
+    0.04  1.3834  0.3822   0.0087  -1.2499  0.1722  1.5184  -0.1959  0.1362  -0.4806  0.5506
+    0.05  1.5612  0.3822   0.0153  -1.2957  0.1722  1.5184  -0.1922  0.1417  -0.4911  0.5607
+    0.06  1.6907  0.3822   0.0210  -1.3218  0.1722  1.5184  -0.1984  0.1500  -0.4900  0.5718
+    0.07  1.7673  0.3822   0.0261  -1.3336  0.1722  1.5184  -0.2011  0.1557  -0.4920  0.5800
+    0.08  1.8689  0.3822   0.0273  -1.3440  0.1722  1.5184  -0.1947  0.1627  -0.4944  0.5887
+    0.09  1.9430  0.3822   0.0276  -1.3435  0.1722  1.5184  -0.2011  0.1589  -0.4910  0.5894
+    0.10  2.0218  0.3822   0.0254  -1.3409  0.1722  1.5184  -0.1817  0.1607  -0.4825  0.5911
+    0.15  2.0521  0.3822   0.0100  -1.2578  0.1722  1.5184  -0.1851  0.1212  -0.4804  0.5812
+    0.20  2.0333  0.3822  -0.0091  -1.1769  0.1722  1.5184  -0.2265  0.0999  -0.4350  0.5715
+    0.25  1.9887  0.3822  -0.0293  -1.1153  0.1722  1.5184  -0.2355  0.0994  -0.4101  0.5715
+    0.30  1.8827  0.3822  -0.0459  -1.0726  0.1722  1.5184  -0.2163  0.1036  -0.4361  0.5768
+    0.35  1.7459  0.3822  -0.0600  -1.0307  0.1722  1.5184  -0.1949  0.1029  -0.4507  0.5739
+    0.40  1.6821  0.3822  -0.0737  -1.0116  0.1722  1.5184  -0.1955  0.1099  -0.4734  0.5696
+    0.45  1.6139  0.3822  -0.0861  -0.9939  0.1722  1.5184  -0.2011  0.1178  -0.4927  0.5699
+    0.50  1.5288  0.3822  -0.0960  -0.9755  0.1722  1.5184  -0.2089  0.1142  -0.5035  0.5681
+    0.60  1.3081  0.3822  -0.1133  -0.9407  0.1722  1.5184  -0.2212  0.1016  -0.5546  0.5731
+    0.70  1.1383  0.3822  -0.1292  -0.9193  0.1722  1.5184  -0.1900  0.1036  -0.6037  0.5703
+    0.80  1.0757  0.3822  -0.1442  -0.9167  0.1722  1.5184  -0.1865  0.1058  -0.6319  0.5723
+    0.90  0.9935  0.3822  -0.1577  -0.9104  0.1722  1.5184  -0.1643  0.1165  -0.6577  0.5736
+    1.00  0.8642  0.3822  -0.1687  -0.9001  0.1722  1.5184  -0.1505  0.1372  -0.6916  0.5741
+    1.50  0.3150  0.3822  -0.2006  -0.8696  0.1722  1.5184  -0.0377  0.1572  -0.7582  0.5743
+    2.00 -0.1760  0.3822  -0.2190  -0.8328  0.1722  1.5184   0.0780  0.1660  -0.7863  0.5696
+    2.50 -0.4103  0.3822  -0.2319  -0.8415  0.1722  1.5184   0.0907  0.1648  -0.7939  0.5521
+    3.00 -0.5019  0.3822  -0.2431  -0.8684  0.1722  1.5184   0.1195  0.1790  -0.7754  0.5296
+    3.50 -0.7206  0.3822  -0.2479  -0.8689  0.1722  1.5184   0.1206  0.1629  -0.7673  0.5256
+    4.00 -0.9383  0.3822  -0.2493  -0.8618  0.1722  1.5184   0.1267  0.1262  -0.7457  0.5285
+    4.40 -1.0405  0.3822  -0.2559  -0.8472  0.1722  1.5184   0.1655  0.1486  -0.7042  0.5239
+    5.00 -1.3694  0.3822  -0.2535  -0.8287  0.1722  1.5184   0.2208  0.1648  -0.6955  0.5240
+    """)
+
+
+class Lin2009AdjustedSigma(Lin2009):
+    """
+    Implements the Lin (2009) GMPE with the total sigma adjusted according to
+    the values in Cheng et al. (2013):
+    C. -T. Cheng, P. -S. Hsieh, P. -S. Lin, Y. -T. Yen, C. -H. Chan (2013)
+    Probability Seismic Hazard Mapping of Taiwan
+    """
+    #: Coefficient table for rock sites, see table 3 page 227.
+    COEFFS = CoeffsTable(sa_damping=0.05, table="""\
     IMT       C1      C2       C3       C4      C5       H       C6      C7       C8  sigma
     pga   1.0109  0.3822   0.0000  -1.1634  0.1722  1.5184  -0.1907  0.1322  -0.4741  0.627
     0.01  1.0209  0.3822  -0.0003  -1.1633  0.1722  1.5184  -0.1922  0.1314  -0.4738  0.627
