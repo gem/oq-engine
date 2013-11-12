@@ -259,7 +259,8 @@ def _create_job_stats(job):
 
 
 # used by bin/openquake
-def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
+def run_calc(job, log_level, log_file, exports, job_type,
+             supervised=True, progress_handler=None):
     """
     Run a calculation.
 
@@ -281,9 +282,13 @@ def run_calc(job, log_level, log_file, exports, job_type, supervised=True):
     :param bool supervised:
         Defaults to `True`. If `True`, run OpenQuake with a supervisor process,
         which monitors the job executor process and collects log messages.
+    :param callable progress_handler:
+        a callback getting the progress of the calculation and the calculation
+        object
     """
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
     calc = get_calculator_class(job_type, calc_mode)(job)
+    calc.register_progress_handler(progress_handler)
 
     # Create job stats, which implicitly records the start time for the job
     _create_job_stats(job)
@@ -410,16 +415,19 @@ def _do_run_calc(job, exports, calc, job_type):
         The input job object when the calculation completes.
     """
     _switch_to_job_phase(job, job_type, "pre_executing")
-
+    calc.progress_handler("pre_executing", calc.hc)
     calc.pre_execute()
 
     _switch_to_job_phase(job, job_type, "executing")
+    calc.progress_handler("executing", calc.hc)
     calc.execute()
 
     _switch_to_job_phase(job, job_type, "post_executing")
+    calc.progress_handler("post_executing", calc.hc)
     calc.post_execute()
 
     _switch_to_job_phase(job, job_type, "post_processing")
+    calc.progress_handler("post_processing", calc.hc)
     calc.post_process()
 
     _switch_to_job_phase(job, job_type, "export")
@@ -431,6 +439,7 @@ def _do_run_calc(job, exports, calc, job_type):
     CacheInserter.flushall()  # flush caches into the db
 
     _switch_to_job_phase(job, job_type, "complete")
+    calc.progress_handler("calculation complete", calc.hc)
     logs.LOG.debug("*> complete")
 
     return job
