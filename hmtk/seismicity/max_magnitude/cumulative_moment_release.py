@@ -81,8 +81,11 @@ class CumulativeMoment(BaseMaximumMagnitude):
         # If no bootstraps no uncertainty on magnitudes then simply calculate
         # Mmax without uncertainty
         self.check_config(config)
-        cond = (config['number_bootstraps'] == 1 or
-                not isinstance(catalogue.data['sigmaMagnitude'], np.ndarray))
+        cond = config['number_bootstraps'] == 1 or\
+               not isinstance(catalogue.data['sigmaMagnitude'], np.ndarray) or\
+               len(catalogue.data['sigmaMagnitude']) == 0 or\
+               np.all(np.isnan(catalogue.data['sigmaMagnitude']))
+
         if cond:
             return self.cumulative_moment(catalogue.data['year'],
                                           catalogue.data['magnitude']), 0.0
