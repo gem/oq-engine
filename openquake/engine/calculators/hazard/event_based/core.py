@@ -129,7 +129,10 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
                     ses=ses,
                     rupture=r,
                     tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
-                        lt_rlz.ordinal, ses.ordinal, src.source_id, i))
+                        lt_rlz.ordinal, ses.ordinal, src.source_id, i),
+                    hypocenter=r.hypocenter.wkt2d,
+                    magnitude=r.mag,
+                )
                 ruptures.append(rup)
         if not ruptures:
             return
@@ -156,10 +159,13 @@ def _save_ses_ruptures(ruptures, complete_logic_tree_ses):
             r.save()
 
         if complete_logic_tree_ses is not None:
-            for rupture in ruptures:
+            for r in ruptures:
                 models.SESRupture.objects.create(
                     ses=complete_logic_tree_ses,
-                    rupture=rupture.rupture)
+                    rupture=r.rupture,
+                    hypocenter=r.hypocenter,
+                    magnitude=r.magnitude,
+                )
 
 
 @tasks.oqtask
