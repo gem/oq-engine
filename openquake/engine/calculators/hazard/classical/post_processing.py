@@ -80,15 +80,15 @@ def compute_hazard_maps(curves, imls, poes):
     return numpy.array(result).transpose()
 
 
-_HAZ_MAP_DISP_NAME_MEAN_FMT = 'hazard-map(%(poe)s)-%(imt)s-mean'
+_HAZ_MAP_DISP_NAME_MEAN_FMT = 'Mean Hazard map(%(poe)s) %(imt)s'
 _HAZ_MAP_DISP_NAME_QUANTILE_FMT = (
-    'hazard-map(%(poe)s)-%(imt)s-quantile(%(quantile)s)')
+    '%(quantile)s Quantile Hazard Map(%(poe)s) %(imt)s')
 # Hazard maps for a specific end branch
-_HAZ_MAP_DISP_NAME_FMT = 'hazard-map(%(poe)s)-%(imt)s-rlz-%(rlz)s'
+_HAZ_MAP_DISP_NAME_FMT = 'Hazard Map(%(poe)s) %(imt)s rlz-%(rlz)s'
 
-_UHS_DISP_NAME_MEAN_FMT = 'uhs-(%(poe)s)-mean'
-_UHS_DISP_NAME_QUANTILE_FMT = 'uhs-(%(poe)s)-quantile(%(quantile)s)'
-_UHS_DISP_NAME_FMT = 'uhs-(%(poe)s)-rlz-%(rlz)s'
+_UHS_DISP_NAME_MEAN_FMT = 'Mean UHS (%(poe)s)'
+_UHS_DISP_NAME_QUANTILE_FMT = '%(quantile)s Quantile UHS (%(poe)s)'
+_UHS_DISP_NAME_FMT = 'UHS (%(poe)s) rlz-%(rlz)s'
 
 
 # Silencing 'Too many local variables'
