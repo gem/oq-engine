@@ -1,5 +1,5 @@
 import collections
-import os
+import shutil
 import tempfile
 import psycopg2
 import urllib
@@ -19,22 +19,23 @@ logger = logging.getLogger(__name__)
 
 
 @task(ignore_result=True)
-def run_hazard_calc(
-        calc_id, migration_callback_url=None, foreign_calc_id=None):
+def run_hazard_calc(calc_id, calc_dir,
+                    callback_url=None, foreign_calc_id=None):
     """
     Run a hazard calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
     and is ready to execute.
     """
     job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
-    update_calculation(migration_callback_url, status="0%")
+
+    update_calculation(callback_url, status="started")
     exports = []
     # TODO: Log to file somewhere. But where?
     log_file = None
 
     def progress_handler(status, calculation):
         update_calculation(
-            migration_callback_url,
+            callback_url,
             status=status,
             engine_id=calculation.id,
             description=calculation.description)
@@ -44,14 +45,17 @@ def run_hazard_calc(
     engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'hazard',
                     supervised=False, progress_handler=progress_handler)
 
+    shutil.rmtree(calc_dir)
+
     # If requested to, signal job completion and trigger a migration of
     # results.
-    if not None in (migration_callback_url, foreign_calc_id):
-        _trigger_migration(job, migration_callback_url, foreign_calc_id)
+    if not None in (callback_url, foreign_calc_id):
+        _trigger_migration(job, callback_url, foreign_calc_id)
 
 
 @task(ignore_result=True)
-def run_risk_calc(calc_id, migration_callback_url=None, foreign_calc_id=None):
+def run_risk_calc(calc_id, calc_dir,
+                  callback_url=None, foreign_calc_id=None):
     """
     Run a risk calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
@@ -65,11 +69,11 @@ def run_risk_calc(calc_id, migration_callback_url=None, foreign_calc_id=None):
     # handling this task will leak processes!!!
     engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'risk',
                     supervised=False)
-
+    shutil.rmtree(calc_dir)
     # If requested to, signal job completion and trigger a migration of
     # results.
-    if not None in (migration_callback_url, foreign_calc_id):
-        _trigger_migration(job, migration_callback_url, foreign_calc_id)
+    if not None in (callback_url, foreign_calc_id):
+        _trigger_migration(job, callback_url, foreign_calc_id)
 
 
 def _trigger_migration(job, callback_url, foreign_calc_id):
@@ -84,13 +88,14 @@ def _trigger_migration(job, callback_url, foreign_calc_id):
     :param str foreign_calc_id:
         The id of the foreign calculation
     """
-    # direct import of settings to avoid starting celery with the
-    # wrong settings module (it should use the engine one)
+
     update_calculation(
         callback_url,
         description=job.calculation.description,
         status="transfering outputs")
 
+    # direct import of settings to avoid starting celery with the
+    # wrong settings module (it should use the engine one)
     from openquakeserver import settings
     platform_connection = psycopg2.connect(
         host=settings.DATABASES['platform']['HOST'],
@@ -105,11 +110,15 @@ def _trigger_migration(job, callback_url, foreign_calc_id):
     platform_connection.close()
 
 
-def update_calculation(callback_url, **query):
+def update_calculation(callback_url=None, **query):
     """
     Update a foreign calculation by POSTing `query` data to
     `callback_url`.
     """
+
+    if callback_url is None:
+        return
+
     if query:
         data = urllib.urlencode(query)
     else:
@@ -335,7 +344,7 @@ def copy_output(platform_connection, output, foreign_calculation_id):
                     'calculation_id': output.oq_job.calculation.id}),
                 temporary_file)
 
-            temporary_file.seek(0, os.SEEK_SET)
+            temporary_file.reset()
 
             temp_table = "temp_%s" % iface.target_table
             platform_cursor.execute("DROP TABLE IF EXISTS %s" % temp_table)

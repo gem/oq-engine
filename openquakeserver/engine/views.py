@@ -10,7 +10,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.http import HttpResponseNotFound
 from django.shortcuts import redirect
-from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from openquake import nrmllib
@@ -128,10 +127,6 @@ def calc_hazard(request):
 
 
 @csrf_exempt
-# NOTE(LB): Needed in order to use this service in the oq-platform.
-# We can probably remove this later if we can properly fix
-# authentication.
-# See https://bugs.launchpad.net/oq-platform/+bug/1234350
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def run_hazard_calc(request):
@@ -142,27 +137,38 @@ def run_hazard_calc(request):
     in queue, the view will respond with a summary of the calculation,
     like what is implemented in `/v1/calc/hazard/:calc_id`.
     """
-    temp_dir = tempfile.mkdtemp()
-    files = {}
-    # Move each file to a new temp dir, using the upload file names
-    # (not the temporary ones).
-    for key, each_file in request.FILES.iteritems():
-        new_path = os.path.join(temp_dir, each_file.name)
-        shutil.move(each_file.temporary_file_path(), new_path)
-        files[key] = new_path
-
-    job_file = files.pop('job_config')
-    job = oq_engine.haz_job_from_file(
-        job_file, request.user.username, DEFAULT_LOG_LEVEL, []
-    )
-    hc = job.hazard_calculation
-
-    migration_callback_url = request.POST.get('migration_callback_url')
+    callback_url = request.POST.get('callback_url')
     foreign_calc_id = request.POST.get('foreign_calculation_id')
 
-    tasks.run_hazard_calc.apply_async(
-        (hc.id, ), dict(migration_callback_url=migration_callback_url,
-                        foreign_calc_id=foreign_calc_id))
+    try:
+        temp_dir = tempfile.mkdtemp()
+
+        if len(request.FILES.getlist('job_config')) > 1:
+            raw_files = request.FILES.getlist('job_config')
+        else:
+            raw_files = request.FILES.values()
+
+        files = []
+        # Move each file to a new temp dir, using the upload file names
+        # (not the temporary ones).
+        for each_file in raw_files:
+            new_path = os.path.join(temp_dir, each_file.name)
+            shutil.move(each_file.temporary_file_path(), new_path)
+            files.append(new_path)
+
+        job_file = [f for f in files if f.endswith('.ini')][0]
+
+        job = oq_engine.haz_job_from_file(
+            job_file, request.user.username, DEFAULT_LOG_LEVEL, []
+        )
+        hc = job.hazard_calculation
+
+        tasks.run_hazard_calc.apply_async(
+            (hc.id, temp_dir),
+            dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id))
+    except Exception as e:
+        tasks.update_calculation(callback_url, status="failed")
+        raise e
 
     return redirect('/v1/calc/hazard/%s' % hc.id)
 
@@ -314,10 +320,6 @@ def calc_risk(request):
 
 
 @csrf_exempt
-# NOTE(LB): Needed in order to use this service in the oq-platform.
-# We can probably remove this later if we can properly fix
-# authentication.
-# See https://bugs.launchpad.net/oq-platform/+bug/1234350
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def run_risk_calc(request):
@@ -328,27 +330,30 @@ def run_risk_calc(request):
     must be included. This param is either the `hazard_calc` or
     `hazard_result`, the value of which must be the corresponding ID.
     """
-    temp_dir = tempfile.mkdtemp()
-    files = {}
-    for key, each_file in request.FILES.iteritems():
-        new_path = os.path.join(temp_dir, each_file.name)
-        shutil.move(each_file.temporary_file_path(), new_path)
-        files[key] = new_path
+    try:
+        callback_url = request.POST.get('callback_url')
+        foreign_calc_id = request.POST.get('foreign_calculation_id')
 
-    job_file = files.pop('job_config')
-    job = oq_engine.risk_job_from_file(
-        job_file, request.user.username, DEFAULT_LOG_LEVEL, [],
-        hazard_calculation_id=request.POST.get('hazard_calc'),
-        hazard_output_id=request.POST.get('hazard_result'),
-    )
-    rc = job.risk_calculation
+        temp_dir = tempfile.mkdtemp()
+        files = {}
+        for key, each_file in request.FILES.iteritems():
+            new_path = os.path.join(temp_dir, each_file.name)
+            shutil.move(each_file.temporary_file_path(), new_path)
+            files[key] = new_path
 
-    migration_callback_url = request.POST.get('migration_callback_url')
-    foreign_calc_id = request.POST.get('foreign_calculation_id')
-
-    tasks.run_risk_calc.apply_async(
-        (rc.id, ), dict(migration_callback_url=migration_callback_url,
-                        foreign_calc_id=foreign_calc_id))
+        job_file = files.pop('job_config')
+        job = oq_engine.risk_job_from_file(
+            job_file, request.user.username, DEFAULT_LOG_LEVEL, [],
+            hazard_calculation_id=request.POST.get('hazard_calc'),
+            hazard_output_id=request.POST.get('hazard_result'),
+        )
+        rc = job.risk_calculation
+        tasks.run_risk_calc.apply_async(
+            (rc.id, temp_dir),
+            dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id))
+    except Exception as e:
+        tasks.update_calculation(callback_url, status="failed")
+        raise e
 
     return redirect('/v1/calc/risk/%s' % rc.id)
 
