@@ -388,7 +388,7 @@ class BaseHazardCalculator(base.Calculator):
 
                 hco = models.Output.objects.create(
                     oq_job=self.job,
-                    display_name="hc-rlz-%s" % rlz.id,
+                    display_name="Hazard Curve rlz-%s" % rlz.id,
                     output_type='hazard_curve',
                 )
 
@@ -823,7 +823,7 @@ class BaseHazardCalculator(base.Calculator):
             if self.hc.mean_hazard_curves:
                 mean_output = models.Output.objects.create_output(
                     job=self.job,
-                    display_name='mean-curves-%s' % imt,
+                    display_name='Mean Hazard Curves %s' % imt,
                     output_type='hazard_curve'
                 )
                 mean_hc = models.HazardCurve.objects.create(
@@ -842,7 +842,7 @@ class BaseHazardCalculator(base.Calculator):
                     q_output = models.Output.objects.create_output(
                         job=self.job,
                         display_name=(
-                            'quantile(%s)-curves-%s' % (quantile, imt)
+                            '%s quantile Hazard Curves %s' % (quantile, imt)
                         ),
                         output_type='hazard_curve'
                     )
