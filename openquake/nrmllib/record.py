@@ -29,9 +29,9 @@ class Location(record.Record):
     lat = record.Field(float)
     unique = Unique('lon', 'lat')
 
-The argument of the Field constructor is a converter, i.e. a callable
-taking in input a UTF8-encoded string and returning a Python object
-or raising a ValueError if the string is invalid.
+The argument of the Field constructor is a callable taking in input a
+UTF8-encoded string and returning a Python object or raising a
+ValueError if the string is invalid.
 """
 
 import abc
@@ -68,13 +68,20 @@ class InvalidRecord(Exception):
 class Unique(object):
     """
     Descriptor used to describe unique constraints on a record type.
-    In the example of a Location record, loc.unique returns the tuple
-    (lon, lat), as UTF8-encoded strings.
+    In the example of a Location record
+
+    class Location(record.Record):
+        id = record.Field(int, key=True)
+        lon = record.Field(float)
+        lat = record.Field(float)
+        unique = Unique('lon', 'lat')
+
+    loc.unique_fields returns the tuple (lon, lat), as UTF8-encoded strings.
     """
     def __init__(self, *indexes):
         assert len(set(indexes)) == len(indexes), 'Duplicates in %s!' % indexes
-        self.indexes = list(indexes)  # set by MetaRecord
-        self.name = 'unique'  # set by MetaRecord
+        self.indexes = list(indexes)  # MetaRecord will override this list
+        self.name = None  # MetaRecord will override this name
 
     def __get__(self, rec, recordtype):
         if rec is None:  # called from the record class
@@ -84,24 +91,27 @@ class Unique(object):
 
 class Field(object):
     """
-    Descriptor use to describe record fields.
-    In the example of a Location record, loc.lon and loc.lat return
-    longitude and latitude respectively, as floats.
+    Descriptor used to describe record fields. A Field instance has
+
+    - a cast function which is able to convert a UTF-8 string into a Python
+      object;
+    - a name attribute with the name of the field
+    - a default attribute with the default string value of the field
+    - an ordinal attribute keeping track of the order of definition
     """
     _counter = itertools.count()
 
-    def __init__(self, converter, key=False, name='noname', default=''):
-        self.converter = converter
+    def __init__(self, cast, key=False, name='noname', default=''):
+        self.cast = cast
         self.key = key
         self.name = name
         self.default = default
         self.ordinal = self._counter.next()
-        self.index = 0  # set by MetaRecord
 
     def __get__(self, rec, rectype):
-        if rec is None:  # sorting function
-            return lambda rec: rec.converter(rec[self.index])
-        return rec.converter(rec[self.index])
+        if rec is None:
+            return lambda rec: rec[self.name].cast()
+        return rec[self.name].cast()
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.name)
@@ -111,7 +121,7 @@ class MetaRecord(abc.ABCMeta):
     """
     Metaclass for record types. The metaclass is in charge of
     processing the Field objects at class definition time. In particular
-    it sets their .name and .index attributes. It also processes the
+    it sets their .name attribute. It also processes the
     Unique constraints, by setting their .name and .indexes attributes.
     It defines on the record subclasses the ``__init__`` method, the
     ``pkey`` property and the attributes ``_name2index``, ``fields``,
@@ -139,10 +149,11 @@ class MetaRecord(abc.ABCMeta):
         keyindexes = []
         for i, f in enumerate(fields):
             fieldnames.append(f.name)
-            _name2index[f.name] = f.index = i
+            _name2index[f.name] = i
             if f.key:
                 keyindexes.append(i)
-        keyindexes = keyindexes or [0]
+        if name != 'Record':
+            assert keyindexes, 'Missing key field in class %s' % name
 
         # unique constraints
         for n, v in dic.iteritems():
@@ -152,6 +163,10 @@ class MetaRecord(abc.ABCMeta):
                         v.name = n
                         v.indexes[i] = _name2index[index]
 
+        # normal an user should not define the following fields in
+        # a client class, since they are defined by the metaclass
+        # a savvy user however can provide her own implementations
+        # and they will have the precedence against the default ones
         if '__init__' not in dic:
             dic['__init__'] = mcl.mkinit(fieldnames)
         if '_name2index' not in dic:
@@ -182,6 +197,12 @@ class MetaRecord(abc.ABCMeta):
         """Returns the names of the fields defined in cls"""
         return [f.name for f in cls.fields]
 
+    def get_unique_items(cls):
+        """
+        Return the Unique instance defined in cls as pairs (name, descriptor)
+        """
+        return inspect.getmembers(cls, lambda m: isinstance(m, Unique))
+
     def __len__(cls):
         """Returns the number of fields defined in cls"""
         return len(cls.fields)
@@ -205,14 +226,17 @@ class Record(collections.Sequence):
 
     def is_valid(self, i=None):
         """
-        True if the fields `i` is valid; if `i` is None, check all the fields
+        `i` can be an integer, a field name, or None: if `i` is None,
+        check all the fields; if `i` is a file name convert it into an integer
+        by looking at the _name2index dictionary and check the corresponding
+        field.
         """
         if i is None:
             return all(self.is_valid(i) for i in range(len(self)))
         if isinstance(i, str):
             i = self._name2index[i]
         try:
-            self.fields[i].converter(self[i])
+            self.fields[i].cast(self[i])
         except ValueError:
             return False
         return True
@@ -223,7 +247,7 @@ class Record(collections.Sequence):
         errs = []
         for col, field in zip(self.row, self.fields):
             try:
-                cols.append(field.converter(col))
+                cols.append(field.cast(col))
             except ValueError as e:
                 errs.append((field.name, str(e)))
         if errs:
@@ -243,16 +267,18 @@ class Record(collections.Sequence):
 
     def __setitem__(self, i, value):
         """
-        Set the column 'i', where 'i' can be an integer or a name.
+        Set the column 'i', where 'i' can be an integer or a field name.
         If the value is invalid, raise a ValueError.
         """
         if isinstance(i, str):
             i = self._name2index[i]
-        self.fields[i].converter(value)
+        self.fields[i].cast(value)
         self.row[i] = value
 
     def __delitem__(self, i):
-        """Delete the column 'i', where 'i' can be an integer or a string"""
+        """
+        Delete the column 'i', where 'i' can be an integer or a field name
+        """
         if isinstance(i, str):
             i = self._name2index[i]
         del self.row[i]
@@ -314,11 +340,10 @@ class Table(collections.MutableSequence):
     """
     def __init__(self, recordtype, records):
         self.recordtype = recordtype
-        self.unique = []
-        for n, v in inspect.getmembers(
-                recordtype, lambda v: isinstance(v, Unique)):
+        self.unique_fields = []
+        for n, v in recordtype.get_unique_items():
             setattr(self, '%s_dict' % v.name, {})
-            self.unique.append(v)
+            self.unique_fields.append(v)
         self.records = []
         for rec in records:
             self.append(rec)
@@ -334,7 +359,7 @@ class Table(collections.MutableSequence):
     def __delitem__(self, i):
         """Delete the i-th record"""
         # i must be an integer, not a range
-        for descr in self.unique:
+        for descr in self.unique_fields:
             key = descr.__get__(self.records[i], self.recordtype)
             del getattr(self, '%s_dict' % descr.name)[key]
         del self.records[i]
@@ -351,7 +376,7 @@ class Table(collections.MutableSequence):
         (in terms of the unique constraints, including the primary
         key) raises a KeyError.
         """
-        for descr in self.unique:
+        for descr in self.unique_fields:
             dic = getattr(self, '%s_dict' % descr.name)
             key = descr.__get__(rec, self.recordtype)
             try:
