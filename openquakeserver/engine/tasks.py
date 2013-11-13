@@ -344,7 +344,7 @@ def copy_output(platform_connection, output, foreign_calculation_id):
                     'calculation_id': output.oq_job.calculation.id}),
                 temporary_file)
 
-            temporary_file.reset()
+            temporary_file.seek(0)
 
             temp_table = "temp_%s" % iface.target_table
             platform_cursor.execute("DROP TABLE IF EXISTS %s" % temp_table)
