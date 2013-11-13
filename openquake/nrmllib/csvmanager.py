@@ -117,6 +117,15 @@ class Archive(object):
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.extract_filenames())
 
+    def __contains__(self, name):
+        """Check if a name is contained in the archive"""
+        try:
+            self.open(name, 'r').close()
+        except:
+            return False
+        else:
+            return True
+
 
 # Writing directly to a zip archive is not possible because .writestr
 # adds a new object every time it is called, so you cannot work line-by-line.
@@ -431,10 +440,12 @@ class CSVManager(object):
     def _find_invalid(self):
         for conv in self._getconverters():
             for recordtype in conv.recordtypes():
-                for invalid in record.find_invalid(conv.man.read(recordtype)):
-                    invalid.fname = '%s__%s.csv' % (
-                        conv.man.prefix, recordtype.__name__)
-                    yield invalid
+                fname = '%s__%s.csv' % (conv.man.prefix, recordtype.__name__)
+                if fname in self.archive:
+                    recorditer = conv.man.read(recordtype)
+                    for invalid in record.find_invalid(recorditer):
+                        invalid.fname = fname
+                        yield invalid
 
     def write(self, record):
         """
