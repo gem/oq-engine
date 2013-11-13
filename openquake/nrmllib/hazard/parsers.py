@@ -25,8 +25,6 @@ import json
 import warnings
 from collections import OrderedDict
 
-from lxml import etree
-
 import openquake.nrmllib
 
 from openquake.nrmllib import models
@@ -580,6 +578,8 @@ class GMFScenarioParser(object):
         gmf = OrderedDict()  # (imt, location) -> gmvs
         point_value_list = []
         for _, element in tree:
+            if element.getparent() is None:
+                break  # work around a bug in lxml 3.2.1
             a = element.attrib
             if element.tag == self._NODE_TAG:
                 point_value_list.append(

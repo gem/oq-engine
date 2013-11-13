@@ -24,9 +24,10 @@ record fields as follows:
 from openquake.nrmllib import record
 
 class Location(record.Record):
-    id = record.Field(int, key=True)
+    id = record.Field(int)
     lon = record.Field(float)
     lat = record.Field(float)
+    pkey = Unique('id')
     unique = Unique('lon', 'lat')
 
 The argument of the Field constructor is a callable taking in input a
@@ -74,6 +75,7 @@ class Unique(object):
         id = record.Field(int, key=True)
         lon = record.Field(float)
         lat = record.Field(float)
+        pkey = Unique('id')
         unique = Unique('lon', 'lat')
 
     loc.unique_fields returns the tuple (lon, lat), as UTF8-encoded strings.
@@ -101,9 +103,8 @@ class Field(object):
     """
     _counter = itertools.count()
 
-    def __init__(self, cast, key=False, name='noname', default=''):
+    def __init__(self, cast, name='noname', default=''):
         self.cast = cast
-        self.key = key
         self.name = name
         self.default = default
         self.ordinal = self._counter.next()
@@ -123,13 +124,13 @@ class MetaRecord(abc.ABCMeta):
     processing the Field objects at class definition time. In particular
     it sets their .name attribute. It also processes the
     Unique constraints, by setting their .name and .indexes attributes.
-    It defines on the record subclasses the ``__init__`` method, the
-    ``pkey`` property and the attributes ``_name2index``, ``fields``,
+    It defines on the record subclasses the ``__init__`` method
+    and the attributes ``_name2index``, ``fields``,
     ``_ntuple``. Moreover it defines the metaclass method
     ``__len__`` and the metaclass property ``fieldnames``.
     """
     _counter = itertools.count()
-    _reserved_names = set('fields fieldnames _name2index _ntuple pkey')
+    _reserved_names = set('fields fieldnames _name2index _ntuple')
 
     def __new__(mcl, name, bases, dic):
         for nam in dic:
@@ -146,14 +147,9 @@ class MetaRecord(abc.ABCMeta):
         fields.sort(key=operator.attrgetter('ordinal'))
         fieldnames = []
         _name2index = {}
-        keyindexes = []
         for i, f in enumerate(fields):
             fieldnames.append(f.name)
             _name2index[f.name] = i
-            if f.key:
-                keyindexes.append(i)
-        if name != 'Record':
-            assert keyindexes, 'Missing key field in class %s' % name
 
         # unique constraints
         for n, v in dic.iteritems():
@@ -175,10 +171,11 @@ class MetaRecord(abc.ABCMeta):
             dic['fields'] = fields
         if '_ntuple' not in dic:
             dic['_ntuple'] = collections.namedtuple(name, fieldnames)
-        if 'pkey' not in dic:
-            dic['pkey'] = Unique(*keyindexes)
         dic['_ordinal'] = mcl._counter.next()
-        return super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
+        cls = super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
+        if name != 'Record':
+            cls.pkey  # raise an AttributeError if pkey is not defined
+        return cls
 
     @staticmethod
     def mkinit(fieldnames):

@@ -25,8 +25,9 @@ from openquake.nrmllib import valid
 
 class DiscreteVulnerabilitySet(Record):
     convertername = 'Vulnerability'
+    pkey = Unique('vulnerabilitySetID')
 
-    vulnerabilitySetID = Field(str, key=True)
+    vulnerabilitySetID = Field(str)
     assetCategory = Field(valid.category)
     lossCategory = Field(str)
     IMT = Field(valid.IMTstr)
@@ -42,9 +43,10 @@ class DiscreteVulnerabilitySet(Record):
 
 class DiscreteVulnerability(Record):
     convertername = 'Vulnerability'
+    pkey = Unique('vulnerabilitySetID', 'vulnerabilityFunctionID')
 
-    vulnerabilitySetID = Field(str, key=True)
-    vulnerabilityFunctionID = Field(str, key=True)
+    vulnerabilitySetID = Field(str)
+    vulnerabilityFunctionID = Field(str)
     probabilisticDistribution = Field(str)
 
     def to_node(self):
@@ -58,10 +60,11 @@ class DiscreteVulnerability(Record):
 
 class DiscreteVulnerabilityData(Record):
     convertername = 'Vulnerability'
+    pkey = Unique('vulnerabilitySetID', 'vulnerabilityFunctionID', 'IML')
 
-    vulnerabilitySetID = Field(str, key=True)
-    vulnerabilityFunctionID = Field(str, key=True)
-    IML = Field(float, key=True)
+    vulnerabilitySetID = Field(str)
+    vulnerabilityFunctionID = Field(str)
+    IML = Field(float)
     lossRatio = Field(float)
     coefficientsVariation = Field(float)
 
@@ -70,8 +73,9 @@ class DiscreteVulnerabilityData(Record):
 
 class Fragility(Record):
     convertername = 'Fragility'
+    pkey = Unique('format')
 
-    format = Field(valid.Choice('discrete', 'continuous'), key=True)
+    format = Field(valid.Choice('discrete', 'continuous'))
     description = Field(str)
     limitStates = Field(valid.namelist)
 
@@ -84,8 +88,9 @@ class Fragility(Record):
 
 class FFSetDiscrete(Record):
     convertername = 'Fragility'
+    pkey = Unique('ordinal')
 
-    ordinal = Field(int, key=True)
+    ordinal = Field(int)
     taxonomy = Field(str)
     noDamageLimit = Field(float)
     IMT = Field(valid.IMTstr)
@@ -103,8 +108,9 @@ class FFSetDiscrete(Record):
 
 class FFSetContinuous(Record):
     convertername = 'Fragility'
+    pkey = Unique('ordinal')
 
-    ordinal = Field(int, key=True)
+    ordinal = Field(int)
     taxonomy = Field(str)
     noDamageLimit = Field(float)
     type = Field(str)
@@ -129,19 +135,21 @@ class FFSetContinuous(Record):
 
 class FFDataDiscrete(Record):
     convertername = 'Fragility'
+    pkey = Unique('ffs_ordinal', 'limitState', 'iml')
 
-    ffs_ordinal = Field(int, key=True)
-    limitState = Field(str, key=True)
-    iml = Field(float, key=True)
+    ffs_ordinal = Field(int)
+    limitState = Field(str)
+    iml = Field(float)
     poe = Field(valid.probability)
 
 
 class FFDContinuos(Record):
     convertername = 'Fragility'
+    pkey = Unique('ffs_ordinal', 'limitState', 'param')
 
-    ffs_ordinal = Field(int, key=True)
-    limitState = Field(str, key=True)
-    param = Field(str, key=True)
+    ffs_ordinal = Field(int)
+    limitState = Field(str)
+    param = Field(str)
     value = Field(float)
 
 
@@ -149,12 +157,12 @@ class FFDContinuos(Record):
 
 class Location(Record):
     convertername = 'Exposure'
+    pkey = Unique('id')
+    unique = Unique('lon', 'lat')
 
-    id = Field(valid.positiveint, key=True)
+    id = Field(valid.positiveint)
     lon = Field(valid.longitude)
     lat = Field(valid.latitude)
-
-    unique = Unique('lon', 'lat')
 
     def to_node(self):
         return Node('location', dict(lon=self[1], lat=self[2]))
@@ -164,8 +172,9 @@ class Location(Record):
 
 class Exposure(Record):
     convertername = 'Exposure'
+    pkey = Unique('id')
 
-    id = Field(str, key=True)
+    id = Field(str)
     category = Field(valid.category)
     taxonomySource = Field(str)
     description = Field(str)
@@ -193,8 +202,9 @@ class Exposure(Record):
 
 class CostType(Record):
     convertername = 'Exposure'
+    pkey = Unique('name')
 
-    name = Field(str, key=True)
+    name = Field(str)
     type = Field(str)
     unit = Field(str)
     retrofittedType = Field(str)
@@ -211,8 +221,9 @@ class CostType(Record):
 
 class AssetPopulation(Record):
     convertername = 'Exposure'
+    pkey = Unique('id')
 
-    id = Field(str, key=True)
+    id = Field(str)
     taxonomy = Field(str)
     number = Field(float)
     location = Field(int)
@@ -226,9 +237,10 @@ class AssetPopulation(Record):
 
 class GmfCollection(Record):
     convertername = 'GmfCollection'
+    pkey = Unique('sourceModelTreePath', 'gsimTreePath')
 
-    sourceModelTreePath = Field(str, key=True)
-    gsimTreePath = Field(str, key=True)
+    sourceModelTreePath = Field(str)
+    gsimTreePath = Field(str)
 
     def to_node(self):
         return Node('gmfCollection', dict(sourceModelTreePath=self[0],
@@ -237,8 +249,9 @@ class GmfCollection(Record):
 
 class GmfSet(Record):
     convertername = 'GmfCollection'
+    pkey = Unique('stochasticEventSetId')
 
-    stochasticEventSetId = Field(int, key=True)
+    stochasticEventSetId = Field(int)
     investigationTime = Field(float)
 
     def to_node(self):
@@ -252,10 +265,11 @@ class GmfSet(Record):
 
 class Gmf(Record):
     convertername = 'GmfCollection'
+    pkey = Unique('stochasticEventSetId', 'imtStr', 'ruptureId')
 
-    stochasticEventSetId = Field(int, key=True)
-    imtStr = Field(valid.IMTstr, key=True)
-    ruptureId = Field(str, key=True)
+    stochasticEventSetId = Field(int)
+    imtStr = Field(valid.IMTstr)
+    ruptureId = Field(str)
 
     def to_node(self):
         imt = self[1]
@@ -271,12 +285,13 @@ class Gmf(Record):
 
 class GmfData(Record):
     convertername = 'GmfCollection'
+    pkey = Unique('stochasticEventSetId', 'imtStr', 'ruptureId', 'lon', 'lat')
 
-    stochasticEventSetId = Field(int, key=True)
-    imtStr = Field(str, key=True)
-    ruptureId = Field(str, key=True)
-    lon = Field(float, key=True)
-    lat = Field(float, key=True)
+    stochasticEventSetId = Field(int)
+    imtStr = Field(str)
+    ruptureId = Field(str)
+    lon = Field(float)
+    lat = Field(float)
     gmv = Field(float)
 
     def to_node(self):
