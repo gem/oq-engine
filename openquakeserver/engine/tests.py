@@ -6,7 +6,7 @@ import shutil
 import tempfile
 
 from collections import namedtuple
-from collections import OrderedDict
+from django.utils.datastructures import MultiValueDict
 from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import RequestFactory
 from django.utils import unittest
@@ -502,16 +502,17 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         fake_model_3 = FakeTempUploadedFile('/foo/bar/tmpHGa9Whtmp.upload',
                                             'source_model.xml')
 
-        request = self.factory.post('/v1/calc/hazard/run')
-        request.user = mock.Mock()
+        request = mock.Mock()
         request.user.username = 'openquake'
-        request._files = OrderedDict([
-            ('job_config', fake_job_file),
-            ('input_model_1', fake_model_1),
-            ('input_model_2', fake_model_2),
-            ('input_model_3', fake_model_3),
-        ])
+        request.method = 'POST'
+        request.get_type.return_value = 'http'
         request.META = dict(HTTP_HOST='www.openquake.org')
+        request.FILES = MultiValueDict({
+            'job_config': [fake_job_file],
+            'input_model_1': [fake_model_1],
+            'input_model_2': [fake_model_2],
+            'input_model_3': [fake_model_3]})
+        request.POST = dict()
 
         # Set up the mocks:
         mocks = dict(
@@ -526,12 +527,6 @@ class RunHazardCalcTestCase(BaseViewTestCase):
 
         # Set up expected test values:
         pathjoin = os.path.join
-        move_exp_call_args = [
-            ((fake_job_file.path, pathjoin(temp_dir, fake_job_file.name)), {}),
-            ((fake_model_1.path, pathjoin(temp_dir, fake_model_1.name)), {}),
-            ((fake_model_2.path, pathjoin(temp_dir, fake_model_2.name)), {}),
-            ((fake_model_3.path, pathjoin(temp_dir, fake_model_3.name)), {}),
-        ]
         jff_exp_call_args = (
             (pathjoin(temp_dir, fake_job_file.name), 'openquake', 'progress',
              []),
@@ -558,14 +553,11 @@ class RunHazardCalcTestCase(BaseViewTestCase):
                 multi_mock['job_from_file'].return_value = fake_job
 
                 # Call the function under test
-                views.run_hazard_calc(request)
+                print views.run_hazard_calc(request)
 
             self.assertEqual(1, multi_mock['mkdtemp'].call_count)
 
             self.assertEqual(4, multi_mock['move'].call_count)
-            self.assertEqual(move_exp_call_args,
-                             multi_mock['move'].call_args_list)
-
             self.assertEqual(1, multi_mock['job_from_file'].call_count)
             self.assertEqual(jff_exp_call_args,
                              multi_mock['job_from_file'].call_args)
@@ -573,9 +565,9 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             self.assertEqual(
                 {'count': 1,
                  'args': (
-                     (666, ),
+                     (666, temp_dir),
                      {'foreign_calc_id': None,
-                      'migration_callback_url': None})},
+                      'callback_url': None})},
                 aa_call_data
             )
 
@@ -586,12 +578,11 @@ class RunHazardCalcTestCase(BaseViewTestCase):
 class RunRiskCalcTestCase(BaseViewTestCase):
 
     def setUp(self):
-        # request = self.factory.post('/v1/calc/risk/run')
         self.request = mock.Mock()
         self.request.user.username = 'openquake'
         self.request.method = 'POST'
         self.request.POST = dict()
-        self.request.POST['hazard_calc'] = 666
+        self.request.POST['hazard_calculation_id'] = 666
         self.request.META = dict()
         self.request.META['HTTP_HOST'] = 'www.openquake.org'
 
@@ -603,11 +594,8 @@ class RunRiskCalcTestCase(BaseViewTestCase):
                                             'vulnerability.xml')
         fake_model_2 = FakeTempUploadedFile('/foo/bar/tmpI66zIGtmp.upload',
                                             'exposure.xml')
-        self.request.FILES = OrderedDict([
-            ('job_config', fake_job_file),
-            ('input_model_1', fake_model_1),
-            ('input_model_2', fake_model_2),
-        ])
+        self.request.FILES = MultiValueDict({
+            'job_config': [fake_job_file, fake_model_1, fake_model_2]})
 
         # Set up the mocks:
         mocks = dict(
@@ -668,9 +656,9 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             self.assertEqual(
                 {'count': 1,
                  'args': (
-                     (777,),
+                     (777, temp_dir),
                      {'foreign_calc_id': None,
-                      'migration_callback_url': None})},
+                      'callback_url': None})},
                 aa_call_data
             )
         finally:
