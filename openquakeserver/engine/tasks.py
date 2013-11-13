@@ -28,7 +28,7 @@ def run_hazard_calc(calc_id, calc_dir,
     """
     job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
 
-    update_calculation(callback_url, status="started")
+    update_calculation(callback_url, status="started", engine_id=calc_id)
     exports = []
     # TODO: Log to file somewhere. But where?
     log_file = None
@@ -37,7 +37,6 @@ def run_hazard_calc(calc_id, calc_dir,
         update_calculation(
             callback_url,
             status=status,
-            engine_id=calculation.id,
             description=calculation.description)
 
     # NOTE: Supervision MUST be turned off, or else the celeryd cluster
