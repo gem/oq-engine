@@ -173,7 +173,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # create a record in the output table
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name="gmf_scenario",
+            display_name="GMF",
             output_type="gmf_scenario")
 
         # create an associated gmf record

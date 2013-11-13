@@ -422,4 +422,3 @@ class TaskArgGenTestCase(unittest.TestCase):
             get_src_patch.stop()
 
             ltp_patch.stop()
-
