@@ -347,33 +347,33 @@ class Table(collections.MutableSequence):
     """
     def __init__(self, recordtype, records):
         self.recordtype = recordtype
-        self.unique_fields = []
+        self._unique_fields = []
+        self._records = []
         for n, v in recordtype.get_unique_items():
             setattr(self, '%s_dict' % v.name, {})
-            self.unique_fields.append(v)
-        self.records = []
+            self._unique_fields.append(v)
         for rec in records:
             self.append(rec)
 
     def __getitem__(self, i):
         """Return the i-th record"""
-        return self.records[i]
+        return self._records[i]
 
     def __setitem__(self, i, record):
         """Set the i-th record"""
-        self.records[i] = record
+        self._records[i] = record
 
     def __delitem__(self, i):
         """Delete the i-th record"""
         # i must be an integer, not a range
-        for descr in self.unique_fields:
-            key = descr.__get__(self.records[i], self.recordtype)
+        for descr in self._unique_fields:
+            key = descr.__get__(self._records[i], self.recordtype)
             del getattr(self, '%s_dict' % descr.name)[key]
-        del self.records[i]
+        del self._records[i]
 
     def __len__(self):
         """The number of records stored in the table"""
-        return len(self.records)
+        return len(self._records)
 
     def insert(self, position, rec):
         """
@@ -383,7 +383,7 @@ class Table(collections.MutableSequence):
         (in terms of the unique constraints, including the primary
         key) raises a KeyError.
         """
-        for descr in self.unique_fields:
+        for descr in self._unique_fields:
             dic = getattr(self, '%s_dict' % descr.name)
             key = descr.__get__(rec, self.recordtype)
             try:
@@ -397,7 +397,7 @@ class Table(collections.MutableSequence):
                 raise KeyError('%s:%d:Duplicate record:%s' %
                                (self.recordtype.__name__, position,
                                 ','.join(msg)))
-        self.records.append(rec)
+        self._records.append(rec)
 
     def getrecord(self, *pkey):
         """
