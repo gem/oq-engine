@@ -66,13 +66,17 @@ class InvalidRecord(Exception):
         return '\n'.join(msg)
 
 
+class ForeignKeyError(Exception):
+    pass
+
+
 class Unique(object):
     """
     Descriptor used to describe unique constraints on a record type.
     In the example of a Location record
 
     class Location(record.Record):
-        id = record.Field(int, key=True)
+        id = record.Field(int)
         lon = record.Field(float)
         lat = record.Field(float)
         pkey = Unique('id')
@@ -80,15 +84,42 @@ class Unique(object):
 
     loc.unique_fields returns the tuple (lon, lat), as UTF8-encoded strings.
     """
-    def __init__(self, *indexes):
-        assert len(set(indexes)) == len(indexes), 'Duplicates in %s!' % indexes
-        self.indexes = list(indexes)  # MetaRecord will override this list
-        self.name = None  # MetaRecord will override this name
+    def __init__(self, *names):
+        assert len(set(names)) == len(names), 'Duplicates in %s!' % names
+        self.names = names
+        self.recordtype = None
+        self.dict = None
 
     def __get__(self, rec, recordtype):
         if rec is None:  # called from the record class
-            return self
-        return tuple(rec[f] for f in self.indexes)
+            unique = Unique(*self.names)
+            unique.recordtype = recordtype
+            unique.dict = {}
+            return unique
+        return tuple(rec[f] for f in self.names)
+
+    def __repr__(self):
+        return '<Unique%s>' % str(self.names)
+
+
+class ForeignKey(object):
+    """
+    Descriptor used to describe unique constraints on a record type.
+    """
+    def __init__(self, unique, *names):
+        self.unique = unique
+        self.names = names
+        self.recordtype = None
+
+    def __get__(self, rec, recordtype):
+        if rec is None:  # called from the record class
+            fkey = ForeignKey(self.unique, *self.names)
+            fkey.recordtype = recordtype
+            return fkey
+        return tuple(rec[f] for f in self.names)
+
+    def __repr__(self):
+        return '<ForeignKey%s>' % str(self.names)
 
 
 class Field(object):
@@ -122,15 +153,14 @@ class MetaRecord(abc.ABCMeta):
     """
     Metaclass for record types. The metaclass is in charge of
     processing the Field objects at class definition time. In particular
-    it sets their .name attribute. It also processes the
-    Unique constraints, by setting their .name and .indexes attributes.
+    it sets their .name attribute.
     It defines on the record subclasses the ``__init__`` method
     and the attributes ``_name2index``, ``fields``,
     ``_ntuple``. Moreover it defines the metaclass method
     ``__len__`` and the metaclass property ``fieldnames``.
     """
     _counter = itertools.count()
-    _reserved_names = set('fields fieldnames _name2index _ntuple')
+    _reserved_names = set('fields fieldnames _name2index _ntuple _ordinal')
 
     def __new__(mcl, name, bases, dic):
         for nam in dic:
@@ -150,14 +180,6 @@ class MetaRecord(abc.ABCMeta):
         for i, f in enumerate(fields):
             fieldnames.append(f.name)
             _name2index[f.name] = i
-
-        # unique constraints
-        for n, v in dic.iteritems():
-            if isinstance(v, Unique):
-                for i, index in enumerate(v.indexes):
-                    if isinstance(index, str):
-                        v.name = n
-                        v.indexes[i] = _name2index[index]
 
         # normal an user should not define the following fields in
         # a client class, since they are defined by the metaclass
@@ -194,11 +216,12 @@ class MetaRecord(abc.ABCMeta):
         """Returns the names of the fields defined in cls"""
         return [f.name for f in cls.fields]
 
-    def get_unique_items(cls):
+    def get_items(cls, descriptor_cls):
         """
-        Return the Unique instance defined in cls as pairs (name, descriptor)
+        Return the instances of descriptor_cls defined in cls as pairs
+        (name, descriptor)
         """
-        return inspect.getmembers(cls, lambda m: isinstance(m, Unique))
+        return inspect.getmembers(cls, lambda m: isinstance(m, descriptor_cls))
 
     def __len__(cls):
         """Returns the number of fields defined in cls"""
@@ -342,15 +365,13 @@ def find_invalid(recorditer):
 class Table(collections.MutableSequence):
     """
     In-memory table storing a sequence of record objects.
-    Primary key and unique constraints are checked at insertion time,
-    by looking at the dictionaries <constraint-name>_dict.
+    Unique constraints are checked at insertion time.
     """
     def __init__(self, recordtype, records):
         self.recordtype = recordtype
         self._unique_fields = []
         self._records = []
-        for n, v in recordtype.get_unique_items():
-            setattr(self, '%s_dict' % v.name, {})
+        for n, v in recordtype.get_items(Unique):
             self._unique_fields.append(v)
         for rec in records:
             self.append(rec)
@@ -368,7 +389,7 @@ class Table(collections.MutableSequence):
         # i must be an integer, not a range
         for descr in self._unique_fields:
             key = descr.__get__(self._records[i], self.recordtype)
-            del getattr(self, '%s_dict' % descr.name)[key]
+            del descr.dict[key]
         del self._records[i]
 
     def __len__(self):
@@ -380,21 +401,20 @@ class Table(collections.MutableSequence):
         Insert a record in the table, at the given position index.
         This is called by the .append method, with position equal
         to the record length. Trying to insert a duplicated record
-        (in terms of the unique constraints, including the primary
+        (in terms of unique constraints, including the primary
         key) raises a KeyError.
         """
         for descr in self._unique_fields:
-            dic = getattr(self, '%s_dict' % descr.name)
             key = descr.__get__(rec, self.recordtype)
             try:
-                rec = dic[key]
+                rec = descr.dict[key]
             except KeyError:  # not inserted yet
-                dic[key] = rec
+                descr.dict[key] = rec
             else:
                 msg = []
-                for k, i in zip(key, descr.indexes):
-                    msg.append('%s=%s' % (rec.fields[i].name, k))
-                raise KeyError('%s:%d:Duplicate record:%s' %
+                for k, name in zip(key, descr.names):
+                    msg.append('%s=%s' % (name, k))
+                raise KeyError('%s:%d:Duplicated record:%s' %
                                (self.recordtype.__name__, position,
                                 ','.join(msg)))
         self._records.append(rec)
@@ -404,7 +424,7 @@ class Table(collections.MutableSequence):
         Extract the record specified by the given primary key.
         Raise a KeyError if the record is missing from the table.
         """
-        return self.pkey_dict[pkey]
+        return self.pkey.dict[pkey]
 
     def is_valid(self):
         """True if all the records in the table are valid"""
@@ -434,3 +454,30 @@ class Table(collections.MutableSequence):
     def __repr__(self):
         """String representation of table displaying the record type name"""
         return '<%s %s>' % (self.__class__.__name__, self.recordtype.__name__)
+
+
+class TableSet(object):
+    """
+    A set of tables associated to the same converter
+    """
+    def __init__(self, converter):
+        self.tables = []
+        for rt in converter.recordtypes():
+            tbl = Table(rt, [])
+            self.tables.append(tbl)
+            setattr(self, rt.__name__, tbl)
+
+    def insert(self, rec):
+        """
+        Insert a record in the correct table in the TableSet, by
+        checking the ForeignKey constraints, if any.
+        """
+        rectype = rec.__class__
+        for fkname, fkey in rectype.get_items(ForeignKey):
+            target = fkey.unique.recordtype.__name__
+            udict = getattr(getattr(self, target), '%s_dict' % fkey.unique)
+            fkvalues = fkey.__get__(rec, rectype)
+            if not fkvalues in udict:
+                raise ForeignKeyError(fkvalues)
+        tbl = getattr(self, rectype.___name__)
+        tbl.insert(rec)

@@ -32,7 +32,7 @@ class TableTestCase(unittest.TestCase):
 2,1.0,2.0
 ''')
         self.assertEqual(str(ctxt.exception),
-                         "'Location:1:Duplicate record:lon=1.0,lat=2.0'")
+                         "'Location:1:Duplicated record:lon=1.0,lat=2.0'")
 
     def test_zip(self):
         with tempfile.NamedTemporaryFile() as f:

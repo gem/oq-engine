@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.nrmllib.record import Record, Field, Unique
+from openquake.nrmllib.record import Record, Field, Unique, ForeignKey
 from openquake.nrmllib.node import Node
 from openquake.nrmllib import valid
 
@@ -44,6 +44,7 @@ class DiscreteVulnerabilitySet(Record):
 class DiscreteVulnerability(Record):
     convertername = 'Vulnerability'
     pkey = Unique('vulnerabilitySetID', 'vulnerabilityFunctionID')
+    fkey = ForeignKey(DiscreteVulnerabilitySet.pkey, 'vulnerabilitySetID')
 
     vulnerabilitySetID = Field(str)
     vulnerabilityFunctionID = Field(str)
@@ -61,6 +62,8 @@ class DiscreteVulnerability(Record):
 class DiscreteVulnerabilityData(Record):
     convertername = 'Vulnerability'
     pkey = Unique('vulnerabilitySetID', 'vulnerabilityFunctionID', 'IML')
+    fkey = ForeignKey(DiscreteVulnerability.pkey,
+                      'vulnerabilitySetID', 'vulnerabilityFunctionID')
 
     vulnerabilitySetID = Field(str)
     vulnerabilityFunctionID = Field(str)

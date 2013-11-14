@@ -61,13 +61,16 @@ class Converter(object):
 
     @classmethod
     def recordtypes(cls):
-        """Record classes associated to the given converter class"""
+        """
+        Get the record classes associated to the given converter class,
+        in order
+        """
         rectypes = []
         for val in vars(records).itervalues():
             if (isinstance(val, record.MetaRecord) and
                     val.convertername == cls.__name__):
                 rectypes.append(val)
-        return rectypes
+        return sorted(rectypes, key=lambda rt: rt._ordinal)
 
     def __init__(self, csvmanager):
         self.man = csvmanager

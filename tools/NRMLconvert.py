@@ -44,21 +44,29 @@ def print_invalid(man, limit):
 
 
 def main(input, output=None, limit=None):
+    """
+    Converts nrml -> csv if the input file ends with .csv
+    and csv -> nrml if the input is a directory or a zip
+    archive containing csv files. The csv are validated and
+    messages are printed on stdout in case of errors.
+    """
     if limit is not None:
         limit = int(limit)  # max number of errors
     if input.endswith('.xml'):
         if not output:
             sys.exit('Please specify an output archive')
+        # nrml -> csv
         name, _ = os.path.splitext(os.path.basename(input))
-        csv = create(CSVManager(mkarchive(output, 'w'), name).
+        man = create(CSVManager(mkarchive(output, 'w'), name).
                      convert_from_nrml, input)
-        print_invalid(csv, limit)
+        print_invalid(man, limit)
         return
+    # csv -> nrml
     inp_archive = mkarchive(input, 'r+')
-    csv = CSVManager(inp_archive, os.path.basename(input))
-    print_invalid(csv, limit)
+    man = CSVManager(inp_archive, os.path.basename(input))
+    print_invalid(man, limit)
     out_archive = mkarchive(output, 'a') if output else inp_archive
-    create(lambda n: csv.convert_to_nrml(out_archive), os.path.basename(input))
+    create(lambda n: man.convert_to_nrml(out_archive), os.path.basename(input))
 
 
 if __name__ == '__main__':
