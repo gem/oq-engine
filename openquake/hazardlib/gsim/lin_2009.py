@@ -55,7 +55,7 @@ class Lin2009(GMPE):
     #: Required site parameter is only Vs30 (used to distinguish rock).
     REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
-    #: Required rupture parameters are magnitude, and focal depth, see
+    #: Required rupture parameters are magnitude and rake see
     #: equation 4.1 page 46.
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
 
