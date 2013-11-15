@@ -26,7 +26,6 @@ import threading
 import kombu
 
 from openquake.engine.signalling import AMQPMessageConsumer, amqp_connect
-from openquake.engine.utils import stats
 
 
 # Place the new level between info and warning
