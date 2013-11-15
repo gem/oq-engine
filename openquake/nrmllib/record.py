@@ -490,7 +490,7 @@ class TableSet(object):
     @classmethod
     def from_node(cls, node):
         """Convert a Node object into a TableSet object"""
-        from operations.nrmllib.converter import Converter
+        from openquake.nrmllib.converter import Converter
         convcls = Converter.from_tag(node.tag)
         self = cls(convcls)
         self.insert_all(convcls.node_to_records(node))
