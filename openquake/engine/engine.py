@@ -288,7 +288,9 @@ def run_calc(job, log_level, log_file, exports, job_type,
     """
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
     calc = get_calculator_class(job_type, calc_mode)(job)
-    calc.register_progress_handler(progress_handler)
+
+    if progress_handler is not None:
+        calc.register_progress_handler(progress_handler)
 
     # Create job stats, which implicitly records the start time for the job
     _create_job_stats(job)
