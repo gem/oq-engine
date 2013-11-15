@@ -341,16 +341,25 @@ def run_risk_calc(request):
     callback_url = request.POST.get('callback_url')
     foreign_calc_id = request.POST.get('foreign_calculation_id')
 
+    if request.POST.get('hazard_output_id'):
+        hazard_output_id = int(request.POST.get('hazard_output_id'))
+        hazard_calculation_id = None
+    else:
+        hazard_output_id = None
+        hazard_calculation_id = request.POST.get('hazard_calculation_id')
+
     try:
         job, temp_dir = _prepare_job(request, functools.partial(
             oq_engine.risk_job_from_file,
-            hazard_output_id=request.POST.get('hazard_output_id'),
-            hazard_calculation_id=request.POST.get('hazard_calculation_id')))
+            hazard_output_id=hazard_output_id,
+            hazard_calculation_id=hazard_calculation_id))
+
         rc = job.risk_calculation
         tasks.run_risk_calc.apply_async(
             (rc.id, temp_dir),
             dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id))
     except Exception as e:
+        print e
         tasks.update_calculation(callback_url, status="failed")
         raise e
 

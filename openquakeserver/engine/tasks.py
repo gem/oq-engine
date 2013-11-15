@@ -61,13 +61,21 @@ def run_risk_calc(calc_id, calc_dir,
     and is ready to execute.
     """
     job = oqe_models.OqJob.objects.get(risk_calculation=calc_id)
+    update_calculation(callback_url, status="started", engine_id=calc_id)
     exports = []
     # TODO: Log to file somewhere. But where?
     log_file = None
+
+    def progress_handler(status, calculation):
+        update_calculation(
+            callback_url,
+            status=status,
+            description=calculation.description)
+
     # NOTE: Supervision MUST be turned off, or else the celeryd cluster
     # handling this task will leak processes!!!
     engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'risk',
-                    supervised=False)
+                    supervised=False, progress_handler=progress_handler)
     shutil.rmtree(calc_dir)
     # If requested to, signal job completion and trigger a migration of
     # results.
@@ -169,11 +177,11 @@ DBINTERFACE = {
            SELECT %s, iml, ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
            FROM temp_icebox_hazardmap"""),
     'ses': DbInterface(
-        """SELECT tag, magnitude, StAsText(hypocenter)
+        """SELECT tag, magnitude, St_AsText(hypocenter)
            FROM hzrdr.ses_rupture r
            JOIN hzrdr.ses ses ON ses.id = r.ses_id
            JOIN hzrdr.ses_collection sc ON ses.ses_collection_id = sc.id
-           JOIN hzrdr.output o ON o.id = sc.output_id
+           JOIN uiapi.output o ON o.id = sc.output_id
            WHERE o.id = %(output_id)d""",
         "icebox_ses",
         "tag varchar, magnitude float, hypocenter varchar",
@@ -184,11 +192,11 @@ DBINTERFACE = {
 # TODO: instead of the region_constraint, we should specify the convex
 # hull of the exposure
     'aggregate_loss': DbInterface(
-        """SELECT StAsText(region_constraint), mean, std_dev
+        """SELECT St_AsText(region_constraint), mean, std_dev
            FROM riskr.aggregate_loss al
            JOIN uiapi.output o ON o.id = al.output_id
-           JOIN uiapi.risk_calculation rc
-           WHERE rc.id = %(calculation_id)d AND o.id = %(output_id)d""",
+           JOIN uiapi.risk_calculation rc ON rc.id = %(calculation_id)d
+           WHERE o.id = %(output_id)d""",
         "icebox_aggregateloss",
         "region varchar, mean float, stddev float",
         """INSERT INTO
@@ -197,13 +205,13 @@ DBINTERFACE = {
            SELECT %s, St_GeomFromText(region), mean_loss, stddev_loss
            FROM temp_icebox_aggregateloss"""),
     'agg_loss_curve': DbInterface(
-        """SELECT ST_AsText(region) as region, losses, poes,
+        """SELECT ST_AsText(region_constraint) as region, losses, poes,
                   average_loss, stddev_loss
            FROM riskr.aggregate_loss_curve_data
-           JOIN riskr.loss_curve rc ON rc.id = loss_curve_id
-           JOIN uiapi.output o ON o.id = rc.output_id
-           JOIN uiapi.risk_calculation rc
-           WHERE rc.id = %(calculation_id)d AND o.id = %(output_id)d""",
+           JOIN riskr.loss_curve lc ON lc.id = loss_curve_id
+           JOIN uiapi.output o ON o.id = lc.output_id
+           JOIN uiapi.risk_calculation rc ON rc.id = %(calculation_id)d
+           WHERE o.id = %(output_id)d""",
         "icebox_aggregatelosscurve",
         ("region varchar, losses float[], poes float[], "
          "average_loss float, stddev_loss float"),
@@ -218,8 +226,8 @@ DBINTERFACE = {
                   stddev_loss_ratio * asset_value,
                   asset_ref
            FROM riskr.loss_curve_data
-           JOIN riskr.loss_curve rc ON rc.id = loss_curve_id
-           JOIN uiapi.output o ON o.id = rc.output_id
+           JOIN riskr.loss_curve lc ON lc.id = loss_curve_id
+           JOIN uiapi.output o ON o.id = lc.output_id
            WHERE o.id = %(output_id)d""",
         "icebox_losscurve",
         ("location varchar, losses float[], poes float[], "
