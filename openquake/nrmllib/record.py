@@ -16,6 +16,8 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+# I am reinventing a database here; we should probably just use a database
+# (for instance sqlite in memory) and an ORM. I am not happy (MS)
 """
 A module to define records extracted from UTF8-encoded CSV files.
 Client code should subclass the record class and define the
@@ -36,7 +38,6 @@ ValueError if the string is invalid.
 """
 
 import abc
-import inspect
 import itertools
 import operator
 import collections
@@ -79,6 +80,7 @@ class Unique(object):
         id = record.Field(int)
         lon = record.Field(float)
         lat = record.Field(float)
+
         pkey = Unique('id')
         unique = Unique('lon', 'lat')
 
@@ -87,15 +89,12 @@ class Unique(object):
     def __init__(self, *names):
         assert len(set(names)) == len(names), 'Duplicates in %s!' % names
         self.names = names
-        self.recordtype = None
-        self.dict = None
+        self.name = None  # set by MetaRecord
+        self.recordtype = None  # set by MetaRecord
 
     def __get__(self, rec, recordtype):
-        if rec is None:  # called from the record class
-            unique = Unique(*self.names)
-            unique.recordtype = recordtype
-            unique.dict = {}
-            return unique
+        if rec is None:
+            return self
         return tuple(rec[f] for f in self.names)
 
     def __repr__(self):
@@ -109,13 +108,12 @@ class ForeignKey(object):
     def __init__(self, unique, *names):
         self.unique = unique
         self.names = names
-        self.recordtype = None
+        self.name = None  # set by MetaRecord
+        self.recordtype = None  # set by MetaRecord
 
     def __get__(self, rec, recordtype):
-        if rec is None:  # called from the record class
-            fkey = ForeignKey(self.unique, *self.names)
-            fkey.recordtype = recordtype
-            return fkey
+        if rec is None:
+            return self
         return tuple(rec[f] for f in self.names)
 
     def __repr__(self):
@@ -194,10 +192,23 @@ class MetaRecord(abc.ABCMeta):
         if '_ntuple' not in dic:
             dic['_ntuple'] = collections.namedtuple(name, fieldnames)
         dic['_ordinal'] = mcl._counter.next()
-        cls = super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
+        return super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
+
+    def __init__(cls, name, bases, dic):
         if name != 'Record':
             cls.pkey  # raise an AttributeError if pkey is not defined
-        return cls
+        for n, v in dic.iteritems():
+            # make a bound copy of the unbound Unique and ForeignKey constraint
+            if isinstance(v, Unique):
+                unique = Unique(*v.names)
+                unique.name = n
+                unique.recordtype = cls
+                setattr(cls, n, unique)
+            elif isinstance(v, ForeignKey):
+                fkey = ForeignKey(v.unique, *v.names)
+                fkey.name = n
+                fkey.recordtype = cls
+                setattr(cls, n, fkey)
 
     @staticmethod
     def mkinit(fieldnames):
@@ -216,13 +227,12 @@ class MetaRecord(abc.ABCMeta):
         """Returns the names of the fields defined in cls"""
         return [f.name for f in cls.fields]
 
-    def get_items(cls, descriptor_cls):
+    def get_descriptors(cls, descriptor_cls):
         """
-        Return the instances of descriptor_cls defined in cls as pairs
-        (name, descriptor)
+        Return the instances of descriptor_cls defined in cls.
         """
-        return [(n, v.__get__(None, cls)) for n, v in inspect.getmembers(
-                cls, lambda m: isinstance(m, descriptor_cls))]
+        return [v.__get__(None, cls) for v in vars(cls).values()
+                if isinstance(v, descriptor_cls)]
 
     def __len__(cls):
         """Returns the number of fields defined in cls"""
@@ -366,6 +376,18 @@ def find_invalid(recorditer):
             yield exc
 
 
+class UniqueData(object):
+    """Table-related"""
+    def __init__(self, table, unique):
+        self.table = table
+        self.unique = unique
+        self.dict = {}
+
+    @property
+    def names(self):
+        return self.unique.names
+
+
 class Table(collections.MutableSequence):
     """
     In-memory table storing a sequence of record objects.
@@ -373,15 +395,10 @@ class Table(collections.MutableSequence):
     """
     def __init__(self, recordtype, records):
         self.recordtype = recordtype
-        self._unique_fields = []
+        self._unique_data = dict(
+            (u.name, UniqueData(self, u))
+            for u in recordtype.get_descriptors(Unique))
         self._records = []
-        # add copies of the Unique and ForeignKey descriptors
-        # to the table instance
-        for n, v in recordtype.get_items(Unique):
-            setattr(self, n, v)
-            self._unique_fields.append(v)
-        for n, v in recordtype.get_items(ForeignKey):
-            setattr(self, n, v)
         for rec in records:
             self.append(rec)
 
@@ -397,9 +414,9 @@ class Table(collections.MutableSequence):
     def __delitem__(self, i):
         """Delete the i-th record"""
         # i must be an integer, not a range
-        for descr in self._unique_fields:
-            key = descr.__get__(self._records[i], self.recordtype)
-            del descr.dict[key]
+        for name, unique in self._unique_data.iteritems():
+            key = getattr(self._records[i], name)
+            del unique.dict[key]
         del self._records[i]
 
     def __len__(self):
@@ -414,15 +431,15 @@ class Table(collections.MutableSequence):
         (in terms of unique constraints, including the primary
         key) raises a KeyError.
         """
-        for descr in self._unique_fields:
-            key = descr.__get__(rec, self.recordtype)
+        for name, unique in self._unique_data.iteritems():
+            key = getattr(rec, name)
             try:
-                rec = descr.dict[key]
+                rec = unique.dict[key]
             except KeyError:  # not inserted yet
-                descr.dict[key] = rec
+                unique.dict[key] = rec
             else:
                 msg = []
-                for k, name in zip(key, descr.names):
+                for k, name in zip(key, unique.names):
                     msg.append('%s=%s' % (name, k))
                 raise KeyError('%s:%d:Duplicated record:%s' %
                                (self.recordtype.__name__, position,
@@ -434,7 +451,7 @@ class Table(collections.MutableSequence):
         Extract the record specified by the given primary key.
         Raise a KeyError if the record is missing from the table.
         """
-        return self.pkey.dict[pkey]
+        return self._unique_data['pkey'].dict[pkey]
 
     def is_valid(self):
         """True if all the records in the table are valid"""
@@ -463,7 +480,7 @@ class Table(collections.MutableSequence):
 
     def __repr__(self):
         """String representation of table displaying the record type name"""
-        return '<%s %s>' % (self.__class__.__name__, self.recordtype.__name__)
+        return '<%s %d records>' % (self.recordtype.__name__, len(self))
 
 
 class TableSet(object):
@@ -482,31 +499,34 @@ class TableSet(object):
     def __init__(self, converter):
         self.converter = converter
         self.tables = []
+        self.fkdict = {}
         for rt in converter.recordtypes():
             tbl = Table(rt, [])
             self.tables.append(tbl)
             setattr(self, rt.__name__, tbl)
+            for fkey in rt.get_descriptors(ForeignKey):
+                target = fkey.unique
+                target_tbl = getattr(self, target.recordtype.__name__)
+                self.fkdict[fkey] = target_tbl._unique_data[target.name]
 
     def check_fk(self, rec):
         """
-        Check is a record has a reference in the referenced table,
-        recursively.
+        Check is a record has a companion record in the referenced table.
         """
-        pass
+        for fkey in rec.__class__.get_descriptors(ForeignKey):
+            fkvalues = getattr(rec, fkey.name)
+            if not fkvalues in self.fkdict[fkey].dict:
+                raise ForeignKeyError(
+                    'Missing record in table %s corresponding to the keys %s'
+                    % (fkey.unique.recordtype.__name__, fkvalues))
 
     def insert(self, rec):
         """
         Insert a record in the correct table in the TableSet, by
         checking the ForeignKey constraints, if any.
         """
-        rectype = rec.__class__
-        for fkname, fkey in rectype.get_items(ForeignKey):
-            target_rt = fkey.unique.recordtype
-            target_tbl = getattr(self, target_rt.__name__)
-            fkvalues = fkey.__get__(rec, rectype)
-            if not fkvalues in target_tbl.unique:
-                raise ForeignKeyError(fkvalues)
-        tbl = getattr(self, rectype.__name__)
+        self.check_fk(rec)
+        tbl = getattr(self, rec.__class__.__name__)
         tbl.append(rec)
 
     def insert_all(self, recs):
@@ -516,3 +536,15 @@ class TableSet(object):
         """
         for rec in recs:
             self.insert(rec)
+
+    def delete(self, rec):
+        """
+        Delete a record by cascading on the ForeignKeys
+        """
+        raise NotImplementedError
+
+    def to_node(self):
+        return self.converter.tableset_to_node(self)
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, self.tables)

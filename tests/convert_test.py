@@ -2,7 +2,7 @@
 import os
 import unittest
 import tempfile
-from openquake.nrmllib import InvalidFile
+from openquake.nrmllib import InvalidFile, record, records
 from openquake.nrmllib.csvmanager import (
     MemArchive, CSVManager, NotInArchive, mkarchive)
 
@@ -140,6 +140,12 @@ PAGER,IR,5.00,0.00,0.30
 PAGER,IR,5.50,0.00,0.30
 PAGER,IR,6.00,0.00,0.30''')
         man = CSVManager(archive, 'test')
-        return
         tset = man.get_tableset()
-        import pdb; pdb.set_trace()
+        self.assertEqual(len(tset.DiscreteVulnerabilitySet), 2)
+        self.assertEqual(len(tset.DiscreteVulnerability), 4)
+        self.assertEqual(len(tset.DiscreteVulnerabilityData), 3)
+        rec = records.DiscreteVulnerabilityData(
+            'PAGR', 'IR', '5.00', '0.00', '0.30')
+
+        with self.assertRaises(record.ForeignKeyError):
+            tset.insert(rec)

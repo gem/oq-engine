@@ -415,16 +415,6 @@ class CSVManager(object):
         for row in reader:
             yield recordtype(*row)
 
-    # this is used when converting from csv -> nrml
-    def groupby(self, keyfields, recordtype):
-        """
-        Group the records on the underlying CSV according to the given
-        keyfield. Assume the records are sorted.
-        """
-        keyindexes = [recordtype._name2index[k] for k in keyfields]
-        return itertools.groupby(
-            self.read(recordtype), lambda rec: [rec[i] for i in keyindexes])
-
     def readtable(self, recordtype):
         """
         Generate a Table object from the underlying CSV

@@ -30,6 +30,14 @@ from openquake.nrmllib.node import Node
 from openquake.nrmllib import InvalidFile, record, records
 
 
+def groupby(records, keyfields):
+    """
+    Group the records on the underlying CSV according to the given
+    keyfield. Assume the records are sorted.
+    """
+    return itertools.groupby(records, lambda r: [r[k] for k in keyfields])
+
+
 class Converter(object):
     """
     Base class.
@@ -121,9 +129,9 @@ class Vulnerability(Converter):
             records.DiscreteVulnerabilitySet))
         dvf_node = record.nodedict(self.man.read(
             records.DiscreteVulnerability))
-        for (set_id, vf_id), group in self.man.groupby(
-                ['vulnerabilitySetID', 'vulnerabilityFunctionID'],
-                records.DiscreteVulnerabilityData):
+        for (set_id, vf_id), group in groupby(
+                self.man.read(records.DiscreteVulnerabilityData),
+                ['vulnerabilitySetID', 'vulnerabilityFunctionID']):
             dvf = dvf_node[set_id, vf_id]
             coeffs = []
             ratios = []
@@ -142,6 +150,28 @@ class Vulnerability(Converter):
                 raise InvalidFile(
                     '%s: no data for %s (or the file may contain duplicates)'
                     % (datafile.name, set_id))
+        return Node('vulnerabilityModel', nodes=dvs_node.values())
+
+    # experimental, for the moment duplicating csv_to_node, must change
+    @classmethod
+    def tableset_to_node(cls, tset):
+        dvs_node = record.nodedict(tset.DiscreteVulnerabilitySet)
+        dvf_node = record.nodedict(tset.DiscreteVulnerability)
+        for (set_id, vf_id), group in groupby(
+                tset.DiscreteVulnerabilityData,
+                ['vulnerabilitySetID', 'vulnerabilityFunctionID']):
+            dvf = dvf_node[set_id, vf_id]
+            coeffs = []
+            ratios = []
+            imls = []
+            for row in group:
+                imls.append(row['IML'])
+                coeffs.append(row['coefficientsVariation'])
+                ratios.append(row['lossRatio'])
+            dvf.lossRatio.text = ' '.join(ratios)
+            dvf.coefficientsVariation.text = ' '.join(coeffs)
+            dvs_node[(set_id,)].append(dvf)
+            dvs_node[(set_id,)].IML.text = ' '.join(imls)
         return Node('vulnerabilityModel', nodes=dvs_node.values())
 
 
@@ -209,8 +239,9 @@ class Fragility(Converter):
             FFDRecord = records.FFDContinuos
         ffs_node = record.nodedict(self.man.read(FFSRecord))
         frag.nodes.extend(ffs_node.values())
-        for (ordinal, ls), data in self.man.groupby(
-                ['ffs_ordinal', 'limitState'], FFDRecord):
+        for (ordinal, ls), data in groupby(
+                self.man.read(FFDRecord),
+                ['ffs_ordinal', 'limitState']):
             data = list(data)
             if frag['format'] == 'discrete':
                 imls = ' '.join(rec['iml'] for rec in data)
@@ -457,9 +488,9 @@ class GmfSet(Converter):
         The rows are grouped by ses, imt, rupture.
         """
         gmfset_node = record.nodedict(self.man.read(records.GmfSet))
-        for (ses, imt, rupture), rows in self.man.groupby(
-                ['stochasticEventSetId', 'imtStr', 'ruptureId'],
-                records.GmfData):
+        for (ses, imt, rupture), rows in groupby(
+                self.man.read(records.GmfData),
+                ['stochasticEventSetId', 'imtStr', 'ruptureId']):
             if imt.startswith('SA'):
                 attr = dict(IMT='SA', saPeriod=imt[3:-1], saDamping='5')
             else:
