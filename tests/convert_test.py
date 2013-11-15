@@ -130,3 +130,16 @@ PAGER,population,fatalities,MMI
         man = CSVManager(archive, 'test')
         with self.assertRaises(InvalidFile):
             man.convert_to_node()
+
+
+class TableSetTestCase(unittest.TestCase):
+    def test_foreign_key(self):
+        archive = fake_archive(dvd='''\
+vulnerabilitySetID,vulnerabilityFunctionID,IML,lossRatio,coefficientsVariation
+PAGER,IR,5.00,0.00,0.30
+PAGER,IR,5.50,0.00,0.30
+PAGER,IR,6.00,0.00,0.30''')
+        man = CSVManager(archive, 'test')
+        return
+        tset = man.get_tableset()
+        import pdb; pdb.set_trace()

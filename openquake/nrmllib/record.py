@@ -99,7 +99,7 @@ class Unique(object):
         return tuple(rec[f] for f in self.names)
 
     def __repr__(self):
-        return '<Unique%s>' % str(self.names)
+        return '<Unique%s>' % str((self.recordtype,) + self.names)
 
 
 class ForeignKey(object):
@@ -119,7 +119,7 @@ class ForeignKey(object):
         return tuple(rec[f] for f in self.names)
 
     def __repr__(self):
-        return '<ForeignKey%s>' % str(self.names)
+        return '<ForeignKey%s>' % str((self.recordtype,) + self.names)
 
 
 class Field(object):
@@ -221,11 +221,15 @@ class MetaRecord(abc.ABCMeta):
         Return the instances of descriptor_cls defined in cls as pairs
         (name, descriptor)
         """
-        return inspect.getmembers(cls, lambda m: isinstance(m, descriptor_cls))
+        return [(n, v.__get__(None, cls)) for n, v in inspect.getmembers(
+                cls, lambda m: isinstance(m, descriptor_cls))]
 
     def __len__(cls):
         """Returns the number of fields defined in cls"""
         return len(cls.fields)
+
+    def __repr__(cls):
+        return '<class %s>' % cls.__name__
 
 
 class Record(collections.Sequence):
@@ -371,8 +375,13 @@ class Table(collections.MutableSequence):
         self.recordtype = recordtype
         self._unique_fields = []
         self._records = []
+        # add copies of the Unique and ForeignKey descriptors
+        # to the table instance
         for n, v in recordtype.get_items(Unique):
+            setattr(self, n, v)
             self._unique_fields.append(v)
+        for n, v in recordtype.get_items(ForeignKey):
+            setattr(self, n, v)
         for rec in records:
             self.append(rec)
 
@@ -382,6 +391,7 @@ class Table(collections.MutableSequence):
 
     def __setitem__(self, i, record):
         """Set the i-th record"""
+        # XXX: the unique and fk dictionaries must be updated!
         self._records[i] = record
 
     def __delitem__(self, i):
@@ -460,12 +470,29 @@ class TableSet(object):
     """
     A set of tables associated to the same converter
     """
+    @classmethod
+    def from_node(cls, node):
+        """Convert a Node object into a TableSet object"""
+        from operations.nrmllib.converter import Converter
+        convcls = Converter.from_tag(node.tag)
+        self = cls(convcls)
+        self.insert_all(convcls.node_to_records(node))
+        return self
+
     def __init__(self, converter):
+        self.converter = converter
         self.tables = []
         for rt in converter.recordtypes():
             tbl = Table(rt, [])
             self.tables.append(tbl)
             setattr(self, rt.__name__, tbl)
+
+    def check_fk(self, rec):
+        """
+        Check is a record has a reference in the referenced table,
+        recursively.
+        """
+        pass
 
     def insert(self, rec):
         """
@@ -474,10 +501,18 @@ class TableSet(object):
         """
         rectype = rec.__class__
         for fkname, fkey in rectype.get_items(ForeignKey):
-            target = fkey.unique.recordtype.__name__
-            udict = getattr(getattr(self, target), '%s_dict' % fkey.unique)
+            target_rt = fkey.unique.recordtype
+            target_tbl = getattr(self, target_rt.__name__)
             fkvalues = fkey.__get__(rec, rectype)
-            if not fkvalues in udict:
+            if not fkvalues in target_tbl.unique:
                 raise ForeignKeyError(fkvalues)
-        tbl = getattr(self, rectype.___name__)
-        tbl.insert(rec)
+        tbl = getattr(self, rectype.__name__)
+        tbl.append(rec)
+
+    def insert_all(self, recs):
+        """
+        Insert a set of records in the right tables;
+        may raise a ForeignKeyError.
+        """
+        for rec in recs:
+            self.insert(rec)

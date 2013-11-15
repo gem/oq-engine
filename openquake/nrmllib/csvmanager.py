@@ -337,6 +337,15 @@ class CSVManager(object):
                 (len(converters), converters))
         return converters[0]
 
+    def get_tableset(self):
+        """
+        Return a populated TableSet from the underlying CSV files
+        """
+        tset = record.TableSet(self._getconverter())
+        for rectype in tset.converter.recordtypes():
+            tset.insert_all(self.read(rectype))
+        return tset
+
     def convert_to_node(self):
         """
         Convert the CSV files in the archive with the given prefix
