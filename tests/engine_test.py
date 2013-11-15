@@ -692,7 +692,7 @@ class ProgressHandlerTestCase(unittest.TestCase):
 
     def test_do_run_calc(self):
         with helpers.MultiMock(
-            sj='openquake.engine.engine._switch_to_job_phase'):
+                sj='openquake.engine.engine._switch_to_job_phase'):
             progress_handler = mock.Mock()
             calc = self.FakeCalc(mock.Mock())
             calc.register_progress_handler(progress_handler)
