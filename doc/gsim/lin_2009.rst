@@ -1,5 +1,5 @@
 ================
-Lin and Lee 2008
+Lin 2009
 ================
 
 .. module:: openquake.hazardlib.gsim.lin_2009
