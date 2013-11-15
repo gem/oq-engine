@@ -375,6 +375,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
 
         self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_calc.id)
 
+
 class DeleteRiskCalcTestCase(unittest.TestCase):
 
     @classmethod
@@ -439,6 +440,7 @@ class FakeJob(object):
         self.hazard_calculation = hc
         self.risk_calculation = rc
         self.status = ''
+
 
 class FakeCalc(object):
     def __init__(self, calc_id):
@@ -583,6 +585,9 @@ class RunCalcTestCase(unittest.TestCase):
 
             def __eq__(self, other):
                 return self.job.id == other.job.id
+
+            def register_progress_handler(self, _fn):
+                pass
 
         mocks = dict(
             save_job_stats='openquake.engine.engine.save_job_stats',
