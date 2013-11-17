@@ -199,13 +199,14 @@ echo ".. Creating database $db_name .."
 psql -p $db_port -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name" $psql_batch_options
 createlang -p $db_port -d $db_name -U $db_admin_user plpythonu
 
-postgis="/usr/share/postgresql/9.1/contrib/postgis-1.5"
+postgres_contrib="/usr/share/postgresql/9.1/contrib/postgis-1.5"
+postgis="$postgres_contrib/postgis-1.5"
 # Load the PostGIS stuff into the newly created OpenQuake database.
 echo ".. Loading postgis functions/data into $db_name .."
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/postgis.sql
 
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/../postgis_comments.sql
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgres_contrib/postgis_comments.sql
 
 echo ".. Running schema definition file: $schema_file .."
 if [ "$verbose" = "off" ]; then
