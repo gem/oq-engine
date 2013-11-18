@@ -26,6 +26,7 @@ This module contains converter classes working on nodes of kind
 - gmfcollection
 """
 import itertools
+from openquake.risklib import scientific
 from openquake.nrmllib.node import Node
 from openquake.nrmllib import InvalidFile, record, records
 
@@ -168,6 +169,11 @@ class Vulnerability(Converter):
                 imls.append(row['IML'])
                 coeffs.append(row['coefficientsVariation'])
                 ratios.append(row['lossRatio'])
+
+            # check we can instantiate a VulnerabilityFunction in risklib
+            scientific.VulnerabilityFunction(
+                map(float, imls), map(float, ratios), map(float, coeffs))
+
             dvf.lossRatio.text = ' '.join(ratios)
             dvf.coefficientsVariation.text = ' '.join(coeffs)
             dvs_node[(set_id,)].append(dvf)
