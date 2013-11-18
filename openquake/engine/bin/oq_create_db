@@ -179,7 +179,7 @@ if [ "$check_table_spaces" == "on" ]; then
         fi
 
         # Create the actual table space.
-        ts_found=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -t -c "SELECT COUNT(*) FROM pg_tablespace WHERE spcname = '$full_ts_name';"`
+        ts_found=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_tablespace WHERE spcname = '$full_ts_name';"`
         if [ $ts_found -eq 0 ]; then
             psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'" $psql_batch_options
         fi
@@ -237,14 +237,14 @@ if [ -r $comments_file ]; then
 fi
 
 # Create OpenQuake database group if not present.
-oq_group_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -t -c "SELECT COUNT(*) FROM pg_group WHERE groname = '$db_group_name';"`
+oq_group_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_group WHERE groname = '$db_group_name';"`
 if [ $oq_group_present -eq 0 ]; then
     psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $db_group_name"
 fi
 
 # Create OpenQuake database users/roles if/as needed.
 for role in $db_roles; do
-    role_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -t -c "SELECT COUNT(*) FROM pg_users WHERE usename = '$role';"`
+    role_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_users WHERE usename = '$role';"`
     if [ $role_present -eq 0 ]; then
         psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake" $psql_batch_options
     fi
