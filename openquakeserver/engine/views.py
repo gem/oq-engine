@@ -154,7 +154,12 @@ def run_hazard_calc(request):
         print e
         raise e
 
-    return redirect('/v1/calc/hazard/%s' % hc.id)
+    try:
+        response_data = _get_haz_calc_info(hc.id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 def create_detect_job_file(*candidates):
@@ -384,7 +389,12 @@ def run_risk_calc(request):
         tasks.update_calculation(callback_url, status="failed")
         raise e
 
-    return redirect('/v1/calc/risk/%s' % rc.id)
+    try:
+        response_data = _get_risk_calc_info(rc.id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 def _get_risk_calcs():
