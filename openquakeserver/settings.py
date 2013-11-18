@@ -13,14 +13,6 @@ ADMINS = (
 MANAGERS = ADMINS
 
 DATABASES = oqe_settings.DATABASES
-DATABASES['default'] = {
-    'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': 'oqengineserver.db',
-    'USER': '',
-    'PASSWORD': '',
-    'HOST': '',
-    'PORT': '',
-}
 
 DATABASES['platform'] = {
     'ENGINE': 'django.contrib.gis.db.backends.postgis',
