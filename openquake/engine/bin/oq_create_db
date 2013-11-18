@@ -179,7 +179,7 @@ if [ "$check_table_spaces" == "on" ]; then
         fi
 
         # Create the actual table space.
-        ts_found=`psql -p $db_port -U $db_admin_user -c '\db' -d postgres $psql_batch_options | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
+        ts_found=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_tablespace WHERE spcname = '$full_ts_name';"`
         if [ $ts_found -eq 0 ]; then
             psql -p $db_port -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'" $psql_batch_options
         fi
@@ -199,13 +199,14 @@ echo ".. Creating database $db_name .."
 psql -p $db_port -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name" $psql_batch_options
 createlang -p $db_port -d $db_name -U $db_admin_user plpythonu
 
-postgis="/usr/share/postgresql/9.1/contrib/postgis-1.5"
+postgres_contrib="/usr/share/postgresql/9.1/contrib"
+postgis="$postgres_contrib/postgis-1.5"
 # Load the PostGIS stuff into the newly created OpenQuake database.
 echo ".. Loading postgis functions/data into $db_name .."
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/postgis.sql
 
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
-psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f /usr/share/postgresql/9.1/contrib/postgis_comments.sql
+psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -f $postgres_contrib/postgis_comments.sql
 
 echo ".. Running schema definition file: $schema_file .."
 if [ "$verbose" = "off" ]; then
@@ -236,14 +237,14 @@ if [ -r $comments_file ]; then
 fi
 
 # Create OpenQuake database group if not present.
-oq_group_present=`psql -p $db_port -U $db_admin_user -c '\dg' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $db_group_name | wc -l`
+oq_group_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_group WHERE groname = '$db_group_name';"`
 if [ $oq_group_present -eq 0 ]; then
     psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $db_group_name"
 fi
 
 # Create OpenQuake database users/roles if/as needed.
 for role in $db_roles; do
-    role_present=`psql -p $db_port -U $db_admin_user -c '\dg' -d postgres $psql_batch_options | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
+    role_present=`psql -p $db_port -U $db_admin_user -d postgres $psql_batch_options -A -t -c "SELECT COUNT(*) FROM pg_user WHERE usename = '$role';"`
     if [ $role_present -eq 0 ]; then
         psql -p $db_port -d postgres -U $db_admin_user -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake" $psql_batch_options
     fi
@@ -266,7 +267,7 @@ fi
 echo ".. Setting table ownership"
 psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "ALTER DATABASE $db_name OWNER TO oq_admin"
 for schema in $tspace_list; do
-    for tbl in `psql -qAt -c "select tablename from pg_tables where schemaname = '$schema';" $db_name`; do 
+    for tbl in `psql -qAt -c "select tablename from pg_tables where schemaname = '$schema';" $db_name`; do
         psql -p $db_port -U $db_admin_user $psql_batch_options -d $db_name -c "alter table $schema.$tbl owner to oq_admin"
     done
 done
