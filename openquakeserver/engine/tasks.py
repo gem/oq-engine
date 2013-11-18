@@ -1,3 +1,23 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright (c) 2013, GEM Foundation.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public
+# License along with this program. If not, see
+# <https://www.gnu.org/licenses/agpl.html>.
+
+import logging
 import collections
 import shutil
 import tempfile
@@ -12,13 +32,15 @@ from openquake.engine.db import models as oqe_models
 
 DEFAULT_LOG_LEVEL = 'progress'
 
-
-import logging
-
 logger = logging.getLogger(__name__)
 
 
-@task(ignore_result=True)
+def update_calculation_on_fail(task_obj, exc, task_id, args, kwargs, einfo):
+    update_calculation(kwargs['callback_url'], status="failed")
+    print "Error in task %s" % task_id
+
+
+@task(ignore_result=True, on_failure=update_calculation_on_fail)
 def run_hazard_calc(calc_id, calc_dir,
                     callback_url=None, foreign_calc_id=None):
     """
@@ -52,7 +74,7 @@ def run_hazard_calc(calc_id, calc_dir,
         _trigger_migration(job, callback_url, foreign_calc_id)
 
 
-@task(ignore_result=True)
+@task(ignore_result=True, on_failure=update_calculation_on_fail)
 def run_risk_calc(calc_id, calc_dir,
                   callback_url=None, foreign_calc_id=None):
     """
@@ -104,6 +126,7 @@ def _trigger_migration(job, callback_url, foreign_calc_id):
     # direct import of settings to avoid starting celery with the
     # wrong settings module (it should use the engine one)
     from openquakeserver import settings
+
     platform_connection = psycopg2.connect(
         host=settings.DATABASES['platform']['HOST'],
         database=settings.DATABASES['platform']['NAME'],
@@ -198,11 +221,11 @@ DBINTERFACE = {
            JOIN uiapi.risk_calculation rc ON rc.id = %(calculation_id)d
            WHERE o.id = %(output_id)d""",
         "icebox_aggregateloss",
-        "region varchar, mean float, stddev float",
+        "region varchar, mean_loss float, stddev_loss float",
         """INSERT INTO
            icebox_aggregateloss(
                output_layer_id, region, mean_loss, stddev_loss)
-           SELECT %s, St_GeomFromText(region), mean_loss, stddev_loss
+           SELECT %s, St_GeomFromText(region, 4326), mean_loss, stddev_loss
            FROM temp_icebox_aggregateloss"""),
     'agg_loss_curve': DbInterface(
         """SELECT ST_AsText(region_constraint) as region, losses, poes,
@@ -240,7 +263,7 @@ DBINTERFACE = {
            FROM temp_icebox_losscurve"""),
     'loss_map': DbInterface(
         """SELECT ST_AsText(location) as location,
-                  value, stddev, asset_ref
+                  value, std_dev, asset_ref
            FROM riskr.loss_map_data
            JOIN riskr.loss_map lm ON lm.id = loss_map_id
            JOIN uiapi.output o ON o.id = lm.output_id
@@ -284,7 +307,7 @@ DBINTERFACE = {
         "mean float, stddev float, asset_ref varchar",
         """INSERT INTO icebox_collapsemap(
                output_layer_id, location, mean, stddev, asset_ref)
-           SELECT %s, St_GeomFromText(location), mean, stddev, asset_ref
+           SELECT %s, St_GeomFromText(location, 4326), mean, stddev, asset_ref
            FROM temp_icebox_collapsemap"""),
     'dmg_dist_per_asset': DbInterface(
         """SELECT ST_AsText(location) as location, mean, stddev, asset_ref,
@@ -297,7 +320,7 @@ DBINTERFACE = {
         """INSERT INTO icebox_damagedistributionperasset(
                output_layer_id, location, mean,
                stddev, asset_ref, damage_state)
-           SELECT %s, St_GeomFromText(location), mean,
+           SELECT %s, St_GeomFromText(location, 4326), mean,
                   stddev, asset_ref, damage_state
            FROM temp_icebox_damagedistributionperasset""")
 }
@@ -355,8 +378,7 @@ def copy_output(platform_connection, output, foreign_calculation_id):
 
             temp_table = "temp_%s" % iface.target_table
             platform_cursor.execute("DROP TABLE IF EXISTS %s" % temp_table)
-            platform_cursor.execute("""
-            CREATE TABLE %s(%s)""" % (
+            platform_cursor.execute("CREATE TABLE %s(%s)" % (
                 temp_table, iface.fields))
 
             import_query = """COPY %s FROM STDIN
@@ -368,8 +390,7 @@ def copy_output(platform_connection, output, foreign_calculation_id):
             platform_cursor.copy_expert(import_query, temporary_file)
 
             platform_cursor.execute(iface.import_query % output_layer_id)
-            platform_cursor.execute("""
-            DROP TABLE IF EXISTS %s""" % temp_table)
+            platform_cursor.execute("DROP TABLE IF EXISTS %s" % temp_table)
         except Exception as e:
             # FIXME. Implement proper logging
             print str(e)

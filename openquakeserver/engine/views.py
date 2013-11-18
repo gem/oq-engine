@@ -142,23 +142,42 @@ def run_hazard_calc(request):
     foreign_calc_id = request.POST.get('foreign_calculation_id')
 
     try:
-        job, temp_dir = _prepare_job(request, oq_engine.haz_job_from_file)
+        job, temp_dir = _prepare_job(
+            request, oq_engine.haz_job_from_file,
+            create_detect_job_file("job.ini", "job_haz.ini", "job_hazard.ini"))
         hc = job.hazard_calculation
         tasks.run_hazard_calc.apply_async(
             (hc.id, temp_dir),
             dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id))
     except Exception as e:
         tasks.update_calculation(callback_url, status="failed")
+        print e
         raise e
 
     return redirect('/v1/calc/hazard/%s' % hc.id)
 
 
-def _prepare_job(request, job_factory):
+def create_detect_job_file(*candidates):
+    def detect_job_file(files):
+        for candidate in candidates:
+            try:
+                file_idx = [os.path.basename(f)
+                            for f in files].index(candidate)
+                return files[file_idx]
+            except ValueError:
+                pass
+        raise RuntimeError("No job file found in %s for %s" % (
+            str(files), str(candidates)))
+    return detect_job_file
+
+
+def _prepare_job(request, job_factory, detect_job_file):
     """
     Creates a temporary directory, move uploaded files there and
     create a new oq-engine job by using the `job_factory` callable
-    (e.g. oq_engine.haz_job_from_file)
+    (e.g. oq_engine.haz_job_from_file). The job file is selected using
+    the `detect_job_file` callable which accepts in input a list
+    holding all the filenames ending with .ini
     """
     temp_dir = tempfile.mkdtemp()
 
@@ -175,7 +194,7 @@ def _prepare_job(request, job_factory):
         shutil.move(each_file.temporary_file_path(), new_path)
         files.append(new_path)
 
-    job_file = [f for f in files if f.endswith('.ini')][0]
+    job_file = detect_job_file([f for f in files if f.endswith('.ini')])
 
     return job_factory(
         job_file, request.user.username, DEFAULT_LOG_LEVEL, []), temp_dir
@@ -349,10 +368,12 @@ def run_risk_calc(request):
         hazard_calculation_id = request.POST.get('hazard_calculation_id')
 
     try:
-        job, temp_dir = _prepare_job(request, functools.partial(
-            oq_engine.risk_job_from_file,
-            hazard_output_id=hazard_output_id,
-            hazard_calculation_id=hazard_calculation_id))
+        job, temp_dir = _prepare_job(
+            request, functools.partial(
+                oq_engine.risk_job_from_file,
+                hazard_output_id=hazard_output_id,
+                hazard_calculation_id=hazard_calculation_id),
+            create_detect_job_file("job.ini", "job_risk.ini"))
 
         rc = job.risk_calculation
         tasks.run_risk_calc.apply_async(
