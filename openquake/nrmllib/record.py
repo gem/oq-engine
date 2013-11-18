@@ -393,8 +393,9 @@ class Table(collections.MutableSequence):
     In-memory table storing a sequence of record objects.
     Unique constraints are checked at insertion time.
     """
-    def __init__(self, recordtype, records):
+    def __init__(self, recordtype, records, ordinal=None):
         self.recordtype = recordtype
+        self.ordinal = ordinal  # not None if part of a TableSet
         self._unique_data = dict(
             (u.name, UniqueData(self, u))
             for u in recordtype.get_descriptors(Unique))
@@ -500,8 +501,8 @@ class TableSet(object):
         self.converter = converter
         self.tables = []
         self.fkdict = {}
-        for rt in converter.recordtypes():
-            tbl = Table(rt, [])
+        for ordinal, rt in enumerate(converter.recordtypes()):
+            tbl = Table(rt, [], ordinal)
             self.tables.append(tbl)
             setattr(self, rt.__name__, tbl)
             for fkey in rt.get_descriptors(ForeignKey):
