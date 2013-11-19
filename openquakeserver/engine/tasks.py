@@ -244,9 +244,8 @@ DBINTERFACE = {
                   losses, poes, average_loss, stddev_loss
            FROM temp_icebox_aggregatelosscurve"""),
     'loss_curve': DbInterface(
-        """SELECT ST_AsText(location) as location, losses, poes,
-                  average_loss_ratio * asset_value,
-                  stddev_loss_ratio * asset_value,
+        """SELECT ST_AsText(location) as location,
+                  loss_ratios, poes, average_loss_ratio, stddev_loss_ratio,
                   asset_ref
            FROM riskr.loss_curve_data
            JOIN riskr.loss_curve lc ON lc.id = loss_curve_id
