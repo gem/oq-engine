@@ -26,9 +26,11 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.source import AreaSource, SimpleFaultSource
+from openquake.hazardlib.source import AreaSource, SimpleFaultSource, \
+    NonParametricSeismicSource, Rupture
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.geo import NodalPlane
+from openquake.hazardlib.geo import NodalPlane, RectangularMesh, \
+    SimpleFaultSurface, Point
 from openquake.hazardlib.scalerel import PeerMSR, PointMSR
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.calc import hazard_curves
@@ -206,3 +208,54 @@ class Set1TestCase(unittest.TestCase):
                                atol=1e-3, rtol=1e-5)
         assert_hazard_curve_is(self, s7hc, test_data.SET1_CASE5_SITE7_POES,
                                atol=1e-3, rtol=1e-5)
+
+    def test_non_parametric_source(self):
+        # non-parametric source equivalent to case 2 simple fault source
+        data = test_data.SET1_CASE2_SOURCE_DATA
+        ruptures = []
+        for i in range(data['num_rups_dip']):
+            for j in range(data['num_rups_strike']):
+                lons = data['lons']
+                lats = data['lats'][j]
+                depths = data['depths'][i]
+                mesh = RectangularMesh(lons, lats, depths)
+                surf = SimpleFaultSurface(mesh)
+                hypo = Point(
+                    data['hypo_lons'][i, j],
+                    data['hypo_lats'][i, j],
+                    data['hypo_depths'][i, j]
+                )
+                rup = Rupture(data['mag'], data['rake'],
+                              data['tectonic_region_type'], hypo, surf,
+                              data['source_typology'])
+                ruptures.append((rup, data['pmf']))
+        npss = NonParametricSeismicSource(
+            'id', 'name', data['tectonic_region_type'], ruptures
+        )
+        sites = SiteCollection([
+            test_data.SET1_CASE1TO9_SITE1, test_data.SET1_CASE1TO9_SITE2,
+            test_data.SET1_CASE1TO9_SITE3, test_data.SET1_CASE1TO9_SITE4,
+            test_data.SET1_CASE1TO9_SITE5, test_data.SET1_CASE1TO9_SITE6,
+            test_data.SET1_CASE1TO9_SITE7
+        ])
+        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        truncation_level = 0
+        imts = {test_data.IMT: test_data.SET1_CASE2_IMLS}
+
+        curves = hazard_curves([npss], sites, imts, gsims, truncation_level)
+        s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[test_data.IMT]
+
+        assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE2_SITE1_POES,
+                               atol=3e-3, rtol=1e-5)
+        assert_hazard_curve_is(self, s2hc, test_data.SET1_CASE2_SITE2_POES,
+                               atol=2e-5, rtol=1e-5)
+        assert_hazard_curve_is(self, s3hc, test_data.SET1_CASE2_SITE3_POES,
+                               atol=2e-5, rtol=1e-5)
+        assert_hazard_curve_is(self, s4hc, test_data.SET1_CASE2_SITE4_POES,
+                               atol=1e-3, rtol=1e-5)
+        assert_hazard_curve_is(self, s5hc, test_data.SET1_CASE2_SITE5_POES,
+                               atol=1e-3, rtol=1e-5)
+        assert_hazard_curve_is(self, s6hc, test_data.SET1_CASE2_SITE6_POES,
+                               atol=1e-3, rtol=1e-5)
+        assert_hazard_curve_is(self, s7hc, test_data.SET1_CASE2_SITE7_POES,
+                               atol=2e-5, rtol=1e-5)
