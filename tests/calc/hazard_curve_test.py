@@ -130,7 +130,7 @@ class HazardCurvesTestCase(unittest.TestCase):
                         str(site2_pgd_poe))
 
     def test_source_errors(self):
-        # exercise `hazard_curves` in the case of an exception,
+        # exercise `hazard_curves_poissonian` in the case of an exception,
         # whereby we expect the source_id to be reported in the error message
 
         fail_source = self.FailSource(self.source2.source_id,
@@ -139,8 +139,8 @@ class HazardCurvesTestCase(unittest.TestCase):
         sources = iter([self.source1, fail_source])
 
         with self.assertRaises(RuntimeError) as ae:
-            hazard_curves(sources, self.sites, self.imts,
-                          self.gsims, self.truncation_level)
+            hazard_curves(sources, self.sites, self.imts, self.gsims,
+                          self.truncation_level)
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
@@ -222,7 +222,6 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
-        time_span = 1.0
         imts = {openquake.hazardlib.imt.PGA(): [0.1, 0.5, 1.3]}
 
         from openquake.hazardlib.calc import filters
@@ -237,14 +236,37 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
             source_site_filter=source_site_filter,
             rupture_site_filter=rupture_site_filter
         )
-        # there are two sources and four sites. first source should
-        # be filtered completely since it is too far from all the sites.
-        # the second one should take only three sites -- all except (10, 16).
-        # it generates three ruptures with magnitudes 4, 6 and 8, from which
-        # the first one doesn't affect any of sites and should be ignored,
-        # second only affects site (10, 10.7) and the last one affects all
-        # three.
+        # there are two sources and four sites. The first source contains only
+        # one rupture, the second source contains three ruptures.
+        #
+        # the first source has 'maximum projection radius' of 0.707 km
+        # the second source has 'maximum projection radius' of 500.0 km
+        #
+        # the epicentral distances for source 1 are: [ 109.50558394,
+        # 667.16955987,   66.71695599,   77.83644865]
+        # the epicentral distances for source 2 are: [ 155.9412148 ,
+        # 555.97463322,   44.47797066,   33.35847799]
+        #
+        # Considering that the source site filtering distance is set to 30 km,
+        # for source 1, all sites have epicentral distance larger than
+        # 0.707 + 30 km. This means that source 1 ('point 1') is not considered
+        # in the calculation because too far.
+        # for source 2, the 1st, 3rd and 4th sites have epicentral distances
+        # smaller than 500.0 + 30 km. This means that source 2 ('point 2') is
+        # considered in the calculation for site 1, 3, and 4.
+        #
+        # JB distances for rupture 1 in source 2 are: [ 155.43860273,
+        #  555.26752644,   43.77086388,   32.65137121]
+        # JB distances for rupture 2 in source 2 are: [ 150.98882575,
+        #  548.90356541,   37.40690285,   26.28741018]
+        # JB distances for rupture 3 in source 2 are: [ 109.50545819,
+        # 55.97463322,    0.        ,    0.        ]
+        # 
+        # Considering that the rupture site filtering distance is set to 30 km,
+        # rupture 1 (magnitude 4) is not considered because too far, rupture 2
+        # (magnitude 6) affect only the 4th site, rupture 3 (magnitude 8)
+        # affect the 3rd and 4th sites.
         self.assertEqual(source_site_filter.counts,
                          [('point2', [1, 3, 4])])
         self.assertEqual(rupture_site_filter.counts,
-                         [(6, [4]), (8, [1, 3, 4])])
+                         [(6, [4]), (8, [3, 4])])
