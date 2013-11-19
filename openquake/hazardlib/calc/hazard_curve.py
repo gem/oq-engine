@@ -53,7 +53,7 @@ def hazard_curves(
 
     :param sources:
         An iterator of seismic sources objects (instances of subclasses
-        of :class:`~openquake.hazardlib.source.base.SeismicSource`).
+        of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
     :param sites:
         Instance of :class:`~openquake.hazardlib.site.SiteCollection` object,
         representing sites of interest.
