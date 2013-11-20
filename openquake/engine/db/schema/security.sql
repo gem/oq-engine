@@ -60,6 +60,14 @@ GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riski TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riskr TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
 
+GRANT ALL ON SCHEMA admin TO oq_admin;
+GRANT ALL ON SCHEMA htemp TO oq_admin;
+GRANT ALL ON SCHEMA hzrdi TO oq_admin;
+GRANT ALL ON SCHEMA hzrdr TO oq_admin;
+GRANT ALL ON SCHEMA riski TO oq_admin;
+GRANT ALL ON SCHEMA riskr TO oq_admin;
+GRANT ALL ON SCHEMA uiapi TO oq_admin;
+
 ----------------------------------------------
 -- Specific permissions for individual tables:
 ----------------------------------------------
@@ -70,7 +78,6 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.hazard_curve_progress TO oq_reslt_wri
 -- hzrdi schema
 GRANT SELECT,INSERT ON hzrdi.hazard_site            TO oq_job_init;
 GRANT SELECT,INSERT ON hzrdi.parsed_source        TO oq_job_init;
-GRANT SELECT,INSERT ON hzrdi.parsed_rupture_model TO oq_job_init;
 GRANT SELECT,INSERT ON hzrdi.site_model           TO oq_job_init;
 
 -- hzrdr schema
@@ -123,8 +130,7 @@ GRANT SELECT,INSERT        ON uiapi.risk_calculation   TO oq_job_init;
 -- what nodes became available/unavailable at what time?
 GRANT SELECT,INSERT,UPDATE ON uiapi.cnode_stats        TO oq_job_superv;
 GRANT SELECT,INSERT,UPDATE ON uiapi.output             TO oq_reslt_writer;
-GRANT SELECT,INSERT        ON uiapi.performance        TO oq_job_init;
-
+GRANT SELECT,INSERT,DELETE ON uiapi.performance        TO oq_job_init;
 
 -- helper views
 GRANT SELECT               ON hzrdr.gmf_family TO oq_job_init;

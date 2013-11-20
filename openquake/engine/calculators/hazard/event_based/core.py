@@ -31,9 +31,9 @@ For more information on computing ground motion fields, see
 :mod:`openquake.hazardlib.calc.gmf`.
 """
 
-import copy
 import math
 import random
+import itertools
 import collections
 
 import openquake.hazardlib.imt
@@ -69,7 +69,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def compute_ses(job_id, src_ids, ses, src_seeds, ltp):
+def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
     """
     Celery task for the stochastic event set calculator.
 
@@ -84,19 +84,15 @@ def compute_ses(job_id, src_ids, ses, src_seeds, ltp):
 
     :param int job_id:
         ID of the currently running job.
-    :param src_ids:
-        List of ids of parsed source models from which we will generate
-        stochastic event sets/ruptures.
-    :param ses:
+    :param src_ses_seeds:
+        List of triples (src_id, ses, seed)
         Stochastic Event Set object
-    :param int src_seeds:
-        Values for seeding numpy/scipy in the computation of stochastic event
-        sets and ground motion fields from the sources
+    :param lt_rlz:
+        Logic Tree realization object
     :param ltp:
-        a :class:`openquake.engine.input.LogicTreeProcessor` instance
+        A :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    lt_rlz = ses.ses_collection.lt_realization
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
 
@@ -109,43 +105,44 @@ def compute_ses(job_id, src_ids, ses, src_seeds, ltp):
 
     with EnginePerformanceMonitor(
             'reading sources', job_id, compute_ses):
-        sources = [apply_uncertainties(s.nrml)
-                   for s in models.ParsedSource.objects.filter(pk__in=src_ids)]
+        src_ids = set(src_id for src_id, ses, seed in src_ses_seeds)
+        source = dict(
+            (s.id, apply_uncertainties(s.nrml))
+            for s in models.ParsedSource.objects.filter(pk__in=src_ids))
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, compute_ses):
         ruptures = []
-        for src_seed, src in zip(src_seeds, sources):
-            # first set the seed for the specific source
-            numpy.random.seed(src_seed)
-            # then make copies of the hazardlib ruptures (which may contain
-            # duplicates): the copy is needed to keep the tags distinct
-            rupts = map(copy.copy, stochastic.stochastic_event_set_poissonian(
-                        [src], hc.investigation_time))
+        for src_id, ses, seed in src_ses_seeds:
+            src = source[src_id]
+            numpy.random.seed(seed)
+            rupts = stochastic.stochastic_event_set_poissonian(
+                [src], hc.investigation_time)
             # set the tag for each copy
             for i, r in enumerate(rupts):
-                r.tag = 'rlz=%02d|ses=%04d|src=%s|i=%03d' % (
-                    lt_rlz.ordinal, ses.ordinal, src.source_id, i)
-            ruptures.extend(rupts)
+                rup = models.SESRupture(
+                    ses=ses,
+                    rupture=r,
+                    tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
+                        lt_rlz.ordinal, ses.ordinal, src.source_id, i),
+                    hypocenter=r.hypocenter.wkt2d,
+                    magnitude=r.mag,
+                )
+                ruptures.append(rup)
         if not ruptures:
             return
+        source.clear()  # save a little memory
 
     with EnginePerformanceMonitor('saving ses', job_id, compute_ses):
-        _save_ses_ruptures(ses, ruptures, cmplt_lt_ses)
-
-compute_ses.ignore_result = False  # essential
+        _save_ses_ruptures(ruptures, cmplt_lt_ses)
 
 
-def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
+def _save_ses_ruptures(ruptures, complete_logic_tree_ses):
     """
     Helper function for saving stochastic event set ruptures to the database.
-
-    :param ses:
-        A :class:`openquake.engine.db.models.SES` instance. This will be DB
-        'container' for the new rupture record.
-    :param rupture:
-        A :class:`openquake.hazardlib.source.rupture.Rupture` instance.
+    :param ruptures:
+        A list of :class:`openquake.engine.db.models.SESRupture` instances.
     :param complete_logic_tree_ses:
         :class:`openquake.engine.db.models.SES` representing the `complete
         logic tree` stochastic event set.
@@ -156,14 +153,16 @@ def _save_ses_ruptures(ses, ruptures, complete_logic_tree_ses):
     # Refactor this to do bulk insertion of ruptures
     with transaction.commit_on_success(using='reslt_writer'):
         for r in ruptures:
-            models.SESRupture.objects.create(
-                ses=ses, rupture=r, tag=r.tag)
+            r.save()
 
         if complete_logic_tree_ses is not None:
-            for rupture in ruptures:
+            for r in ruptures:
                 models.SESRupture.objects.create(
                     ses=complete_logic_tree_ses,
-                    rupture=rupture)
+                    rupture=r.rupture,
+                    hypocenter=r.hypocenter,
+                    magnitude=r.magnitude,
+                )
 
 
 @tasks.oqtask
@@ -183,8 +182,6 @@ def compute_gmf(job_id, params, imt, gsims, ses, site_coll,
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
         _save_gmfs(ses, imt, gmvs_per_site, ruptures_per_site, site_coll)
-
-compute_gmf.ignore_result = False  # essential
 
 
 # NB: I tried to return a single dictionary {site_id: [(gmv, rupt_id),...]}
@@ -286,66 +283,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
     core_calc_task = compute_ses
 
-    preferred_block_size = 1  # will be overridden in calc_num_tasks
-
-    def calc_num_tasks(self):
-        """
-        The number of tasks is inferred from the configuration parameter
-        concurrent_tasks (c), from the number of sources per realization
-        (n) and from the number of stochastic event sets (s) by using
-        the formula::
-
-                     N * n
-         num_tasks = ----- * s
-                       b
-
-        where N is the number of realizations and b is the block_size,
-        defined as::
-
-             N * n * s
-         b = ---------
-              10 * c
-
-        The divisions are intended rounded to the closest upper integer
-        (ceil). The mechanism is intended to generate a number of tasks
-        close to 10 * c independently on the number of sources and SES.
-        For instance, with c = 512, you should expect the engine to
-        generate at most 5120 tasks; they could be much less in case
-        of few sources and few SES; the minimum number of tasks generated
-        is::
-
-          num_tasks_min = N * n * s
-
-        To have good concurrency the number of tasks must be bigger than
-        the number of the cores (which is essentially c) but not too big,
-        otherwise all the time would be wasted in passing arguments.
-        Generating 10 times more tasks than cores gives a nice progress
-        percentage. There is no more motivation than that.
-        """
-        preferred_num_tasks = self.concurrent_tasks() * 10
-        num_ses = self.hc.ses_per_logic_tree_path
-
-        num_sources = []  # number of sources per realization
-        for lt_rlz in self._get_realizations():
-            n = models.SourceProgress.objects.filter(
-                lt_realization=lt_rlz).count()
-            num_sources.append(n)
-            logs.LOG.info('Found %d sources for realization %d',
-                          n, lt_rlz.id)
-        total_sources = sum(num_sources)
-
-        if len(num_sources) > 1:
-            logs.LOG.info('Total number of sources: %d', total_sources)
-
-        self.preferred_block_size = int(
-            math.ceil(float(total_sources * num_ses) / preferred_num_tasks))
-        logs.LOG.warn('Using block size: %d', self.preferred_block_size)
-
-        num_tasks = [math.ceil(float(n) / self.preferred_block_size) * num_ses
-                     for n in num_sources]
-
-        return int(sum(num_tasks))
-
     def task_arg_gen(self, _block_size=None):
         """
         Loop through realizations and sources to generate a sequence of
@@ -369,12 +306,15 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                            ses_collection__lt_realization=lt_rlz,
                            ordinal__isnull=False).order_by('ordinal'))
 
-            for src_ids in block_splitter(sources, self.preferred_block_size):
-                for ses in all_ses:
-                    # compute seeds for the sources
-                    src_seeds = [rnd.randint(0, models.MAX_SINT_32)
-                                 for _ in src_ids]
-                    yield self.job.id, src_ids, ses, src_seeds, ltp
+            # source, ses, seed triples
+            sss = [(src, ses, rnd.randint(0, models.MAX_SINT_32))
+                   for src, ses in itertools.product(sources, all_ses)]
+            preferred_block_size = int(
+                math.ceil(float(len(sources) * len(all_ses)) /
+                          self.concurrent_tasks()))
+            logs.LOG.info('Using block size %d', preferred_block_size)
+            for block in block_splitter(sss, preferred_block_size):
+                yield self.job.id, block, lt_rlz, ltp
 
     def compute_gmf_arg_gen(self):
         """
@@ -421,11 +361,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                             yield (self.job.id, params, imt, gsims, ses,
                                    site_coll, rupts, seeds)
 
-    def execute(self):
+    def post_execute(self):
         """
-        Run compute_ses and optionally compute_gmf in parallel.
+        Optionally compute_gmf in parallel.
         """
-        self.parallelize(self.core_calc_task, self.task_arg_gen())
         if self.hc.ground_motion_fields:
             self.parallelize(compute_gmf, self.compute_gmf_arg_gen())
 
@@ -443,7 +382,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='ses-coll-rlz-%s' % lt_rlz.id,
+            display_name='SES Collection rlz-%s' % lt_rlz.id,
             output_type='ses')
 
         ses_coll = models.SESCollection.objects.create(
@@ -452,7 +391,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         if self.job.hazard_calculation.ground_motion_fields:
             output = models.Output.objects.create(
                 oq_job=self.job,
-                display_name='gmf-rlz-%s' % lt_rlz.id,
+                display_name='GMF rlz-%s' % lt_rlz.id,
                 output_type='gmf')
 
             models.Gmf.objects.create(
@@ -538,8 +477,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         if self.job.hazard_calculation.complete_logic_tree_ses:
             self.initialize_complete_lt_ses_db_records()
-
-        self.record_init_stats()
 
         num_sources = models.SourceProgress.objects.filter(
             is_complete=False,

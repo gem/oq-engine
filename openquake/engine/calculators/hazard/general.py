@@ -18,7 +18,6 @@
 
 """Common code for the hazard calculators."""
 
-import math
 import os
 import random
 import re
@@ -26,6 +25,9 @@ import re
 import openquake.hazardlib
 import openquake.hazardlib.site
 import numpy
+
+# FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
+from openquake.engine.db import models
 
 from django.db import transaction, connections
 from django.db.models import Sum
@@ -45,7 +47,6 @@ from openquake.engine.calculators.post_processing import quantile_curve
 from openquake.engine.calculators.post_processing import (
     weighted_quantile_curve
 )
-from openquake.engine.db import models
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
@@ -269,7 +270,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
-    def task_arg_gen(self, block_size, check_num_task=True):
+    def task_arg_gen(self, block_size):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -308,13 +309,6 @@ class BaseHazardCalculator(base.Calculator):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
-
-        # this sanity check should go into a unit test, and will likely
-        # go there in the future
-        if check_num_task:
-            num_tasks = models.JobStats.objects.get(
-                oq_job=self.job.id).num_tasks
-            assert num_tasks == n, 'Expected %d tasks, got %d' % (num_tasks, n)
 
     def _get_realizations(self):
         """
@@ -395,7 +389,7 @@ class BaseHazardCalculator(base.Calculator):
 
                 hco = models.Output.objects.create(
                     oq_job=self.job,
-                    display_name="hc-rlz-%s" % rlz.id,
+                    display_name="Hazard Curve rlz-%s" % rlz.id,
                     output_type='hazard_curve',
                 )
 
@@ -779,44 +773,6 @@ class BaseHazardCalculator(base.Calculator):
         """
         return hazard_export.export(output_id, export_dir, export_type)
 
-    def calc_num_tasks(self):
-        """
-        The number of tasks is inferred from the number of sources
-        per realization by using the formula::
-
-                     N * n   N * n0
-         num_tasks = ----- + ------
-                       b       b0
-
-        where:
-
-          N is the number of realizations
-          n is the number of complex source
-          n0 is the number of point sources
-          b is the the block_size
-          b0 is the the point_source_block_size
-
-        The divisions are intended rounded to the closest upper integer
-        (ceil).
-        """
-        num_tasks = 0
-        block_size = self.block_size()
-        point_source_block_size = self.point_source_block_size()
-        total_sources = 0
-        for lt_rlz in self._get_realizations():
-            n = len(self._get_source_ids(lt_rlz))
-            n0 = len(self._get_point_source_ids(lt_rlz))
-            logs.LOG.debug('complex sources: %s, point sources: %d', n, n0)
-            total_sources += n + n0
-            ntasks = math.ceil(float(n) / block_size)
-            ntasks0 = math.ceil(float(n0) / point_source_block_size)
-            logs.LOG.debug(
-                'complex sources tasks: %s, point sources tasks: %d',
-                ntasks, ntasks0)
-            num_tasks += ntasks + ntasks0
-        logs.LOG.info('Total number of sources: %d', total_sources)
-        return int(num_tasks)
-
     @EnginePerformanceMonitor.monitor
     def do_aggregate_post_proc(self):
         """
@@ -868,7 +824,7 @@ class BaseHazardCalculator(base.Calculator):
             if self.hc.mean_hazard_curves:
                 mean_output = models.Output.objects.create_output(
                     job=self.job,
-                    display_name='mean-curves-%s' % imt,
+                    display_name='Mean Hazard Curves %s' % imt,
                     output_type='hazard_curve'
                 )
                 mean_hc = models.HazardCurve.objects.create(
@@ -887,7 +843,7 @@ class BaseHazardCalculator(base.Calculator):
                     q_output = models.Output.objects.create_output(
                         job=self.job,
                         display_name=(
-                            'quantile(%s)-curves-%s' % (quantile, imt)
+                            '%s quantile Hazard Curves %s' % (quantile, imt)
                         ),
                         output_type='hazard_curve'
                     )

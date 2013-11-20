@@ -851,6 +851,8 @@ def get_ruptures(job, ses_collection, num):
         models.SESRupture.objects.create(
             ses=ses,
             tag='rlz=%d|ses=%d|src=test|i=%d' % (rlz, ses.ordinal, i),
+            magnitude=1 + i * 10. / float(num),
+            hypocenter=Point(0, 0, 0.1).wkt2d,
             rupture=ProbabilisticRupture(
                 mag=1 + i * 10. / float(num), rake=0,
                 tectonic_region_type="test region type",
