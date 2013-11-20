@@ -28,16 +28,8 @@ Model representations of the OpenQuake DB tables.
 import collections
 import itertools
 import operator
-import os
 import re
 from datetime import datetime
-
-
-def set_django_settings_module():
-    if not os.getenv('DJANGO_SETTINGS_MODULE', False):
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
-
-set_django_settings_module()
 
 
 import numpy
