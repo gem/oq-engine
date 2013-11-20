@@ -41,9 +41,6 @@ try:
 except ImportError:
     pass
 
-from openquake.engine.db.models import set_django_settings_module
-set_django_settings_module()
-
 import openquake.engine
 
 from openquake.engine import __version__
