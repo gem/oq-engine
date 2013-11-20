@@ -21,21 +21,20 @@ import openquake.hazardlib
 import openquake.hazardlib.calc
 import openquake.hazardlib.imt
 
-from django.db import transaction
-
 from openquake.engine import logs
-from openquake.engine.calculators import base
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
 from openquake.engine.db import models
-from openquake.engine.utils import stats
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 
+# FIXME: the following import must go after the openquake.engine.db import
+# so that the variable DJANGO_SETTINGS_MODULE is properly set
+from django.db import transaction
+
 
 @utils_tasks.oqtask
-@stats.count_progress('h')
 def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     """
     A celery task wrapper function around :func:`compute_hazard_curves`.
@@ -52,7 +51,6 @@ def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
     logs.LOG.debug('< task complete, signalling completion')
-    base.signal_task_complete(job_id=job_id, num_items=len(src_ids))
 
 
 # Silencing 'Too many local variables'
@@ -67,11 +65,6 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     Once hazard curve data is computed, result progress updated (within a
     transaction, to prevent race conditions) in the
     `htemp.hazard_curve_progress` table.
-
-    Once all of this work is complete, a signal will be sent via AMQP to let
-    the control node know that the work is complete. (If there is any work left
-    to be dispatched, this signal will indicate to the control node that more
-    work can be enqueued.)
 
     :param int job_id:
         ID of the currently running job.
@@ -107,12 +100,12 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     if hc.maximum_distance:
         dist = hc.maximum_distance
         # NB: a better approach could be to filter the sources by distance
-        # at the beginning and to sore into the database only the relevant
+        # at the beginning and to store into the database only the relevant
         # sources, as we do in the event based calculator: I am not doing that
-        # for the classical calculators because I wonder about the performance
+        # for the classical calculator because I wonder about the performance
         # impact in in SHARE-like calculations. So at the moment we store
         # everything in the database and we filter on the workers. This
-        # will probably change in the future.
+        # will probably change in the future (MS).
         calc_kwargs['source_site_filter'] = (
             openquake.hazardlib.calc.filters.source_site_distance_filter(dist))
         calc_kwargs['rupture_site_filter'] = (
@@ -239,8 +232,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         # work is complete.
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
-
-        self.record_init_stats()
 
         # Set the progress counters:
         num_sources = models.SourceProgress.objects.filter(

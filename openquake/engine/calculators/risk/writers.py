@@ -451,7 +451,7 @@ class LossCurveMapBuilder(OutputBuilder):
         mean_loss_curve = [models.LossCurve.objects.create(
             output=models.Output.objects.create_output(
                 job=self.calc.job,
-                display_name='mean loss curves. type=%s' % loss_type,
+                display_name='Mean Loss Curves. type=%s' % loss_type,
                 output_type='loss_curve'),
             statistics='mean', loss_type=loss_type)]
 
@@ -459,7 +459,7 @@ class LossCurveMapBuilder(OutputBuilder):
             mean_insured_loss_curve = [models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.calc.job,
-                    display_name='mean insured curves. type=%s' % loss_type,
+                    display_name='Mean Insured Curves. type=%s' % loss_type,
                     output_type='loss_curve'),
                 statistics='mean', insured=True, loss_type=loss_type)]
         else:
@@ -471,7 +471,7 @@ class LossCurveMapBuilder(OutputBuilder):
             quantile_loss_curves.append(models.LossCurve.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.calc.job,
-                    display_name='quantile(%s) curves. type=%s' % (
+                    display_name='%s Quantile Loss Curves. type=%s' % (
                         quantile, loss_type),
                     output_type='loss_curve'),
                 statistics='quantile',
@@ -483,8 +483,8 @@ class LossCurveMapBuilder(OutputBuilder):
                         output=models.Output.objects.create_output(
                             job=self.calc.job,
                             display_name=(
-                                'quantile(%s) insured curves. type=%s' % (
-                            quantile, loss_type)),
+                                '%s Quantile Insured Loss Curves. type=%s' % (
+                                    quantile, loss_type)),
                             output_type='loss_curve'),
                         statistics='quantile',
                         insured=True,
@@ -496,7 +496,7 @@ class LossCurveMapBuilder(OutputBuilder):
             mean_loss_maps.append(models.LossMap.objects.create(
                 output=models.Output.objects.create_output(
                     job=self.calc.job,
-                    display_name="mean loss map type=%s poe=%.4f" % (
+                    display_name="Mean Loss Map type=%s poe=%.4f" % (
                         loss_type, poe),
                     output_type="loss_map"),
                 statistics="mean",
@@ -506,7 +506,7 @@ class LossCurveMapBuilder(OutputBuilder):
         quantile_loss_maps = []
         for quantile in self.calc.rc.quantile_loss_curves or []:
             for poe in self.calc.rc.conditional_loss_poes or []:
-                name = "quantile(%.4f) loss map type=%s poe=%.4f" % (
+                name = "%.4f Quantile Loss Map type=%s poe=%.4f" % (
                     quantile, loss_type, poe)
                 quantile_loss_maps.append(models.LossMap.objects.create(
                     output=models.Output.objects.create_output(
@@ -587,7 +587,7 @@ class ConditionalLossFractionBuilder(OutputBuilder):
                 loss_type=loss_type,
                 output=models.Output.objects.create_output(
                     job=self.calc.job,
-                    display_name="mean loss fractions. type=%s poe=%.4f" % (
+                    display_name="Mean Loss Fractions. type=%s poe=%.4f" % (
                         loss_type, poe),
                     output_type="loss_fraction"),
                 statistics="mean"))
@@ -600,7 +600,7 @@ class ConditionalLossFractionBuilder(OutputBuilder):
                     loss_type=loss_type,
                     output=models.Output.objects.create_output(
                         job=self.calc.job,
-                        display_name=("quantile(%.4f) loss fractions "
+                        display_name=("%.4f Quantile Loss Fractions "
                                       "loss_type=%s poe=%.4f" % (
                                           quantile, loss_type, poe)),
                         output_type="loss_fraction"),
