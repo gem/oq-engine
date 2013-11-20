@@ -18,7 +18,6 @@
 
 """Common code for the hazard calculators."""
 
-import math
 import os
 import random
 import re
@@ -26,6 +25,9 @@ import re
 import openquake.hazardlib
 import openquake.hazardlib.site
 import numpy
+
+# FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
+from openquake.engine.db import models
 
 from django.db import transaction, connections
 from django.db.models import Sum
@@ -45,7 +47,6 @@ from openquake.engine.calculators.post_processing import quantile_curve
 from openquake.engine.calculators.post_processing import (
     weighted_quantile_curve
 )
-from openquake.engine.db import models
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
