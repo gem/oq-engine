@@ -26,7 +26,7 @@ import openquake.hazardlib
 import openquake.hazardlib.site
 import numpy
 
-# the import below, as a side effect, sets DJANGO_SETTINGS_MODULE
+# FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
 
 from django.db import transaction, connections
