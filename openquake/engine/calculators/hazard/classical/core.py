@@ -29,7 +29,7 @@ from openquake.engine.db import models
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 
-# the following import must go after from openquake.engine.db import models
+# FIXME: the following import must go after the openquake.engine.db import
 # so that the variable DJANGO_SETTINGS_MODULE is properly set
 from django.db import transaction
 
