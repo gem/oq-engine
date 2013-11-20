@@ -26,7 +26,6 @@ import threading
 import kombu
 
 from openquake.engine.signalling import AMQPMessageConsumer, amqp_connect
-from openquake.engine.utils import stats
 
 
 # Place the new level between info and warning
@@ -73,41 +72,6 @@ def _log_progress(msg, *args, **kwargs):
     msg = '%s %s' % (prefix, msg)
     LOG._log(logging.PROGRESS, msg, args, **kwargs)
 LOG.progress = _log_progress
-
-
-def log_percent_complete(job_id, ctype):
-    """Log a message when the percentage completed changed for a calculation.
-
-    :param int job_id: identifier of the job in question
-    :param str ctype: calculation type, one of: hazard, risk
-    """
-    if ctype not in ("hazard", "risk"):
-        LOG.warn("Unknown calculation type: '%s'" % ctype)
-        return -1
-
-    key = "nhzrd_total" if ctype == "hazard" else "nrisk_total"
-    total = stats.pk_get(job_id, key)
-    key = "nhzrd_done" if ctype == "hazard" else "nrisk_done"
-    done = stats.pk_get(job_id, key)
-
-    if done <= 0 or total <= 0:
-        return 0
-
-    percent = total / 100.0
-    # Store percentage complete as well as the last value reported as integers
-    # in order to avoid reporting the same percentage more than once.
-    percent_complete = int(done / percent)
-    # Get the last value reported
-    lvr = stats.pk_get(job_id, "lvr")
-
-    # Only report the percentage completed if it is above the last value shown
-    if percent_complete > lvr:
-        LOG.progress(
-            "%s %3d%% complete" % (ctype, percent_complete), indent=True
-        )
-        stats.pk_set(job_id, "lvr", percent_complete)
-
-    return percent_complete
 
 
 def init_logs_amqp_send(level, calc_domain, calc_id):

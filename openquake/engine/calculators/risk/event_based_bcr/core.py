@@ -16,18 +16,19 @@
 """
 Core functionality for the Event Based BCR Risk calculator.
 """
+from django.db import transaction
 
 from openquake.risklib import workflows
 
 from openquake.engine.calculators.risk import (
-    base, hazard_getters, writers, validation)
+    hazard_getters, writers, validation)
 from openquake.engine.calculators.risk.event_based import core as event_based
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.db import models
-from django.db import transaction
+from openquake.engine.utils import tasks
 
 
-@base.risk_task
+@tasks.oqtask
 def event_based_bcr(job_id, units, containers, _params):
     """
     Celery task for the BCR risk calculator based on the event based
@@ -47,9 +48,8 @@ def event_based_bcr(job_id, units, containers, _params):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     """
-    def profile(name):
-        return EnginePerformanceMonitor(
-            name, job_id, event_based_bcr, tracing=True)
+    monitor = EnginePerformanceMonitor(
+        None, job_id, event_based_bcr, tracing=True)
 
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
@@ -58,7 +58,7 @@ def event_based_bcr(job_id, units, containers, _params):
             do_event_based_bcr(
                 unit,
                 containers.with_args(loss_type=unit.loss_type),
-                profile)
+                monitor.copy)
 
 
 def do_event_based_bcr(unit, containers, profile):
@@ -135,10 +135,11 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         No need to compute the aggregate loss curve in the BCR calculator.
         """
 
-    def task_completed_hook(self, _message):
+    def task_completed(self, event_loss_tables):
         """
         No need to update event loss tables in the BCR calculator
         """
+        self.log_percent(event_loss_tables)
 
     def pre_execute(self):
         """

@@ -30,6 +30,8 @@ from tests.utils.helpers import get_data_path
 from tests.utils.helpers import get_hazard_job
 from tests.utils.helpers import patch
 
+terminate = supervisor.SupervisorLogMessageConsumer.terminate
+
 
 class SupervisorHelpersTestCase(unittest.TestCase):
 
@@ -58,7 +60,7 @@ class SupervisorHelpersTestCase(unittest.TestCase):
                 with patch('celery.task.control.revoke') as revoke:
                     gti.return_value = ['task-id-1', 'task-id-2']
 
-                    supervisor.cleanup_after_job(self.job.id)
+                    supervisor.cleanup_after_job(self.job.id, terminate=True)
 
                     self.assertEqual(1, cache_gc.call_count)
                     self.assertEqual(((self.job.id, ), {}), cache_gc.call_args)
@@ -71,8 +73,24 @@ class SupervisorHelpersTestCase(unittest.TestCase):
                                        (('task-id-2',), {'terminate': True})]
                     self.assertEqual(exp_revoke_args, revoke.call_args_list)
 
-    def test_update_job_status_and_error_msg(self):
-        supervisor.update_job_status_and_error_msg(self.job.id)
+                with patch('celery.task.control.revoke') as revoke:
+                    gti.return_value = ['task-id-1', 'task-id-2']
+
+                    supervisor.cleanup_after_job(self.job.id, terminate=False)
+
+                    self.assertEqual(2, cache_gc.call_count)
+                    self.assertEqual(((self.job.id, ), {}), cache_gc.call_args)
+
+                    self.assertEqual(2, gti.call_count)
+                    self.assertEqual(((self.job.id, ), {}), gti.call_args)
+
+                    self.assertEqual(2, revoke.call_count)
+                    exp_revoke_args = [(('task-id-1',), {'terminate': False}),
+                                       (('task-id-2',), {'terminate': False})]
+                    self.assertEqual(exp_revoke_args, revoke.call_args_list)
+
+    def test_update_job_status(self):
+        supervisor.update_job_status(self.job.id)
 
 
 class SupervisorTestCase(unittest.TestCase):
@@ -99,7 +117,7 @@ record_job_stop_time')
         start_patch('openquake.engine.supervising.supervisor.terminate_job')
         start_patch('openquake.engine.supervising.supervisor.get_job_status')
         start_patch('openquake.engine.supervising.supervisor'
-                    '.update_job_status_and_error_msg')
+                    '.update_job_status')
 
         logging.root.setLevel(logging.CRITICAL)
 
@@ -149,16 +167,16 @@ record_job_stop_time')
             # the cleanup is triggered
             self.assertEqual(1, self.cleanup_after_job.call_count)
             self.assertEqual(
-                ((self.job.id,), {}),
+                ((self.job.id, terminate), {}),
                 self.cleanup_after_job.call_args)
 
             # the status in the job record is updated
             self.assertEqual(
                 1,
-                self.update_job_status_and_error_msg.call_count)
+                self.update_job_status.call_count)
             self.assertEqual(
                 ((self.job.id,), {}),
-                self.update_job_status_and_error_msg.call_args)
+                self.update_job_status.call_args)
 
     def test_actions_after_job_process_termination(self):
         # the job process is *not* running
@@ -176,7 +194,7 @@ record_job_stop_time')
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
         self.assertEqual(
-            ((self.job.id,), {}),
+            ((self.job.id, terminate), {}),
             self.cleanup_after_job.call_args)
 
     def test_actions_after_job_process_failures(self):
@@ -205,7 +223,7 @@ record_job_stop_time')
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
         self.assertEqual(
-            ((self.job.id,), {}),
+            ((self.job.id, terminate), {}),
             self.cleanup_after_job.call_args)
 
     def test_actions_after_job_process_crash(self):
@@ -225,14 +243,14 @@ record_job_stop_time')
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
         self.assertEqual(
-            ((self.job.id,), {}),
+            ((self.job.id, terminate), {}),
             self.cleanup_after_job.call_args)
 
         # the status in the job record is updated
-        self.assertEqual(1, self.update_job_status_and_error_msg.call_count)
+        self.assertEqual(1, self.update_job_status.call_count)
         self.assertEqual(
             ((self.job.id,), {}),
-            self.update_job_status_and_error_msg.call_args)
+            self.update_job_status.call_args)
 
 
 class AbortDueToFailedNodesTestCase(unittest.TestCase):
