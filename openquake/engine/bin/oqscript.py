@@ -2,52 +2,8 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-"""OpenQuake: software for seismic hazard and risk assessment
-
-It receives its inputs through a configuration file plus input data in .xml
-format and stores the results in .xml format.
-
-Available Hazard Analysis
-
-  Classical PSHA
-    Input   Source Model Logic Tree
-            GMPE Logic Tree
-
-    Output  Hazard maps
-            Hazard curves
-
-  Event-Based PSHA
-    Input   Source Model Logic Tree
-            GMPE Logic Tree
-
-    Output  Ground Motion fields
-
-  Scenario SHA
-    Input   Rupture Model
-
-    Output  Ground Motion fields
-
-Available Risk Analysis
-
-  Classical PSHA-based
-    Input   Exposure (a value per asset)
-            Vulnerability curves (a list of vulnerability functions)
-            Seismic hazard input: hazard curves
-
-    Output  A grid of loss-ratio curves
-            A grid of loss curves
-            A map of losses at each interval
-
-  Probabilistic event-based
-    Input   Exposure (a value per asset)
-            Vulnerability curves (a list of vulnerability functions)
-            Seismic hazard input: sets of ground motion fields
-
-    Output  A grid of loss-ratio curves
-            A grid of loss curves
-            A map of losses at each interval
-            An aggregated loss curve
-
+"""
+OpenQuake: software for seismic hazard and risk assessment
 """
 
 import argparse
@@ -85,9 +41,6 @@ try:
 except ImportError:
     pass
 
-from openquake.engine.db.models import set_django_settings_module
-set_django_settings_module()
-
 import openquake.engine
 
 from openquake.engine import __version__
@@ -98,6 +51,7 @@ from openquake.engine.export import risk as risk_export
 from openquake.engine.input import source
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
+from openquake.engine.tools import save_hazards, load_hazards
 
 HAZARD_OUTPUT_ARG = "--hazard-output-id"
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
@@ -236,6 +190,17 @@ def set_up_arg_parser():
         help=('Use with --export-hazard or --export-risk, specify the '
               'desired output format. Defaults to "xml".')
     )
+
+    save_load_grp = parser.add_argument_group('Save/Load')
+    save_load_grp.add_argument(
+        '--save-hazard-calculation', '--shc',
+        help=('Save a hazard calculation to a new created directory.'),
+        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'DUMP_DIR'))
+    save_load_grp.add_argument(
+        '--load-hazard-calculation',
+        help=("Load a hazard calculation from a saved import. "
+              "Only SES outputs currently supported"),
+        metavar=('DUMP_DIR'))
 
     import_grp = parser.add_argument_group('Import')
     import_grp.add_argument(
@@ -519,6 +484,12 @@ def main():
         list_imported_outputs()
     elif args.delete_uncompleted_calculations:
         delete_uncompleted_calculations()
+    elif args.save_hazard_calculation:
+        save_hazards.main(*args.save_hazard_calculation)
+    elif args.load_hazard_calculation:
+        hc_ids = load_hazards.hazard_load(
+            models.getcursor('admin').connection, args.load_hazard_calculation)
+        print "Load hazard calculation with IDs: %s" % hc_ids
     else:
         arg_parser.print_usage()
 

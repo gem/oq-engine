@@ -24,10 +24,11 @@ import tempfile
 import unittest
 import warnings
 
+from openquake.engine.db import models
 from django.core import exceptions
 
 from openquake.engine import engine
-from openquake.engine.db import models
+from openquake.engine.calculators import base
 
 from tests.utils import helpers
 
@@ -374,6 +375,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
 
         self.assertRaises(RuntimeError, engine.del_haz_calc, hazard_calc.id)
 
+
 class DeleteRiskCalcTestCase(unittest.TestCase):
 
     @classmethod
@@ -438,6 +440,7 @@ class FakeJob(object):
         self.hazard_calculation = hc
         self.risk_calculation = rc
         self.status = ''
+
 
 class FakeCalc(object):
     def __init__(self, calc_id):
@@ -583,7 +586,11 @@ class RunCalcTestCase(unittest.TestCase):
             def __eq__(self, other):
                 return self.job.id == other.job.id
 
+            def register_progress_handler(self, _fn):
+                pass
+
         mocks = dict(
+            save_job_stats='openquake.engine.engine.save_job_stats',
             get_calc='openquake.engine.engine.get_calculator_class',
             job_stats='openquake.engine.engine._create_job_stats',
             job_exec='openquake.engine.engine._job_exec',
@@ -643,6 +650,8 @@ class RunCalcTestCase(unittest.TestCase):
             engine.run_calc(self.job, 'debug', 'oq.log', ['geojson'], 'hazard',
                             supervised=False)
 
+        self.assertEqual(1, mm['save_job_stats'].call_count)
+
         # Check the intermediate function calls and the flow of data:
         self.assertEqual(1, mm['get_calc'].call_count)
         self.assertEqual((('hazard', 'classical'), {}),
@@ -659,7 +668,42 @@ class RunCalcTestCase(unittest.TestCase):
         )
 
         self.assertEqual(1, mm['cleanup'].call_count)
-        self.assertEqual(((1984, ), {}), mm['cleanup'].call_args)
+        self.assertEqual(((1984, ), {'terminate': False}),
+                         mm['cleanup'].call_args)
 
         self.assertEqual(1, mm['get_job'].call_count)
         self.assertEqual(((1984, ), {}), mm['get_job'].call_args)
+
+
+class ProgressHandlerTestCase(unittest.TestCase):
+    class FakeCalc(base.Calculator):
+        class Task(object):
+            subtask = lambda fn: fn
+        core_calc_task = Task
+
+        hc = mock.Mock()
+
+        def block_size(self):
+            return -1
+
+        def task_arg_gen(self, block_size):
+            return (range(block_size) for _ in range(block_size))
+
+        def _get_outputs_for_export(self):
+            return []
+
+    def setUp(self):
+        pass
+
+    def test_do_run_calc(self):
+        with helpers.MultiMock(
+                sj='openquake.engine.engine._switch_to_job_phase'):
+            progress_handler = mock.Mock()
+            calc = self.FakeCalc(mock.Mock())
+            calc.register_progress_handler(progress_handler)
+
+            engine._do_run_calc(calc.job, [], calc, "hazard")
+
+        self.assertTrue(progress_handler.call_count > 0)
+        self.assertEqual((('calculation complete', self.FakeCalc.hc), {}),
+                         progress_handler.call_args)

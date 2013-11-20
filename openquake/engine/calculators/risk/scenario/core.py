@@ -23,17 +23,14 @@ import numpy
 from django import db
 
 from openquake.risklib import workflows
-
-from openquake.engine.calculators.base import signal_task_complete
 from openquake.engine.calculators.risk import (
     base, hazard_getters, validation, writers)
-from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-@base.count_progress_risk('r')
 def scenario(job_id, units, containers, _params):
     """
     Celery task for the scenario risk calculator.
@@ -49,8 +46,7 @@ def scenario(job_id, units, containers, _params):
       An instance of :class:`..base.CalcParams` used to compute
       derived outputs
     """
-    def profile(name):
-        return EnginePerformanceMonitor(name, job_id, scenario, tracing=True)
+    monitor = EnginePerformanceMonitor(None, job_id, scenario, tracing=True)
 
     agg = dict()
     insured = dict()
@@ -61,12 +57,8 @@ def scenario(job_id, units, containers, _params):
                 containers.with_args(
                     loss_type=unit.loss_type,
                     output_type="loss_map"),
-                profile)
-    num_items = base.get_num_items(units)
-    signal_task_complete(
-        job_id=job_id, num_items=num_items,
-        aggregate_losses=agg, insured_losses=insured)
-scenario.ignore_result = False
+                monitor.copy)
+    return agg, insured
 
 
 def do_scenario(unit, containers, profile):
@@ -122,8 +114,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
 
-    def task_completed_hook(self, message):
-        aggregate_losses_dict = message.get('aggregate_losses')
+    def task_completed(self, task_result):
+        self.log_percent(task_result)
+        aggregate_losses_dict, insured_losses_dict = task_result
 
         for loss_type in models.loss_types(self.risk_models):
             aggregate_losses = aggregate_losses_dict.get(loss_type)
@@ -135,7 +128,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 self.aggregate_losses[loss_type] += aggregate_losses
 
         if self.rc.insured_losses:
-            insured_losses_dict = message.get('insured_losses')
             for loss_type in models.loss_types(self.risk_models):
                 insured_losses = insured_losses_dict.get(
                     loss_type)

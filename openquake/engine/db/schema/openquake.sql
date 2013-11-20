@@ -95,19 +95,6 @@ CREATE TABLE hzrdi.parsed_source (
 ) TABLESPACE hzrdi_ts;
 
 
--- Parsed Rupture models
-CREATE TABLE hzrdi.parsed_rupture_model (
-    id SERIAL PRIMARY KEY,
-    job_id INTEGER NOT NULL,
-    rupture_type VARCHAR NOT NULL
-        CONSTRAINT enforce_rupture_type CHECK
-        (rupture_type IN ('complex_fault', 'simple_fault')),
-    nrml BYTEA NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE hzrdi_ts;
-
-
 -- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
@@ -156,10 +143,8 @@ CREATE TABLE uiapi.job_stats (
     stop_time timestamp without time zone,
     -- The number of total sites in the calculation
     num_sites INTEGER,
-    -- The number of tasks in a job
-    num_tasks INTEGER,
-    -- The number of logic tree samples
-    num_realizations INTEGER
+    disk_space BIGINT
+    -- The disk space occupation in bytes
 ) TABLESPACE uiapi_ts;
 
 
@@ -177,10 +162,6 @@ CREATE TABLE uiapi.job_phase_stats (
 
 
 CREATE TABLE uiapi.hazard_calculation (
-    -- TODO(larsbutler): At the moment, this model only contains Classical
-    -- hazard parameters.
-    -- We'll need to update fields and constraints as we add the other
-    -- calculation modes.
     id SERIAL PRIMARY KEY,
     -- Contains the absolute path to the directory containing the job config
     -- file
@@ -390,9 +371,9 @@ CREATE TABLE hzrdr.hazard_map (
             ((imt = 'SA') AND (sa_damping IS NOT NULL))
             OR ((imt != 'SA') AND (sa_damping IS NULL))),
     poe float NOT NULL,
-    lons bytea NOT NULL,
-    lats bytea NOT NULL,
-    imls bytea NOT NULL
+    lons float[] NOT NULL,
+    lats float[] NOT NULL,
+    imls float[] NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 
@@ -472,7 +453,7 @@ CREATE TABLE hzrdr.ses (
 CREATE TABLE hzrdr.ses_rupture (
     id SERIAL PRIMARY KEY,
     ses_id INTEGER NOT NULL,
-    old_magnitude float NULL,
+
     old_strike float NULL,
     old_dip float NULL,
     old_rake float NULL,
@@ -483,9 +464,12 @@ CREATE TABLE hzrdr.ses_rupture (
     old_lats BYTEA NULL,
     old_depths BYTEA NULL,
     old_surface BYTEA NULL,
+
     rupture BYTEA NOT NULL DEFAULT 'not computed',
-    tag VARCHAR
+    tag VARCHAR,
+    magnitude float NOT NULL
 ) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'ses_rupture', 'hypocenter', 4326, 'POINT', 2);
 
 
 CREATE TABLE hzrdr.gmf (

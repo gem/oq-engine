@@ -85,3 +85,10 @@ def no_distribute():
         return False
     else:
         return general_utils.str2bool(nd)
+
+
+def set_django_settings_module():
+    if not os.getenv('DJANGO_SETTINGS_MODULE', False):
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
+
+set_django_settings_module()

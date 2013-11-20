@@ -28,16 +28,8 @@ Model representations of the OpenQuake DB tables.
 import collections
 import itertools
 import operator
-import os
 import re
 from datetime import datetime
-
-
-def set_django_settings_module():
-    if not os.getenv('DJANGO_SETTINGS_MODULE', False):
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.engine.settings'
-
-set_django_settings_module()
 
 
 import numpy
@@ -325,21 +317,6 @@ class SiteModel(djm.Model):
         db_table = 'hzrdi\".\"site_model'
 
 
-class ParsedRupture(djm.Model):
-    """Stores parsed hazard rupture model in serialized python object
-       tree format."""
-    job = djm.OneToOneField('OqJob')
-    RUPTURE_TYPE_CHOICES = (
-        (u'complex_fault', u'Complex Fault'),
-        (u'simple_fault', u'Simple Fault'),)
-    rupture_type = djm.TextField(choices=RUPTURE_TYPE_CHOICES)
-    nrml = fields.PickleField(help_text="NRML object representing the rupture"
-                                        " model")
-
-    class Meta:
-        db_table = 'hzrdi\".\"parsed_rupture_model'
-
-
 ## Tables in the 'uiapi' schema.
 
 class OqJob(djm.Model):
@@ -420,11 +397,8 @@ class JobStats(djm.Model):
     stop_time = djm.DateTimeField(editable=False)
     # The number of total sites in job
     num_sites = djm.IntegerField(null=True)
-    # The total number of tasks in a job
-    num_tasks = djm.IntegerField(null=True)
-    # The number of logic tree samples
-    # (for hazard jobs of all types except scenario)
-    num_realizations = djm.IntegerField(null=True)
+    # The disk space occupation in bytes
+    disk_space = djm.IntegerField(null=True)
 
     class Meta:
         db_table = 'uiapi\".\"job_stats'
@@ -1004,8 +978,8 @@ class RiskCalculation(djm.Model):
     # asset. Expressed in kilometers
     maximum_distance = djm.FloatField(
         null=True, blank=True, default=DEFAULT_MAXIMUM_DISTANCE)
-    # the hazard output (it can point to an HazardCurve or to a
-    # Gmf) used by the risk calculation
+    # the hazard output (it can point to an HazardCurvem, to a
+    # Gmf or to a SES collection) used by the risk calculation
     hazard_output = djm.ForeignKey("Output", null=True, blank=True)
 
     # the HazardCalculation object used by the risk calculation when
@@ -1457,9 +1431,9 @@ class HazardMap(djm.Model):
     poe = djm.FloatField()
     # lons, lats, and imls are stored as numpy arrays with a uniform size and
     # shape
-    lons = fields.PickleField()
-    lats = fields.PickleField()
-    imls = fields.PickleField()
+    lons = fields.FloatArrayField()
+    lats = fields.FloatArrayField()
+    imls = fields.FloatArrayField()
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_map'
@@ -1690,10 +1664,12 @@ class SESRupture(djm.Model):
     #: instance
     rupture = fields.PickleField()
 
+    magnitude = djm.FloatField(null=True)
+    hypocenter = djm.PointField(srid=DEFAULT_SRID)
+
     # a tag with rlz, ses, src and ordinal info
     tag = djm.TextField()
 
-    old_magnitude = djm.FloatField(null=True)
     old_strike = djm.FloatField(null=True)
     old_dip = djm.FloatField(null=True)
     old_rake = djm.FloatField(null=True)
@@ -1857,10 +1833,6 @@ class SESRupture(djm.Model):
     @old_field_property
     def surface(self):
         return self.rupture.surface
-
-    @old_field_property
-    def magnitude(self):
-        return self.rupture.mag
 
     @old_field_property
     def strike(self):

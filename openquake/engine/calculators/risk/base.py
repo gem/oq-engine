@@ -17,11 +17,10 @@
 
 """Base RiskCalculator class."""
 
-from functools import wraps
 import collections
 
 from openquake.engine import logs, export
-from openquake.engine.utils import config, stats, tasks
+from openquake.engine.utils import config, stats
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import writers, validation, loaders
@@ -66,7 +65,7 @@ class RiskCalculator(base.Calculator):
                 (self.rc.preloaded_exposure_model or loaders.exposure(
                     self.job,
                     self.rc.inputs['exposure'])).taxonomies_in(
-                        self.rc.region_constraint))
+                    self.rc.region_constraint))
 
         with logs.tracing('parse risk models'):
             self.risk_models = self.get_risk_models()
@@ -215,11 +214,6 @@ class RiskCalculator(base.Calculator):
         stats.pk_set(self.job.id, "nrisk_total", total)
         stats.pk_set(self.job.id, "nrisk_done", 0)
 
-        job_stats = models.JobStats.objects.get(oq_job=self.job)
-        job_stats.num_sites = total
-        job_stats.num_tasks = self.expected_tasks(self.block_size())
-        job_stats.save()
-
     def get_risk_models(self, retrofitted=False):
         """
         Parse vulnerability models for each loss type in
@@ -238,43 +232,6 @@ class RiskCalculator(base.Calculator):
                 risk_models[taxonomy][loss_type] = model
 
         return risk_models
-
-
-class count_progress_risk(stats.count_progress):   # pylint: disable=C0103
-    """
-    Extend :class:`openquake.engine.utils.stats.count_progress` to work with
-    celery task where the number of items (i.e. assets) are embedded in
-    calculation units.
-    """
-    def get_task_data(self, job_id, units, *_args):
-        num_items = get_num_items(units)
-
-        return job_id, num_items
-
-
-def get_num_items(units):
-    """
-    :param units:
-        a not empty lists of
-        :class:`openquake.engine.calculators.risk.base.CalculationUnit`
-        instances
-    """
-    # Get the getter (an instance of `..hazard_getters.HazardGetter`)
-    # from the first unit. A getter keeps a reference to the list of
-    # assets we want to consider
-    return len(units[0].getter.assets)
-
-
-def risk_task(task):
-    @wraps(task)
-    def fn(job_id, units, *args):
-        task(job_id, units, *args)
-        num_items = get_num_items(units)
-        base.signal_task_complete(job_id=job_id, num_items=num_items)
-    fn.ignore_result = False
-
-    return tasks.oqtask(count_progress_risk('r')(fn))
-
 
 #: Calculator parameters are used to compute derived outputs like loss
 #: maps, disaggregation plots, quantile/mean curves. See
