@@ -20,3 +20,5 @@ Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it as needed.
 *Full test suite*
   These tests including many long-running QA tests and can take ~1 hour to run:
   $ nosetests --with-doctest
+
+[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/ed9166f60bd7a26c93f0bb34dca7f69b "githalytics.com")](http://githalytics.com/gem/oq-engine)
