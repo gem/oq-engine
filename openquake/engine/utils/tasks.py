@@ -138,8 +138,7 @@ def oqtask(task_func):
             finally:
                 CacheInserter.flushall()
                 # the task finished, we can remove from the performance
-                # table the associated row 'storing task id', then the
-                # supervisor will not try revoke it without need
+                # table the associated row 'storing task id'
                 models.Performance.objects.filter(
                     oq_job=job,
                     operation='storing task id',
