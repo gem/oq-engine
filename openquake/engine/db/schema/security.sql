@@ -120,7 +120,6 @@ GRANT SELECT,INSERT,UPDATE ON riskr.event_loss_data           TO oq_reslt_writer
 
 -- uiapi schema
 GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job             TO oq_job_init;
-GRANT SELECT,INSERT,UPDATE ON uiapi.job_phase_stats    TO oq_job_init;
 -- oq_job_init is granted write access to record job start time and other job stats at job init time
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_stats          TO oq_job_init;
 -- oq_job_superv is granted write access so that the job supervisor can record job completion time
