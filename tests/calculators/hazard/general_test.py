@@ -307,10 +307,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
             '%s.%s' % (base_path, 'initialize_site_model'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
-        init_pr_data_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_pr_data'))
-        patches = (init_src_patch, init_sm_patch, init_rlz_patch,
-                   init_pr_data_patch)
+        patches = (init_src_patch, init_sm_patch, init_rlz_patch)
 
         mocks = [p.start() for p in patches]
 
