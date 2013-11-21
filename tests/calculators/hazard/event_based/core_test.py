@@ -181,50 +181,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                 # The only metadata in in the SES is investigation time.
                 self.assertEqual(hc.investigation_time, ses.investigation_time)
 
-    def test_initialize_pr_data_with_ses(self):
-        hc = self.job.hazard_calculation
-
-        # Initialize sources as a setup for the test:
-        self.calc.initialize_sources()
-
-        self.calc.initialize_realizations(
-            rlz_callbacks=[self.calc.initialize_ses_db_records])
-
-        ltr1, ltr2 = models.LtRealization.objects.filter(
-            hazard_calculation=hc).order_by("id")
-
-        ltr1.completed_items = 12
-        ltr1.save()
-
-        self.calc.initialize_pr_data()
-
-        total = stats.pk_get(self.calc.job.id, "nhzrd_total")
-        self.assertEqual(ltr1.total_items + ltr2.total_items, total)
-        done = stats.pk_get(self.calc.job.id, "nhzrd_done")
-        self.assertEqual(ltr1.completed_items + ltr2.completed_items, done)
-
-    def test_initialize_pr_data_with_gmf(self):
-        hc = self.job.hazard_calculation
-
-        # Initialize sources as a setup for the test:
-        self.calc.initialize_sources()
-
-        self.calc.initialize_realizations(
-            rlz_callbacks=[self.calc.initialize_ses_db_records])
-
-        ltr1, ltr2 = models.LtRealization.objects.filter(
-            hazard_calculation=hc).order_by("id")
-
-        ltr1.completed_items = 13
-        ltr1.save()
-
-        self.calc.initialize_pr_data()
-
-        total = stats.pk_get(self.calc.job.id, "nhzrd_total")
-        self.assertEqual(ltr1.total_items + ltr2.total_items, total)
-        done = stats.pk_get(self.calc.job.id, "nhzrd_done")
-        self.assertEqual(ltr1.completed_items + ltr2.completed_items, done)
-
     def test_initialize_complete_lt_ses_db_records_branch_enum(self):
         # Set hazard_calculation.number_of_logic_tree_samples = 0
         # This indicates that the `end-branch enumeration` method should be

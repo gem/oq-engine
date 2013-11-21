@@ -31,7 +31,6 @@ from django.core import exceptions
 from django import db as django_db
 from lxml import etree
 
-from openquake.engine import kvs
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.job.validation import validate
@@ -312,16 +311,15 @@ def _job_exec(job, log_level, exports, job_type, calc):
     """
     Abstraction of some general job execution procedures.
 
-    Parameters are the same as :func:`run_calc`, except for ``supervised``
-    which is not included. Also ``calc`` is an instance of the calculator class
+    Parameters are the same as :func:`run_calc`.
+    Also ``calc`` is an instance of the calculator class
     which is passed to :func:`_do_run_calc`.
     """
-    logs.init_logs_amqp_send(level=log_level, calc_domain=job_type,
-                             calc_id=job.calculation.id)
+    logs.init_logs(
+        level=log_level, calc_domain=job_type, calc_id=job.calculation.id)
     # run the job
     job.is_running = True
     job.save()
-    kvs.mark_job_as_current(job.id)
     _do_run_calc(job, exports, calc, job_type)
 
 

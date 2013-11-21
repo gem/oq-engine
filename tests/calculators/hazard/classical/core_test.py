@@ -24,7 +24,6 @@ from nose.plugins.attrib import attr
 from openquake.engine.calculators.hazard.classical import core
 from openquake.engine.db import models
 from openquake.engine.engine import save_job_stats
-from openquake.engine.utils import stats
 from tests.utils import helpers
 
 
@@ -52,10 +51,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             '%s.%s' % (base_path, 'initialize_sources'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
-
-        init_pr_data_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_pr_data'))
-        patches = (init_src_patch, init_rlz_patch, init_pr_data_patch)
+        patches = (init_src_patch, init_rlz_patch)
 
         mocks = [p.start() for p in patches]
 
@@ -172,25 +168,6 @@ store_site_model'
             # realization.
             self._check_logic_tree_realization_source_progress(ltr)
 
-    def test_initialize_pr_data(self):
-        # The total/done counters for progress reporting are initialized
-        # correctly.
-        self.calc.initialize_sources()
-        self.calc.initialize_realizations(
-            rlz_callbacks=[self.calc.initialize_hazard_curve_progress])
-        ltr1, ltr2 = models.LtRealization.objects.filter(
-            hazard_calculation=self.job.hazard_calculation.id).order_by("id")
-
-        ltr1.completed_items = 11
-        ltr1.save()
-
-        self.calc.initialize_pr_data()
-
-        total = stats.pk_get(self.calc.job.id, "nhzrd_total")
-        self.assertEqual(ltr1.total_items + ltr2.total_items, total)
-        done = stats.pk_get(self.calc.job.id, "nhzrd_done")
-        self.assertEqual(ltr1.completed_items + ltr2.completed_items, done)
-
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_sources()
         # enumeration is triggered by zero value used as number of realizations
@@ -224,10 +201,6 @@ store_site_model'
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
         # num sources * num lt samples / block size (items per task):
         self.assertEqual(120, job_stats.num_sites)
-
-        # Check the calculator total/progress counters as well:
-        self.assertEqual(0, self.calc.progress['computed'])
-        self.assertEqual(236, self.calc.progress['total'])
 
         # Update job status to move on to the execution phase.
         self.job.is_running = True

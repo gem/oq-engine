@@ -42,7 +42,6 @@ class Calculator(object):
     def __init__(self, job):
         self.job = job
         self.num_tasks = None
-        self.progress = dict(total=0, computed=0, in_queue=0)
         self.progress_handler = DEFAULT_PROGRESS_HANDLER
 
     def register_progress_handler(self, fn):
