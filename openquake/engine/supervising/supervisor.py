@@ -32,9 +32,6 @@ import logging
 import os
 import signal
 
-import openquake.engine
-from openquake.engine.utils import config, general
-
 from datetime import datetime
 
 try:
@@ -48,11 +45,8 @@ except ImportError:
 from openquake.engine.db.models import JobStats
 from openquake.engine.db.models import OqJob
 from openquake.engine.db.models import Performance
-from openquake.engine import supervising
 from openquake.engine import kvs
 from openquake.engine import logs
-from openquake.engine.utils import monitor
-from openquake.engine.utils import stats
 
 
 LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
@@ -175,10 +169,8 @@ def _update_log_record(self, record):
 
 class SupervisorLogStreamHandler(logging.StreamHandler):
     """
-    Log stream handler intended to be used with
-    :class:`SupervisorLogMessageConsumer`.
+    Log stream handler
     """
-
     def __init__(self, calc_domain, calc_id):
         super(SupervisorLogStreamHandler, self).__init__()
         self.setFormatter(logging.Formatter(LOG_FORMAT))
@@ -192,10 +184,8 @@ class SupervisorLogStreamHandler(logging.StreamHandler):
 
 class SupervisorLogFileHandler(logging.FileHandler):
     """
-    Log file handler intended to be used with
-    :class:`SupervisorLogMessageConsumer`.
+    Log file handler
     """
-
     def __init__(self, calc_domain, calc_id, log_file):
         super(SupervisorLogFileHandler, self).__init__(log_file)
         self.setFormatter(logging.Formatter(LOG_FORMAT))
@@ -208,128 +198,7 @@ class SupervisorLogFileHandler(logging.FileHandler):
         super(SupervisorLogFileHandler, self).emit(record)
 
 
-class SupervisorLogMessageConsumer(logs.AMQPLogSource):
-    """
-    Supervise an OpenQuake job by:
-
-       - handling its "critical" and "error" messages
-       - periodically checking that the job process is still running
-    """
-    # Failure counter check delay, translates to 60 seconds with the current
-    # settings.
-    FCC_DELAY = 60
-    terminate = general.str2bool(
-        config.get('celery', 'terminate_workers_on_revoke'))
-
-    def __init__(self, job_id, job_pid, timeout=1):
-        self.job_id = job_id
-        job = OqJob.objects.get(id=job_id)
-        self.calc_id = job.calculation.id
-        if job.hazard_calculation is not None:
-            self.calc_domain = 'hazard'
-        else:
-            self.calc_domain = 'risk'
-
-        self.selflogger = logging.getLogger('oq.%s.%s.supervisor'
-                                            % (self.calc_domain, self.calc_id))
-        self.selflogger.debug('Entering supervisor for %s calc %s'
-                              % (self.calc_domain, self.calc_id))
-        logger_name = 'oq.%s.%s' % (self.calc_domain, self.calc_id)
-        key = '%s.#' % logger_name
-        super(SupervisorLogMessageConsumer, self).__init__(timeout=timeout,
-                                                           routing_key=key)
-        self.job_pid = job_pid
-        self.joblogger = logging.getLogger(logger_name)
-        self.jobhandler = logging.Handler(logging.ERROR)
-        self.jobhandler.emit = self.log_callback
-        self.joblogger.addHandler(self.jobhandler)
-        # Failure counter check delay value
-        self.fcc_delay_value = 0
-
-    def run(self):
-        """
-        Wrap superclass' method just to add cleanup.
-        """
-        super(SupervisorLogMessageConsumer, self).run()
-        self.joblogger.removeHandler(self.jobhandler)
-        self.selflogger.debug('Exiting supervisor for %s calc %s'
-                              % (self.calc_domain, self.calc_id))
-
-    def log_callback(self, record):
-        """
-        Handles messages of severe level from the supervised job.
-        """
-        if record.name == self.selflogger.name:
-            # ignore error log messages sent by selflogger.
-            # this way we don't try to kill the job if its
-            # process has crashed (or has been stopped).
-            # we emit selflogger's error messages from
-            # timeout_callback().
-            return
-
-        terminate_job(self.job_pid)
-
-        update_job_status(self.job_id)
-
-        record_job_stop_time(self.job_id)
-
-        cleanup_after_job(self.job_id, self.terminate)
-
-        self.stop()
-
-    # NB: we should remove the timeout functionality from the engine;
-    # if we want it (for instance on OATH jobs should not run
-    # for more than X minutes) we can rely on the celery options
-    # --soft-time-limit/CELERYD_TASK_TIME_LIMIT
-    # currently I have raised the no_progress_timeout to 100 hours so this
-	# method is never invoked (MS)
-    def timeout_callback(self):
-        """
-        On timeout expiration check if the job process is still running
-        and whether it experienced any failures.
-
-        Terminate the job process in the latter case.
-        """
-        def failure_counters_need_check():
-            """Return `True` if failure counters should be checked."""
-            self.fcc_delay_value += 1
-            result = self.fcc_delay_value >= self.FCC_DELAY
-            if result:
-                self.fcc_delay_value = 0
-            return result
-
-        process_stopped = job_failed = False
-        message = None
-
-        if not supervising.is_pid_running(self.job_pid):
-            message = ('job process %s crashed or terminated' % self.job_pid)
-            process_stopped = True
-        elif failure_counters_need_check():
-            # Job process is still running.
-            failures = stats.failure_counters(self.job_id)
-            if failures:
-                message = "job terminated with failures: %s" % failures
-                terminate_job(self.job_pid)
-                job_failed = True
-
-        if job_failed or process_stopped:
-            job_status = get_job_status(self.job_id)
-            if process_stopped and job_status == 'complete':
-                message = 'job process %s succeeded' % self.job_pid
-                self.selflogger.debug(message)
-            elif not job_status == 'complete':
-                # The job crashed without having a chance to update the
-                # status in the database, or it has been running even though
-                # there were failures. We update the job status here.
-                self.selflogger.error(message)
-                update_job_status(self.job_id)
-
-            record_job_stop_time(self.job_id)
-            cleanup_after_job(self.job_id, self.terminate)
-            raise StopIteration()
-
-
-def supervise(pid, job_id, timeout=1, log_file=None):
+def supervise(pid, job_id, log_file=None):
     """
     Supervise a job process, entering a loop that ends only when the job
     terminates.
@@ -338,8 +207,6 @@ def supervise(pid, job_id, timeout=1, log_file=None):
         the process id
     :param int job_id:
         the job id
-    :param float timeout:
-        timeout value in seconds
     :param str log_file:
         Optional log file location. If specified, log messages will be appended
         to this file. If not specified, log messages will be printed to the
@@ -347,20 +214,14 @@ def supervise(pid, job_id, timeout=1, log_file=None):
     """
     the_job = OqJob.objects.get(id=job_id)
     calc_id = the_job.calculation.id
-    if the_job.hazard_calculation is not None:
-        calc_domain = 'hazard'
-    else:
-        calc_domain = 'risk'
+    calc_domain = 'hazard' if the_job.hazard_calculation else 'risk'
+
     # Set the name of this process (as reported by /bin/ps)
     setproctitle('openquake supervisor for %s calc_id=%s job_pid=%s'
                  % (calc_domain, calc_id, pid))
     ignore_sigint()
 
     start_logging(calc_id, calc_domain, log_file)
-
-    supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
-
-    supervisor.run()
 
 
 def start_logging(calc_id, calc_domain, log_file):

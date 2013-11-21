@@ -260,7 +260,7 @@ def _create_job_stats(job):
 
 # used by bin/openquake
 def run_calc(job, log_level, log_file, exports, job_type,
-             supervised=True, progress_handler=None):
+             progress_handler=None):
     """
     Run a calculation.
 
@@ -279,9 +279,6 @@ def run_calc(job, log_level, log_file, exports, job_type,
         supported.
     :param str job_type:
         'hazard' or 'risk'
-    :param bool supervised:
-        Defaults to `True`. If `True`, run OpenQuake with a supervisor process,
-        which monitors the job executor process and collects log messages.
     :param callable progress_handler:
         a callback getting the progress of the calculation and the calculation
         object
@@ -294,70 +291,21 @@ def run_calc(job, log_level, log_file, exports, job_type,
 
     # Create job stats, which implicitly records the start time for the job
     _create_job_stats(job)
-    # Closing all db connections to make sure they're not shared between
-    # supervisor and job executor processes.
-    # Otherwise, if one of them closes the connection it immediately
-    # becomes unavailable for others.
-    if supervised:
-        django_db.close_connection()
 
-        job_pid = os.fork()
-
-        if not job_pid:
-            # calculation executor process
-            try:
-                with job_stats(job):
-                    _job_exec(job, log_level, exports, job_type, calc)
-            except Exception, ex:
-                logs.LOG.critical("Calculation failed with exception: '%s'"
-                                  % str(ex))
-                raise
-            finally:
-                job.is_running = False
-                job.save()
-            return
-
-        supervisor_pid = os.fork()
-        if not supervisor_pid:
-            # supervisor process
-            logs.set_logger_level(logs.logging.root, log_level)
-            # TODO: deal with KVS garbage collection
-            supervisor.supervise(job_pid, job.id, log_file=log_file)
-            return
-
-        # parent process
-
-        # ignore Ctrl-C as well as supervisor process does. thus only
-        # job executor terminates on SIGINT
-        supervisor.ignore_sigint()
-        # wait till both child processes are done
-        os.waitpid(job_pid, 0)
-        os.waitpid(supervisor_pid, 0)
-    else:
-        try:
-            with job_stats(job):
-                _job_exec(job, log_level, exports, job_type, calc)
-        except Exception, ex:
-            logs.LOG.critical("Calculation failed with exception: '%s'"
-                              % str(ex))
-            raise
-        finally:
-            job.is_running = False
-            job.save()
-            # Normally the supervisor process does this, but since we don't
-            # have one in this case, we have to call the cleanup manually.
-            supervisor.cleanup_after_job(job.id, terminate=False)
-
-    # Refresh the job record, in case we are forking and another process has
-    # modified the job state.
-    return _get_job(job.id)
-
-
-def _get_job(job_id):
-    """
-    Helper function to get a job object by ID. Makes testing/mocking easier.
-    """
-    return models.OqJob.objects.get(id=job_id)
+    calc_id = job.calculation.id
+    calc_domain = 'hazard' if job.hazard_calculation else 'risk'
+    supervisor.start_logging(calc_id, calc_domain, log_file)
+    try:
+        with job_stats(job):
+            _job_exec(job, log_level, exports, job_type, calc)
+    except Exception, ex:
+        logs.LOG.critical("Calculation failed with exception: '%s'", ex)
+        raise
+    finally:
+        job.is_running = False
+        job.save()
+        supervisor.cleanup_after_job(job.id, terminate=False)
+    return job
 
 
 def _job_exec(job, log_level, exports, job_type, calc):
@@ -379,21 +327,14 @@ def _job_exec(job, log_level, exports, job_type, calc):
 
 def _switch_to_job_phase(job, ctype, status):
     """Switch to a particular phase of execution.
-
-    This involves creating a `job_phase_stats` record and logging the new
-    status.
-
-    :param job:
-        An :class:`~openquake.engine.db.models.OqJob` instance.
+    :param job: An :class:`~openquake.engine.db.models.OqJob` instance.
     :param str ctype: calculation type (hazard|risk)
     :param str status: one of the following: pre_executing, executing,
         post_executing, post_processing, export, clean_up, complete
     """
     job.status = status
     job.save()
-    models.JobPhaseStats.objects.create(oq_job=job, job_status=status,
-                                        ctype=ctype)
-    logs.LOG.progress("%s (%s)" % (status, ctype))
+    logs.LOG.progress("%s (%s)", status, ctype)
     if status == "executing" and not openquake.engine.no_distribute():
         # Record the compute nodes that were available at the beginning of the
         # execute phase so we can detect failed nodes later.

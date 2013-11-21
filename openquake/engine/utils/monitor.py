@@ -16,11 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """
 Utility functions related to monitoring.
 """
-
 
 from celery.task.control import inspect
 
@@ -90,7 +88,7 @@ def _live_cnode_status():
     live_nodes = ins.ping()
     # ping returns a dict like this:
     #   {'gemsun04': 'pong', 'gemsun01': 'pong', 'bigstar04': 'pong'}
-    return set(live_nodes.keys()) if live_nodes else set()
+    return set(live_nodes) if live_nodes else set()
 
 
 def _db_cnode_status(job):
