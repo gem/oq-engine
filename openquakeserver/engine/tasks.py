@@ -61,10 +61,8 @@ def run_hazard_calc(calc_id, calc_dir,
             status=status,
             description=calculation.description)
 
-    # NOTE: Supervision MUST be turned off, or else the celeryd cluster
-    # handling this task will leak processes!!!
     engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'hazard',
-                    supervised=False, progress_handler=progress_handler)
+                    progress_handler=progress_handler)
 
     shutil.rmtree(calc_dir)
 
@@ -94,10 +92,8 @@ def run_risk_calc(calc_id, calc_dir,
             status=status,
             description=calculation.description)
 
-    # NOTE: Supervision MUST be turned off, or else the celeryd cluster
-    # handling this task will leak processes!!!
     engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'risk',
-                    supervised=False, progress_handler=progress_handler)
+                    progress_handler=progress_handler)
     shutil.rmtree(calc_dir)
     # If requested to, signal job completion and trigger a migration of
     # results.
