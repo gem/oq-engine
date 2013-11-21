@@ -13,7 +13,6 @@ Contents:
     db/models
     db/fields
     architecture
-    kvs
     logs
     input
     risk
