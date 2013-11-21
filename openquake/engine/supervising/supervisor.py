@@ -18,64 +18,23 @@
 
 
 """
-This module implements supervise(), a function that monitors an OpenQuake job.
-
-Upon job termination, successful or for an error of whatever level or gravity,
-supervise() will:
-
-   - ensure a cleanup of the resources used by the job
-   - update status of the job record in the database
+This module will soon be merged with logs.py
 """
 
-import celery.task.control
 import logging
-import os
-import signal
-
 from datetime import datetime
 
-try:
-    # setproctitle is optional external dependency
-    # apt-get installl python-setproctitle or
-    # http://pypi.python.org/pypi/setproctitle/
-    from setproctitle import setproctitle
-except ImportError:
-    setproctitle = lambda title: None  # pylint: disable=C0103
+import celery.task.control
 
 from openquake.engine.db.models import JobStats
 from openquake.engine.db.models import OqJob
 from openquake.engine.db.models import Performance
-from openquake.engine import kvs
 from openquake.engine import logs
 
 
 LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
               '%(levelname)s %(processName)s/%(process)s %(name)s] '
               '%(message)s')
-
-
-def ignore_sigint():
-    """
-    Setup signal handler on SIGINT in order to ignore it.
-
-    This is needed to avoid premature death of the supervisor and is called
-    from :func:`openquake.engine.engine.run_job` for job parent process and
-    from :func:`supervise` for supervisor process.
-    """
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-
-def terminate_job(pid):
-    """
-    Terminate an openquake job by killing its process.
-
-    :param pid: the process id
-    :type pid: int
-    """
-
-    logging.debug('Terminating job process %s', pid)
-
-    os.kill(pid, signal.SIGKILL)
 
 
 def record_job_stop_time(job_id):
@@ -101,9 +60,6 @@ def cleanup_after_job(job_id, terminate):
     :param bool terminate: the celery revoke command terminate flag
     """
     logging.debug('Cleaning up after job %s', job_id)
-
-    kvs.cache_gc(job_id)
-
     # Using the celery API, terminate and revoke and terminate any running
     # tasks associated with the current job.
     task_ids = _get_task_ids(job_id)
@@ -196,32 +152,6 @@ class SupervisorLogFileHandler(logging.FileHandler):
     def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
         super(SupervisorLogFileHandler, self).emit(record)
-
-
-def supervise(pid, job_id, log_file=None):
-    """
-    Supervise a job process, entering a loop that ends only when the job
-    terminates.
-
-    :param int pid:
-        the process id
-    :param int job_id:
-        the job id
-    :param str log_file:
-        Optional log file location. If specified, log messages will be appended
-        to this file. If not specified, log messages will be printed to the
-        console.
-    """
-    the_job = OqJob.objects.get(id=job_id)
-    calc_id = the_job.calculation.id
-    calc_domain = 'hazard' if the_job.hazard_calculation else 'risk'
-
-    # Set the name of this process (as reported by /bin/ps)
-    setproctitle('openquake supervisor for %s calc_id=%s job_pid=%s'
-                 % (calc_domain, calc_id, pid))
-    ignore_sigint()
-
-    start_logging(calc_id, calc_domain, log_file)
 
 
 def start_logging(calc_id, calc_domain, log_file):
