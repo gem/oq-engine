@@ -594,8 +594,7 @@ class RunCalcTestCase(unittest.TestCase):
             get_calc='openquake.engine.engine.get_calculator_class',
             job_stats='openquake.engine.engine._create_job_stats',
             job_exec='openquake.engine.engine._job_exec',
-            cleanup=('openquake.engine.supervising.supervisor'
-                     '.cleanup_after_job'),
+            cleanup=('openquake.engine.engine.cleanup_after_job'),
         )
         self.mm = helpers.MultiMock(**mocks)
         self.job = mock.Mock()
