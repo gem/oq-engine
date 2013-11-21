@@ -630,7 +630,7 @@ class RunCalcTestCase(unittest.TestCase):
         )
 
         self.assertEqual(1, mm['cleanup'].call_count)
-        self.assertEqual(((1984, ), {'terminate': False}),
+        self.assertEqual(((1984, ), {'terminate': engine.TERMINATE}),
                          mm['cleanup'].call_args)
 
 
