@@ -57,13 +57,7 @@ class AMQPMessageConsumer(object):
 
         MyConsumer('routing.key.#').run()
     """
-    def __init__(self, routing_key, timeout=None):
-        if timeout is not None:
-            assert type(self).timeout_callback \
-                   is not AMQPMessageConsumer.timeout_callback, \
-                   "please override timeout_callback() method " \
-                   "if you want to handle timeouts"
-        self.timeout = timeout
+    def __init__(self, routing_key):
         self.channel = self.connection = None
         self._stopped = False
 
@@ -83,10 +77,7 @@ class AMQPMessageConsumer(object):
         """
         try:
             while not self._stopped:
-                try:
-                    self.connection.drain_events(timeout=self.timeout)
-                except socket.timeout:
-                    self._timeout_callback()
+                self.connection.drain_events()
         finally:
             self.channel.close()
             self.connection.close()
@@ -111,16 +102,6 @@ class AMQPMessageConsumer(object):
         else:
             msg.ack()
 
-    def _timeout_callback(self):
-        """
-        Run :meth:`timeout_callback` and handle :exc:`StopIteration` raised
-        from there doing :meth:`stop`.
-        """
-        try:
-            self.timeout_callback()
-        except StopIteration:
-            self.stop()
-
     def message_callback(self, payload, msg):
         """
         Called by :meth:`run` when a message is received.
@@ -129,15 +110,3 @@ class AMQPMessageConsumer(object):
         and terminate execution.
         """
         raise NotImplementedError()
-
-    def timeout_callback(self):
-        """
-        Called by :meth:`run` each time the timeout expires.
-
-        You need to implement this only if you specify a timeout when creating
-        an instance of AMQPMessageConsumer.
-
-        Can raise StopIteration to stop the loop inside :meth:`run`
-        and terminate execution.
-        """
-        pass

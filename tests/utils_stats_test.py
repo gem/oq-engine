@@ -29,7 +29,7 @@ import sys
 import unittest
 
 from openquake.engine import engine
-from openquake.engine.db.models import HazardCalculation, JobPhaseStats
+from openquake.engine.db.models import HazardCalculation
 from openquake.engine.utils import stats
 
 from tests.utils import helpers
@@ -350,74 +350,3 @@ class CountProgressTestCase(helpers.RedisTestCase, unittest.TestCase):
 
         value = stats.pk_get(22, "nrisk_failed")
         self.assertEqual(6, value)
-
-
-def approx_equal(expected, actual, tolerance):
-    """True if actual value equals the expected one within the tolerance."""
-    return abs(expected - actual) <= tolerance
-
-
-class GetProgressTimingDataTestCase(helpers.RedisTestCase, unittest.TestCase):
-    """Tests the behaviour of utils.stats.get_progress_timing_data()."""
-
-    job = None
-
-    def setUp(self):
-        self.job = engine.prepare_job()
-        self.job.hazard_calculation = HazardCalculation(no_progress_timeout=99)
-
-    def test_get_progress_timing_data_before_first_increment(self):
-        # No "progress counter increment" time stamp exists, the time stamp of
-        # the *executing* `JobPhaseStats` record is taken instead.
-        five_mins_ago = datetime.utcnow() - timedelta(minutes=5)
-        jps = JobPhaseStats(oq_job=self.job, ctype="hazard",
-                            job_status="executing")
-        jps.start_time = five_mins_ago
-        jps.save()
-        actual, timeout = stats.get_progress_timing_data(self.job)
-        self.assertTrue(approx_equal(300, actual, 5))
-        self.assertEqual(99, timeout)
-
-    def test_get_progress_timing_data_no_increment_multiple_rows(self):
-        # No progress counter increment time stamp exists, the time stamp of
-        # the most recent *executing* `JobPhaseStats` record is taken instead.
-        jps_ts = datetime.utcnow() - timedelta(minutes=5)
-        jps = JobPhaseStats(oq_job=self.job, ctype="hazard",
-                            job_status="executing")
-        jps.start_time = jps_ts
-        jps.save()
-        jps_ts = datetime.utcnow() - timedelta(minutes=2)
-        jps = JobPhaseStats(oq_job=self.job, ctype="risk",
-                            job_status="executing")
-        jps.start_time = jps_ts
-        jps.save()
-        actual, timeout = stats.get_progress_timing_data(self.job)
-        self.assertTrue(approx_equal(120, actual, 5))
-
-    def test_get_progress_timing_data_with_increment(self):
-        # The progress counter increment time stamp exists and is used instead
-        # of the time stamp in the *executing* `JobPhaseStats` record since the
-        # former is more recent.
-        tstamp = datetime.utcnow() - timedelta(minutes=6)
-        stats.pk_set(self.job.id, "lvr_ts", tstamp.strftime("%s"))
-        tstamp = datetime.utcnow() - timedelta(minutes=7)
-        jps = JobPhaseStats(oq_job=self.job, ctype="hazard",
-                            job_status="executing")
-        jps.start_time = tstamp
-        jps.save()
-        actual, timeout = stats.get_progress_timing_data(self.job)
-        self.assertTrue(approx_equal(360, actual, 5))
-
-    def test_get_progress_timing_data_with_stale_increment_ts(self):
-        # The progress counter increment time stamp exists but is not used
-        # since the time stamp in the *executing* `JobPhaseStats` record is
-        # more recent.
-        tstamp = datetime.utcnow() - timedelta(minutes=9)
-        stats.pk_set(self.job.id, "lvr_ts", tstamp.strftime("%s"))
-        tstamp = datetime.utcnow() - timedelta(minutes=8)
-        jps = JobPhaseStats(oq_job=self.job, ctype="hazard",
-                            job_status="executing")
-        jps.start_time = tstamp
-        jps.save()
-        actual, timeout = stats.get_progress_timing_data(self.job)
-        self.assertTrue(approx_equal(480, actual, 5))

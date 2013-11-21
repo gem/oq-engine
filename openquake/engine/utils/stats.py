@@ -334,32 +334,3 @@ def delete_job_counters(job_id):
 
     return len(keys)
 
-
-def get_progress_timing_data(job):
-    """Get length of time since the last task completed and the timeout.
-
-    :param job: The :class:`openquake.engine.db.models.OqJob` instance to use
-    :returns: number of seconds since the last task completed (or the
-        execute phase began) and the value of the `no_progress_timeout`
-        parameter as a 2-tuple
-    """
-    def epoch(dto):
-        """Convert a datetime object to seconds since epoch"""
-        return int(dto.strftime("%s"))
-
-    tstamp = epoch(datetime.utcnow())
-
-    # the "last value recorded time stamp" will be zero if not set in the kvs
-    lvr_ts = pk_get(job.id, "lvr_ts")
-
-    # when did the most recent "executing" job phase for this calculation
-    # start?
-    jpss = models.JobPhaseStats.objects.filter(oq_job=job,
-                                               job_status="executing")
-    [jps] = jpss.order_by("-start_time")[:1]
-    jps_ts = epoch(jps.start_time)
-
-    # take the more recent of the two time stamps
-    lvr_ts = jps_ts if jps_ts > lvr_ts else lvr_ts
-
-    return (tstamp - lvr_ts, job.calculation.no_progress_timeout)
