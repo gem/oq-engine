@@ -38,7 +38,8 @@ from lxml import etree
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.job.validation import validate
-from openquake.engine.utils import config, monitor, get_calculator_class
+from openquake.engine.utils import (
+    config, monitor, get_calculator_class, general)
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import JobStats
@@ -58,6 +59,9 @@ UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
 LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
               '%(levelname)s %(processName)s/%(process)s %(name)s] '
               '%(message)s')
+
+TERMINATE = general.str2bool(
+    config.get('celery', 'terminate_workers_on_revoke'))
 
 
 def record_job_stop_time(job_id):
@@ -450,8 +454,7 @@ def run_calc(job, log_level, log_file, exports, job_type,
     finally:
         job.is_running = False
         job.save()
-        cleanup_after_job(job.id, terminate=general.str2bool(
-                config.get('celery', 'terminate_workers_on_revoke')))
+        cleanup_after_job(job.id, terminate=TERMINATE)
     return job
 
 
