@@ -33,7 +33,6 @@ from openquake.hazardlib.gsim import get_available_gsims
 
 from openquake.engine.db import models
 from openquake.engine.calculators.hazard.event_based import core
-from openquake.engine.utils import stats
 
 from tests.utils import helpers
 
