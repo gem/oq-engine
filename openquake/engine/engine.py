@@ -22,8 +22,12 @@ import getpass
 import os
 import sys
 import time
+import logging
 import warnings
 from contextlib import contextmanager
+from datetime import datetime
+
+import celery.task.control
 
 import openquake.engine
 
@@ -34,10 +38,12 @@ from lxml import etree
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.job.validation import validate
-from openquake.engine.supervising import supervisor
-from openquake.engine.utils import monitor, get_calculator_class
+from openquake.engine.utils import config, monitor, get_calculator_class
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
+from openquake.engine.db.models import JobStats
+from openquake.engine.db.models import OqJob
+from openquake.engine.db.models import Performance
 
 from openquake import hazardlib
 from openquake import risklib
@@ -45,8 +51,149 @@ from openquake import nrmllib
 
 
 INPUT_TYPES = dict(models.INPUT_TYPE_CHOICES)
+
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
+
+LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
+              '%(levelname)s %(processName)s/%(process)s %(name)s] '
+              '%(message)s')
+
+
+def record_job_stop_time(job_id):
+    """
+    Call this when a job concludes (successful or not) to record the
+    'stop_time' (using the current UTC time) in the uiapi.job_stats table.
+
+    :param job_id: the job id
+    :type job_id: int
+    """
+    logs.LOG.debug('Recording stop time for job %s to job_stats', job_id)
+    job_stats = JobStats.objects.get(oq_job=job_id)
+    job_stats.stop_time = datetime.utcnow()
+    job_stats.save(using='job_superv')
+
+
+def cleanup_after_job(job_id, terminate):
+    """
+    Release the resources used by an openquake job.
+
+    :param int job_id: the job id
+    :param bool terminate: the celery revoke command terminate flag
+    """
+    logs.LOG.debug('Cleaning up after job %s', job_id)
+    # Using the celery API, terminate and revoke and terminate any running
+    # tasks associated with the current job.
+    task_ids = _get_task_ids(job_id)
+    if task_ids:
+        logs.LOG.warn('Revoking %d tasks', len(task_ids))
+    else:  # this is normal when OQ_NO_DISTRIBUTE=1
+        logs.LOG.debug('No task to revoke')
+    for tid in task_ids:
+        celery.task.control.revoke(tid, terminate=terminate)
+        logs.LOG.debug('Revoked task %s', tid)
+
+
+def _get_task_ids(job_id):
+    """
+    Get all Celery task IDs for a given ``job_id``.
+    """
+    return Performance.objects.filter(
+        oq_job=job_id, operation='storing task id', task_id__isnull=False)\
+        .values_list('task_id', flat=True)
+
+
+def get_job_status(job_id):
+    """
+    Return the status of the job stored in its database record.
+
+    :param job_id: the id of the job
+    :type job_id: int
+    :return: the status of the job
+    :rtype: string
+    """
+
+    return OqJob.objects.get(id=job_id).status
+
+
+def update_job_status(job_id):
+    """
+    Store in the database the status of a job.
+
+    :param int job_id: the id of the job
+    """
+    job = OqJob.objects.get(id=job_id)
+    job.is_running = False
+    job.save()
+
+
+def _update_log_record(self, record):
+    """
+    Massage a log record before emitting it. Intended to be used by the
+    custom log handlers defined in this module.
+    """
+    if not hasattr(record, 'hostname'):
+        record.hostname = '-'
+    if not hasattr(record, 'calc_domain'):
+        record.calc_domain = self.calc_domain
+    if not hasattr(record, 'calc_id'):
+        record.calc_id = self.calc_id
+    logger_name_prefix = 'oq.%s.%s' % (record.calc_domain, record.calc_id)
+    if record.name.startswith(logger_name_prefix):
+        record.name = record.name[len(logger_name_prefix):].lstrip('.')
+        if not record.name:
+            record.name = 'root'
+
+
+class LogStreamHandler(logging.StreamHandler):
+    """
+    Log stream handler
+    """
+    def __init__(self, calc_domain, calc_id):
+        super(LogStreamHandler, self).__init__()
+        self.setFormatter(logging.Formatter(LOG_FORMAT))
+        self.calc_domain = calc_domain
+        self.calc_id = calc_id
+
+    def emit(self, record):  # pylint: disable=E0202
+        _update_log_record(self, record)
+        super(LogStreamHandler, self).emit(record)
+
+
+class LogFileHandler(logging.FileHandler):
+    """
+    Log file handler
+    """
+    def __init__(self, calc_domain, calc_id, log_file):
+        super(LogFileHandler, self).__init__(log_file)
+        self.setFormatter(logging.Formatter(LOG_FORMAT))
+        self.calc_domain = calc_domain
+        self.calc_id = calc_id
+        self.log_file = log_file
+
+    def emit(self, record):  # pylint: disable=E0202
+        _update_log_record(self, record)
+        super(LogFileHandler, self).emit(record)
+
+
+def start_logging(calc_id, calc_domain, log_file):
+    """
+    Add logging handlers to begin collecting log messages.
+
+    :param int calc_id:
+        Hazard or Risk calculation ID.
+    :param str calc_domain:
+        'hazard' or 'risk'
+    :param str log_file:
+        Log file path location. Can be `None`. If a path is specified, we will
+        create a file handler for logging. Else, we just log to the console.
+    """
+    if log_file is not None:
+        logging.root.addHandler(
+            LogFileHandler(calc_domain, calc_id, log_file))
+    else:
+        logging.root.addHandler(
+            LogStreamHandler(calc_domain, calc_id))
 
 
 def save_job_stats(job, disk_space=None):
@@ -293,7 +440,7 @@ def run_calc(job, log_level, log_file, exports, job_type,
 
     calc_id = job.calculation.id
     calc_domain = 'hazard' if job.hazard_calculation else 'risk'
-    supervisor.start_logging(calc_id, calc_domain, log_file)
+    start_logging(calc_id, calc_domain, log_file)
     try:
         with job_stats(job):
             _job_exec(job, log_level, exports, job_type, calc)
@@ -303,7 +450,8 @@ def run_calc(job, log_level, log_file, exports, job_type,
     finally:
         job.is_running = False
         job.save()
-        supervisor.cleanup_after_job(job.id, terminate=False)
+        cleanup_after_job(job.id, terminate=general.str2bool(
+                config.get('celery', 'terminate_workers_on_revoke')))
     return job
 
 
@@ -478,23 +626,19 @@ def run_hazard(cfg_file, log_level, log_file, exports):
             cfg_file, getpass.getuser(), log_level, exports
         )
 
-        # Initialize the supervisor, instantiate the calculator,
-        # and run the calculation.
+        # Instantiate the calculator, and run the calculation.
         t0 = time.time()
         completed_job = run_calc(
             job, log_level, log_file, exports, 'hazard'
         )
         duration = time.time() - t0
-        if completed_job is not None:
-            # We check for `None` here because the supervisor and executor
-            # process forks return to here as well. We want to ignore them.
-            if completed_job.status == 'complete':
-                print_results(completed_job.hazard_calculation.id,
-                              duration, list_hazard_outputs)
-            else:
-                complain_and_exit('Calculation %d failed'
-                                  % completed_job.hazard_calculation.id,
-                                  exit_code=1)
+        if completed_job.status == 'complete':
+            print_results(completed_job.hazard_calculation.id,
+                          duration, list_hazard_outputs)
+        else:
+            complain_and_exit('Calculation %d failed'
+                              % completed_job.hazard_calculation.id,
+                              exit_code=1)
     except IOError as e:
         print str(e)
     except Exception as e:
@@ -625,23 +769,19 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
             hazard_calculation_id
         )
 
-        # Initialize the supervisor, instantiate the calculator,
-        # and run the calculation.
+        # Instantiate the calculator and run the calculation.
         t0 = time.time()
         completed_job = run_calc(
             job, log_level, log_file, exports, 'risk'
         )
         duration = time.time() - t0
-        if completed_job is not None:
-            # We check for `None` here because the supervisor and executor
-            # process forks return to here as well. We want to ignore them.
-            if completed_job.status == 'complete':
-                print_results(completed_job.risk_calculation.id,
-                              duration, list_risk_outputs)
-            else:
-                complain_and_exit('Calculation %s failed'
-                                  % completed_job.risk_calculation.id,
-                                  exit_code=1)
+        if completed_job.status == 'complete':
+            print_results(completed_job.risk_calculation.id,
+                          duration, list_risk_outputs)
+        else:
+            complain_and_exit('Calculation %s failed'
+                              % completed_job.risk_calculation.id,
+                              exit_code=1)
     except IOError as e:
         print str(e)
     except Exception as e:
