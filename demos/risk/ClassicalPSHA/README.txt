@@ -5,9 +5,9 @@ calculations are defined in separate .ini files and were designed to be
 run together to form a complete end-to-end demonstration of the workflow.
 
 --Hazard--
-Expected runtime: <2 minutes
+Expected runtime: ~2 minutes
 Outputs: Hazard Curves
 
 --Risk--
-Expected runtime: ~17 minutes
+Expected runtime: <1 minute
 Outputs: Loss Curves

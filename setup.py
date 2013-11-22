@@ -14,7 +14,7 @@ celeryconfig.py file works with your python-celery setup.
 Feel free to copy /usr/openquake/engine/celeryconfig.py and revise it as needed.
 """
 
-PY_MODULES = ['openquake.engine.bin.cache_gc', 'openquake.engine.bin.oqscript']
+PY_MODULES = ['openquake.engine.bin.oqscript']
 
 setup(
     entry_points={
