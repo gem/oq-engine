@@ -52,7 +52,6 @@ from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.input import source
 from openquake.engine.utils import config
-from openquake.engine.utils import stats
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
@@ -184,63 +183,11 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-def validate_site_model(sm_nodes, mesh):
-    """Given the geometry for a site model and the geometry of interest for the
-    calculation (``mesh``, make sure the geometry of interest lies completely
-    inside of the convex hull formed by the site model locations.
-
-    If a point of interest lies directly on top of a vertex or edge of the site
-    model area (a polygon), it is considered "inside"
-
-    :param sm_nodes:
-        Sequence of :class:`~openquake.engine.db.models.SiteModel` objects.
-    :param mesh:
-        A :class:`openquake.hazardlib.geo.mesh.Mesh` which represents the
-        calculation points of interest.
-
-    :raises:
-        :exc:`RuntimeError` if the area of interest (given as a mesh) is not
-        entirely contained by the site model.
-    """
-    sm_mp = geometry.MultiPoint(
-        [(n.location.x, n.location.y) for n in sm_nodes]
-    )
-
-    sm_ch = sm_mp.convex_hull
-    # Enlarging the area if the site model nodes
-    # create a straight line with zero area.
-    if sm_ch.area == 0:
-        sm_ch = sm_ch.buffer(DILATION_ONE_METER)
-
-    sm_poly = hazardlib_geo.Polygon(
-        [hazardlib_geo.Point(*x) for x in sm_ch.exterior.coords]
-    )
-
-    # "Intersects" is the correct operation (not "contains"), since we're just
-    # checking a collection of points (mesh). "Contains" would tell us if the
-    # points are inside the polygon, but would return `False` if a point was
-    # directly on top of a polygon edge or vertex. We want these points to be
-    # included.
-    intersects = sm_poly.intersects(mesh)
-
-    if not intersects.all():
-        raise RuntimeError(
-            ['Sites of interest are outside of the site model coverage area.'
-             ' This configuration is invalid.']
-        )
-
-
 class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
-
-    def __init__(self, *args, **kwargs):
-        super(BaseHazardCalculator, self).__init__(*args, **kwargs)
-
-        self.progress.update(in_queue=0)
-
     @property
     def hc(self):
         """
@@ -404,8 +351,8 @@ class BaseHazardCalculator(base.Calculator):
                 )
                 haz_curve.save()
 
-                with transaction.commit_on_success(using='reslt_writer'):
-                    cursor = connections['reslt_writer'].cursor()
+                with transaction.commit_on_success(using='job_init'):
+                    cursor = connections['job_init'].cursor()
 
                     # TODO(LB): I don't like the fact that we have to pass
                     # potentially huge arguments (100k sites, for example).
@@ -533,29 +480,21 @@ class BaseHazardCalculator(base.Calculator):
     @EnginePerformanceMonitor.monitor
     def initialize_site_model(self):
         """
+        Populate the hazard site table.
+
         If a site model is specified in the calculation configuration,
-        parse it and load it into the `hzrdi.site_model` table. This
-        includes a validation step to ensure that the area covered by
-        the site model completely envelops the calculation geometry.
-        (If this requirement is not satisfied, an exception will be
-        raised. See :func:`validate_site_model`.)
+        parse it and load it into the `hzrdi.site_model` table.
         """
-        logs.LOG.progress("initializing site model")
+        logs.LOG.progress("initializing sites")
+        self.hc.points_to_compute(save_sites=True)
+
         site_model_inp = self.hc.site_model
         if site_model_inp:
-            # Store `site_model` records:
             store_site_model(self.job, site_model_inp)
-
-            # Get the site model records we stored:
-            validate_site_model(
-                self.job.sitemodel_set.all(),
-                self.hc.points_to_compute(save_sites=True))
-        else:
-            self.hc.points_to_compute(save_sites=True)
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
-    @transaction.commit_on_success(using='reslt_writer')
+    @transaction.commit_on_success(using='job_init')
     def initialize_realizations(self, rlz_callbacks=None):
         """
         Create records for the `hzrdr.lt_realization` and
@@ -589,20 +528,6 @@ class BaseHazardCalculator(base.Calculator):
             # full paths enumeration
             self._initialize_realizations_enumeration(
                 rlz_callbacks=rlz_callbacks)
-
-    def initialize_pr_data(self):
-        """Record the total/completed number of work items.
-
-        This is needed for the purpose of providing an indication of progress
-        to the end user."""
-        stats.pk_set(self.job.id, "lvr", 0)
-        rs = models.LtRealization.objects.filter(
-            hazard_calculation=self.job.hazard_calculation)
-        total = rs.aggregate(Sum("total_items"))
-        done = rs.aggregate(Sum("completed_items"))
-        stats.pk_set(self.job.id, "nhzrd_total", total.values().pop())
-        if done > 0:
-            stats.pk_set(self.job.id, "nhzrd_done", done.values().pop())
 
     def _initialize_realizations_enumeration(self, rlz_callbacks=None):
         """
@@ -702,7 +627,7 @@ class BaseHazardCalculator(base.Calculator):
             the path of the source_model associated with the
             logic tree realization
         """
-        cursor = connections['reslt_writer'].cursor()
+        cursor = connections['job_init'].cursor()
         src_progress_tbl = models.SourceProgress._meta.db_table
         parsed_src_tbl = models.ParsedSource._meta.db_table
         lt_rlz_tbl = models.LtRealization._meta.db_table
@@ -863,7 +788,7 @@ class BaseHazardCalculator(base.Calculator):
                 models.HazardCurveData.objects.all_curves_for_imt(
                     self.job.id, im_type, sa_period, sa_damping))
 
-            with transaction.commit_on_success(using='reslt_writer'):
+            with transaction.commit_on_success(using='job_init'):
                 inserter = writer.CacheInserter(
                     models.HazardCurveData, CURVE_CACHE_SIZE)
 

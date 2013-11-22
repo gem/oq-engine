@@ -20,7 +20,6 @@ from tests.utils import helpers
 from tests.utils.helpers import get_data_path
 from openquake.engine.calculators.risk import base
 from openquake.engine.db import models
-from openquake.engine.utils import stats
 
 
 class BaseRiskCalculatorTestCase(unittest.TestCase):
@@ -60,19 +59,3 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
     def setUp(self):
         super(RiskCalculatorTestCase, self).setUp()
         self.calculator = FakeRiskCalculator(self.job)
-
-    def test_initialize_progress(self):
-        # Tests that the progress counter has been initialized
-        # properly
-
-        self.calculator.pre_execute()
-
-        total = 2  # expected
-        self.calculator._initialize_progress(total)
-
-        self.assertEqual(total, stats.pk_get(
-            self.calculator.job.id, "nrisk_total"))
-        self.assertEqual(2, total)
-        self.assertEqual({'VF': 2}, self.calculator.taxonomies_asset_count)
-        done = stats.pk_get(self.calculator.job.id, "nrisk_done")
-        self.assertEqual(0, done)

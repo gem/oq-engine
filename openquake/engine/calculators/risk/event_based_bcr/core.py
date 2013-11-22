@@ -53,7 +53,7 @@ def event_based_bcr(job_id, units, containers, _params):
 
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
-    with transaction.commit_on_success(using='reslt_writer'):
+    with transaction.commit_on_success(using='job_init'):
         for unit in units:
             do_event_based_bcr(
                 unit,
