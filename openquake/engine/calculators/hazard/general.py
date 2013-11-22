@@ -530,7 +530,7 @@ class BaseHazardCalculator(base.Calculator):
                 # total_items is obsolete and will be removed
                 total_items=-1)
 
-            self.initialize_sources_per_rlz(lt_rlz, source_model_filename)
+            self.set_sources_per_rlz(lt_rlz, source_model_filename)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -576,7 +576,7 @@ class BaseHazardCalculator(base.Calculator):
                 total_items=-1
             )
 
-            self.initialize_sources_per_rlz(lt_rlz, source_model_filename)
+            self.set_sources_per_rlz(lt_rlz, source_model_filename)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -588,7 +588,7 @@ class BaseHazardCalculator(base.Calculator):
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
 
-    def initialize_sources_per_rlz(self, lt_rlz, source_model_filename):
+    def set_sources_per_rlz(self, lt_rlz, source_model_filename):
         """
         :param lt_rlz:
             :class:`openquake.engine.db.models.LtRealization` object to
