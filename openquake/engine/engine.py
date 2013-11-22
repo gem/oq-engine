@@ -64,31 +64,28 @@ TERMINATE = general.str2bool(
     config.get('celery', 'terminate_workers_on_revoke'))
 
 
-def record_job_stop_time(job_id):
+def record_job_stop_time(job):
     """
     Call this when a job concludes (successful or not) to record the
     'stop_time' (using the current UTC time) in the uiapi.job_stats table.
 
-    :param job_id: the job id
-    :type job_id: int
+    :param job: the job object
     """
-    logs.LOG.debug('Recording stop time for job %s to job_stats', job_id)
-    job_stats = JobStats.objects.get(oq_job=job_id)
+    job_stats = JobStats.objects.get(oq_job=job)
     job_stats.stop_time = datetime.utcnow()
     job_stats.save(using='job_init')
 
 
-def cleanup_after_job(job_id, terminate):
+def cleanup_after_job(job, terminate):
     """
     Release the resources used by an openquake job.
 
     :param int job_id: the job id
     :param bool terminate: the celery revoke command terminate flag
     """
-    logs.LOG.debug('Cleaning up after job %s', job_id)
     # Using the celery API, terminate and revoke and terminate any running
     # tasks associated with the current job.
-    task_ids = _get_task_ids(job_id)
+    task_ids = _get_task_ids(job.id)
     if task_ids:
         logs.LOG.warn('Revoking %d tasks', len(task_ids))
     else:  # this is normal when OQ_NO_DISTRIBUTE=1
@@ -454,7 +451,8 @@ def run_calc(job, log_level, log_file, exports, job_type,
     finally:
         job.is_running = False
         job.save()
-        cleanup_after_job(job.id, terminate=TERMINATE)
+        record_job_stop_time(job)
+        cleanup_after_job(job, terminate=TERMINATE)
     return job
 
 
