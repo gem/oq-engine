@@ -367,8 +367,6 @@ class EventBasedHazardForm(BaseHazardModelForm):
             'ses_per_logic_tree_path',
             'ground_motion_correlation_model',
             'ground_motion_correlation_params',
-            'complete_logic_tree_ses',
-            'complete_logic_tree_gmf',
             'ground_motion_fields',
             'hazard_curves_from_gmfs',
             'mean_hazard_curves',
@@ -387,16 +385,6 @@ class EventBasedHazardForm(BaseHazardModelForm):
         hc = self.instance
 
         # contextual validation
-
-        # It doesn't make sense to capture/export the `complete_logic_tree_gmf`
-        # when we're doing end-branch enumeration:
-        if not hc.number_of_logic_tree_samples and hc.complete_logic_tree_gmf:
-
-            msg = '`%s` is not available with end branch enumeration'
-            msg %= 'complete_logic_tree_gmf'
-            self._add_error('complete_logic_tree_gmf', msg)
-            all_valid = False
-
         # If a vulnerability model is defined, show warnings if the user also
         # specified `intensity_measure_types_and_levels` or
         # `intensity_measure_types`:
@@ -1031,18 +1019,6 @@ def ground_motion_correlation_params_is_valid(_mdl):
     # parameters at this point because the parameters are specific to a given
     # correlation model.
     # Field normalization should make sure that the input is properly formed.
-    return True, []
-
-
-def complete_logic_tree_ses_is_valid(_mdl):
-    # This parameter is a simple True or False;
-    # field normalization should cover all of validation necessary.
-    return True, []
-
-
-def complete_logic_tree_gmf_is_valid(_mdl):
-    # This parameter is a simple True or False;
-    # field normalization should cover all of validation necessary.
     return True, []
 
 

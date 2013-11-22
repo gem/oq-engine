@@ -209,8 +209,6 @@ CREATE TABLE uiapi.hazard_calculation (
     uniform_hazard_spectra boolean DEFAULT false,
     export_multi_curves boolean DEFAULT false,
     -- event-based:
-    complete_logic_tree_ses BOOLEAN,
-    complete_logic_tree_gmf BOOLEAN,
     ground_motion_fields BOOLEAN,
     hazard_curves_from_gmfs BOOLEAN
 ) TABLESPACE uiapi_ts;
@@ -302,8 +300,6 @@ CREATE TABLE uiapi.output (
             'aggregate_loss',
             'bcr_distribution',
             'collapse_map',
-            'complete_lt_gmf',
-            'complete_lt_ses',
             'disagg_matrix',
             'dmg_dist_per_asset',
             'dmg_dist_per_taxonomy',
@@ -1202,19 +1198,3 @@ CREATE VIEW hzrdr.gmf_data_job AS
    INNER JOIN uiapi.output AS c
    ON b.output_id=c.id
    WHERE output_type='gmf';
-
-
--- associations parent->children
-CREATE VIEW hzrdr.gmf_family AS
-  SELECT j.id as oq_job_id, hazard_calculation_id,
-  c1.id AS parent_id, c2.id AS child_id
-  FROM uiapi.oq_job AS j
-  INNER JOIN uiapi.output AS o1
-  ON o1.oq_job_id=j.id
-  INNER JOIN uiapi.output AS o2
-  ON o2.oq_job_id=j.id
-  INNER JOIN hzrdr.gmf AS c1
-  ON c1.output_id=o1.id
-  INNER JOIN hzrdr.gmf AS c2
-  ON c2.output_id=o2.id
-  WHERE o1.output_type='complete_lt_gmf' AND o2.output_type='gmf';
