@@ -30,7 +30,6 @@ import numpy
 from openquake.engine.db import models
 
 from django.db import transaction, connections
-from django.db.models import Sum
 from shapely import geometry
 
 from openquake.hazardlib import correlation
@@ -125,42 +124,6 @@ def imt_to_hazardlib(imt):
         return imt_class()
 
 
-def update_realization(lt_rlz_id, num_items):
-    """
-    Call this function when a task is complete to update realization counters
-    with the ``num_items`` completed.
-
-    If the `completed_items` becomes equal to the `total_items` for the
-    realization, the realization will be marked as complete.
-
-    .. note::
-        Because this function performs a SELECT FOR UPDATE query, it is
-        expected that this should be called in the context of a transaction, to
-        avoid race conditions.
-
-    :param int lt_rlz_id:
-        ID of the :class:`openquake.engine.db.models.LtRealization` we want
-        to update.
-    :param int num_items:
-        The number of items by which we want to increment the realization's
-        `completed_items` counter.
-    """
-    ltr_query = """
-    SELECT * FROM hzrdr.lt_realization
-    WHERE id = %s
-    FOR UPDATE
-    """
-
-    [lt_rlz] = models.LtRealization.objects.raw(
-        ltr_query, [lt_rlz_id])
-
-    lt_rlz.completed_items += num_items
-    if lt_rlz.completed_items == lt_rlz.total_items:
-        lt_rlz.is_complete = True
-
-    lt_rlz.save()
-
-
 def get_correl_model(hc):
     """
     Helper function for constructing the appropriate correlation model.
@@ -242,16 +205,15 @@ class BaseHazardCalculator(base.Calculator):
             # separate point sources from all the other types, since
             # we distribution point sources in different sized chunks
             # point sources first
-            point_source_ids = self._get_point_source_ids(lt_rlz)
-
+            point_source_ids = self.sources_per_rlz[lt_rlz.id, 'point']
             for block in block_splitter(point_source_ids,
                                         point_source_block_size):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
-            # now for area and fault sources
-            other_source_ids = self._get_source_ids(lt_rlz)
 
+            # now for area and fault sources
+            other_source_ids = self.sources_per_rlz[lt_rlz.id, 'other']
             for block in block_splitter(other_source_ids, block_size):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
@@ -264,40 +226,6 @@ class BaseHazardCalculator(base.Calculator):
         return models.LtRealization.objects\
             .filter(hazard_calculation=self.hc, is_complete=False)\
             .order_by('id')
-
-    @staticmethod
-    def _get_point_source_ids(lt_rlz):
-        """
-        Get `parsed_source` IDs for all of the point sources for a given logic
-        tree realization. See also :meth:`_get_source_ids`.
-
-        :param lt_rlz:
-            A :class:`openquake.engine.db.models.LtRealization` instance.
-        """
-        return models.SourceProgress.objects\
-            .filter(is_complete=False, lt_realization=lt_rlz,
-                    parsed_source__source_type='point')\
-            .order_by('id')\
-            .values_list('parsed_source_id', flat=True)
-
-    @staticmethod
-    def _get_source_ids(lt_rlz):
-        """
-        Get `parsed_source` IDs for all sources for a given logic tree
-        realization, except for point sources. See
-        :meth:`_get_point_source_ids`.
-
-        :param lt_rlz:
-            A :class:`openquake.engine.db.models.LtRealization` instance.
-        """
-        return models.SourceProgress.objects\
-            .filter(is_complete=False, lt_realization=lt_rlz,
-                    parsed_source__source_type__in=['area',
-                                                    'complex',
-                                                    'simple',
-                                                    'characteristic'])\
-            .order_by('id')\
-            .values_list('parsed_source_id', flat=True)
 
     def finalize_hazard_curves(self):
         """
@@ -475,7 +403,7 @@ class BaseHazardCalculator(base.Calculator):
             with logs.tracing('storing exposure'):
                 exposure.ExposureDBWriter(
                     self.job).serialize(
-                        parsers.ExposureModelParser(hc.inputs['exposure']))
+                    parsers.ExposureModelParser(hc.inputs['exposure']))
 
     @EnginePerformanceMonitor.monitor
     def initialize_site_model(self):
@@ -497,18 +425,13 @@ class BaseHazardCalculator(base.Calculator):
     @transaction.commit_on_success(using='job_init')
     def initialize_realizations(self, rlz_callbacks=None):
         """
-        Create records for the `hzrdr.lt_realization` and
-        `htemp.source_progress` records.
+        Create records for the `hzrdr.lt_realization`.
 
         This function works either in random sampling mode (when lt_realization
         models get the random seed value) or in enumeration mode (when weight
         values are populated). In both cases we record the logic tree paths
         for both trees in the `lt_realization` record, as well as ordinal
         number of the realization (zero-based).
-
-        Then we create `htemp.source_progress` records for each source
-        in the source model chosen for each realization,
-        see :meth:`initialize_source_progress`.
 
         :param rlz_callbacks:
             Optionally, you can specify a list of callbacks for each
@@ -550,11 +473,10 @@ class BaseHazardCalculator(base.Calculator):
                 weight=weight,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path,
-                # we will update total_items in initialize_source_progress()
+                # total_items is obsolete and will be removed
                 total_items=-1)
 
-            # Create source_progress objects
-            self.initialize_source_progress(lt_rlz, source_model_filename)
+            self.set_sources_per_rlz(lt_rlz, source_model_filename)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -596,12 +518,11 @@ class BaseHazardCalculator(base.Calculator):
                 weight=None,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path,
-                # we will update total_items in initialize_source_progress()
+                # total_items is obsolete and will be removed
                 total_items=-1
             )
 
-            # Create source_progress objects
-            self.initialize_source_progress(lt_rlz, source_model_filename)
+            self.set_sources_per_rlz(lt_rlz, source_model_filename)
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -613,12 +534,8 @@ class BaseHazardCalculator(base.Calculator):
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
 
-    @staticmethod
-    def initialize_source_progress(lt_rlz, source_model_filename):
+    def set_sources_per_rlz(self, lt_rlz, source_model_filename):
         """
-        Create ``source_progress`` models for given logic tree realization
-        and set total sources of realization.
-
         :param lt_rlz:
             :class:`openquake.engine.db.models.LtRealization` object to
             initialize source progress for.
@@ -627,25 +544,19 @@ class BaseHazardCalculator(base.Calculator):
             the path of the source_model associated with the
             logic tree realization
         """
-        cursor = connections['job_init'].cursor()
-        src_progress_tbl = models.SourceProgress._meta.db_table
-        parsed_src_tbl = models.ParsedSource._meta.db_table
-        lt_rlz_tbl = models.LtRealization._meta.db_table
-        cursor.execute("""
-            INSERT INTO "%s" (lt_realization_id, parsed_source_id, is_complete)
-            SELECT %%s, id, FALSE
-            FROM "%s" WHERE job_id = %%s AND source_model_filename=%%s
-            ORDER BY id
-            """ % (src_progress_tbl, parsed_src_tbl),
-            [lt_rlz.id,
-             lt_rlz.hazard_calculation.oqjob.id,
-             source_model_filename])
-        cursor.execute("""
-            UPDATE "%s" SET total_items = (
-                SELECT count(1) FROM "%s" WHERE lt_realization_id = %%s
-            )""" % (lt_rlz_tbl, src_progress_tbl),
-            [lt_rlz.id])
-        transaction.commit_unless_managed()
+        point_source_ids = models.ParsedSource.objects.filter(
+            job=lt_rlz.hazard_calculation.oqjob,
+            source_model_filename=source_model_filename,
+            source_type='point',
+            ).order_by('id').values_list('id', flat=True)
+        self.sources_per_rlz[lt_rlz.id, 'point'] = list(point_source_ids)
+
+        other_source_ids = models.ParsedSource.objects.filter(
+            job=lt_rlz.hazard_calculation.oqjob,
+            source_model_filename=source_model_filename,
+            source_type__in=['area', 'complex', 'simple', 'characteristic'],
+            ).order_by('id').values_list('id', flat=True)
+        self.sources_per_rlz[lt_rlz.id, 'other'] = list(other_source_ids)
 
     def initialize_hazard_curve_progress(self, lt_rlz):
         """

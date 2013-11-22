@@ -297,10 +297,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_rlz in realizations:
-            sources = models.SourceProgress.objects\
-                .filter(is_complete=False, lt_realization=lt_rlz)\
-                .order_by('id')\
-                .values_list('parsed_source_id', flat=True)
+            sources = (self.sources_per_rlz[lt_rlz.id, 'point'] +
+                       self.sources_per_rlz[lt_rlz.id, 'other'])
 
             all_ses = list(models.SES.objects.filter(
                            ses_collection__lt_realization=lt_rlz,
