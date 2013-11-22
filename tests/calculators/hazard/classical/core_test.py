@@ -221,8 +221,6 @@ store_site_model'
         # Now we test that the htemp results were copied to the final location
         # in `hzrdr.hazard_curve` and `hzrdr.hazard_curve_data`.
         for rlz in lt_rlzs:
-            self.assertEqual(rlz.total_items, rlz.completed_items)
-            self.assertTrue(rlz.is_complete)
 
             # get hazard curves for this realization
             [pga_curves] = models.HazardCurve.objects.filter(

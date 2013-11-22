@@ -165,11 +165,6 @@ def compute_disagg(job_id, sites, lt_rlz_id, ltp):
                         sa_damping
                     )
 
-    with transaction.commit_on_success():
-        # Update realiation progress,
-        # mark realization as complete if it is done
-        haz_general.update_realization(lt_rlz_id, len(sites))
-
     logs.LOG.debug('< done computing disaggregation')
 
 
