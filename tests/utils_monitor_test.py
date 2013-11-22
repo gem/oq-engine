@@ -42,7 +42,7 @@ class DbCnodeStatusTestCase(unittest.TestCase):
         for node, status in [("N1", "up"), ("N2", "down"), ("N3", "down")]:
             ns = models.CNodeStats(oq_job=job, node=node,
                                    current_status=status)
-            ns.save(using="job_superv")
+            ns.save(using="job_init")
             expected[node] = ns
         self.assertEqual(expected, monitor._db_cnode_status(job.id))
 
@@ -52,7 +52,7 @@ class DbCnodeStatusTestCase(unittest.TestCase):
         for node, status in [("O1", "up"), ("O2", "down"), ("O3", "down")]:
             ns = models.CNodeStats(oq_job=job, node=node,
                                    current_status=status)
-            ns.save(using="job_superv")
+            ns.save(using="job_init")
         self.assertEqual(expected, monitor._db_cnode_status(-1))
 
     def test__db_cnode_status_and_two_jobs(self):
@@ -60,13 +60,13 @@ class DbCnodeStatusTestCase(unittest.TestCase):
         for node, status in [("P1", "up"), ("P2", "down"), ("P3", "down")]:
             ns = models.CNodeStats(oq_job=job1, node=node,
                                    current_status=status)
-            ns.save(using="job_superv")
+            ns.save(using="job_init")
         job2 = engine.prepare_job()
         expected = {}
         for node, status in [("Q2", "down"), ("Q3", "down")]:
             ns = models.CNodeStats(oq_job=job2, node=node,
                                    current_status=status)
-            ns.save(using="job_superv")
+            ns.save(using="job_init")
             expected[node] = ns
         self.assertEqual(expected, monitor._db_cnode_status(job2.id))
 
@@ -83,15 +83,15 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
     def test_cnode_stats_with_correct_data(self):
         # The db record is saved w/o triggering an exception
         cs = models.CNodeStats(oq_job=self.job, node="N1", current_status="up")
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
 
     def test_cnode_stats_failure_counter_with_up_down_transition(self):
         # The failures counter is incremented in case of a
         #   up -> down transition
         cs = models.CNodeStats(oq_job=self.job, node="N3", current_status="up")
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
         cs.current_status = "down"
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
         cs = models.CNodeStats.objects.get(id=cs.id)
 
         self.assertEqual(1, cs.failures)
@@ -102,9 +102,9 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         # and will remain unchanged here.
         cs = models.CNodeStats(oq_job=self.job, node="N6",
                                current_status="down")
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
         cs.current_status = "up"
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
         cs = models.CNodeStats.objects.get(id=cs.id)
 
         self.assertEqual(0, cs.failures)
@@ -114,11 +114,11 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         # in case of a state transition
         cs = models.CNodeStats(oq_job=self.job, node="N7",
                                current_status="down")
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
         old_current_ts = cs.current_ts
 
         cs.current_status = "up"
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
         cs = models.CNodeStats.objects.get(id=cs.id)
 
         self.assertIsNot(None, cs.previous_ts)
@@ -129,11 +129,11 @@ class CNodeStatsTestCase(DjangoTestCase, unittest.TestCase):
         # if the compute node status did not change
         cs = models.CNodeStats(oq_job=self.job, node="N8",
                                current_status="down")
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
         old_current_ts = cs.current_ts
 
         cs.node = "N8+1"
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
         cs = models.CNodeStats.objects.get(id=cs.id)
 
         self.assertIs(None, cs.previous_ts)
@@ -200,7 +200,7 @@ class CountFailedNodesTestCase(unittest.TestCase):
         # never took on any tasks. Only nodes that were functioning at some
         # time during the calculation and *then* failed are counted.
         n1 = models.CNodeStats(oq_job=self.job, node="N6", current_status="up")
-        n1.save(using="job_superv")
+        n1.save(using="job_init")
         n2 = models.CNodeStats(oq_job=self.job, node="N7",
                                current_status="down")
         self.db_mock.return_value = {"N6": n1, "N7": n2}
@@ -216,11 +216,11 @@ class CountFailedNodesTestCase(unittest.TestCase):
         # Result: 1 node failure; the node failed and recovered. Its failures
         # counter is unaffected by the recovery.
         n1 = models.CNodeStats(oq_job=self.job, node="N8", current_status="up")
-        n1.save(using="job_superv")
+        n1.save(using="job_init")
         self.assertEqual(0, n1.failures)
 
         n1.current_status = "down"
-        n1.save(using="job_superv")
+        n1.save(using="job_init")
         n1 = models.CNodeStats.objects.get(id=n1.id)
         self.assertEqual(1, n1.failures)
 

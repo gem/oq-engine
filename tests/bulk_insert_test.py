@@ -56,7 +56,7 @@ class CacheInserterTestCase(unittest.TestCase):
     def setUp(self):
         self.connections = writer.connections
         writer.connections = dict(
-            admin=DummyConnection(), reslt_writer=DummyConnection())
+            admin=DummyConnection(), job_init=DummyConnection())
 
     def tearDown(self):
         writer.connections = self.connections
@@ -73,7 +73,7 @@ class CacheInserterTestCase(unittest.TestCase):
         cache.add(gmf1)
         cache.add(gmf2)
         cache.flush()
-        connection = writer.connections['reslt_writer']
+        connection = writer.connections['job_init']
         self.assertEqual(
             connection.data,
             '1\t\\N\tPGA\t\\N\t\\N\t{}\t{}\t1\n1\t\\N\tPGA\t\\N\t\\N\t{}\t{}\t2\n')

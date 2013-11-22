@@ -25,11 +25,6 @@ OpenQuake python code base.
 
 .. automodule:: openquake.engine.utils.config
 
-:mod:`stats`
-------------
-
-.. automodule:: openquake.engine.utils.stats
-
 :mod:`tasks`
 ------------
 Various utility functions related to splitting work into tasks and/or

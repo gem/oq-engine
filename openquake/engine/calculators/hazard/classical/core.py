@@ -233,14 +233,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         self.initialize_realizations(
             rlz_callbacks=[self.initialize_hazard_curve_progress])
 
-        # Set the progress counters:
-        num_sources = models.SourceProgress.objects.filter(
-            is_complete=False,
-            lt_realization__hazard_calculation=self.hc).count()
-        self.progress['total'] = num_sources
-
-        self.initialize_pr_data()
-
     def post_execute(self):
         """
         Post-execution actions. At the moment, all we do is finalize the hazard

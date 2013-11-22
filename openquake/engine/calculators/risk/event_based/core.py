@@ -63,7 +63,7 @@ def event_based(job_id, units, containers, params):
     # without the celery machinery
     event_loss_tables = dict()
 
-    with db.transaction.commit_on_success(using='reslt_writer'):
+    with db.transaction.commit_on_success(using='job_init'):
         for unit in units:
             event_loss_tables[unit.loss_type] = do_event_based(
                 unit, containers.with_args(loss_type=unit.loss_type),

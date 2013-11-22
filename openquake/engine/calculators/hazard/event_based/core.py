@@ -151,7 +151,7 @@ def _save_ses_ruptures(ruptures, complete_logic_tree_ses):
 
     # TODO: Possible future optimiztion:
     # Refactor this to do bulk insertion of ruptures
-    with transaction.commit_on_success(using='reslt_writer'):
+    with transaction.commit_on_success(using='job_init'):
         for r in ruptures:
             r.save()
 
@@ -237,7 +237,7 @@ def _compute_gmf(params, imt, gsims, site_coll, ruptures, rupture_seeds):
     return gmvs_per_site, ruptures_per_site
 
 
-@transaction.commit_on_success(using='reslt_writer')
+@transaction.commit_on_success(using='job_init')
 def _save_gmfs(ses, imt, gmvs_per_site, ruptures_per_site, sites):
     """
     Helper method to save computed GMF data to the database.
@@ -477,13 +477,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         if self.job.hazard_calculation.complete_logic_tree_ses:
             self.initialize_complete_lt_ses_db_records()
-
-        num_sources = models.SourceProgress.objects.filter(
-            is_complete=False,
-            lt_realization__hazard_calculation=self.hc).count()
-        self.progress['total'] = num_sources
-
-        self.initialize_pr_data()
 
     def post_process(self):
         """

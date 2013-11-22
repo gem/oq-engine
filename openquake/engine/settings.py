@@ -59,8 +59,6 @@ def _db_cfg(db_name):
 _DB_NAMES = (
     'admin',
     'job_init',
-    'job_superv',
-    'reslt_writer',
 )
 
 DATABASES = dict((db, _db_cfg(db)) for db in _DB_NAMES)
