@@ -371,16 +371,11 @@ class TaskArgGenTestCase(unittest.TestCase):
         get_rlz_mock.return_value = [self.Rlz(5), self.Rlz(6)]
 
         # _get_point_source_ids
-        get_pt_patch = helpers.patch(
-            '%s.%s' % (base_path, '_get_point_source_ids')
-        )
-        get_pt_mock = get_pt_patch.start()
-        get_pt_mock.return_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
-        # _get_source_ids
-        get_src_patch = helpers.patch('%s.%s' % (base_path, '_get_source_ids'))
-        get_src_mock = get_src_patch.start()
-        get_src_mock.return_value = [100, 101, 102, 103, 104]
+        for rlz in 5, 6:
+            calc.sources_per_rlz[rlz, 'point'] = [
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+            calc.sources_per_rlz[rlz, 'other'] = [100, 101, 102, 103, 104]
 
         expected = [
             (1776, [1, 2, 3, 4, 5], 5),
@@ -404,18 +399,9 @@ class TaskArgGenTestCase(unittest.TestCase):
             self.assertEqual(expected, actual)
             self.assertEqual(1, pt_src_block_size_mock.call_count)
             self.assertEqual(1, get_rlz_mock.call_count)
-            self.assertEqual(2, get_src_mock.call_count)
         finally:
             pt_src_block_size_mock.stop()
             pt_src_block_size_patch.stop()
-
             get_rlz_mock.stop()
             get_rlz_patch.stop()
-
-            get_pt_mock.stop()
-            get_pt_patch.stop()
-
-            get_src_mock.stop()
-            get_src_patch.stop()
-
             ltp_patch.stop()
