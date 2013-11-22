@@ -200,7 +200,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 404)
+        self.assertEqual(num_ruptures, 202)
 
         # check that we generated the right number of rows in GmfData
         # 1210 = 121 sites * 5 ses * 2 IMTs
