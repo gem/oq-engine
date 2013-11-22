@@ -48,7 +48,7 @@ def count_failed_nodes(job):
         """Update the status of the given node in the database."""
         cs = db_stats[node]
         cs.current_status = status
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
 
     # working nodes according to the database
     dworking_nodes = set(cs.node for cs in db_stats.values()
@@ -67,7 +67,7 @@ def count_failed_nodes(job):
     new_nodes = live_nodes - set(db_stats.keys())
     for node in new_nodes:
         cs = models.CNodeStats(oq_job=job, node=node, current_status="up")
-        cs.save(using="job_superv")
+        cs.save(using="job_init")
 
     # Any nodes that came back after a failure?
     for node in live_nodes.intersection(dfailed_nodes):
