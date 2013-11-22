@@ -17,6 +17,6 @@
 
 
 -- If a new database is being built, explicitly set the oq-engine DB schema version:
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('oq-engine', '1.0.1', 9);
+INSERT INTO admin.revision_info(artefact, revision, step) VALUES('oq-engine', '1.0.1', 10);
 
 

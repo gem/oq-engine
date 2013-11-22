@@ -322,7 +322,7 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     # This should fail if neither `lt_realization` nor `statistics` is defined:
     uhs.save()
 
-    with transaction.commit_on_success(using='reslt_writer'):
+    with transaction.commit_on_success(using='job_init'):
         inserter = CacheInserter(models.UHSData, CURVE_CACHE_SIZE)
         for lon, lat, imls in uhs_results['uh_spectra']:
             inserter.add(
