@@ -103,7 +103,7 @@ class OQRouterTestCase(unittest.TestCase):
         expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
-        self._db_for_write_helper([oq.Output], 'reslt_writer')
+        self._db_for_write_helper([oq.Output], 'job_init')
 
     def test_hzrdr_read_schema(self):
         '''
@@ -112,7 +112,7 @@ class OQRouterTestCase(unittest.TestCase):
         '''
         classes = [oq.HazardMap, oq.HazardCurve, oq.HazardCurveData,
                    oq.GmfData]
-        expected_db = 'reslt_writer'
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -124,7 +124,7 @@ class OQRouterTestCase(unittest.TestCase):
         classes = [oq.HazardMap, oq.HazardCurve, oq.HazardCurveData,
                    oq.GmfData]
 
-        expected_db = 'reslt_writer'
+        expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
 
@@ -136,7 +136,7 @@ class OQRouterTestCase(unittest.TestCase):
         classes = [oq.LossMap, oq.LossMapData, oq.LossCurve, oq.LossCurveData,
                    oq.AggregateLossCurveData, oq.BCRDistribution,
                    oq.BCRDistributionData]
-        expected_db = 'reslt_writer'
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -148,7 +148,7 @@ class OQRouterTestCase(unittest.TestCase):
         classes = [oq.LossMap, oq.LossMapData, oq.LossCurve, oq.LossCurveData,
                    oq.AggregateLossCurveData, oq.BCRDistribution,
                    oq.BCRDistributionData]
-        expected_db = 'reslt_writer'
+        expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
 
