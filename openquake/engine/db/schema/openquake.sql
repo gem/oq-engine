@@ -405,11 +405,7 @@ ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.ses_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    -- If `lt_realization_id` is NULL, this is a `complete logic tree`
-    -- Stochastic Event Set Collection, containing a single stochastic
-    -- event set containing all of the ruptures from the entire
-    -- calculation.
-    lt_realization_id INTEGER
+    lt_realization_id INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 -- Stochastic Event Set: A container for 1 or more ruptures associated with a
@@ -453,7 +449,7 @@ CREATE TABLE hzrdr.gmf (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,  -- FK to output.id
     -- FK to lt_realization.id
-    lt_realization_id INTEGER
+    lt_realization_id INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf_data (
