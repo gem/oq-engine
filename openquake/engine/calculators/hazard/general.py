@@ -183,52 +183,6 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
-def validate_site_model(sm_nodes, mesh):
-    """Given the geometry for a site model and the geometry of interest for the
-    calculation (``mesh``, make sure the geometry of interest lies completely
-    inside of the convex hull formed by the site model locations.
-
-    If a point of interest lies directly on top of a vertex or edge of the site
-    model area (a polygon), it is considered "inside"
-
-    :param sm_nodes:
-        Sequence of :class:`~openquake.engine.db.models.SiteModel` objects.
-    :param mesh:
-        A :class:`openquake.hazardlib.geo.mesh.Mesh` which represents the
-        calculation points of interest.
-
-    :raises:
-        :exc:`RuntimeError` if the area of interest (given as a mesh) is not
-        entirely contained by the site model.
-    """
-    sm_mp = geometry.MultiPoint(
-        [(n.location.x, n.location.y) for n in sm_nodes]
-    )
-
-    sm_ch = sm_mp.convex_hull
-    # Enlarging the area if the site model nodes
-    # create a straight line with zero area.
-    if sm_ch.area == 0:
-        sm_ch = sm_ch.buffer(DILATION_ONE_METER)
-
-    sm_poly = hazardlib_geo.Polygon(
-        [hazardlib_geo.Point(*x) for x in sm_ch.exterior.coords]
-    )
-
-    # "Intersects" is the correct operation (not "contains"), since we're just
-    # checking a collection of points (mesh). "Contains" would tell us if the
-    # points are inside the polygon, but would return `False` if a point was
-    # directly on top of a polygon edge or vertex. We want these points to be
-    # included.
-    intersects = sm_poly.intersects(mesh)
-
-    if not intersects.all():
-        raise RuntimeError(
-            ['Sites of interest are outside of the site model coverage area.'
-             ' This configuration is invalid.']
-        )
-
-
 class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
@@ -526,25 +480,17 @@ class BaseHazardCalculator(base.Calculator):
     @EnginePerformanceMonitor.monitor
     def initialize_site_model(self):
         """
+        Populate the hazard site table.
+
         If a site model is specified in the calculation configuration,
-        parse it and load it into the `hzrdi.site_model` table. This
-        includes a validation step to ensure that the area covered by
-        the site model completely envelops the calculation geometry.
-        (If this requirement is not satisfied, an exception will be
-        raised. See :func:`validate_site_model`.)
+        parse it and load it into the `hzrdi.site_model` table.
         """
-        logs.LOG.progress("initializing site model")
+        logs.LOG.progress("initializing sites")
+        self.hc.points_to_compute(save_sites=True)
+
         site_model_inp = self.hc.site_model
         if site_model_inp:
-            # Store `site_model` records:
             store_site_model(self.job, site_model_inp)
-
-            # Get the site model records we stored:
-            validate_site_model(
-                self.job.sitemodel_set.all(),
-                self.hc.points_to_compute(save_sites=True))
-        else:
-            self.hc.points_to_compute(save_sites=True)
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
