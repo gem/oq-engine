@@ -590,6 +590,8 @@ class RunCalcTestCase(unittest.TestCase):
                 pass
 
         mocks = dict(
+            record_job_stop_time=
+            'openquake.engine.engine.record_job_stop_time',
             save_job_stats='openquake.engine.engine.save_job_stats',
             get_calc='openquake.engine.engine.get_calculator_class',
             job_stats='openquake.engine.engine._create_job_stats',
@@ -598,7 +600,6 @@ class RunCalcTestCase(unittest.TestCase):
         )
         self.mm = helpers.MultiMock(**mocks)
         self.job = mock.Mock()
-        self.job.id = 1984
         self.job.hazard_calculation.calculation_mode = 'classical'
 
         self.calc_class = FakeCalc
@@ -630,7 +631,7 @@ class RunCalcTestCase(unittest.TestCase):
         )
 
         self.assertEqual(1, mm['cleanup'].call_count)
-        self.assertEqual(((1984, ), {'terminate': engine.TERMINATE}),
+        self.assertEqual(((self.job, ), {'terminate': engine.TERMINATE}),
                          mm['cleanup'].call_args)
 
 

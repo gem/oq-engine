@@ -397,8 +397,8 @@ class BaseHazardCalculator(base.Calculator):
                 )
                 haz_curve.save()
 
-                with transaction.commit_on_success(using='reslt_writer'):
-                    cursor = connections['reslt_writer'].cursor()
+                with transaction.commit_on_success(using='job_init'):
+                    cursor = connections['job_init'].cursor()
 
                     # TODO(LB): I don't like the fact that we have to pass
                     # potentially huge arguments (100k sites, for example).
@@ -548,7 +548,7 @@ class BaseHazardCalculator(base.Calculator):
 
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
-    @transaction.commit_on_success(using='reslt_writer')
+    @transaction.commit_on_success(using='job_init')
     def initialize_realizations(self, rlz_callbacks=None):
         """
         Create records for the `hzrdr.lt_realization` and
@@ -681,7 +681,7 @@ class BaseHazardCalculator(base.Calculator):
             the path of the source_model associated with the
             logic tree realization
         """
-        cursor = connections['reslt_writer'].cursor()
+        cursor = connections['job_init'].cursor()
         src_progress_tbl = models.SourceProgress._meta.db_table
         parsed_src_tbl = models.ParsedSource._meta.db_table
         lt_rlz_tbl = models.LtRealization._meta.db_table
@@ -842,7 +842,7 @@ class BaseHazardCalculator(base.Calculator):
                 models.HazardCurveData.objects.all_curves_for_imt(
                     self.job.id, im_type, sa_period, sa_damping))
 
-            with transaction.commit_on_success(using='reslt_writer'):
+            with transaction.commit_on_success(using='job_init'):
                 inserter = writer.CacheInserter(
                     models.HazardCurveData, CURVE_CACHE_SIZE)
 
