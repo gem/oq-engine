@@ -30,7 +30,6 @@ import numpy
 from openquake.engine.db import models
 
 from django.db import transaction, connections
-from django.db.models import Sum
 from shapely import geometry
 
 from openquake.hazardlib import correlation
@@ -123,42 +122,6 @@ def imt_to_hazardlib(imt):
     else:
         imt_class = getattr(openquake.hazardlib.imt, imt)
         return imt_class()
-
-
-def update_realization(lt_rlz_id, num_items):
-    """
-    Call this function when a task is complete to update realization counters
-    with the ``num_items`` completed.
-
-    If the `completed_items` becomes equal to the `total_items` for the
-    realization, the realization will be marked as complete.
-
-    .. note::
-        Because this function performs a SELECT FOR UPDATE query, it is
-        expected that this should be called in the context of a transaction, to
-        avoid race conditions.
-
-    :param int lt_rlz_id:
-        ID of the :class:`openquake.engine.db.models.LtRealization` we want
-        to update.
-    :param int num_items:
-        The number of items by which we want to increment the realization's
-        `completed_items` counter.
-    """
-    ltr_query = """
-    SELECT * FROM hzrdr.lt_realization
-    WHERE id = %s
-    FOR UPDATE
-    """
-
-    [lt_rlz] = models.LtRealization.objects.raw(
-        ltr_query, [lt_rlz_id])
-
-    lt_rlz.completed_items += num_items
-    if lt_rlz.completed_items == lt_rlz.total_items:
-        lt_rlz.is_complete = True
-
-    lt_rlz.save()
 
 
 def get_correl_model(hc):

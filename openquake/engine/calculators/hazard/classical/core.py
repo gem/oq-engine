@@ -187,10 +187,6 @@ def _update_curves(hc, matrices, lt_rlz, src_ids):
             # Mark source_progress records as complete
             src_prog.update(is_complete=True)
 
-            # Update realiation progress,
-            # mark realization as complete if it is done
-            haz_general.update_realization(lt_rlz.id, len(src_ids))
-
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
     """
