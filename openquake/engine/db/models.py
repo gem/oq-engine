@@ -26,7 +26,6 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import collections
-import itertools
 import operator
 import re
 from datetime import datetime
@@ -667,20 +666,6 @@ class HazardCalculation(djm.Model):
                    'phase.'))
     # Event-Based params:
     #####################
-    complete_logic_tree_ses = fields.OqNullBooleanField(
-        help_text=('If true, generate a collection of all of the stochastic '
-                   'event sets for all logic tree samples with an adjusted '
-                   'investgation time'),
-        null=True,
-        blank=True,
-    )
-    complete_logic_tree_gmf = fields.OqNullBooleanField(
-        help_text=(
-            'If true, generate a collection of all of the GMFs for all'
-            ' logic tree branches with an adjusted investigation time.'),
-        null=True,
-        blank=True,
-    )
     ground_motion_fields = fields.OqNullBooleanField(
         help_text=('If true, ground motion fields will be computed (in '
                    'addition to stochastic event sets)'),
@@ -1253,8 +1238,6 @@ class Output(djm.Model):
     # coming from an external source, with no job associated
     display_name = djm.TextField()
     HAZARD_OUTPUT_TYPE_CHOICES = (
-        (u'complete_lt_gmf', u'Complete Logic Tree GMF'),
-        (u'complete_lt_ses', u'Complete Logic Tree SES'),
         (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'gmf', u'Ground Motion Field'),
         (u'gmf_scenario', u'Ground Motion Field'),
@@ -1308,11 +1291,6 @@ class Output(djm.Model):
             return self.hazard_curve
         elif self.output_type == 'gmf_scenario':
             return self.gmf
-        elif self.output_type == "complete_lt_gmf":
-            return self.gmf
-        elif self.output_type == "complete_lt_ses":
-            return self.ses
-
         return getattr(self, self.output_type)
 
     @property
@@ -1844,8 +1822,9 @@ class _GmfsPerSES(object):
         return self._gmfs.next()
 
     def __str__(self):
-        return ('GMFsPerSES(investigation_time=%f, '
-                'stochastic_event_set_id=%s,\n%s)' % (
+        return (
+            'GMFsPerSES(investigation_time=%f, '
+            'stochastic_event_set_id=%s,\n%s)' % (
                 self.investigation_time,
                 self.stochastic_event_set_id,
                 '\n'.join(sorted(map(str, self._gmfs)))))
@@ -1870,18 +1849,6 @@ class Gmf(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
-
-    # NB: uses the helper view gmf_family
-    def get_children(self):
-        """
-        Get the children of a given gmf, if any.
-        :returns:
-          A list of :class:`openquake.engine.db.models.Gmf` instances
-        """
-        curs = getcursor('job_init')
-        curs.execute('select child_id from hzrdr.gmf_family '
-                     'where parent_id=%s', (self.id,))
-        return [self.__class__.objects.get(pk=r[0]) for r in curs]
 
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
@@ -1908,20 +1875,6 @@ class Gmf(djm.Model):
             * `lon` and `lat` attributes (to indicate the geographical location
               of the ground motion field)
         """
-        children = self.get_children()
-        if children:  # complete logic tree
-            all_gmfs = []
-            tot_time = 0.0
-            fake_ses_ordinal = 1
-            for coll in children:
-                for g in coll:
-                    all_gmfs.append(g)
-                    tot_time += g.investigation_time
-            if all_gmfs:
-                yield _GmfsPerSES(
-                    itertools.chain(*all_gmfs), tot_time, fake_ses_ordinal)
-            return
-        # leaf of the tree
         ses_coll = SESCollection.objects.get(
             lt_realization=self.lt_realization)
 
