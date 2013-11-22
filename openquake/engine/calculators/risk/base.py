@@ -20,7 +20,7 @@
 import collections
 
 from openquake.engine import logs, export
-from openquake.engine.utils import config, stats
+from openquake.engine.utils import config
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import writers, validation, loaders
@@ -61,11 +61,10 @@ class RiskCalculator(base.Calculator):
             4. Validate exposure and risk models
         """
         with logs.tracing('get exposure'):
-            self.taxonomies_asset_count = (
+            self.taxonomies_asset_count = \
                 (self.rc.preloaded_exposure_model or loaders.exposure(
-                    self.job,
-                    self.rc.inputs['exposure'])).taxonomies_in(
-                    self.rc.region_constraint))
+                    self.job, self.rc.inputs['exposure'])
+                 ).taxonomies_in(self.rc.region_constraint)
 
         with logs.tracing('parse risk models'):
             self.risk_models = self.get_risk_models()
@@ -78,8 +77,6 @@ class RiskCalculator(base.Calculator):
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
                     if t in self.risk_models)
-
-        self._initialize_progress(sum(self.taxonomies_asset_count.values()))
 
         for validator_class in self.validators:
             validator = validator_class(self)
@@ -202,17 +199,6 @@ class RiskCalculator(base.Calculator):
         provide custom arguments to its celery task
         """
         return []
-
-    def _initialize_progress(self, total):
-        """Record the total/completed number of work items.
-
-        This is needed for the purpose of providing an indication of progress
-        to the end user."""
-        logs.LOG.debug("Computing risk over %d assets" % total)
-        self.progress.update(total=total)
-        stats.pk_set(self.job.id, "lvr", 0)
-        stats.pk_set(self.job.id, "nrisk_total", total)
-        stats.pk_set(self.job.id, "nrisk_done", 0)
 
     def get_risk_models(self, retrofitted=False):
         """

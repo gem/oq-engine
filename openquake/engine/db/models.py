@@ -404,20 +404,6 @@ class JobStats(djm.Model):
         db_table = 'uiapi\".\"job_stats'
 
 
-class JobPhaseStats(djm.Model):
-    '''
-    Capture when the various job phases started.
-    '''
-    oq_job = djm.ForeignKey('OqJob')
-    # calculation type (hazard|risk)
-    ctype = djm.TextField()
-    job_status = djm.TextField()
-    start_time = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'uiapi\".\"job_phase_stats'
-
-
 class CNodeStats(djm.Model):
     '''
     Captures the compute node status (changes).
@@ -459,10 +445,6 @@ class HazardCalculation(djm.Model):
     # A description for this config profile which is meaningful to a user.
     description = djm.TextField(default='', blank=True)
 
-    # The timeout is stored in seconds and is 100 hours by default.
-    no_progress_timeout = djm.IntegerField(
-        default=360000, help_text="what time period w/o any progress is "
-        "acceptable for calculations?")
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
@@ -951,12 +933,6 @@ class RiskCalculation(djm.Model):
 
     # A description for this config profile which is meaningful to a user.
     description = djm.TextField(default='', blank=True)
-
-    # The timeout is stored in seconds and is 100 hours by default.
-    no_progress_timeout = djm.IntegerField(
-        default=360000,
-        help_text=("what time period w/o any progress is "
-                   "acceptable for calculations?"))
 
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
