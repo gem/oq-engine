@@ -168,8 +168,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # for all sites.
         self.initialize_site_model()
 
-        self.progress['total'] = len(self.hc.site_collection)
-
         # create a record in the output table
         output = models.Output.objects.create(
             oq_job=self.job,

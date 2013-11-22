@@ -52,7 +52,6 @@ from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.input import source
 from openquake.engine.utils import config
-from openquake.engine.utils import stats
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
@@ -235,12 +234,6 @@ class BaseHazardCalculator(base.Calculator):
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
-
-    def __init__(self, *args, **kwargs):
-        super(BaseHazardCalculator, self).__init__(*args, **kwargs)
-
-        self.progress.update(in_queue=0)
-
     @property
     def hc(self):
         """
@@ -589,20 +582,6 @@ class BaseHazardCalculator(base.Calculator):
             # full paths enumeration
             self._initialize_realizations_enumeration(
                 rlz_callbacks=rlz_callbacks)
-
-    def initialize_pr_data(self):
-        """Record the total/completed number of work items.
-
-        This is needed for the purpose of providing an indication of progress
-        to the end user."""
-        stats.pk_set(self.job.id, "lvr", 0)
-        rs = models.LtRealization.objects.filter(
-            hazard_calculation=self.job.hazard_calculation)
-        total = rs.aggregate(Sum("total_items"))
-        done = rs.aggregate(Sum("completed_items"))
-        stats.pk_set(self.job.id, "nhzrd_total", total.values().pop())
-        if done > 0:
-            stats.pk_set(self.job.id, "nhzrd_done", done.values().pop())
 
     def _initialize_realizations_enumeration(self, rlz_callbacks=None):
         """
