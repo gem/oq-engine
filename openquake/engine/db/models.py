@@ -1554,11 +1554,7 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    # If `lt_realization` is None, this is a `complete logic tree`
-    # Stochastic Event Set Collection, containing a single stochastic
-    # event set containing all of the ruptures from the entire
-    # calculation.
-    lt_realization = djm.ForeignKey('LtRealization', null=True)
+    lt_realization = djm.ForeignKey('LtRealization', null=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
@@ -1842,10 +1838,7 @@ class Gmf(djm.Model):
     realization.
     """
     output = djm.OneToOneField('Output', related_name="gmf")
-    # If `lt_realization` is None, this is a `complete logic tree`
-    # GMF Collection, containing a single GMF set containing all of the ground
-    # motion fields in the calculation.
-    lt_realization = djm.ForeignKey('LtRealization', null=True)
+    lt_realization = djm.ForeignKey('LtRealization', null=False)
 
     class Meta:
         db_table = 'hzrdr\".\"gmf'
