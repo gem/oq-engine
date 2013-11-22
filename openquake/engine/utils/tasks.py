@@ -116,8 +116,8 @@ def oqtask(task_func):
             # the job was killed, it is useless to run the task
             return
 
-        # it is important to save the task ids soon, so that
-        # the revoke functionality implemented in supervisor.py can work
+        # it is important to save the task id soon, so that
+        # the revoke functionality can work
         EnginePerformanceMonitor.store_task_id(job_id, tsk)
 
         with EnginePerformanceMonitor(
@@ -127,28 +127,18 @@ def oqtask(task_func):
                     'loading calculation object', job_id, tsk, flush=True):
                 calculation = job.calculation
 
-            # Set up logging via amqp.
-            if isinstance(calculation, models.HazardCalculation):
-                logs.init_logs_amqp_send(level=job.log_level,
-                                         calc_domain='hazard',
-                                         calc_id=calculation.id)
-            else:
-                logs.init_logs_amqp_send(level=job.log_level,
-                                         calc_domain='risk',
-                                         calc_id=calculation.id)
+            # tasks write on the celery log file
+            logs.init_logs(
+                level=job.log_level,
+                calc_domain='hazard' if isinstance(
+                    calculation, models.HazardCalculation) else'risk',
+                calc_id=calculation.id)
             try:
-                res = task_func(*args, **kwargs)
-            except Exception, err:
-                logs.LOG.critical('Error occurred in task: %s', err)
-                logs.LOG.exception(err)
-                raise
-            else:
-                return res
+                return task_func(*args, **kwargs)
             finally:
                 CacheInserter.flushall()
                 # the task finished, we can remove from the performance
-                # table the associated row 'storing task id', then the
-                # supervisor will not try revoke it without need
+                # table the associated row 'storing task id'
                 models.Performance.objects.filter(
                     oq_job=job,
                     operation='storing task id',

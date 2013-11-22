@@ -22,7 +22,7 @@ def import_hazard_curves(fileobj):
         object.
     """
     fname = fileobj.name
-    curs = connections['reslt_writer'].cursor().cursor.cursor  # DB API cursor
+    curs = connections['job_init'].cursor().cursor.cursor  # DB API cursor
     hc = models.HazardCalculation.objects.create(
         base_path=os.path.dirname(fname),
         description='HazardCurve importer, file %s' % os.path.basename(fname),

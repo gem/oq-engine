@@ -22,8 +22,12 @@ import getpass
 import os
 import sys
 import time
+import logging
 import warnings
 from contextlib import contextmanager
+from datetime import datetime
+
+import celery.task.control
 
 import openquake.engine
 
@@ -31,14 +35,16 @@ from django.core import exceptions
 from django import db as django_db
 from lxml import etree
 
-from openquake.engine import kvs
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.job.validation import validate
-from openquake.engine.supervising import supervisor
-from openquake.engine.utils import monitor, get_calculator_class
+from openquake.engine.utils import (
+    config, monitor, get_calculator_class, general)
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
+from openquake.engine.db.models import JobStats
+from openquake.engine.db.models import OqJob
+from openquake.engine.db.models import Performance
 
 from openquake import hazardlib
 from openquake import risklib
@@ -46,8 +52,149 @@ from openquake import nrmllib
 
 
 INPUT_TYPES = dict(models.INPUT_TYPE_CHOICES)
+
 UNABLE_TO_DEL_HC_FMT = 'Unable to delete hazard calculation: %s'
 UNABLE_TO_DEL_RC_FMT = 'Unable to delete risk calculation: %s'
+
+LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
+              '%(levelname)s %(processName)s/%(process)s %(name)s] '
+              '%(message)s')
+
+TERMINATE = general.str2bool(
+    config.get('celery', 'terminate_workers_on_revoke'))
+
+
+def record_job_stop_time(job):
+    """
+    Call this when a job concludes (successful or not) to record the
+    'stop_time' (using the current UTC time) in the uiapi.job_stats table.
+
+    :param job: the job object
+    """
+    job_stats = JobStats.objects.get(oq_job=job)
+    job_stats.stop_time = datetime.utcnow()
+    job_stats.save(using='job_init')
+
+
+def cleanup_after_job(job, terminate):
+    """
+    Release the resources used by an openquake job.
+
+    :param int job_id: the job id
+    :param bool terminate: the celery revoke command terminate flag
+    """
+    # Using the celery API, terminate and revoke and terminate any running
+    # tasks associated with the current job.
+    task_ids = _get_task_ids(job.id)
+    if task_ids:
+        logs.LOG.warn('Revoking %d tasks', len(task_ids))
+    else:  # this is normal when OQ_NO_DISTRIBUTE=1
+        logs.LOG.debug('No task to revoke')
+    for tid in task_ids:
+        celery.task.control.revoke(tid, terminate=terminate)
+        logs.LOG.debug('Revoked task %s', tid)
+
+
+def _get_task_ids(job_id):
+    """
+    Get all Celery task IDs for a given ``job_id``.
+    """
+    return Performance.objects.filter(
+        oq_job=job_id, operation='storing task id', task_id__isnull=False)\
+        .values_list('task_id', flat=True)
+
+
+def get_job_status(job_id):
+    """
+    Return the status of the job stored in its database record.
+
+    :param job_id: the id of the job
+    :type job_id: int
+    :return: the status of the job
+    :rtype: string
+    """
+
+    return OqJob.objects.get(id=job_id).status
+
+
+def update_job_status(job_id):
+    """
+    Store in the database the status of a job.
+
+    :param int job_id: the id of the job
+    """
+    job = OqJob.objects.get(id=job_id)
+    job.is_running = False
+    job.save()
+
+
+def _update_log_record(self, record):
+    """
+    Massage a log record before emitting it. Intended to be used by the
+    custom log handlers defined in this module.
+    """
+    if not hasattr(record, 'hostname'):
+        record.hostname = '-'
+    if not hasattr(record, 'calc_domain'):
+        record.calc_domain = self.calc_domain
+    if not hasattr(record, 'calc_id'):
+        record.calc_id = self.calc_id
+    logger_name_prefix = 'oq.%s.%s' % (record.calc_domain, record.calc_id)
+    if record.name.startswith(logger_name_prefix):
+        record.name = record.name[len(logger_name_prefix):].lstrip('.')
+        if not record.name:
+            record.name = 'root'
+
+
+class LogStreamHandler(logging.StreamHandler):
+    """
+    Log stream handler
+    """
+    def __init__(self, calc_domain, calc_id):
+        super(LogStreamHandler, self).__init__()
+        self.setFormatter(logging.Formatter(LOG_FORMAT))
+        self.calc_domain = calc_domain
+        self.calc_id = calc_id
+
+    def emit(self, record):  # pylint: disable=E0202
+        _update_log_record(self, record)
+        super(LogStreamHandler, self).emit(record)
+
+
+class LogFileHandler(logging.FileHandler):
+    """
+    Log file handler
+    """
+    def __init__(self, calc_domain, calc_id, log_file):
+        super(LogFileHandler, self).__init__(log_file)
+        self.setFormatter(logging.Formatter(LOG_FORMAT))
+        self.calc_domain = calc_domain
+        self.calc_id = calc_id
+        self.log_file = log_file
+
+    def emit(self, record):  # pylint: disable=E0202
+        _update_log_record(self, record)
+        super(LogFileHandler, self).emit(record)
+
+
+def start_logging(calc_id, calc_domain, log_file):
+    """
+    Add logging handlers to begin collecting log messages.
+
+    :param int calc_id:
+        Hazard or Risk calculation ID.
+    :param str calc_domain:
+        'hazard' or 'risk'
+    :param str log_file:
+        Log file path location. Can be `None`. If a path is specified, we will
+        create a file handler for logging. Else, we just log to the console.
+    """
+    if log_file is not None:
+        logging.root.addHandler(
+            LogFileHandler(calc_domain, calc_id, log_file))
+    else:
+        logging.root.addHandler(
+            LogStreamHandler(calc_domain, calc_id))
 
 
 def save_job_stats(job, disk_space=None):
@@ -260,7 +407,7 @@ def _create_job_stats(job):
 
 # used by bin/openquake
 def run_calc(job, log_level, log_file, exports, job_type,
-             supervised=True, progress_handler=None):
+             progress_handler=None):
     """
     Run a calculation.
 
@@ -279,9 +426,6 @@ def run_calc(job, log_level, log_file, exports, job_type,
         supported.
     :param str job_type:
         'hazard' or 'risk'
-    :param bool supervised:
-        Defaults to `True`. If `True`, run OpenQuake with a supervisor process,
-        which monitors the job executor process and collects log messages.
     :param callable progress_handler:
         a callback getting the progress of the calculation and the calculation
         object
@@ -294,106 +438,50 @@ def run_calc(job, log_level, log_file, exports, job_type,
 
     # Create job stats, which implicitly records the start time for the job
     _create_job_stats(job)
-    # Closing all db connections to make sure they're not shared between
-    # supervisor and job executor processes.
-    # Otherwise, if one of them closes the connection it immediately
-    # becomes unavailable for others.
-    if supervised:
-        django_db.close_connection()
 
-        job_pid = os.fork()
-
-        if not job_pid:
-            # calculation executor process
-            try:
-                with job_stats(job):
-                    _job_exec(job, log_level, exports, job_type, calc)
-            except Exception, ex:
-                logs.LOG.critical("Calculation failed with exception: '%s'"
-                                  % str(ex))
-                raise
-            finally:
-                job.is_running = False
-                job.save()
-            return
-
-        supervisor_pid = os.fork()
-        if not supervisor_pid:
-            # supervisor process
-            logs.set_logger_level(logs.logging.root, log_level)
-            # TODO: deal with KVS garbage collection
-            supervisor.supervise(job_pid, job.id, log_file=log_file)
-            return
-
-        # parent process
-
-        # ignore Ctrl-C as well as supervisor process does. thus only
-        # job executor terminates on SIGINT
-        supervisor.ignore_sigint()
-        # wait till both child processes are done
-        os.waitpid(job_pid, 0)
-        os.waitpid(supervisor_pid, 0)
-    else:
-        try:
-            with job_stats(job):
-                _job_exec(job, log_level, exports, job_type, calc)
-        except Exception, ex:
-            logs.LOG.critical("Calculation failed with exception: '%s'"
-                              % str(ex))
-            raise
-        finally:
-            job.is_running = False
-            job.save()
-            # Normally the supervisor process does this, but since we don't
-            # have one in this case, we have to call the cleanup manually.
-            supervisor.cleanup_after_job(job.id, terminate=False)
-
-    # Refresh the job record, in case we are forking and another process has
-    # modified the job state.
-    return _get_job(job.id)
-
-
-def _get_job(job_id):
-    """
-    Helper function to get a job object by ID. Makes testing/mocking easier.
-    """
-    return models.OqJob.objects.get(id=job_id)
+    calc_id = job.calculation.id
+    calc_domain = 'hazard' if job.hazard_calculation else 'risk'
+    start_logging(calc_id, calc_domain, log_file)
+    try:
+        with job_stats(job):
+            _job_exec(job, log_level, exports, job_type, calc)
+    except Exception, ex:
+        logs.LOG.critical("Calculation failed with exception: '%s'", ex)
+        raise
+    finally:
+        job.is_running = False
+        job.save()
+        record_job_stop_time(job)
+        cleanup_after_job(job, terminate=TERMINATE)
+    return job
 
 
 def _job_exec(job, log_level, exports, job_type, calc):
     """
     Abstraction of some general job execution procedures.
 
-    Parameters are the same as :func:`run_calc`, except for ``supervised``
-    which is not included. Also ``calc`` is an instance of the calculator class
+    Parameters are the same as :func:`run_calc`.
+    Also ``calc`` is an instance of the calculator class
     which is passed to :func:`_do_run_calc`.
     """
-    logs.init_logs_amqp_send(level=log_level, calc_domain=job_type,
-                             calc_id=job.calculation.id)
+    logs.init_logs(
+        level=log_level, calc_domain=job_type, calc_id=job.calculation.id)
     # run the job
     job.is_running = True
     job.save()
-    kvs.mark_job_as_current(job.id)
     _do_run_calc(job, exports, calc, job_type)
 
 
 def _switch_to_job_phase(job, ctype, status):
     """Switch to a particular phase of execution.
-
-    This involves creating a `job_phase_stats` record and logging the new
-    status.
-
-    :param job:
-        An :class:`~openquake.engine.db.models.OqJob` instance.
+    :param job: An :class:`~openquake.engine.db.models.OqJob` instance.
     :param str ctype: calculation type (hazard|risk)
     :param str status: one of the following: pre_executing, executing,
         post_executing, post_processing, export, clean_up, complete
     """
     job.status = status
     job.save()
-    models.JobPhaseStats.objects.create(oq_job=job, job_status=status,
-                                        ctype=ctype)
-    logs.LOG.progress("%s (%s)" % (status, ctype))
+    logs.LOG.progress("%s (%s)", status, ctype)
     if status == "executing" and not openquake.engine.no_distribute():
         # Record the compute nodes that were available at the beginning of the
         # execute phase so we can detect failed nodes later.
@@ -539,23 +627,19 @@ def run_hazard(cfg_file, log_level, log_file, exports):
             cfg_file, getpass.getuser(), log_level, exports
         )
 
-        # Initialize the supervisor, instantiate the calculator,
-        # and run the calculation.
+        # Instantiate the calculator, and run the calculation.
         t0 = time.time()
         completed_job = run_calc(
             job, log_level, log_file, exports, 'hazard'
         )
         duration = time.time() - t0
-        if completed_job is not None:
-            # We check for `None` here because the supervisor and executor
-            # process forks return to here as well. We want to ignore them.
-            if completed_job.status == 'complete':
-                print_results(completed_job.hazard_calculation.id,
-                              duration, list_hazard_outputs)
-            else:
-                complain_and_exit('Calculation %d failed'
-                                  % completed_job.hazard_calculation.id,
-                                  exit_code=1)
+        if completed_job.status == 'complete':
+            print_results(completed_job.hazard_calculation.id,
+                          duration, list_hazard_outputs)
+        else:
+            complain_and_exit('Calculation %d failed'
+                              % completed_job.hazard_calculation.id,
+                              exit_code=1)
     except IOError as e:
         print str(e)
     except Exception as e:
@@ -686,23 +770,19 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
             hazard_calculation_id
         )
 
-        # Initialize the supervisor, instantiate the calculator,
-        # and run the calculation.
+        # Instantiate the calculator and run the calculation.
         t0 = time.time()
         completed_job = run_calc(
             job, log_level, log_file, exports, 'risk'
         )
         duration = time.time() - t0
-        if completed_job is not None:
-            # We check for `None` here because the supervisor and executor
-            # process forks return to here as well. We want to ignore them.
-            if completed_job.status == 'complete':
-                print_results(completed_job.risk_calculation.id,
-                              duration, list_risk_outputs)
-            else:
-                complain_and_exit('Calculation %s failed'
-                                  % completed_job.risk_calculation.id,
-                                  exit_code=1)
+        if completed_job.status == 'complete':
+            print_results(completed_job.risk_calculation.id,
+                          duration, list_risk_outputs)
+        else:
+            complain_and_exit('Calculation %s failed'
+                              % completed_job.risk_calculation.id,
+                              exit_code=1)
     except IOError as e:
         print str(e)
     except Exception as e:
