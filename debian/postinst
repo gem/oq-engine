@@ -134,7 +134,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
     LOGFILE=/var/tmp/openquake-db-installation
     rm -f $LOGFILE
     su -c "/usr/bin/oq_create_db --yes --db-name=openquake --db-port=$pgport --schema-path=$IDIR/db/schema > $LOGFILE 2>&1" postgres
-    for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer
+    for dbu in oq_admin oq_job_init
     do
         su -c "psql -p $pgport -c \"ALTER ROLE $dbu WITH PASSWORD 'openquake'\" >> $LOGFILE 2>&1" postgres
     done
@@ -162,7 +162,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
         # if we flatten them.
         rm -f $PG_ROOT/pg_hba.conf.orig
         mv $PG_ROOT/pg_hba.conf $PG_ROOT/pg_hba.conf.orig
-        for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer
+        for dbu in oq_admin oq_job_init
         do
             echo "local   openquake   $dbu                   md5" >> $PG_ROOT/pg_hba.conf
         done
@@ -177,7 +177,7 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
         echo "Please ask the system administrator to grant access to the"
         echo "'openquake' database to the following users:"
         echo ""
-        echo "      oq_admin oq_job_init oq_job_superv oq_reslt_writer"
+        echo "      oq_admin oq_job_init"
         echo "============================================================"
         echo ""
     fi

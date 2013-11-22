@@ -82,7 +82,7 @@ def compute_gmfs(job_id, sites, rupture, gmf_id, realizations):
         save_gmf(gmf_id, gmf, sites)
 
 
-@transaction.commit_on_success(using='reslt_writer')
+@transaction.commit_on_success(using='job_init')
 def save_gmf(gmf_id, gmf_dict, sites):
     """
     Helper method to save computed GMF data to the database.

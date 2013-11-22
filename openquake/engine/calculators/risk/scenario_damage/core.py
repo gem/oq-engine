@@ -60,7 +60,7 @@ def scenario_damage(job_id, units, containers, params):
     # and NO containes
     assert len(containers) == 0
 
-    with db.transaction.commit_on_success(using='reslt_writer'):
+    with db.transaction.commit_on_success(using='job_init'):
         return do_scenario_damage(unit, params, monitor.copy)
 
 

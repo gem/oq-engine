@@ -250,7 +250,7 @@ _devtest_innervm_run () {
     # configure the machine to run tests
     ssh $lxc_ip "echo \"local   all             \$USER          trust\" | sudo tee -a /etc/postgresql/9.1/main/pg_hba.conf"
     ssh $lxc_ip "set -e
-        for dbu in oq_reslt_writer oq_job_superv oq_job_init oq_admin; do
+        for dbu in oq_job_init oq_admin; do
             sudo sed -i \"1ilocal   openquake   \$dbu                   md5\" /etc/postgresql/9.1/main/pg_hba.conf
         done"
 
@@ -261,7 +261,7 @@ _devtest_innervm_run () {
 
     ssh $lxc_ip "sudo su postgres -c \"cd oq-engine ; openquake/engine/bin/oq_create_db --yes --db-user=\\\$USER --db-name=openquake --schema-path=\\\$(pwd)/openquake/engine/db/schema\""
 
-    for dbu in oq_admin oq_job_init oq_job_superv oq_reslt_writer; do
+    for dbu in oq_admin oq_job_init; do
         ssh $lxc_ip "sudo su postgres -c \"psql -c \\\"ALTER ROLE $dbu WITH PASSWORD 'openquake'\\\"\""
     done
 
