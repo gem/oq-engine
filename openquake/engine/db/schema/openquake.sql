@@ -880,14 +880,6 @@ CREATE TABLE riski.occupancy (
 ) TABLESPACE riski_ts;
 
 
--- keep track of sources considered in a calculation, per logic tree realization
-CREATE TABLE htemp.source_progress (
-    id SERIAL PRIMARY KEY,
-    lt_realization_id INTEGER NOT NULL,
-    parsed_source_id INTEGER NOT NULL,
-    is_complete BOOLEAN NOT NULL DEFAULT FALSE
-) TABLESPACE htemp_ts;
-
 CREATE TABLE htemp.hazard_curve_progress (
     -- This table will contain 1 record per IMT per logic tree realization
     -- for a given calculation.
@@ -1130,20 +1122,6 @@ REFERENCES riski.exposure_data(id) ON DELETE CASCADE;
 ALTER TABLE riski.cost ADD CONSTRAINT
 riski_cost_cost_type_fk FOREIGN KEY (cost_type_id)
 REFERENCES riski.cost_type(id) ON DELETE CASCADE;
-
--- htemp.source_progress to hzrdr.lt_realization FK
-ALTER TABLE htemp.source_progress
-ADD CONSTRAINT htemp_source_progress_lt_realization_fk
-FOREIGN KEY (lt_realization_id)
-REFERENCES hzrdr.lt_realization(id)
-ON DELETE CASCADE;
-
--- htemp.source_progress to hzrdi.parsed_source FK
-ALTER TABLE htemp.source_progress
-ADD CONSTRAINT htemp_source_progress_parsed_source_fk
-FOREIGN KEY (parsed_source_id)
-REFERENCES hzrdi.parsed_source(id)
-ON DELETE CASCADE;
 
 -- htemp.hazard_curve_progress to hzrdr.lt_realization FK
 ALTER TABLE htemp.hazard_curve_progress
