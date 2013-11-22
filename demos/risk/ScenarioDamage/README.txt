@@ -9,6 +9,5 @@ Expected runtime: <1 minute
 Outputs: Ground Motion Fields
 
 --Risk--
-Expected runtime: ~1 hour
-Outputs: Damage Distribution Maps, Collapse Maps
-
+Expected runtime: ~7 minutes
+Outputs: Damage Distribution per Asset,Damage Distribution per Taxonomy, Collapse Maps, Total Damage Distribution
