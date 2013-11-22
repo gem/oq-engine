@@ -298,7 +298,6 @@ class ClassicalHazardForm(BaseHazardModelForm):
         model = models.HazardCalculation
         fields = (
             'description',
-            'no_progress_timeout',
             'region',
             'region_grid_spacing',
             'sites',
@@ -348,7 +347,6 @@ class EventBasedHazardForm(BaseHazardModelForm):
         model = models.HazardCalculation
         fields = (
             'description',
-            'no_progress_timeout',
             'region',
             'region_grid_spacing',
             'sites',
@@ -464,7 +462,6 @@ class DisaggHazardForm(BaseHazardModelForm):
         model = models.HazardCalculation
         fields = (
             'description',
-            'no_progress_timeout',
             'region',
             'region_grid_spacing',
             'sites',
@@ -555,7 +552,6 @@ class ClassicalRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
-            'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
             'lrem_steps_per_interval',
@@ -575,7 +571,6 @@ class ClassicalBCRRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
-            'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
             'lrem_steps_per_interval',
@@ -593,7 +588,6 @@ class EventBasedBCRRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
-            'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
             'loss_curve_resolution',
@@ -613,7 +607,6 @@ class EventBasedRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
-            'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
             'risk_investigation_time',
@@ -667,7 +660,6 @@ class ScenarioRiskForm(BaseOQModelForm):
         model = models.RiskCalculation
         fields = (
             'description',
-            'no_progress_timeout',
             'region_constraint',
             'maximum_distance',
             'master_seed',
@@ -735,12 +727,6 @@ def region_is_valid(mdl):
 def region_grid_spacing_is_valid(mdl):
     if not mdl.region_grid_spacing > 0:
         return False, ['Region grid spacing must be > 0']
-    return True, []
-
-
-def no_progress_timeout_is_valid(mdl):
-    if not mdl.no_progress_timeout > 0:
-        return False, ['"No progress" time-out must be > 0']
     return True, []
 
 

@@ -50,7 +50,7 @@ def scenario(job_id, units, containers, _params):
 
     agg = dict()
     insured = dict()
-    with db.transaction.commit_on_success(using='reslt_writer'):
+    with db.transaction.commit_on_success(using='job_init'):
         for unit in units:
             agg[unit.loss_type], insured[unit.loss_type] = do_scenario(
                 unit,
@@ -139,7 +139,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     def post_process(self):
         for loss_type, aggregate_losses in self.aggregate_losses.items():
-            with db.transaction.commit_on_success(using='reslt_writer'):
+            with db.transaction.commit_on_success(using='job_init'):
                 models.AggregateLoss.objects.create(
                     output=models.Output.objects.create_output(
                         self.job,

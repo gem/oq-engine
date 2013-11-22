@@ -71,13 +71,3 @@ def failing_task(data):
 def reflect_data_to_be_processed(data):
     """Merely returns the data received."""
     return data
-
-
-@test_task
-def ignore_result(data):
-    """Write the data using the given test store key."""
-    key, value = data[0]
-    helpers.TestStore.set(key, value)
-    # Results will be ignored.
-    return data
-ignore_result.ignore_result = True
