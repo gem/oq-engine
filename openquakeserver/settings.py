@@ -13,14 +13,6 @@ ADMINS = (
 MANAGERS = ADMINS
 
 DATABASES = oqe_settings.DATABASES
-DATABASES['default'] = {
-    'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': 'oqengineserver.db',
-    'USER': '',
-    'PASSWORD': '',
-    'HOST': '',
-    'PORT': '',
-}
 
 DATABASES['platform'] = {
     'ENGINE': 'django.contrib.gis.db.backends.postgis',
@@ -159,10 +151,10 @@ LOGGING = {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
         },
-        'console':{
-            'level':'DEBUG',
-            'class':'logging.StreamHandler',
-            'formatter': 'simple'
+    'console': {
+        'level':'DEBUG',
+        'class':'logging.StreamHandler',
+        'formatter': 'simple'
         },
     },
     'loggers': {
@@ -172,8 +164,8 @@ LOGGING = {
             'propagate': True,
         },
         'django.request': {
-            'handlers': ['mail_admins', 'console'],
-            'level': 'ERROR',
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': True,
         },
         'openquakeserver': {
