@@ -18,11 +18,8 @@ PY_MODULES = ['openquake.engine.bin.cache_gc', 'openquake.engine.bin.oqscript']
 
 setup(
     entry_points={
-        "console_scripts": [
-            "openquake = openquake.engine.bin.oqscript:main",
-            "oq_cache_gc = openquake.engine.bin.cache_gc:main",
-            "oq_monitor = openquake.engine.bin.openquake_supervisor:main",
-            ]},
+        "console_scripts": ["openquake = openquake.engine.bin.oqscript:main"]
+    },
     name="openquake.engine",
     version=version,
     author="The OpenQuake team",
@@ -36,7 +33,7 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
-        ],
+    ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
                                     "tools", "tests", "tests.*",
                                     "openquake.engine.bin",

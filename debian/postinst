@@ -184,7 +184,6 @@ if [ -f /usr/lib/postgresql/9.1/bin/postgres ]; then
 
     # Restart the remaining services just to be on the safe side.
     /etc/init.d/rabbitmq-server restart
-    /etc/init.d/redis-server restart
 
     # Restart celeryd
     if [ -x /etc/init.d/celeryd ]; then

@@ -148,19 +148,6 @@ CREATE TABLE uiapi.job_stats (
 ) TABLESPACE uiapi_ts;
 
 
--- how long are the various job phases taking?
-CREATE TABLE uiapi.job_phase_stats (
-    id SERIAL PRIMARY KEY,
-    oq_job_id INTEGER NOT NULL,
-    -- calculation type (hazard|risk)
-    ctype VARCHAR NOT NULL,
-    job_status VARCHAR NOT NULL,
-    start_time timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL,
-    UNIQUE (oq_job_id, ctype, job_status)
-) TABLESPACE uiapi_ts;
-
-
 CREATE TABLE uiapi.hazard_calculation (
     id SERIAL PRIMARY KEY,
     -- Contains the absolute path to the directory containing the job config
@@ -170,9 +157,6 @@ CREATE TABLE uiapi.hazard_calculation (
     -- general parameters:
     -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',
-    -- what time period w/o any progress is acceptable for calculations?
-    -- The timeout is stored in seconds and is 100 hours by default.
-    no_progress_timeout INTEGER NOT NULL DEFAULT 360000,
     calculation_mode VARCHAR NOT NULL CONSTRAINT haz_calc_mode
         CHECK(calculation_mode IN (
             'classical',
@@ -242,9 +226,6 @@ CREATE TABLE uiapi.risk_calculation (
     export_dir VARCHAR,
     -- general parameters:
     description VARCHAR NOT NULL DEFAULT '',
-    -- what time period w/o any progress is acceptable for calculations?
-    -- The timeout is stored in seconds and is 100 hours by default.
-    no_progress_timeout INTEGER NOT NULL DEFAULT 360000,
     calculation_mode VARCHAR NOT NULL,
     inputs BYTEA,  -- stored as a pickled Python `dict`
 
@@ -948,9 +929,6 @@ ALTER TABLE uiapi.performance ADD CONSTRAINT uiapi_performance_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.job_stats ADD CONSTRAINT uiapi_job_stats_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.job_phase_stats ADD CONSTRAINT  uiapi_job_phase_stats_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.cnode_stats ADD CONSTRAINT  uiapi_cnode_stats_oq_job_fk
