@@ -167,30 +167,6 @@ def _update_curves(hc, matrices, lt_rlz, src_ids):
 
                     logs.LOG.debug('< done updating hazard for IMT=%s' % imt)
 
-        with transaction.commit_on_success():
-            # Check here if any of records in source progress model
-            # with parsed_source_id from src_ids are marked as complete,
-            # and rollback and abort if there is at least one
-            src_prog = models.SourceProgress.objects.filter(
-                lt_realization=lt_rlz, parsed_source__in=src_ids)
-
-            if any(x.is_complete for x in src_prog):
-                msg = (
-                    'One or more `source_progress` records were marked as '
-                    'complete. This was unexpected and probably means that the'
-                    ' calculation workload was not distributed properly.'
-                )
-                logs.LOG.critical(msg)
-                transaction.rollback()
-                raise RuntimeError(msg)
-
-            # Mark source_progress records as complete
-            src_prog.update(is_complete=True)
-
-            # Update realiation progress,
-            # mark realization as complete if it is done
-            haz_general.update_realization(lt_rlz.id, len(src_ids))
-
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
     """
@@ -252,10 +228,9 @@ BaseHazardCalculator.finalize_hazard_curves`
         In this case, this includes all of the data for this calculation in the
         tables found in the `htemp` schema space.
         """
+        self.sources_per_rlz.clear()
         logs.LOG.debug('> cleaning up temporary DB data')
         models.HazardCurveProgress.objects.filter(
-            lt_realization__hazard_calculation=self.hc.id).delete()
-        models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=self.hc.id).delete()
         logs.LOG.debug('< done cleaning up temporary DB data')
 
