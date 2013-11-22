@@ -61,8 +61,6 @@ db_group_name="openquake"
 read -r -d '' db_roles <<'EOF'
 oq_admin
 oq_job_init
-oq_job_superv
-oq_reslt_writer
 EOF
 
 for i in $*

@@ -151,7 +151,7 @@ def _save_ses_ruptures(ruptures, complete_logic_tree_ses):
 
     # TODO: Possible future optimiztion:
     # Refactor this to do bulk insertion of ruptures
-    with transaction.commit_on_success(using='reslt_writer'):
+    with transaction.commit_on_success(using='job_init'):
         for r in ruptures:
             r.save()
 
@@ -237,7 +237,7 @@ def _compute_gmf(params, imt, gsims, site_coll, ruptures, rupture_seeds):
     return gmvs_per_site, ruptures_per_site
 
 
-@transaction.commit_on_success(using='reslt_writer')
+@transaction.commit_on_success(using='job_init')
 def _save_gmfs(ses, imt, gmvs_per_site, ruptures_per_site, sites):
     """
     Helper method to save computed GMF data to the database.

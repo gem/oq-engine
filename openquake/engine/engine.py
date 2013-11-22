@@ -75,7 +75,7 @@ def record_job_stop_time(job_id):
     logs.LOG.debug('Recording stop time for job %s to job_stats', job_id)
     job_stats = JobStats.objects.get(oq_job=job_id)
     job_stats.stop_time = datetime.utcnow()
-    job_stats.save(using='job_superv')
+    job_stats.save(using='job_init')
 
 
 def cleanup_after_job(job_id, terminate):
