@@ -374,14 +374,14 @@ class EventBasedExportTestCase(BaseExportTestCase):
             self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
-            # 2 GMFs, 2 SESs, 1 complete logic tree SES, 1 complete LT GMF,
+            # 2 GMFs, 2 SESs,
             # ((2 imts * 2 realizations)
             # + ((2 imts + 1 multi) * (1 mean + 3 quantiles))
             # hazard curves,
             # (2 poes * 2 imts * 2 realizations)
             # + (2 poes * 2 imts * (1 mean + 3 quantiles)) hazard maps
             # Total: 42
-            self.assertEqual(46, len(outputs))
+            self.assertEqual(44, len(outputs))
 
             #######
             # SESs:
