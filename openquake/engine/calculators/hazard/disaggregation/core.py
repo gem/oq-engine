@@ -19,8 +19,6 @@ Disaggregation calculator core functionality
 """
 import numpy
 
-from django.db import transaction
-
 import openquake.hazardlib
 from openquake.engine import logs
 from openquake.engine.calculators.hazard import general as haz_general
@@ -43,15 +41,15 @@ def compute_hazard_curves_task(job_id, src_ids, lt_rlz_id, ltp):
 
 
 @utils_tasks.oqtask
-def disagg_task(job_id, sites, lt_rlz_id, ltp):
+def disagg_task(job_id, sites, src_ids, lt_rlz_id, ltp):
     """
     Task wrapper around
     :func:`openquake.engine.calculators.hazard.disaggregation.core.compute_disagg`.
     """
-    compute_disagg(job_id, sites, lt_rlz_id, ltp)
+    compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp)
 
 
-def compute_disagg(job_id, sites, lt_rlz_id, ltp):
+def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
     """
     Calculate disaggregation histograms and saving the results to the database.
 
@@ -74,6 +72,8 @@ def compute_disagg(job_id, sites, lt_rlz_id, ltp):
         `list` of :class:`openquake.hazardlib.site.Site` objects, which
         indicate the locations (and associated soil parameters) for which we
         need to compute disaggregation histograms.
+    :param list src_ids:
+        `list` of ParsedSource objects ids
     :param int lt_rlz_id:
         ID of the :class:`openquake.engine.db.models.LtRealization` for which
         we want to compute disaggregation histograms. This realization will
@@ -94,9 +94,6 @@ def compute_disagg(job_id, sites, lt_rlz_id, ltp):
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-
-    src_ids = models.SourceProgress.objects.filter(lt_realization=lt_rlz)\
-        .order_by('id').values_list('parsed_source_id', flat=True)
     sources = [apply_uncertainties(s.nrml)
                for s in models.ParsedSource.objects.filter(pk__in=src_ids)]
 
@@ -164,11 +161,6 @@ def compute_disagg(job_id, sites, lt_rlz_id, ltp):
                         hc.investigation_time, hc_im_type, iml, poe, sa_period,
                         sa_damping
                     )
-
-    with transaction.commit_on_success():
-        # Update realiation progress,
-        # mark realization as complete if it is done
-        haz_general.update_realization(lt_rlz_id, len(sites))
 
     logs.LOG.debug('< done computing disaggregation')
 
@@ -301,9 +293,11 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
 
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
+            src_ids = (self.sources_per_rlz[lt_rlz.id, 'point'] +
+                       self.sources_per_rlz[lt_rlz.id, 'other'])
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
-                yield self.job.id, sites, lt_rlz.id, ltp
+                yield self.job.id, sites, src_ids, lt_rlz.id, ltp
 
     def post_execute(self):
         """
@@ -323,9 +317,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         In this case, this includes all of the data for this calculation in the
         tables found in the `htemp` schema space.
         """
+        self.sources_per_rlz.clear()
         logs.LOG.debug('> cleaning up temporary DB data')
         models.HazardCurveProgress.objects.filter(
-            lt_realization__hazard_calculation=self.hc.id).delete()
-        models.SourceProgress.objects.filter(
             lt_realization__hazard_calculation=self.hc.id).delete()
         logs.LOG.debug('< done cleaning up temporary DB data')

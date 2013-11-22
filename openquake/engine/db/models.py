@@ -3248,23 +3248,6 @@ class Cost(djm.Model):
 ## Tables in the 'htemp' schema.
 
 
-class SourceProgress(djm.Model):
-    """
-    Keep track of which sources have been considered for a given logic tree
-    realization.
-
-    Marking progress as we go gives us the ability to resume partially-
-    completed logic tree realizations.
-    """
-
-    lt_realization = djm.ForeignKey('LtRealization')
-    parsed_source = djm.ForeignKey('ParsedSource')
-    is_complete = djm.BooleanField(default=False)
-
-    class Meta:
-        db_table = 'htemp\".\"source_progress'
-
-
 class HazardCurveProgress(djm.Model):
     """
     Store intermediate results of hazard curve calculations (as a pickled numpy

@@ -96,5 +96,4 @@ CREATE INDEX riski_exposure_data_site_sty_idx ON riski.exposure_data(ST_Y(geomet
 CREATE INDEX riski_cost_type_name_idx ON riski.cost_type(name);
 
 -- htemp indexes
-CREATE INDEX htemp_source_progress_lt_realization_id_idx on htemp.source_progress(lt_realization_id);
 CREATE INDEX htemp_hazard_curve_progress_lt_realization_id_idx on htemp.hazard_curve_progress(lt_realization_id);

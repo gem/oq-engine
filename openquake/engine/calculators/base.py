@@ -43,6 +43,7 @@ class Calculator(object):
         self.job = job
         self.num_tasks = None
         self.progress_handler = DEFAULT_PROGRESS_HANDLER
+        self.sources_per_rlz = {}  # (rlz_id, source_type) -> source_ids
 
     def register_progress_handler(self, fn):
         """
@@ -210,3 +211,4 @@ class Calculator(object):
     def clean_up(self, *args, **kwargs):
         """Implement this method in subclasses to perform clean-up actions
            like garbage collection, etc."""
+        self.sources_per_rlz.clear()
