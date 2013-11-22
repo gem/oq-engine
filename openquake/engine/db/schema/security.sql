@@ -72,7 +72,6 @@ GRANT ALL ON SCHEMA uiapi TO oq_admin;
 -- Specific permissions for individual tables:
 ----------------------------------------------
 -- htemp schema
-GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.source_progress       TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.hazard_curve_progress TO oq_job_init;
 
 -- hzrdi schema
