@@ -22,7 +22,8 @@ import numpy
 import openquake.hazardlib
 from openquake.engine import logs
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.calculators.hazard.classical import core
+from openquake.engine.calculators.hazard.classical.core import \
+    compute_hazard_curves
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import general as general_utils
@@ -31,24 +32,6 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @utils_tasks.oqtask
-def compute_hazard_curves_task(job_id, sources, lt_rlz_id, ltp):
-    """
-    Task wrapper around
-
-    :func:`openquake.engine.calculators.hazard.classical.core.compute_hazard_curves`.
-    """
-    core.compute_hazard_curves(job_id, sources, lt_rlz_id, ltp)
-
-
-@utils_tasks.oqtask
-def disagg_task(job_id, sites, sources, lt_rlz_id, ltp):
-    """
-    Task wrapper around
-    :func:`openquake.engine.calculators.hazard.disaggregation.core.compute_disagg`.
-    """
-    compute_disagg(job_id, sites, sources, lt_rlz_id, ltp)
-
-
 def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
     """
     Calculate disaggregation histograms and saving the results to the database.
@@ -147,14 +130,14 @@ def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
                     'rupture_site_filter': rup_site_filter,
                 }
                 with EnginePerformanceMonitor(
-                        'computing disaggregation', job_id, disagg_task):
+                        'computing disaggregation', job_id, compute_disagg):
                     bin_edges, diss_matrix = openquake.hazardlib.calc.\
                         disagg.disaggregation_poissonian(**calc_kwargs)
                     if not bin_edges:  # no ruptures generated
                         continue
 
                 with EnginePerformanceMonitor(
-                        'saving disaggregation', job_id, disagg_task):
+                        'saving disaggregation', job_id, compute_disagg):
                     _save_disagg_matrix(
                         job, site, bin_edges, diss_matrix, lt_rlz,
                         hc.investigation_time, hc_im_type, iml, poe, sa_period,
@@ -243,7 +226,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
     See :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
     details about the nature of this type of calculation.
     """
-    core_calc_task = compute_hazard_curves_task
+    core_calc_task = compute_hazard_curves
 
     def pre_execute(self):
         """
@@ -304,8 +287,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         and start the disaggregation phase.
         """
         self.finalize_hazard_curves()
-        self.parallelize(disagg_task,
-                         self.disagg_task_arg_gen(self.block_size()))
+        self.parallelize(
+            compute_disagg, self.disagg_task_arg_gen(self.block_size()))
 
     def clean_up(self):
         """
