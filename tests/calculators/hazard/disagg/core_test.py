@@ -74,7 +74,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         # To test the disagg function, we first need to compute the hazard
         # curves:
         for args in self.calc.task_arg_gen(1):
-            cls_core.compute_hazard_curves(*args)
+            cls_core.compute_hazard_curves.task_func(*args)
         self.calc.finalize_hazard_curves()
 
         diss1, diss2, diss3, diss4 = list(self.calc.disagg_task_arg_gen(1))
@@ -97,19 +97,19 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
                 # diss3: compute
                 # diss4: skip
 
-                disagg_core.compute_disagg(*diss1)
+                disagg_core.compute_disagg.task_func(*diss1)
                 # 2 poes * 2 imts * 1 site = 4
                 self.assertEqual(4, disagg_mock.call_count)
                 self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
-                disagg_core.compute_disagg(*diss2)
+                disagg_core.compute_disagg.task_func(*diss2)
                 self.assertEqual(4, disagg_mock.call_count)
                 self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
-                disagg_core.compute_disagg(*diss3)
+                disagg_core.compute_disagg.task_func(*diss3)
                 self.assertEqual(8, disagg_mock.call_count)
                 self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
-                disagg_core.compute_disagg(*diss4)
+                disagg_core.compute_disagg.task_func(*diss4)
                 self.assertEqual(8, disagg_mock.call_count)
                 self.assertEqual(0, save_mock.call_count)  # no rupt generated
