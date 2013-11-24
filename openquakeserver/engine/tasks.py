@@ -32,6 +32,8 @@ from openquake.engine.db import models as oqe_models
 
 DEFAULT_LOG_LEVEL = 'progress'
 
+
+# FIXME. Configure logging by using the configuration stored in settings
 logger = logging.getLogger(__name__)
 
 
@@ -101,7 +103,7 @@ def run_risk_calc(calc_id, calc_dir,
         _trigger_migration(job, callback_url, foreign_calc_id)
 
 
-def _trigger_migration(job, callback_url, foreign_calc_id):
+def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
     """
     Helper function to initiate a post-calculation migration of results.
 
@@ -112,6 +114,9 @@ def _trigger_migration(job, callback_url, foreign_calc_id):
         oq-engine-server.
     :param str foreign_calc_id:
         The id of the foreign calculation
+    :param str dbname:
+        a key to extract database connection settings from settings.DATABASES
+        in order to get a cursor from the platform database
     """
 
     update_calculation(
@@ -121,14 +126,14 @@ def _trigger_migration(job, callback_url, foreign_calc_id):
 
     # direct import of settings to avoid starting celery with the
     # wrong settings module (it should use the engine one)
-    from openquakeserver import settings
+    import settings
 
     platform_connection = psycopg2.connect(
-        host=settings.DATABASES['platform']['HOST'],
-        database=settings.DATABASES['platform']['NAME'],
-        user=settings.DATABASES['platform']['USER'],
-        password=settings.DATABASES['platform']['PASSWORD'],
-        port=settings.DATABASES['platform']['PORT'])
+        host=settings.DATABASES[dbname]['HOST'],
+        database=settings.DATABASES[dbname]['NAME'],
+        user=settings.DATABASES[dbname]['USER'],
+        password=settings.DATABASES[dbname]['PASSWORD'],
+        port=settings.DATABASES[dbname]['PORT'])
 
     for output in job.output_set.all():
         copy_output(platform_connection, output, foreign_calc_id)
@@ -292,32 +297,6 @@ DBINTERFACE = {
                   average_annual_loss_original,
                   average_annual_loss_retrofitted, bcr, asset_ref
            FROM temp_icebox_bcrdistribution"""),
-    'collapse_map': DbInterface(
-        """SELECT ST_AsText(location) as location, mean, stddev, asset_ref
-           FROM riskr.dmg_dist_per_asset
-           JOIN riskr.dmg_state ds ON dmg_state_id = ds.id
-           WHERE ds.risk_calculation_id = %(calculation_id)d
-           AND ds.dmg_state = 'collapse'""",
-        "icebox_collapsemap",
-        "mean float, stddev float, asset_ref varchar",
-        """INSERT INTO icebox_collapsemap(
-               output_layer_id, location, mean, stddev, asset_ref)
-           SELECT %s, St_GeomFromText(location, 4326), mean, stddev, asset_ref
-           FROM temp_icebox_collapsemap"""),
-    'dmg_dist_per_asset': DbInterface(
-        """SELECT ST_AsText(location) as location, mean, stddev, asset_ref,
-                  ds.dmg_state
-           FROM riskr.dmg_dist_per_asset
-           JOIN riskr.dmg_state ds ON dmg_state_id = ds.id
-           WHERE ds.risk_calculation_id = %(calculation_id)d""",
-        "icebox_damagedistributionperasset",
-        "mean float, stddev float, asset_ref varchar, damage_state varchar",
-        """INSERT INTO icebox_damagedistributionperasset(
-               output_layer_id, location, mean,
-               stddev, asset_ref, damage_state)
-           SELECT %s, St_GeomFromText(location, 4326), mean,
-                  stddev, asset_ref, damage_state
-           FROM temp_icebox_damagedistributionperasset""")
 }
 
 

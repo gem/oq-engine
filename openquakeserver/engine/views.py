@@ -10,7 +10,6 @@ import urlparse
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.http import HttpResponseNotFound
-from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from openquake import nrmllib
