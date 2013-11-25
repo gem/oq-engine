@@ -360,8 +360,6 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
             ses_per_logic_tree_path=5,
             ground_motion_correlation_model='JB2009',
             ground_motion_correlation_params={"vs30_clustering": True},
-            complete_logic_tree_ses=False,
-            complete_logic_tree_gmf=True,
             ground_motion_fields=True,
             hazard_curves_from_gmfs=True,
             mean_hazard_curves=True,
@@ -451,27 +449,6 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
 
         self.hc.intensity_measure_types = iml_imt
         self.hc.intensity_measure_types_and_levels = VALID_IML_IMT
-
-        form = validation.EventBasedHazardForm(
-            instance=self.hc, files=None
-        )
-
-        self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
-        self.assertTrue(equal, err)
-
-    def test_invalid_params_complet_lt_gmf_with_eb_enum(self):
-        # When the `complete_logic_tree_gmf` is requested with end-branch
-        # enumeration, this is not allowed. (The complete LT GMF is not a
-        # useful artifact in this case.)
-        expected_errors = {
-            'complete_logic_tree_gmf': [
-                '`complete_logic_tree_gmf` is not available with end branch '
-                'enumeration'],
-        }
-
-        self.hc.number_of_logic_tree_samples = 0
-        self.hc.complete_logic_tree_gmf = True
 
         form = validation.EventBasedHazardForm(
             instance=self.hc, files=None
