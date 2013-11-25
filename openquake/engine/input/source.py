@@ -23,7 +23,6 @@ from django.db import router
 from django.db import transaction
 from itertools import izip
 
-import openquake.nrmllib
 from openquake.hazardlib import geo
 from openquake.hazardlib import mfd
 from openquake.hazardlib import pmf
