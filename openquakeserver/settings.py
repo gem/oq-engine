@@ -177,3 +177,10 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
+
+
+# Load more settings from a file called local_settings.py if it exists
+try:
+    from local_settings import *
+except ImportError:
+    pass
