@@ -38,7 +38,7 @@ from django.db import transaction, connections
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
-from shapely import wkt, wkb
+from shapely import wkt
 
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import source as hazardlib_source
