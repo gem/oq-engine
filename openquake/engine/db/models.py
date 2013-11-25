@@ -38,7 +38,7 @@ from django.db import transaction, connections
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
-from shapely import wkt
+from shapely import wkt, wkb
 
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import source as hazardlib_source
@@ -432,6 +432,11 @@ class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
     '''
+    @classmethod
+    def create(cls, **kw):
+        _prep_geometry(kw)
+        return cls(**kw)
+
     # Contains the absolute path to the directory containing the job config
     # file.
     base_path = djm.TextField()
@@ -683,7 +688,6 @@ class HazardCalculation(djm.Model):
         db_table = 'uiapi\".\"hazard_calculation'
 
     def __init__(self, *args, **kwargs):
-        kwargs = _prep_geometry(kwargs)
         # A place to cache computation geometry. Recomputing this many times
         # for large regions is wasteful.
         self._points_to_compute = None
@@ -903,6 +907,10 @@ class RiskCalculation(djm.Model):
     '''
     Parameters needed to run a Risk job.
     '''
+    @classmethod
+    def create(cls, **kw):
+        _prep_geometry(kw)
+        return cls(**kw)
 
     #: Default maximum asset-hazard distance in km
     DEFAULT_MAXIMUM_DISTANCE = 5
@@ -1034,10 +1042,6 @@ class RiskCalculation(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"risk_calculation'
 
-    def __init__(self, *args, **kwargs):
-        kwargs = _prep_geometry(kwargs)
-        super(RiskCalculation, self).__init__(*args, **kwargs)
-
     def get_hazard_calculation(self):
         """
         Get the hazard calculation associated with the hazard output used as an
@@ -1162,6 +1166,8 @@ def _prep_geometry(kwargs):
                            ('region_constraint', 'POLYGON((%s))')):
         if field in kwargs:
             geom = kwargs[field]
+            if geom is None:
+                continue
             try:
                 wkt.loads(geom)
                 # if this succeeds, we know the wkt is at least valid
