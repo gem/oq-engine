@@ -34,7 +34,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
 
     def test_sites_from_wkt(self):
         # should succeed with no errors
-        hjp = models.HazardCalculation(sites='MULTIPOINT(1 2, 3 4)')
+        hjp = models.HazardCalculation.create(sites='MULTIPOINT(1 2, 3 4)')
         expected_wkt = (
             'MULTIPOINT (1.0000000000000000 2.0000000000000000,'
             ' 3.0000000000000000 4.0000000000000000)'
@@ -43,13 +43,15 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         self.assertEqual(expected_wkt, hjp.sites.wkt)
 
     def test_sites_invalid_str(self):
-        self.assertRaises(ValueError, models.HazardCalculation, sites='a 5')
+        self.assertRaises(
+            ValueError, models.HazardCalculation.create, sites='a 5')
 
     def test_sites_odd_num_of_coords_in_str_list(self):
-        self.assertRaises(ValueError, models.HazardCalculation, sites='1 2, 3')
+        self.assertRaises(
+            ValueError, models.HazardCalculation.create, sites='1 2, 3')
 
     def test_sites_valid_str_list(self):
-        hjp = models.HazardCalculation(sites='1 2, 3 4')
+        hjp = models.HazardCalculation.create(sites='1 2, 3 4')
         expected_wkt = (
             'MULTIPOINT (1.0000000000000000 2.0000000000000000,'
             ' 3.0000000000000000 4.0000000000000000)'
@@ -58,7 +60,8 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         self.assertEqual(expected_wkt, hjp.sites.wkt)
 
     def test_region_from_wkt(self):
-        hjp = models.HazardCalculation(region='POLYGON((1 2, 3 4, 5 6, 1 2))')
+        hjp = models.HazardCalculation.create(
+            region='POLYGON((1 2, 3 4, 5 6, 1 2))')
         expected_wkt = (
             'POLYGON ((1.0000000000000000 2.0000000000000000, '
             '3.0000000000000000 4.0000000000000000, '
@@ -70,19 +73,20 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
 
     def test_region_invalid_str(self):
         self.assertRaises(
-            ValueError, models.HazardCalculation,
+            ValueError, models.HazardCalculation.create,
             region='0, 0, 5a 5, 1, 3, 0, 0'
         )
 
     def test_region_odd_num_of_coords_in_str_list(self):
         self.assertRaises(
-            ValueError, models.HazardCalculation, region='1 2, 3 4, 5 6, 1'
+            ValueError, models.HazardCalculation.create,
+            region='1 2, 3 4, 5 6, 1'
         )
 
     def test_region_valid_str_list(self):
         # note that the last coord (with closes the ring) can be ommitted
         # in this case
-        hjp = models.HazardCalculation(region='1 2, 3 4, 5 6')
+        hjp = models.HazardCalculation.create(region='1 2, 3 4, 5 6')
         expected_wkt = (
             'POLYGON ((1.0000000000000000 2.0000000000000000, '
             '3.0000000000000000 4.0000000000000000, '
@@ -93,10 +97,10 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         self.assertEqual(expected_wkt, hjp.region.wkt)
 
     def test_points_to_compute_none(self):
-        hc = models.HazardCalculation()
+        hc = models.HazardCalculation.create()
         self.assertIsNone(hc.points_to_compute())
 
-        hc = models.HazardCalculation(region='1 2, 3 4, 5 6')
+        hc = models.HazardCalculation.create(region='1 2, 3 4, 5 6')
         # There's no region grid spacing
         self.assertIsNone(hc.points_to_compute())
 
@@ -135,7 +139,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
             45.96040703644873, 45.96040703644873,
         ]
 
-        hc = models.HazardCalculation(
+        hc = models.HazardCalculation.create(
             region='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8',
             region_grid_spacing=20)
         mesh = hc.points_to_compute(save_sites=False)
@@ -146,7 +150,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
     def test_points_to_compute_sites(self):
         lons = [6.5, 6.5, 8.5, 8.5]
         lats = [45.8, 46.5, 46.5, 45.8]
-        hc = models.HazardCalculation(
+        hc = models.HazardCalculation.create(
             sites='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8')
 
         mesh = hc.points_to_compute(save_sites=False)
