@@ -7,9 +7,6 @@ ALTER TABLE uiapi.risk_calculation DROP COLUMN no_progress_timeout;
 ALTER TABLE uiapi.hazard_calculation DROP COLUMN complete_logic_tree_ses;
 ALTER TABLE uiapi.hazard_calculation DROP COLUMN complete_logic_tree_gmf;
 
-DELETE FROM hzrdr.gmf WHERE lt_realization_id IS NULL;
-ALTER TABLE hzrdr.gmf ALTER COLUMN lt_realization_id SET NOT NULL;
-
 DELETE FROM hzrdr.ses_collection WHERE lt_realization_id IS NULL;
 ALTER TABLE hzrdr.ses_collection ALTER COLUMN lt_realization_id SET NOT NULL;
 
