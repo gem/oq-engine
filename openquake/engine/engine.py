@@ -368,7 +368,7 @@ def create_calculation(model, params):
             warnings.warn(msg, RuntimeWarning)
             params.pop(param)
 
-    calc = model(**params)
+    calc = model.create(**params)
     calc.full_clean()
     calc.save()
 
