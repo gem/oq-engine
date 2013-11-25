@@ -96,13 +96,6 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
 
-    # complete_logic_tree_ses flag
-    cmplt_lt_ses = None
-    if hc.complete_logic_tree_ses:
-        cmplt_lt_ses = models.SES.objects.get(
-            ses_collection__output__oq_job=job_id,
-            ordinal=None)
-
     source = {}
     with EnginePerformanceMonitor(
             'apply uncertainties to sources', job_id, compute_ses):
@@ -133,34 +126,20 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
         source.clear()  # save a little memory
 
     with EnginePerformanceMonitor('saving ses', job_id, compute_ses):
-        _save_ses_ruptures(ruptures, cmplt_lt_ses)
+        _save_ses_ruptures(ruptures)
 
 
-def _save_ses_ruptures(ruptures, complete_logic_tree_ses):
+def _save_ses_ruptures(ruptures):
     """
     Helper function for saving stochastic event set ruptures to the database.
     :param ruptures:
         A list of :class:`openquake.engine.db.models.SESRupture` instances.
-    :param complete_logic_tree_ses:
-        :class:`openquake.engine.db.models.SES` representing the `complete
-        logic tree` stochastic event set.
-        If not None, save a copy of the input `rupture` to this SES.
     """
-
-    # TODO: Possible future optimiztion:
+    # TODO: Possible future optimization:
     # Refactor this to do bulk insertion of ruptures
     with transaction.commit_on_success(using='job_init'):
         for r in ruptures:
             r.save()
-
-        if complete_logic_tree_ses is not None:
-            for r in ruptures:
-                models.SESRupture.objects.create(
-                    ses=complete_logic_tree_ses,
-                    rupture=r.rupture,
-                    hypocenter=r.hypocenter,
-                    magnitude=r.magnitude,
-                )
 
 
 @tasks.oqtask
@@ -403,36 +382,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                     ordinal=i))
         return all_ses
 
-    def initialize_complete_lt_ses_db_records(self):
-        """
-        Optional; if the user has requested to collect a `complete logic tree`
-        stochastic event set (containing all ruptures from all realizations),
-        initialize DB records for those results here.
-
-        Throughout the course of the calculation, computed ruptures will be
-        copied into this collection. See :func:`_save_ses_ruptures` for more
-        info.
-        """
-        # `complete logic tree` SES
-        clt_ses_output = models.Output.objects.create(
-            oq_job=self.job,
-            display_name='complete logic tree SES',
-            output_type='complete_lt_ses')
-
-        clt_ses_coll = models.SESCollection.objects.create(
-            output=clt_ses_output)
-
-        models.SES.objects.create(
-            ses_collection=clt_ses_coll,
-            investigation_time=self.hc.total_investigation_time())
-
-        if self.hc.complete_logic_tree_gmf:
-            clt_gmf_output = models.Output.objects.create(
-                oq_job=self.job,
-                display_name='complete logic tree GMF',
-                output_type='complete_lt_gmf')
-            models.Gmf.objects.create(output=clt_gmf_output)
-
     def get_source_filter_condition(self):
         """
         Return a function filtering on the maximum_distance
@@ -471,9 +420,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rlz_callbacks = [self.initialize_ses_db_records]
 
         self.initialize_realizations(rlz_callbacks=rlz_callbacks)
-
-        if self.job.hazard_calculation.complete_logic_tree_ses:
-            self.initialize_complete_lt_ses_db_records()
 
     def post_process(self):
         """
