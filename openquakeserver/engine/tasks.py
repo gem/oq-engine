@@ -126,7 +126,7 @@ def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
 
     # direct import of settings to avoid starting celery with the
     # wrong settings module (it should use the engine one)
-    import settings
+    from openquakeserver import settings
 
     platform_connection = psycopg2.connect(
         host=settings.DATABASES[dbname]['HOST'],
