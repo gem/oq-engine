@@ -97,7 +97,7 @@ def compute_hazard_curves(job_id, sources, lt_rlz_id, ltp):
             hazard_curves_poissonian(**calc_kwargs)
 
     with EnginePerformanceMonitor(
-            'saving hazard curves', job_id,
+            'saving hazard curves', job_id, compute_hazard_curves):
         _update_curves(hc, matrices, lt_rlz)
 
 
