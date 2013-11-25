@@ -44,7 +44,8 @@ def update_calculation_on_fail(task_obj, exc, task_id, args, kwargs, einfo):
 
 @task(ignore_result=True, on_failure=update_calculation_on_fail)
 def run_hazard_calc(calc_id, calc_dir,
-                    callback_url=None, foreign_calc_id=None):
+                    callback_url=None, foreign_calc_id=None,
+                    dbname="platform"):
     """
     Run a hazard calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
@@ -71,12 +72,12 @@ def run_hazard_calc(calc_id, calc_dir,
     # If requested to, signal job completion and trigger a migration of
     # results.
     if not None in (callback_url, foreign_calc_id):
-        _trigger_migration(job, callback_url, foreign_calc_id)
+        _trigger_migration(job, callback_url, foreign_calc_id, dbname)
 
 
 @task(ignore_result=True, on_failure=update_calculation_on_fail)
 def run_risk_calc(calc_id, calc_dir,
-                  callback_url=None, foreign_calc_id=None):
+                  callback_url=None, foreign_calc_id=None, dbname="platform"):
     """
     Run a risk calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
@@ -100,7 +101,7 @@ def run_risk_calc(calc_id, calc_dir,
     # If requested to, signal job completion and trigger a migration of
     # results.
     if not None in (callback_url, foreign_calc_id):
-        _trigger_migration(job, callback_url, foreign_calc_id)
+        _trigger_migration(job, callback_url, foreign_calc_id, dbname)
 
 
 def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
@@ -126,7 +127,7 @@ def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
 
     # direct import of settings to avoid starting celery with the
     # wrong settings module (it should use the engine one)
-    import settings
+    from openquakeserver import settings
 
     platform_connection = psycopg2.connect(
         host=settings.DATABASES[dbname]['HOST'],
