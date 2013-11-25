@@ -180,29 +180,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
                 # The only metadata in in the SES is investigation time.
                 self.assertEqual(hc.investigation_time, ses.investigation_time)
 
-    def test_initialize_complete_lt_ses_db_records_branch_enum(self):
-        # Set hazard_calculation.number_of_logic_tree_samples = 0
-        # This indicates that the `end-branch enumeration` method should be
-        # used to carry out the calculation.
-
-        # This test was added primarily for branch coverage (in the case of end
-        # branch enum) for the method `initialize_complete_lt_ses_db_records`.
-        hc = self.job.hazard_calculation
-        hc.number_of_logic_tree_samples = 0
-
-        self.calc.initialize_sources()
-        self.calc.initialize_realizations()
-
-        self.calc.initialize_complete_lt_ses_db_records()
-
-        complete_lt_ses = models.SES.objects.get(
-            ses_collection__output__oq_job=self.job.id,
-            ses_collection__output__output_type='complete_lt_ses',
-            ordinal=None)
-
-        self.assertEqual(250.0, complete_lt_ses.investigation_time)
-        self.assertIsNone(complete_lt_ses.ordinal)
-
     @attr('slow')
     def test_complete_event_based_calculation_cycle(self):
         # run the calculation in process (to easy debugging)
@@ -223,7 +200,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 404)
+        self.assertEqual(num_ruptures, 202)
 
         # check that we generated the right number of rows in GmfData
         # 1210 = 121 sites * 5 ses * 2 IMTs
@@ -233,18 +210,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             gmf__lt_realization=rlz2).count()
         self.assertEqual(num_gmf1, 1210)
         self.assertEqual(num_gmf2, 1210)
-
-        # Check the complete logic tree SES
-        complete_lt_ses = models.SES.objects.get(
-            ses_collection__output__oq_job=job.id,
-            ses_collection__output__output_type='complete_lt_ses',
-            ordinal=None)
-
-        # Test the computed `investigation_time`
-        # 2 lt realizations * 5 ses_per_logic_tree_path * 50.0 years
-        self.assertEqual(500.0, complete_lt_ses.investigation_time)
-
-        self.assertIsNone(complete_lt_ses.ordinal)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
