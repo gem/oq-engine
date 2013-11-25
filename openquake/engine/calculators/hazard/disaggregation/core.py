@@ -49,7 +49,7 @@ def disagg_task(job_id, sites, src_ids, lt_rlz_id, ltp):
     compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp)
 
 
-def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
+def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
     """
     Calculate disaggregation histograms and saving the results to the database.
 
@@ -72,8 +72,8 @@ def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
         `list` of :class:`openquake.hazardlib.site.Site` objects, which
         indicate the locations (and associated soil parameters) for which we
         need to compute disaggregation histograms.
-    :param list src_ids:
-        `list` of ParsedSource objects ids
+    :param list sources:
+        `list` of hazardlib source objects
     :param int lt_rlz_id:
         ID of the :class:`openquake.engine.db.models.LtRealization` for which
         we want to compute disaggregation histograms. This realization will
@@ -94,8 +94,7 @@ def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-    sources = [apply_uncertainties(s.nrml)
-               for s in models.ParsedSource.objects.filter(pk__in=src_ids)]
+    sources = map(apply_uncertainties, sources)
 
     # Make filters for distance to source and distance to rupture:
     # a better approach would be to filter the sources on distance
@@ -293,8 +292,8 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
 
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
-            src_ids = (self.sources_per_rlz[lt_rlz.id, 'point'] +
-                       self.sources_per_rlz[lt_rlz.id, 'other'])
+            src_ids = (self.sources_per_model[lt_rlz.id, 'point'] +
+                       self.sources_per_model[lt_rlz.id, 'other'])
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
                 yield self.job.id, sites, src_ids, lt_rlz.id, ltp
@@ -317,7 +316,7 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
         In this case, this includes all of the data for this calculation in the
         tables found in the `htemp` schema space.
         """
-        self.sources_per_rlz.clear()
+        self.sources_per_model.clear()
         logs.LOG.debug('> cleaning up temporary DB data')
         models.HazardCurveProgress.objects.filter(
             lt_realization__hazard_calculation=self.hc.id).delete()
