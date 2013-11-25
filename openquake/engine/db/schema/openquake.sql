@@ -449,7 +449,7 @@ CREATE TABLE hzrdr.gmf (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,  -- FK to output.id
     -- FK to lt_realization.id
-    lt_realization_id INTEGER NOT NULL
+    lt_realization_id INTEGER  -- can be NULL for scenario calculator
 ) TABLESPACE hzrdr_ts;
 
 CREATE TABLE hzrdr.gmf_data (
