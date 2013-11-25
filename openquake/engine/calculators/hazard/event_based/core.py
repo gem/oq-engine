@@ -103,23 +103,21 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
             ses_collection__output__oq_job=job_id,
             ordinal=None)
 
+    source = {}
     with EnginePerformanceMonitor(
-            'reading sources', job_id, compute_ses):
-        src_ids = set(src_id for src_id, ses, seed in src_ses_seeds)
-        source = dict(
-            (s.id, apply_uncertainties(s))
-            for s in models.ParsedSource.objects.filter(pk__in=src_ids))
+            'apply uncertainties to sources', job_id, compute_ses):
+        for src, ses, seed in src_ses_seeds:
+            if src.source_id not in source:
+                source[src.source_id] = apply_uncertainties(src)
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, compute_ses):
         ruptures = []
-        for src_id, ses, seed in src_ses_seeds:
-            src = source[src_id]
+        for src, ses, seed in src_ses_seeds:
             numpy.random.seed(seed)
             rupts = stochastic.stochastic_event_set_poissonian(
-                [src], hc.investigation_time)
-            # set the tag for each copy
+                [source[src.source_id]], hc.investigation_time)
             for i, r in enumerate(rupts):
                 rup = models.SESRupture(
                     ses=ses,
@@ -287,7 +285,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
-        Yielded results are tuples of the form job_id, src_ids, ses, seeds
+        Yielded results are tuples of the form job_id, sources, ses, seeds
         (seeds will be used to seed numpy for temporal occurence sampling).
         """
         hc = self.hc

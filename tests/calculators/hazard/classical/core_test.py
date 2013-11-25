@@ -67,11 +67,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
     def test_initalize_sources(self):
         self.calc.initialize_sources()
-
-        # The source model contains 118 sources:
-        self.assertEqual(
-            118,
-            models.ParsedSource.objects.filter(job=self.calc.job).count())
+        # the source model contains 118 non-point sources
+        sources = self.calc.sources_per_model['dissFaultModel.xml', 'other']
+        self.assertEqual(118, len(sources))
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -111,9 +109,10 @@ store_site_model'
     def _check_logic_tree_realization_sources_per_model(self, ltr):
         # the logic tree for this sample calculation only contains a single
         # source model
-        src_ids = (self.calc.sources_per_model[ltr.id, 'point'] +
-                   self.calc.sources_per_model[ltr.id, 'other'])
-        self.assertEqual(118, len(src_ids))
+        sm = self.calc.rlz_to_sm[ltr]
+        sources = (self.calc.sources_per_model[sm, 'point'] +
+                   self.calc.sources_per_model[sm, 'other'])
+        self.assertEqual(118, len(sources))
 
         # Check that hazard curve progress records were properly
         # initialized:

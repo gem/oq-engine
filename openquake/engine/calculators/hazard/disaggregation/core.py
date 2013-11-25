@@ -31,22 +31,22 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @utils_tasks.oqtask
-def compute_hazard_curves_task(job_id, src_ids, lt_rlz_id, ltp):
+def compute_hazard_curves_task(job_id, sources, lt_rlz_id, ltp):
     """
     Task wrapper around
 
     :func:`openquake.engine.calculators.hazard.classical.core.compute_hazard_curves`.
     """
-    core.compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp)
+    core.compute_hazard_curves(job_id, sources, lt_rlz_id, ltp)
 
 
 @utils_tasks.oqtask
-def disagg_task(job_id, sites, src_ids, lt_rlz_id, ltp):
+def disagg_task(job_id, sites, sources, lt_rlz_id, ltp):
     """
     Task wrapper around
     :func:`openquake.engine.calculators.hazard.disaggregation.core.compute_disagg`.
     """
-    compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp)
+    compute_disagg(job_id, sites, sources, lt_rlz_id, ltp)
 
 
 def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
@@ -292,11 +292,11 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
 
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
-            src_ids = (self.sources_per_model[lt_rlz.id, 'point'] +
+            sources = (self.sources_per_model[lt_rlz.id, 'point'] +
                        self.sources_per_model[lt_rlz.id, 'other'])
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
-                yield self.job.id, sites, src_ids, lt_rlz.id, ltp
+                yield self.job.id, sites, sources, lt_rlz.id, ltp
 
     def post_execute(self):
         """
