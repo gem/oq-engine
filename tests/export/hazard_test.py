@@ -259,32 +259,6 @@ class GetResultExportDestTestCase(unittest.TestCase):
             hazard._get_result_export_dest(8, self.target_dir, ses)
         )
 
-    def test_clt_gmf(self):
-        output = self.FakeOutput('complete_lt_gmf')
-
-        gmf = self.FakeCLTGMF(output)
-
-        expected_path = '%s/calc_9/gmf/complete_lt_gmf.xml'
-        expected_path %= self.target_dir
-
-        self.assertEqual(
-            expected_path,
-            hazard._get_result_export_dest(9, self.target_dir, gmf)
-        )
-
-    def test_clt_ses(self):
-        output = self.FakeOutput('complete_lt_ses')
-
-        ses = self.FakeCLTSES(output)
-
-        expected_path = '%s/calc_10/ses/complete_lt_ses.xml'
-        expected_path %= self.target_dir
-
-        self.assertEqual(
-            expected_path,
-            hazard._get_result_export_dest(10, self.target_dir, ses)
-        )
-
 
 class ClassicalExportTestCase(BaseExportTestCase):
 
@@ -400,14 +374,14 @@ class EventBasedExportTestCase(BaseExportTestCase):
             self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
-            # 2 GMFs, 2 SESs, 1 complete logic tree SES, 1 complete LT GMF,
+            # 2 GMFs, 2 SESs,
             # ((2 imts * 2 realizations)
             # + ((2 imts + 1 multi) * (1 mean + 3 quantiles))
             # hazard curves,
             # (2 poes * 2 imts * 2 realizations)
             # + (2 poes * 2 imts * (1 mean + 3 quantiles)) hazard maps
             # Total: 42
-            self.assertEqual(46, len(outputs))
+            self.assertEqual(44, len(outputs))
 
             #######
             # SESs:
@@ -424,14 +398,6 @@ class EventBasedExportTestCase(BaseExportTestCase):
             for f in exported_files:
                 self._test_exported_file(f)
 
-            ##################
-            # Complete LT SES:
-            [complete_lt_ses] = outputs.filter(output_type='complete_lt_ses')
-
-            exported_file = check_export(complete_lt_ses.id, target_dir)
-
-            self._test_exported_file(exported_file)
-
             #######
             # GMFs:
             gmf_outputs = outputs.filter(output_type='gmf')
@@ -447,24 +413,6 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # empty.
             for f in exported_files:
                 self._test_exported_file(f)
-
-            ##################
-            # Complete LT GMF:
-            [complete_lt_gmf] = outputs.filter(output_type='complete_lt_gmf')
-
-            exported_file = check_export(complete_lt_gmf.id, target_dir)
-
-            self._test_exported_file(exported_file)
-
-            # Check for the correct number of GMFs in the file:
-            tree = etree.parse(exported_file)
-            # NB: the number of generated gmfs depends on the number
-            # of ruptures, which is stochastic number; even having fixed
-            # the seed, it will change by changing the order in which the
-            # stochastic functions are called; a test relying on that
-            # precise number would be fragile, this is why here we just
-            # check that there are gmfs (MS)
-            self.assertGreater(number_of('nrml:gmf', tree), 0)
 
             ################
             # Hazard curves:
