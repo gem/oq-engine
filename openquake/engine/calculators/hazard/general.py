@@ -33,6 +33,7 @@ from django.db import transaction, connections
 
 from openquake.hazardlib import correlation
 from openquake.nrmllib import parsers as nrml_parsers
+from openquake.nrmllib.models import PointSource
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import source, exposure
@@ -205,7 +206,6 @@ class BaseHazardCalculator(base.Calculator):
             # we distribution point sources in different sized chunks
             # point sources first
             point_sources = self.sources_per_model[sm, 'point']
-            print 'point_sources', len(point_sources)
             for block in block_splitter(point_sources,
                                         point_source_block_size):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
@@ -214,7 +214,6 @@ class BaseHazardCalculator(base.Calculator):
 
             # now for area and fault sources
             other_sources = self.sources_per_model[sm, 'other']
-            print 'other_sources', len(other_sources)
             for block in block_splitter(other_sources, block_size):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
@@ -315,9 +314,7 @@ class BaseHazardCalculator(base.Calculator):
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
-        Parse and validation source logic trees. Save the parsed
-        sources to the `parsed_source` table (see
-        :class:`openquake.engine.db.models.ParsedSource`).
+        Parse and validate source logic trees
         """
         logs.LOG.progress("initializing sources")
 
@@ -329,7 +326,7 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization)
-                if source._source_type(src_nrml) == 'point':
+                if isinstance(src_nrml, PointSource):
                     self.sources_per_model[src_path, 'point'].append(src)
                 else:
                     self.sources_per_model[src_path, 'other'].append(src)
