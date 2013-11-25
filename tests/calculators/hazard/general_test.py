@@ -255,9 +255,9 @@ class TaskArgGenTestCase(unittest.TestCase):
         # _get_point_source_ids
 
         for rlz in 5, 6:
-            calc.sources_per_rlz[rlz, 'point'] = [
+            calc.sources_per_model[rlz, 'point'] = [
                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-            calc.sources_per_rlz[rlz, 'other'] = [100, 101, 102, 103, 104]
+            calc.sources_per_model[rlz, 'other'] = [100, 101, 102, 103, 104]
 
         expected = [
             (1776, [1, 2, 3, 4, 5], 5),
