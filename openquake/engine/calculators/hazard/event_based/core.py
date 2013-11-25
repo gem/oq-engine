@@ -107,7 +107,7 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
             'reading sources', job_id, compute_ses):
         src_ids = set(src_id for src_id, ses, seed in src_ses_seeds)
         source = dict(
-            (s.id, apply_uncertainties(s.nrml))
+            (s.id, apply_uncertainties(s))
             for s in models.ParsedSource.objects.filter(pk__in=src_ids))
 
     # Compute and save stochastic event sets
@@ -297,8 +297,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_rlz in realizations:
-            sources = (self.sources_per_rlz[lt_rlz.id, 'point'] +
-                       self.sources_per_rlz[lt_rlz.id, 'other'])
+            sources = (self.sources_per_model[lt_rlz.id, 'point'] +
+                       self.sources_per_model[lt_rlz.id, 'other'])
 
             all_ses = list(models.SES.objects.filter(
                            ses_collection__lt_realization=lt_rlz,
