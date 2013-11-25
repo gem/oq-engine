@@ -61,7 +61,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
     """Tests for classical hazard job param validation."""
 
     def setUp(self):
-        self.hc = models.HazardCalculation(
+        self.hc = models.HazardCalculation.create(
             description='',
             region=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -178,7 +178,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
 
         }
 
-        hc = models.HazardCalculation(
+        hc = models.HazardCalculation.create(
             description='',
             region=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -333,7 +333,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         subset_iml_imt = VALID_IML_IMT.copy()
         subset_iml_imt.pop('PGA')
 
-        self.hc = models.HazardCalculation(
+        self.hc = models.HazardCalculation.create(
             description='',
             region=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -507,7 +507,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
 class DisaggHazardFormTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.hc = models.HazardCalculation(
+        self.hc = models.HazardCalculation.create(
             description='',
             sites='MULTIPOINT((-122.114 38.113))',
             calculation_mode='disaggregation',
@@ -616,7 +616,7 @@ class DisaggHazardFormTestCase(unittest.TestCase):
 class ScenarioFormTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.hc = models.HazardCalculation(
+        self.hc = models.HazardCalculation.create(
             description='',
             sites='MULTIPOINT((-122.114 38.113))',
             calculation_mode='scenario',
@@ -695,7 +695,7 @@ class ClassicalRiskFormTestCase(unittest.TestCase):
         args = dict(self.compulsory_arguments.items())
         args.update(self.other_args)
 
-        rc = models.RiskCalculation(**args)
+        rc = models.RiskCalculation.create(**args)
 
         form = validation.ClassicalRiskForm(
             instance=rc, files=None)
@@ -717,7 +717,7 @@ class ClassicalRiskFormTestCase(unittest.TestCase):
             # then we set other not-compulsory arguments
             arguments.update(self.other_args)
 
-            rc = models.RiskCalculation(**arguments)
+            rc = models.RiskCalculation.create(**arguments)
 
             form = validation.ClassicalRiskForm(instance=rc, files=None)
 
@@ -746,7 +746,7 @@ class ClassicalBCRRiskFormTestCase(unittest.TestCase):
         args = dict(self.compulsory_arguments.items())
         args.update(self.other_args)
 
-        rc = models.RiskCalculation(**args)
+        rc = models.RiskCalculation.create(**args)
 
         form = validation.ClassicalBCRRiskForm(
             instance=rc, files=None)
@@ -763,7 +763,7 @@ class ClassicalBCRRiskFormTestCase(unittest.TestCase):
             for field in fields:
                 compulsory_arguments[field] = None
             compulsory_arguments.update(self.other_args)
-            rc = models.RiskCalculation(**compulsory_arguments)
+            rc = models.RiskCalculation.create(**compulsory_arguments)
             form = validation.ClassicalBCRRiskForm(instance=rc, files=None)
 
             self.assertFalse(form.is_valid(), fields)
@@ -783,7 +783,7 @@ class EventBasedBCRRiskForm(unittest.TestCase):
             '-122.57 38.111, -122.0 38.113))'
         )
 
-        rc = models.RiskCalculation(
+        rc = models.RiskCalculation.create(
             calculation_mode="event_based_bcr",
             region_constraint=region_constraint,
             hazard_output=self.job.risk_calculation.hazard_output,
@@ -802,7 +802,7 @@ class EventBasedBCRRiskForm(unittest.TestCase):
             '-122.57 38.111, -122.0 38.113))'
         )
 
-        rc = models.RiskCalculation(
+        rc = models.RiskCalculation.create(
             calculation_mode="event_based_bcr",
             region_constraint=region_constraint,
             hazard_output=self.job.risk_calculation.hazard_output,
@@ -822,7 +822,7 @@ class EventBasedRiskValidationTestCase(unittest.TestCase):
         )
 
     def test_valid_form_with_default_resolution(self):
-        rc = models.RiskCalculation(
+        rc = models.RiskCalculation.create(
             calculation_mode="event_based",
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -834,7 +834,7 @@ class EventBasedRiskValidationTestCase(unittest.TestCase):
         self.assertTrue(form.is_valid(), dict(form.errors))
 
     def test_valid_form_with_custom_resolution(self):
-        rc = models.RiskCalculation(
+        rc = models.RiskCalculation.create(
             calculation_mode="event_based",
             loss_curve_resolution=60,
             region_constraint=(
@@ -847,7 +847,7 @@ class EventBasedRiskValidationTestCase(unittest.TestCase):
         self.assertTrue(form.is_valid(), dict(form.errors))
 
     def test_invalid_form(self):
-        rc = models.RiskCalculation(
+        rc = models.RiskCalculation.create(
             calculation_mode="event_based",
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -878,7 +878,7 @@ class EventBasedRiskValidationTestCase(unittest.TestCase):
 class ScenarioRiskValidationTestCase(unittest.TestCase):
 
     def test_invalid_form(self):
-        rc = models.RiskCalculation(
+        rc = models.RiskCalculation.create(
             calculation_mode='scenario',
             region_constraint=(
                 'POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
@@ -897,8 +897,8 @@ class ScenarioRiskValidationTestCase(unittest.TestCase):
         expected_errors = {
             'asset_correlation': [u'Enter a number.',
                                   u'Asset Correlation must be >= 0 and <= 1'],
-             'time_event': ['Scenario Risk requires time_event when an '
-                            'occupants vulnerability model is given'],
+            'time_event': ['Scenario Risk requires time_event when an '
+                           'occupants vulnerability model is given'],
         }
         self.assertFalse(form.is_valid())
         self.assertEqual(expected_errors, dict(form.errors))
