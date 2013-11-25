@@ -147,7 +147,8 @@ def run_hazard_calc(request):
         hc = job.hazard_calculation
         tasks.run_hazard_calc.apply_async(
             (hc.id, temp_dir),
-            dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id))
+            dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
+                 dbname=request.POST['database']))
     except Exception as e:
         tasks.update_calculation(callback_url, status="failed")
         print e
@@ -382,7 +383,8 @@ def run_risk_calc(request):
         rc = job.risk_calculation
         tasks.run_risk_calc.apply_async(
             (rc.id, temp_dir),
-            dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id))
+            dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
+                 dbname=request.POST['database']))
     except Exception as e:
         print e
         tasks.update_calculation(callback_url, status="failed")
