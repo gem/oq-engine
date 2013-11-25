@@ -46,6 +46,8 @@ class Calculator(object):
         self.progress_handler = DEFAULT_PROGRESS_HANDLER
         # a dictionary (sm_name, source_type) -> source_ids
         self.sources_per_model = collections.defaultdict(list)
+        # a dictionary rlz -> source model name (in the logic tree)
+        self.rlz_to_sm = {}
 
     def register_progress_handler(self, fn):
         """
