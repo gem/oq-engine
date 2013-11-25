@@ -99,12 +99,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
 
     # Create the names for each subdirectory
     calc_dir = 'calc_%s' % calc_id
-
     type_dir = output_type
-    if output_type == 'complete_lt_gmf':
-        type_dir = 'gmf'
-    elif output_type == 'complete_lt_ses':
-        type_dir = 'ses'
 
     imt_dir = ''  # if blank, we don't have an IMT dir
     if output_type in ('hazard_curve', 'hazard_map', 'disagg_matrix'):
@@ -288,12 +283,8 @@ def export_gmf_xml(output, target):
     lt_rlz = gmf_coll.lt_realization
     haz_calc = output.oq_job.hazard_calculation
 
-    if output.output_type == 'complete_lt_gmf':
-        sm_lt_path = None
-        gsim_lt_path = None
-    else:
-        sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
-        gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+    sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+    gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
     dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
 
@@ -303,8 +294,6 @@ def export_gmf_xml(output, target):
     writer.serialize(gmf_coll)
 
     return dest
-
-export_complete_lt_gmf_xml = export_gmf_xml
 
 
 @core.makedirsdeco
@@ -348,13 +337,9 @@ def export_ses_xml(output, target):
     ses_coll = models.SESCollection.objects.get(output=output.id)
     haz_calc = output.oq_job.hazard_calculation
 
-    if output.output_type == 'complete_lt_ses':
-        sm_lt_path = None
-        gsim_lt_path = None
-    else:
-        lt_rlz = ses_coll.lt_realization
-        sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
-        gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+    lt_rlz = ses_coll.lt_realization
+    sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
+    gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
     dest = _get_result_export_dest(haz_calc.id, target,
                                    output.ses)
@@ -363,8 +348,6 @@ def export_ses_xml(output, target):
     writer.serialize(ses_coll)
 
     return dest
-
-export_complete_lt_ses_xml = export_ses_xml
 
 
 def _export_hazard_map(output, target, writer_class, file_ext):
@@ -579,8 +562,6 @@ def export_uh_spectra_xml(output, target):
 
 
 XML_EXPORTERS = {
-    'complete_lt_gmf': export_complete_lt_gmf_xml,
-    'complete_lt_ses': export_complete_lt_ses_xml,
     'disagg_matrix': export_disagg_matrix_xml,
     'gmf': export_gmf_xml,
     'gmf_scenario': export_gmf_scenario_xml,
