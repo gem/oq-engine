@@ -216,3 +216,4 @@ class Calculator(object):
         """Implement this method in subclasses to perform clean-up actions
            like garbage collection, etc."""
         self.sources_per_model.clear()
+        self.rlz_to_sm.clear()
