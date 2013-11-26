@@ -210,7 +210,7 @@ BaseHazardCalculator.finalize_hazard_curves`
         In this case, this includes all of the data for this calculation in the
         tables found in the `htemp` schema space.
         """
-        self.sources_per_model.clear()
+        super(ClassicalHazardCalculator, self).clean_up()
         logs.LOG.debug('> cleaning up temporary DB data')
         models.HazardCurveProgress.objects.filter(
             lt_realization__hazard_calculation=self.hc.id).delete()
