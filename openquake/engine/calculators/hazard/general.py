@@ -21,12 +21,12 @@
 import os
 import random
 import re
+import collections
 
 import numpy
 
 import openquake.hazardlib
 import openquake.hazardlib.site
-from openquake.hazardlib.calc import filters
 from openquake.hazardlib import correlation
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
@@ -150,6 +150,19 @@ class BaseHazardCalculator(base.Calculator):
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
+
+    def __init__(self, job):
+        super(BaseHazardCalculator, self).__init__(job)
+        # a dictionary (sm_name, source_type) -> source_ids
+        self.sources_per_model = collections.defaultdict(list)
+        # a dictionary rlz -> source model name (in the logic tree)
+        self.rlz_to_sm = {}
+
+    def clean_up(self, *args, **kwargs):
+        """Cleanup temporary dictionaries"""
+        self.sources_per_model.clear()
+        self.rlz_to_sm.clear()
+
     @property
     def hc(self):
         """
@@ -306,12 +319,9 @@ class BaseHazardCalculator(base.Calculator):
 
     def filtered_sites(self, src):
         """
-        Return the sites within maximum_distance from the source or None
+        Do not filter sites up front: overridden in the event based subclass
         """
-        if self.hc.maximum_distance is None:
-            return self.hc.site_collection  # do not filter
-        return src.filter_sites_by_distance_to_source(
-            self.hc.maximum_distance, self.hc.site_collection)
+        return self.hc.site_collection
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
