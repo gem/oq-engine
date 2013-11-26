@@ -403,7 +403,7 @@ _pkgtest_innervm_run () {
             openquake --run-hazard  \$ini --exports xml
         done
 
-        for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d | sort); do
+        for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d | grep -v 'risk/common$' | sort); do
             cd \$demo_dir
             echo \"Running demo in \$demo_dir\"
             openquake --run-hazard job_hazard.ini
