@@ -304,7 +304,6 @@ class BaseHazardCalculator(base.Calculator):
                         [self.hc.id, rlz.id, haz_curve.id, imt, lons, lats]
                     )
 
-    @EnginePerformanceMonitor.monitor
     def filtered_sites(self, src):
         """
         Return the sites within maximum_distance from the source or None
