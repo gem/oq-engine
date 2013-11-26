@@ -22,16 +22,17 @@ import os
 import random
 import re
 
+import numpy
+
 import openquake.hazardlib
 import openquake.hazardlib.site
-import numpy
+from openquake.hazardlib.calc import filters
+from openquake.hazardlib import correlation
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
-
 from django.db import transaction, connections
 
-from openquake.hazardlib import correlation
 from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.models import PointSource
 from openquake.nrmllib.risk import parsers
@@ -304,12 +305,21 @@ class BaseHazardCalculator(base.Calculator):
                     )
 
     @EnginePerformanceMonitor.monitor
+    def filtered_sites(self, src):
+        """
+        Return the sites within maximum_distance from the source or None
+        """
+        if self.hc.maximum_distance is None:
+            return self.hc.site_collection  # do not filter
+        return src.filter_sites_by_distance_to_source(
+            self.hc.maximum_distance, self.hc.site_collection)
+
+    @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
         Parse and validate source logic trees
         """
         logs.LOG.progress("initializing sources")
-
         for src_path in logictree.read_logic_trees(self.hc):
             for src_nrml in nrml_parsers.SourceModelParser(
                     os.path.join(self.hc.base_path, src_path)).parse():
@@ -318,10 +328,11 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization)
-                if isinstance(src_nrml, PointSource):
-                    self.sources_per_model[src_path, 'point'].append(src)
-                else:
-                    self.sources_per_model[src_path, 'other'].append(src)
+                if self.filtered_sites(src):
+                    if isinstance(src_nrml, PointSource):
+                        self.sources_per_model[src_path, 'point'].append(src)
+                    else:
+                        self.sources_per_model[src_path, 'other'].append(src)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
