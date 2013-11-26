@@ -65,7 +65,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             m.stop()
             patches[i].stop()
 
-    def test_initalize_sources(self):
+    def test_initialize_sources(self):
+        self.calc.initialize_site_model()
         self.calc.initialize_sources()
         # the source model contains 118 non-point sources
         sources = self.calc.sources_per_model['dissFaultModel.xml', 'other']
@@ -129,6 +130,7 @@ store_site_model'
     def test_initialize_realizations_montecarlo(self):
         # We need initalize sources first (read logic trees, parse sources,
         # etc.)
+        self.calc.initialize_site_model()
         self.calc.initialize_sources()
 
         # No realizations yet:
@@ -160,6 +162,7 @@ store_site_model'
             self._check_logic_tree_realization_sources_per_model(ltr)
 
     def test_initialize_realizations_enumeration(self):
+        self.calc.initialize_site_model()
         self.calc.initialize_sources()
         # enumeration is triggered by zero value used as number of realizations
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
