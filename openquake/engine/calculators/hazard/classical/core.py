@@ -154,6 +154,13 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
 
     core_calc_task = compute_hazard_curves
 
+    def filtered_sites(self, src):
+        """
+        Do not filter sites up front: the filtering will be done
+        on the workers in parallel
+        """
+        return self.hc.site_collection
+
     def pre_execute(self):
         """
         Do pre-execution work. At the moment, this work entails:
