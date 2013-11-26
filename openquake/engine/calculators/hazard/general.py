@@ -303,14 +303,6 @@ class BaseHazardCalculator(base.Calculator):
                         [self.hc.id, rlz.id, haz_curve.id, imt, lons, lats]
                     )
 
-    def get_source_filter_condition(self):
-        """
-        Return a filter function, i.e. a function source -> boolean to filter
-        the sources to save; by default it returns always True and no sources
-        are filtered.
-        """
-        return lambda src: True
-
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
