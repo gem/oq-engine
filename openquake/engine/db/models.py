@@ -266,26 +266,6 @@ class RevisionInfo(djm.Model):
 
 ## Tables in the 'hzrdi' (Hazard Input) schema.
 
-
-class ParsedSource(djm.Model):
-    """Stores parsed hazard input model sources in serialized python object
-       tree format."""
-    job = djm.ForeignKey('OqJob')
-    SRC_TYPE_CHOICES = (
-        (u'area', u'Area'),
-        (u'point', u'Point'),
-        (u'complex', u'Complex'),
-        (u'simple', u'Simple'),
-        (u'characteristic', u'Characteristic'),
-    )
-    source_type = djm.TextField(choices=SRC_TYPE_CHOICES)
-    source_model_filename = djm.TextField(null=False)
-    nrml = fields.PickleField(help_text="NRML object representing the source")
-
-    class Meta:
-        db_table = 'hzrdi\".\"parsed_source'
-
-
 class SiteModel(djm.Model):
     '''
      A model for site-specific parameters.

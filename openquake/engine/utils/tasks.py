@@ -145,4 +145,5 @@ def oqtask(task_func):
                     task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, queue=celery_queue)
+    tsk.task_func = task_func
     return tsk
