@@ -142,8 +142,8 @@ def _export_common(output, loss_type):
                 source_model_tree_path=source_model_tree_path,
                 gsim_tree_path=gsim_tree_path,
                 unit=output.oq_job.risk_calculation.exposure_model.unit(
-                    loss_type))
-
+                    loss_type),
+                loss_type=loss_type)
 
 @core.makedirsdeco
 def export_agg_loss_curve_xml(output, target):
