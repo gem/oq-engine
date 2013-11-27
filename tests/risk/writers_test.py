@@ -412,12 +412,12 @@ class LossMapWriterTestCase(unittest.TestCase):
                  u'properties': {u'asset_ref': u'asset_3', u'loss': 17.23},
                  u'type': u'Feature'}],
             u'oqmetadata': {u'investigationTime': u'10.0',
+                            u'lossType': u'structural',
                             u'poE': u'0.8',
                             u'statistics': u'mean'},
             u'oqnrmlversion': u'0.4',
             u'oqtype': u'LossMap',
-            u'type': u'FeatureCollection',
-            u'loss_type': u'structural'}
+            u'type': u'FeatureCollection'}
         writer = writers.LossMapGeoJSONWriter(
             self.filename, investigation_time=10.0, poe=0.8,
             statistics="mean", loss_type="structural"
@@ -471,14 +471,14 @@ class LossMapWriterTestCase(unittest.TestCase):
                  u'type': u'Feature'}],
             u'oqmetadata': {u'investigationTime': u'10.0',
                             u'lossCategory': u'economic',
+                            u'lossType': u'structural',
                             u'poE': u'0.8',
                             u'quantileValue': u'0.5',
                             u'statistics': u'quantile',
                             u'unit': u'USD'},
             u'oqnrmlversion': u'0.4',
             u'oqtype': u'LossMap',
-            u'type': u'FeatureCollection',
-            u'loss_type': u'structural'}
+            u'type': u'FeatureCollection'}
 
         writer = writers.LossMapGeoJSONWriter(
             self.filename,
@@ -538,13 +538,13 @@ class LossMapWriterTestCase(unittest.TestCase):
             u'oqmetadata': {u'gsimTreePath': u'b3|b4',
                             u'investigationTime': u'10.0',
                             u'lossCategory': u'economic',
+                            u'lossType': u'structural',
                             u'poE': u'0.8',
                             u'sourceModelTreePath': u'b1|b2',
                             u'unit': u'USD'},
             u'oqnrmlversion': u'0.4',
             u'oqtype': u'LossMap',
-            u'type': u'FeatureCollection',
-            u'loss_type': u'structural'}
+            u'type': u'FeatureCollection'}
 
         writer = writers.LossMapGeoJSONWriter(
             self.filename,
