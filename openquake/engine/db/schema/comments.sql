@@ -34,13 +34,6 @@ COMMENT ON COLUMN admin.revision_info.step IS 'A simple counter that will be use
 COMMENT ON COLUMN admin.revision_info.last_update IS 'The date/time when the revision information was last updated. Please note: this time stamp is not refreshed automatically. It is expected that schema/data migration scripts will modify this as appropriate.';
 
 
--- hzrdi schema tables ------------------------------------------
-
-COMMENT ON TABLE hzrdi.parsed_source IS 'Stores parsed hazard input model sources in serialized python object tree format';
-COMMENT ON COLUMN hzrdi.parsed_source.nrml IS 'NRML object representing the source';
-COMMENT ON COLUMN hzrdi.parsed_source.source_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
-
-
 -- hzrdr schema tables ------------------------------------------
 COMMENT ON TABLE hzrdr.hazard_curve IS 'A collection of hazard curves. This table defines common attributes for the collection.';
 COMMENT ON COLUMN hzrdr.hazard_curve.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
