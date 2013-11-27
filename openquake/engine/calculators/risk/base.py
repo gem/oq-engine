@@ -219,9 +219,6 @@ class RiskCalculator(base.Calculator):
 
         return risk_models
 
-    def clean_up(self, *args, **kwargs):
-        """Nothing to do in risk calculators"""
-
 #: Calculator parameters are used to compute derived outputs like loss
 #: maps, disaggregation plots, quantile/mean curves. See
 #: :class:`openquake.engine.db.models.RiskCalculation` for a description
