@@ -96,23 +96,21 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
 
+    source = {}
     with EnginePerformanceMonitor(
-            'reading sources', job_id, compute_ses):
-        src_ids = set(src_id for src_id, ses, seed in src_ses_seeds)
-        source = dict(
-            (s.id, apply_uncertainties(s.nrml))
-            for s in models.ParsedSource.objects.filter(pk__in=src_ids))
+            'filtering sources', job_id, compute_ses):
+        for src, ses, seed in src_ses_seeds:
+            if src.source_id not in source:
+                source[src.source_id] = apply_uncertainties(src)
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, compute_ses):
         ruptures = []
-        for src_id, ses, seed in src_ses_seeds:
-            src = source[src_id]
+        for src, ses, seed in src_ses_seeds:
             numpy.random.seed(seed)
             rupts = stochastic.stochastic_event_set_poissonian(
-                [src], hc.investigation_time)
-            # set the tag for each copy
+                [source[src.source_id]], hc.investigation_time)
             for i, r in enumerate(rupts):
                 rup = models.SESRupture(
                     ses=ses,
@@ -262,11 +260,20 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
     core_calc_task = compute_ses
 
+    def filtered_sites(self, src):
+        """
+        Return the sites within maximum_distance from the source or None
+        """
+        if self.hc.maximum_distance is None:
+            return self.hc.site_collection  # do not filter
+        return src.filter_sites_by_distance_to_source(
+            self.hc.maximum_distance, self.hc.site_collection)
+
     def task_arg_gen(self, _block_size=None):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
-        Yielded results are tuples of the form job_id, src_ids, ses, seeds
+        Yielded results are tuples of the form job_id, sources, ses, seeds
         (seeds will be used to seed numpy for temporal occurence sampling).
         """
         hc = self.hc
@@ -276,8 +283,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_rlz in realizations:
-            sources = (self.sources_per_rlz[lt_rlz.id, 'point'] +
-                       self.sources_per_rlz[lt_rlz.id, 'other'])
+            sm = self.rlz_to_sm[lt_rlz]
+            sources = (self.sources_per_model[sm, 'point'] +
+                       self.sources_per_model[sm, 'other'])
 
             all_ses = list(models.SES.objects.filter(
                            ses_collection__lt_realization=lt_rlz,
@@ -292,6 +300,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             logs.LOG.info('Using block size %d', preferred_block_size)
             for block in block_splitter(sss, preferred_block_size):
                 yield self.job.id, block, lt_rlz, ltp
+
+        # now the dictionary can be cleared to save memory
+        self.sources_per_model.clear()
 
     def compute_gmf_arg_gen(self):
         """
@@ -382,18 +393,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                     investigation_time=self.hc.investigation_time,
                     ordinal=i))
         return all_ses
-
-    def get_source_filter_condition(self):
-        """
-        Return a function filtering on the maximum_distance
-        """
-        src_filter = filters.source_site_distance_filter(
-            self.hc.maximum_distance)
-
-        def filter_on_distance(src):
-            """True if the source is relevant for the site collection"""
-            return bool(list(src_filter([(src, self.hc.site_collection)])))
-        return filter_on_distance
 
     def pre_execute(self):
         """

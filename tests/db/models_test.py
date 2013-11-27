@@ -370,8 +370,8 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         calc = cls_core.ClassicalHazardCalculator(job)
 
         # Bootstrap the `hazard_site` table:
-        calc.initialize_sources()
         calc.initialize_site_model()
+        calc.initialize_sources()
 
         site_coll = job.hazard_calculation.site_collection
         # Since we're using a pretty big site model, it's a bit excessive to
