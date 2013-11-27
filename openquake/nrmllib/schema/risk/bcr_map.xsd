@@ -30,6 +30,7 @@
 
         <xs:attribute name="interestRate" type="xs:double" use="required" />
         <xs:attribute name="assetLifeExpectancy" type="xs:double" use="required" />
+        <xs:attribute name="lossType" type="xs:string" use="required" />
     </xs:complexType>
 
     <xs:complexType name="BCRMapNode">

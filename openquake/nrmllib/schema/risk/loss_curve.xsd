@@ -16,6 +16,7 @@
         </xs:sequence>
 
         <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="lossType" type="xs:string" use="required" />
         <xs:attribute name="sourceModelTreePath" type="xs:string" use="optional" />
         <xs:attribute name="gsimTreePath" type="xs:string" use="optional" />
 
@@ -23,7 +24,6 @@
         <!-- quantileValue is only used when statistics == 'quantile' -->
         <xs:attribute name="quantileValue" type="PositiveDoubleType" use="optional" />
 
-        <!-- same as `stcoUnit` in exposure. -->
         <xs:attribute name="unit" type="xs:string" use="optional" />
 
         <!-- is an insured loss curve? -->

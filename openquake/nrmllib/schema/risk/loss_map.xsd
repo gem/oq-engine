@@ -16,7 +16,8 @@
 
         <!-- Required only for loss maps computed with the classical /
              probabilistic calculators. -->
-        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="optional" />
+        <xs:attribute name="investigationTime" type="PositiveNonZeroDoubleType" use="required" />
+        <xs:attribute name="lossType" type="xs:string" use="required" />
         <!-- Probability of Exceedence for the map. This was the PoE for loss curve
              interpolation to produce this map. Required only for loss maps
              computed with the classical / probabilistic calculators. -->
