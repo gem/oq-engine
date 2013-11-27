@@ -425,43 +425,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         self.assertEqual(expected_error, ar.exception.message)
 
 
-class SourceDBWriterTestCase(unittest.TestCase):
-    """Test DB serialization of seismic sources using
-    :class:`openquake.engine.input.source.SourceDBWriter`.
-    """
-
-    def test_serialize(self):
-        parser = nrml_parsers.SourceModelParser(MIXED_SRC_MODEL)
-        source_model = parser.parse()
-
-        job = models.OqJob.objects.create(user_name='openquake')
-
-        db_writer = source_input.SourceDBWriter(
-            job, MIXED_SRC_MODEL, source_model,
-            MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
-        )
-        db_writer.serialize()
-
-        # Check that everything was saved properly.
-
-        # re-reparse the test file for comparisons:
-        nrml_sources = list(
-            nrml_parsers.SourceModelParser(MIXED_SRC_MODEL).parse()
-        )
-
-        parsed_sources = list(
-            models.ParsedSource.objects.filter(job=job.id).order_by('id')
-        )
-
-        # compare pristine nrml sources to the hazardlib sources stored
-        # in pickled form in the database (by unpickling them first, of course)
-        for i, ns in enumerate(nrml_sources):
-            # comparing the ids; one could compare all the attributes
-            # but it looks overkill; the important thing is that we
-            # do not miss data in the db
-            self.assertEqual(ns.id, parsed_sources[i].nrml.source_id)
-
-
 class AreaSourceToPointSourcesTestCase(unittest.TestCase):
     """
     Tests for
