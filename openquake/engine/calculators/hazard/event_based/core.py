@@ -301,6 +301,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             for block in block_splitter(sss, preferred_block_size):
                 yield self.job.id, block, lt_rlz, ltp
 
+        # now the dictionary can be cleared to save memory
+        self.sources_per_model.clear()
+
     def compute_gmf_arg_gen(self):
         """
         Argument generator for the task compute_gmf. For each SES yields a

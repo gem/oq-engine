@@ -49,7 +49,7 @@ def compute_hazard_curves(job_id, sources, lt_rlz_id, ltp):
     :param int job_id:
         ID of the currently running job.
     :param sources:
-        List of hazardlib source objects
+        List of :class:`openquake.hazardlib.source.base.SeismicSource` objects
     :param lt_rlz_id:
         Id of logic tree realization model to calculate for.
     :param ltp:
