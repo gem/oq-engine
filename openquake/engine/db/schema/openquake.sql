@@ -81,20 +81,6 @@ CREATE TABLE hzrdi.site_model (
 SELECT AddGeometryColumn('hzrdi', 'site_model', 'location', 4326, 'POINT', 2);
 
 
--- Parsed sources
-CREATE TABLE hzrdi.parsed_source (
-    id SERIAL PRIMARY KEY,
-    job_id INTEGER NOT NULL,
-    source_type VARCHAR NOT NULL
-        CONSTRAINT enforce_source_type CHECK
-        (source_type IN ('area', 'point', 'complex', 'simple', 'characteristic')),
-    nrml BYTEA NOT NULL,
-    source_model_filename VARCHAR NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE hzrdi_ts;
-
-
 -- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,

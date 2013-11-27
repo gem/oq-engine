@@ -250,14 +250,17 @@ class TaskArgGenTestCase(unittest.TestCase):
             '%s.%s' % (base_path, '_get_realizations')
         )
         get_rlz_mock = get_rlz_patch.start()
-        get_rlz_mock.return_value = [self.Rlz(5), self.Rlz(6)]
 
-        # _get_point_source_ids
+        r5, r6 = self.Rlz(5), self.Rlz(6)
+        get_rlz_mock.return_value = [r5, r6]
 
-        for rlz in 5, 6:
-            calc.sources_per_rlz[rlz, 'point'] = [
+        calc.rlz_to_sm = {r5: 'dummy_sm', r6: 'dummy_sm'}
+
+        for rlz in (r5, r6):
+            calc.sources_per_model['dummy_sm', 'point'] = [
                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-            calc.sources_per_rlz[rlz, 'other'] = [100, 101, 102, 103, 104]
+            calc.sources_per_model['dummy_sm', 'other'] = [
+                100, 101, 102, 103, 104]
 
         expected = [
             (1776, [1, 2, 3, 4, 5], 5),
