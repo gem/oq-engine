@@ -13,9 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Saves source model data (parsed from a NRML file) to the
-'hzrdi.parsed_source' table.
-"""
 import sys
 import math
 
