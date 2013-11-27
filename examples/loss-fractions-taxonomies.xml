@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossFraction investigationTime="50.00" poE="0.1000" sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2" lossCategory="building" unit="EUR" variable="taxonomy">
+  <lossFraction investigationTime="50.00" poE="0.1000" sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2" lossCategory="building" unit="EUR" variable="taxonomy" lossType="structural">
     <total>
       <bin value="RM" absoluteLoss="1.6000e+03" fraction="0.80000"/>
       <bin value="RC" absoluteLoss="4.0000e+02" fraction="0.20000"/>

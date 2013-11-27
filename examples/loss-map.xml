@@ -6,7 +6,7 @@
     <!-- attributes sourceModelTreePath, gsimTreePath, lossCategory, and unit are optional. -->
     <lossMap sourceModelTreePath="b1|b2" gsimTreePath="b1|b2"
              lossCategory="economic_loss" unit="EUR" poE="0.5"
-             investigationTime="50.0">
+             investigationTime="50.0" lossType="structural">
 
         <node>
             <gml:Point>
