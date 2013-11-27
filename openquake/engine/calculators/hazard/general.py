@@ -158,11 +158,6 @@ class BaseHazardCalculator(base.Calculator):
         # a dictionary rlz -> source model name (in the logic tree)
         self.rlz_to_sm = {}
 
-    def clean_up(self, *args, **kwargs):
-        """Cleanup temporary dictionaries"""
-        self.sources_per_model.clear()
-        self.rlz_to_sm.clear()
-
     @property
     def hc(self):
         """
@@ -232,6 +227,9 @@ class BaseHazardCalculator(base.Calculator):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
+
+        # now the dictionary can be cleared to save memory
+        self.sources_per_model.clear()
 
     def _get_realizations(self):
         """
