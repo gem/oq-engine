@@ -210,4 +210,3 @@ class Calculator(object):
     def clean_up(self, *args, **kwargs):
         """Implement this method in subclasses to perform clean-up actions
            like garbage collection, etc."""
-        raise NotImplementedError
