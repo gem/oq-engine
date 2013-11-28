@@ -65,13 +65,12 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             m.stop()
             patches[i].stop()
 
-    def test_initalize_sources(self):
+    def test_initialize_sources(self):
+        self.calc.initialize_site_model()
         self.calc.initialize_sources()
-
-        # The source model contains 118 sources:
-        self.assertEqual(
-            118,
-            models.ParsedSource.objects.filter(job=self.calc.job).count())
+        # the source model contains 118 non-point sources
+        sources = self.calc.sources_per_model['dissFaultModel.xml', 'other']
+        self.assertEqual(118, len(sources))
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -108,12 +107,13 @@ store_site_model'
             # We should never try to store a site model in this case.
             self.assertEqual(0, store_sm_patch.call_count)
 
-    def _check_logic_tree_realization_sources_per_rlz(self, ltr):
+    def _check_logic_tree_realization_sources_per_model(self, ltr):
         # the logic tree for this sample calculation only contains a single
         # source model
-        src_ids = (self.calc.sources_per_rlz[ltr.id, 'point'] +
-                   self.calc.sources_per_rlz[ltr.id, 'other'])
-        self.assertEqual(118, len(src_ids))
+        sm = self.calc.rlz_to_sm[ltr]
+        sources = (self.calc.sources_per_model[sm, 'point'] +
+                   self.calc.sources_per_model[sm, 'other'])
+        self.assertEqual(118, len(sources))
 
         # Check that hazard curve progress records were properly
         # initialized:
@@ -130,6 +130,7 @@ store_site_model'
     def test_initialize_realizations_montecarlo(self):
         # We need initalize sources first (read logic trees, parse sources,
         # etc.)
+        self.calc.initialize_site_model()
         self.calc.initialize_sources()
 
         # No realizations yet:
@@ -158,9 +159,10 @@ store_site_model'
         self.assertEqual(['b1'], ltr2.gsim_lt_path)
 
         for ltr in (ltr1, ltr2):
-            self._check_logic_tree_realization_sources_per_rlz(ltr)
+            self._check_logic_tree_realization_sources_per_model(ltr)
 
     def test_initialize_realizations_enumeration(self):
+        self.calc.initialize_site_model()
         self.calc.initialize_sources()
         # enumeration is triggered by zero value used as number of realizations
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
@@ -177,7 +179,7 @@ store_site_model'
         self.assertEqual(['b1'], ltr.sm_lt_path)
         self.assertEqual(['b1'], ltr.gsim_lt_path)
 
-        self._check_logic_tree_realization_sources_per_rlz(ltr)
+        self._check_logic_tree_realization_sources_per_model(ltr)
 
     @attr('slow')
     def test_complete_calculation_workflow(self):
@@ -314,7 +316,7 @@ store_site_model'
             lt_realization__hazard_calculation=hc.id)
         self.assertEqual(0, len(hcp))
 
-        self.assertEqual(0, len(self.calc.sources_per_rlz))
+        self.assertEqual(0, len(self.calc.sources_per_model))
 
     def test_hazard_curves_task(self):
         # Test the `hazard_curves` task, but execute it as a normal function

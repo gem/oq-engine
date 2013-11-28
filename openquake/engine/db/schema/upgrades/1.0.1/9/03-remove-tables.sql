@@ -1,5 +1,6 @@
 DROP TABLE uiapi.job_phase_stats;
 DROP TABLE htemp.source_progress;
+DROP TABLE hzrdi.parsed_source;
 
 ALTER TABLE uiapi.hazard_calculation DROP COLUMN no_progress_timeout;
 ALTER TABLE uiapi.risk_calculation DROP COLUMN no_progress_timeout;
