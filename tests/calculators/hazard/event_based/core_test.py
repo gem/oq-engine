@@ -281,9 +281,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
             for job_id, sss, rlz, ltp in arg_gen:
-                for src_id, ses, seed in sss:
-                    src = models.ParsedSource.objects.get(pk=src_id)
-                    yield src.nrml.source_id, ses, seed
+                for src, ses, seed in sss:
+                    yield src.source_id, ses, seed
 
         actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)

@@ -35,27 +35,7 @@ from django.db import transaction
 
 
 @utils_tasks.oqtask
-def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
-    """
-    A celery task wrapper function around :func:`compute_hazard_curves`.
-    See :func:`compute_hazard_curves` for parameter definitions.
-
-    :param ltp:
-        a :class:`openquake.engine.input.LogicTreeProcessor` instance
-    """
-    logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
-                   % (job_id, lt_rlz_id))
-
-    compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp)
-    # Last thing, signal back the control node to indicate the completion of
-    # task. The control node needs this to manage the task distribution and
-    # keep track of progress.
-    logs.LOG.debug('< task complete, signalling completion')
-
-
-# Silencing 'Too many local variables'
-# pylint: disable=R0914
-def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
+def compute_hazard_curves(job_id, sources, lt_rlz_id, ltp):
     """
     Celery task for hazard curve calculator.
 
@@ -68,8 +48,8 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
 
     :param int job_id:
         ID of the currently running job.
-    :param src_ids:
-        List of ids of parsed source models to take into account.
+    :param sources:
+        List of :class:`openquake.hazardlib.source.base.SeismicSource` objects
     :param lt_rlz_id:
         Id of logic tree realization model to calculate for.
     :param ltp:
@@ -82,9 +62,6 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-
-    parsed_sources = models.ParsedSource.objects.filter(pk__in=src_ids)
-
     imts = haz_general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
 
@@ -92,8 +69,7 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     calc_kwargs = {'gsims': gsims,
                    'truncation_level': hc.truncation_level,
                    'time_span': hc.investigation_time,
-                   'sources': [apply_uncertainties(s.nrml)
-                               for s in parsed_sources],
+                   'sources': map(apply_uncertainties, sources),
                    'imts': imts,
                    'sites': hc.site_collection}
 
@@ -115,16 +91,17 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
     with EnginePerformanceMonitor(
-            'computing hazard curves', job_id, hazard_curves, tracing=True):
+            'computing hazard curves', job_id,
+            compute_hazard_curves, tracing=True):
         matrices = openquake.hazardlib.calc.hazard_curve.\
             hazard_curves_poissonian(**calc_kwargs)
 
     with EnginePerformanceMonitor(
-            'saving hazard curves', job_id, hazard_curves, tracing=True):
-        _update_curves(hc, matrices, lt_rlz, src_ids)
+            'saving hazard curves', job_id, compute_hazard_curves):
+        _update_curves(hc, matrices, lt_rlz)
 
 
-def _update_curves(hc, matrices, lt_rlz, src_ids):
+def _update_curves(hc, matrices, lt_rlz):
     """
     Helper function for updating source, hazard curve, and realization progress
     records in the database.
@@ -136,8 +113,6 @@ def _update_curves(hc, matrices, lt_rlz, src_ids):
     :param lt_rlz:
         :class:`openquake.engine.db.models.LtRealization` record for the
         current realization.
-    :param src_ids:
-        List of source IDs considered for this calculation task.
     """
     with logs.tracing('_update_curves for all IMTs'):
         for imt in hc.intensity_measure_types_and_levels.keys():
@@ -177,7 +152,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
     and GMPEs (Ground Motion Prediction Equations) from logic trees.
     """
 
-    core_calc_task = hazard_curves
+    core_calc_task = compute_hazard_curves
 
     def pre_execute(self):
         """
@@ -228,7 +203,7 @@ BaseHazardCalculator.finalize_hazard_curves`
         In this case, this includes all of the data for this calculation in the
         tables found in the `htemp` schema space.
         """
-        self.sources_per_rlz.clear()
+        super(ClassicalHazardCalculator, self).clean_up()
         logs.LOG.debug('> cleaning up temporary DB data')
         models.HazardCurveProgress.objects.filter(
             lt_realization__hazard_calculation=self.hc.id).delete()
