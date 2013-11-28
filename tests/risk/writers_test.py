@@ -101,7 +101,8 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 
     def test_empty_model_not_supported(self):
         writer = writers.LossCurveXMLWriter(
-            self.filename, investigation_time=10.0, statistics="mean")
+            self.filename, investigation_time=10.0, statistics="mean",
+            loss_type="structural")
 
         self.assertRaises(ValueError, writer.serialize, [])
         self.assertRaises(ValueError, writer.serialize, None)
@@ -113,7 +114,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossCurves investigationTime="10.0"
               sourceModelTreePath="b1_b2_b3"
-              gsimTreePath="b1_b2" unit="USD">
+              gsimTreePath="b1_b2" unit="USD" lossType="structural">
     <lossCurve assetRef="asset_1">
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -138,7 +139,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer = writers.LossCurveXMLWriter(
             self.filename, investigation_time=10.0,
             source_model_tree_path="b1_b2_b3",
-            gsim_tree_path="b1_b2", unit="USD")
+            gsim_tree_path="b1_b2", unit="USD", loss_type="structural")
 
         data = [
             LOSS_CURVE(
@@ -163,7 +164,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossCurves  insured="True" investigationTime="10.0"
-    sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD">
+    sourceModelTreePath="b1_b2_b3" gsimTreePath="b1_b2" unit="USD" lossType="structural">
     <lossCurve assetRef="asset_1">
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -189,7 +190,8 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer = writers.LossCurveXMLWriter(
             self.filename,
             investigation_time=10.0, source_model_tree_path="b1_b2_b3",
-            gsim_tree_path="b1_b2", unit="USD", insured=True)
+            gsim_tree_path="b1_b2", unit="USD", insured=True,
+            loss_type="structural")
 
         data = [
             LOSS_CURVE(
@@ -214,7 +216,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossCurves investigationTime="10.0"
-              statistics="quantile" quantileValue="0.5">
+              statistics="quantile" quantileValue="0.5" lossType="structural">
     <lossCurve assetRef="asset_1">
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -232,7 +234,7 @@ class LossCurveXMLWriterTestCase(unittest.TestCase):
         writer = writers.LossCurveXMLWriter(
             self.filename,
             investigation_time=10.0, statistics="quantile",
-            quantile_value=0.50)
+            quantile_value=0.50, loss_type="structural")
 
         data = [LOSS_CURVE(
                 asset_ref="asset_1", location=Point(1.0, 1.5),
@@ -253,7 +255,8 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
 
     def test_empty_model_not_supported(self):
         writer = writers.AggregateLossCurveXMLWriter(
-            self.filename, investigation_time=10.0, statistics="mean")
+            self.filename, investigation_time=10.0, statistics="mean",
+            loss_type="structural")
 
         self.assertRaises(ValueError, writer.serialize, None)
 
@@ -267,7 +270,8 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
     investigationTime="10.0"
     sourceModelTreePath="b1_b2_b3"
     gsimTreePath="b1_b2"
-    unit="USD">
+    unit="USD"
+    lossType="structural">
     <poEs>1.0 0.5 0.1</poEs>
     <losses>10.0000 20.0000 30.0000</losses>
     <averageLoss>3.0000e+00</averageLoss>
@@ -279,7 +283,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
         writer = writers.AggregateLossCurveXMLWriter(
             self.filename,
             investigation_time=10.0, source_model_tree_path="b1_b2_b3",
-            gsim_tree_path="b1_b2", unit="USD")
+            gsim_tree_path="b1_b2", unit="USD", loss_type="structural")
 
         data = AGGREGATE_LOSS_CURVE(
             poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
@@ -299,7 +303,8 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
   <aggregateLossCurve
     investigationTime="10.0"
     statistics="quantile"
-    quantileValue="0.5">
+    quantileValue="0.5"
+    lossType="structural">
     <poEs>1.0 0.5 0.1</poEs>
     <losses>10.0000 20.0000 30.0000</losses>
     <averageLoss>2.0000e+00</averageLoss>
@@ -311,7 +316,7 @@ class AggregateLossCurveXMLWriterTestCase(unittest.TestCase):
         writer = writers.AggregateLossCurveXMLWriter(
             self.filename,
             investigation_time=10.0, statistics="quantile",
-            quantile_value=0.50)
+            quantile_value=0.50, loss_type="structural")
 
         data = AGGREGATE_LOSS_CURVE(
             poes=[1.0, 0.5, 0.1], losses=[10.0, 20.0, 30.0],
@@ -345,7 +350,7 @@ class LossMapWriterTestCase(unittest.TestCase):
     def test_empty_model_not_supported_xml(self):
         writer = writers.LossMapXMLWriter(
             self.filename, investigation_time=10.0, poe=0.5,
-            statistics="mean"
+            statistics="mean", loss_type="structural"
         )
 
         self.assertRaises(ValueError, writer.serialize, [])
@@ -354,7 +359,7 @@ class LossMapWriterTestCase(unittest.TestCase):
     def test_empty_model_not_supported_geojson(self):
         writer = writers.LossMapGeoJSONWriter(
             self.filename, investigation_time=10.0, poe=0.5,
-            statistics="mean"
+            statistics="mean", loss_type="structural"
         )
 
         self.assertRaises(ValueError, writer.serialize, [])
@@ -365,7 +370,7 @@ class LossMapWriterTestCase(unittest.TestCase):
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="10.0" poE="0.8" statistics="mean">
+  <lossMap investigationTime="10.0" poE="0.8" statistics="mean" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -385,7 +390,7 @@ class LossMapWriterTestCase(unittest.TestCase):
 
         writer = writers.LossMapXMLWriter(
             self.filename, investigation_time=10.0, poe=0.8,
-            statistics="mean"
+            statistics="mean", loss_type="structural"
         )
 
         writer.serialize(self.data)
@@ -407,6 +412,7 @@ class LossMapWriterTestCase(unittest.TestCase):
                  u'properties': {u'asset_ref': u'asset_3', u'loss': 17.23},
                  u'type': u'Feature'}],
             u'oqmetadata': {u'investigationTime': u'10.0',
+                            u'lossType': u'structural',
                             u'poE': u'0.8',
                             u'statistics': u'mean'},
             u'oqnrmlversion': u'0.4',
@@ -414,7 +420,7 @@ class LossMapWriterTestCase(unittest.TestCase):
             u'type': u'FeatureCollection'}
         writer = writers.LossMapGeoJSONWriter(
             self.filename, investigation_time=10.0, poe=0.8,
-            statistics="mean"
+            statistics="mean", loss_type="structural"
         )
 
         writer.serialize(self.data)
@@ -428,7 +434,7 @@ class LossMapWriterTestCase(unittest.TestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossMap investigationTime="10.0" poE="0.8" statistics="quantile"
-        quantileValue="0.5" lossCategory="economic" unit="USD">
+        quantileValue="0.5" lossCategory="economic" unit="USD" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -442,7 +448,8 @@ class LossMapWriterTestCase(unittest.TestCase):
         writer = writers.LossMapXMLWriter(
             self.filename,
             investigation_time=10.0, poe=0.80, statistics="quantile",
-            quantile_value=0.50, unit="USD", loss_category="economic"
+            quantile_value=0.50, unit="USD", loss_category="economic",
+            loss_type="structural"
         )
 
         data = [LOSS_NODE(
@@ -464,6 +471,7 @@ class LossMapWriterTestCase(unittest.TestCase):
                  u'type': u'Feature'}],
             u'oqmetadata': {u'investigationTime': u'10.0',
                             u'lossCategory': u'economic',
+                            u'lossType': u'structural',
                             u'poE': u'0.8',
                             u'quantileValue': u'0.5',
                             u'statistics': u'quantile',
@@ -475,7 +483,8 @@ class LossMapWriterTestCase(unittest.TestCase):
         writer = writers.LossMapGeoJSONWriter(
             self.filename,
             investigation_time=10.0, poe=0.80, statistics="quantile",
-            quantile_value=0.50, unit="USD", loss_category="economic"
+            quantile_value=0.50, unit="USD", loss_category="economic",
+            loss_type="structural"
         )
 
         data = [LOSS_NODE(
@@ -493,7 +502,7 @@ class LossMapWriterTestCase(unittest.TestCase):
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossMap investigationTime="10.0" poE="0.8"
            sourceModelTreePath="b1|b2" gsimTreePath="b3|b4"
-           lossCategory="economic" unit="USD">
+           lossCategory="economic" unit="USD" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -507,7 +516,8 @@ class LossMapWriterTestCase(unittest.TestCase):
         writer = writers.LossMapXMLWriter(
             self.filename,
             investigation_time=10.0, poe=0.80, source_model_tree_path="b1|b2",
-            gsim_tree_path="b3|b4", unit="USD", loss_category="economic")
+            gsim_tree_path="b3|b4", unit="USD", loss_category="economic",
+            loss_type="structural")
 
         data = [LOSS_NODE(asset_ref="asset_1",
                           location=Point(1.0, 1.5), value=15.23, std_dev=None)]
@@ -528,6 +538,7 @@ class LossMapWriterTestCase(unittest.TestCase):
             u'oqmetadata': {u'gsimTreePath': u'b3|b4',
                             u'investigationTime': u'10.0',
                             u'lossCategory': u'economic',
+                            u'lossType': u'structural',
                             u'poE': u'0.8',
                             u'sourceModelTreePath': u'b1|b2',
                             u'unit': u'USD'},
@@ -538,7 +549,8 @@ class LossMapWriterTestCase(unittest.TestCase):
         writer = writers.LossMapGeoJSONWriter(
             self.filename,
             investigation_time=10.0, poe=0.80, source_model_tree_path="b1|b2",
-            gsim_tree_path="b3|b4", unit="USD", loss_category="economic"
+            gsim_tree_path="b3|b4", unit="USD", loss_category="economic",
+            loss_type="structural"
         )
 
         data = [LOSS_NODE(
@@ -569,7 +581,7 @@ class LossFractionsWriterTestCase(unittest.TestCase):
                 statistics=None,
                 quantile=None,
                 sm_path="b1_b2_b4",
-                gsim_path="b1_b2"), poe=0.1).serialize(
+                gsim_path="b1_b2"), poe=0.1, loss_type="structural").serialize(
                     dict(RC=(400, 0.2), RM=(1600, 0.8)),
                     {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
                      (1., 1.): dict(RC=(200, 0.25), RM=(1400, 0.75))})
@@ -589,7 +601,7 @@ class LossFractionsWriterTestCase(unittest.TestCase):
                 statistics="quantile",
                 quantile=0.3,
                 sm_path=None,
-                gsim_path=None), poe=None).serialize(
+                gsim_path=None), poe=None, loss_type="structural").serialize(
                     dict(RC=(400, 0.2), RM=(1600, 0.8)),
                     {(0., 0.): dict(RC=(200, 0.5), RM=(200, 0.5)),
                      (1., 1.): dict(RC=(200, 0.25), RM=(1400, 0.75))})
@@ -607,7 +619,8 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
     def test_empty_model_not_supported(self):
         writer = writers.BCRMapXMLWriter(
             self.filename,
-            interest_rate=10.0, asset_life_expectancy=0.5, statistics="mean")
+            interest_rate=10.0, asset_life_expectancy=0.5, statistics="mean",
+            loss_type="structural")
 
         self.assertRaises(ValueError, writer.serialize, [])
         self.assertRaises(ValueError, writer.serialize, None)
@@ -616,7 +629,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" statistics="mean">
+  <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" statistics="mean" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -636,7 +649,8 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
 
         writer = writers.BCRMapXMLWriter(
             self.filename,
-            interest_rate=10.0, asset_life_expectancy=50.0, statistics="mean")
+            interest_rate=10.0, asset_life_expectancy=50.0, statistics="mean",
+            loss_type="structural")
 
         data = [
             BCR_NODE(
@@ -662,7 +676,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" statistics="quantile" quantileValue="0.5" lossCategory="economic" unit="USD">
+  <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" statistics="quantile" quantileValue="0.5" lossCategory="economic" unit="USD" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -677,7 +691,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
             self.filename,
             interest_rate=10.0, asset_life_expectancy=50.0,
             statistics="quantile", quantile_value=0.50, unit="USD",
-            loss_category="economic")
+            loss_category="economic", loss_type="structural")
 
         data = [BCR_NODE(
                 asset_ref="asset_1", location=Point(1.0, 1.5),
@@ -693,7 +707,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
         expected = StringIO.StringIO("""\
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" sourceModelTreePath="b1|b2" gsimTreePath="b1|b2" lossCategory="economic" unit="USD">
+  <bcrMap interestRate="10.0" assetLifeExpectancy="50.0" sourceModelTreePath="b1|b2" gsimTreePath="b1|b2" lossCategory="economic" unit="USD" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.5</gml:pos>
@@ -708,7 +722,7 @@ class BCRMapXMLWriterTestCase(unittest.TestCase):
             self.filename,
             interest_rate=10.0, asset_life_expectancy=50.0,
             source_model_tree_path="b1|b2", gsim_tree_path="b1|b2",
-            unit="USD", loss_category="economic")
+            unit="USD", loss_category="economic", loss_type="structural")
 
         data = [BCR_NODE(
                 asset_ref="asset_1", location=Point(1.0, 1.5),

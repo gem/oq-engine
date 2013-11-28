@@ -36,6 +36,10 @@ class LossCurveXMLWriter(object):
     :param float investigation_time:
         Investigation time (also known as Time Span) defined in
         the calculation which produced these results (in years).
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -59,7 +63,7 @@ class LossCurveXMLWriter(object):
         True if it is an insured loss curve
     """
 
-    def __init__(self, dest, investigation_time,
+    def __init__(self, dest, investigation_time, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None,
                  insured=False):
@@ -73,6 +77,7 @@ class LossCurveXMLWriter(object):
         self._quantile_value = quantile_value
         self._gsim_tree_path = gsim_tree_path
         self._investigation_time = investigation_time
+        self._loss_type = loss_type
         self._source_model_tree_path = source_model_tree_path
         self._insured = insured
 
@@ -182,6 +187,7 @@ class LossCurveXMLWriter(object):
         if self._unit is not None:
             self._loss_curves.set("unit", str(self._unit))
 
+        self._loss_curves.set("lossType", self._loss_type)
 
 class AggregateLossCurveXMLWriter(object):
     """
@@ -191,6 +197,10 @@ class AggregateLossCurveXMLWriter(object):
     :param float investigation_time:
         Investigation time (also known as Time Span) defined in
         the calculation which produced these results (in years).
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -209,7 +219,7 @@ class AggregateLossCurveXMLWriter(object):
         it describes the quantile value.
     """
 
-    def __init__(self, dest, investigation_time,
+    def __init__(self, dest, investigation_time, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None):
 
@@ -222,6 +232,7 @@ class AggregateLossCurveXMLWriter(object):
         self._quantile_value = quantile_value
         self._gsim_tree_path = gsim_tree_path
         self._investigation_time = investigation_time
+        self._loss_type = loss_type
         self._source_model_tree_path = source_model_tree_path
 
     def serialize(self, data):
@@ -277,6 +288,8 @@ class AggregateLossCurveXMLWriter(object):
             if self._unit is not None:
                 aggregate_loss_curve.set("unit", str(self._unit))
 
+            aggregate_loss_curve.set("lossType", self._loss_type)
+
             poes = etree.SubElement(aggregate_loss_curve, "poEs")
             poes.text = " ".join([str(p) for p in data.poes])
 
@@ -312,6 +325,10 @@ class LossMapWriter(object):
     :param float poe:
         Probability of exceedance used to interpolate the losses
         producing this loss map.
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -333,7 +350,7 @@ class LossMapWriter(object):
         it describes the quantile value.
     """
 
-    def __init__(self, dest, investigation_time, poe,
+    def __init__(self, dest, investigation_time, poe, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None,
                  loss_category=None):
@@ -345,6 +362,7 @@ class LossMapWriter(object):
                                      statistics, quantile_value)
 
         self._poe = poe
+        self._loss_type = loss_type
         self._unit = unit
         self._dest = dest
         self._statistics = statistics
@@ -445,6 +463,8 @@ class LossMapXMLWriter(LossMapWriter):
         if self._unit is not None:
             loss_map.set("unit", str(self._unit))
 
+        loss_map.set("lossType", self._loss_type)
+
         return loss_map
 
 
@@ -521,6 +541,8 @@ class LossMapGeoJSONWriter(LossMapWriter):
         if self._unit is not None:
             meta['unit'] = str(self._unit)
 
+        meta['lossType'] = self._loss_type
+
         return meta
 
 
@@ -534,8 +556,12 @@ class LossFractionsWriter(object):
         will be saved into.
     :attr str variable:
         The variable used for disaggregation
-    :attr str unit:
+    :attr str loss_unit:
         Attribute describing how the value of the assets has been measured.
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :attr str loss_category:
         Attribute describing the category (economic, population, buildings,
         etc..) of the losses producing this loss map.
@@ -548,11 +574,12 @@ class LossFractionsWriter(object):
         producing this fraction map.
     """
 
-    def __init__(self, dest, variable, loss_unit,
+    def __init__(self, dest, variable, loss_unit, loss_type,
                  loss_category, hazard_metadata, poe=None):
         self.dest = dest
         self.variable = variable
         self.loss_unit = loss_unit
+        self.loss_type = loss_type
         self.loss_category = loss_category
         self.hazard_metadata = hm = hazard_metadata
         self.poe = poe
@@ -608,6 +635,7 @@ class LossFractionsWriter(object):
             container.set("lossCategory", self.loss_category)
             container.set("unit", self.loss_unit)
             container.set("variable", self.variable)
+            container.set("lossType", self.loss_type)
 
             # total fractions
             total = etree.SubElement(container, "total")
@@ -639,6 +667,10 @@ class BCRMapXMLWriter(object):
         The inflation discount rate.
     :param float asset_life_expectancy:
         The period of time in which the building is expected to be used.
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -660,7 +692,7 @@ class BCRMapXMLWriter(object):
         it describes the quantile value.
     """
 
-    def __init__(self, path, interest_rate, asset_life_expectancy,
+    def __init__(self, path, interest_rate, asset_life_expectancy, loss_type,
                  source_model_tree_path=None, gsim_tree_path=None,
                  statistics=None, quantile_value=None, unit=None,
                  loss_category=None):
@@ -672,6 +704,7 @@ class BCRMapXMLWriter(object):
         self._path = path
         self._statistics = statistics
         self._interest_rate = interest_rate
+        self._loss_type = loss_type
         self._loss_category = loss_category
         self._quantile_value = quantile_value
         self._gsim_tree_path = gsim_tree_path
@@ -767,6 +800,7 @@ class BCRMapXMLWriter(object):
         if self._unit is not None:
             self._bcr_map.set("unit", str(self._unit))
 
+        self._bcr_map.set("lossType", self._loss_type)
 
 class DmgDistPerAssetXMLWriter(object):
     """

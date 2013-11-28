@@ -454,7 +454,7 @@ class RuptureModelParserTestCase(unittest.TestCase):
 
     <bcrMap sourceModelTreePath="b1|b2" gsimTreePath="b1|b2"
             lossCategory="economic_loss" unit="EUR" interestRate="1.0"
-            assetLifeExpectancy="20">
+            assetLifeExpectancy="20" lossType="structural">
 
         <node>
             <gml:Point>

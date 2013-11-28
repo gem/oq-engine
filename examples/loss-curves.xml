@@ -6,7 +6,7 @@
     mean or quantile hazard curves, no `sourceModelTreePath` and `gsimTreePath`
     attributes will be provided. -->
     <lossCurves sourceModelTreePath="b1_b2_b4" gsimTreePath="b1_b2"
-                investigationTime="50.0" unit="USD">
+                investigationTime="50.0" unit="USD" lossType="structural">
 
         <lossCurve assetRef="asset_1">
             <gml:Point>

@@ -4,7 +4,7 @@
 
     <!-- `statistics` could also be `mean`. -->
     <lossCurves statistics="quantile" quantileValue="0.50"
-                investigationTime="50.0" unit="USD">
+                investigationTime="50.0" unit="USD" lossType="structural">
 
         <lossCurve assetRef="asset_1">
             <gml:Point>
