@@ -36,6 +36,10 @@ class LossCurveXMLWriter(object):
     :param float investigation_time:
         Investigation time (also known as Time Span) defined in
         the calculation which produced these results (in years).
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -194,6 +198,10 @@ class AggregateLossCurveXMLWriter(object):
     :param float investigation_time:
         Investigation time (also known as Time Span) defined in
         the calculation which produced these results (in years).
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -319,6 +327,10 @@ class LossMapWriter(object):
     :param float poe:
         Probability of exceedance used to interpolate the losses
         producing this loss map.
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
@@ -546,8 +558,12 @@ class LossFractionsWriter(object):
         will be saved into.
     :attr str variable:
         The variable used for disaggregation
-    :attr str unit:
+    :attr str loss_unit:
         Attribute describing how the value of the assets has been measured.
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :attr str loss_category:
         Attribute describing the category (economic, population, buildings,
         etc..) of the losses producing this loss map.
@@ -653,6 +669,10 @@ class BCRMapXMLWriter(object):
         The inflation discount rate.
     :param float asset_life_expectancy:
         The period of time in which the building is expected to be used.
+    :param str loss_type:
+        Loss type used in risk model input for the calculation producing this
+        output (examples: structural, non-structural, business-interruption,
+        fatalities)
     :param str source_model_tree_path:
         Id of the source model tree path (obtained by concatenating the IDs of
         the branches the path is made of) for which input hazard curves
