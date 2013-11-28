@@ -76,7 +76,6 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.hazard_curve_progress TO oq_job_init;
 
 -- hzrdi schema
 GRANT SELECT,INSERT ON hzrdi.hazard_site            TO oq_job_init;
-GRANT SELECT,INSERT ON hzrdi.parsed_source        TO oq_job_init;
 GRANT SELECT,INSERT ON hzrdi.site_model           TO oq_job_init;
 
 -- hzrdr schema

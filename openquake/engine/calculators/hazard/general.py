@@ -21,23 +21,23 @@
 import os
 import random
 import re
+import collections
+
+import numpy
 
 import openquake.hazardlib
 import openquake.hazardlib.site
-import numpy
+from openquake.hazardlib import correlation
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
-
 from django.db import transaction, connections
-from shapely import geometry
 
-from openquake.hazardlib import correlation
-from openquake.hazardlib import geo as hazardlib_geo
 from openquake.nrmllib import parsers as nrml_parsers
+from openquake.nrmllib.models import PointSource
 from openquake.nrmllib.risk import parsers
 
-from openquake.engine.input import exposure
+from openquake.engine.input import source, exposure
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
@@ -49,7 +49,6 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
-from openquake.engine.input import source
 from openquake.engine.utils import config
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -151,6 +150,19 @@ class BaseHazardCalculator(base.Calculator):
     Abstract base class for hazard calculators. Contains a bunch of common
     functionality, like initialization procedures.
     """
+
+    def __init__(self, job):
+        super(BaseHazardCalculator, self).__init__(job)
+        # a dictionary (sm_name, source_type) -> source_ids
+        self.sources_per_model = collections.defaultdict(list)
+        # a dictionary rlz -> source model name (in the logic tree)
+        self.rlz_to_sm = {}
+
+    def clean_up(self, *args, **kwargs):
+        """Clean up dictionaries at the end"""
+        self.sources_per_model.clear()
+        self.rlz_to_sm.clear()
+
     @property
     def hc(self):
         """
@@ -202,19 +214,21 @@ class BaseHazardCalculator(base.Calculator):
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         for lt_rlz in realizations:
+            sm = self.rlz_to_sm[lt_rlz]
+
             # separate point sources from all the other types, since
             # we distribution point sources in different sized chunks
             # point sources first
-            point_source_ids = self.sources_per_rlz[lt_rlz.id, 'point']
-            for block in block_splitter(point_source_ids,
+            point_sources = self.sources_per_model[sm, 'point']
+            for block in block_splitter(point_sources,
                                         point_source_block_size):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
 
             # now for area and fault sources
-            other_source_ids = self.sources_per_rlz[lt_rlz.id, 'other']
-            for block in block_splitter(other_source_ids, block_size):
+            other_sources = self.sources_per_model[sm, 'other']
+            for block in block_splitter(other_sources, block_size):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
                 n += 1
@@ -303,33 +317,31 @@ class BaseHazardCalculator(base.Calculator):
                         [self.hc.id, rlz.id, haz_curve.id, imt, lons, lats]
                     )
 
-    def get_source_filter_condition(self):
+    def filtered_sites(self, src):
         """
-        Return a filter function, i.e. a function source -> boolean to filter
-        the sources to save; by default it returns always True and no sources
-        are filtered.
+        Do not filter sites up front: overridden in the event based subclass
         """
-        return lambda src: True
+        return self.hc.site_collection
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
-        Parse and validation source logic trees. Save the parsed
-        sources to the `parsed_source` table (see
-        :class:`openquake.engine.db.models.ParsedSource`).
+        Parse and validate source logic trees
         """
         logs.LOG.progress("initializing sources")
-
         for src_path in logictree.read_logic_trees(self.hc):
-            source.SourceDBWriter(
-                self.job,
-                src_path,
-                nrml_parsers.SourceModelParser(
-                    os.path.join(self.hc.base_path, src_path)).parse(),
-                self.hc.rupture_mesh_spacing,
-                self.hc.width_of_mfd_bin,
-                self.hc.area_source_discretization,
-                self.get_source_filter_condition()).serialize()
+            for src_nrml in nrml_parsers.SourceModelParser(
+                    os.path.join(self.hc.base_path, src_path)).parse():
+                src = source.nrml_to_hazardlib(
+                    src_nrml,
+                    self.hc.rupture_mesh_spacing,
+                    self.hc.width_of_mfd_bin,
+                    self.hc.area_source_discretization)
+                if self.filtered_sites(src):
+                    if isinstance(src_nrml, PointSource):
+                        self.sources_per_model[src_path, 'point'].append(src)
+                    else:
+                        self.sources_per_model[src_path, 'other'].append(src)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -462,6 +474,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         hc = self.job.hazard_calculation
         ltp = logictree.LogicTreeProcessor.from_hc(hc)
+        self.rlz_to_sm = {}
 
         for i, path_info in enumerate(ltp.enumerate_paths()):
             source_model_filename, weight, sm_lt_path, gsim_lt_path = path_info
@@ -476,7 +489,7 @@ class BaseHazardCalculator(base.Calculator):
                 # total_items is obsolete and will be removed
                 total_items=-1)
 
-            self.set_sources_per_rlz(lt_rlz, source_model_filename)
+            self.rlz_to_sm[lt_rlz] = source_model_filename
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -499,6 +512,7 @@ class BaseHazardCalculator(base.Calculator):
         rnd.seed(seed)
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
+        self.rlz_to_sm = {}
 
         # The first realization gets the seed we specified in the config file.
         for i in xrange(self.hc.number_of_logic_tree_samples):
@@ -522,7 +536,7 @@ class BaseHazardCalculator(base.Calculator):
                 total_items=-1
             )
 
-            self.set_sources_per_rlz(lt_rlz, source_model_filename)
+            self.rlz_to_sm[lt_rlz] = source_model_filename
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -533,30 +547,6 @@ class BaseHazardCalculator(base.Calculator):
             # update the seed for the next realization
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
-
-    def set_sources_per_rlz(self, lt_rlz, source_model_filename):
-        """
-        :param lt_rlz:
-            :class:`openquake.engine.db.models.LtRealization` object to
-            initialize source progress for.
-
-        :param str source_model_filename:
-            the path of the source_model associated with the
-            logic tree realization
-        """
-        point_source_ids = models.ParsedSource.objects.filter(
-            job=lt_rlz.hazard_calculation.oqjob,
-            source_model_filename=source_model_filename,
-            source_type='point',
-            ).order_by('id').values_list('id', flat=True)
-        self.sources_per_rlz[lt_rlz.id, 'point'] = list(point_source_ids)
-
-        other_source_ids = models.ParsedSource.objects.filter(
-            job=lt_rlz.hazard_calculation.oqjob,
-            source_model_filename=source_model_filename,
-            source_type__in=['area', 'complex', 'simple', 'characteristic'],
-            ).order_by('id').values_list('id', flat=True)
-        self.sources_per_rlz[lt_rlz.id, 'other'] = list(other_source_ids)
 
     def initialize_hazard_curve_progress(self, lt_rlz):
         """
