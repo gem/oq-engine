@@ -160,8 +160,6 @@ def hazard_load(conn, directory):
         created.append(tname)
         safe_load(curs, fullname, tname)
     hc_ids = transfer_data(curs, models.HazardCalculation)
-    lt_ids = transfer_data(
-        curs, models.LtRealization, hazard_calculation_id=hc_ids)
     transfer_data(
         curs, models.HazardSite, hazard_calculation_id=hc_ids)
     job_ids = transfer_data(
@@ -170,7 +168,7 @@ def hazard_load(conn, directory):
         curs, models.Output, oq_job_id=job_ids)
     ses_collection_ids = transfer_data(
         curs, models.SESCollection,
-        output_id=out_ids, lt_realization_id=lt_ids)
+        output_id=out_ids)
     ses_ids = transfer_data(
         curs, models.SES, ses_collection_id=ses_collection_ids)
     transfer_data(curs, models.SESRupture, ses_id=ses_ids)

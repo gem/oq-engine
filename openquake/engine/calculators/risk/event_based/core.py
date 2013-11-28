@@ -344,8 +344,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     inserter = writer.CacheInserter(models.EventLossData, 9999)
 
                     rupture_ids = models.SESRupture.objects.filter(
-                        ses__ses_collection__lt_realization=
-                        hazard_output.output_container.lt_realization
+                        ses__ses_collection__output=hazard_output
                     ).values_list('id', flat=True)
 
                     for rupture_id in rupture_ids:

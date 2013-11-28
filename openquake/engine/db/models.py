@@ -1054,9 +1054,7 @@ class RiskCalculation(djm.Model):
                     filters = dict(output_type='gmf',
                                    gmf__lt_realization__isnull=False)
                 else:
-                    filters = dict(
-                        output_type='ses',
-                        ses__lt_realization__isnull=False)
+                    filters = dict(output_type='ses')
             elif self.calculation_mode in ['scenario', 'scenario_damage']:
                 filters = dict(output_type='gmf_scenario')
             else:
@@ -1540,7 +1538,7 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    lt_realization = djm.ForeignKey('LtRealization', null=False)
+    sm_lt_path = fields.CharArrayField()
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
@@ -1565,8 +1563,7 @@ class SES(djm.Model):
     investigation_time = djm.FloatField()
     # Order number of this Stochastic Event Set in a series of SESs
     # (for a given logic tree realization).
-    # For `complete logic tree` SESs, this should be None/NULL.
-    ordinal = djm.IntegerField(null=True)
+    ordinal = djm.IntegerField(null=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses'

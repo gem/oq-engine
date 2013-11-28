@@ -464,6 +464,27 @@ class BaseHazardCalculator(base.Calculator):
             self._initialize_realizations_enumeration(
                 rlz_callbacks=rlz_callbacks)
 
+    def get_sm_lt_paths(self, ltp):
+        """
+        Yield pairs (source_model_filename, sm_lt_path)
+        """
+        if self.job.hazard_calculation.number_of_logic_tree_samples:
+            # random sampling of the source model logic tree
+            rnd = random.Random()
+            rnd.seed(self.hc.random_seed)
+            for i in xrange(self.hc.number_of_logic_tree_samples):
+                # Sample source model logic tree branch paths
+                sm_filename, sm_lt_path = ltp.sample_source_model_logictree(
+                    rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
+                yield sm_filename, sm_lt_path
+                # update the seed for the next realization
+                rnd.seed(rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
+        else:
+            # full enumeration of the source model logic tree
+            for i, path_info in enumerate(ltp.enumerate_paths()):
+                sm_filename, weight, sm_lt_path, gsim_lt_path = path_info
+                yield sm_filename, sm_lt_path
+
     def _initialize_realizations_enumeration(self, rlz_callbacks=None):
         """
         Perform full paths enumeration of logic trees and populate
