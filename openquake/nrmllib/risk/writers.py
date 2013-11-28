@@ -187,8 +187,7 @@ class LossCurveXMLWriter(object):
         if self._unit is not None:
             self._loss_curves.set("unit", str(self._unit))
 
-        self._loss_curves.set("lossType",
-                              str(self._loss_type))
+        self._loss_curves.set("lossType", self._loss_type)
 
 class AggregateLossCurveXMLWriter(object):
     """
@@ -289,8 +288,7 @@ class AggregateLossCurveXMLWriter(object):
             if self._unit is not None:
                 aggregate_loss_curve.set("unit", str(self._unit))
 
-            aggregate_loss_curve.set("lossType",
-                                     str(self._loss_type))
+            aggregate_loss_curve.set("lossType", self._loss_type)
 
             poes = etree.SubElement(aggregate_loss_curve, "poEs")
             poes.text = " ".join([str(p) for p in data.poes])
@@ -465,7 +463,7 @@ class LossMapXMLWriter(LossMapWriter):
         if self._unit is not None:
             loss_map.set("unit", str(self._unit))
 
-        loss_map.set("lossType", str(self._loss_type))
+        loss_map.set("lossType", self._loss_type)
 
         return loss_map
 
@@ -543,7 +541,7 @@ class LossMapGeoJSONWriter(LossMapWriter):
         if self._unit is not None:
             meta['unit'] = str(self._unit)
 
-        meta['lossType'] = str(self._loss_type)
+        meta['lossType'] = self._loss_type
 
         return meta
 
@@ -802,7 +800,7 @@ class BCRMapXMLWriter(object):
         if self._unit is not None:
             self._bcr_map.set("unit", str(self._unit))
 
-        self._bcr_map.set("lossType", str(self._loss_type))
+        self._bcr_map.set("lossType", self._loss_type)
 
 class DmgDistPerAssetXMLWriter(object):
     """
