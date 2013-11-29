@@ -667,12 +667,10 @@ class HazardCalculation(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"hazard_calculation'
 
-    def __init__(self, *args, **kwargs):
-        # A place to cache computation geometry. Recomputing this many times
-        # for large regions is wasteful.
-        self._points_to_compute = None
-        self.prefilter_on = None
-        super(HazardCalculation, self).__init__(*args, **kwargs)
+    # class attributes used as defaults; I am avoiding `__init__`
+    # to avoid issues with Django caching mechanism (MS)
+    _points_to_compute = None
+    prefilter_on = None
 
     def individual_curves_per_location(self):
         """
@@ -804,9 +802,10 @@ class HazardCalculation(djm.Model):
         if self.id in SiteCollection.cache:
             return SiteCollection.cache[self.id]
 
-        site_model_inp = self.site_model
         hsites = HazardSite.objects.filter(
             hazard_calculation=self).order_by('id')
+        if not hsites:
+            raise RuntimeError('No sites were imported!')
         # NB: the sites MUST be ordered. The issue is that the disaggregation
         # calculator has a for loop of kind
         # for site in sites:
@@ -817,6 +816,7 @@ class HazardCalculation(djm.Model):
         # qa_tests/hazard/disagg/case_1/test.py fails with a bad
         # error message
         sites = []
+        site_model_inp = self.site_model
         for hsite in hsites:
             pt = openquake.hazardlib.geo.point.Point(
                 hsite.location.x, hsite.location.y)
@@ -835,8 +835,7 @@ class HazardCalculation(djm.Model):
             sites.append(openquake.hazardlib.site.Site(
                          pt, vs30, measured, z1pt0, z2pt5, hsite.id))
 
-        sitecoll = SiteCollection.cache[self.id] = \
-            SiteCollection(sites) if sites else None
+        sitecoll = SiteCollection.cache[self.id] = SiteCollection(sites)
         self.prefilter_on = len(sitecoll) <= 1000
         return sitecoll
 
