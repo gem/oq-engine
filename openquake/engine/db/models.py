@@ -3197,24 +3197,6 @@ class Cost(djm.Model):
 ## Tables in the 'htemp' schema.
 
 
-class HazardCurveProgress(djm.Model):
-    """
-    Store intermediate results of hazard curve calculations (as a pickled numpy
-    array) for a single logic tree realization.
-    """
-
-    lt_realization = djm.ForeignKey('LtRealization')
-    imt = djm.TextField()
-    # stores a pickled numpy array for intermediate results
-    # array is 2d: sites x IMLs
-    # each row indicates a site,
-    # each column holds the PoE vaue for the IML at that index
-    result_matrix = fields.NumpyListField(default=None)
-
-    class Meta:
-        db_table = 'htemp\".\"hazard_curve_progress'
-
-
 class HazardSite(djm.Model):
     """
     Contains pre-computed site parameter matrices. ``lons`` and ``lats``
