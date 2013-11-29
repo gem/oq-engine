@@ -148,13 +148,11 @@ store_site_model'
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr1.ordinal)
         self.assertEqual(23, ltr1.seed)
-        self.assertFalse(ltr1.is_complete)
         self.assertEqual(['b1'], ltr1.sm_lt_path)
         self.assertEqual(['b1'], ltr1.gsim_lt_path)
 
         self.assertEqual(1, ltr2.ordinal)
         self.assertEqual(1685488378, ltr2.seed)
-        self.assertFalse(ltr2.is_complete)
         self.assertEqual(['b1'], ltr2.sm_lt_path)
         self.assertEqual(['b1'], ltr2.gsim_lt_path)
 
@@ -175,7 +173,6 @@ store_site_model'
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr.ordinal)
         self.assertEqual(None, ltr.seed)
-        self.assertFalse(ltr.is_complete)
         self.assertEqual(['b1'], ltr.sm_lt_path)
         self.assertEqual(['b1'], ltr.gsim_lt_path)
 

@@ -154,31 +154,26 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             core._save_gmfs(ses, gmf_dict, points)
             self.assertEqual(1, m.add.call_count)
 
-    def test_initialize_ses_db_records(self):
+    def test_initialize_ses_records(self):
         hc = self.job.hazard_calculation
 
         # Initialize sources as a setup for the test:
         self.calc.initialize_sources()
 
-        self.calc.initialize_realizations(
-            rlz_callbacks=[self.calc.initialize_ses_db_records])
+        self.calc.initialize_ses_records()
 
+        # with this job configuration, we have 2 source model realizations
         outputs = models.Output.objects.filter(
             oq_job=self.job, output_type='ses')
         self.assertEqual(2, len(outputs))
 
-        # With this job configuration, we have 2 logic tree realizations.
-        lt_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
-        self.assertEqual(2, len(lt_rlzs))
+        sess = models.SES.objects.filter(
+            ses_collection__output__oq_job=self.job)
+        self.assertEqual(hc.ses_per_logic_tree_path * 2, len(sess))
 
-        for rlz in lt_rlzs:
-            sess = models.SES.objects.filter(
-                ses_collection__lt_realization=rlz)
-            self.assertEqual(hc.ses_per_logic_tree_path, len(sess))
-
-            for ses in sess:
-                # The only metadata in in the SES is investigation time.
-                self.assertEqual(hc.investigation_time, ses.investigation_time)
+        for ses in sess:
+            # The only metadata in in the SES is investigation time.
+            self.assertEqual(hc.investigation_time, ses.investigation_time)
 
     @attr('slow')
     def test_complete_event_based_calculation_cycle(self):
@@ -224,65 +219,29 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(20, maps.count())
 
     def test_task_arg_gen(self):
-        hc = self.job.hazard_calculation
-
         self.calc.initialize_sources()
         self.calc.initialize_realizations()
+        self.calc.initialize_ses_records()
+        # 5 SES * 2 realizations
+        [s1, s2, s3, s4, s5, t1, t2, t3, t4, t5] = models.SES.objects.filter(
+            ses_collection__output__oq_job=self.job).order_by('id')
 
-        [rlz1, rlz2] = models.LtRealization.objects.filter(
-            hazard_calculation=hc).order_by('id')
-
-        [s1, s2, s3, s4, s5] = self.calc.initialize_ses_db_records(rlz1)
-        [t1, t2, t3, t4, t5] = self.calc.initialize_ses_db_records(rlz2)
-
-        expected = [  # source_id, ses_id, seed
-            ('1', s1, 1711655216),
-            ('1', s2, 1038305917),
-            ('1', s3, 836289861),
-            ('1', s4, 1781144172),
-            ('1', s5, 1869241528),
-            ('2', s1, 215682727),
-            ('2', s2, 1101399957),
-            ('2', s3, 2054512780),
-            ('2', s4, 1550095676),
-            ('2', s5, 1537531637),
-            ('3', s1, 834081132),
-            ('3', s2, 2109160433),
-            ('3', s3, 1527803099),
-            ('3', s4, 1876252834),
-            ('3', s5, 1712942246),
-            ('4', s1, 219667398),
-            ('4', s2, 332999334),
-            ('4', s3, 1017801655),
-            ('4', s4, 1577927432),
-            ('4', s5, 1810736590),
-            ('1', t1, 745519017),
-            ('1', t2, 2107357950),
-            ('1', t3, 1305437041),
-            ('1', t4, 75519567),
-            ('1', t5, 179387370),
-            ('2', t1, 1653492095),
-            ('2', t2, 176278337),
-            ('2', t3, 777508283),
-            ('2', t4, 718002527),
-            ('2', t5, 1872666256),
-            ('3', t1, 796266430),
-            ('3', t2, 646033314),
-            ('3', t3, 289567826),
-            ('3', t4, 1964698790),
-            ('3', t5, 613832594),
-            ('4', t1, 1858181087),
-            ('4', t2, 195127891),
-            ('4', t3, 1761641849),
-            ('4', t4, 259827383),
-            ('4', t5, 1464146382),
+        expected = [  # source_id, seed
+            ('1', 1711655216),
+            ('2', 1038305917),
+            ('3', 836289861),
+            ('4', 1781144172),
+            ('1', 1869241528),
+            ('2', 215682727),
+            ('3', 1101399957),
+            ('4', 2054512780),
         ]
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for job_id, sss, rlz, ltp in arg_gen:
-                for src, ses, seed in sss:
-                    yield src.source_id, ses, seed
+            for job_id, ss, ses_coll, ltp in arg_gen:
+                for src, seed in ss:
+                    yield src.source_id, seed
 
         actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)

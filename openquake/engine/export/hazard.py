@@ -287,10 +287,7 @@ def export_gmf_xml(output, target):
     gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
 
     dest = _get_result_export_dest(haz_calc.id, target, output.gmf)
-
-    writer = writers.EventBasedGMFXMLWriter(
-        dest, sm_lt_path, gsim_lt_path)
-
+    writer = writers.EventBasedGMFXMLWriter(dest, sm_lt_path, gsim_lt_path)
     writer.serialize(gmf_coll)
 
     return dest

@@ -238,8 +238,7 @@ class BaseHazardCalculator(base.Calculator):
         Get all of the logic tree realizations for this calculation.
         """
         return models.LtRealization.objects\
-            .filter(hazard_calculation=self.hc, is_complete=False)\
-            .order_by('id')
+            .filter(hazard_calculation=self.hc).order_by('id')
 
     def finalize_hazard_curves(self):
         """
@@ -506,9 +505,7 @@ class BaseHazardCalculator(base.Calculator):
                 seed=None,
                 weight=weight,
                 sm_lt_path=sm_lt_path,
-                gsim_lt_path=gsim_lt_path,
-                # total_items is obsolete and will be removed
-                total_items=-1)
+                gsim_lt_path=gsim_lt_path)
 
             self.rlz_to_sm[lt_rlz] = source_model_filename
 
@@ -552,10 +549,7 @@ class BaseHazardCalculator(base.Calculator):
                 seed=seed,
                 weight=None,
                 sm_lt_path=sm_lt_path,
-                gsim_lt_path=gsim_lt_path,
-                # total_items is obsolete and will be removed
-                total_items=-1
-            )
+                gsim_lt_path=gsim_lt_path)
 
             self.rlz_to_sm[lt_rlz] = source_model_filename
 

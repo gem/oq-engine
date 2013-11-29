@@ -37,7 +37,6 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.performance import DummyMonitor, LightMonitor
 from openquake.engine.calculators.hazard import general
-from openquake.engine.input import logictree
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
@@ -330,7 +329,7 @@ GROUP BY site_id ORDER BY site_id;
         hc = hazard_output.output.oq_job.hazard_calculation
         truncation_level = hc.truncation_level
         gsims = self.logic_tree_processor.parse_gmpe_logictree_path(
-                hazard_output.lt_realization.gsim_lt_path)
+            hazard_output.lt_realization.gsim_lt_path)
         if hc.ground_motion_correlation_model is not None:
             model = general.get_correl_model(hc)
         else:
