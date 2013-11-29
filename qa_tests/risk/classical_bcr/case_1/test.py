@@ -25,7 +25,7 @@ class ClassicalBCRCase1TestCase(risk.BaseRiskQATestCase):
     EXPECTED_BCR_DISTRIBUTION = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <bcrMap interestRate="0.05" assetLifeExpectancy="40.0" statistics="mean" unit="USD">
+  <bcrMap interestRate="0.05" assetLifeExpectancy="40.0" statistics="mean" unit="USD" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
