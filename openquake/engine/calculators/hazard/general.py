@@ -23,8 +23,6 @@ import random
 import re
 import collections
 
-import numpy
-
 import openquake.hazardlib
 import openquake.hazardlib.site
 from openquake.hazardlib import correlation
@@ -202,8 +200,7 @@ class BaseHazardCalculator(base.Calculator):
         Get all of the logic tree realizations for this calculation.
         """
         return models.LtRealization.objects\
-            .filter(hazard_calculation=self.hc, is_complete=False)\
-            .order_by('id')
+            .filter(hazard_calculation=self.hc).order_by('id')
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):

@@ -345,7 +345,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         Optionally compute_gmf in parallel.
         """
         if self.hc.ground_motion_fields:
-            self.parallelize(compute_gmf, self.compute_gmf_arg_gen())
+            self.parallelize(compute_gmf,
+                             self.compute_gmf_arg_gen(),
+                             self.log_percent)
 
     def initialize_ses_db_records(self, lt_rlz):
         """
@@ -423,7 +425,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                                           self.job.id):
                 self.parallelize(
                     post_processing.gmf_to_hazard_curve_task,
-                    post_processing.gmf_to_hazard_curve_arg_gen(self.job))
+                    post_processing.gmf_to_hazard_curve_arg_gen(self.job),
+                    self.log_percent)
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
@@ -439,4 +442,5 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                     self.parallelize(
                         cls_post_proc.hazard_curves_to_hazard_map_task,
                         cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
-                            self.job))
+                            self.job),
+                        self.log_percent)
