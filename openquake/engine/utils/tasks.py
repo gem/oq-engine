@@ -31,7 +31,7 @@ from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
-def _map_reduce(task_func, task_args, agg, acc):
+def map_reduce(task_func, task_args, agg, acc):
     """
     Given a callable and an iterable of positional arguments, apply the
     callable to the arguments in parallel and return an aggregate
@@ -89,7 +89,7 @@ def parallelize(task_func, task_args, side_effect=lambda val: None):
     def noagg(acc, val):
         side_effect(val)
 
-    _map_reduce(task_func, task_args, noagg, None)
+    map_reduce(task_func, task_args, noagg, None)
 
 
 def oqtask(task_func):

@@ -121,7 +121,7 @@ class Calculator(object):
         """
         self.log_percent(task_result)
 
-    def log_percent(self, task_result):
+    def log_percent(self, task_result=None):
         """
         Log the progress percentage, if changed.
         It is called at each task completion.
