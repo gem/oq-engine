@@ -671,6 +671,7 @@ class HazardCalculation(djm.Model):
         # A place to cache computation geometry. Recomputing this many times
         # for large regions is wasteful.
         self._points_to_compute = None
+        self.prefilter_on = None
         super(HazardCalculation, self).__init__(*args, **kwargs)
 
     def individual_curves_per_location(self):
@@ -836,6 +837,7 @@ class HazardCalculation(djm.Model):
 
         sitecoll = SiteCollection.cache[self.id] = \
             SiteCollection(sites) if sites else None
+        self.prefilter_on = len(sitecoll) <= 1000
         return sitecoll
 
     def get_imts(self):
@@ -881,6 +883,21 @@ class HazardCalculation(djm.Model):
                               * n_lt_realizations)
 
         return investigation_time
+
+    def filtered_site_collection(self, src):
+        """
+        If the maximum_distance is set and the prefiltering is on,
+        i.e. if the computation involves only few (<=1000) sites,
+        return the filtered subset of the site collection, otherwise
+        return the whole connection. NB: this method returns `None`
+        if the filtering does not find any site close to the source.
+
+        :param src: the source object used for the filtering
+        """
+        if self.maximum_distance and self.prefilter_on:
+            return src.filter_sites_by_distance_to_source(
+                self.maximum_distance, self.site_collection)
+        return self.site_collection
 
 
 class RiskCalculation(djm.Model):
