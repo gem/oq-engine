@@ -26,7 +26,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
     EXPECTED_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="50.0" statistics="mean" unit="USD">
+  <lossCurves investigationTime="50.0" statistics="mean" unit="USD" lossType="structural">
     <lossCurve assetRef="a1">
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
@@ -43,8 +43,8 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
     EXPECTED_LOSS_MAP_0_01_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossMap investigationTime="50.0" poE="0.01"
-           statistics="mean" lossCategory="single_asset" unit="USD">
+  <lossMap investigationTime="50.0" poE="0.01" statistics="mean"
+    lossCategory="single_asset" unit="USD" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
@@ -59,7 +59,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossMap investigationTime="50.0" poE="0.02"
-           statistics="mean" lossCategory="single_asset" unit="USD">
+           statistics="mean" lossCategory="single_asset" unit="USD" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
@@ -73,7 +73,7 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossMap investigationTime="50.0" poE="0.05" statistics="mean"
-           lossCategory="single_asset" unit="USD">
+           lossCategory="single_asset" unit="USD" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
