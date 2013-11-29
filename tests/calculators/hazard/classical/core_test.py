@@ -68,9 +68,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_sources(self):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
-        # the source model contains 118 non-point sources
+        # after filtering the source model contains 18 non-point sources
         sources = self.calc.sources_per_model['dissFaultModel.xml', 'other']
-        self.assertEqual(118, len(sources))
+        self.assertEqual(18, len(sources))
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -113,19 +113,7 @@ store_site_model'
         sm = self.calc.rlz_to_sm[ltr]
         sources = (self.calc.sources_per_model[sm, 'point'] +
                    self.calc.sources_per_model[sm, 'other'])
-        self.assertEqual(118, len(sources))
-
-        # Check that hazard curve progress records were properly
-        # initialized:
-        [hc_prog_pga] = models.HazardCurveProgress.objects.filter(
-            lt_realization=ltr.id, imt="PGA")
-        self.assertEqual((120, 19), hc_prog_pga.result_matrix.shape)
-        self.assertTrue((hc_prog_pga.result_matrix == 0).all())
-
-        [hc_prog_sa] = models.HazardCurveProgress.objects.filter(
-            lt_realization=ltr.id, imt="SA(0.025)")
-        self.assertEqual((120, 19), hc_prog_sa.result_matrix.shape)
-        self.assertTrue((hc_prog_sa.result_matrix == 0).all())
+        self.assertEqual(18, len(sources))
 
     def test_initialize_realizations_montecarlo(self):
         # We need initalize sources first (read logic trees, parse sources,
@@ -138,8 +126,7 @@ store_site_model'
             hazard_calculation=self.job.hazard_calculation.id)
         self.assertEqual(0, len(ltrs))
 
-        self.calc.initialize_realizations(
-            rlz_callbacks=[self.calc.initialize_hazard_curve_progress])
+        self.calc.initialize_realizations()
 
         # We expect 2 logic tree realizations
         ltr1, ltr2 = models.LtRealization.objects.filter(
@@ -166,8 +153,7 @@ store_site_model'
         self.calc.initialize_sources()
         # enumeration is triggered by zero value used as number of realizations
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
-        self.calc.initialize_realizations(
-            rlz_callbacks=[self.calc.initialize_hazard_curve_progress])
+        self.calc.initialize_realizations()
 
         [ltr] = models.LtRealization.objects.filter(
             hazard_calculation=self.job.hazard_calculation.id)
@@ -310,12 +296,6 @@ store_site_model'
         self.job.status = 'clean_up'
         self.job.save()
         self.calc.clean_up()
-
-        # last thing, make sure that `clean_up` cleaned up the htemp tables
-        hcp = models.HazardCurveProgress.objects.filter(
-            lt_realization__hazard_calculation=hc.id)
-        self.assertEqual(0, len(hcp))
-
         self.assertEqual(0, len(self.calc.sources_per_model))
 
     def test_hazard_curves_task(self):
