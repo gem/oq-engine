@@ -150,9 +150,9 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             self.matrices = numpy.array([numpy.zeros((n_sites, n_imls))
                                          for n_imls in num_imls])
             self.parallelize(self.core_calc_task, task_args)
-            with self.monitor('finalize curves'):
+            with self.monitor('saving curves'):
                 with transaction.commit_on_success(using='job_init'):
-                    self.finalize_curve(lt_rlz)
+                    self.save_curves(lt_rlz)
 
     def task_completed(self, matrices):
         """
@@ -165,7 +165,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         self.matrices = update_result_matrix(self.matrices, matrices)
         self.log_percent()
 
-    def finalize_curve(self, rlz):
+    def save_curves(self, rlz):
         """
         Create the final output records for hazard curves. This is done by
         copying the in-memory matrices to
