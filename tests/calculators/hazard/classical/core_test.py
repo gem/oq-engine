@@ -298,16 +298,9 @@ store_site_model'
         self.calc.clean_up()
         self.assertEqual(0, len(self.calc.sources_per_model))
 
-    def test_hazard_curves_task(self):
-        # Test the `hazard_curves` task, but execute it as a normal function
-        # (for purposes of test coverage).
-        self.calc.pre_execute()
 
-        # Update job status to move on to the execution phase.
-        self.job.is_running = True
-
-        self.job.status = 'executing'
-        self.job.save()
+def update_result_matrix(current, new):
+    return 1 - (1 - current) * (1 - new)
 
 
 class HelpersTestCase(unittest.TestCase):
@@ -317,23 +310,23 @@ class HelpersTestCase(unittest.TestCase):
 
     def test_update_result_matrix_with_scalars(self):
         init = 0.0
-        result = core.update_result_matrix(init, 0.2)
+        result = update_result_matrix(init, 0.2)
         # The first time we apply this formula on a 0.0 value,
         # result is equal to the first new value we apply.
         self.assertAlmostEqual(0.2, result)
 
-        result = core.update_result_matrix(result, 0.3)
+        result = update_result_matrix(result, 0.3)
         self.assertAlmostEqual(0.44, result)
 
     def test_update_result_matrix_numpy_arrays(self):
         init = numpy.zeros((4, 4))
         first = numpy.array([0.2] * 16).reshape((4, 4))
 
-        result = core.update_result_matrix(init, first)
+        result = update_result_matrix(init, first)
         numpy.testing.assert_allclose(first, result)
 
         second = numpy.array([0.3] * 16).reshape((4, 4))
-        result = core.update_result_matrix(result, second)
+        result = update_result_matrix(result, second)
 
         expected = numpy.array([0.44] * 16).reshape((4, 4))
         numpy.testing.assert_allclose(expected, result)

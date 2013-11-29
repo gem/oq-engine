@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
+import os
 import getpass
 import mock
 import unittest
@@ -21,9 +21,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from openquake.engine import engine
-from openquake.engine.calculators.hazard.disaggregation \
-    import core as disagg_core
-from openquake.engine.calculators.hazard.classical import core as cls_core
+from openquake.engine.calculators.hazard.disaggregation import core
 from openquake.engine.db import models
 
 from tests.utils import helpers
@@ -38,7 +36,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
     def _setup_a_new_calculator(self):
         cfg = helpers.get_data_path('disaggregation/job.ini')
         job = helpers.get_hazard_job(cfg, username=getpass.getuser())
-        calc = disagg_core.DisaggHazardCalculator(job)
+        calc = core.DisaggHazardCalculator(job)
         return job, calc
 
     def test_pre_execute(self):
@@ -73,9 +71,11 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
         # To test the disagg function, we first need to compute the hazard
         # curves:
-        for args in self.calc.task_arg_gen(1):
-            cls_core.compute_hazard_curves.task_func(*args)
-        self.calc.finalize_hazard_curves()
+        os.environ['OQ_NO_DISTRIBUTE'] = '1'
+        try:
+            self.calc.execute()
+        finally:
+            del os.environ['OQ_NO_DISTRIBUTE']
 
         diss1, diss2, diss3, diss4 = list(self.calc.disagg_task_arg_gen(1))
 
@@ -97,19 +97,19 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
                 # diss3: compute
                 # diss4: skip
 
-                disagg_core.compute_disagg.task_func(*diss1)
+                core.compute_disagg.task_func(*diss1)
                 # 2 poes * 2 imts * 1 site = 4
                 self.assertEqual(4, disagg_mock.call_count)
                 self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
-                disagg_core.compute_disagg.task_func(*diss2)
+                core.compute_disagg.task_func(*diss2)
                 self.assertEqual(4, disagg_mock.call_count)
                 self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
-                disagg_core.compute_disagg.task_func(*diss3)
+                core.compute_disagg.task_func(*diss3)
                 self.assertEqual(8, disagg_mock.call_count)
                 self.assertEqual(0, save_mock.call_count)  # no rupt generated
 
-                disagg_core.compute_disagg.task_func(*diss4)
+                core.compute_disagg.task_func(*diss4)
                 self.assertEqual(8, disagg_mock.call_count)
                 self.assertEqual(0, save_mock.call_count)  # no rupt generated
