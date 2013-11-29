@@ -252,9 +252,9 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
     def post_execute(self):
         """
-        Finalize the hazard curves computed in the execute phase
-        and start the disaggregation phase.
+        Start the disaggregation phase.
         """
-        super(DisaggHazardCalculator, self).post_execute()
         self.parallelize(
-            compute_disagg, self.disagg_task_arg_gen(self.block_size()))
+            compute_disagg,
+            self.disagg_task_arg_gen(self.block_size()),
+            self.log_percent)

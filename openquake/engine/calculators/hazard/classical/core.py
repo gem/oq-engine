@@ -27,7 +27,7 @@ from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
 from openquake.engine.db import models
-from openquake.engine.utils.tasks import oqtask
+from openquake.engine.utils.tasks import oqtask, map_reduce
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.input import logictree
 from openquake.engine.utils.general import block_splitter
@@ -121,8 +121,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         provided by the .task_arg_gen method. By default it uses the
         parallelize distribution, but it can be overridden is subclasses.
         """
-        n_sites = len(self.hc.site_collection)
-        num_imls = [
+        self.n_sites = len(self.hc.site_collection)
+        self.num_imls = [
             len(self.hc.intensity_measure_types_and_levels[imt])
             for imt in sorted(self.hc.intensity_measure_types_and_levels)]
 
@@ -147,25 +147,43 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             for block in block_splitter(other_sources, block_size):
                 task_args.append((self.job.id, block, lt_rlz.id, ltp))
 
-            self.matrices = numpy.array([numpy.zeros((n_sites, n_imls))
-                                         for n_imls in num_imls])
-            self.parallelize(self.core_calc_task, task_args)
+            zeros = numpy.array([numpy.zeros((self.n_sites, n_imls))
+                                 for n_imls in self.num_imls])
+            self.initialize_percent(
+                self.core_calc_task, task_args)
+            matrices = map_reduce(
+                self.core_calc_task, task_args, self.aggregate, zeros)
             with self.monitor('saving curves'):
                 with transaction.commit_on_success(using='job_init'):
-                    self.save_curves(lt_rlz)
+                    self.save_curves(lt_rlz, matrices)
 
-    def task_completed(self, matrices):
+    def aggregate(self, current, new):
         """
-        Method called when a task is completed. It can be overridden
-        to aggregate the partial results of a computation. By default
-        it just calls the method .log_percent.
+        Use the following formula to combine multiple iterations of results:
 
-        :param matrices: the matrices returned by the task
+        `result = 1 - (1 - current) * (1 - new)`
+
+        This is used to incrementally update hazard curve results by combining
+        an initial value with some new results. (Each set of new results is
+        computed over only a subset of seismic sources defined in the
+        calculation model.)
+
+        Parameters are expected to be multi-dimensional numpy arrays, but the
+        formula will also work with scalars.
+
+        :param current:
+            Numpy array representing the current result matrix value.
+        :param new:
+            Numpy array representing the new results which need to be
+            combined with the current value. This should be the same shape
+            as `current`.
+        :returns: the updated array
         """
-        self.matrices = update_result_matrix(self.matrices, matrices)
+        result = 1 - (1 - current) * (1 - new)
         self.log_percent()
+        return result
 
-    def save_curves(self, rlz):
+    def save_curves(self, rlz, matrices):
         """
         Create the final output records for hazard curves. This is done by
         copying the in-memory matrices to
@@ -188,7 +206,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
 
         # create a new `HazardCurve` 'container' record for each
         # realization for each intensity measure type
-        for imt, matrix in zip(sorted(im), self.matrices):
+        for imt, matrix in zip(sorted(im), matrices):
             hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
             # save output
@@ -223,7 +241,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
 
     def post_process(self):
         logs.LOG.debug('> starting post processing')
-        self.task_completed = self.log_percent  # horrible hack
 
         # means/quantiles:
         if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
@@ -236,31 +253,10 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         if self.hc.hazard_maps or self.hc.uniform_hazard_spectra:
             self.parallelize(
                 post_proc.hazard_curves_to_hazard_map_task,
-                post_proc.hazard_curves_to_hazard_map_task_arg_gen(self.job))
+                post_proc.hazard_curves_to_hazard_map_task_arg_gen(self.job),
+                self.log_percent)
 
         if self.hc.uniform_hazard_spectra:
             post_proc.do_uhs_post_proc(self.job)
 
         logs.LOG.debug('< done with post processing')
-
-
-def update_result_matrix(current, new):
-    """
-    Use the following formula to combine multiple iterations of results:
-
-    `result = 1 - (1 - current) * (1 - new)`
-
-    This is used to incrementally update hazard curve results by combining an
-    initial value with some new results. (Each set of new results is computed
-    over only a subset of seismic sources defined in the calculation model.)
-
-    Parameters are expected to be multi-dimensional numpy arrays, but the
-    formula will also work with scalars.
-
-    :param current:
-        Numpy array representing the current result matrix value.
-    :param new:
-        Numpy array representing the new results which need to be combined with
-        the current value. This should be the same shape as `current`.
-    """
-    return 1 - (1 - current) * (1 - new)
