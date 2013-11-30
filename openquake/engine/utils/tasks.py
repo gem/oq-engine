@@ -95,16 +95,14 @@ def oqtask(task_func):
     """
 
     @wraps(task_func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args):
         """
         Initialize logs, make sure the job is still running, and run the task
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # job_id is always assumed to be the first argument passed to
-        # the task, or a keyword argument
-        # this is the only required argument
-        job_id = kwargs.get('job_id') or args[0]
+        # job_id is always assumed to be the first argument
+        job_id = args[0]
         job = models.OqJob.objects.get(id=job_id)
         if job.is_running is False:
             # the job was killed, it is useless to run the task
@@ -128,7 +126,7 @@ def oqtask(task_func):
                     calculation, models.HazardCalculation) else'risk',
                 calc_id=calculation.id)
             try:
-                return task_func(*args, **kwargs)
+                return task_func(*args)
             finally:
                 CacheInserter.flushall()
                 # the task finished, we can remove from the performance
