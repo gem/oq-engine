@@ -244,8 +244,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
             sm = self.rlz_to_sm[lt_rlz]
-            sources = (self.sources_per_model[sm, 'point'] +
-                       self.sources_per_model[sm, 'other'])
+            sources = self.sources_per_model[sm]
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
                 yield self.job.id, sites, sources, lt_rlz.id, ltp
