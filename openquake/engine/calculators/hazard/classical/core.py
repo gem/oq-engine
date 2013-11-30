@@ -36,6 +36,32 @@ from openquake.engine.utils.general import block_splitter
 from django.db import transaction
 
 
+def hazard_curves_poisson(
+        sources, sites, imts, time_span, gsims, truncation_level,
+        source_site_filter, rupture_site_filter):
+
+    curves = dict((imt, numpy.ones([len(sites), len(imts[imt])]))
+                  for imt in imts)
+    tom = PoissonTOM(time_span)
+
+    total_sites = len(sites)
+    sources_sites = ((source, sites) for source in sources)
+    for source, s_sites in source_site_filter(sources_sites):
+        ruptures_sites = ((rupture, s_sites)
+                          for rupture in source.iter_ruptures(tom))
+        for rupture, r_sites in rupture_site_filter(ruptures_sites):
+            prob = rupture.get_probability_one_or_more_occurrences()
+            gsim = gsims[rupture.tectonic_region_type]
+            sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+            for imt in imts:
+                poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
+                                     truncation_level)
+                curves[imt] *= r_sites.expand(
+                    (1 - prob) ** poes, total_sites, placeholder=1
+                )
+    return dict((imt, 1 - curves[imt]) for imt in imts)
+
+
 @oqtask
 def compute_hazard_curves(job_id, sources, lt_rlz_id, ltp):
     """
@@ -78,8 +104,8 @@ def compute_hazard_curves(job_id, sources, lt_rlz_id, ltp):
         if not hc.prefiltering:  # filter the sources in the worker
             calc_kwargs['source_site_filter'] = openquake.hazardlib.calc.\
                 filters.source_site_distance_filter(dist)
-        calc_kwargs['rupture_site_filter'] = openquake.hazardlib.calc.\
-            filters.rupture_site_distance_filter(dist)
+        #calc_kwargs['rupture_site_filter'] = openquake.hazardlib.calc.\
+        #    filters.rupture_site_distance_filter(dist)
 
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
@@ -147,10 +173,10 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
                  for n_imls in self.num_imls])
             matrices = map_reduce(
                 self.core_calc_task, task_args, self.aggregate, zeros)
-            with self.monitor('saving curves'):
-                with transaction.commit_on_success(using='job_init'):
-                    self.save_curves(lt_rlz, matrices)
+            with transaction.commit_on_success(using='job_init'):
+                self.save_curves(lt_rlz, matrices)
 
+    @EnginePerformanceMonitor.monitor
     def aggregate(self, current, new):
         """
         Use the following formula to combine multiple iterations of results:
@@ -177,6 +203,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         self.log_percent()
         return result
 
+    @EnginePerformanceMonitor.monitor
     def save_curves(self, rlz, matrices):
         """
         Create the final output records for hazard curves. This is done by
