@@ -135,6 +135,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             sources = self.sources_per_model[sm]
             preferred_block_size = int(
                 math.ceil(float(len(sources)) / self.concurrent_tasks()))
+            logs.LOG.info('preferred block size=%d', preferred_block_size)
             for block in block_splitter(sources, preferred_block_size):
                 task_args.append((self.job.id, block, lt_rlz.id, ltp))
 
