@@ -221,6 +221,11 @@ class BaseHazardCalculator(base.Calculator):
                         self.sources_per_model[src_path, 'point'].append(src)
                     else:
                         self.sources_per_model[src_path, 'other'].append(src)
+            logs.LOG.info(
+                '%s: found %d relevant point sources and %d other sources',
+                src_path,
+                len(self.sources_per_model[src_path, 'point']),
+                len(self.sources_per_model[src_path, 'other']))
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
