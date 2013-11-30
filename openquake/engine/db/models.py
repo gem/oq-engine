@@ -670,7 +670,6 @@ class HazardCalculation(djm.Model):
     # class attributes used as defaults; I am avoiding `__init__`
     # to avoid issues with Django caching mechanism (MS)
     _points_to_compute = None
-    prefilter_on = None
 
     def individual_curves_per_location(self):
         """
@@ -680,6 +679,13 @@ class HazardCalculation(djm.Model):
         """
         realizations_nr = self.ltrealization_set.count()
         return realizations_nr
+
+    @property
+    def prefiltering(self):
+        """
+        Prefiltering is enabled when there are few sites (up to a thousand)
+        """
+        return len(self.site_collection) <= 1000
 
     @property
     def vulnerability_models(self):
@@ -835,9 +841,8 @@ class HazardCalculation(djm.Model):
             sites.append(openquake.hazardlib.site.Site(
                          pt, vs30, measured, z1pt0, z2pt5, hsite.id))
 
-        sitecoll = SiteCollection.cache[self.id] = SiteCollection(sites)
-        self.prefilter_on = len(sitecoll) <= 1000
-        return sitecoll
+        sc = SiteCollection.cache[self.id] = SiteCollection(sites)
+        return sc
 
     def get_imts(self):
         """
@@ -893,7 +898,7 @@ class HazardCalculation(djm.Model):
 
         :param src: the source object used for the filtering
         """
-        if self.maximum_distance and self.prefilter_on:
+        if self.maximum_distance and self.prefiltering:
             return src.filter_sites_by_distance_to_source(
                 self.maximum_distance, self.site_collection)
         return self.site_collection
