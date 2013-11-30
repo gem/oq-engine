@@ -151,7 +151,7 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary (sm_name, source_type) -> source_ids
+        # a dictionary source model name -> source_ids
         self.sources_per_model = collections.defaultdict(list)
         # a dictionary rlz -> source model name (in the logic tree)
         self.rlz_to_sm = {}
@@ -168,20 +168,6 @@ class BaseHazardCalculator(base.Calculator):
         :class:`~openquake.engine.db.models.HazardCalculation`.
         """
         return self.job.hazard_calculation
-
-    def block_size(self):
-        """
-        For hazard calculators, the number of work items per task
-        is specified in the configuration file.
-        """
-        return int(config.get('hazard', 'block_size'))
-
-    def point_source_block_size(self):
-        """
-        Similar to :meth:`block_size`, except that this parameter applies
-        specifically to grouping of point sources.
-        """
-        return int(config.get('hazard', 'point_source_block_size'))
 
     def concurrent_tasks(self):
         """
@@ -217,15 +203,10 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization)
                 if self.hc.filtered_site_collection(src):
-                    if isinstance(src_nrml, PointSource):
-                        self.sources_per_model[src_path, 'point'].append(src)
-                    else:
-                        self.sources_per_model[src_path, 'other'].append(src)
+                    self.sources_per_model[src_path].append(src)
             logs.LOG.info(
-                '%s: found %d relevant point sources and %d other sources',
-                src_path,
-                len(self.sources_per_model[src_path, 'point']),
-                len(self.sources_per_model[src_path, 'other']))
+                'found %d relevant sources for model %s',
+                len(self.sources_per_model[src_path]), src_path)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):

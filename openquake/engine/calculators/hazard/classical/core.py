@@ -16,6 +16,7 @@
 """
 Core functionality for the classical PSHA hazard calculator.
 """
+import math
 import numpy
 
 import openquake.hazardlib
@@ -126,31 +127,23 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             len(self.hc.intensity_measure_types_and_levels[imt])
             for imt in sorted(self.hc.intensity_measure_types_and_levels)]
 
-        point_source_block_size = self.point_source_block_size()
-        block_size = self.block_size()
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         for lt_rlz in self._get_realizations():
             task_args = []
             sm = self.rlz_to_sm[lt_rlz]  # source model path
-
-            # we separate point sources from all the other types, since
-            # we distribution point sources in different sized chunks
-            # point sources first
-            point_sources = self.sources_per_model[sm, 'point']
-            for block in block_splitter(point_sources,
-                                        point_source_block_size):
+            sources = self.sources_per_model[sm]
+            preferred_block_size = int(
+                math.ceil(float(len(sources)) / self.concurrent_tasks()))
+            for block in block_splitter(sources, preferred_block_size):
                 task_args.append((self.job.id, block, lt_rlz.id, ltp))
 
-            # now for area and fault sources
-            other_sources = self.sources_per_model[sm, 'other']
-            for block in block_splitter(other_sources, block_size):
-                task_args.append((self.job.id, block, lt_rlz.id, ltp))
+            # the following line will print out the number of tasks generated
+            self.initialize_percent(self.core_calc_task, task_args)
 
-            zeros = numpy.array([numpy.zeros((self.n_sites, n_imls))
-                                 for n_imls in self.num_imls])
-            self.initialize_percent(
-                self.core_calc_task, task_args)
+            zeros = numpy.array(
+                [numpy.zeros((self.n_sites, n_imls))
+                 for n_imls in self.num_imls])
             matrices = map_reduce(
                 self.core_calc_task, task_args, self.aggregate, zeros)
             with self.monitor('saving curves'):

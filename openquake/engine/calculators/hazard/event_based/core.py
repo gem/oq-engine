@@ -275,8 +275,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_rlz in realizations:
             sm = self.rlz_to_sm[lt_rlz]
-            sources = (self.sources_per_model[sm, 'point'] +
-                       self.sources_per_model[sm, 'other'])
+            sources = self.sources_per_model[sm]
 
             all_ses = list(models.SES.objects.filter(
                            ses_collection__lt_realization=lt_rlz,
