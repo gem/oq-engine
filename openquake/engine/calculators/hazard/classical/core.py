@@ -17,6 +17,8 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 import math
+import itertools
+
 import numpy
 
 import openquake.hazardlib
@@ -36,34 +38,8 @@ from openquake.engine.utils.general import block_splitter
 from django.db import transaction
 
 
-def hazard_curves_poisson(
-        sources, sites, imts, time_span, gsims, truncation_level,
-        source_site_filter, rupture_site_filter):
-
-    curves = dict((imt, numpy.ones([len(sites), len(imts[imt])]))
-                  for imt in imts)
-    tom = PoissonTOM(time_span)
-
-    total_sites = len(sites)
-    sources_sites = ((source, sites) for source in sources)
-    for source, s_sites in source_site_filter(sources_sites):
-        ruptures_sites = ((rupture, s_sites)
-                          for rupture in source.iter_ruptures(tom))
-        for rupture, r_sites in rupture_site_filter(ruptures_sites):
-            prob = rupture.get_probability_one_or_more_occurrences()
-            gsim = gsims[rupture.tectonic_region_type]
-            sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-            for imt in imts:
-                poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                     truncation_level)
-                curves[imt] *= r_sites.expand(
-                    (1 - prob) ** poes, total_sites, placeholder=1
-                )
-    return dict((imt, 1 - curves[imt]) for imt in imts)
-
-
 @oqtask
-def compute_hazard_curves(job_id, sources, lt_rlz_id, ltp):
+def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
     """
     Celery task for hazard curve calculator.
 
@@ -74,17 +50,14 @@ def compute_hazard_curves(job_id, sources, lt_rlz_id, ltp):
         ID of the currently running job.
     :param sources:
         List of :class:`openquake.hazardlib.source.base.SeismicSource` objects
-    :param lt_rlz_id:
-        Id of logic tree realization model to calculate for.
+    :param lt_rlz:
+        Logic tree realization model to calculate for.
     :param ltp:
         a :class:`openquake.engine.input.LogicTreeProcessor` instance
 
-    Return a sorted array of arrays, one for each IMT.
+    Return a sorted list of arrays, one for each IMT.
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-
-    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
@@ -110,11 +83,22 @@ def compute_hazard_curves(job_id, sources, lt_rlz_id, ltp):
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
     with EnginePerformanceMonitor(
-            'computing hazard curves', job_id,
-            compute_hazard_curves, tracing=True):
+            'computing hazard curves', job_id, compute_hazard_curves):
         dic = openquake.hazardlib.calc.hazard_curve.hazard_curves_poissonian(
             **calc_kwargs)
-        return numpy.array([dic[imt] for imt in sorted(imts)])
+        return [dic[imt] for imt in sorted(imts)]
+
+
+def make_zeros(sites, imts):
+    """
+    Returns a list of I numpy arrays of S * L zeros, where
+    I is the number of intensity measure types, S the number of sites
+    and L the number of intensity measure levels.
+
+    :params sites: the site collection
+    :param imts: a dictionary of intensity measure types and levels
+    """
+    return [numpy.zeros((len(sites), len(imts[imt]))) for imt in sorted(imts)]
 
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
@@ -148,11 +132,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         provided by the .task_arg_gen method. By default it uses the
         parallelize distribution, but it can be overridden is subclasses.
         """
-        self.n_sites = len(self.hc.site_collection)
-        self.num_imls = [
-            len(self.hc.intensity_measure_types_and_levels[imt])
-            for imt in sorted(self.hc.intensity_measure_types_and_levels)]
-
+        imtls = self.hc.intensity_measure_types_and_levels
+        zeros = make_zeros(self.hc.site_collection, imtls)
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         for lt_rlz in self._get_realizations():
@@ -163,14 +144,10 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
                 math.ceil(float(len(sources)) / self.concurrent_tasks()))
             logs.LOG.info('preferred block size=%d', preferred_block_size)
             for block in block_splitter(sources, preferred_block_size):
-                task_args.append((self.job.id, block, lt_rlz.id, ltp))
+                task_args.append((self.job.id, block, lt_rlz, ltp))
 
             # the following line will print out the number of tasks generated
             self.initialize_percent(self.core_calc_task, task_args)
-
-            zeros = numpy.array(
-                [numpy.zeros((self.n_sites, n_imls))
-                 for n_imls in self.num_imls])
             matrices = map_reduce(
                 self.core_calc_task, task_args, self.aggregate, zeros)
             with transaction.commit_on_success(using='job_init'):
@@ -199,7 +176,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             as `current`.
         :returns: the updated array
         """
-        result = 1 - (1 - current) * (1 - new)
+        result = [1. - (1. - c) * (1. - n)
+                  for c, n in itertools.izip(current, new)]
         self.log_percent()
         return result
 
@@ -213,7 +191,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
         is need to export the full hazard curve results).
         """
-        im = self.hc.intensity_measure_types_and_levels
+        imtls = self.hc.intensity_measure_types_and_levels
 
         # create a new `HazardCurve` 'container' record for each
         # realization (virtual container for multiple imts)
@@ -227,7 +205,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
 
         # create a new `HazardCurve` 'container' record for each
         # realization for each intensity measure type
-        for imt, matrix in zip(sorted(im), matrices):
+        for imt, matrix in zip(sorted(imtls), matrices):
             hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
             # save output
@@ -243,7 +221,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
                 lt_realization=rlz,
                 investigation_time=self.hc.investigation_time,
                 imt=hc_im_type,
-                imls=im[imt],
+                imls=imtls[imt],
                 sa_period=sa_period,
                 sa_damping=sa_damping,
             )
