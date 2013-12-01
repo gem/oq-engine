@@ -291,7 +291,8 @@ class BaseHazardCalculator(base.Calculator):
         parse it and load it into the `hzrdi.site_model` table.
         """
         logs.LOG.progress("initializing sites")
-        self.hc.points_to_compute(save_sites=True)
+        sites = self.hc.points_to_compute(save_sites=True)
+        logs.LOG.info('Considering %d sites', len(sites))
 
         site_model_inp = self.hc.site_model
         if site_model_inp:
