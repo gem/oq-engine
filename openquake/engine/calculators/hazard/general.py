@@ -32,7 +32,6 @@ from openquake.engine.db import models
 from django.db import transaction
 
 from openquake.nrmllib import parsers as nrml_parsers
-from openquake.nrmllib.models import PointSource
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import source, exposure
