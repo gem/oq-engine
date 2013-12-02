@@ -157,6 +157,15 @@ class FFSetContinuous(Record):
         return node
 
 
+class FFLimitStateDiscrete(Record):
+    convertername = 'FragilityDiscrete'
+    pkey = Unique('format', 'ffs_ordinal', 'limitState')
+
+    format = Field(valid.Choice('discrete'))
+    ffs_ordinal = Field(int)
+    limitState = Field(str)
+
+
 class FFDataDiscrete(Record):
     convertername = 'FragilityDiscrete'
     pkey = Unique('format', 'ffs_ordinal', 'limitState', 'iml')
@@ -166,6 +175,10 @@ class FFDataDiscrete(Record):
     limitState = Field(str)
     iml = Field(float)
     poe = Field(valid.probability)
+
+    # some properties useful for plotting the record
+    x = property(lambda self: self.iml)
+    y = property(lambda self: self.poe)
 
 
 class FFDContinuos(Record):
