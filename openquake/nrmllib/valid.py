@@ -24,6 +24,20 @@ import re
 import collections
 
 
+class NoneOr(object):
+    """
+    Accept the empty string (casted to None) or something else validated
+    by the cast callable.
+    """
+    def __init__(self, cast):
+        self.cast = cast
+
+    def __call__(self, value):
+        if value == '':
+            return None
+        return self.cast(value)
+
+
 class Choice(object):
     """
     Check if the choice is valid.

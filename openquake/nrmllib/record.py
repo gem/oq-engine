@@ -140,8 +140,8 @@ class Field(object):
 
     def __get__(self, rec, rectype):
         if rec is None:
-            return lambda rec: rec[self.name].cast()
-        return rec[self.name].cast()
+            return lambda rec: self.cast(rec[self.name])
+        return self.cast(rec[self.name])
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.name)
@@ -158,7 +158,8 @@ class MetaRecord(abc.ABCMeta):
     ``__len__`` and the metaclass property ``fieldnames``.
     """
     _counter = itertools.count()
-    _reserved_names = set('fields fieldnames _name2index _ntuple _ordinal')
+    _reserved_names = set(
+        'fields fieldnames _name2index _ntuple _ordinal'.split())
 
     def __new__(mcl, name, bases, dic):
         for nam in dic:
@@ -219,7 +220,11 @@ class MetaRecord(abc.ABCMeta):
         self.row = [%s]
         self.init()''' % (defaults, fields)
         dic = {}
-        exec(templ, dic)
+        try:
+            exec(templ, dic)
+        except:
+            print 'Could not build __init__ method, error in:', templ
+            raise
         return dic['__init__']
 
     @property
@@ -492,7 +497,7 @@ class TableSet(object):
     def from_node(cls, node):
         """Convert a Node object into a TableSet object"""
         from openquake.nrmllib.converter import Converter
-        convcls = Converter.from_tag(node.tag)
+        convcls = Converter.from_node(node)
         self = cls(convcls)
         self.insert_all(convcls.node_to_records(node))
         return self
@@ -509,6 +514,12 @@ class TableSet(object):
                 target = fkey.unique
                 target_tbl = getattr(self, target.recordtype.__name__)
                 self.fkdict[fkey] = target_tbl._unique_data[target.name]
+
+    def __iter__(self):
+        """
+        Returns only the nonempty tables
+        """
+        return iter(self.tables)
 
     def check_fk(self, rec):
         """
@@ -549,3 +560,6 @@ class TableSet(object):
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.tables)
+
+    def __len__(self):
+        return sum(1 for tbl in self.tables)

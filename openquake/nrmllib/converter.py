@@ -44,10 +44,13 @@ class Converter(object):
     Base class.
     """
     @classmethod
-    def from_tag(cls, tag):
+    def from_node(cls, node):
         """Return the Converter subclass specified by the tag"""
+        tag = node.tag
         name = tag[0].upper() + tag[1:]
         clsname = name[:-5] if name.endswith('Model') else name
+        if 'format' in node.attrib:
+            clsname += node['format'].capitalize()
         return globals()[clsname]
 
     # this is used by the GUI
@@ -55,7 +58,7 @@ class Converter(object):
     def node_to_tables(cls, node):
         """Convert a Node object into an ordered list of Table objects"""
         tbl = {}
-        subcls = cls.from_tag(node.tag)
+        subcls = cls.from_node(node)
         for rec in subcls.node_to_records(node):
             name = rec.__class__.__name__
             if name not in tbl:
@@ -183,82 +186,104 @@ class Vulnerability(Converter):
 
 ############################# fragility #################################
 
-class Fragility(Converter):
+class FragilityDiscrete(Converter):
     """A converter for fragilityModel nodes"""
 
     @classmethod
     def node_to_records(cls, node):
         """Convert the node into a sequence of Fragility records"""
-        format = node['format']
+        fmt = node['format']
+        assert fmt == 'discrete'
         limitStates = node.limitStates.text.split()
-        yield records.Fragility(node['format'],
-                                node.description.text.strip(),
-                                node.limitStates.text.strip())
+        yield records.FragilityDiscrete(
+            fmt, node.description.text.strip(), node.limitStates.text.strip())
         for i, ffs in enumerate(node.getnodes('ffs'), 1):
             ffs_ordinal = str(i)
-
-            if format == 'discrete':
-                yield records.FFSetDiscrete(
-                    ffs_ordinal,
-                    ffs.taxonomy.text,
-                    ffs.attrib.get('noDamageLimit', ''),
-                    ffs.IML['IMT'],
-                    ffs.IML['imlUnit'])
-                imls = ffs.IML.text.split()
-                for ls, ffd in zip(limitStates, ffs.getnodes('ffd')):
-                    assert ls == ffd['ls'], 'Expected %s, got %s' % (
-                        ls, ffd['ls'])
-                    poEs = ffd.poEs.text.split()
-                    for iml, poe in zip(imls, poEs):
-                        yield records.FFDataDiscrete(ffs_ordinal, ls, iml, poe)
-
-            elif format == 'continuous':
-                yield records.FFSetContinuous(
-                    ffs_ordinal,
-                    ffs.taxonomy.text,
-                    ffs.attrib.get('noDamageLimit', ''),
-                    ffs.attrib.get('type', ''),
-                    ffs.IML['IMT'],
-                    ffs.IML['imlUnit'],
-                    ffs.IML['minIML'],
-                    ffs.IML['maxIML'])
-                for ls, ffc in zip(limitStates, ffs.getnodes('ffc')):
-                    assert ls == ffc['ls'], 'Expected %s, got %s' % (
-                        ls, ffc['ls'])
-                    yield records.FFDContinuos(
-                        ffs_ordinal, ls, 'mean', ffc.params['mean'])
-                    yield records.FFDContinuos(
-                        ffs_ordinal, ls, 'stddev', ffc.params['stddev'])
+            yield records.FFSetDiscrete(
+                fmt,
+                ffs_ordinal,
+                ffs.taxonomy.text,
+                ffs.attrib.get('noDamageLimit', ''),
+                ffs.IML['IMT'],
+                ffs.IML['imlUnit'])
+            imls = ffs.IML.text.split()
+            for ls, ffd in zip(limitStates, ffs.getnodes('ffd')):
+                assert ls == ffd['ls'], 'Expected %s, got %s' % (
+                    ls, ffd['ls'])
+                poEs = ffd.poEs.text.split()
+                for iml, poe in zip(imls, poEs):
+                    yield records.FFDataDiscrete(
+                        fmt, ffs_ordinal, ls, iml, poe)
 
     def csv_to_node(self):
         """
-        Build a full fragility node from Fragility.csv and
-        FFSetDiscrete.csv, FFDataDiscrete.csv or
-        FFSetContinuous.csv, FFDataContinuous.csv.
+        Build a full fragility node from CSV
         """
-        frag = self.man.read(records.Fragility).next().to_node()
-        if frag['format'] == 'discrete':
-            FFSRecord = records.FFSetDiscrete
-            FFDRecord = records.FFDataDiscrete
-        else:  # 'continuous'
-            FFSRecord = records.FFSetContinuous
-            FFDRecord = records.FFDContinuos
+        frag = self.man.read(records.FragilityDiscrete).next().to_node()
+        FFSRecord = records.FFSetDiscrete
+        FFDRecord = records.FFDataDiscrete
         ffs_node = record.nodedict(self.man.read(FFSRecord))
         frag.nodes.extend(ffs_node.values())
         for (ordinal, ls), data in groupby(
                 self.man.read(FFDRecord),
                 ['ffs_ordinal', 'limitState']):
             data = list(data)
-            if frag['format'] == 'discrete':
-                imls = ' '.join(rec['iml'] for rec in data)
-                ffs_node[(ordinal,)].IML.text = imls
-                poes = ' '.join(rec['poe'] for rec in data)
-                n = Node('ffd', dict(ls=ls))
-                n.append(Node('poEs', text=poes))
-            else:  # 'continuous' in frag
-                n = Node('ffc', dict(ls=ls))
-                rows = [row[2:] for row in data]  # param, value
-                n.append(Node('params', dict(rows)))
+            imls = ' '.join(rec['iml'] for rec in data)
+            ffs_node[(ordinal,)].IML.text = imls
+            poes = ' '.join(rec['poe'] for rec in data)
+            n = Node('ffd', dict(ls=ls))
+            n.append(Node('poEs', text=poes))
+            ffs_node[(ordinal,)].append(n)
+        return frag
+
+
+class FragilityContinuous(Converter):
+    """A converter for fragilityModel nodes"""
+
+    @classmethod
+    def node_to_records(cls, node):
+        """Convert the node into a sequence of Fragility records"""
+        fmt = node['format']
+        assert fmt == 'continuous', fmt
+        limitStates = node.limitStates.text.split()
+        yield records.FragilityContinuous(
+            fmt, node.description.text.strip(), node.limitStates.text.strip())
+        for i, ffs in enumerate(node.getnodes('ffs'), 1):
+            ffs_ordinal = str(i)
+            yield records.FFSetContinuous(
+                fmt,
+                ffs_ordinal,
+                ffs.taxonomy.text,
+                ffs.attrib.get('noDamageLimit', ''),
+                ffs.attrib.get('type', ''),
+                ffs.IML['IMT'],
+                ffs.IML['imlUnit'],
+                ffs.IML['minIML'],
+                ffs.IML['maxIML'])
+            for ls, ffc in zip(limitStates, ffs.getnodes('ffc')):
+                assert ls == ffc['ls'], 'Expected %s, got %s' % (
+                    ls, ffc['ls'])
+                yield records.FFDContinuos(
+                    fmt, ffs_ordinal, ls, 'mean', ffc.params['mean'])
+                yield records.FFDContinuos(
+                    fmt, ffs_ordinal, ls, 'stddev', ffc.params['stddev'])
+
+    def csv_to_node(self):
+        """
+        Build a full continuous fragility node from CSV
+        """
+        frag = self.man.read(records.FragilityContinuous).next().to_node()
+        FFSRecord = records.FFSetContinuous
+        FFDRecord = records.FFDContinuos
+        ffs_node = record.nodedict(self.man.read(FFSRecord))
+        frag.nodes.extend(ffs_node.values())
+        for (ordinal, ls), data in groupby(
+                self.man.read(FFDRecord),
+                ['ffs_ordinal', 'limitState']):
+            data = list(data)
+            n = Node('ffc', dict(ls=ls))
+            rows = [row[2:] for row in data]  # param, value
+            n.append(Node('params', dict(rows)))
             ffs_node[(ordinal,)].append(n)
         return frag
 

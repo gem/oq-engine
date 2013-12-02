@@ -391,7 +391,7 @@ class CSVManager(object):
             man = self
         else:  # creates a new CSVManager for the given prefix
             man = self.__class__(self.archive, prefix)
-        conv = converter.Converter.from_tag(node.tag)(man)
+        conv = converter.Converter.from_node(node)(man)
         with man:
             for rec in conv.node_to_records(node):
                 man.write(rec)  # automatically opens the needed files

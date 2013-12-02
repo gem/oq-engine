@@ -71,14 +71,33 @@ class DiscreteVulnerabilityData(Record):
     lossRatio = Field(float)
     coefficientsVariation = Field(float)
 
+    # some properties useful for plotting the record
+    x = property(lambda self: self.IML)
+    y = property(lambda self: self.lossRatio)
+
 
 # fragility records
 
-class Fragility(Record):
-    convertername = 'Fragility'
+class FragilityDiscrete(Record):
+    convertername = 'FragilityDiscrete'
     pkey = Unique('format')
 
-    format = Field(valid.Choice('discrete', 'continuous'))
+    format = Field(valid.Choice('discrete'))
+    description = Field(str)
+    limitStates = Field(valid.namelist)
+
+    def to_node(self):
+        node = Node('fragilityModel', dict(format=self[0]))
+        node.append(Node('description', text=self[1]))
+        node.append(Node('limitStates', text=self[2]))
+        return node
+
+
+class FragilityContinuous(Record):
+    convertername = 'FragilityContinuous'
+    pkey = Unique('format')
+
+    format = Field(valid.Choice('continuous'))
     description = Field(str)
     limitStates = Field(valid.namelist)
 
@@ -90,12 +109,13 @@ class Fragility(Record):
 
 
 class FFSetDiscrete(Record):
-    convertername = 'Fragility'
-    pkey = Unique('ordinal')
+    convertername = 'FragilityDiscrete'
+    pkey = Unique('format', 'ordinal')
 
+    format = Field(valid.Choice('discrete'))
     ordinal = Field(int)
     taxonomy = Field(str)
-    noDamageLimit = Field(float)
+    noDamageLimit = Field(valid.NoneOr(float))
     IMT = Field(valid.IMTstr)
     imlUnit = Field(str)
 
@@ -110,12 +130,13 @@ class FFSetDiscrete(Record):
 
 
 class FFSetContinuous(Record):
-    convertername = 'Fragility'
-    pkey = Unique('ordinal')
+    convertername = 'FragilityContinuous'
+    pkey = Unique('format', 'ordinal')
 
+    format = Field(valid.Choice('continuous'))
     ordinal = Field(int)
     taxonomy = Field(str)
-    noDamageLimit = Field(float)
+    noDamageLimit = Field(valid.NoneOr(float))
     type = Field(str)
     IMT = Field(str)
     imlUnit = Field(str)
@@ -137,9 +158,10 @@ class FFSetContinuous(Record):
 
 
 class FFDataDiscrete(Record):
-    convertername = 'Fragility'
-    pkey = Unique('ffs_ordinal', 'limitState', 'iml')
+    convertername = 'FragilityDiscrete'
+    pkey = Unique('format', 'ffs_ordinal', 'limitState', 'iml')
 
+    format = Field(valid.Choice('discrete'))
     ffs_ordinal = Field(int)
     limitState = Field(str)
     iml = Field(float)
@@ -147,9 +169,10 @@ class FFDataDiscrete(Record):
 
 
 class FFDContinuos(Record):
-    convertername = 'Fragility'
-    pkey = Unique('ffs_ordinal', 'limitState', 'param')
+    convertername = 'FragilityContinuous'
+    pkey = Unique('format', 'ffs_ordinal', 'limitState', 'param')
 
+    format = Field(valid.Choice('continuous'))
     ffs_ordinal = Field(int)
     limitState = Field(str)
     param = Field(str)
