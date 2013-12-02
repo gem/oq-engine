@@ -61,8 +61,12 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-    imts = haz_general.im_dict_to_hazardlib(
-        hc.intensity_measure_types_and_levels)
+    sorted_imts = sorted(hc.intensity_measure_types_and_levels)
+    imts = {}
+    hazlib = {}
+    for imt in sorted_imts:
+        hazlib[imt] = haz_general.imt_to_hazardlib(imt)
+        imts[hazlib[imt]] = hc.intensity_measure_types_and_levels[imt]
 
     # Prepare args for the calculator.
     calc_kwargs = {'gsims': gsims,
@@ -74,11 +78,11 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
 
     if hc.maximum_distance:
         dist = hc.maximum_distance
-        if not hc.prefiltering:  # filter the sources in the worker
+        if not hc.prefiltering:  # filter the sources on the worker
             calc_kwargs['source_site_filter'] = openquake.hazardlib.calc.\
                 filters.source_site_distance_filter(dist)
-        #calc_kwargs['rupture_site_filter'] = openquake.hazardlib.calc.\
-        #    filters.rupture_site_distance_filter(dist)
+        calc_kwargs['rupture_site_filter'] = openquake.hazardlib.calc.\
+            filters.rupture_site_distance_filter(dist)
 
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
@@ -86,19 +90,20 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
             'computing hazard curves', job_id, compute_hazard_curves):
         dic = openquake.hazardlib.calc.hazard_curve.hazard_curves_poissonian(
             **calc_kwargs)
-        return [dic[imt] for imt in sorted(imts)]
+        return [dic[hazlib[imt]] for imt in sorted_imts]
 
 
-def make_zeros(sites, imts):
+def make_zeros(sites, imtls):
     """
     Returns a list of I numpy arrays of S * L zeros, where
     I is the number of intensity measure types, S the number of sites
     and L the number of intensity measure levels.
 
     :params sites: the site collection
-    :param imts: a dictionary of intensity measure types and levels
+    :param imtls: a dictionary of intensity measure types and levels
     """
-    return [numpy.zeros((len(sites), len(imts[imt]))) for imt in sorted(imts)]
+    return [numpy.zeros((len(sites), len(imtls[imt])))
+            for imt in sorted(imtls)]
 
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
