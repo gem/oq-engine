@@ -201,11 +201,15 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization)
-                if self.hc.filtered_site_collection(src):
+                if self.hc.sites_affected_by(src):
                     self.sources_per_model[src_path].append(src)
             logs.LOG.info(
                 'found %d relevant sources for model %s',
                 len(self.sources_per_model[src_path]), src_path)
+        # reorder the sources by typology, to have a better distribution:
+        # Area, CharacteristicFault, ComplexFault, Point, SimpleFault
+        for src_list in self.sources_per_model.itervalues():
+            src_list.sort(key=lambda src: src.__class__.__name__)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
