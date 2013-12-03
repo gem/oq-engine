@@ -16,6 +16,8 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+# I am reinventing a database here; we should probably just use a database
+# (for instance sqlite in memory) and an ORM. I am not happy (MS)
 """
 A module to define records extracted from UTF8-encoded CSV files.
 Client code should subclass the record class and define the
@@ -24,60 +26,122 @@ record fields as follows:
 from openquake.nrmllib import record
 
 class Location(record.Record):
-    id = record.Field(int, key=True)
+    id = record.Field(int)
     lon = record.Field(float)
     lat = record.Field(float)
+    pkey = Unique('id')
     unique = Unique('lon', 'lat')
 
-The argument of the Field constructor is a converter, i.e. a callable
-taking in input a UTF8-encoded string and returning a Python object
-or raising a ValueError if the string is invalid.
+The argument of the Field constructor is a callable taking in input a
+UTF8-encoded string and returning a Python object or raising a
+ValueError if the string is invalid.
 """
 
 import abc
-import inspect
 import itertools
 import operator
 import collections
 
 
+class InvalidRecord(Exception):
+    """
+    Exception raised when casting a record fails. It provides the attributes
+    .record (the failing record) and .errorlist which is a list of pair
+    (fieldname, errormessage), where fieldname is the name of the column
+    that could not be casted and errormessage is the relative error message.
+    """
+
+    def __init__(self, record, errorlist):
+        self.fname = None
+        self.rowno = 0
+        self.record = record
+        self.errorlist = errorlist
+
+    def __str__(self):
+        where = self.fname or self.record.__class__.__name__
+        msg = []
+        for field, errmsg in self.errorlist:
+            colno = self.record._name2index[field]
+            msg.append('%s[%s]: %d,%d: %s' %
+                       (where, field, self.rowno, colno, errmsg))
+        return '\n'.join(msg)
+
+
+class ForeignKeyError(Exception):
+    pass
+
+
 class Unique(object):
     """
     Descriptor used to describe unique constraints on a record type.
-    In the example of a Location record, loc.unique returns the tuple
-    (lon, lat), as UTF8-encoded strings.
+    In the example of a Location record
+
+    class Location(record.Record):
+        id = record.Field(int)
+        lon = record.Field(float)
+        lat = record.Field(float)
+
+        pkey = Unique('id')
+        unique = Unique('lon', 'lat')
+
+    loc.unique_fields returns the tuple (lon, lat), as UTF8-encoded strings.
     """
-    def __init__(self, *indexes):
-        assert len(set(indexes)) == len(indexes), 'Duplicates in %s!' % indexes
-        self.indexes = list(indexes)  # set by MetaRecord
-        self.name = 'unique'  # set by MetaRecord
+    def __init__(self, *names):
+        assert len(set(names)) == len(names), 'Duplicates in %s!' % names
+        self.names = names
+        self.name = None  # set by MetaRecord
+        self.recordtype = None  # set by MetaRecord
 
     def __get__(self, rec, recordtype):
-        if rec is None:  # called from the record class
+        if rec is None:
             return self
-        return tuple(rec[f] for f in self.indexes)
+        return tuple(rec[f] for f in self.names)
+
+    def __repr__(self):
+        return '<Unique%s>' % str((self.recordtype,) + self.names)
+
+
+class ForeignKey(object):
+    """
+    Descriptor used to describe unique constraints on a record type.
+    """
+    def __init__(self, unique, *names):
+        self.unique = unique
+        self.names = names
+        self.name = None  # set by MetaRecord
+        self.recordtype = None  # set by MetaRecord
+
+    def __get__(self, rec, recordtype):
+        if rec is None:
+            return self
+        return tuple(rec[f] for f in self.names)
+
+    def __repr__(self):
+        return '<ForeignKey%s>' % str((self.recordtype,) + self.names)
 
 
 class Field(object):
     """
-    Descriptor use to describe record fields.
-    In the example of a Location record, loc.lon and loc.lat return
-    longitude and latitude respectively, as floats.
+    Descriptor used to describe record fields. A Field instance has
+
+    - a cast function which is able to convert a UTF-8 string into a Python
+      object;
+    - a name attribute with the name of the field
+    - a default attribute with the default string value of the field
+    - an ordinal attribute keeping track of the order of definition
     """
     _counter = itertools.count()
 
-    def __init__(self, converter, key=False, name='noname', default=''):
-        self.converter = converter
-        self.key = key
+    def __init__(self, cast, name='noname', default=''):
+        self.cast = cast
         self.name = name
         self.default = default
         self.ordinal = self._counter.next()
-        self.index = 0  # set by MetaRecord
 
     def __get__(self, rec, rectype):
-        if rec is None:  # sorting function
-            return lambda rec: rec.converter(rec[self.index])
-        return rec.converter(rec[self.index])
+        if rec is None:
+            return lambda rec: self.cast(rec[self.name])
+        return self.cast(rec[self.name])
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.name)
@@ -87,15 +151,15 @@ class MetaRecord(abc.ABCMeta):
     """
     Metaclass for record types. The metaclass is in charge of
     processing the Field objects at class definition time. In particular
-    it sets their .name and .index attributes. It also processes the
-    Unique constraints, by setting their .name and .indexes attributes.
-    It defines on the record subclasses the ``__init__`` method, the
-    ``pkey`` property and the attributes ``_name2index``, ``fields``,
+    it sets their .name attribute.
+    It defines on the record subclasses the ``__init__`` method
+    and the attributes ``_name2index``, ``fields``,
     ``_ntuple``. Moreover it defines the metaclass method
     ``__len__`` and the metaclass property ``fieldnames``.
     """
     _counter = itertools.count()
-    _reserved_names = set('fields fieldnames _name2index _ntuple pkey')
+    _reserved_names = set(
+        'fields fieldnames _name2index _ntuple _ordinal'.split())
 
     def __new__(mcl, name, bases, dic):
         for nam in dic:
@@ -112,22 +176,14 @@ class MetaRecord(abc.ABCMeta):
         fields.sort(key=operator.attrgetter('ordinal'))
         fieldnames = []
         _name2index = {}
-        keyindexes = []
         for i, f in enumerate(fields):
             fieldnames.append(f.name)
-            _name2index[f.name] = f.index = i
-            if f.key:
-                keyindexes.append(i)
-        keyindexes = keyindexes or [0]
+            _name2index[f.name] = i
 
-        # unique constraints
-        for n, v in dic.iteritems():
-            if isinstance(v, Unique):
-                for i, index in enumerate(v.indexes):
-                    if isinstance(index, str):
-                        v.name = n
-                        v.indexes[i] = _name2index[index]
-
+        # normal an user should not define the following fields in
+        # a client class, since they are defined by the metaclass
+        # a savvy user however can provide her own implementations
+        # and they will have the precedence against the default ones
         if '__init__' not in dic:
             dic['__init__'] = mcl.mkinit(fieldnames)
         if '_name2index' not in dic:
@@ -136,10 +192,24 @@ class MetaRecord(abc.ABCMeta):
             dic['fields'] = fields
         if '_ntuple' not in dic:
             dic['_ntuple'] = collections.namedtuple(name, fieldnames)
-        if 'pkey' not in dic:
-            dic['pkey'] = Unique(*keyindexes)
         dic['_ordinal'] = mcl._counter.next()
         return super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
+
+    def __init__(cls, name, bases, dic):
+        if name != 'Record':
+            cls.pkey  # raise an AttributeError if pkey is not defined
+        for n, v in dic.iteritems():
+            # make a bound copy of the unbound Unique and ForeignKey constraint
+            if isinstance(v, Unique):
+                unique = Unique(*v.names)
+                unique.name = n
+                unique.recordtype = cls
+                setattr(cls, n, unique)
+            elif isinstance(v, ForeignKey):
+                fkey = ForeignKey(v.unique, *v.names)
+                fkey.name = n
+                fkey.recordtype = cls
+                setattr(cls, n, fkey)
 
     @staticmethod
     def mkinit(fieldnames):
@@ -150,7 +220,11 @@ class MetaRecord(abc.ABCMeta):
         self.row = [%s]
         self.init()''' % (defaults, fields)
         dic = {}
-        exec(templ, dic)
+        try:
+            exec(templ, dic)
+        except:
+            print 'Could not build __init__ method, error in:', templ
+            raise
         return dic['__init__']
 
     @property
@@ -158,9 +232,19 @@ class MetaRecord(abc.ABCMeta):
         """Returns the names of the fields defined in cls"""
         return [f.name for f in cls.fields]
 
+    def get_descriptors(cls, descriptor_cls):
+        """
+        Return the instances of descriptor_cls defined in cls.
+        """
+        return [v.__get__(None, cls) for v in vars(cls).values()
+                if isinstance(v, descriptor_cls)]
+
     def __len__(cls):
         """Returns the number of fields defined in cls"""
         return len(cls.fields)
+
+    def __repr__(cls):
+        return '<class %s>' % cls.__name__
 
 
 class Record(collections.Sequence):
@@ -174,34 +258,51 @@ class Record(collections.Sequence):
     method, a .check_valid() method and a .is_valid() method.
     """
     __metaclass__ = MetaRecord
+    convertername = 'Converter'
 
     def init(self):
         """To override for post-initialization operations"""
 
     def is_valid(self, i=None):
         """
-        True if the fields `i` is valid; if `i` is None, check all the fields
+        `i` can be an integer, a field name, or None: if `i` is None,
+        check all the fields; if `i` is a file name convert it into an integer
+        by looking at the _name2index dictionary and check the corresponding
+        field.
         """
         if i is None:
             return all(self.is_valid(i) for i in range(len(self)))
         if isinstance(i, str):
             i = self._name2index[i]
         try:
-            self.fields[i].converter(self[i])
+            self.fields[i].cast(self[i])
         except ValueError:
             return False
         return True
 
     def cast(self):
-        """Cast the record into a namedtuple by casting all of the field"""
+        """Return a casted (namedtuple, InvalidRecord) pair"""
         cols = []
+        errs = []
         for col, field in zip(self.row, self.fields):
             try:
-                cols.append(field.converter(col))
+                cols.append(field.cast(col))
             except ValueError as e:
-                raise ValueError('Invalid %s.%s: %s' %
-                                 (self.__class__.__name__, field.name, e))
-        return self._ntuple._make(cols)
+                errs.append((field.name, str(e)))
+        if errs:
+            return None, InvalidRecord(self, errs)
+        else:
+            return self._ntuple._make(cols), None
+
+    def to_tuple(self):
+        """
+        Cast the record to a namedtuple with the right types or raise
+        an InvalidRecord exception.
+        """
+        tup, exc = self.cast()
+        if exc:
+            raise exc
+        return tup
 
     def to_node(self):
         """Implement this if you want to convert records into Node objects"""
@@ -215,16 +316,18 @@ class Record(collections.Sequence):
 
     def __setitem__(self, i, value):
         """
-        Set the column 'i', where 'i' can be an integer or a name.
+        Set the column 'i', where 'i' can be an integer or a field name.
         If the value is invalid, raise a ValueError.
         """
         if isinstance(i, str):
             i = self._name2index[i]
-        self.fields[i].converter(value)
+        self.fields[i].cast(value)
         self.row[i] = value
 
     def __delitem__(self, i):
-        """Delete the column 'i', where 'i' can be an integer or a string"""
+        """
+        Delete the column 'i', where 'i' can be an integer or a field name
+        """
         if isinstance(i, str):
             i = self._name2index[i]
         del self.row[i]
@@ -264,90 +367,101 @@ def nodedict(records):
         (rec.pkey, rec.to_node()) for rec in records)
 
 
+def find_invalid(recorditer):
+    """
+    Yield the InvalidRecord exceptions found in the record iterator.
+    To find the first record only call
+
+      find_invalid(records).next()
+    """
+    for rowno, rec in enumerate(recorditer):
+        row, exc = rec.cast()
+        if exc:
+            exc.rowno = rowno
+            yield exc
+
+
+class UniqueData(object):
+    """Table-related"""
+    def __init__(self, table, unique):
+        self.table = table
+        self.unique = unique
+        self.dict = {}
+
+    @property
+    def names(self):
+        return self.unique.names
+
+
 class Table(collections.MutableSequence):
     """
     In-memory table storing a sequence of record objects.
-    Primary key and unique constraints are checked at insertion time,
-    by looking at the dictionaries <constraint-name>_dict.
+    Unique constraints are checked at insertion time.
     """
-    def __init__(self, recordtype, records):
+    def __init__(self, recordtype, records, ordinal=None):
         self.recordtype = recordtype
-        self.unique = []
-        for n, v in inspect.getmembers(
-                recordtype, lambda v: isinstance(v, Unique)):
-            setattr(self, '%s_dict' % v.name, {})
-            self.unique.append(v)
-        self.records = []
+        self.ordinal = ordinal  # not None if part of a TableSet
+        self._unique_data = dict(
+            (u.name, UniqueData(self, u))
+            for u in recordtype.get_descriptors(Unique))
+        self._records = []
         for rec in records:
             self.append(rec)
 
     def __getitem__(self, i):
         """Return the i-th record"""
-        return self.records[i]
+        return self._records[i]
 
     def __setitem__(self, i, record):
         """Set the i-th record"""
-        self.records[i] = record
+        # XXX: the unique and fk dictionaries must be updated!
+        self._records[i] = record
 
     def __delitem__(self, i):
         """Delete the i-th record"""
         # i must be an integer, not a range
-        for descr in self.unique:
-            key = descr.__get__(self.records[i], self.recordtype)
-            del getattr(self, '%s_dict' % descr.name)[key]
-        del self.records[i]
+        for name, unique in self._unique_data.iteritems():
+            key = getattr(self._records[i], name)
+            del unique.dict[key]
+        del self._records[i]
 
     def __len__(self):
         """The number of records stored in the table"""
-        return len(self.records)
+        return len(self._records)
 
     def insert(self, position, rec):
         """
         Insert a record in the table, at the given position index.
         This is called by the .append method, with position equal
         to the record length. Trying to insert a duplicated record
-        (in terms of the unique constraints, including the primary
+        (in terms of unique constraints, including the primary
         key) raises a KeyError.
         """
-        for descr in self.unique:
-            dic = getattr(self, '%s_dict' % descr.name)
-            key = descr.__get__(rec, self.recordtype)
+        for name, unique in self._unique_data.iteritems():
+            key = getattr(rec, name)
             try:
-                rec = dic[key]
+                rec = unique.dict[key]
             except KeyError:  # not inserted yet
-                dic[key] = rec
+                unique.dict[key] = rec
             else:
                 msg = []
-                for k, i in zip(key, descr.indexes):
-                    msg.append('%s=%s' % (rec.fields[i].name, k))
-                raise KeyError('%s:%d:Duplicate record:%s' %
+                for k, name in zip(key, unique.names):
+                    msg.append('%s=%s' % (name, k))
+                raise KeyError('%s:%d:Duplicated record:%s' %
                                (self.recordtype.__name__, position,
                                 ','.join(msg)))
-        self.records.append(rec)
+        self._records.append(rec)
 
     def getrecord(self, *pkey):
         """
         Extract the record specified by the given primary key.
         Raise a KeyError if the record is missing from the table.
         """
-        return self.pkey_dict[pkey]
+        return self._unique_data['pkey'].dict[pkey]
 
     def is_valid(self):
         """True if all the records in the table are valid"""
         return all(rec.is_valid() for rec in self)
-
-    def cast(self):
-        """
-        Cast all the rows in the table to namedtuples;
-        raise a ValueError at the first invalid record
-        """
-        rows = []
-        for i, rec in enumerate(self):
-            try:
-                rows.append(rec.cast())
-            except ValueError as e:
-                raise ValueError('At row %d: %s' % (i, e))
-        return rows
 
     def __str__(self):
         """CSV representation of the whole table"""
@@ -372,4 +486,81 @@ class Table(collections.MutableSequence):
 
     def __repr__(self):
         """String representation of table displaying the record type name"""
-        return '<%s %s>' % (self.__class__.__name__, self.recordtype.__name__)
+        return '<%s %d records>' % (self.recordtype.__name__, len(self))
+
+
+class TableSet(object):
+    """
+    A set of tables associated to the same converter
+    """
+    @classmethod
+    def from_node(cls, node):
+        """Convert a Node object into a TableSet object"""
+        from openquake.nrmllib.converter import Converter
+        convcls = Converter.from_node(node)
+        self = cls(convcls)
+        self.insert_all(convcls.node_to_records(node))
+        return self
+
+    def __init__(self, converter):
+        self.converter = converter
+        self.tables = []
+        self.fkdict = {}
+        for ordinal, rt in enumerate(converter.recordtypes()):
+            tbl = Table(rt, [], ordinal)
+            if not getattr(rt, 'hidden', None):
+                self.tables.append(tbl)
+            setattr(self, rt.__name__, tbl)
+            for fkey in rt.get_descriptors(ForeignKey):
+                target = fkey.unique
+                target_tbl = getattr(self, target.recordtype.__name__)
+                self.fkdict[fkey] = target_tbl._unique_data[target.name]
+
+    def __iter__(self):
+        """
+        Returns only the nonempty tables
+        """
+        return iter(self.tables)
+
+    def check_fk(self, rec):
+        """
+        Check is a record has a companion record in the referenced table.
+        """
+        for fkey in rec.__class__.get_descriptors(ForeignKey):
+            fkvalues = getattr(rec, fkey.name)
+            if not fkvalues in self.fkdict[fkey].dict:
+                raise ForeignKeyError(
+                    'Missing record in table %s corresponding to the keys %s'
+                    % (fkey.unique.recordtype.__name__, fkvalues))
+
+    def insert(self, rec):
+        """
+        Insert a record in the correct table in the TableSet, by
+        checking the ForeignKey constraints, if any.
+        """
+        self.check_fk(rec)
+        tbl = getattr(self, rec.__class__.__name__)
+        tbl.append(rec)
+
+    def insert_all(self, recs):
+        """
+        Insert a set of records in the right tables;
+        may raise a ForeignKeyError.
+        """
+        for rec in recs:
+            self.insert(rec)
+
+    def delete(self, rec):
+        """
+        Delete a record by cascading on the ForeignKeys
+        """
+        raise NotImplementedError
+
+    def to_node(self):
+        return self.converter.tableset_to_node(self)
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, self.tables)
+
+    def __len__(self):
+        return sum(1 for tbl in self.tables)

@@ -25,8 +25,6 @@ import json
 import warnings
 from collections import OrderedDict
 
-from lxml import etree
-
 import openquake.nrmllib
 
 from openquake.nrmllib import models

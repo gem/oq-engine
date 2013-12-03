@@ -16,54 +16,57 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import time
-from openquake.nrmllib.convert import (
-    convert_nrml_to_zip, convert_zip_to_nrml, build_node)
-from openquake.nrmllib.tables import FileTable
+from openquake.nrmllib.csvmanager import CSVManager, mkarchive
 
 
-def collect(fnames):
-    xmlfiles, zipfiles, csvmdatafiles, otherfiles = [], [],  [], []
-    for fname in sorted(fnames):
-        if fname.endswith('.xml'):
-            xmlfiles.append(fname)
-        elif fname.endswith('.zip'):
-            zipfiles.append(fname)
-        elif fname.endswith(('.csv', '.mdata')):
-            csvmdatafiles.append(fname)
-        else:
-            otherfiles.append(fname)
-    return xmlfiles, zipfiles, csvmdatafiles, otherfiles
-
-
-def create(factory, fname):
+def create(convert, fname):
     t0 = time.time()
     try:
-        out = factory(fname)
+        out = convert(fname)
     except Exception as e:
+        raise
         print e
         return
     dt = time.time() - t0
     print 'Created %s in %s seconds' % (out, dt)
+    return out
 
 
-def main(*fnames):
-    if not fnames:
-        sys.exit('Please provide some input files')
+def print_invalid(man, limit):
+    invalid = man.find_invalid(limit)
+    for inv in invalid:
+        print inv
+    if invalid:
+        sys.exit('Found %d invalid records' % len(invalid))
 
-    xmlfiles, zipfiles, csvmdatafiles, otherfiles = collect(fnames)
-    for xmlfile in xmlfiles:
-        create(convert_nrml_to_zip, xmlfile)
 
-    for zipfile in zipfiles:
-        create(convert_zip_to_nrml, zipfile)
-
-    for name, group in FileTable.get_all('.', csvmdatafiles):
-        def convert_to_nrml(out):
-            build_node(group, open(out, 'wb+'))
-            return out
-        create(convert_to_nrml, name + '.xml')
+def main(input, output=None, limit=None):
+    """
+    Converts nrml -> csv if the input file ends with .csv
+    and csv -> nrml if the input is a directory or a zip
+    archive containing csv files. The csv are validated and
+    messages are printed on stdout in case of errors.
+    """
+    if limit is not None:
+        limit = int(limit)  # max number of errors
+    if input.endswith('.xml'):
+        if not output:
+            sys.exit('Please specify an output archive')
+        # nrml -> csv
+        name, _ = os.path.splitext(os.path.basename(input))
+        man = create(CSVManager(mkarchive(output, 'w'), name).
+                     convert_from_nrml, input)
+        print_invalid(man, limit)
+        return
+    # csv -> nrml
+    inp_archive = mkarchive(input, 'r+')
+    man = CSVManager(inp_archive, os.path.basename(input))
+    print_invalid(man, limit)
+    out_archive = mkarchive(output, 'a') if output else inp_archive
+    create(lambda n: man.convert_to_nrml(out_archive), os.path.basename(input))
 
 
 if __name__ == '__main__':
