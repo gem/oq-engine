@@ -244,17 +244,16 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
             sm = self.rlz_to_sm[lt_rlz]
-            sources = (self.sources_per_model[sm, 'point'] +
-                       self.sources_per_model[sm, 'other'])
+            sources = self.sources_per_model[sm]
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
                 yield self.job.id, sites, sources, lt_rlz.id, ltp
 
     def post_execute(self):
         """
-        Finalize the hazard curves computed in the execute phase
-        and start the disaggregation phase.
+        Start the disaggregation phase.
         """
-        super(DisaggHazardCalculator, self).post_execute()
         self.parallelize(
-            compute_disagg, self.disagg_task_arg_gen(self.block_size()))
+            compute_disagg,
+            self.disagg_task_arg_gen(self.block_size()),
+            self.log_percent)

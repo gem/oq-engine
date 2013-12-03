@@ -260,15 +260,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
     core_calc_task = compute_ses
 
-    def filtered_sites(self, src):
-        """
-        Return the sites within maximum_distance from the source or None
-        """
-        if self.hc.maximum_distance is None:
-            return self.hc.site_collection  # do not filter
-        return src.filter_sites_by_distance_to_source(
-            self.hc.maximum_distance, self.hc.site_collection)
-
     def task_arg_gen(self, _block_size=None):
         """
         Loop through realizations and sources to generate a sequence of
@@ -284,8 +275,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_rlz in realizations:
             sm = self.rlz_to_sm[lt_rlz]
-            sources = (self.sources_per_model[sm, 'point'] +
-                       self.sources_per_model[sm, 'other'])
+            sources = self.sources_per_model[sm]
 
             all_ses = list(models.SES.objects.filter(
                            ses_collection__lt_realization=lt_rlz,
@@ -354,7 +344,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         Optionally compute_gmf in parallel.
         """
         if self.hc.ground_motion_fields:
-            self.parallelize(compute_gmf, self.compute_gmf_arg_gen())
+            self.parallelize(compute_gmf,
+                             self.compute_gmf_arg_gen(),
+                             self.log_percent)
 
     def initialize_ses_db_records(self, lt_rlz):
         """
@@ -427,11 +419,13 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         curves.
         """
         if self.hc.hazard_curves_from_gmfs:
+
             with EnginePerformanceMonitor('generating hazard curves',
                                           self.job.id):
                 self.parallelize(
                     post_processing.gmf_to_hazard_curve_task,
-                    post_processing.gmf_to_hazard_curve_arg_gen(self.job))
+                    post_processing.gmf_to_hazard_curve_arg_gen(self.job),
+                    self.log_percent)
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
@@ -447,4 +441,5 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                     self.parallelize(
                         cls_post_proc.hazard_curves_to_hazard_map_task,
                         cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
-                            self.job))
+                            self.job),
+                        self.log_percent)

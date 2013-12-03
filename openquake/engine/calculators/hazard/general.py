@@ -23,18 +23,15 @@ import random
 import re
 import collections
 
-import numpy
-
 import openquake.hazardlib
 import openquake.hazardlib.site
 from openquake.hazardlib import correlation
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
-from django.db import transaction, connections
+from django.db import transaction
 
 from openquake.nrmllib import parsers as nrml_parsers
-from openquake.nrmllib.models import PointSource
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import source, exposure
@@ -153,7 +150,7 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary (sm_name, source_type) -> source_ids
+        # a dictionary source model name -> source_ids
         self.sources_per_model = collections.defaultdict(list)
         # a dictionary rlz -> source model name (in the logic tree)
         self.rlz_to_sm = {}
@@ -171,20 +168,6 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
-    def block_size(self):
-        """
-        For hazard calculators, the number of work items per task
-        is specified in the configuration file.
-        """
-        return int(config.get('hazard', 'block_size'))
-
-    def point_source_block_size(self):
-        """
-        Similar to :meth:`block_size`, except that this parameter applies
-        specifically to grouping of point sources.
-        """
-        return int(config.get('hazard', 'point_source_block_size'))
-
     def concurrent_tasks(self):
         """
         For hazard calculators, the number of tasks to be in queue
@@ -194,134 +177,15 @@ class BaseHazardCalculator(base.Calculator):
 
     def task_arg_gen(self, block_size):
         """
-        Loop through realizations and sources to generate a sequence of
-        task arg tuples. Each tuple of args applies to a single task.
-
-        For this default implementation, yielded results are triples of
-        (job_id, realization_id, source_id_list).
-
-        Override this in subclasses as necessary.
-
-        :param int block_size:
-            The (max) number of work items for each each task. In this case,
-            sources.
+        To override in subclasses
         """
-        point_source_block_size = self.point_source_block_size()
-
-        realizations = self._get_realizations()
-
-        n = 0  # number of yielded arguments
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-
-        for lt_rlz in realizations:
-            sm = self.rlz_to_sm[lt_rlz]
-
-            # separate point sources from all the other types, since
-            # we distribution point sources in different sized chunks
-            # point sources first
-            point_sources = self.sources_per_model[sm, 'point']
-            for block in block_splitter(point_sources,
-                                        point_source_block_size):
-                task_args = (self.job.id, block, lt_rlz.id, ltp)
-                yield task_args
-                n += 1
-
-            # now for area and fault sources
-            other_sources = self.sources_per_model[sm, 'other']
-            for block in block_splitter(other_sources, block_size):
-                task_args = (self.job.id, block, lt_rlz.id, ltp)
-                yield task_args
-                n += 1
 
     def _get_realizations(self):
         """
         Get all of the logic tree realizations for this calculation.
         """
         return models.LtRealization.objects\
-            .filter(hazard_calculation=self.hc, is_complete=False)\
-            .order_by('id')
-
-    def finalize_hazard_curves(self):
-        """
-        Create the final output records for hazard curves. This is done by
-        copying the temporary results from `htemp.hazard_curve_progress` to
-        `hzrdr.hazard_curve` (for metadata) and `hzrdr.hazard_curve_data` (for
-        the actual curve PoE values). Foreign keys are made from
-        `hzrdr.hazard_curve` to `hzrdr.lt_realization` (realization information
-        is need to export the full hazard curve results).
-        """
-        im = self.hc.intensity_measure_types_and_levels
-        points = self.hc.points_to_compute()
-
-        # prepare site locations for the stored function call
-        lons = '{%s}' % ', '.join(str(v) for v in points.lons)
-        lats = '{%s}' % ', '.join(str(v) for v in points.lats)
-
-        realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc.id)
-
-        for rlz in realizations:
-            # create a new `HazardCurve` 'container' record for each
-            # realization (virtual container for multiple imts)
-            models.HazardCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
-                    "hazard_curve_multi"),
-                lt_realization=rlz,
-                imt=None,
-                investigation_time=self.hc.investigation_time)
-
-            # create a new `HazardCurve` 'container' record for each
-            # realization for each intensity measure type
-            for imt, imls in im.items():
-                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
-
-                hco = models.Output.objects.create(
-                    oq_job=self.job,
-                    display_name="Hazard Curve rlz-%s" % rlz.id,
-                    output_type='hazard_curve',
-                )
-
-                haz_curve = models.HazardCurve(
-                    output=hco,
-                    lt_realization=rlz,
-                    investigation_time=self.hc.investigation_time,
-                    imt=hc_im_type,
-                    imls=imls,
-                    sa_period=sa_period,
-                    sa_damping=sa_damping,
-                )
-                haz_curve.save()
-
-                with transaction.commit_on_success(using='job_init'):
-                    cursor = connections['job_init'].cursor()
-
-                    # TODO(LB): I don't like the fact that we have to pass
-                    # potentially huge arguments (100k sites, for example).
-                    # I would like to be able to fetch this site data from
-                    # the stored function, but at the moment, the only form
-                    # available is a pickled `SiteCollection` object, and I've
-                    # experienced problems trying to import third-party libs
-                    # in a DB function context and could not get it to reliably
-                    # work.
-                    # As a fix, in addition to caching the pickled
-                    # SiteCollection in the DB, we could store also arrays for
-                    # lons and lats. It's duplicated information, but we have a
-                    # relatively low number of HazardCalculation records, so it
-                    # shouldn't be a big deal.
-                    cursor.execute(
-                        """
-                        SELECT hzrdr.finalize_hazard_curves(
-                            %s, %s, %s, %s, %s, %s)
-                        """,
-                        [self.hc.id, rlz.id, haz_curve.id, imt, lons, lats]
-                    )
-
-    def filtered_sites(self, src):
-        """
-        Do not filter sites up front: overridden in the event based subclass
-        """
-        return self.hc.site_collection
+            .filter(hazard_calculation=self.hc).order_by('id')
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
@@ -337,11 +201,15 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization)
-                if self.filtered_sites(src):
-                    if isinstance(src_nrml, PointSource):
-                        self.sources_per_model[src_path, 'point'].append(src)
-                    else:
-                        self.sources_per_model[src_path, 'other'].append(src)
+                if self.hc.sites_affected_by(src):
+                    self.sources_per_model[src_path].append(src)
+            logs.LOG.info(
+                'found %d relevant sources for model %s',
+                len(self.sources_per_model[src_path]), src_path)
+        # reorder the sources by typology, to have a better distribution:
+        # Area, CharacteristicFault, ComplexFault, Point, SimpleFault
+        for src_list in self.sources_per_model.itervalues():
+            src_list.sort(key=lambda src: src.__class__.__name__)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -426,7 +294,8 @@ class BaseHazardCalculator(base.Calculator):
         parse it and load it into the `hzrdi.site_model` table.
         """
         logs.LOG.progress("initializing sites")
-        self.hc.points_to_compute(save_sites=True)
+        sites = self.hc.points_to_compute(save_sites=True)
+        logs.LOG.info('Considering %d sites', len(sites))
 
         site_model_inp = self.hc.site_model
         if site_model_inp:
@@ -547,35 +416,6 @@ class BaseHazardCalculator(base.Calculator):
             # update the seed for the next realization
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
-
-    def initialize_hazard_curve_progress(self, lt_rlz):
-        """
-        As a calculation progresses, workers will periodically update the
-        intermediate results. These results will be stored in
-        `htemp.hazard_curve_progress` until the calculation is completed.
-
-        Before the core calculation begins, we need to initalize these records,
-        one data set per IMT. Each dataset will be stored in the database as a
-        pickled 2D numpy array (with number of rows == calculation points of
-        interest and number of columns == number of IML values for a given
-        IMT).
-
-        We will create 1 `hazard_curve_progress` record per IMT per
-        realization.
-
-        :param lt_rlz:
-            :class:`openquake.engine.db.models.LtRealization` object to
-            associate with these inital hazard curve values.
-        """
-        num_points = len(self.hc.points_to_compute())
-
-        im_data = self.hc.intensity_measure_types_and_levels
-        for imt, imls in im_data.items():
-            hc_prog = models.HazardCurveProgress()
-            hc_prog.lt_realization = lt_rlz
-            hc_prog.imt = imt
-            hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
-            hc_prog.save()
 
     def _get_outputs_for_export(self):
         """
