@@ -200,7 +200,6 @@ class FragilityDiscrete(Converter):
         for i, ffs in enumerate(node.getnodes('ffs'), 1):
             ffs_ordinal = str(i)
             yield records.FFSetDiscrete(
-                fmt,
                 ffs_ordinal,
                 ffs.taxonomy.text,
                 ffs.attrib.get('noDamageLimit', ''),
@@ -210,11 +209,10 @@ class FragilityDiscrete(Converter):
             for ls, ffd in zip(limitStates, ffs.getnodes('ffd')):
                 assert ls == ffd['ls'], 'Expected %s, got %s' % (
                     ls, ffd['ls'])
-                yield records.FFLimitStateDiscrete(fmt, ffs_ordinal, ls)
+                yield records.FFLimitStateDiscrete(ffs_ordinal, ls)
                 poEs = ffd.poEs.text.split()
                 for iml, poe in zip(imls, poEs):
-                    yield records.FFDataDiscrete(
-                        fmt, ffs_ordinal, ls, iml, poe)
+                    yield records.FFDataDiscrete(ffs_ordinal, ls, iml, poe)
 
     def csv_to_node(self):
         """
@@ -250,7 +248,6 @@ class FragilityContinuous(Converter):
         for i, ffs in enumerate(node.getnodes('ffs'), 1):
             ffs_ordinal = str(i)
             yield records.FFSetContinuous(
-                fmt,
                 ffs_ordinal,
                 ffs.taxonomy.text,
                 ffs.attrib.get('noDamageLimit', ''),
@@ -263,9 +260,9 @@ class FragilityContinuous(Converter):
                 assert ls == ffc['ls'], 'Expected %s, got %s' % (
                     ls, ffc['ls'])
                 yield records.FFDContinuos(
-                    fmt, ffs_ordinal, ls, 'mean', ffc.params['mean'])
+                    ffs_ordinal, ls, 'mean', ffc.params['mean'])
                 yield records.FFDContinuos(
-                    fmt, ffs_ordinal, ls, 'stddev', ffc.params['stddev'])
+                    ffs_ordinal, ls, 'stddev', ffc.params['stddev'])
 
     def csv_to_node(self):
         """

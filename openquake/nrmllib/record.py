@@ -508,7 +508,8 @@ class TableSet(object):
         self.fkdict = {}
         for ordinal, rt in enumerate(converter.recordtypes()):
             tbl = Table(rt, [], ordinal)
-            self.tables.append(tbl)
+            if not getattr(rt, 'hidden', None):
+                self.tables.append(tbl)
             setattr(self, rt.__name__, tbl)
             for fkey in rt.get_descriptors(ForeignKey):
                 target = fkey.unique

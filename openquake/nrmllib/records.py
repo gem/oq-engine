@@ -79,6 +79,7 @@ class DiscreteVulnerabilityData(Record):
 # fragility records
 
 class FragilityDiscrete(Record):
+    hidden = True
     convertername = 'FragilityDiscrete'
     pkey = Unique('format')
 
@@ -94,6 +95,7 @@ class FragilityDiscrete(Record):
 
 
 class FragilityContinuous(Record):
+    hidden = True
     convertername = 'FragilityContinuous'
     pkey = Unique('format')
 
@@ -110,9 +112,8 @@ class FragilityContinuous(Record):
 
 class FFSetDiscrete(Record):
     convertername = 'FragilityDiscrete'
-    pkey = Unique('format', 'ordinal')
+    pkey = Unique('ordinal')
 
-    format = Field(valid.Choice('discrete'))
     ordinal = Field(int)
     taxonomy = Field(str)
     noDamageLimit = Field(valid.NoneOr(float))
@@ -131,9 +132,8 @@ class FFSetDiscrete(Record):
 
 class FFSetContinuous(Record):
     convertername = 'FragilityContinuous'
-    pkey = Unique('format', 'ordinal')
+    pkey = Unique('ordinal')
 
-    format = Field(valid.Choice('continuous'))
     ordinal = Field(int)
     taxonomy = Field(str)
     noDamageLimit = Field(valid.NoneOr(float))
@@ -159,18 +159,16 @@ class FFSetContinuous(Record):
 
 class FFLimitStateDiscrete(Record):
     convertername = 'FragilityDiscrete'
-    pkey = Unique('format', 'ffs_ordinal', 'limitState')
+    pkey = Unique('ffs_ordinal', 'limitState')
 
-    format = Field(valid.Choice('discrete'))
     ffs_ordinal = Field(int)
     limitState = Field(str)
 
 
 class FFDataDiscrete(Record):
     convertername = 'FragilityDiscrete'
-    pkey = Unique('format', 'ffs_ordinal', 'limitState', 'iml')
+    pkey = Unique('ffs_ordinal', 'limitState', 'iml')
 
-    format = Field(valid.Choice('discrete'))
     ffs_ordinal = Field(int)
     limitState = Field(str)
     iml = Field(float)
@@ -183,9 +181,8 @@ class FFDataDiscrete(Record):
 
 class FFDContinuos(Record):
     convertername = 'FragilityContinuous'
-    pkey = Unique('format', 'ffs_ordinal', 'limitState', 'param')
+    pkey = Unique('ffs_ordinal', 'limitState', 'param')
 
-    format = Field(valid.Choice('continuous'))
     ffs_ordinal = Field(int)
     limitState = Field(str)
     param = Field(str)
