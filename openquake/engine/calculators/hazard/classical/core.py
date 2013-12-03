@@ -38,8 +38,12 @@ from openquake.engine.utils.general import block_splitter
 from django.db import transaction
 
 
+def result_list(result, zero, index, n):
+    return [result if i == index else zero for i in range(n)]
+
+
 @oqtask
-def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
+def compute_hazard_curves(job_id, sources, lt_rlz, ltp, num_rlz):
     """
     Celery task for hazard curve calculator.
 
@@ -54,8 +58,10 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
         Logic tree realization model to calculate for.
     :param ltp:
         a :class:`openquake.engine.input.LogicTreeProcessor` instance
+    :param int num_rlz:
+        the total number of realizations
 
-    Return a sorted list of arrays, one for each IMT.
+    Return a list of sorted lists of arrays, one for each IMT.
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     apply_uncertainties = ltp.parse_source_model_logictree_path(
@@ -90,20 +96,27 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
             'computing hazard curves', job_id, compute_hazard_curves):
         dic = openquake.hazardlib.calc.hazard_curve.hazard_curves_poissonian(
             **calc_kwargs)
-        return [dic[hazlib[imt]] for imt in sorted_imts]
+
+        if (sum(dic.itervalues()) == 0.0).all():
+            # shortcut for filtered sources giving no contribution
+            return
+
+        return result_list([dic[hazlib[imt]] for imt in sorted_imts],
+                           [0 for imt in sorted_imts],
+                           lt_rlz.ordinal, num_rlz)
 
 
-def make_zeros(sites, imtls):
+def make_zeros(realizations, sites, imtls):
     """
-    Returns a list of I numpy arrays of S * L zeros, where
-    I is the number of intensity measure types, S the number of sites
-    and L the number of intensity measure levels.
+    Returns a list of R lists containing I numpy arrays of S * L zeros, where
+    R is the number of realizations, I is the number of intensity measure
+    types, S the number of sites and L the number of intensity measure levels.
 
     :params sites: the site collection
     :param imtls: a dictionary of intensity measure types and levels
     """
-    return [numpy.zeros((len(sites), len(imtls[imt])))
-            for imt in sorted(imtls)]
+    return [[numpy.zeros((len(sites), len(imtls[imt])))
+             for imt in sorted(imtls)] for _ in range(len(realizations))]
 
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
@@ -131,6 +144,19 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         self.initialize_sources()
         self.initialize_realizations()
 
+    def task_arg_gen(self, blocksize=None):
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
+        num_rlz = len(self.rlz_to_sm)
+        for lt_rlz in self._get_realizations():
+            sm_path = self.rlz_to_sm[lt_rlz]  # source model path
+            sources = self.sources_per_model[sm_path]
+            preferred_block_size = int(
+                math.ceil(float(len(sources)) / self.concurrent_tasks()))
+            logs.LOG.info('preferred block size for %s =%d',
+                          sm_path, preferred_block_size)
+            for block in block_splitter(sources, preferred_block_size):
+                yield self.job.id, block, lt_rlz, ltp, num_rlz
+
     def execute(self):
         """
         Run the core_calc_task in parallel, by passing the arguments
@@ -138,25 +164,13 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         parallelize distribution, but it can be overridden is subclasses.
         """
         imtls = self.hc.intensity_measure_types_and_levels
-        zeros = make_zeros(self.hc.site_collection, imtls)
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-
-        for lt_rlz in self._get_realizations():
-            task_args = []
-            sm = self.rlz_to_sm[lt_rlz]  # source model path
-            sources = self.sources_per_model[sm]
-            preferred_block_size = int(
-                math.ceil(float(len(sources)) / self.concurrent_tasks()))
-            logs.LOG.info('preferred block size=%d', preferred_block_size)
-            for block in block_splitter(sources, preferred_block_size):
-                task_args.append((self.job.id, block, lt_rlz, ltp))
-
-            # the following line will print out the number of tasks generated
-            self.initialize_percent(self.core_calc_task, task_args)
-            matrices = map_reduce(
-                self.core_calc_task, task_args, self.aggregate, zeros)
-            with transaction.commit_on_success(using='job_init'):
-                self.save_curves(lt_rlz, matrices)
+        zeros = make_zeros(self.rlz_to_sm, self.hc.site_collection, imtls)
+        task_args = self.initialize_percent(
+            self.core_calc_task, self.task_arg_gen())
+        all_matrices = map_reduce(
+            self.core_calc_task, task_args, self.aggregate, zeros)
+        with transaction.commit_on_success(using='job_init'):
+            self.save_curves(all_matrices)
 
     @EnginePerformanceMonitor.monitor
     def aggregate(self, current, new):
@@ -181,13 +195,18 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             as `current`.
         :returns: the updated array
         """
-        result = [1. - (1. - c) * (1. - n)
-                  for c, n in itertools.izip(current, new)]
-        self.log_percent()
-        return result
+        try:
+            if new is None:
+                # shortcut for filtered away sources giving no contribution
+                return current
+            return [[1. - (1. - c) * (1. - n)
+                     for c, n in itertools.izip(c1, n1)]
+                    for c1, n1 in itertools.izip(current, new)]
+        finally:
+            self.log_percent()
 
     @EnginePerformanceMonitor.monitor
-    def save_curves(self, rlz, matrices):
+    def save_curves(self, all_matrices):
         """
         Create the final output records for hazard curves. This is done by
         copying the in-memory matrices to
@@ -197,51 +216,54 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         is need to export the full hazard curve results).
         """
         imtls = self.hc.intensity_measure_types_and_levels
+        for i, matrices in enumerate(all_matrices):
+            rlz = models.LtRealization.objects.get(
+                hazard_calculation=self.hc, ordinal=i)
 
-        # create a new `HazardCurve` 'container' record for each
-        # realization (virtual container for multiple imts)
-        models.HazardCurve.objects.create(
-            output=models.Output.objects.create_output(
-                self.job, "hc-multi-imt-rlz-%s" % rlz.id,
-                "hazard_curve_multi"),
-            lt_realization=rlz,
-            imt=None,
-            investigation_time=self.hc.investigation_time)
-
-        # create a new `HazardCurve` 'container' record for each
-        # realization for each intensity measure type
-        for imt, matrix in zip(sorted(imtls), matrices):
-            hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
-
-            # save output
-            hco = models.Output.objects.create(
-                oq_job=self.job,
-                display_name="Hazard Curve rlz-%s" % rlz.id,
-                output_type='hazard_curve',
-            )
-
-            # save hazard_curve
-            haz_curve = models.HazardCurve.objects.create(
-                output=hco,
+            # create a new `HazardCurve` 'container' record for each
+            # realization (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create_output(
+                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                    "hazard_curve_multi"),
                 lt_realization=rlz,
-                investigation_time=self.hc.investigation_time,
-                imt=hc_im_type,
-                imls=imtls[imt],
-                sa_period=sa_period,
-                sa_damping=sa_damping,
-            )
+                imt=None,
+                investigation_time=self.hc.investigation_time)
 
-            # save hazard_curve_data
-            points = self.hc.points_to_compute()
-            logs.LOG.info('saving %d hazard curves for %s, imt=%s',
-                          len(points), hco, imt)
-            writer.CacheInserter.saveall([
-                models.HazardCurveData(
-                    hazard_curve=haz_curve,
-                    poes=list(poes),
-                    location='POINT(%s %s)' % (p.longitude, p.latitude),
-                    weight=rlz.weight)
-                for p, poes in zip(points, matrix)])
+            # create a new `HazardCurve` 'container' record for each
+            # realization for each intensity measure type
+            for imt, matrix in zip(sorted(imtls), matrices):
+                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
+
+                # save output
+                hco = models.Output.objects.create(
+                    oq_job=self.job,
+                    display_name="Hazard Curve rlz-%s" % rlz.id,
+                    output_type='hazard_curve',
+                )
+
+                # save hazard_curve
+                haz_curve = models.HazardCurve.objects.create(
+                    output=hco,
+                    lt_realization=rlz,
+                    investigation_time=self.hc.investigation_time,
+                    imt=hc_im_type,
+                    imls=imtls[imt],
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                )
+
+                # save hazard_curve_data
+                points = self.hc.points_to_compute()
+                logs.LOG.info('saving %d hazard curves for %s, imt=%s',
+                              len(points), hco, imt)
+                writer.CacheInserter.saveall([
+                    models.HazardCurveData(
+                        hazard_curve=haz_curve,
+                        poes=list(poes),
+                        location='POINT(%s %s)' % (p.longitude, p.latitude),
+                        weight=rlz.weight)
+                    for p, poes in zip(points, matrix)])
 
     def post_process(self):
         logs.LOG.debug('> starting post processing')
