@@ -30,6 +30,9 @@ from celery.task import task
 from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
 
+from openquakeserver.dbsettings import PLATFORM_DATABASES as DATABASES
+
+
 DEFAULT_LOG_LEVEL = 'progress'
 
 
@@ -125,16 +128,12 @@ def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
         description=job.calculation.description,
         status="transfering outputs")
 
-    # direct import of settings to avoid starting celery with the
-    # wrong settings module (it should use the engine one)
-    from openquakeserver import settings
-
     platform_connection = psycopg2.connect(
-        host=settings.DATABASES[dbname]['HOST'],
-        database=settings.DATABASES[dbname]['NAME'],
-        user=settings.DATABASES[dbname]['USER'],
-        password=settings.DATABASES[dbname]['PASSWORD'],
-        port=settings.DATABASES[dbname]['PORT'])
+        host=DATABASES[dbname]['HOST'],
+        database=DATABASES[dbname]['NAME'],
+        user=DATABASES[dbname]['USER'],
+        password=DATABASES[dbname]['PASSWORD'],
+        port=DATABASES[dbname]['PORT'])
 
     for output in job.output_set.all():
         copy_output(platform_connection, output, foreign_calc_id)

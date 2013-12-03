@@ -14,15 +14,6 @@ MANAGERS = ADMINS
 
 DATABASES = oqe_settings.DATABASES
 
-DATABASES['platform'] = {
-    'ENGINE': 'django.contrib.gis.db.backends.postgis',
-    'HOST': 'localhost',
-    'NAME': "oqplatform",
-    'USER': 'oqplatform',
-    'PASSWORD': 'openquake',
-    'PORT': 5432
-}
-
 DATABASE_ROUTERS = [
     'openquakeserver.routers.DefaultRouter',
     'openquake.engine.db.routers.OQRouter',
@@ -177,10 +168,3 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
-
-
-# Load more settings from a file called local_settings.py if it exists
-try:
-    from local_settings import *
-except ImportError:
-    pass
