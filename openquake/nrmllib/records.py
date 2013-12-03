@@ -76,7 +76,7 @@ class DiscreteVulnerabilityData(Record):
     y = property(lambda self: self.lossRatio)
 
 
-# fragility records
+# fragility records (discrete)
 
 class FragilityDiscrete(Record):
     hidden = True
@@ -84,22 +84,6 @@ class FragilityDiscrete(Record):
     pkey = Unique('format')
 
     format = Field(valid.Choice('discrete'))
-    description = Field(str)
-    limitStates = Field(valid.namelist)
-
-    def to_node(self):
-        node = Node('fragilityModel', dict(format=self[0]))
-        node.append(Node('description', text=self[1]))
-        node.append(Node('limitStates', text=self[2]))
-        return node
-
-
-class FragilityContinuous(Record):
-    hidden = True
-    convertername = 'FragilityContinuous'
-    pkey = Unique('format')
-
-    format = Field(valid.Choice('continuous'))
     description = Field(str)
     limitStates = Field(valid.namelist)
 
@@ -130,6 +114,46 @@ class FFSetDiscrete(Record):
         return node
 
 
+class FFLimitStateDiscrete(Record):
+    convertername = 'FragilityDiscrete'
+    pkey = Unique('ffs_ordinal', 'limitState')
+
+    ffs_ordinal = Field(int)
+    limitState = Field(str)
+
+
+class FFDataDiscrete(Record):
+    convertername = 'FragilityDiscrete'
+    pkey = Unique('ffs_ordinal', 'limitState', 'iml')
+
+    ffs_ordinal = Field(int)
+    limitState = Field(str)
+    iml = Field(float)
+    poe = Field(valid.probability)
+
+    # some properties useful for plotting the record
+    x = property(lambda self: self.iml)
+    y = property(lambda self: self.poe)
+
+
+# fragility records (continuous)
+
+class FragilityContinuous(Record):
+    hidden = True
+    convertername = 'FragilityContinuous'
+    pkey = Unique('format')
+
+    format = Field(valid.Choice('continuous'))
+    description = Field(str)
+    limitStates = Field(valid.namelist)
+
+    def to_node(self):
+        node = Node('fragilityModel', dict(format=self[0]))
+        node.append(Node('description', text=self[1]))
+        node.append(Node('limitStates', text=self[2]))
+        return node
+
+
 class FFSetContinuous(Record):
     convertername = 'FragilityContinuous'
     pkey = Unique('ordinal')
@@ -157,26 +181,12 @@ class FFSetContinuous(Record):
         return node
 
 
-class FFLimitStateDiscrete(Record):
-    convertername = 'FragilityDiscrete'
+class FFLimitStateContinuous(Record):
+    convertername = 'FragilityContinuous'
     pkey = Unique('ffs_ordinal', 'limitState')
 
     ffs_ordinal = Field(int)
     limitState = Field(str)
-
-
-class FFDataDiscrete(Record):
-    convertername = 'FragilityDiscrete'
-    pkey = Unique('ffs_ordinal', 'limitState', 'iml')
-
-    ffs_ordinal = Field(int)
-    limitState = Field(str)
-    iml = Field(float)
-    poe = Field(valid.probability)
-
-    # some properties useful for plotting the record
-    x = property(lambda self: self.iml)
-    y = property(lambda self: self.poe)
 
 
 class FFDContinuos(Record):

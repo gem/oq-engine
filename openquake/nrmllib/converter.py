@@ -173,7 +173,7 @@ class Vulnerability(Converter):
                 coeffs.append(row['coefficientsVariation'])
                 ratios.append(row['lossRatio'])
 
-            # check we can instantiate a VulnerabilityFunction in risklib
+            # check that we can instantiate a VulnerabilityFunction in risklib
             scientific.VulnerabilityFunction(
                 map(float, imls), map(float, ratios), map(float, coeffs))
 
@@ -259,6 +259,7 @@ class FragilityContinuous(Converter):
             for ls, ffc in zip(limitStates, ffs.getnodes('ffc')):
                 assert ls == ffc['ls'], 'Expected %s, got %s' % (
                     ls, ffc['ls'])
+                yield records.FFLimitStateContinuous(ffs_ordinal, ls)
                 yield records.FFDContinuos(
                     ffs_ordinal, ls, 'mean', ffc.params['mean'])
                 yield records.FFDContinuos(

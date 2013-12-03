@@ -21,7 +21,6 @@ import csv
 import inspect
 import zipfile
 import StringIO
-import itertools
 import tempfile
 from abc import ABCMeta, abstractmethod
 
