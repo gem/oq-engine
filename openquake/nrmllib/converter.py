@@ -330,16 +330,6 @@ def assetgenerator(assets, location_node, costtypes):
         yield Node('asset', attr, nodes=nodes)
 
 
-def make_asset_class(costcolumns):
-    fields = dict((f.name, f) for f in records.AssetPopulation.fields)
-    for cc in costcolumns:
-        fields[cc] = record.Field(str)
-        fields['area'] = record.Field(str)
-        for period in PERIODS:
-            fields['occupancy__%s' % period] = record.Field(str)
-    return type('AssetBuilding', (records.AssetPopulation,), fields)
-
-
 class Exposure(Converter):
     """A converter for exposureModel nodes"""
 
@@ -353,8 +343,7 @@ class Exposure(Converter):
                 yield records.CostType(c['name'], c['type'], c['unit'],
                                        c.attrib.get('retrofittedType', ''),
                                        c.attrib.get('retrofittedUnit', ''))
-            costcolumns = getcostcolumns(node.conversions.costTypes)
-            Asset = make_asset_class(costcolumns)
+            #costcolumns = getcostcolumns(node.conversions.costTypes)
             conv = node.conversions
             yield records.Exposure(
                 node['id'],
@@ -366,7 +355,6 @@ class Exposure(Converter):
                 conv.deductible['isAbsolute'],
                 conv.insuranceLimit['isAbsolute'])
         else:
-            Asset = records.AssetPopulation
             yield records.Exposure(
                 node['id'],
                 node['category'],
@@ -376,11 +364,7 @@ class Exposure(Converter):
         locations = {}  # location -> id
         loc_counter = itertools.count(1)
         for asset in node.assets:
-            if node['category'] == 'buildings':
-                extras = [asset['area']] + getcosts(asset, costcolumns) + \
-                    getoccupancies(asset)
-            else:
-                extras = []
+            # getcosts(asset, costcolumns) + getoccupancies(asset)
             loc = asset.location['lon'], asset.location['lat']
             try:
                 loc_id = locations[loc]
@@ -388,8 +372,9 @@ class Exposure(Converter):
                 loc_id = locations[loc] = loc_counter.next()
 
             yield records.Location(str(loc_id), loc[0], loc[1])
-            yield Asset(asset['id'], asset['taxonomy'],
-                        asset['number'], loc_id, *extras)
+            yield records.Asset(
+                asset['id'], asset['taxonomy'],  asset['number'],
+                asset.attrib.get('area', ''), loc_id)
 
     def to_node(self):
         """
@@ -414,10 +399,8 @@ class Exposure(Converter):
         if exp['category'] == 'buildings':
             exp.conversions.costTypes.nodes = ctypes = [
                 c.to_node() for c in tset.CostType]
-            costcolumns = getcostcolumns(exp.conversions.costTypes)
-            Asset = make_asset_class(costcolumns)
+            # costcolumns = getcostcolumns(exp.conversions.costTypes)
         else:
-            Asset = records.AssetPopulation
             ctypes = []
         location_dict = record.nodedict(tset.Location)
         exp.assets.nodes = assetgenerator(tset.Asset, location_dict, ctypes)

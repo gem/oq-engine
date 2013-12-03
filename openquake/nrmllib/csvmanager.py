@@ -252,9 +252,9 @@ def create_table(recordtype, csvstr):
     return Table(recordtype, reclist)
 
 
-class MultipleConverterError(Exception):
+class MultipleManagerError(Exception):
     """
-    Raised when it is not possible to extract a single converter
+    Raised when it is not possible to extract a single manager
     from an archive of CSV files (i.e. there more than one common
     prefix).
     """
@@ -332,7 +332,7 @@ class CSVManager(object):
                 'Could not determine the right manager '
                 'for files %s' % self.archive.extract_filenames())
         elif len(managers) > 1:
-            raise MultipleConverterError(
+            raise MultipleManagerError(
                 'Found %d managers %s, expected 1' %
                 (len(managers), managers))
         return managers[0].convertertype
@@ -345,7 +345,8 @@ class CSVManager(object):
         for rectype in tset.convertertype.recordtypes():
             try:
                 tset.insert_all(self.read(rectype))
-            except NotInArchive:  # it may happen for optional tables
+            except NotInArchive:
+                # this may happen for optional tables in the tableset
                 continue
         return tset
 
