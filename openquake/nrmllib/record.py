@@ -493,20 +493,11 @@ class TableSet(object):
     """
     A set of tables associated to the same converter
     """
-    @classmethod
-    def from_node(cls, node):
-        """Convert a Node object into a TableSet object"""
-        from openquake.nrmllib.converter import Converter
-        convcls = Converter.from_node(node)
-        self = cls(convcls)
-        self.insert_all(convcls.node_to_records(node))
-        return self
-
-    def __init__(self, converter):
-        self.converter = converter
+    def __init__(self, convertertype):
+        self.convertertype = convertertype
         self.tables = []
         self.fkdict = {}
-        for ordinal, rt in enumerate(converter.recordtypes()):
+        for ordinal, rt in enumerate(convertertype.recordtypes()):
             tbl = Table(rt, [], ordinal)
             if not getattr(rt, 'hidden', None):
                 self.tables.append(tbl)
@@ -557,7 +548,7 @@ class TableSet(object):
         raise NotImplementedError
 
     def to_node(self):
-        return self.converter.tableset_to_node(self)
+        return self.convertertype(self).to_node()
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.tables)
