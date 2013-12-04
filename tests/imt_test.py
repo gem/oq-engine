@@ -76,7 +76,7 @@ class BaseIMTTestCase(unittest.TestCase):
         sa = imt_module.from_string('SA(0.1)')
         self.assertEqual(sa, ('SA', 0.1, 5.0))
         pga = imt_module.from_string('PGA')
-        self.assertEqual(pga, ('PGA',))
+        self.assertEqual(pga, ('PGA', None, None))
         with self.assertRaises(KeyError):
             imt_module.from_string('XXX')
 

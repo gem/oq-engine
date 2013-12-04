@@ -20,6 +20,8 @@ types.
 import re
 import operator
 
+# NB: (MS) the management of the IMTs implemented here is horrible and will
+# be thrown away when we will need to introduce a new IMT.
 
 __all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI')
 
@@ -38,7 +40,7 @@ def from_string(imt):
         period = float(match.group(1))
         return SA(period, DEFAULT_SA_DAMPING)
     else:
-        return globals()[imt]()
+        return globals()[imt](None, None)
 
 
 class _IMT(tuple):
@@ -59,8 +61,8 @@ class _IMT(tuple):
                 setattr(cls, field, property(operator.itemgetter(index + 1)))
             return cls
 
-    def __new__(cls, *args):
-        return tuple.__new__(cls, (cls.__name__,) + args)
+    def __new__(cls, sa_period=None, sa_damping=None):
+        return tuple.__new__(cls, (cls.__name__, sa_period, sa_damping))
 
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__,
