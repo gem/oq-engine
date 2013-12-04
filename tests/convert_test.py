@@ -140,9 +140,9 @@ PAGER,IR,5.50,0.00,0.30
 PAGER,IR,6.00,0.00,0.30''')
         man = CSVManager(archive, 'test')
         tset = man.get_tableset()
-        self.assertEqual(len(tset.DiscreteVulnerabilitySet), 2)
-        self.assertEqual(len(tset.DiscreteVulnerability), 4)
-        self.assertEqual(len(tset.DiscreteVulnerabilityData), 3)
+        self.assertEqual(len(tset.tableDiscreteVulnerabilitySet), 2)
+        self.assertEqual(len(tset.tableDiscreteVulnerability), 4)
+        self.assertEqual(len(tset.tableDiscreteVulnerabilityData), 3)
         rec = records.DiscreteVulnerabilityData(
             'PAGR', 'IR', '5.00', '0.00', '0.30')
 

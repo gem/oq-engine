@@ -495,16 +495,18 @@ class TableSet(object):
     """
     def __init__(self, convertertype):
         self.convertertype = convertertype
+        self.name = convertertype.__name__
         self.tables = []
         self.fkdict = {}
         for ordinal, rt in enumerate(convertertype.recordtypes()):
             tbl = Table(rt, [], ordinal)
             if not getattr(rt, 'hidden', None):
                 self.tables.append(tbl)
-            setattr(self, rt.__name__, tbl)
+            setattr(self, 'table' + rt.__name__, tbl)
             for fkey in rt.get_descriptors(ForeignKey):
                 target = fkey.unique
-                target_tbl = getattr(self, target.recordtype.__name__)
+                target_name = 'table' + target.recordtype.__name__
+                target_tbl = getattr(self, target_name)
                 self.fkdict[fkey] = target_tbl._unique_data[target.name]
 
     def __iter__(self):
@@ -530,7 +532,7 @@ class TableSet(object):
         checking the ForeignKey constraints, if any.
         """
         self.check_fk(rec)
-        tbl = getattr(self, rec.__class__.__name__)
+        tbl = getattr(self, 'table' + rec.__class__.__name__)
         tbl.append(rec)
 
     def insert_all(self, recs):
@@ -548,10 +550,13 @@ class TableSet(object):
         raise NotImplementedError
 
     def to_node(self):
+        """
+        Convert the table set into a node object by using the converter class
+        """
         return self.convertertype(self).to_node()
 
     def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name__, self.tables)
+        return '<%s %s>' % (self.name, self.tables)
 
     def __len__(self):
         return sum(1 for tbl in self.tables)

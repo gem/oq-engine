@@ -121,10 +121,10 @@ class Vulnerability(Converter):
 
     def to_node(self):
         tset = self.tableset
-        dvs_node = record.nodedict(tset.DiscreteVulnerabilitySet)
-        dvf_node = record.nodedict(tset.DiscreteVulnerability)
+        dvs_node = record.nodedict(tset.tableDiscreteVulnerabilitySet)
+        dvf_node = record.nodedict(tset.tableDiscreteVulnerability)
         for (set_id, vf_id), group in groupby(
-                tset.DiscreteVulnerabilityData,
+                tset.tableDiscreteVulnerabilityData,
                 ['vulnerabilitySetID', 'vulnerabilityFunctionID']):
             dvf = dvf_node[set_id, vf_id]
             coeffs = []
@@ -181,12 +181,25 @@ class FragilityDiscrete(Converter):
         Build a full fragility node from CSV
         """
         tset = self.tableset
-        frag = tset.FragilityDiscrete[0].to_node()
-        ffs_node = record.nodedict(tset.FFSetDiscrete)
+        frag = tset.tableFragilityDiscrete[0].to_node()
+        ffs_node = record.nodedict(tset.tableFFSetDiscrete)
+        nodamage = float(ffs_node['noDamageLimit']) \
+            if 'noDamageLimit' in ffs_node else None
         frag.nodes.extend(ffs_node.values())
         for (ordinal, ls), data in groupby(
-                tset.FFDataDiscrete, ['ffs_ordinal', 'limitState']):
+                tset.tableFFDataDiscrete, ['ffs_ordinal', 'limitState']):
             data = list(data)
+
+            # check that we can instantiate a FragilityFunction in risklib
+            if nodamage:
+                scientific.FragilityFunctionDiscrete(
+                    [nodamage] + [rec.iml for rec in data],
+                    [0.0] + [rec.poe for rec in data], nodamage)
+            else:
+                scientific.FragilityFunctionDiscrete(
+                    [rec.iml for rec in data],
+                    [rec.poe for rec in data], nodamage)
+
             imls = ' '.join(rec['iml'] for rec in data)
             ffs_node[(ordinal,)].IML.text = imls
             poes = ' '.join(rec['poe'] for rec in data)
@@ -232,15 +245,20 @@ class FragilityContinuous(Converter):
         Build a full continuous fragility node from CSV
         """
         tset = self.tableset
-        frag = tset.FragilityContinuous[0].to_node()
-        ffs_node = record.nodedict(tset.FFSetContinuous)
+        frag = tset.tableFragilityContinuous[0].to_node()
+        ffs_node = record.nodedict(tset.tableFFSetContinuous)
         frag.nodes.extend(ffs_node.values())
         for (ordinal, ls), data in groupby(
-                tset.FFDContinuos, ['ffs_ordinal', 'limitState']):
+                tset.tableFFDContinuos, ['ffs_ordinal', 'limitState']):
             data = list(data)
             n = Node('ffc', dict(ls=ls))
-            rows = [row[2:] for row in data]  # param, value
-            n.append(Node('params', dict(rows)))
+            param = dict(row[2:] for row in data)  # param, value
+
+            # check that we can instantiate a FragilityFunction in risklib
+            scientific.FragilityFunctionContinuous(
+                float(param['mean']), float(param['stddev']))
+
+            n.append(Node('params', param))
             ffs_node[(ordinal,)].append(n)
         return frag
 
@@ -395,15 +413,16 @@ class Exposure(Converter):
         with a variable number of columns depending on the metadata.
         """
         tset = self.tableset
-        exp = tset.Exposure[0].to_node()
+        exp = tset.tableExposure[0].to_node()
         if exp['category'] == 'buildings':
             exp.conversions.costTypes.nodes = ctypes = [
-                c.to_node() for c in tset.CostType]
+                c.to_node() for c in tset.tableCostType]
             # costcolumns = getcostcolumns(exp.conversions.costTypes)
         else:
             ctypes = []
-        location_dict = record.nodedict(tset.Location)
-        exp.assets.nodes = assetgenerator(tset.Asset, location_dict, ctypes)
+        location_dict = record.nodedict(tset.tableLocation)
+        exp.assets.nodes = assetgenerator(
+            tset.tableAsset, location_dict, ctypes)
         return exp
 
 
@@ -459,9 +478,10 @@ class GmfCollection(Converter):
         The rows are grouped by ses, imt, rupture.
         """
         tset = self.tableset
-        gmfset_node = record.nodedict(tset.GmfSet)
+        gmfset_node = record.nodedict(tset.tableGmfSet)
         for (ses, imt, rupture), rows in groupby(
-                tset.GmfData, ['stochasticEventSetId', 'imtStr', 'ruptureId']):
+                tset.tableGmfData,
+                ['stochasticEventSetId', 'imtStr', 'ruptureId']):
             if imt.startswith('SA'):
                 attr = dict(IMT='SA', saPeriod=imt[3:-1], saDamping='5')
             else:
@@ -479,8 +499,8 @@ class GmfCollection(Converter):
         """
         tset = self.tableset
         try:
-            gmfcoll = tset.GmfCollection[0]
-        except Exception:  # no data for GmfCollection
+            gmfcoll = tset.tableGmfCollection[0]
+        except IndexError:  # no data for GmfCollection
             gmfset_node = self._to_node()
             return gmfset_node.values()[0]  # there is a single node
         gmfset_node = self._to_node()
