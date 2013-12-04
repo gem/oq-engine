@@ -17,10 +17,28 @@
 Module :mod:`openquake.hazardlib.imt` defines different intensity measure
 types.
 """
+import re
 import operator
 
 
 __all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'CAV', 'RSD', 'MMI')
+
+DEFAULT_SA_DAMPING = 5.0
+
+
+def from_string(imt):
+    """
+    Convert an IMT string into a hazardlib object.
+
+    :param str imt:
+        Intensity Measure Type.
+    """
+    if 'SA' in imt:
+        match = re.match(r'^SA\(([^)]+?)\)$', imt)
+        period = float(match.group(1))
+        return SA(period, DEFAULT_SA_DAMPING)
+    else:
+        return globals()[imt]()
 
 
 class _IMT(tuple):
@@ -38,12 +56,11 @@ class _IMT(tuple):
             dct['__slots__'] = ()
             cls = type.__new__(mcs, name, bases, dct)
             for index, field in enumerate(cls._fields):
-                setattr(cls, field, property(operator.itemgetter(index)))
+                setattr(cls, field, property(operator.itemgetter(index + 1)))
             return cls
 
     def __new__(cls, *args):
-        salt = hash(('IMT', cls.__name__))
-        return tuple.__new__(cls, args + (salt, ))
+        return tuple.__new__(cls, (cls.__name__,) + args)
 
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__,
@@ -86,7 +103,7 @@ class SA(_IMT):
     """
     _fields = ('period', 'damping')
 
-    def __new__(cls, period, damping):
+    def __new__(cls, period, damping=DEFAULT_SA_DAMPING):
         if not period > 0:
             raise ValueError('period must be positive')
         if not damping > 0:
@@ -106,6 +123,7 @@ class CAV(_IMT):
     Cumulative Absolute Velocity. Defins the integral of the absolute
     acceleration time series. Units are "g-sec"
     """
+
 
 class RSD(_IMT):
     """

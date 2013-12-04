@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-
+import cPickle
 from openquake.hazardlib import imt as imt_module
 
 
@@ -48,7 +48,7 @@ class BaseIMTTestCase(unittest.TestCase):
         self.assertFalse(self.TestIMT('foo', 'bar') ==
                          self.TestIMT('fooz', 'bar'))
         self.assertFalse(self.TestIMT('foo', 'bar') == ('foo', 'bar'))
-        self.assertFalse(self.TestIMT(False, False) == False)
+        self.assertFalse(self.TestIMT(False, False) is False)
 
         self.assertTrue(self.TestIMT(1, 1) != (1, 1))
         self.assertTrue(self.TestIMT(0, 1) != self.TestIMT(1, 1))
@@ -56,7 +56,6 @@ class BaseIMTTestCase(unittest.TestCase):
         self.assertTrue(self.TestIMT('foo', 'bar') !=
                         self.TestIMT('fooz', 'bar'))
         self.assertTrue(self.TestIMT('foo', 'bar') != ('foo', 'bar'))
-        self.assertTrue(self.TestIMT(False, False) != False)
 
     def test_hash(self):
         imt1 = self.TestIMT('some', 'thing')
@@ -68,6 +67,18 @@ class BaseIMTTestCase(unittest.TestCase):
 
         imt2 = TestIMT2('some', 'thing')
         self.assertNotEqual(hash(imt1), hash(imt2))
+
+    def test_pickeable(self):
+        imt = imt_module.SA(0.2)
+        self.assertEqual(cPickle.loads(cPickle.dumps(imt)), imt)
+
+    def test_from_string(self):
+        sa = imt_module.from_string('SA(0.1)')
+        self.assertEqual(sa, ('SA', 0.1, 5.0))
+        pga = imt_module.from_string('PGA')
+        self.assertEqual(pga, ('PGA',))
+        with self.assertRaises(KeyError):
+            imt_module.from_string('XXX')
 
 
 class SATestCase(unittest.TestCase):
