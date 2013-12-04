@@ -19,7 +19,7 @@ Core functionality for the classical PSHA hazard calculator.
 
 import openquake.hazardlib
 import openquake.hazardlib.calc
-import openquake.hazardlib.imt
+from openquake.hazardlib.imt import from_string
 
 from openquake.engine import logs
 from openquake.engine.calculators.hazard import general as haz_general
@@ -116,7 +116,7 @@ def _update_curves(hc, matrices, lt_rlz):
     """
     with logs.tracing('_update_curves for all IMTs'):
         for imt in hc.intensity_measure_types_and_levels.keys():
-            hazardlib_imt = haz_general.imt_to_hazardlib(imt)
+            hazardlib_imt = from_string(imt)
             matrix = matrices[hazardlib_imt]
             if (matrix == 0.0).all():
                 # The matrix for this IMT is all zeros; there's no reason to
