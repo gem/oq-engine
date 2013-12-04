@@ -29,7 +29,9 @@ DEFAULT_SA_DAMPING = 5.0
 def from_string(imt):
     """
     Convert an IMT string into a hazardlib object.
-    param str imt: the intensity measure type
+
+    :param str imt:
+        Intensity Measure Type.
     """
     if 'SA' in imt:
         match = re.match(r'^SA\(([^)]+?)\)$', imt)
