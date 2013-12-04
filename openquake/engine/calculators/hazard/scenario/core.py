@@ -25,6 +25,7 @@ from openquake.nrmllib.hazard.parsers import RuptureModelParser
 
 # HAZARDLIB
 from openquake.hazardlib.calc import ground_motion_fields
+from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
 from openquake.engine.calculators.hazard import general as haz_general
@@ -68,8 +69,7 @@ def compute_gmfs(job_id, sites, rupture, gmf_id, realizations):
         Number of realizations to create.
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    imts = [haz_general.imt_to_hazardlib(x)
-            for x in hc.intensity_measure_types]
+    imts = [from_string(x) for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     correlation_model = haz_general.get_correl_model(hc)
 
@@ -103,14 +103,7 @@ def save_gmf(gmf_id, gmf_dict, sites):
         # we want it is an array; it handles subscripting
         # in the way that we want
         gmfarray = numpy.array(gmfs_)
-
-        sa_period = None
-        sa_damping = None
-        if isinstance(imt, openquake.hazardlib.imt.SA):
-            sa_period = imt.period
-            sa_damping = imt.damping
-        imt_name = imt.__class__.__name__
-
+        imt_name, sa_period, sa_damping = imt
         for i, site in enumerate(sites):
             inserter.add(models.GmfData(
                 gmf_id=gmf_id,
