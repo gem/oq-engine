@@ -4,7 +4,7 @@ import tempfile
 from openquake.nrmllib import records
 from openquake.nrmllib.csvmanager import (
     create_table, ZipArchive, MemArchive, CSVManager,
-    MultipleConverterError)
+    MultipleManagerError)
 
 
 def cast(rec):
@@ -55,7 +55,7 @@ class TableTestCase(unittest.TestCase):
             ('tes__DiscreteVulnerabilityData.csv', ''),
         ])
         man = CSVManager(archive)
-        with self.assertRaises(MultipleConverterError):
+        with self.assertRaises(MultipleManagerError):
             man._getconverter()
         # the case NotInArchive is convered in convert_test.py
 

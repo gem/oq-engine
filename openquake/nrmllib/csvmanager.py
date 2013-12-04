@@ -252,9 +252,9 @@ def create_table(recordtype, csvstr):
     return Table(recordtype, reclist)
 
 
-class MultipleConverterError(Exception):
+class MultipleManagerError(Exception):
     """
-    Raised when it is not possible to extract a single converter
+    Raised when it is not possible to extract a single manager
     from an archive of CSV files (i.e. there more than one common
     prefix).
     """
@@ -282,6 +282,8 @@ class CSVManager(object):
 
     CSVManager(archive).convert_from_nrml()
     """
+    convertertype = converter.Converter
+
     def __init__(self, archive, prefix='', has_header=True):
         self.archive = archive
         self.prefix = prefix
@@ -290,18 +292,17 @@ class CSVManager(object):
         self.rt2writer = {}
         self.rt2file = {}
 
-    def _getconverters(self):
+    def _getmanagers(self):
         """
-        Returns a list of Converter instances, one for each file group
-        in the underlying archive. Each converter has its own manager
-        with the right prefix.
+        Returns a list of managers, one for each file group in the
+        underlying archive. Each manager has its own converter class.
         """
-        converters = {}  # name->converter dictionary
-        cc = {}  # converter name -> converter class dictionary
+        managers = {}  # name->manager dictionary
+        ct = {}  # converter name -> converter type dictionary
         for name, value in vars(converter).iteritems():
             if inspect.isclass(value) and issubclass(
                     value, converter.Converter):
-                cc[name] = value
+                ct[name] = value
         for fname in sorted(self.archive.extract_filenames()):
             try:
                 prefix, recordcsv = fname.split('__')
@@ -312,37 +313,41 @@ class CSVManager(object):
             recordtype = getattr(records, recordcsv[:-4], None)
             if recordtype is None:
                 continue
-            if not prefix in converters:
+            if not prefix in managers:
                 man = self.__class__(self.archive, prefix)
-                conv = cc[recordtype.convertername](man)
-                converters[prefix] = conv
-        return converters.values()
+                man.convertertype = ct[recordtype.convertername]
+                managers[prefix] = man
+        return managers.values()
 
     def _getconverter(self):
         """
-        Extract the appropriate converter to convert the files in
+        Extract the appropriate converter class to convert the files in
         the underlying archive. Raise an error is no converter is
         found (this happens if there are no files following the
         naming conventions).
         """
-        converters = self._getconverters()
-        if not converters:
+        managers = self._getmanagers()
+        if not managers:
             raise NotInArchive(
-                'Could not determine the right converter '
-                'from files %s' % self.archive.extract_filenames())
-        elif len(converters) > 1:
-            raise MultipleConverterError(
-                'Found %d converters %s, expected 1' %
-                (len(converters), converters))
-        return converters[0]
+                'Could not determine the right manager '
+                'for files %s' % self.archive.extract_filenames())
+        elif len(managers) > 1:
+            raise MultipleManagerError(
+                'Found %d managers %s, expected 1' %
+                (len(managers), managers))
+        return managers[0].convertertype
 
     def get_tableset(self):
         """
         Return a populated TableSet from the underlying CSV files
         """
         tset = record.TableSet(self._getconverter())
-        for rectype in tset.converter.recordtypes():
-            tset.insert_all(self.read(rectype))
+        for rectype in tset.convertertype.recordtypes():
+            try:
+                tset.insert_all(self.read(rectype))
+            except NotInArchive:
+                # this may happen for optional tables in the tableset
+                continue
         return tset
 
     def convert_to_node(self):
@@ -350,7 +355,7 @@ class CSVManager(object):
         Convert the CSV files in the archive with the given prefix
         into a Node object. Raise an error if some files are missing.
         """
-        return self._getconverter().csv_to_node()
+        return self.get_tableset().to_node()
 
     def convert_to_nrml(self, out_archive=None):
         """
@@ -358,15 +363,15 @@ class CSVManager(object):
         directory is not specified, use the input archive to store the output.
         """
         fnames = []
-        for conv in self._getconverters():
-            with conv.man as man:
+        for man in self._getmanagers():
+            with man:
                 outname = man.prefix + '.xml'
                 if out_archive is None:
                     out = man.archive.open(outname, 'w+')
                 else:
                     out = out_archive.open(outname, 'w+')
                 with out:
-                    node = conv.csv_to_node()
+                    node = man.get_tableset().to_node()
                     node_to_nrml(node, out)
                 fnames.append(out.name)
         return fnames
@@ -390,9 +395,9 @@ class CSVManager(object):
             man = self
         else:  # creates a new CSVManager for the given prefix
             man = self.__class__(self.archive, prefix)
-        conv = converter.Converter.from_node(node)(man)
+        convtype = converter.Converter.from_node(node)
         with man:
-            for rec in conv.node_to_records(node):
+            for rec in convtype.node_to_records(node):
                 man.write(rec)  # automatically opens the needed files
         return man
 
@@ -436,11 +441,11 @@ class CSVManager(object):
         return [e for i, e in zip(range(limit), it)]
 
     def _find_invalid(self):
-        for conv in self._getconverters():
-            for recordtype in conv.recordtypes():
-                fname = '%s__%s.csv' % (conv.man.prefix, recordtype.__name__)
+        for man in self._getmanagers():
+            for recordtype in man.convertertype.recordtypes():
+                fname = '%s__%s.csv' % (man.prefix, recordtype.__name__)
                 if fname in self.archive:
-                    recorditer = conv.man.read(recordtype)
+                    recorditer = man.read(recordtype)
                     for invalid in record.find_invalid(recorditer):
                         invalid.fname = fname
                         yield invalid

@@ -265,18 +265,19 @@ class CostType(Record):
         return Node('costType', attr)
 
 
-class AssetPopulation(Record):
+class Asset(Record):
     convertername = 'Exposure'
     pkey = Unique('id')
 
     id = Field(str)
     taxonomy = Field(str)
     number = Field(float)
+    area = Field(float)
     location = Field(int)
 
     def to_node(self):
         return Node('asset', dict(id=self[0], taxonomy=self[1],
-                                  number=self[2]))
+                                  number=self[2], area=self[3]))
 
 
 # gmf records

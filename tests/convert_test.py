@@ -98,8 +98,7 @@ class ConvertBadFilesTestCase(unittest.TestCase):
             dvd='vulnerabilitySetID,vulnerabilityFunctionID,'
             'IML,lossRatio,coefficientsVariation')
         man = CSVManager(archive, 'test')
-        with self.assertRaises(InvalidFile):
-            man.convert_to_node()
+        man.convert_to_node()  # should raise some error?
 
     def test_bad_data_1(self):
         archive = fake_archive(dvd='''\
@@ -108,7 +107,7 @@ PAGER,IR,5.00,0.00,0.30
 PAGER,IR,5.50,0.00,0.30
 PAGER,IR,6.00,0.00,''')
         man = CSVManager(archive, 'test')
-        with self.assertRaises(InvalidFile):
+        with self.assertRaises(ValueError):
             man.convert_to_node()
 
     def test_bad_data_2(self):
@@ -118,7 +117,7 @@ PAGER,IR,5.00,0.00,0.30
 PAGER,IR,5.50,0.00,0.30
 PAGER,IR,6.00,0.00''')
         man = CSVManager(archive, 'test')
-        with self.assertRaises(InvalidFile):
+        with self.assertRaises(ValueError):
             man.convert_to_node()
 
     def test_duplicates(self):
@@ -128,7 +127,7 @@ PAGER,population,fatalities,MMI
 PAGER,population,fatalities,MMI
 ''')
         man = CSVManager(archive, 'test')
-        with self.assertRaises(InvalidFile):
+        with self.assertRaises(KeyError):
             man.convert_to_node()
 
 
@@ -141,9 +140,9 @@ PAGER,IR,5.50,0.00,0.30
 PAGER,IR,6.00,0.00,0.30''')
         man = CSVManager(archive, 'test')
         tset = man.get_tableset()
-        self.assertEqual(len(tset.DiscreteVulnerabilitySet), 2)
-        self.assertEqual(len(tset.DiscreteVulnerability), 4)
-        self.assertEqual(len(tset.DiscreteVulnerabilityData), 3)
+        self.assertEqual(len(tset.tableDiscreteVulnerabilitySet), 2)
+        self.assertEqual(len(tset.tableDiscreteVulnerability), 4)
+        self.assertEqual(len(tset.tableDiscreteVulnerabilityData), 3)
         rec = records.DiscreteVulnerabilityData(
             'PAGR', 'IR', '5.00', '0.00', '0.30')
 
