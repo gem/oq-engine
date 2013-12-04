@@ -40,17 +40,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 from shapely import wkt
 
+from openquake.hazardlib.imt import from_string, DEFAULT_SA_DAMPING
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import source as hazardlib_source
 import openquake.hazardlib.site
 
 from openquake.engine.db import fields
 from openquake.engine import writer
-
-
-#: Default Spectral Acceleration damping. At the moment, this is not
-#: configurable.
-DEFAULT_SA_DAMPING = 5.0
 
 
 #: Kind of supported curve statistics
@@ -1971,9 +1967,9 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     hc = job.hazard_calculation
     coll = output.gmf
     if imt is None:
-        imts = [parse_imt(x) for x in hc.intensity_measure_types]
+        imts = [from_string(x) for x in hc.intensity_measure_types]
     else:
-        imts = [parse_imt(imt)]
+        imts = [from_string(imt)]
     for imt, sa_period, sa_damping in imts:
         for gmf in GmfData.objects.filter(
                 gmf=coll, imt=imt,
