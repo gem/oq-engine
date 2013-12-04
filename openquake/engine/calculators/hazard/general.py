@@ -20,14 +20,13 @@
 
 import os
 import random
-import re
 import collections
 
 import numpy
 
-import openquake.hazardlib
-import openquake.hazardlib.site
 from openquake.hazardlib import correlation
+from openquake.hazardlib.imt import from_string
+
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
@@ -98,29 +97,7 @@ def im_dict_to_hazardlib(im_dict):
     # TODO: file a bug about  SA periods in hazardlib imts.
     # Why are values of 0.0 not allowed? Technically SA(0.0) means PGA, but
     # there must be a reason why we can't do this.
-    hazardlib_im = {}
-
-    for imt, imls in im_dict.items():
-        hazardlib_imt = imt_to_hazardlib(imt)
-        hazardlib_im[hazardlib_imt] = imls
-
-    return hazardlib_im
-
-
-def imt_to_hazardlib(imt):
-    """Covert an IMT string to an hazardlib object.
-
-    :param str imt:
-        Given the IMT string (defined in the job config file), convert it to
-        equivlent hazardlib object. See :mod:`openquake.hazardlib.imt`.
-    """
-    if 'SA' in imt:
-        match = re.match(r'^SA\(([^)]+?)\)$', imt)
-        period = float(match.group(1))
-        return openquake.hazardlib.imt.SA(period, models.DEFAULT_SA_DAMPING)
-    else:
-        imt_class = getattr(openquake.hazardlib.imt, imt)
-        return imt_class()
+    return dict((from_string(imt), imls) for imt, imls in im_dict.items())
 
 
 def get_correl_model(hc):
@@ -274,7 +251,7 @@ class BaseHazardCalculator(base.Calculator):
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
             for imt, imls in im.items():
-                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
+                hc_im_type, sa_period, sa_damping = from_string(imt)
 
                 hco = models.Output.objects.create(
                     oq_job=self.job,
@@ -643,7 +620,7 @@ class BaseHazardCalculator(base.Calculator):
                     investigation_time=self.hc.investigation_time)
 
         for imt, imls in self.hc.intensity_measure_types_and_levels.items():
-            im_type, sa_period, sa_damping = models.parse_imt(imt)
+            im_type, sa_period, sa_damping = from_string(imt)
 
             # prepare `output` and `hazard_curve` containers in the DB:
             container_ids = dict()
