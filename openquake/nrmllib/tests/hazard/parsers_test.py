@@ -24,9 +24,11 @@ from lxml import etree
 
 from openquake.nrmllib import models
 
-from tests import _utils
+from openquake.nrmllib.tests import _utils
 from openquake.nrmllib.hazard import parsers
 from openquake.nrmllib.hazard import writers
+
+DATADIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
 
 class SourceModelParserTestCase(unittest.TestCase):
@@ -582,7 +584,7 @@ class HazardCurveParserTestCase(unittest.TestCase):
         # produced XML is unchanged.
         for example in ('hazard-curves-mean.xml', 'hazard-curves-pga.xml',
                         'hazard-curves-quantile.xml', 'hazard-curves-sa.xml'):
-            infile = os.path.join('tests/data', example)
+            infile = os.path.join(DATADIR, example)
             hcp = parsers.HazardCurveXMLParser(infile)
             parsed_model = hcp.parse()
             _, outfile = tempfile.mkstemp()
