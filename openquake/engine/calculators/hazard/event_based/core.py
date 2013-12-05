@@ -270,6 +270,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rnd.seed(self.hc.random_seed)
         smwp = self.smlt.get_sm_weight_paths(
             self.hc.number_of_logic_tree_samples, rnd)
+        n = 0
         for sm_path, weight, sm_lt_path in smwp:
             output = models.Output.objects.create(
                 oq_job=self.job,
@@ -280,11 +281,15 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 output=output, sm_path=sm_path, sm_lt_path=sm_lt_path,
                 weight=weight)
 
-            for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
-                models.SES.objects.create(
+            the_ses = [
+                models.SES(
                     ses_collection=ses_coll,
                     investigation_time=self.hc.investigation_time,
-                    ordinal=i)
+                    ordinal=i,
+                ) for i in xrange(1, self.hc.ses_per_logic_tree_path + 1)]
+            writer.CacheInserter.saveall(the_ses)
+            n += self.hc.ses_per_logic_tree_path
+        logs.LOG.info('Created %d SES', n)
 
     def initialize_gmf_records(self, lt_rlz):
         """
@@ -352,11 +357,14 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             correl_model=haz_general.get_correl_model(self.hc),
             truncation_level=self.hc.truncation_level,
             maximum_distance=self.hc.maximum_distance)
+
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
+        n_ruptures = 0
 
         for ses_coll in models.SESCollection.objects.filter(
                 output__oq_job=self.job):
             for gmf in models.Gmf.objects.filter(
+                    output__oq_job=self.job,
                     lt_realization__sm_lt_path=ses_coll.sm_lt_path):
                 lt_rlz = gmf.lt_realization
                 gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
@@ -366,6 +374,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                         ses=ses).values_list('id', flat=True)
                     if not rup_ids:
                         continue
+                    n_ruptures += len(rup_ids)
+
                     # compute the associated seeds
                     rup_seeds = [rnd.randint(0, models.MAX_SINT_32)
                                  for _ in range(len(rup_ids))]
@@ -384,6 +394,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                             for rupts, seeds in zip(rupt_iter, seed_iter):
                                 yield (self.job.id, params, imt, gsims, ses.id,
                                        gmf, site_coll, rupts, seeds)
+        logs.LOG.info('Considering %d ruptures', n_ruptures)
 
     def post_execute(self):
         """

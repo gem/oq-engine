@@ -187,7 +187,6 @@ class BaseHazardCalculator(base.Calculator):
 
         realizations = self._get_realizations()
 
-        n = 0  # number of yielded arguments
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         for lt_rlz in realizations:
@@ -201,14 +200,12 @@ class BaseHazardCalculator(base.Calculator):
                                         point_source_block_size):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
-                n += 1
 
             # now for area and fault sources
             other_sources = self.sources_per_model[sm, 'other']
             for block in block_splitter(other_sources, block_size):
                 task_args = (self.job.id, block, lt_rlz.id, ltp)
                 yield task_args
-                n += 1
 
     def _get_realizations(self):
         """
@@ -321,6 +318,9 @@ class BaseHazardCalculator(base.Calculator):
                         self.sources_per_model[sm, 'point'].append(src)
                     else:
                         self.sources_per_model[sm, 'other'].append(src)
+            n = len(self.sources_per_model[sm, 'point']) + \
+                len(self.sources_per_model[sm, 'other'])
+            logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
