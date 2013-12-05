@@ -21,10 +21,8 @@ import StringIO
 from openquake.nrmllib.risk import parsers
 from openquake.nrmllib import InvalidFile
 
-
-EXAMPLES_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    'examples')
+d = os.path.dirname
+EXAMPLES_DIR = os.path.join(d(d(d(d(d(__file__))))), 'examples')
 
 
 def get_example(fname):
