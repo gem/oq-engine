@@ -286,11 +286,9 @@ class GmfsPerSesTestCase(unittest.TestCase):
         cls.investigation_time = job.hazard_calculation.investigation_time
 
     def test_branch_lt(self):
-        all_gmfs = list(self.gmf_coll1)
-        self.assertEqual(len(all_gmfs), 2)
-        gmfs = all_gmfs[0]
+        [gmfs] = self.gmf_coll1
         expected = """\
-GMFsPerSES(investigation_time=%f, stochastic_event_set_id=%d,
+GMFsPerSES(investigation_time=%f, stochastic_event_set_id=1,
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.31000, Y= 38.22500, GMV=0.1000000>
 <X= 15.48000, Y= 38.09100, GMV=0.1000000>
@@ -309,9 +307,8 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.48100, Y= 38.25000, GMV=0.3000000>
 <X= 15.56500, Y= 38.17000, GMV=0.3000000>
 <X= 15.71000, Y= 37.22500, GMV=0.3000000>))""" % (
-            (self.investigation_time, gmfs.stochastic_event_set_id) +
-            self.ruptures1)
-        self.assertEqual(str(gmfs), expected)
+            (self.investigation_time,) + self.ruptures1)
+        self.assertEqual(gmfs, expected)
 
 
 class PrepGeometryTestCase(unittest.TestCase):

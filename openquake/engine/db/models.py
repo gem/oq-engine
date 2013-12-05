@@ -26,6 +26,7 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import collections
+import itertools
 import operator
 import re
 from datetime import datetime
@@ -1573,7 +1574,7 @@ class SES(djm.Model):
             'GMFsPerSES(investigation_time=%f, '
             'stochastic_event_set_id=%s,\n%s)' % (
                 self.investigation_time,
-                self.stochastic_event_set_id,
+                self.ordinal,
                 '\n'.join(sorted(map(str, gmfset)))))
 
 
@@ -1827,33 +1828,37 @@ class Gmf(djm.Model):
               of the ground motion field)
         """
         hc = self.output.oq_job.hazard_calculation
-        for ses in self.ses_collection:
-            query = """
-        SELECT imt, sa_period, sa_damping, tag,
-               array_agg(gmv) AS gmvs,
-               array_agg(ST_X(location::geometry)) AS xs,
-               array_agg(ST_Y(location::geometry)) AS ys
-        FROM (SELECT imt, sa_period, sa_damping, ses_id,
-             unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           FROM hzrdr.gmf_data, hzrdi.hazard_site
-           WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
-             AND gmf_id=%d AND ses_id=%d) AS x, hzrdr.ses_rupture AS y
-        WHERE x.rupture_id = y.id
-        GROUP BY imt, sa_period, sa_damping, tag
-        ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (hc.id, self.id, ses.id)
-            with transaction.commit_on_success(using='job_init'):
-                curs = getcursor('job_init')
-                curs.execute(query)
+        # NB: this could be done with a named cursor
+        # if there are memory issues
+        query = """
+    SELECT x.ses_id, imt, sa_period, sa_damping, tag,
+           array_agg(gmv) AS gmvs,
+           array_agg(ST_X(location::geometry)) AS xs,
+           array_agg(ST_Y(location::geometry)) AS ys
+    FROM (SELECT imt, sa_period, sa_damping, ses_id,
+         unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
+       FROM hzrdr.gmf_data, hzrdi.hazard_site
+       WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
+         AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y
+    WHERE x.rupture_id = y.id AND x.ses_id=y.ses_id
+    GROUP BY x.ses_id, imt, sa_period, sa_damping, tag
+    ORDER BY x.ses_id, imt, sa_period, sa_damping, tag;
+    """ % (hc.id, self.id)
+        with transaction.commit_on_success(using='job_init'):
+            curs = getcursor('job_init')
+            curs.execute(query)
+        for ses_id, group in itertools.groupby(
+                curs, key=operator.itemgetter(0)):
             # a set of GMFs generate by the same SES, one per rupture
             gmfset = []
-            for imt, sa_period, sa_damping, rupture_tag, gmvs, xs, ys in curs:
+            for ses_id, imt, sa_period, sa_damping, rupture_tag, gmvs, xs, ys \
+                    in group:
                 nodes = [_GroundMotionFieldNode(gmv, _Point(x, y))
                          for gmv, x, y in zip(gmvs, xs, ys)]
                 gmfset.append(
                     _GroundMotionField(
                         imt, sa_period, sa_damping, rupture_tag, nodes))
-            yield ses.gmfset_to_str(gmfset)
+            yield SES.objects.get(pk=ses_id).gmfset_to_str(gmfset)
 
 
 class _GroundMotionField(object):
