@@ -36,6 +36,8 @@ from scipy import interpolate
 
 from django.db import transaction, connections
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 
 from django.contrib.gis.db import models as djm
 from shapely import wkt
@@ -1207,6 +1209,14 @@ class OutputManager(djm.Manager):
     """
     Manager class to filter and create Output objects
     """
+    def create_output_new(self, job, output_type):
+        """
+        Create an output for the given `job`, `display_name` and
+        `output_type` (default to hazard_curve)
+        """
+        return self.create(oq_job=job,
+                           output_type=output_type)
+
     def create_output(self, job, display_name, output_type):
         """
         Create an output for the given `job`, `display_name` and
@@ -1242,7 +1252,7 @@ class Output(djm.Model):
 
     oq_job = djm.ForeignKey('OqJob')  # nullable in the case of an output
     # coming from an external source, with no job associated
-    display_name = djm.TextField()
+    display_name = djm.TextField(blank=True, default='')
     HAZARD_OUTPUT_TYPE_CHOICES = (
         (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'gmf', u'Ground Motion Field'),
@@ -2177,6 +2187,16 @@ class LossFraction(djm.Model):
     poe = djm.FloatField(null=True)
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
+    def create_description(self):
+        return "%s%s%sloss fractions%s%s%s%s" % (
+            str(self.loss_type) + " ",
+            "quantile " if self.quantile else "",
+            str(self.statistics) + " " if self.statistics else "",
+            " | POE = " + str(self.poe),
+            " | hazard output id = " + str(self.hazard_output.id),
+            " | quantile = " + str(self.quantile) if self.quantile else "",
+            " | variable = " + str(self.variable))
+
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
 
@@ -2388,6 +2408,16 @@ class LossMap(djm.Model):
     quantile = djm.FloatField(null=True)
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
+    def create_description(self):
+        return "%s%s%s%sloss maps%s%s" % (
+            str(self.loss_type) + " ",
+            "insured " if self.insured else "",
+            "quantile " if self.quantile else "",
+            (str(self.statistics) + " " + " | hazard output id = " +
+             str(self.hazard_output.id) if self.statistics else ""),
+            " | POE = " + str(self.poe) if self.poe else "",
+            " | quantile = " + str(self.quantile) if self.quantile else "")
+
     class Meta:
         db_table = 'riskr\".\"loss_map'
 
@@ -2484,6 +2514,16 @@ class LossCurve(djm.Model):
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
+
+    def create_description(self):
+        return "%s%s%s%s%sloss curves%s" % (
+            str(self.loss_type) + " ",
+            "insured " if self.insured else "",
+            "aggregate " if self.aggregate else "",
+            "quantile " if self.quantile else "",
+            (str(self.statistics) + " " + " | hazard output id = " +
+             str(self.hazard_output.id) if self.statistics else ""),
+            " | quantile = " + str(self.quantile) if self.quantile else "")
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -2632,6 +2672,11 @@ class BCRDistribution(djm.Model):
     hazard_output = djm.ForeignKey(
         "Output", related_name="risk_bcr_distribution")
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
+
+    def create_description(self):
+        return "%sBCR distributions%s" % (
+            str(self.loss_type) + " ",
+            " | hazard output id = " + str(self.hazard_output.id))
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -3234,3 +3279,24 @@ class HazardSite(djm.Model):
 
     class Meta:
         db_table = 'hzrdi\".\"hazard_site'
+
+
+# if we split classes in different files, we need to put this function in
+# a global scope related file
+@receiver(pre_save)
+def update_description(sender, instance, *args, **kwargs):
+    """
+    Whenever any of the django models (sender) attempts to save data into the
+    DB, it sends a signal that is intercepted by this method.
+    If the sender is one of the output models listed in output_models, before
+    saving the record in the DB, the instance creates its own description and
+    saves it into the display_name field of the output table.
+    """
+    output_models = [LossCurve,
+                     LossMap,
+                     BCRDistribution,
+                     LossFraction]
+
+    if sender in output_models:
+        instance.output.display_name = instance.create_description()
+        instance.output.save()
