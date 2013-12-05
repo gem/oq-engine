@@ -1039,8 +1039,7 @@ class RiskCalculation(djm.Model):
                                hazard_curve__lt_realization__isnull=False)
             elif self.calculation_mode in ["event_based", "event_based_bcr"]:
                 if self.hazard_calculation.ground_motion_fields:
-                    filters = dict(output_type='gmf',
-                                   gmf__lt_realization__isnull=False)
+                    filters = dict(output_type='gmf')
                 else:
                     filters = dict(output_type='ses')
             elif self.calculation_mode in ['scenario', 'scenario_damage']:

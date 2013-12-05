@@ -359,9 +359,8 @@ class OutputDict(dict):
             statistics=statistics,
             variable=variable,
             insured=insured)
-        assert super(
-            OutputDict, self).get(
-                key, None) is None, "OutputDict can not be updated"
+        assert super(OutputDict, self).get(key, None) is None, \
+            "OutputDict can not be updated"
 
         self[key] = container.id
 

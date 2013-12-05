@@ -121,7 +121,9 @@ class HazardGetter(object):
         ws = []
         for hazard in self.hazard_outputs:
             h = hazard.output_container
-            if hasattr(h, 'lt_realization') and h.lt_realization:
+            if hasattr(h, 'weight') and h.weight:  # for ses_collection enum
+                ws.append(h.weight)
+            elif hasattr(h, 'lt_realization') and h.lt_realization:
                 ws.append(h.lt_realization.weight)
         return ws
 
@@ -243,6 +245,7 @@ GROUP BY site_id ORDER BY site_id;
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
                 self._assets_mesh.get_convex_hull().wkt)
+        self.assoc_sites_query = cursor.mogrify(query, args)
         cursor.execute(query, args)
         sites_assets = cursor.fetchall()
         if not sites_assets:
@@ -273,7 +276,8 @@ GROUP BY site_id ORDER BY site_id;
             if gmf.rupture_ids:
                 ruptures.extend(gmf.rupture_ids)
         if not gmvs:
-            logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
+            logs.LOG.warn(
+                'No gmvs/ruptures for site %s, IMT=%s', site_id, self.imt)
         return gmvs, ruptures
 
     def get_data(self, hazard_output, monitor):
@@ -293,6 +297,10 @@ GROUP BY site_id ORDER BY site_id;
         # the ordering is there only to have repeatable runs
         with monitor.copy('associating assets->site'):
             site_assets = list(self.assets_gen(hazard_output))
+        if not site_assets:
+            raise RuntimeError(
+                'Could not find assets close to the hazard sites. '
+                ' The query was %s' % self.assoc_sites_query)
 
         if hazard_output.output.output_type == 'ses':
             logs.LOG.info('Compute Ground motion field values on the fly')
@@ -303,7 +311,7 @@ GROUP BY site_id ORDER BY site_id;
                 n_assets = len(assets)
                 all_assets.extend(assets)
                 gmvs, ruptures = self.get_gmvs_ruptures(hazard_output, site_id)
-                if ruptures:  # event based
+                if ruptures is not None:  # event based
                     site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
                     for r in ruptures:
                         all_ruptures.add(r)

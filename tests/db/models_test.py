@@ -308,7 +308,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.56500, Y= 38.17000, GMV=0.3000000>
 <X= 15.71000, Y= 37.22500, GMV=0.3000000>))""" % (
             (self.investigation_time,) + self.ruptures1)
-        self.assertEqual(gmfs, expected)
+        self.assertEqual(str(gmfs), expected)
 
 
 class PrepGeometryTestCase(unittest.TestCase):
@@ -321,7 +321,7 @@ class PrepGeometryTestCase(unittest.TestCase):
             'region': '-1 1 1 1 1 -1 -1 -1',
             # with randomly placed commas
             'region_constraint': (
-            '-0.5 0.5 0.0, 2.0 0.5 0.5, 0.5 -0.5 -0.5, -0.5'),
+                '-0.5 0.5 0.0, 2.0 0.5 0.5, 0.5 -0.5 -0.5, -0.5'),
             'something': 'else',
         }
 

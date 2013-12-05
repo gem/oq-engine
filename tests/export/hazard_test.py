@@ -69,15 +69,7 @@ class GetResultExportDestTestCase(unittest.TestCase):
         )
         self.FakeSES = namedtuple(
             'SES',
-            'output, lt_realization'
-        )
-        self.FakeCLTGMF = namedtuple(
-            'CompleteLogicTreeGMF',
-            'output'
-        )
-        self.FakeCLTSES = namedtuple(
-            'CompleteLogicTreeSES',
-            'output'
+            'output, sm_lt_path, weight'
         )
         self.FakeOutput = namedtuple(
             'Output',
@@ -248,12 +240,11 @@ class GetResultExportDestTestCase(unittest.TestCase):
     def test_ses(self):
         output = self.FakeOutput('ses')
 
-        ses = self.FakeGMF(output, self.ltr_mc)
+        ses = self.FakeSES(output, self.ltr_mc.sm_lt_path, None)
         expected_path = (
-            '%s/calc_8/ses/ses-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml'
+            '%s/calc_8/ses/ses-smltp_B1_B3.xml'
             % self.target_dir
         )
-
         self.assertEqual(
             expected_path,
             hazard._get_result_export_dest(8, self.target_dir, ses)
