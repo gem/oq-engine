@@ -306,9 +306,12 @@ class BaseHazardCalculator(base.Calculator):
         Parse and validate source logic trees
         """
         logs.LOG.progress("initializing sources")
-        for src_path in logictree.read_logic_trees(self.hc):
-            for src_nrml in nrml_parsers.SourceModelParser(
-                    os.path.join(self.hc.base_path, src_path)).parse():
+        smlt_file = self.hc.inputs['source_model_logic_tree']
+        self.smlt = logictree.SourceModelLogicTree(
+            file(smlt_file).read(), self.hc.base_path, smlt_file)
+        for sm in self.smlt.get_source_models():
+            fname = os.path.join(self.hc.base_path, sm)
+            for src_nrml in nrml_parsers.SourceModelParser(fname).parse():
                 src = source.nrml_to_hazardlib(
                     src_nrml,
                     self.hc.rupture_mesh_spacing,
@@ -316,9 +319,9 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.area_source_discretization)
                 if self.filtered_sites(src):
                     if isinstance(src_nrml, PointSource):
-                        self.sources_per_model[src_path, 'point'].append(src)
+                        self.sources_per_model[sm, 'point'].append(src)
                     else:
-                        self.sources_per_model[src_path, 'other'].append(src)
+                        self.sources_per_model[sm, 'other'].append(src)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -440,27 +443,6 @@ class BaseHazardCalculator(base.Calculator):
             # full paths enumeration
             self._initialize_realizations_enumeration(
                 rlz_callbacks=rlz_callbacks)
-
-    def get_sm_lt_paths(self, ltp):
-        """
-        Yield pairs (source_model_filename, sm_lt_path)
-        """
-        if self.job.hazard_calculation.number_of_logic_tree_samples:
-            # random sampling of the source model logic tree
-            rnd = random.Random()
-            rnd.seed(self.hc.random_seed)
-            for i in xrange(self.hc.number_of_logic_tree_samples):
-                # Sample source model logic tree branch paths
-                sm_filename, sm_lt_path = ltp.sample_source_model_logictree(
-                    rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
-                yield sm_filename, sm_lt_path
-                # update the seed for the next realization
-                rnd.seed(rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
-        else:
-            # full enumeration of the source model logic tree
-            for i, path_info in enumerate(ltp.enumerate_paths()):
-                sm_filename, weight, sm_lt_path, gsim_lt_path = path_info
-                yield sm_filename, sm_lt_path
 
     def _initialize_realizations_enumeration(self, rlz_callbacks=None):
         """

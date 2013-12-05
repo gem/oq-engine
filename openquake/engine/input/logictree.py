@@ -32,6 +32,8 @@ import openquake.nrmllib
 import openquake.hazardlib
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
+from openquake.engine.db import models
+
 
 GSIM = openquake.hazardlib.gsim.get_available_gsims()
 
@@ -534,6 +536,20 @@ class BaseLogicTree(object):
             the root branchset for this tree.
         """
 
+    def sample_path(self, random_seed):
+        """
+        Return the model name and a list of branch ids
+        """
+        rnd = random.Random(random_seed)
+        branchset = self.root_branchset
+        branch_ids = []
+        while branchset is not None:
+            branch = branchset.sample(rnd)
+            branch_ids.append(branch.branch_id)
+            branchset = branch.child_branchset
+        modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
+        return modelname, branch_ids
+
     @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
         """
@@ -870,6 +886,63 @@ class SourceModelLogicTree(BaseLogicTree):
                 parent.remove(prev)
                 prev = node.getprevious()
 
+    def get_source_models(self):
+        """
+        Return a list of source model logic tree paths.
+        """
+        return [branch.value for branch in self.root_branchset.branches]
+
+    def get_sm_weight_paths(
+            self, number_of_logic_tree_samples, rnd):
+        """
+        Yield triples (name, weight, path), where weight is not None only
+        when the number_of_logic_tree_samples is 0. In that case a full
+        enumeration is performed and the random object is ignored.
+        """
+        if number_of_logic_tree_samples:
+            # random sampling of the source model logic tree
+            for i in xrange(number_of_logic_tree_samples):
+                # sample source model logic tree branch paths
+                seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
+                sm_filename, sm_lt_path = self.sample_path(seed)
+                yield sm_filename, None, sm_lt_path
+                rnd.seed(seed)  # update the seed
+        else:  # full enumeration
+            for weight, smlt_path in self.root_branchset.enumerate_paths():
+                sm_name = smlt_path[0].value
+                smlt_branch_ids = [branch.branch_id for branch in smlt_path]
+                yield sm_name, weight, smlt_branch_ids
+
+    def make_apply_uncertainties(self, branch_ids):
+        """
+        Parse the path through the source model logic tree and return
+        "apply uncertainties" function.
+
+        :param branch_ids:
+            List of string identifiers of branches, representing the path
+            through source model logic tree.
+        :return:
+            Function to be applied to all the sources as they get read from
+            the database and converted to hazardlib representation. Function
+            takes one argument, that is the hazardlib source object, and
+            applies uncertainties to it in-place.
+        """
+        branchset = self.root_branchset
+        branchsets_and_uncertainties = []
+        branch_ids = branch_ids[::-1]
+
+        while branchset is not None:
+            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
+            if not branchset.uncertainty_type == 'sourceModel':
+                branchsets_and_uncertainties.append((branchset, branch.value))
+            branchset = branch.child_branchset
+
+        def apply_uncertainties(source):
+            for branchset, value in branchsets_and_uncertainties:
+                branchset.apply_uncertainty(value, source)
+            return source
+        return apply_uncertainties
+
 
 class GMPELogicTree(BaseLogicTree):
     """
@@ -990,25 +1063,6 @@ class GMPELogicTree(BaseLogicTree):
             )
 
 
-def read_logic_trees(hc, validate=True):
-    """
-    :param bool validate:
-        Defaults to `True`. If `True`, do a full validation when reading the
-        logic trees.
-    :param hc:
-        a :class:`openquake.engine.db.models.HazardCalculation`.
-    """
-    smlt_file = hc.inputs['source_model_logic_tree']
-    gsimlt_file = hc.inputs['gsim_logic_tree']
-
-    smlt = SourceModelLogicTree(
-        file(smlt_file).read(), hc.base_path, smlt_file, validate=validate)
-    GMPELogicTree(
-        smlt.tectonic_region_types, file(gsimlt_file).read(), hc.base_path,
-        gsimlt_file, validate=validate)
-    return [branch.value for branch in smlt.root_branchset.branches]
-
-
 class LogicTreeProcessor(object):
     """
     Logic tree processor. High-level interface to dealing with logic trees
@@ -1043,30 +1097,14 @@ class LogicTreeProcessor(object):
             and second is a list of the branchIDs (strings) which indicate
             the complete path taken through the logic tree for this sample.
         """
-        path = self._sample_path(random_seed, self.source_model_lt)
-        sm_b = self.source_model_lt.root_branchset.get_branch_by_id(path[0])
-        return sm_b.value, path
+        return self.source_model_lt.sample_path(random_seed)
 
     def sample_gmpe_logictree(self, random_seed):
         """
         Same as :meth:`sample_source_model_logictree`, but for GMPE logic tree
         and returns only path (list of branch ids).
         """
-        return self._sample_path(random_seed, self.gmpe_lt)
-
-    def _sample_path(self, random_seed, tree):
-        """
-        Common part of :func:`sample_source_model_logictree` and
-        :func:`sample_gmpe_logictree`.
-        """
-        branch_ids = []
-        rnd = random.Random(random_seed)
-        branchset = tree.root_branchset
-        while branchset is not None:
-            branch = branchset.sample(rnd)
-            branch_ids.append(branch.branch_id)
-            branchset = branch.child_branchset
-        return branch_ids
+        return self.gmpe_lt.sample_path(random_seed)[1]
 
     def enumerate_paths(self):
         """
@@ -1109,21 +1147,7 @@ class LogicTreeProcessor(object):
             takes one argument, that is the hazardlib source object, and
             applies uncertainties to it in-place.
         """
-        branchset = self.source_model_lt.root_branchset
-        branchsets_and_uncertainties = []
-        branch_ids = branch_ids[::-1]
-
-        while branchset is not None:
-            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
-            if not branchset.uncertainty_type == 'sourceModel':
-                branchsets_and_uncertainties.append((branchset, branch.value))
-            branchset = branch.child_branchset
-
-        def apply_uncertainties(source):
-            for branchset, value in branchsets_and_uncertainties:
-                branchset.apply_uncertainty(value, source)
-            return source
-        return apply_uncertainties
+        return self.source_model_lt.make_apply_uncertainties(branch_ids)
 
     def parse_gmpe_logictree_path(self, branch_ids):
         """

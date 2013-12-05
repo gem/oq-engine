@@ -669,15 +669,6 @@ class HazardCalculation(djm.Model):
         self._points_to_compute = None
         super(HazardCalculation, self).__init__(*args, **kwargs)
 
-    def individual_curves_per_location(self):
-        """
-        Returns the number of individual curves per location, that are
-        expected after a full computation of the hazard calculation
-        has been performed
-        """
-        realizations_nr = self.ltrealization_set.count()
-        return realizations_nr
-
     @property
     def vulnerability_models(self):
         return [self.inputs[vf_type]

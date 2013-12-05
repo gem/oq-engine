@@ -68,7 +68,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def compute_ses(job_id, src_seeds, ses_coll, ltp):
+def compute_ses(job_id, src_seeds, ses_coll, smlt):
     """
     Celery task for the stochastic event set calculator.
 
@@ -87,12 +87,11 @@ def compute_ses(job_id, src_seeds, ses_coll, ltp):
         List of pairs (source, seed)
     :param ses_coll:
        A :class:`openquake.engine.db.models.SESCollection` instance
-    :param ltp:
-        A :class:`openquake.engine.input.LogicTreeProcessor` instance
+    :param smlt:
+        A :class:`openquake.engine.input.SourceModelLogicTree` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        ses_coll.sm_lt_path)
+    apply_uncertainties = smlt.make_apply_uncertainties(ses_coll.sm_lt_path)
     rnd = random.Random()
     all_ses = models.SES.objects.filter(
         ses_collection=ses_coll).order_by('ordinal')
@@ -272,9 +271,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rnd = random.Random()
         rnd.seed(hc.random_seed)
 
-        ltp = logictree.LogicTreeProcessor.from_hc(hc)
         self.ses_coll = {}
-        for source_model, sm_lt_path in self.get_sm_lt_paths(ltp):
+
+        smwp = self.smlt.get_sm_weight_paths(
+            self.hc.number_of_logic_tree_samples, rnd)
+        for source_model, _weight, sm_lt_path in smwp:
             ses_coll = self.initialize_ses_records(sm_lt_path)
             self.ses_coll['_'.join(sm_lt_path)] = ses_coll
             sources = (self.sources_per_model[source_model, 'point'] +
@@ -286,7 +287,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 math.ceil(float(len(sources)) / self.concurrent_tasks()))
             logs.LOG.info('Using block size %d', preferred_block_size)
             for block in block_splitter(ss, preferred_block_size):
-                yield self.job.id, block, ses_coll, ltp
+                yield self.job.id, block, ses_coll, self.smlt
 
         # now the dictionary can be cleared to save memory
         self.sources_per_model.clear()
