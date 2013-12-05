@@ -65,7 +65,8 @@ class ExportTestCase(unittest.TestCase):
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
-                               'unit': 'bucks'})], m.call_args_list)
+                               'unit': 'bucks',
+                               'loss_type': 'structural'})], m.call_args_list)
             self.assertEqual('/tmp/loss-curves-0.xml', ret)
 
     def test_export_loss_curve(self):
@@ -86,7 +87,8 @@ class ExportTestCase(unittest.TestCase):
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
-                               'unit': 'bucks'})], m.call_args_list)
+                               'unit': 'bucks',
+                               'loss_type': 'structural'})], m.call_args_list)
             self.assertEqual('/tmp/loss-curves-0.xml', ret)
 
     def test_export_loss_map(self):
@@ -108,7 +110,8 @@ class ExportTestCase(unittest.TestCase):
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
-                               'unit': 'bucks'})], m.call_args_list)
+                               'unit': 'bucks',
+                               'loss_type': 'structural'})], m.call_args_list)
             self.assertEqual('/tmp/loss-maps-0.xml', ret)
 
     def test_export_bcr_distribution(self):
@@ -128,7 +131,8 @@ class ExportTestCase(unittest.TestCase):
                                'quantile_value': None,
                                'source_model_tree_path': None,
                                'statistics': 'mean',
-                               'unit': 'bucks'})], m.call_args_list)
+                               'unit': 'bucks',
+                               'loss_type': 'structural'})], m.call_args_list)
             self.assertEqual('/tmp/bcr-distribution-0.xml', ret)
 
     def test_export_aggregate_loss(self):

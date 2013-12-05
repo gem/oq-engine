@@ -35,13 +35,13 @@ import math
 import random
 import collections
 
-import openquake.hazardlib.imt
 import numpy.random
 
 from django.db import transaction
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.calc import stochastic
+from openquake.hazardlib.imt import from_string
 
 from openquake.engine import writer, logs
 from openquake.engine.utils.general import block_splitter
@@ -68,7 +68,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def compute_ses(job_id, src_seeds, ses_coll, ltp):
+def compute_ses(job_id, src_seeds, ses_coll, smlt):
     """
     Celery task for the stochastic event set calculator.
 
@@ -87,12 +87,11 @@ def compute_ses(job_id, src_seeds, ses_coll, ltp):
         List of pairs (source, seed)
     :param ses_coll:
        A :class:`openquake.engine.db.models.SESCollection` instance
-    :param ltp:
-        A :class:`openquake.engine.input.LogicTreeProcessor` instance
+    :param smlt:
+        A :class:`openquake.engine.input.SourceModelLogicTree` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        ses_coll.sm_lt_path)
+    apply_uncertainties = smlt.make_apply_uncertainties(ses_coll.sm_lt_path)
     rnd = random.Random()
     all_ses = models.SES.objects.filter(
         ses_collection=ses_coll).order_by('ordinal')
@@ -144,7 +143,7 @@ def compute_gmf(job_id, params, imt, gsims, ses_id, gmf, site_coll,
     """
     Compute and save the GMFs for all the ruptures in a SES.
     """
-    imt = haz_general.imt_to_hazardlib(imt)
+    imt = from_string(imt)
     with EnginePerformanceMonitor(
             'reading ruptures', job_id, compute_gmf):
         ruptures = list(models.SESRupture.objects.filter(pk__in=rupture_ids))
@@ -230,13 +229,7 @@ def _save_gmfs(gmf, ses_id, imt, gmvs_per_site, ruptures_per_site, sites):
         An :class:`openquake.hazardlib.site.SiteCollection` object,
         representing the sites of interest for a calculation.
     """
-    sa_period = None
-    sa_damping = None
-    if isinstance(imt, openquake.hazardlib.imt.SA):
-        sa_period = imt.period
-        sa_damping = imt.damping
-    imt_name = imt.__class__.__name__
-
+    imt_name, sa_period, sa_damping = imt
     for site_id in gmvs_per_site:
         inserter.add(models.GmfData(
             gmf=gmf,
@@ -326,11 +319,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rnd = random.Random()
         rnd.seed(hc.random_seed)
 
-        ltp = logictree.LogicTreeProcessor.from_hc(hc)
         for ses_coll in models.SESCollection.objects.filter(
-                output__oq_job=self.job):
-            sources = (self.sources_per_model[ses_coll.sm_path, 'point'] +
-                       self.sources_per_model[ses_coll.sm_path, 'other'])
+
+        smwp = self.smlt.get_sm_weight_paths(
+            self.hc.number_of_logic_tree_samples, rnd)
+        for source_model, _weight, sm_lt_path in smwp:
             preferred_block_size = int(
                 math.ceil(float(len(sources)) / self.concurrent_tasks()))
             logs.LOG.info('Using block size %d', preferred_block_size)
@@ -338,7 +331,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in sources]  # source, seed pairs
             for block in block_splitter(ss, preferred_block_size):
-                yield self.job.id, block, ses_coll, ltp
+                yield self.job.id, block, ses_coll, self.smlt
 
         # now the dictionary can be cleared to save memory
         self.sources_per_model.clear()
