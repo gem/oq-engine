@@ -1801,21 +1801,6 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
-    @property
-    def ses_collection(self):
-        """
-        The Stochastic Event Set collection associated with the current
-        realization of the GMF.
-        """
-        curs = getcursor('job_init')
-        query = '''select distinct c.id from hzrdr.gmf_data as g,
-        hzrdr.ses_collection as c, hzrdr.ses as s where g.ses_id=s.id
-        and s.ses_collection_id=c.id and gmf_id=%d;''' % self.id
-        print query
-        curs.execute(query)
-        import pdb; pdb.set_trace()
-        return SESCollection.objects.get(pk=curs.fetchall()[0][0])
-
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
         """

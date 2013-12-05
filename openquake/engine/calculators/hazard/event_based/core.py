@@ -266,8 +266,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         :class:`~openquake.engine.db.models.SESCollection`
         "container" records for all source models in the logic tree.
         """
-        ltp = logictree.LogicTreeProcessor.from_hc(self.job.hazard_calculation)
-        for sm_path, sm_lt_path in self.get_sm_lt_paths(ltp):
+        rnd = random.Random()
+        rnd.seed(self.hc.random_seed)
+        smwp = self.smlt.get_sm_weight_paths(
+            self.hc.number_of_logic_tree_samples, rnd)
+        for sm_path, _weight, sm_lt_path in smwp:
             output = models.Output.objects.create(
                 oq_job=self.job,
                 display_name='SES Collection %s' % '_'.join(sm_lt_path),
@@ -318,12 +321,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-
         for ses_coll in models.SESCollection.objects.filter(
-
-        smwp = self.smlt.get_sm_weight_paths(
-            self.hc.number_of_logic_tree_samples, rnd)
-        for source_model, _weight, sm_lt_path in smwp:
+                output__oq_job=self.job):
+            sm = ses_coll.sm_path
+            sources = (self.sources_per_model[sm, 'point'] +
+                       self.sources_per_model[sm, 'other'])
             preferred_block_size = int(
                 math.ceil(float(len(sources)) / self.concurrent_tasks()))
             logs.LOG.info('Using block size %d', preferred_block_size)
@@ -351,34 +353,36 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             maximum_distance=self.hc.maximum_distance)
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
-        for gmf in models.Gmf.objects.filter(output__oq_job=self.job):
-            lt_rlz = gmf.lt_realization
-            gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-            for ses in gmf.ses_collection:
-                # count the ruptures in the given SES
-                rupture_ids = models.SESRupture.objects.filter(
-                    ses=ses).values_list('id', flat=True)
-                if not rupture_ids:
-                    continue
-                # compute the associated seeds
-                rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
-                                 for _ in range(len(rupture_ids))]
-                # splitting on IMTs to generate more tasks and save memory
-                for imt in self.hc.intensity_measure_types:
-                    if self.hc.ground_motion_correlation_model is None:
-                        # we split on sites to avoid running out of memory
-                        # on the workers for computations like the full Japan
-                        for sites in block_splitter(site_coll, BLOCK_SIZE):
-                            yield (self.job.id, params, imt, gsims, ses.id,
-                                   gmf, models.SiteCollection(sites),
-                                   rupture_ids, rupture_seeds)
-                    else:
-                        # we split on ruptures to avoid running out of memory
-                        rupt_iter = block_splitter(rupture_ids, BLOCK_SIZE)
-                        seed_iter = block_splitter(rupture_seeds, BLOCK_SIZE)
-                        for rupts, seeds in zip(rupt_iter, seed_iter):
-                            yield (self.job.id, params, imt, gsims, ses.id,
-                                   gmf, site_coll, rupts, seeds)
+        for ses_coll in models.SESCollection.objects.filter(
+                output__oq_job=self.job):
+            for gmf in models.Gmf.objects.filter(
+                    lt_realization__sm_lt_path=ses_coll.sm_lt_path):
+                lt_rlz = gmf.lt_realization
+                gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
+                for ses in ses_coll:
+                    # count the ruptures in the given SES
+                    rup_ids = models.SESRupture.objects.filter(
+                        ses=ses).values_list('id', flat=True)
+                    if not rup_ids:
+                        continue
+                    # compute the associated seeds
+                    rup_seeds = [rnd.randint(0, models.MAX_SINT_32)
+                                 for _ in range(len(rup_ids))]
+                    # splitting on IMTs to generate more tasks and save memory
+                    for imt in self.hc.intensity_measure_types:
+                        if self.hc.ground_motion_correlation_model is None:
+                            # we split on sites to avoid running out of memory
+                            for sites in block_splitter(site_coll, BLOCK_SIZE):
+                                yield (self.job.id, params, imt, gsims, ses.id,
+                                       gmf, models.SiteCollection(sites),
+                                       rup_ids, rup_seeds)
+                        else:
+                            # we split on ruptures
+                            rupt_iter = block_splitter(rup_ids, BLOCK_SIZE)
+                            seed_iter = block_splitter(rup_seeds, BLOCK_SIZE)
+                            for rupts, seeds in zip(rupt_iter, seed_iter):
+                                yield (self.job.id, params, imt, gsims, ses.id,
+                                       gmf, site_coll, rupts, seeds)
 
     def post_execute(self):
         """
