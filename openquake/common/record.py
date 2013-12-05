@@ -23,7 +23,7 @@ A module to define records extracted from UTF8-encoded CSV files.
 Client code should subclass the record class and define the
 record fields as follows:
 
-from openquake.commons import record
+from openquake.common import record
 
 class Location(record.Record):
     id = record.Field(int)

@@ -19,7 +19,7 @@
 import os
 import sys
 import time
-from openquake.commons.csvmanager import CSVManager, mkarchive
+from openquake.common.csvmanager import CSVManager, mkarchive
 
 
 def create(convert, fname):

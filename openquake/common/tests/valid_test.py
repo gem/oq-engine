@@ -1,5 +1,5 @@
 import unittest
-from openquake.commons import valid
+from openquake.common import valid
 
 
 class ValidationTestCase(unittest.TestCase):

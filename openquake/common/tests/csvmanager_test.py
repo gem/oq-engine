@@ -1,8 +1,8 @@
 import os
 import unittest
 import tempfile
-from openquake.commons import records
-from openquake.commons.csvmanager import (
+from openquake.common import records
+from openquake.common.csvmanager import (
     create_table, ZipArchive, MemArchive, CSVManager,
     MultipleManagerError)
 

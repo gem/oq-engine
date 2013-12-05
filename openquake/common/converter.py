@@ -28,7 +28,7 @@ This module contains converter classes working on nodes of kind
 import itertools
 from openquake.risklib import scientific
 from openquake.nrmllib.node import Node
-from openquake.commons import record, records
+from openquake.common import record, records
 
 
 def groupby(records, keyfields):
