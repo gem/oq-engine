@@ -1566,18 +1566,6 @@ class SES(djm.Model):
         return SESRupture.objects.filter(ses=self.id).order_by('tag') \
             .iterator()
 
-    def gmfset_to_str(self, gmfset):
-        """
-        Return a string representation of the Ground Motion Field Set
-        (one GMF per rupture) associated to the Stochastic Event Set.
-        """
-        return (
-            'GMFsPerSES(investigation_time=%f, '
-            'stochastic_event_set_id=%s,\n%s)' % (
-                self.investigation_time,
-                self.ordinal,
-                '\n'.join(sorted(map(str, gmfset)))))
-
 
 def old_field_property(prop):
     def wrapped_property(s):
@@ -1859,7 +1847,29 @@ class Gmf(djm.Model):
                 gmfset.append(
                     _GroundMotionField(
                         imt, sa_period, sa_damping, rupture_tag, nodes))
-            yield SES.objects.get(pk=ses_id).gmfset_to_str(gmfset)
+            yield GmfSet(SES.objects.get(pk=ses_id), gmfset)
+
+
+class GmfSet(object):
+    """
+    Small wrapper over the list of Gmf objects associated to the given SES.
+    """
+    def __init__(self, ses, gmfset):
+        self.ses = ses
+        self.gmfset = gmfset
+        self.investigation_time = ses.investigation_time
+        self.stochastic_event_set_id = ses.ordinal
+        self.str = (
+            'GMFsPerSES(investigation_time=%f, '
+            'stochastic_event_set_id=%s,\n%s)' % (
+                ses.investigation_time,
+                ses.ordinal, '\n'.join(sorted(map(str, gmfset)))))
+
+    def __iter__(self):
+        return iter(self.gmfset)
+
+    def __str__(self):
+        return self.str
 
 
 class _GroundMotionField(object):
