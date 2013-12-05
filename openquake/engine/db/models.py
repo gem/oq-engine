@@ -1528,6 +1528,7 @@ class SESCollection(djm.Model):
     output = djm.OneToOneField('Output', related_name="ses")
     sm_path = djm.TextField(null=False)
     sm_lt_path = fields.CharArrayField(null=False)
+    weight = djm.FloatField(null=True)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'

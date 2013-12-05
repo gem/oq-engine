@@ -270,14 +270,15 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rnd.seed(self.hc.random_seed)
         smwp = self.smlt.get_sm_weight_paths(
             self.hc.number_of_logic_tree_samples, rnd)
-        for sm_path, _weight, sm_lt_path in smwp:
+        for sm_path, weight, sm_lt_path in smwp:
             output = models.Output.objects.create(
                 oq_job=self.job,
                 display_name='SES Collection %s' % '_'.join(sm_lt_path),
                 output_type='ses')
 
             ses_coll = models.SESCollection.objects.create(
-                output=output, sm_path=sm_path, sm_lt_path=sm_lt_path)
+                output=output, sm_path=sm_path, sm_lt_path=sm_lt_path,
+                weight=weight)
 
             for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
                 models.SES.objects.create(

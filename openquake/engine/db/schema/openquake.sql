@@ -392,7 +392,8 @@ CREATE TABLE hzrdr.ses_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
     sm_path VARCHAR NOT NULL,
-    sm_lt_path VARCHAR[] NOT NULL
+    sm_lt_path VARCHAR[] NOT NULL,
+    weight FLOAT
 ) TABLESPACE hzrdr_ts;
 
 -- Stochastic Event Set: A container for 1 or more ruptures associated with a
