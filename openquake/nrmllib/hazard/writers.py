@@ -391,20 +391,10 @@ class EventBasedGMFXMLWriter(object):
             gmf_set_node.nodes = gen_gmfs(gmf_set)
             gmf_set_nodes.append(gmf_set_node)
 
-        if self.sm_lt_path is not None and self.gsim_lt_path is not None:
-            # A normal GMF collection
-            gmf_container = node.Node('gmfCollection')
-            gmf_container[SM_TREE_PATH] = self.sm_lt_path
-            gmf_container[GSIM_TREE_PATH] = self.gsim_lt_path
-            gmf_container.nodes = gmf_set_nodes
-        else:
-            # A collection of GMFs for a complete logic tree
-            # In this case, we should only have a single <gmfSet>,
-            # containing all ground motion fields.
-            # NOTE: In this case, there is no need for a <gmfCollection>
-            # element; instead, we just write the single <gmfSet>
-            # underneath the root <nrml> element.
-            gmf_container = gmf_set_nodes[0]
+        gmf_container = node.Node('gmfCollection')
+        gmf_container[SM_TREE_PATH] = self.sm_lt_path
+        gmf_container[GSIM_TREE_PATH] = self.gsim_lt_path
+        gmf_container.nodes = gmf_set_nodes
 
         with open(self.dest, 'w') as dest:
             node.node_to_nrml(gmf_container, dest)
@@ -423,10 +413,9 @@ class SESXMLWriter(object):
         produced this collection of stochastic event sets.
     """
 
-    def __init__(self, dest, sm_lt_path, gsim_lt_path):
+    def __init__(self, dest, sm_lt_path):
         self.dest = dest
         self.sm_lt_path = sm_lt_path
-        self.gsim_lt_path = gsim_lt_path
 
     def serialize(self, data):
         """
@@ -487,26 +476,9 @@ class SESXMLWriter(object):
         with NRMLFile(self.dest, 'w') as fh:
             root = etree.Element('nrml',
                                  nsmap=openquake.nrmllib.SERIALIZE_NS_MAP)
-
-            if self.sm_lt_path is not None and self.gsim_lt_path is not None:
-                # A normal stochastic event set collection
-                ses_container = etree.SubElement(
-                    root, 'stochasticEventSetCollection')
-
-                ses_container.set(SM_TREE_PATH, self.sm_lt_path)
-                ses_container.set(GSIM_TREE_PATH, self.gsim_lt_path)
-            else:
-                # A stochastic event set collection for the complete logic tree
-                # In this case, we should only have a single stochastic event
-                # set.
-                # NOTE: In this case, there is no need for a
-                # `stochasticEventSetCollection` tag.
-                # Write the _single_ stochastic event set directly under the
-                # root element.
-                ses_container = root
-                # NOTE: The code below is written to expect 1 or more SESs in
-                # `data`. Again, there will only be one in this case.
-
+            ses_container = etree.SubElement(
+                root, 'stochasticEventSetCollection')
+            ses_container.set(SM_TREE_PATH, self.sm_lt_path)
             for ses in data:
                 ses_elem = etree.SubElement(
                     ses_container, 'stochasticEventSet')

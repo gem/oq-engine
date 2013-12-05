@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
-    <stochasticEventSetCollection sourceModelTreePath="foo" gsimTreePath="bar">
+    <stochasticEventSetCollection sourceModelTreePath="foo">
         <stochasticEventSet id="1" investigationTime="50.0">
             <rupture id="rlz=00,ses=0001,src=231,i=1" magnitude="5.5" strike="0.0" dip="45.0" rake="0.0" tectonicRegion="Active Shallow Crust">
                 <!-- in case the rupture is generated from a point or area source -->
