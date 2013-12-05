@@ -1,6 +1,7 @@
 import os
 import argparse
 from openquake.nrmllib.hazard.parsers import GMFScenarioParser
+from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
 from openquake.engine import writer
 
@@ -46,7 +47,7 @@ def import_gmf_scenario(fileobj):
     # XXX: probably the maximum_distance should be entered by the user
 
     out = models.Output.objects.create(
-       display_name='Imported from %r' % fname, output_type='gmf_scenario')
+        display_name='Imported from %r' % fname, output_type='gmf_scenario')
 
     gmf_coll = models.Gmf.objects.create(output=out)
 
@@ -54,7 +55,7 @@ def import_gmf_scenario(fileobj):
     if fname.endswith('.xml'):
         # convert the XML into a tab-separated StringIO
         for imt, gmvs, loc in GMFScenarioParser(fileobj).parse():
-            imt_type, sa_period, sa_damping = models.parse_imt(imt)
+            imt_type, sa_period, sa_damping = from_string(imt)
             sa_period = '\N' if sa_period is None else str(sa_period)
             sa_damping = '\N' if sa_damping is None else str(sa_damping)
             gmvs = '{%s}' % str(gmvs)[1:-1]
