@@ -642,6 +642,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         hazard_calculation=hazard_job.hazard_calculation,
         ordinal=1, seed=1, weight=None,
         sm_lt_path="test_sm", gsim_lt_path="test_gsim")
+
     if output_type == "curve":
         models.HazardCurve.objects.create(
             lt_realization=rlz,
@@ -685,6 +686,9 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
 
     elif output_type == "gmf":
         hazard_output = create_gmf_data_records(hazard_job, rlz)[0].gmf
+
+    else:
+        raise RuntimeError('Unexpected output_type: %s' % output_type)
 
     hazard_job.status = "complete"
     hazard_job.save()
