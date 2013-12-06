@@ -114,8 +114,7 @@ class HazardGetter(object):
 
     def __call__(self, monitor=None):
         for hazard in self.hazard_outputs:
-            h = hazard.output_container
-            yield (hazard.id,) + self.get_assets_data(h, monitor)
+            yield (hazard.id,) + self.get_assets_data(hazard, monitor)
 
     def weights(self):
         ws = []
@@ -142,13 +141,12 @@ class HazardCurveGetterPerAsset(HazardGetter):
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :meth:`HazardGetter.get_data` interface.
         """
-        hc = hazard_output
-
-        if hc.output.output_type == 'hazard_curve':
+        hc = hazard_output.output_container
+        if hazard_output.output_type == 'hazard_curve':
             imls = hc.imls
-        elif hc.output.output_type == 'hazard_curve_multi':
+        elif hazard_output.output_type == 'hazard_curve_multi':
             hc = models.HazardCurve.objects.get(
-                output__oq_job=hc.output.oq_job,
+                output__oq_job=hazard_output.oq_job,
                 output__output_type='hazard_curve',
                 statistics=hc.statistics,
                 lt_realization=hc.lt_realization,
@@ -202,22 +200,19 @@ class GroundMotionValuesGetter(HazardGetter):
     """
 
     def __init__(
-            self, hazard, assets, max_distance, imt, seeds=None, ltp=None):
+            self, hazard, assets, max_distance, imt, seeds=None):
         super(GroundMotionValuesGetter, self).__init__(
             hazard, assets, max_distance, imt)
-        assert hazard[0].output_type != "ses" or (
-            seeds is not None and ltp is not None)
+        assert hazard[0].output_type != "ses" or seeds is not None
         self.seeds = seeds or [None] * len(hazard)
-        self.logic_tree_processor = ltp
 
     def __call__(self, monitor=None):
         """
         Override base method to seed the rng for each hazard output
         """
         for hazard, seed in zip(self.hazard_outputs, self.seeds):
-            h = hazard.output_container
             numpy.random.seed(seed)
-            yield (hazard.id,) + self.get_assets_data(h, monitor)
+            yield (hazard.id,) + self.get_assets_data(hazard, monitor)
 
     def assets_gen(self, hazard_output):
         """
@@ -241,7 +236,7 @@ SELECT site_id, array_agg(asset_id ORDER BY asset_id) AS asset_ids FROM (
 GROUP BY site_id ORDER BY site_id;
    """
         args = (self.max_distance * KILOMETERS_TO_METERS,
-                hazard_output.output.oq_job.hazard_calculation.id,
+                hazard_output.oq_job.hazard_calculation.id,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
                 self._assets_mesh.get_convex_hull().wkt)
@@ -261,13 +256,13 @@ GROUP BY site_id ORDER BY site_id;
             if assets:
                 yield site_id, assets
 
-    def get_gmvs_ruptures(self, gmf, site_id):
+    def get_gmvs_ruptures(self, hazard_output, site_id):
         """
         :returns: gmvs and ruptures for the given site and IMT
         """
         gmvs = []
         ruptures = []
-
+        gmf = hazard_output.output_container
         for gmf in models.GmfData.objects.filter(
                 gmf=gmf,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
@@ -288,7 +283,6 @@ GROUP BY site_id ORDER BY site_id;
         with the GMVs; for event based computations the data is
         a pair (GMVs, rupture_ids).
         """
-
         all_ruptures = set()
         all_assets = []
         all_gmvs = []
@@ -298,7 +292,7 @@ GROUP BY site_id ORDER BY site_id;
         with monitor.copy('associating assets->site'):
             site_assets = list(self.assets_gen(hazard_output))
 
-        if hazard_output.output.output_type == 'ses':
+        if hazard_output.output_type == 'ses':
             logs.LOG.info('Compute Ground motion field values on the fly')
             return self.compute_gmvs(hazard_output, site_assets, monitor)
 
@@ -330,11 +324,12 @@ GROUP BY site_id ORDER BY site_id;
         """
         Compute ground motion values on the fly
         """
+        # hazard_output is a SESCollection with an attribute
+        # gsim_lt_path added by the event based calculator
         # get needed hazard calculation params from the db
-        hc = hazard_output.output.oq_job.hazard_calculation
+        hc = hazard_output.oq_job.hazard_calculation
         truncation_level = hc.truncation_level
-        gsims = self.logic_tree_processor.parse_gmpe_logictree_path(
-            hazard_output.lt_realization.gsim_lt_path)
+        gsims = hazard_output.gsims
         if hc.ground_motion_correlation_model is not None:
             model = general.get_correl_model(hc)
         else:
@@ -342,8 +337,9 @@ GROUP BY site_id ORDER BY site_id;
 
         # check that the ruptures have been computed by a sufficiently
         # new version of openquake
+        ses_coll = hazard_output.output_container
         queryset = models.SESRupture.objects.filter(
-            ses__ses_collection=hazard_output).order_by('tag')
+            ses__ses_collection=ses_coll).order_by('tag')
 
         if queryset.filter(rupture="not computed").exists():
             msg = ("The stochastic event set has been computed with "
@@ -367,7 +363,7 @@ GROUP BY site_id ORDER BY site_id;
                     WHERE ses.ses_collection_id = %s
                     ORDER BY rup.tag LIMIT %s OFFSET %s"""
             for offset in offsets:
-                cursor.execute(query, (hazard_output.id, limit, offset))
+                cursor.execute(query, (ses_coll.id, limit, offset))
                 for (rupture_data,) in cursor.fetchall():
                     yield pickle.loads(str(rupture_data))
         r_objs = list(ruptures())

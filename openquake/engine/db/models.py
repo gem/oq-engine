@@ -1278,7 +1278,8 @@ class Output(djm.Model):
         container = self.output_container
 
         if self.output_type in hazard_output_types:
-            if container.lt_realization_id is not None:
+            rlz = getattr(container, 'lt_realization_id', None)
+            if rlz is not None:
                 return self.LogicTreePath(
                     tuple(container.lt_realization.gsim_lt_path),
                     tuple(container.lt_realization.sm_lt_path))

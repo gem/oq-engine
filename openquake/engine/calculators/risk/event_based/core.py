@@ -18,9 +18,11 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import copy
 import random
 import collections
 import itertools
+
 import numpy
 
 from django import db
@@ -343,10 +345,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         hazard_output=hazard_output)
                     inserter = writer.CacheInserter(models.EventLossData, 9999)
 
-                    # here hazard_output.output_container is a Gmf object
-                    rlz = hazard_output.output_container.lt_realization
+                    # hazard_output.output_container is SESCollection object
+                    # or a Gmf object
+                    container = hazard_output.output_container
+                    sm_lt_path = getattr(container, 'sm_lt_path', None) or \
+                        container.lt_realization.sm_lt_path
                     rupture_ids = models.SESRupture.objects.filter(
-                        ses__ses_collection__sm_lt_path=rlz.sm_lt_path
+                        ses__ses_collection__sm_lt_path=sm_lt_path
                     ).values_list('id', flat=True)
 
                     for rupture_id in rupture_ids:
@@ -406,9 +411,21 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # logic trees
         if self.rc.hazard_outputs()[0].output_type == "ses":
             ltp = logictree.LogicTreeProcessor.from_hc(self.rc)
+            rnd = random.Random()
+            rnd.seed(self.hc.random_seed)
+            hazard_outputs = []
+            for output in self.rc.hazard_outputs():
+                if not self.hc.number_of_logic_tree_samples:  # full enum
+                    wp = ltp.gmpe_lt.root_branchset.enumerate_paths()
+                else:  # a single sample
+                    seed = rnd.randint(0, models.MAX_SINT_32)
+                    wp = [ltp.gmpe_lt.sample_path(seed)]
+                for weight, gsim_lt_path in wp:
+                    ho = copy.copy(output)
+                    ho.gsims = ltp.parse_gmpe_logictree_path(gsim_lt_path)
+                    hazard_outputs.append(ho)
         else:
-            ltp = None
-
+            hazard_outputs = self.rc.hazard_outputs()
         return workflows.CalculationUnit(
             loss_type,
             workflows.ProbabilisticEventBased(
@@ -420,12 +437,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.rc.conditional_loss_poes,
                 self.rc.insured_losses),
             hazard_getters.GroundMotionValuesGetter(
-                self.rc.hazard_outputs(),
+                hazard_outputs,
                 assets,
                 self.rc.best_maximum_distance,
                 risk_model.imt,
-                self.hazard_seeds,
-                ltp))
+                self.hazard_seeds))
 
     def hazard_times(self):
         """

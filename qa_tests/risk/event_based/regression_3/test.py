@@ -26,14 +26,15 @@ class EventBaseQATestCase(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
     def test(self):
 
         expected_losses = [
-            69.0103214562, 28.6348740356, 7.03106365373, 6.13903150308,
-            5.46296324231, 2.62305127604, 2.27520725638, 1.97496927237,
-            1.07155984657, 0.684801646576, 0.6614696242, 0.413749931498,
-            0.111114467633, 0.0817185722631, 0.0657068428625, 0.0229156239494]
+            5.33083443369, 3.94728761785, 3.1223425756, 2.6151541546,
+            2.56940323354, 2.22498394278, 1.91646046637, 1.66286113136,
+            1.35975710337, 1.17446242495, 0.941926305, 0.779054160432,
+            0.674043664504, 0.500301641814, 0.424490126232, 0.322237369209,
+            0.258284335777, 0.100717305214, 0.0951221948904, 0.0907799964947,
+            0.054055642437]
 
         outputs = self._run_test().output_set
         losses = outputs.get(output_type="event_loss").event_loss
-
         for event_loss, expected in zip(losses, expected_losses):
             self.assertAlmostEqual(
                 expected, event_loss.aggregate_loss,
