@@ -138,8 +138,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         gmf_dict = {PGA: dict(rupture_ids=[1, 2], gmvs=gmvs)}
         points = make_mock_points(3)
         with helpers.patch('openquake.engine.writer.CacheInserter') as m:
-            core._save_gmfs(
-                ses, gmf_dict, points)
+            core._save_gmfs(ses, gmf_dict, points)
             self.assertEqual(2, m.add.call_count)
 
     @unittest.skip  # temporarily skipped
@@ -189,23 +188,23 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             hazard_calculation=hc.id).order_by('ordinal')
 
         # check that the parameters are read correctly from the files
-        self.assertEqual(hc.ses_per_logic_tree_path, 5)
+        self.assertEqual(hc.ses_per_logic_tree_path, 1)
 
         # check that we generated the right number of ruptures
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 182)
+        self.assertEqual(num_ruptures, 36)
 
         # check that we generated the right number of rows in GmfData
-        # 2420 = 121 sites * 2 rlz * 5 ses * 2 IMTs
+        # 484 = 121 sites * 2 rlz * 1 ses * 2 IMTs
         num_gmf1 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz1).count()
         num_gmf2 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz2).count()
 
-        self.assertEqual(num_gmf1, 2420)
-        self.assertEqual(num_gmf2, 2420)
+        self.assertEqual(num_gmf1, 484)
+        self.assertEqual(num_gmf2, 484)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
@@ -223,9 +222,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_sources()
         self.calc.initialize_realizations()
         self.calc.initialize_ses_records()
-        # 5 SES * 2 realizations
-        [s1, s2, s3, s4, s5, t1, t2, t3, t4, t5] = models.SES.objects.filter(
-            ses_collection__output__oq_job=self.job).order_by('id')
 
         expected = [  # source_id, seed
             ('1', 1711655216),
