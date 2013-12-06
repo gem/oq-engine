@@ -1039,7 +1039,8 @@ class RiskCalculation(djm.Model):
                                hazard_curve__lt_realization__isnull=False)
             elif self.calculation_mode in ["event_based", "event_based_bcr"]:
                 if self.hazard_calculation.ground_motion_fields:
-                    filters = dict(output_type='gmf')
+                    filters = dict(output_type='gmf',
+                                   gmf__lt_realization__isnull=False)
                 else:
                     filters = dict(output_type='ses')
             elif self.calculation_mode in ['scenario', 'scenario_damage']:
@@ -1793,8 +1794,8 @@ class Gmf(djm.Model):
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
         """
-        Get the ground motion fields per SES ("GMF set") in string form,
-        ready for the XML export. Each "GMF set" should:
+        Get the ground motion fields per SES ("GMF set") for
+        the XML export. Each "GMF set" should:
 
             * have an `investigation_time` attribute
             * have an `stochastic_event_set_id` attribute
@@ -1816,8 +1817,8 @@ class Gmf(djm.Model):
               of the ground motion field)
         """
         hc = self.output.oq_job.hazard_calculation
-        # NB: this could be done with a named cursor
-        # if there are memory issues
+        # NB: this could be done with a named cursor if there are memory
+        # issues; however the XML export is meant for small dataset (MS)
         query = """
     SELECT x.ses_id, imt, sa_period, sa_damping, tag,
            array_agg(gmv) AS gmvs,
@@ -1851,7 +1852,7 @@ class Gmf(djm.Model):
 
 class GmfSet(object):
     """
-    Small wrapper over the list of Gmf objects associated to the given SES.
+    Small wrapper around the list of Gmf objects associated to the given SES.
     """
     def __init__(self, ses, gmfset):
         self.ses = ses

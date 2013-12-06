@@ -148,7 +148,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
             filename = '%s-smltp_%s.%s' % (output_type, sm_ltp, file_ext)
         else:
             # End Branch Enumeration
-            filename = '%s-smltp_%s-.%s' % (output_type, sm_ltp, file_ext)
+            filename = '%s-smltp_%s.%s' % (output_type, sm_ltp, file_ext)
     elif output_type == 'gmf':
         ltr = result.lt_realization
         sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)

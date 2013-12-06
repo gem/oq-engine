@@ -538,7 +538,9 @@ class BaseLogicTree(object):
 
     def sample_path(self, random_seed):
         """
-        Return the model name and a list of branch ids
+        Return the model name and a list of branch ids.
+
+        :param int seed: the seed used for the sampling
         """
         rnd = random.Random(random_seed)
         branchset = self.root_branchset
@@ -895,9 +897,13 @@ class SourceModelLogicTree(BaseLogicTree):
     def get_sm_weight_paths(
             self, number_of_logic_tree_samples, rnd):
         """
-        Yield triples (name, weight, path), where weight is not None only
-        when the number_of_logic_tree_samples is 0. In that case a full
-        enumeration is performed and the random object is ignored.
+        Yield triples (source_model_name, weight, path). Notice that
+        weight is not None only when the number_of_logic_tree_samples
+        is 0. In that case a full enumeration is performed and the
+        random object is ignored.
+
+        :param int number_of_logic_tree_samples: number of samples (or 0)
+        :param rnd: a :class:`random.Random` instance (or None)
         """
         if number_of_logic_tree_samples:
             # random sampling of the source model logic tree
