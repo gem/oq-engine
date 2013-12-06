@@ -28,7 +28,7 @@ from lxml import etree
 from openquake.nrmllib.hazard import writers
 from openquake.nrmllib.hazard import parsers
 
-from tests import _utils as utils
+from openquake.nrmllib.tests import _utils as utils
 
 HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
 UHSData = namedtuple('UHSData', 'location, imls')

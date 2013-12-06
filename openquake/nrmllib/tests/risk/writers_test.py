@@ -24,7 +24,7 @@ import collections
 from openquake import nrmllib
 from openquake.nrmllib.risk import writers
 
-from tests import _utils
+from openquake.nrmllib.tests import _utils
 
 
 HazardMetadata = collections.namedtuple(
@@ -570,7 +570,7 @@ class LossFractionsWriterTestCase(unittest.TestCase):
         expected = file(
             os.path.join(
                 os.path.dirname(__file__),
-                "../../examples/loss-fractions-taxonomies.xml"))
+                "../../../../examples/loss-fractions-taxonomies.xml"))
 
         writers.LossFractionsWriter(
             self.filename, "taxonomy",
