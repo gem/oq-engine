@@ -343,8 +343,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         hazard_output=hazard_output)
                     inserter = writer.CacheInserter(models.EventLossData, 9999)
 
+                    # here hazard_output.output_container is a Gmf object
+                    rlz = hazard_output.output_container.lt_realization
                     rupture_ids = models.SESRupture.objects.filter(
-                        ses__ses_collection__output=hazard_output
+                        ses__ses_collection__sm_lt_path=rlz.sm_lt_path
                     ).values_list('id', flat=True)
 
                     for rupture_id in rupture_ids:

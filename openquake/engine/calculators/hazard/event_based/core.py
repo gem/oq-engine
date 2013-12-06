@@ -278,7 +278,8 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 output_type='ses')
 
             ses_coll = models.SESCollection.objects.create(
-                output=output, sm_path=sm_path, sm_lt_path=sm_lt_path,
+                output=output, sm_path=sm_path,
+                sm_lt_path=sm_lt_path,
                 weight=weight)
 
             the_ses = [
