@@ -450,7 +450,7 @@ class Table(collections.MutableSequence):
                 raise KeyError('%s:%d:Duplicated record:%s' %
                                (self.recordtype.__name__, position,
                                 ','.join(msg)))
-        self._records.append(rec)
+        self._records.insert(position, rec)
 
     def getrecord(self, *pkey):
         """
