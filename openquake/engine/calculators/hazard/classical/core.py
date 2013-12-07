@@ -20,7 +20,6 @@ import numpy
 
 import openquake.hazardlib
 import openquake.hazardlib.calc
-from openquake.hazardlib.imt import from_string
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general as haz_general
@@ -157,17 +156,17 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         calculation model.)
 
         :param task_result:
-            A pair (matrices_by_imt, ordinal) where matrix is a 2-D
-            numpy array representing the new results which need to be
-            combined with the current value. This should be the same shape
-            as self.matrices[ordinal] where ordinal is the realization ordinal.
+            A pair (matrices_by_imt, ordinal) where matrices_by_imt is a
+            list of 2-D numpy arrays representing the new results which need
+            to be combined with the current value. These should be the same
+            shape as self.matrices[i][j] where i is the realization ordinal
+            and j the IMT ordinal.
         """
         matrices_by_imt, i = task_result
-        for j in range(len(matrices_by_imt)):  # j is the IMT index
-            if matrices_by_imt[j] is None:  # fast lane
-                continue
-            self.matrices[i][j] = 1. - (1. - self.matrices[i][j]
-                                        ) * (1. - matrices_by_imt[j])
+        for j, matrix in enumerate(matrices_by_imt):  # j is the IMT index
+            if matrix is not None:
+                self.matrices[i][j] = 1. - (
+                    1. - self.matrices[i][j]) * (1. - matrix)
         self.log_percent(task_result)
 
     # this could be parallelized in the future, however in all the cases
