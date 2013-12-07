@@ -146,10 +146,8 @@ class ImtsToHazardlibTestCase(unittest.TestCase):
             openquake.hazardlib.imt.PGA(): [1, 2],
             openquake.hazardlib.imt.PGV(): [2, 3],
             openquake.hazardlib.imt.PGD(): [3, 4],
-            openquake.hazardlib.imt.SA(0.1, models.DEFAULT_SA_DAMPING): [
-                0.1, 0.2],
-            openquake.hazardlib.imt.SA(0.025, models.DEFAULT_SA_DAMPING): [
-                0.2, 0.3],
+            openquake.hazardlib.imt.SA(0.1): [0.1, 0.2],
+            openquake.hazardlib.imt.SA(0.025): [0.2, 0.3],
             openquake.hazardlib.imt.IA(): [0.3, 0.4],
             openquake.hazardlib.imt.RSD(): [0.4, 0.5],
             openquake.hazardlib.imt.MMI(): [0.5, 0.6],
