@@ -67,6 +67,8 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
     """
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
+    assert sites, sites
+    assert sources, sources
     logs.LOG.debug(
         '> computing disaggregation for %(np)s sites for realization %(rlz)s'
         % dict(np=len(sites), rlz=lt_rlz.id))
@@ -238,11 +240,11 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             hazard_calculation=self.hc)
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
             sm = self.rlz_to_sm[lt_rlz]
-            sources = self.sources_per_model[sm]
+            sources = (self.sources_per_model[sm, 'point'] +
+                       self.sources_per_model[sm, 'other'])
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
                 yield self.job.id, sites, sources, lt_rlz, ltp
