@@ -24,6 +24,7 @@ display them to standard output in CSV format
 import sys
 import csv
 from openquake.engine.db import models
+from openquake.hazardlib.imt import from_string
 
 
 def extract(hc_id, a_writer):
@@ -33,7 +34,7 @@ def extract(hc_id, a_writer):
             hazard_calculation=hc):
 
         for imt in hc.intensity_measure_types:
-            imt_type, sa_period, _ = models.parse_imt(imt)
+            imt_type, sa_period, _ = from_string(imt)
 
             if imt_type == "PGA":
                 imt_type_fix = "SA"
