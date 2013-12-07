@@ -20,18 +20,20 @@
 
 import os
 import random
-import re
 import collections
 
-import openquake.hazardlib
-import openquake.hazardlib.site
+import numpy
+
 from openquake.hazardlib import correlation
+from openquake.hazardlib.imt import from_string
+
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
-from django.db import transaction
+from django.db import transaction, connections
 
 from openquake.nrmllib import parsers as nrml_parsers
+from openquake.nrmllib.models import PointSource
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import source, exposure
@@ -95,29 +97,7 @@ def im_dict_to_hazardlib(im_dict):
     # TODO: file a bug about  SA periods in hazardlib imts.
     # Why are values of 0.0 not allowed? Technically SA(0.0) means PGA, but
     # there must be a reason why we can't do this.
-    hazardlib_im = {}
-
-    for imt, imls in im_dict.items():
-        hazardlib_imt = imt_to_hazardlib(imt)
-        hazardlib_im[hazardlib_imt] = imls
-
-    return hazardlib_im
-
-
-def imt_to_hazardlib(imt):
-    """Covert an IMT string to an hazardlib object.
-
-    :param str imt:
-        Given the IMT string (defined in the job config file), convert it to
-        equivlent hazardlib object. See :mod:`openquake.hazardlib.imt`.
-    """
-    if 'SA' in imt:
-        match = re.match(r'^SA\(([^)]+?)\)$', imt)
-        period = float(match.group(1))
-        return openquake.hazardlib.imt.SA(period, models.DEFAULT_SA_DAMPING)
-    else:
-        imt_class = getattr(openquake.hazardlib.imt, imt)
-        return imt_class()
+    return dict((from_string(imt), imls) for imt, imls in im_dict.items())
 
 
 def get_correl_model(hc):
@@ -150,7 +130,7 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary source model name -> source_ids
+        # a dictionary (sm_name, source_type) -> source_ids
         self.sources_per_model = collections.defaultdict(list)
         # a dictionary rlz -> source model name (in the logic tree)
         self.rlz_to_sm = {}
@@ -168,6 +148,20 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
+    def block_size(self):
+        """
+        For hazard calculators, the number of work items per task
+        is specified in the configuration file.
+        """
+        return int(config.get('hazard', 'block_size'))
+
+    def point_source_block_size(self):
+        """
+        Similar to :meth:`block_size`, except that this parameter applies
+        specifically to grouping of point sources.
+        """
+        return int(config.get('hazard', 'point_source_block_size'))
+
     def concurrent_tasks(self):
         """
         For hazard calculators, the number of tasks to be in queue
@@ -177,15 +171,53 @@ class BaseHazardCalculator(base.Calculator):
 
     def task_arg_gen(self, block_size):
         """
-        To override in subclasses
+        Loop through realizations and sources to generate a sequence of
+        task arg tuples. Each tuple of args applies to a single task.
+
+        For this default implementation, yielded results are triples of
+        (job_id, realization_id, source_id_list).
+
+        Override this in subclasses as necessary.
+
+        :param int block_size:
+            The (max) number of work items for each each task. In this case,
+            sources.
         """
+        point_source_block_size = self.point_source_block_size()
+
+        realizations = self._get_realizations()
+
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
+
+        for lt_rlz in realizations:
+            sm = self.rlz_to_sm[lt_rlz]
+
+            # separate point sources from all the other types, since
+            # we distribution point sources in different sized chunks
+            # point sources first
+            point_sources = self.sources_per_model[sm, 'point']
+            for block in block_splitter(point_sources,
+                                        point_source_block_size):
+                yield self.job.id, block, lt_rlz, ltp
+
+            # now for area and fault sources
+            other_sources = self.sources_per_model[sm, 'other']
+            for block in block_splitter(other_sources, block_size):
+                yield self.job.id, block, lt_rlz, ltp
 
     def _get_realizations(self):
         """
         Get all of the logic tree realizations for this calculation.
         """
         return models.LtRealization.objects\
-            .filter(hazard_calculation=self.hc).order_by('id')
+            .filter(hazard_calculation=self.hc, is_complete=False)\
+            .order_by('id')
+
+    def filtered_sites(self, src):
+        """
+        Do not filter sites up front: overridden in the event based subclass
+        """
+        return self.hc.site_collection
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
@@ -201,15 +233,11 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization)
-                if self.hc.sites_affected_by(src):
-                    self.sources_per_model[src_path].append(src)
-            logs.LOG.info(
-                'found %d relevant sources for model %s',
-                len(self.sources_per_model[src_path]), src_path)
-        # reorder the sources by typology, to have a better distribution:
-        # Area, CharacteristicFault, ComplexFault, Point, SimpleFault
-        for src_list in self.sources_per_model.itervalues():
-            src_list.sort(key=lambda src: src.__class__.__name__)
+                if self.filtered_sites(src):
+                    if isinstance(src_nrml, PointSource):
+                        self.sources_per_model[src_path, 'point'].append(src)
+                    else:
+                        self.sources_per_model[src_path, 'other'].append(src)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -294,8 +322,7 @@ class BaseHazardCalculator(base.Calculator):
         parse it and load it into the `hzrdi.site_model` table.
         """
         logs.LOG.progress("initializing sites")
-        sites = self.hc.points_to_compute(save_sites=True)
-        logs.LOG.info('Considering %d sites', len(sites))
+        self.hc.points_to_compute(save_sites=True)
 
         site_model_inp = self.hc.site_model
         if site_model_inp:
@@ -417,6 +444,35 @@ class BaseHazardCalculator(base.Calculator):
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
 
+    def initialize_hazard_curve_progress(self, lt_rlz):
+        """
+        As a calculation progresses, workers will periodically update the
+        intermediate results. These results will be stored in
+        `htemp.hazard_curve_progress` until the calculation is completed.
+
+        Before the core calculation begins, we need to initalize these records,
+        one data set per IMT. Each dataset will be stored in the database as a
+        pickled 2D numpy array (with number of rows == calculation points of
+        interest and number of columns == number of IML values for a given
+        IMT).
+
+        We will create 1 `hazard_curve_progress` record per IMT per
+        realization.
+
+        :param lt_rlz:
+            :class:`openquake.engine.db.models.LtRealization` object to
+            associate with these inital hazard curve values.
+        """
+        num_points = len(self.hc.points_to_compute())
+
+        im_data = self.hc.intensity_measure_types_and_levels
+        for imt, imls in im_data.items():
+            hc_prog = models.HazardCurveProgress()
+            hc_prog.lt_realization = lt_rlz
+            hc_prog.imt = imt
+            hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
+            hc_prog.save()
+
     def _get_outputs_for_export(self):
         """
         Util function for getting :class:`openquake.engine.db.models.Output`
@@ -483,7 +539,7 @@ class BaseHazardCalculator(base.Calculator):
                     investigation_time=self.hc.investigation_time)
 
         for imt, imls in self.hc.intensity_measure_types_and_levels.items():
-            im_type, sa_period, sa_damping = models.parse_imt(imt)
+            im_type, sa_period, sa_damping = from_string(imt)
 
             # prepare `output` and `hazard_curve` containers in the DB:
             container_ids = dict()
