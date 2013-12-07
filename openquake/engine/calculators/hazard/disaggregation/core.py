@@ -32,7 +32,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @utils_tasks.oqtask
-def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
+def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
     """
     Calculate disaggregation histograms and saving the results to the database.
 
@@ -57,8 +57,8 @@ def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
         need to compute disaggregation histograms.
     :param list sources:
         `list` of hazardlib source objects
-    :param int lt_rlz_id:
-        ID of the :class:`openquake.engine.db.models.LtRealization` for which
+    :param lt_rlz:
+        instance of :class:`openquake.engine.db.models.LtRealization` for which
         we want to compute disaggregation histograms. This realization will
         determine which hazard curve results to use as a basis for the
         calculation.
@@ -69,11 +69,10 @@ def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
     # pylint: disable=R0914
     logs.LOG.debug(
         '> computing disaggregation for %(np)s sites for realization %(rlz)s'
-        % dict(np=len(sites), rlz=lt_rlz_id))
+        % dict(np=len(sites), rlz=lt_rlz.id))
 
     job = models.OqJob.objects.get(id=job_id)
     hc = job.hazard_calculation
-    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
@@ -88,8 +87,8 @@ def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
         rupture_site_distance_filter(hc.maximum_distance)
 
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
-        hazardlib_imt = haz_general.imt_to_hazardlib(imt)
-        hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
+        imt = models.parse_imt(imt)
+        hc_im_type, sa_period, sa_damping = imt
 
         imls = numpy.array(imls[::-1])
 
@@ -98,7 +97,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
             # get curve for this point/IMT/realization
             [curve] = models.HazardCurveData.objects.filter(
                 location=site.location.wkt2d,
-                hazard_curve__lt_realization=lt_rlz_id,
+                hazard_curve__lt_realization=lt_rlz,
                 hazard_curve__imt=hc_im_type,
                 hazard_curve__sa_period=sa_period,
                 hazard_curve__sa_damping=sa_damping,
@@ -117,7 +116,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz_id, ltp):
                 calc_kwargs = {
                     'sources': sources,
                     'site': site,
-                    'imt': hazardlib_imt,
+                    'imt': imt,
                     'iml': iml,
                     'gsims': gsims,
                     'time_span': hc.investigation_time,
@@ -247,12 +246,13 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             sources = self.sources_per_model[sm]
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
-                yield self.job.id, sites, sources, lt_rlz.id, ltp
+                yield self.job.id, sites, sources, lt_rlz, ltp
 
     def post_execute(self):
         """
-        Start the disaggregation phase.
+        Start the disaggregation phase after hazard curve finalization.
         """
+        super(DisaggHazardCalculator, self).post_execute()
         self.parallelize(
             compute_disagg,
             self.disagg_task_arg_gen(self.block_size()),
