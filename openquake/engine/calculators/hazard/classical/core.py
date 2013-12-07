@@ -114,7 +114,6 @@ def make_zeros(realizations, sites, imtls):
              for imt in sorted(imtls)] for _ in range(len(realizations))]
 
 
-
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
     """
     Classical PSHA hazard calculator. Computes hazard curves for a given set of
@@ -125,6 +124,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
     """
 
     core_calc_task = compute_hazard_curves
+
+    matrices = []  # R x I lists of S x L numpy arrays
 
     def pre_execute(self):
         """
@@ -226,6 +227,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
                         location='POINT(%s %s)' % (p.longitude, p.latitude),
                         weight=rlz.weight)
                     for p, poes in zip(points, matrix)])
+        del self.matrices  # save memory for the post_processing phase
 
     def post_process(self):
         logs.LOG.debug('> starting post processing')

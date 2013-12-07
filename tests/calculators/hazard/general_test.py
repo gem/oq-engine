@@ -16,10 +16,7 @@
 
 
 import unittest
-import mock
 import openquake.hazardlib
-
-from collections import namedtuple
 
 from openquake.hazardlib import geo as hazardlib_geo
 
@@ -183,11 +180,9 @@ class ParseRiskModelsTestCase(unittest.TestCase):
                      '.ClassicalHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))
-        init_sm_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_site_model'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
-        patches = (init_src_patch, init_sm_patch, init_rlz_patch)
+        patches = (init_src_patch, init_rlz_patch)
 
         mocks = [p.start() for p in patches]
 
