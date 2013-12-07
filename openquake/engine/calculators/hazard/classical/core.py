@@ -20,6 +20,7 @@ import numpy
 
 import openquake.hazardlib
 import openquake.hazardlib.calc
+from openquake.hazardlib.imt import from_string
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general as haz_general
@@ -111,6 +112,7 @@ def make_zeros(realizations, sites, imtls):
     """
     return [[numpy.zeros((len(sites), len(imtls[imt])))
              for imt in sorted(imtls)] for _ in range(len(realizations))]
+
 
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):

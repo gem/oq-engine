@@ -20,8 +20,8 @@ Disaggregation calculator core functionality
 import numpy
 
 import openquake.hazardlib
+from openquake.hazardlib.imt import from_string
 from openquake.engine import logs
-from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
 from openquake.engine.db import models
@@ -87,8 +87,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
         rupture_site_distance_filter(hc.maximum_distance)
 
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
-        imt = models.parse_imt(imt)
-        hc_im_type, sa_period, sa_damping = imt
+        hc_im_type, sa_period, sa_damping = imt = from_string(imt)
 
         imls = numpy.array(imls[::-1])
 
