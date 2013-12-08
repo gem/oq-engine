@@ -86,18 +86,18 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
     with EnginePerformanceMonitor(
             'computing hazard curves', job_id,
             compute_hazard_curves, tracing=True):
-        dic = openquake.hazardlib.calc.hazard_curve.\
+        curves = openquake.hazardlib.calc.hazard_curve.\
             hazard_curves_poissonian(**calc_kwargs)
-        matrices_by_imt = []
+        curves_by_imt = []
         for imt in sorted(imts):
-            if (dic[imt] == 0.0).all():
+            if (curves[imt] == 0.0).all():
                 # shortcut for filtered sources giving no contribution;
                 # this is essential for performance, we want to avoid
                 # returning big arrays of zeros (MS)
-                matrices_by_imt.append(None)
+                curves_by_imt.append(None)
             else:
-                matrices_by_imt.append(dic[imt])
-        return matrices_by_imt, lt_rlz.ordinal
+                curves_by_imt.append(curves[imt])
+        return curves_by_imt, lt_rlz.ordinal
 
 
 def make_zeros(realizations, sites, imtls):
@@ -124,8 +124,6 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
 
     core_calc_task = compute_hazard_curves
 
-    matrices = []  # R x I lists of S x L numpy arrays
-
     def pre_execute(self):
         """
         Do pre-execution work. At the moment, this work entails:
@@ -144,7 +142,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         # the `execute` phase.
         self.initialize_realizations()
         imtls = self.hc.intensity_measure_types_and_levels
-        self.matrices = make_zeros(
+        self.curves_by_rlz = make_zeros(
             self.rlz_to_sm, self.hc.site_collection, imtls)
 
     @EnginePerformanceMonitor.monitor
@@ -156,29 +154,29 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         calculation model.)
 
         :param task_result:
-            A pair (matrices_by_imt, ordinal) where matrices_by_imt is a
+            A pair (curves_by_imt, ordinal) where curves_by_imt is a
             list of 2-D numpy arrays representing the new results which need
             to be combined with the current value. These should be the same
-            shape as self.matrices[i][j] where i is the realization ordinal
+            shape as self.curves_by_rlz[i][j] where i is the realization ordinal
             and j the IMT ordinal.
         """
-        matrices_by_imt, i = task_result
-        for j, matrix in enumerate(matrices_by_imt):  # j is the IMT index
+        curves_by_imt, i = task_result
+        for j, matrix in enumerate(curves_by_imt):  # j is the IMT index
             if matrix is not None:
-                self.matrices[i][j] = 1. - (
-                    1. - self.matrices[i][j]) * (1. - matrix)
+                self.curves_by_rlz[i][j] = 1. - (
+                    1. - self.curves_by_rlz[i][j]) * (1. - matrix)
         self.log_percent(task_result)
 
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)
     @EnginePerformanceMonitor.monitor
-    def post_execute(self):
+    def save_hazard_curves(self):
         """
         Post-execution actions. At the moment, all we do is finalize the hazard
         curve results.
         """
         imtls = self.hc.intensity_measure_types_and_levels
-        for i, matrices in enumerate(self.matrices):
+        for i, curves_imts in enumerate(self.curves_by_rlz):
             rlz = models.LtRealization.objects.get(
                 hazard_calculation=self.hc, ordinal=i)
 
@@ -194,7 +192,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
 
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
-            for imt, matrix in zip(sorted(imtls), matrices):
+            for imt, curves_by_imt in zip(sorted(imtls), curves_imts):
                 hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
 
                 # save output
@@ -225,10 +223,16 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
                         poes=list(poes),
                         location='POINT(%s %s)' % (p.longitude, p.latitude),
                         weight=rlz.weight)
-                    for p, poes in zip(points, matrix)])
-        del self.matrices  # save memory for the post_processing phase
+                    for p, poes in zip(points, curves_by_imt)])
+        del self.curves_by_rlz  # save memory for the post_processing phase
+
+    post_execute = save_hazard_curves
 
     def post_process(self):
+        """
+        Optionally generates aggregate curves, hazard maps and
+        uniform_hazard_spectra.
+        """
         logs.LOG.debug('> starting post processing')
 
         # means/quantiles:
