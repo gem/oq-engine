@@ -27,7 +27,6 @@ Model representations of the OpenQuake DB tables.
 
 import collections
 import operator
-import re
 from datetime import datetime
 
 
@@ -40,7 +39,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.gis.db import models as djm
 from shapely import wkt
 
-from openquake.hazardlib.imt import from_string, DEFAULT_SA_DAMPING
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import source as hazardlib_source
 import openquake.hazardlib.site
@@ -1405,23 +1404,6 @@ class HazardMap(djm.Model):
         return self.__str__()
 
 
-def parse_imt(imt):
-    """
-    Given an intensity measure type in long form (with attributes),
-    return the intensity measure type, the sa_period and sa_damping
-    """
-    sa_period = None
-    sa_damping = None
-    if 'SA' in imt:
-        match = re.match(r'^SA\(([^)]+?)\)$', imt)
-        sa_period = float(match.group(1))
-        sa_damping = DEFAULT_SA_DAMPING
-        hc_im_type = 'SA'  # don't include the period
-    else:
-        hc_im_type = imt
-    return hc_im_type, sa_period, sa_damping
-
-
 class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
@@ -2017,9 +1999,9 @@ def get_gmfs_scenario(output, imt=None):
     hc = job.hazard_calculation
     coll = output.gmf
     if imt is None:
-        imts = [parse_imt(x) for x in hc.intensity_measure_types]
+        imts = [from_string(x) for x in hc.intensity_measure_types]
     else:
-        imts = [parse_imt(imt)]
+        imts = [from_string(imt)]
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
         for gmf in GmfData.objects.filter(

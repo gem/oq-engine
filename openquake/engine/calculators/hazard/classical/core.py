@@ -20,6 +20,7 @@ import numpy
 
 import openquake.hazardlib
 import openquake.hazardlib.calc
+from openquake.hazardlib.imt import from_string
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general as haz_general
@@ -193,7 +194,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
             for imt, curves_by_imt in zip(sorted(imtls), curves_imts):
-                hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
+                hc_im_type, sa_period, sa_damping = from_string(imt)
 
                 # save output
                 hco = models.Output.objects.create(
