@@ -84,7 +84,7 @@ class Calculator(object):
 
         Subclasses must implement this.
         """
-        return 1
+        raise NotImplementedError
 
     def concurrent_tasks(self):
         """
