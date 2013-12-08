@@ -28,9 +28,6 @@ CREATE SCHEMA hzrdr;
 CREATE SCHEMA riski;
 CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
-CREATE SCHEMA htemp;
-CREATE SCHEMA rtemp;
-
 
 
 ------------------------------------------------------------------------
