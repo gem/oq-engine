@@ -357,11 +357,9 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # run the calculation in process to create something to export
             os.environ['OQ_NO_DISTRIBUTE'] = '1'
             try:
-                helpers.run_hazard_job(cfg)
+                job = helpers.run_hazard_job(cfg)
             finally:
                 del os.environ['OQ_NO_DISTRIBUTE']
-
-            job = models.OqJob.objects.latest('id')
             self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)

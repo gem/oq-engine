@@ -35,15 +35,15 @@ class MapReduceTestCase(unittest.TestCase):
 
     def test_single_item(self):
         expected = ["hello"] * 5
-        result = tasks._map_reduce(
+        result = tasks.map_reduce(
             just_say_hello, [(i, ) for i in range(5)],
             lambda lst, val: lst + [val], [])
         self.assertEqual(expected, result)
 
     def test_type_error(self):
         try:
-            tasks._map_reduce(just_say_hello, range(5),
-                              lambda lst, val: lst + [val], [])
+            tasks.map_reduce(just_say_hello, range(5),
+                             lambda lst, val: lst + [val], [])
         except TypeError as exc:
             # the message depend on the OQ_NO_DISTRIBUTE flag
             self.assertIn('int', str(exc))
