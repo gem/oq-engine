@@ -22,7 +22,6 @@
 -- of our database users/roles.
 
 GRANT USAGE ON SCHEMA admin TO GROUP openquake;
-GRANT USAGE ON SCHEMA htemp TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdi TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdr TO GROUP openquake;
 GRANT USAGE ON SCHEMA riski TO GROUP openquake;
@@ -30,7 +29,6 @@ GRANT USAGE ON SCHEMA riskr TO GROUP openquake;
 GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
 
 GRANT ALL ON ALL SEQUENCES IN SCHEMA admin TO GROUP openquake;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA htemp TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdi TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA hzrdr TO GROUP openquake;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA riski TO GROUP openquake;
@@ -39,7 +37,6 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA uiapi TO GROUP openquake;
 
 -- Users in the `openquake` group have read access to everything
 GRANT SELECT ON ALL TABLES IN SCHEMA admin TO GROUP openquake;
-GRANT SELECT ON ALL TABLES IN SCHEMA htemp TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA hzrdi TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA hzrdr TO GROUP openquake;
 GRANT SELECT ON ALL TABLES IN SCHEMA riski TO GROUP openquake;
@@ -50,10 +47,9 @@ GRANT SELECT ON geometry_columns           TO GROUP openquake;
 GRANT SELECT ON spatial_ref_sys            TO GROUP openquake;
 
 -- `oq_admin` has full SELECT/INSERT/UPDATE/DELETE access to all tables.
--- In fact, `oq_admin` is the only user that can delete records,
--- with the exception the `htemp` schema space. See below.
+-- In fact, `oq_admin` is the only user that can delete records
+-- with the exception the uiapi.performance table.
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA admin TO oq_admin;
-GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA htemp TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdi TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA hzrdr TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riski TO oq_admin;
@@ -61,7 +57,6 @@ GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA riskr TO oq_admin;
 GRANT INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA uiapi TO oq_admin;
 
 GRANT ALL ON SCHEMA admin TO oq_admin;
-GRANT ALL ON SCHEMA htemp TO oq_admin;
 GRANT ALL ON SCHEMA hzrdi TO oq_admin;
 GRANT ALL ON SCHEMA hzrdr TO oq_admin;
 GRANT ALL ON SCHEMA riski TO oq_admin;
@@ -71,8 +66,6 @@ GRANT ALL ON SCHEMA uiapi TO oq_admin;
 ----------------------------------------------
 -- Specific permissions for individual tables:
 ----------------------------------------------
--- htemp schema
-GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.hazard_curve_progress TO oq_job_init;
 
 -- hzrdi schema
 GRANT SELECT,INSERT ON hzrdi.hazard_site            TO oq_job_init;

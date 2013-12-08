@@ -70,7 +70,7 @@ class HazardGetter(object):
         self.assets = assets
         self.max_distance = max_distance
         self.imt = imt
-        self.imt_type, self.sa_period, self.sa_damping = models.parse_imt(imt)
+        self.imt_type, self.sa_period, self.sa_damping = from_string(imt)
         # FIXME(lp). It is better to directly store the convex hull
         # instead of the mesh. We are not doing it because
         # hazardlib.Polygon is not (yet) pickeable
