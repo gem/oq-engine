@@ -16,10 +16,7 @@
 
 
 import unittest
-import mock
 import openquake.hazardlib
-
-from collections import namedtuple
 
 from openquake.hazardlib import geo as hazardlib_geo
 
@@ -183,11 +180,9 @@ class ParseRiskModelsTestCase(unittest.TestCase):
                      '.ClassicalHazardCalculator')
         init_src_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_sources'))
-        init_sm_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_site_model'))
         init_rlz_patch = helpers.patch(
             '%s.%s' % (base_path, 'initialize_realizations'))
-        patches = (init_src_patch, init_sm_patch, init_rlz_patch)
+        patches = (init_src_patch, init_rlz_patch)
 
         mocks = [p.start() for p in patches]
 
@@ -208,83 +203,3 @@ class ParseRiskModelsTestCase(unittest.TestCase):
             patches[i].stop()
 
         return job
-
-
-class TaskArgGenTestCase(unittest.TestCase):
-    """
-    Tests for the default implementation of the hazard calc task arg generator.
-
-    The default implementation splits the calculation into blocks of sources.
-    """
-
-    Job = namedtuple('Job', 'id hazard_calculation')
-    Rlz = namedtuple('Realization', 'id')
-
-    def test_task_arg_gen(self):
-        # Test the logic of `BaseHazardCalculator.task_arg_gen`.
-        job = self.Job(1776, mock.Mock())
-
-        base_path = (
-            'openquake.engine.calculators.hazard.general.BaseHazardCalculator'
-        )
-        calc = general.BaseHazardCalculator(job)
-
-        # Set up mocks:
-        # ltp
-        ltp_patch = mock.patch(
-            'openquake.engine.input.logictree.LogicTreeProcessor.from_hc')
-        ltp_mock = ltp_patch.start()
-        ltp_mock.return_value = mock.Mock()
-
-        # point_source_block_size
-        pt_src_block_size_patch = helpers.patch(
-            '%s.%s' % (base_path, 'point_source_block_size')
-        )
-        pt_src_block_size_mock = pt_src_block_size_patch.start()
-        pt_src_block_size_mock.return_value = 5
-
-        # _get_realizations
-        get_rlz_patch = helpers.patch(
-            '%s.%s' % (base_path, '_get_realizations')
-        )
-        get_rlz_mock = get_rlz_patch.start()
-
-        r5, r6 = self.Rlz(5), self.Rlz(6)
-        get_rlz_mock.return_value = [r5, r6]
-
-        calc.rlz_to_sm = {r5: 'dummy_sm', r6: 'dummy_sm'}
-
-        for rlz in (r5, r6):
-            calc.sources_per_model['dummy_sm', 'point'] = [
-                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-            calc.sources_per_model['dummy_sm', 'other'] = [
-                100, 101, 102, 103, 104]
-
-        expected = [
-            (1776, [1, 2, 3, 4, 5], 5),
-            (1776, [6, 7, 8, 9, 10], 5),
-            (1776, [11], 5),
-            (1776, [100, 101], 5),
-            (1776, [102, 103], 5),
-            (1776, [104], 5),
-            (1776, [1, 2, 3, 4, 5], 6),
-            (1776, [6, 7, 8, 9, 10], 6),
-            (1776, [11], 6),
-            (1776, [100, 101], 6),
-            (1776, [102, 103], 6),
-            (1776, [104], 6),
-        ]
-
-        expected = [exp + (ltp_mock.return_value,) for exp in expected]
-
-        try:
-            actual = list(calc.task_arg_gen(block_size=2))
-            self.assertEqual(expected, actual)
-            self.assertEqual(1, pt_src_block_size_mock.call_count)
-            self.assertEqual(1, get_rlz_mock.call_count)
-        finally:
-            pt_src_block_size_mock.stop()
-            pt_src_block_size_patch.stop()
-            get_rlz_mock.stop()
-            get_rlz_patch.stop()
-            ltp_patch.stop()

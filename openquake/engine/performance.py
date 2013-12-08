@@ -112,12 +112,12 @@ class EnginePerformanceMonitor(PerformanceMonitor):
         """
         A decorator to add monitoring to calculator methods. The only
         constraints are:
-        1) the method has no arguments except self
+        1) the method has no keyword arguments
         2) there is an attribute self.job.id
         """
-        def newmeth(self):
+        def newmeth(self, *args):
             with cls(method.__name__, self.job.id, flush=True):
-                return method(self)
+                return method(self, *args)
         newmeth.__name__ = method.__name__
         return newmeth
 
