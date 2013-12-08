@@ -74,7 +74,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         os.environ['OQ_NO_DISTRIBUTE'] = '1'
         try:
             self.calc.execute()
-            self.calc.__class__.__base__.post_execute(self.calc)  # save curves
+            self.calc.save_hazard_curves()
         finally:
             del os.environ['OQ_NO_DISTRIBUTE']
 
