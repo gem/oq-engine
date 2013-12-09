@@ -30,7 +30,7 @@ from openquake.hazardlib.imt import from_string
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
-from django.db import transaction, connections
+from django.db import transaction
 
 from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.models import PointSource

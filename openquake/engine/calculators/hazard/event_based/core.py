@@ -402,8 +402,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         Optionally compute_gmf in parallel.
         """
         if self.hc.ground_motion_fields:
-            self.initialize_realizations(
-                rlz_callbacks=[self.initialize_gmf_records])
+            self.initialize_realizations([self.initialize_gmf_records])
             self.parallelize(compute_gmf, self.compute_gmf_arg_gen(),
                              self.log_percent)
 
