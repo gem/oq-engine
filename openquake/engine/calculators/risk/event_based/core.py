@@ -348,12 +348,18 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     # hazard_output.output_container is SESCollection object
                     # or a Gmf object
                     container = hazard_output.output_container
-                    sm_lt_path = getattr(container, 'sm_lt_path', None) or \
-                        container.lt_realization.sm_lt_path
-                    rupture_ids = models.SESRupture.objects.filter(
-                        ses__ses_collection__sm_lt_path=sm_lt_path
-                    ).values_list('id', flat=True)
-
+                    if isinstance(container, models.Gmf):
+                        rupture_ids = models.SESRupture.objects.filter(
+                            ses__ses_collection__sm_lt_path=
+                            container.lt_realization.sm_lt_path
+                            ).values_list('id', flat=True)
+                    elif isinstance(container, models.SESCollection):
+                        rupture_ids = models.SESRupture.objects.filter(
+                            ses__ses_collection=container
+                        ).values_list('id', flat=True)
+                    else:
+                        raise TypeError('Got %s, expected Gmf or SESCollection'
+                                        % container)
                     for rupture_id in rupture_ids:
                         if rupture_id in event_loss_table:
                             inserter.add(
