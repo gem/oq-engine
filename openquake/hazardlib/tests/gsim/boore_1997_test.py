@@ -13,93 +13,94 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.boore_1997 import (BooreEtAl1997,
-    BooreEtAl1997Unspecified, BooreEtAl1997Arbitrary,
-    BooreEtAl1997UnspecifiedArbitrary)
-
-
+from openquake.hazardlib.gsim.boore_1997 import (
+    BooreEtAl1997,
+    BooreEtAl1997Unspecified,
+    BooreEtAl1997Arbitrary,
+    BooreEtAl1997UnspecifiedArbitrary
+    )
 from tests.gsim.utils import BaseGSIMTestCase
 
 
 class BooreEtAl1997TestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1997
-    
+
     # All test data were generated using the Matlab implementation of the
     # Boore et al (1997) GMPE, as provided by Jack Baker
     # http://www.stanford.edu/~bakerjw/GMPEs.html
 
     def test_mean_normal(self):
         self.check('BJF1997/BJF1997_MEAN.csv',
-                    max_discrep_percentage=0.1)
-                     
+                   max_discrep_percentage=0.1)
+
     def test_std_intra(self):
         self.check('BJF1997/BJF1997_INTRA.csv',
-                    max_discrep_percentage=0.1)
-                    
+                   max_discrep_percentage=0.1)
+
     def test_std_inter(self):
         self.check('BJF1997/BJF1997_INTER.csv',
-                    max_discrep_percentage=0.1)
-                    
+                   max_discrep_percentage=0.1)
+
     def test_std_total(self):
         self.check('BJF1997/BJF1997_TOTAL.csv',
-                    max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
 
 class BooreEtAl1997UnspecifiedTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1997Unspecified
-    
+
     def test_mean_normal(self):
         self.check('BJF1997/BJF1997_UNC_MEAN.csv',
-                    max_discrep_percentage=0.1)
-                     
+                   max_discrep_percentage=0.1)
+
     def test_std_intra(self):
         self.check('BJF1997/BJF1997_UNC_INTRA.csv',
-                    max_discrep_percentage=0.1)
-                    
+                   max_discrep_percentage=0.1)
+
     def test_std_inter(self):
         self.check('BJF1997/BJF1997_UNC_INTER.csv',
-                    max_discrep_percentage=0.1)
-                    
+                   max_discrep_percentage=0.1)
+
     def test_std_total(self):
         self.check('BJF1997/BJF1997_UNC_TOTAL.csv',
-                    max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
 
 class BooreEtAl1997ArbitraryTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1997Arbitrary
-    
+
     def test_mean_normal(self):
         self.check('BJF1997/BJF1997_Arb_MEAN.csv',
-                    max_discrep_percentage=0.1)
-                     
+                   max_discrep_percentage=0.1)
+
     def test_std_intra(self):
         self.check('BJF1997/BJF1997_Arb_INTRA.csv',
-                    max_discrep_percentage=0.1)
-                    
+                   max_discrep_percentage=0.1)
+
     def test_std_inter(self):
         self.check('BJF1997/BJF1997_Arb_INTER.csv',
-                    max_discrep_percentage=0.1)
-                    
+                   max_discrep_percentage=0.1)
+
     def test_std_total(self):
         self.check('BJF1997/BJF1997_Arb_TOTAL.csv',
-                    max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
 
 
 class BooreEtAl1997ArbitraryUnspecifiedTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1997ArbitraryUnspecified
-    
+
     def test_mean_normal(self):
         self.check('BJF1997/BJF1997_UNC_Arb_MEAN.csv',
-                    max_discrep_percentage=0.1)
-                     
+                   max_discrep_percentage=0.1)
+
     def test_std_intra(self):
         self.check('BJF1997/BJF1997_UNC_Arb_INTRA.csv',
-                    max_discrep_percentage=0.1)
-                    
+                   max_discrep_percentage=0.1)
+
     def test_std_inter(self):
         self.check('BJF1997/BJF1997_UNC_Arb_INTER.csv',
-                    max_discrep_percentage=0.1)
-                    
+                   max_discrep_percentage=0.1)
+
     def test_std_total(self):
         self.check('BJF1997/BJF1997_UNC_Arb_TOTAL.csv',
-                    max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1)
