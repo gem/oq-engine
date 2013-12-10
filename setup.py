@@ -78,7 +78,7 @@ setup(
     ],
     ext_modules=[geodetic_speedups, geoutils_speedups],
     include_dirs=include_dirs,
-    scripts=['tests/gsim/check_gsim.py'],
+    scripts=['openquake/hazardlib/tests/gsim/check_gsim.py'],
     maintainer='GEM',
     maintainer_email='info@openquake.org',
     classifiers=(
