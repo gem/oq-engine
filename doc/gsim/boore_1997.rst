@@ -13,5 +13,5 @@ Boore, Joyner and Fumal 1997
 .. autoclass:: BooreEtAl1997Arbitrary
     :members:
 
-.. autoclass:: BooreEtAl1997UnspecifiedArbitrary
+.. autoclass:: BooreEtAl1997ArbitraryUnspecified
     :members:

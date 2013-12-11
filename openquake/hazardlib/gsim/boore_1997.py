@@ -86,7 +86,7 @@ class BooreEtAl1997(GMPE):
 
     def _get_stddevs(self, C, stddev_types, num_sites):
         """
-        Return standard deviations as defined in table 8, pag 121.
+        Return standard deviations using Page 142 (Eq 4 - 5)
         """
         stddevs = []
         for stddev_type in stddev_types:
@@ -103,14 +103,15 @@ class BooreEtAl1997(GMPE):
 
     def _compute_distance_scaling(self, rjb, C):
         """
-        Compute distance-scaling term, equations (3) and (4), pag 107.
+        Compute distance-scaling term (Page 141, Eq 1)
         """
+        # Calculate distance according to Page 141, Eq 2.
         rdist = np.sqrt((rjb ** 2.) + (C['h'] ** 2.))
         return C['B5'] * np.log(rdist)
 
     def _compute_magnitude_scaling(self, mag, C):
         """
-        Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
+        Compute magnitude-scaling term (Page 141, Eq 1)
         """
         dmag = mag - 6.
         return (C['B2'] * dmag) + (C['B3'] * (dmag ** 2.))
@@ -139,8 +140,7 @@ class BooreEtAl1997(GMPE):
 
     def _compute_site_term(self, vs30, C):
         """
-        Compute site amplification linear term,
-        equation (7), pag 107.
+        Compute site amplification linear term (Page 141, Eq 1)
         """
         return C['Bv'] * np.log(vs30 / C['Va'])
 
@@ -203,7 +203,7 @@ class BooreEtAl1997Unspecified(BooreEtAl1997):
     this instance of the Boore et al (1997) GMPE, which omits the need for
     rake to be defined.
     """
-    #: Required rupture parameters are magnitude, and rake.
+    #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag'))
 
     def _compute_style_of_faulting_term(self, rup, C):
@@ -248,7 +248,7 @@ class BooreEtAl1997ArbitraryUnspecified(BooreEtAl1997Arbitrary):
     As for the :class:'BooreEtAl1997Arbitrary', here defined for the case
     when the style of faulting is not specified
     """
-    #: Required rupture parameters are magnitude, and rake.
+    #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = set(('mag'))
 
     def _compute_style_of_faulting_term(self, rup, C):
