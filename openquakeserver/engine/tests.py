@@ -512,7 +512,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             'input_model_1': [fake_model_1],
             'input_model_2': [fake_model_2],
             'input_model_3': [fake_model_3]})
-        request.POST = dict()
+        request.POST = dict(database="platform")
 
         # Set up the mocks:
         mocks = dict(
@@ -567,6 +567,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
                  'args': (
                      (666, temp_dir),
                      {'foreign_calc_id': None,
+                      'dbname': 'platform',
                       'callback_url': None})},
                 aa_call_data
             )
@@ -581,7 +582,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
         self.request = mock.Mock()
         self.request.user.username = 'openquake'
         self.request.method = 'POST'
-        self.request.POST = dict()
+        self.request.POST = dict(database="platform")
         self.request.POST['hazard_calculation_id'] = 666
         self.request.META = dict()
         self.request.META['HTTP_HOST'] = 'www.openquake.org'
@@ -658,6 +659,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
                  'args': (
                      (777, temp_dir),
                      {'foreign_calc_id': None,
+                      'dbname': 'platform',
                       'callback_url': None})},
                 aa_call_data
             )

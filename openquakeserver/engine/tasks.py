@@ -320,22 +320,22 @@ def copy_output(platform_connection, output, foreign_calculation_id):
     platform_cursor = platform_connection.cursor()
 
     with tempfile.TemporaryFile() as temporary_file:
-        platform_cursor.execute(
-            """INSERT INTO
-               icebox_outputlayer(display_name, calculation_id, engine_id)
-               VALUES(%s, %s, %s) RETURNING id""",
-            (output.display_name, foreign_calculation_id, output.id))
-
-        [[output_layer_id]] = platform_cursor.fetchall()
-
-        iface = DBINTERFACE.get(output.output_type)
-
-        if iface is None:
-            # FIXME. Implement proper logging
-            print "Output type %s not supported" % output.output_type
-            return
-
         try:
+            platform_cursor.execute(
+                """INSERT INTO
+                   icebox_outputlayer(display_name, calculation_id, engine_id)
+                   VALUES(%s, %s, %s) RETURNING id""",
+                (output.display_name, foreign_calculation_id, output.id))
+
+            [[output_layer_id]] = platform_cursor.fetchall()
+
+            iface = DBINTERFACE.get(output.output_type)
+
+            if iface is None:
+                # FIXME. Implement proper logging
+                print "Output type %s not supported" % output.output_type
+                return
+
             # FIXME() in a celery task I can not spawn threads. How
             # can i build a pipe?
             logger.info("Copying to temporary stream")
