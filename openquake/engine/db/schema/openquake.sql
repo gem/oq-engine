@@ -440,7 +440,6 @@ CREATE TABLE hzrdr.gmf (
 CREATE TABLE hzrdr.gmf_data (
     id SERIAL PRIMARY KEY,
     gmf_id INTEGER NOT NULL, -- fk -> gmf
-    ses_id INTEGER, -- fk -> ses
     imt VARCHAR NOT NULL,
         CONSTRAINT hazard_curve_imt
         CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
@@ -1096,12 +1095,6 @@ FOREIGN KEY (gmf_id)
 REFERENCES hzrdr.gmf(id)
 ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.gmf_data
-ADD CONSTRAINT hzrdr_gmf_data_ses_fk
-FOREIGN KEY (ses_id)
-REFERENCES hzrdr.ses(id)
-ON DELETE CASCADE;
-
 
 -- this function is used in the performance_view, cannot go in functions.sql
 CREATE FUNCTION maxint(a INTEGER, b INTEGER) RETURNS INTEGER AS $$
@@ -1138,13 +1131,3 @@ INNER JOIN uiapi.oq_job AS o
 ON p.oq_job_id=o.id
 INNER JOIN uiapi.risk_calculation AS r
 ON r.id=o.risk_calculation_id;
-
--- gmf_data per job
-CREATE VIEW hzrdr.gmf_data_job AS
-   SELECT c.oq_job_id, a.*
-   FROM hzrdr.gmf_data AS a
-   INNER JOIN hzrdr.gmf AS b
-   ON a.gmf_id=b.id
-   INNER JOIN uiapi.output AS c
-   ON b.output_id=c.id
-   WHERE output_type='gmf';

@@ -138,12 +138,13 @@ def _save_ses_ruptures(ruptures):
 
 
 @tasks.oqtask
-def compute_gmvs(job_id, params, imt, gsims, ses_id, gmf, site_coll,
+def compute_gmvs(job_id, params, imt, gsims, gmf,
                  rupture_ids, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
     See the docstring in _compute_gmvs which is doing the real work.
     """
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
     imt = from_string(imt)
     with EnginePerformanceMonitor(
             'reading ruptures', job_id, compute_gmvs):
@@ -151,11 +152,11 @@ def compute_gmvs(job_id, params, imt, gsims, ses_id, gmf, site_coll,
     with EnginePerformanceMonitor(
             'computing gmvs', job_id, compute_gmvs):
         gmvs_per_site, ruptures_per_site = _compute_gmvs(
-            params, imt, gsims, site_coll, ruptures, rupture_seeds)
+            params, imt, gsims, hc.site_collection, ruptures, rupture_seeds)
 
     with EnginePerformanceMonitor('saving gmvs', job_id, compute_gmvs):
-        _save_gmvs(
-            gmf, ses_id, imt, gmvs_per_site, ruptures_per_site, site_coll)
+        _save_gmvs(gmf, imt, gmvs_per_site, ruptures_per_site,
+                   hc.site_collection)
 
 
 # NB: I tried to return a single dictionary {site_id: [(gmv, rupt_id),...]}
@@ -212,14 +213,12 @@ def _compute_gmvs(params, imt, gsims, site_coll, ruptures, rupture_seeds):
 
 
 @transaction.commit_on_success(using='job_init')
-def _save_gmvs(gmf, ses_id, imt, gmvs_per_site, ruptures_per_site, sites):
+def _save_gmvs(gmf, imt, gmvs_per_site, ruptures_per_site, sites):
     """
     Helper method to save computed GMF data to the database.
 
     :param gmf:
         A :class:`openquake.engine.db.models.Gmf` instance
-    :param int ses_id:
-        The id of a :class:`openquake.engine.db.models.SES` record
     :param imt:
         An intensity measure type instance
     :param gmf_per_site:
@@ -234,7 +233,6 @@ def _save_gmvs(gmf, ses_id, imt, gmvs_per_site, ruptures_per_site, sites):
     for site_id in gmvs_per_site:
         inserter.add(models.GmfData(
             gmf=gmf,
-            ses_id=ses_id,
             imt=imt_name,
             sa_period=sa_period,
             sa_damping=sa_damping,
@@ -349,12 +347,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     def compute_gmvs_arg_gen(self):
         """
         Argument generator for the task compute_gmvs. For each SES yields a
-        tuple of the form (job_id, params, imt, gsims, ses, gmf, site_coll,
-        rupture_ids, rupture_seeds).
+        tuple of the form (job_id, params, imt, gsims, gmf, rupture_ids,
+        rupture_seeds).
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-        site_coll = self.hc.site_collection
         params = dict(
             correl_model=haz_general.get_correl_model(self.hc),
             truncation_level=self.hc.truncation_level,
@@ -383,19 +380,12 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                                  for _ in range(len(rup_ids))]
                     # splitting on IMTs to generate more tasks and save memory
                     for imt in self.hc.intensity_measure_types:
-                        if self.hc.ground_motion_correlation_model is None:
-                            # we split on sites to avoid running out of memory
-                            for sites in block_splitter(site_coll, BLOCK_SIZE):
-                                yield (self.job.id, params, imt, gsims, ses.id,
-                                       gmf, models.SiteCollection(sites),
-                                       rup_ids, rup_seeds)
-                        else:
-                            # we split on ruptures
-                            rupt_iter = block_splitter(rup_ids, BLOCK_SIZE)
-                            seed_iter = block_splitter(rup_seeds, BLOCK_SIZE)
-                            for rupts, seeds in zip(rupt_iter, seed_iter):
-                                yield (self.job.id, params, imt, gsims, ses.id,
-                                       gmf, site_coll, rupts, seeds)
+                        # we split on ruptures to save memory
+                        rupt_iter = block_splitter(rup_ids, BLOCK_SIZE)
+                        seed_iter = block_splitter(rup_seeds, BLOCK_SIZE)
+                        for rupts, seeds in zip(rupt_iter, seed_iter):
+                            yield (self.job.id, params, imt, gsims,
+                                   gmf, rupts, seeds)
         logs.LOG.info('Considering %d ruptures', n_ruptures)
 
     def post_execute(self):

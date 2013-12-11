@@ -1926,7 +1926,6 @@ class GmfData(djm.Model):
     respective geographical locations.
     """
     gmf = djm.ForeignKey('Gmf')
-    ses = djm.ForeignKey('SES', null=True)
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
