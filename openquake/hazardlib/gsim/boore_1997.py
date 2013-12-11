@@ -92,13 +92,13 @@ class BooreEtAl1997(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                sigtot = np.sqrt(((C['sigmae'] * np.ones(num_sites)) ** 2.) +
+                sigtot = np.sqrt(((C['sigma_e'] * np.ones(num_sites)) ** 2.) +
                                  (C['sigma1'] * np.ones(num_sites)) ** 2.)
                 stddevs.append(sigtot)
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(C['sigma1'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['sigmae'] + np.zeros(num_sites))
+                stddevs.append(C['sigma_e'] + np.zeros(num_sites))
         return stddevs
 
     def _compute_distance_scaling(self, rjb, C):
@@ -237,9 +237,9 @@ class BooreEtAl1997Arbitrary(BooreEtAl1997):
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(C['sigma_tot'] * np.ones(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigmar'] + np.zeros(num_sites))
+                stddevs.append(C['sigma_r'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['sigmae'] + np.zeros(num_sites))
+                stddevs.append(C['sigma_e'] + np.zeros(num_sites))
         return stddevs
 
 
