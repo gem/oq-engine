@@ -75,7 +75,7 @@ class EventBasedHazardTestCase(unittest.TestCase):
     """Tests for the routines used by the event-based hazard calculator"""
 
     # test a case with 5 sites and 2 ruptures
-    def test_compute_gmf(self):
+    def test_compute_gmvs(self):
         hc = mock.Mock()
         hc.ground_motion_correlation_model = None
         hc.truncation_level = None
@@ -90,7 +90,7 @@ class EventBasedHazardTestCase(unittest.TestCase):
         rupture_ids = range(2)
         ruptures = [FakeRupture(i, trt) for i in rupture_ids]
         rupture_seeds = rupture_ids
-        gmv_dict, rup_dict = core._compute_gmf(
+        gmv_dict, rup_dict = core._compute_gmvs(
             params, PGA(), {trt: gsim}, site_coll, ruptures, rupture_seeds)
         expected_rups = {
             0: rupture_ids,
@@ -138,7 +138,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         gmf_dict = {PGA: dict(rupture_ids=[1, 2], gmvs=gmvs)}
         points = make_mock_points(3)
         with helpers.patch('openquake.engine.writer.CacheInserter') as m:
-            core._save_gmfs(ses, gmf_dict, points)
+            core._save_gmvs(ses, gmf_dict, points)
             self.assertEqual(2, m.add.call_count)
 
     @unittest.skip  # temporarily skipped
@@ -150,7 +150,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         points = make_mock_points(1)
         with helpers.patch('openquake.engine.writer.CacheInserter') as m:
-            core._save_gmfs(ses, gmf_dict, points)
+            core._save_gmvs(ses, gmf_dict, points)
             self.assertEqual(1, m.add.call_count)
 
     def test_initialize_ses_records(self):

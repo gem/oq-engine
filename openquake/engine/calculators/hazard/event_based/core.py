@@ -138,28 +138,29 @@ def _save_ses_ruptures(ruptures):
 
 
 @tasks.oqtask
-def compute_gmf(job_id, params, imt, gsims, ses_id, gmf, site_coll,
-                rupture_ids, rupture_seeds):
+def compute_gmvs(job_id, params, imt, gsims, ses_id, gmf, site_coll,
+                 rupture_ids, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
+    See the docstring in _compute_gmvs which is doing the real work.
     """
     imt = from_string(imt)
     with EnginePerformanceMonitor(
-            'reading ruptures', job_id, compute_gmf):
+            'reading ruptures', job_id, compute_gmvs):
         ruptures = list(models.SESRupture.objects.filter(pk__in=rupture_ids))
     with EnginePerformanceMonitor(
-            'computing gmfs', job_id, compute_gmf):
-        gmvs_per_site, ruptures_per_site = _compute_gmf(
+            'computing gmvs', job_id, compute_gmvs):
+        gmvs_per_site, ruptures_per_site = _compute_gmvs(
             params, imt, gsims, site_coll, ruptures, rupture_seeds)
 
-    with EnginePerformanceMonitor('saving gmfs', job_id, compute_gmf):
-        _save_gmfs(
+    with EnginePerformanceMonitor('saving gmvs', job_id, compute_gmvs):
+        _save_gmvs(
             gmf, ses_id, imt, gmvs_per_site, ruptures_per_site, site_coll)
 
 
 # NB: I tried to return a single dictionary {site_id: [(gmv, rupt_id),...]}
 # but it takes a lot more memory (MS)
-def _compute_gmf(params, imt, gsims, site_coll, ruptures, rupture_seeds):
+def _compute_gmvs(params, imt, gsims, site_coll, ruptures, rupture_seeds):
     """
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for the given IMT. Returns a
@@ -211,7 +212,7 @@ def _compute_gmf(params, imt, gsims, site_coll, ruptures, rupture_seeds):
 
 
 @transaction.commit_on_success(using='job_init')
-def _save_gmfs(gmf, ses_id, imt, gmvs_per_site, ruptures_per_site, sites):
+def _save_gmvs(gmf, ses_id, imt, gmvs_per_site, ruptures_per_site, sites):
     """
     Helper method to save computed GMF data to the database.
 
@@ -345,10 +346,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         # now the dictionary can be cleared to save memory
         self.sources_per_model.clear()
 
-    def compute_gmf_arg_gen(self):
+    def compute_gmvs_arg_gen(self):
         """
-        Argument generator for the task compute_gmf. For each SES yields a
-        tuple of the form (job_id, params, imt, gsims, ses, site_coll,
+        Argument generator for the task compute_gmvs. For each SES yields a
+        tuple of the form (job_id, params, imt, gsims, ses, gmf, site_coll,
         rupture_ids, rupture_seeds).
         """
         rnd = random.Random()
@@ -399,11 +400,11 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
 
     def post_execute(self):
         """
-        Optionally compute_gmf in parallel.
+        Optionally compute_gmvs in parallel.
         """
         if self.hc.ground_motion_fields:
             self.initialize_realizations([self.initialize_gmf_records])
-            self.parallelize(compute_gmf, self.compute_gmf_arg_gen(),
+            self.parallelize(compute_gmvs, self.compute_gmvs_arg_gen(),
                              self.log_percent)
 
     def post_process(self):
