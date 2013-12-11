@@ -388,6 +388,7 @@ ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.ses_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
+    ordinal INTEGER NOT NULL,
     sm_path VARCHAR NOT NULL,
     sm_lt_path VARCHAR[] NOT NULL,
     weight FLOAT

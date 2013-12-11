@@ -120,9 +120,9 @@ class HazardGetter(object):
         ws = []
         for hazard in self.hazard_outputs:
             h = hazard.output_container
-            if hasattr(h, 'weight') and h.weight:  # for ses_collection enum
+            if hasattr(h, 'weight'):  # ses_collection
                 ws.append(h.weight)
-            elif hasattr(h, 'lt_realization') and h.lt_realization:
+            elif hasattr(h, 'lt_realization') and h.lt_realization:  # gmf
                 ws.append(h.lt_realization.weight)
         return ws
 

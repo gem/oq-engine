@@ -26,7 +26,6 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import collections
-import itertools
 import operator
 from datetime import datetime
 
@@ -1530,13 +1529,14 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
+    ordinal = djm.IntegerField(null=False)
     sm_path = djm.TextField(null=False)
     sm_lt_path = fields.CharArrayField(null=False)
     weight = djm.FloatField(null=True)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
-        ordering = ['id']
+        ordering = ['ordinal']
 
     def __iter__(self):
         """

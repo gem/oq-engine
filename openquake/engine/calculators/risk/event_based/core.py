@@ -329,6 +329,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
           Compute aggregate loss curves and event loss tables
         """
+        smlt_file = self.hc.inputs['source_model_logic_tree']
+        smlt = logictree.SourceModelLogicTree(
+            file(smlt_file).read(), self.hc.base_path, smlt_file)
+        nsm = len(smlt.get_source_models())  # number of source models
         with EnginePerformanceMonitor('post processing', self.job.id):
 
             time_span, tses = self.hazard_times()
@@ -349,9 +353,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     # or a Gmf object
                     container = hazard_output.output_container
                     if isinstance(container, models.Gmf):
+                        if self.hc.number_of_logic_tree_samples:
+                            ordinal = container.lt_realization.ordinal
+                        else:  # full enumeration
+                            ordinal = container.lt_realization.ordinal // nsm
                         rupture_ids = models.SESRupture.objects.filter(
-                            ses__ses_collection__sm_lt_path=
-                            container.lt_realization.sm_lt_path
+                            ses__ses_collection__ordinal=ordinal
                             ).values_list('id', flat=True)
                     elif isinstance(container, models.SESCollection):
                         rupture_ids = models.SESRupture.objects.filter(

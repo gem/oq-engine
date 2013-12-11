@@ -511,7 +511,7 @@ def create_gmf(hazard_job, rlz=None):
     hc = hazard_job.hazard_calculation
 
     rlz = rlz or models.LtRealization.objects.create(
-        hazard_calculation=hc, ordinal=1, seed=1, weight=None,
+        hazard_calculation=hc, ordinal=0, seed=1, weight=None,
         sm_lt_path="test_sm", gsim_lt_path="test_gsim")
 
     gmf = models.Gmf.objects.create(
@@ -530,6 +530,7 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     ses_coll = ses_coll or models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test SES Collection", "ses"),
+        ordinal=0,
         sm_lt_path=gmf.lt_realization.sm_lt_path)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
@@ -569,7 +570,7 @@ def create_gmf_from_csv(job, fname):
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             job, "Test SES Collection", "ses"),
-        sm_lt_path=gmf.lt_realization.sm_lt_path)
+        ordinal=0, sm_lt_path=gmf.lt_realization.sm_lt_path)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()

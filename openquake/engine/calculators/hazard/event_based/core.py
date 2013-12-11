@@ -270,14 +270,15 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         smwp = self.smlt.get_sm_weight_paths(
             self.hc.number_of_logic_tree_samples, rnd)
         n = 0
-        for sm_path, weight, sm_lt_path in smwp:
+        for i, (sm_path, weight, sm_lt_path) in enumerate(smwp):
             output = models.Output.objects.create(
                 oq_job=self.job,
                 display_name='SES Collection %s' % '_'.join(sm_lt_path),
                 output_type='ses')
 
             ses_coll = models.SESCollection.objects.create(
-                output=output, sm_path=sm_path,
+                output=output, ordinal=i,
+                sm_path=sm_path,
                 sm_lt_path=sm_lt_path,
                 weight=weight)
 
@@ -358,13 +359,18 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
             maximum_distance=self.hc.maximum_distance)
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
+        nsm = len(ltp.source_model_lt.get_source_models())
         n_ruptures = 0
-
         for ses_coll in models.SESCollection.objects.filter(
                 output__oq_job=self.job):
+            if self.hc.number_of_logic_tree_samples:
+                rlz_range = [ses_coll.ordinal]
+            else:  # full enumeration
+                i = ses_coll.ordinal
+                rlz_range = range(i * nsm, (i + 1) * nsm)
             for gmf in models.Gmf.objects.filter(
                     output__oq_job=self.job,
-                    lt_realization__sm_lt_path=ses_coll.sm_lt_path):
+                    lt_realization__ordinal__in=rlz_range):
                 lt_rlz = gmf.lt_realization
                 gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
                 for ses in ses_coll:
