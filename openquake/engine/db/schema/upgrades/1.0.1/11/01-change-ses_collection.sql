@@ -10,4 +10,7 @@ ALTER TABLE hzrdr.lt_realization DROP COLUMN is_complete;
 ALTER TABLE hzrdr.lt_realization DROP COLUMN total_items;
 ALTER TABLE hzrdr.lt_realization DROP COLUMN completed_items;
 
-ALTER TABLE hzrdr.gmf_data DROP COLUMN ses_id CASCADE;
+ALTER TABLE hzrdr.gmf_data RENAME ses_id TO task_no;
+
+UPDATE hzrdr.gmf_data SET task_no=0 WHERE task_no IS NULL;
+ALTER TABLE hzrdr.gmf_data ALTER COLUMN task_no SET NOT NULL;

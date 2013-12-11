@@ -441,6 +441,7 @@ CREATE TABLE hzrdr.gmf (
 CREATE TABLE hzrdr.gmf_data (
     id SERIAL PRIMARY KEY,
     gmf_id INTEGER NOT NULL, -- fk -> gmf
+    task_no INTEGER NOT NULL,
     imt VARCHAR NOT NULL,
         CONSTRAINT hazard_curve_imt
         CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),

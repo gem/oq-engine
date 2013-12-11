@@ -530,8 +530,7 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     ses_coll = ses_coll or models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test SES Collection", "ses"),
-        ordinal=0,
-        sm_lt_path=gmf.lt_realization.sm_lt_path)
+        ordinal=0, sm_lt_path=gmf.lt_realization.sm_lt_path)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
     if points is None:
@@ -541,6 +540,7 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     for site_id in hazard_job.hazard_calculation.save_sites(points):
         records.append(models.GmfData.objects.create(
             gmf=gmf,
+            task_no=0,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
             rupture_ids=[r.id for r in ruptures],
@@ -585,6 +585,7 @@ def create_gmf_from_csv(job, fname):
             [site_id] = job.hazard_calculation.save_sites([point])
             models.GmfData.objects.create(
                 gmf=gmf,
+                task_no=0,
                 imt="PGA", gmvs=gmvs,
                 rupture_ids=[r.id for r in ruptures],
                 site_id=site_id)
@@ -616,7 +617,7 @@ def populate_gmf_data_from_csv(job, fname):
             point = tuple(map(float, locations[i].split()))
             [site_id] = job.hazard_calculation.save_sites([point])
             models.GmfData.objects.create(
-                imt="PGA", gmf=gmf, gmvs=gmvs, site_id=site_id)
+                imt="PGA", gmf=gmf, task_no=0, gmvs=gmvs, site_id=site_id)
 
     return gmf
 
@@ -674,6 +675,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         for site_id in site_ids:
             models.GmfData.objects.create(
                 gmf=hazard_output,
+                task_no=0,
                 imt="PGA",
                 site_id=site_id,
                 gmvs=[0.1, 0.2, 0.3])
@@ -682,7 +684,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         hazard_output = models.SESCollection.objects.create(
             output=models.Output.objects.create_output(
                 hazard_job, "Test SES Collection", "ses"),
-            sm_lt_path=rlz.sm_lt_path)
+            ordinal=0, sm_lt_path=rlz.sm_lt_path)
 
     elif output_type == "gmf":
         hazard_output = create_gmf_data_records(hazard_job, rlz)[0].gmf

@@ -138,7 +138,7 @@ def _save_ses_ruptures(ruptures):
 
 
 @tasks.oqtask
-def compute_gmvs(job_id, params, imt, gsims, gmf,
+def compute_gmvs(job_id, params, imt, gsims, gmf, task_no,
                  rupture_ids, rupture_seeds):
     """
     Compute and save the GMFs for all the ruptures in a SES.
@@ -155,7 +155,7 @@ def compute_gmvs(job_id, params, imt, gsims, gmf,
             params, imt, gsims, hc.site_collection, ruptures, rupture_seeds)
 
     with EnginePerformanceMonitor('saving gmvs', job_id, compute_gmvs):
-        _save_gmvs(gmf, imt, gmvs_per_site, ruptures_per_site,
+        _save_gmvs(gmf, task_no, imt, gmvs_per_site, ruptures_per_site,
                    hc.site_collection)
 
 
@@ -213,12 +213,14 @@ def _compute_gmvs(params, imt, gsims, site_coll, ruptures, rupture_seeds):
 
 
 @transaction.commit_on_success(using='job_init')
-def _save_gmvs(gmf, imt, gmvs_per_site, ruptures_per_site, sites):
+def _save_gmvs(gmf, task_no, imt, gmvs_per_site, ruptures_per_site, sites):
     """
     Helper method to save computed GMF data to the database.
 
     :param gmf:
         A :class:`openquake.engine.db.models.Gmf` instance
+    :param int task_no:
+        The number of the task that generated the gmvs
     :param imt:
         An intensity measure type instance
     :param gmf_per_site:
@@ -233,6 +235,7 @@ def _save_gmvs(gmf, imt, gmvs_per_site, ruptures_per_site, sites):
     for site_id in gmvs_per_site:
         inserter.add(models.GmfData(
             gmf=gmf,
+            task_no=task_no,
             imt=imt_name,
             sa_period=sa_period,
             sa_damping=sa_damping,
@@ -361,6 +364,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         nsm = len(ltp.source_model_lt.get_source_models())
         n_ruptures = 0
+        task_no = -1
         for ses_coll in models.SESCollection.objects.filter(
                 output__oq_job=self.job):
             if self.hc.number_of_logic_tree_samples:
@@ -390,8 +394,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                         rupt_iter = block_splitter(rup_ids, BLOCK_SIZE)
                         seed_iter = block_splitter(rup_seeds, BLOCK_SIZE)
                         for rupts, seeds in zip(rupt_iter, seed_iter):
+                            task_no += 1
                             yield (self.job.id, params, imt, gsims,
-                                   gmf, rupts, seeds)
+                                   gmf, task_no, rupts, seeds)
         logs.LOG.info('Considering %d ruptures', n_ruptures)
 
     def post_execute(self):
