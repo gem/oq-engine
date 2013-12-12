@@ -73,14 +73,14 @@ def compute_hazard_maps(curves, imls, poes):
         poes = poes.reshape(1)
 
     result = []
-    imls = numpy.array(imls[::-1])
+    imls = numpy.log(numpy.array(imls[::-1]))
 
     for curve in curves:
-        curve_cutoff = [max(p, EPSILON) for p in curve[::-1]]
+        curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
         # exp-log interpolation, to reduce numerical errors
         # see https://bugs.launchpad.net/oq-engine/+bug/1252770
         hmap_val = numpy.exp(numpy.interp(
-            numpy.log(poes), numpy.log(curve_cutoff), numpy.log(imls)))
+            numpy.log(poes), numpy.log(curve_cutoff), imls))
 
         result.append(hmap_val)
 
