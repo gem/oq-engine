@@ -32,7 +32,7 @@ from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.writer import CacheInserter
 
-# minimum value for the poes: under this value use linear interpolation
+# cutoff value for the poe
 EPSILON = 1E-30
 
 # Number of locations considered by each task
