@@ -159,26 +159,27 @@ class FragilityDiscrete(Converter):
         limitStates = node.limitStates.text.split()
         yield records.FragilityDiscrete(
             fmt, node.description.text.strip(), node.limitStates.text.strip())
+        for ls in limitStates:
+            yield records.FFLimitStateDiscrete(ls)
         for i, ffs in enumerate(node.getnodes('ffs'), 1):
-            ffs_ordinal = str(i)
+            ffs_ordinal = str(i)  # there is a ffs for each taxonomy
+            imls = ffs.IML.text.split()
             yield records.FFSetDiscrete(
                 ffs_ordinal,
-                ffs.taxonomy.text,
+                ffs.taxonomy.text.strip(),
                 ffs.attrib.get('noDamageLimit', ''),
                 ffs.IML['IMT'],
                 ffs.IML['imlUnit'])
-            imls = ffs.IML.text.split()
             for ls, ffd in zip(limitStates, ffs.getnodes('ffd')):
                 assert ls == ffd['ls'], 'Expected %s, got %s' % (
                     ls, ffd['ls'])
-                yield records.FFLimitStateDiscrete(ffs_ordinal, ls)
                 poEs = ffd.poEs.text.split()
                 for iml, poe in zip(imls, poEs):
-                    yield records.FFDataDiscrete(ffs_ordinal, ls, iml, poe)
+                    yield records.FFDataDiscrete(ls, ffs_ordinal, iml, poe)
 
     def to_node(self):
         """
-        Build a full fragility node from CSV
+        Build a full discrete fragility node from CSV
         """
         tset = self.tableset
         frag = tset.tableFragilityDiscrete[0].to_node()
@@ -186,8 +187,8 @@ class FragilityDiscrete(Converter):
         nodamage = float(ffs_node['noDamageLimit']) \
             if 'noDamageLimit' in ffs_node else None
         frag.nodes.extend(ffs_node.values())
-        for (ordinal, ls), data in groupby(
-                tset.tableFFDataDiscrete, ['ffs_ordinal', 'limitState']):
+        for (ls, ordinal), data in groupby(
+                tset.tableFFDataDiscrete, ['limitState', 'ffs_ordinal']):
             data = list(data)
 
             # check that we can instantiate a FragilityFunction in risklib
@@ -220,11 +221,13 @@ class FragilityContinuous(Converter):
         limitStates = node.limitStates.text.split()
         yield records.FragilityContinuous(
             fmt, node.description.text.strip(), node.limitStates.text.strip())
+        for ls in limitStates:
+            yield records.FFLimitStateContinuous(ls)
         for i, ffs in enumerate(node.getnodes('ffs'), 1):
             ffs_ordinal = str(i)
             yield records.FFSetContinuous(
                 ffs_ordinal,
-                ffs.taxonomy.text,
+                ffs.taxonomy.text.strip(),
                 ffs.attrib.get('noDamageLimit', ''),
                 ffs.attrib.get('type', ''),
                 ffs.IML['IMT'],
@@ -234,11 +237,10 @@ class FragilityContinuous(Converter):
             for ls, ffc in zip(limitStates, ffs.getnodes('ffc')):
                 assert ls == ffc['ls'], 'Expected %s, got %s' % (
                     ls, ffc['ls'])
-                yield records.FFLimitStateContinuous(ffs_ordinal, ls)
                 yield records.FFDContinuos(
-                    ffs_ordinal, ls, 'mean', ffc.params['mean'])
+                    ls, ffs_ordinal, 'mean', ffc.params['mean'])
                 yield records.FFDContinuos(
-                    ffs_ordinal, ls, 'stddev', ffc.params['stddev'])
+                    ls, ffs_ordinal, 'stddev', ffc.params['stddev'])
 
     def to_node(self):
         """
@@ -248,8 +250,8 @@ class FragilityContinuous(Converter):
         frag = tset.tableFragilityContinuous[0].to_node()
         ffs_node = record.nodedict(tset.tableFFSetContinuous)
         frag.nodes.extend(ffs_node.values())
-        for (ordinal, ls), data in groupby(
-                tset.tableFFDContinuos, ['ffs_ordinal', 'limitState']):
+        for (ls, ordinal), data in groupby(
+                tset.tableFFDContinuos, ['limitState', 'ffs_ordinal']):
             data = list(data)
             n = Node('ffc', dict(ls=ls))
             param = dict(row[2:] for row in data)  # param, value

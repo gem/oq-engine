@@ -94,6 +94,12 @@ class FragilityDiscrete(Record):
         return node
 
 
+class FFLimitStateDiscrete(Record):
+    convertername = 'FragilityDiscrete'
+    pkey = Unique('limitState')
+    limitState = Field(str)
+
+
 class FFSetDiscrete(Record):
     convertername = 'FragilityDiscrete'
     pkey = Unique('ordinal')
@@ -114,20 +120,12 @@ class FFSetDiscrete(Record):
         return node
 
 
-class FFLimitStateDiscrete(Record):
-    convertername = 'FragilityDiscrete'
-    pkey = Unique('ffs_ordinal', 'limitState')
-
-    ffs_ordinal = Field(int)
-    limitState = Field(str)
-
-
 class FFDataDiscrete(Record):
     convertername = 'FragilityDiscrete'
-    pkey = Unique('ffs_ordinal', 'limitState', 'iml')
+    pkey = Unique('limitState', 'ffs_ordinal', 'iml')
 
-    ffs_ordinal = Field(int)
     limitState = Field(str)
+    ffs_ordinal = Field(int)
     iml = Field(float)
     poe = Field(valid.probability)
 
@@ -152,6 +150,12 @@ class FragilityContinuous(Record):
         node.append(Node('description', text=self[1]))
         node.append(Node('limitStates', text=self[2]))
         return node
+
+
+class FFLimitStateContinuous(Record):
+    convertername = 'FragilityContinuous'
+    pkey = Unique('limitState')
+    limitState = Field(str)
 
 
 class FFSetContinuous(Record):
@@ -181,20 +185,12 @@ class FFSetContinuous(Record):
         return node
 
 
-class FFLimitStateContinuous(Record):
-    convertername = 'FragilityContinuous'
-    pkey = Unique('ffs_ordinal', 'limitState')
-
-    ffs_ordinal = Field(int)
-    limitState = Field(str)
-
-
 class FFDContinuos(Record):
     convertername = 'FragilityContinuous'
-    pkey = Unique('ffs_ordinal', 'limitState', 'param')
+    pkey = Unique('limitState', 'ffs_ordinal', 'param')
 
-    ffs_ordinal = Field(int)
     limitState = Field(str)
+    ffs_ordinal = Field(int)
     param = Field(str)
     value = Field(float)
 
