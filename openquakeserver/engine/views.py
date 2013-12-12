@@ -202,7 +202,7 @@ def _prepare_job(request, job_factory, detect_job_file):
     job_file = detect_job_file([f for f in files if f.endswith('.ini')])
 
     return job_factory(
-        job_file, request.user.username, DEFAULT_LOG_LEVEL, []), temp_dir
+        job_file, "platform", DEFAULT_LOG_LEVEL, []), temp_dir
 
 
 def _is_source_model(tempfile):
