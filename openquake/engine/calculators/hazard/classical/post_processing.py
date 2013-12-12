@@ -32,6 +32,8 @@ from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.writer import CacheInserter
 
+# cutoff value for the poe
+EPSILON = 1E-30
 
 # Number of locations considered by each task
 DEFAULT_LOCATIONS_PER_TASK = 1000
@@ -74,7 +76,12 @@ def compute_hazard_maps(curves, imls, poes):
     imls = numpy.array(imls[::-1])
 
     for curve in curves:
-        hmap_val = numpy.interp(poes, curve[::-1], imls)
+        curve_cutoff = [max(p, EPSILON) for p in curve[::-1]]
+        # exp-log interpolation, to reduce numerical errors
+        # see https://bugs.launchpad.net/oq-engine/+bug/1252770
+        hmap_val = numpy.exp(numpy.interp(
+            numpy.log(poes), numpy.log(curve_cutoff), numpy.log(imls)))
+
         result.append(hmap_val)
 
     return numpy.array(result).transpose()
