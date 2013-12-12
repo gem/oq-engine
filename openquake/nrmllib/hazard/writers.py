@@ -412,8 +412,9 @@ class SESXMLWriter(object):
         GSIM logic tree branch identifier of the logic tree realization which
         produced this collection of stochastic event sets.
     """
-
-    def __init__(self, dest, sm_lt_path):
+    # gsim_lt_path is there only for backward compatibility, it is scheduled
+    # for complete removal (MS)
+    def __init__(self, dest, sm_lt_path, gsim_lt_path=None):
         self.dest = dest
         self.sm_lt_path = sm_lt_path
 
