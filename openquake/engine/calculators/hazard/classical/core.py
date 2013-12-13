@@ -132,7 +132,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         self.initialize_realizations()
         imtls = self.hc.intensity_measure_types_and_levels
         self.curves_by_rlz = make_zeros(
-            self.rlz_to_sm, self.hc.site_collection, imtls)
+            self._get_realizations(), self.hc.site_collection, imtls)
 
     @EnginePerformanceMonitor.monitor
     def task_completed(self, task_result):
@@ -146,8 +146,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             A pair (curves_by_imt, ordinal) where curves_by_imt is a
             list of 2-D numpy arrays representing the new results which need
             to be combined with the current value. These should be the same
-            shape as self.curves_by_rlz[i][j] where i is the realization ordinal
-            and j the IMT ordinal.
+            shape as self.curves_by_rlz[i][j] where i is the realization
+            ordinal and j the IMT ordinal.
         """
         curves_by_imt, i = task_result
         for j, matrix in enumerate(curves_by_imt):  # j is the IMT index
