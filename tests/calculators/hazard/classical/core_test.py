@@ -68,9 +68,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_sources(self):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
-        # the source model contains 118 non-point sources
+        # after filtering the source model contains 17 non-point sources
         sources = self.calc.sources_per_model['dissFaultModel.xml', 'other']
-        self.assertEqual(118, len(sources))
+        self.assertEqual(17, len(sources))
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -112,7 +112,7 @@ store_site_model'
         # source model
         sm = self.calc.rlz_to_sm[ltr]
         sources = self.calc.sources_per_model[sm, 'other']
-        self.assertEqual(118, len(sources))
+        self.assertEqual(17, len(sources))
 
     def test_initialize_realizations_montecarlo(self):
         # We need initalize sources first (read logic trees, parse sources,
