@@ -240,8 +240,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         rlz = models.LtRealization.objects.create(
             hazard_calculation=hazard_job.hazard_calculation,
             ordinal=1, seed=1, weight=None,
-            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-            is_complete=False, total_items=1, completed_items=1)
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim")
         hazard_output = models.HazardCurve.objects.create(
             lt_realization=rlz,
             output=models.Output.objects.create_output(
@@ -349,7 +348,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # In this case, deletion is not allowed and should raise an exception.
         risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
-            output_type='curves', username=getpass.getuser()
+            output_type='curve', username=getpass.getuser()
         )
         risk_calc = risk_job.risk_calculation
 
@@ -368,7 +367,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # In this case, deletion is not allowed and should raise an exception.
         risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
-            output_type='curves', username=getpass.getuser()
+            output_type='curve', username=getpass.getuser()
         )
         hazard_job = risk_job.risk_calculation.hazard_output.oq_job
         hazard_calc = hazard_job.hazard_calculation
@@ -386,7 +385,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
     def test_del_risk_calc(self):
         risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
-            output_type='curves', username=getpass.getuser()
+            output_type='curve', username=getpass.getuser()
         )
         risk_calc = risk_job.risk_calculation
 
@@ -428,7 +427,7 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         # In this case, deletion is now allowed and should raise an exception.
         risk_job, _ = helpers.get_fake_risk_job(
             self.risk_cfg, self.hazard_cfg,
-            output_type='curves', username=helpers.random_string()
+            output_type='curve', username=helpers.random_string()
         )
         risk_calc = risk_job.risk_calculation
 
