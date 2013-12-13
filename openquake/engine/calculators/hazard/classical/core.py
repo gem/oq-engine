@@ -53,8 +53,6 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
         a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
     imts = haz_general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
@@ -63,7 +61,7 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
     calc_kwargs = {'gsims': gsims,
                    'truncation_level': hc.truncation_level,
                    'time_span': hc.investigation_time,
-                   'sources': map(apply_uncertainties, sources),
+                   'sources': sources,
                    'imts': imts,
                    'sites': hc.site_collection}
 
