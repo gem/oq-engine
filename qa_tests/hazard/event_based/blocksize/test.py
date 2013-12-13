@@ -37,24 +37,23 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # then you will see in /tmp a few files which you can diff
     # to see the problem
     expected_tags = [
-        'rlz=00|ses=0001|src=1|i=000',
-        'rlz=00|ses=0001|src=2|i=000',
-        'rlz=00|ses=0001|src=398|i=000',
-        'rlz=00|ses=0001|src=398|i=001',
-        'rlz=00|ses=0001|src=398|i=002',
-        'rlz=00|ses=0001|src=3|i=000'
+        'rlz=00|ses=0001|src=2-174|i=000',
+        'rlz=00|ses=0001|src=2-175|i=000',
+        'rlz=00|ses=0001|src=2-1|i=000',
+        'rlz=00|ses=0001|src=2-305|i=000',
+        'rlz=00|ses=0001|src=3-192|i=000'
     ]
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1|i=000
-<X=131.00000, Y= 40.00000, GMV=0.0131284>
-<X=131.00000, Y= 40.10000, GMV=0.0096460>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=2|i=000
-<X=131.00000, Y= 40.00000, GMV=0.0002624>
-<X=131.00000, Y= 40.10000, GMV=0.0003190>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=3|i=000
-<X=131.00000, Y= 40.00000, GMV=0.0004269>
-<X=131.00000, Y= 40.10000, GMV=0.0002599>))'''
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=2-174|i=000
+<X=131.00000, Y= 40.00000, GMV=0.0005577>
+<X=131.00000, Y= 40.10000, GMV=0.0004644>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=2-175|i=000
+<X=131.00000, Y= 40.00000, GMV=0.0001893>
+<X=131.00000, Y= 40.10000, GMV=0.0002294>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=2-305|i=000
+<X=131.00000, Y= 40.00000, GMV=0.0005766>
+<X=131.00000, Y= 40.10000, GMV=0.0021862>))'''
 
     @attr('qa', 'hazard', 'event_based')
     def test_8(self):
