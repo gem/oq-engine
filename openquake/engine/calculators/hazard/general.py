@@ -191,17 +191,17 @@ class BaseHazardCalculator(base.Calculator):
         for lt_rlz in realizations:
             sm = self.rlz_to_sm[lt_rlz]
 
-            # separate point sources from all the other types, since
-            # we distribution point sources in different sized chunks
-            # point sources first
+            # first non-point sources, which are potentially slow
+            other_sources = self.sources_per_model[sm, 'other']
+            for block in block_splitter(other_sources, block_size):
+                yield self.job.id, block, lt_rlz, ltp
+
+            # then point sources, which are more homogeneous
+            # we separate point sources from all the other types, since
+            # we distribute point sources with a different block size
             point_sources = self.sources_per_model[sm, 'point']
             for block in block_splitter(point_sources,
                                         point_source_block_size):
-                yield self.job.id, block, lt_rlz, ltp
-
-            # now for area and fault sources
-            other_sources = self.sources_per_model[sm, 'other']
-            for block in block_splitter(other_sources, block_size):
                 yield self.job.id, block, lt_rlz, ltp
 
     def _get_realizations(self):
