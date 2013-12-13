@@ -129,14 +129,15 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary (sm_name, source_type) -> source_ids
-        self.sources_per_model = collections.defaultdict(list)
+
+        # a dictionary (sm_lt_path, source_type) -> source_ids
+        self.sources_per_ltpath = collections.defaultdict(list)
         # a dictionary rlz -> source model name (in the logic tree)
         self.rlz_to_sm = {}
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
-        self.sources_per_model.clear()
+        self.sources_per_ltpath.clear()
         self.rlz_to_sm.clear()
 
     @property
@@ -189,17 +190,17 @@ class BaseHazardCalculator(base.Calculator):
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         for lt_rlz in realizations:
-            sm = self.rlz_to_sm[lt_rlz]
+            path = tuple(lt_rlz.sm_lt_path)
 
             # first non-point sources, which are potentially slow
-            other_sources = self.sources_per_model[sm, 'other']
+            other_sources = self.sources_per_ltpath[path, 'other']
             for block in block_splitter(other_sources, block_size):
                 yield self.job.id, block, lt_rlz, ltp
 
             # then point sources, which are more homogeneous
             # we separate point sources from all the other types, since
             # we distribute point sources with a different block size
-            point_sources = self.sources_per_model[sm, 'point']
+            point_sources = self.sources_per_ltpath[path, 'point']
             for block in block_splitter(point_sources,
                                         point_source_block_size):
                 yield self.job.id, block, lt_rlz, ltp
@@ -217,7 +218,7 @@ class BaseHazardCalculator(base.Calculator):
         Parse source models and validate source logic trees. It also
         filters the sources far away and apply uncertainties to the
         relevant ones. As a side effect it populates the instance dictionary
-        `.sources_per_model`. Notice that area sources are automatically
+        `.sources_per_ltpath`. Notice that area sources are automatically
         split into point sources.
         """
         logs.LOG.progress("initializing sources")
@@ -229,6 +230,7 @@ class BaseHazardCalculator(base.Calculator):
         # typically very few realizations; moreover, the filtering will remove
         # most of the sources, so the memory occupation is typically low
         for sm, path in self.smlt.get_sm_paths():
+            smpath = tuple(path)
             apply_uncertainties = self.smlt.make_apply_uncertainties(path)
             fname = os.path.join(self.hc.base_path, sm)
             for src in source.parse_source_model_smart(
@@ -239,11 +241,11 @@ class BaseHazardCalculator(base.Calculator):
                 if self.hc.sites_affected_by(src):
                     src = apply_uncertainties(src)
                     if src.__class__.__name__ == 'PointSource':
-                        self.sources_per_model[sm, 'point'].append(src)
+                        self.sources_per_ltpath[smpath, 'point'].append(src)
                     else:
-                        self.sources_per_model[sm, 'other'].append(src)
-            n = len(self.sources_per_model[sm, 'point']) + \
-                len(self.sources_per_model[sm, 'other'])
+                        self.sources_per_ltpath[smpath, 'other'].append(src)
+            n = len(self.sources_per_ltpath[smpath, 'point']) + \
+                len(self.sources_per_ltpath[smpath, 'other'])
             logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
 
     @EnginePerformanceMonitor.monitor
@@ -377,8 +379,6 @@ class BaseHazardCalculator(base.Calculator):
         """
         hc = self.job.hazard_calculation
         ltp = logictree.LogicTreeProcessor.from_hc(hc)
-        self.rlz_to_sm = {}
-
         for i, path_info in enumerate(ltp.enumerate_paths()):
             source_model_filename, weight, sm_lt_path, gsim_lt_path = path_info
 
@@ -389,8 +389,6 @@ class BaseHazardCalculator(base.Calculator):
                 weight=weight,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path)
-
-            self.rlz_to_sm[lt_rlz] = source_model_filename
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
@@ -413,7 +411,6 @@ class BaseHazardCalculator(base.Calculator):
         rnd.seed(seed)
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        self.rlz_to_sm = {}
 
         # The first realization gets the seed we specified in the config file.
         for i in xrange(self.hc.number_of_logic_tree_samples):
@@ -433,8 +430,6 @@ class BaseHazardCalculator(base.Calculator):
                 weight=None,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path)
-
-            self.rlz_to_sm[lt_rlz] = source_model_filename
 
             # Run realization callback (if any) to do additional initialization
             # for each realization:
