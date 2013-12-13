@@ -538,3 +538,32 @@ def optimize_source_model(input_path, area_src_disc, output_path):
     writer.serialize(out_source_model)
 
     return output_path
+
+
+def parse_source_model_smart(fname, rupture_mesh_spacing,
+                             width_of_mfd_bin,
+                             area_source_discretization):
+    """
+    Parse a NRML source model and yield hazardlib sources.
+    Notice that area sources are automatically splitted into point sources.
+
+    :param str fname: the full pathname of the source model file
+    :param rupture_mesh_spacing: the rupture mesh spacing
+    :param width_of_mfd_bin: the width of the MFD bin
+    :param area_source_discretization: the area discretization parameter
+    """
+    for src_nrml in haz_parsers.SourceModelParser(fname).parse():
+        if isinstance(src_nrml, nrml_models.AreaSource):
+            for pt in area_source_to_point_sources(
+                    src_nrml, area_source_discretization):
+                yield nrml_to_hazardlib(
+                    pt,
+                    rupture_mesh_spacing,
+                    width_of_mfd_bin,
+                    area_source_discretization)
+        else:
+            yield nrml_to_hazardlib(
+                src_nrml,
+                rupture_mesh_spacing,
+                width_of_mfd_bin,
+                area_source_discretization)

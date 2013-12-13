@@ -75,11 +75,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
 
     job = models.OqJob.objects.get(id=job_id)
     hc = job.hazard_calculation
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-    sources = map(apply_uncertainties, sources)
-
     rup_site_filter = openquake.hazardlib.calc.filters.\
         rupture_site_distance_filter(hc.maximum_distance)
 
