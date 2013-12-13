@@ -69,7 +69,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
+def compute_ses(job_id, src_ses_seeds, lt_rlz):
     """
     Celery task for the stochastic event set calculator.
 
@@ -89,19 +89,14 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
         Stochastic Event Set object
     :param lt_rlz:
         Logic Tree realization object
-    :param ltp:
-        A :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
-
     source = {}
     with EnginePerformanceMonitor(
             'filtering sources', job_id, compute_ses):
         for src, ses, seed in src_ses_seeds:
             if src.source_id not in source:
-                source[src.source_id] = apply_uncertainties(src)
+                source[src.source_id] = src
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -263,14 +258,10 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        realizations = self._get_realizations()
-
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        for lt_rlz in realizations:
+        for lt_rlz in self._get_realizations():
             sm = self.rlz_to_sm[lt_rlz]
             sources = (self.sources_per_model[sm, 'point'] +
                        self.sources_per_model[sm, 'other'])
-
             all_ses = list(models.SES.objects.filter(
                            ses_collection__lt_realization=lt_rlz))
 
@@ -282,7 +273,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                           self.concurrent_tasks()))
             logs.LOG.info('Using block size %d', preferred_block_size)
             for block in block_splitter(sss, preferred_block_size):
-                yield self.job.id, block, lt_rlz, ltp
+                yield self.job.id, block, lt_rlz
 
         # now the dictionary can be cleared to save memory
         self.sources_per_model.clear()
