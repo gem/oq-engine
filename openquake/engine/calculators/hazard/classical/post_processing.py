@@ -307,16 +307,16 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     )
     if rlz is not None:
         uhs.lt_realization = rlz
-        output.display_name = _UHS_DISP_NAME_FMT % dict(poe=poe, rlz=rlz.id)
+        #output.display_name = _UHS_DISP_NAME_FMT % dict(poe=poe, rlz=rlz.id)
     elif statistics is not None:
         uhs.statistics = statistics
         if statistics == 'quantile':
             uhs.quantile = quantile
-            output.display_name = (_UHS_DISP_NAME_QUANTILE_FMT
-                                   % dict(poe=poe, quantile=quantile))
-        else:
+            #output.display_name = (_UHS_DISP_NAME_QUANTILE_FMT
+            #                       % dict(poe=poe, quantile=quantile))
+        #else:
             # mean
-            output.display_name = _UHS_DISP_NAME_MEAN_FMT % dict(poe=poe)
+            #output.display_name = _UHS_DISP_NAME_MEAN_FMT % dict(poe=poe)
     output.save()
     uhs.output = output
     # This should fail if neither `lt_realization` nor `statistics` is defined:

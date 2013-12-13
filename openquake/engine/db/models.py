@@ -1405,6 +1405,18 @@ class HazardMap(djm.Model):
     lats = fields.FloatArrayField()
     imls = fields.FloatArrayField()
 
+    def create_display_name(self):
+        return "%s%s%shazard map%s%s%s%s%s%s" % (
+            "mean " if self.statistics == 'mean' else "",
+            "%" + str(self.quantile) + " " if self.quantile else "",
+            "quantile " if self.statistics == 'quantile' else "",
+            " | realization = " + str(self.lt_realization) + " " if self.lt_realization else "",
+            " | investigation time = " + str(self.investigation_time),
+            " | poe = " + str(self.poe),
+            " | sa_period = " + str(self.sa_period) if self.sa_period else "",
+            " | sa_damping = " + str(self.sa_damping) if self.sa_damping else "",
+            " | imt = " + str(self.imt))
+
     class Meta:
         db_table = 'hzrdr\".\"hazard_map'
 
@@ -1455,6 +1467,17 @@ class HazardCurve(djm.Model):
     quantile = djm.FloatField(null=True)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
+
+    def create_display_name(self):
+        return "%s%s%shazard map%s%s%s%s%s" % (
+            "mean " if self.statistics == 'mean' else "",
+            "%" + str(self.quantile) + " " if self.quantile else "",
+            "quantile " if self.statistics == 'quantile' else "",
+            " | realization = " + str(self.lt_realization) + " " if self.lt_realization else "",
+            " | investigation time = " + str(self.investigation_time),
+            " | sa_period = " + str(self.sa_period) if self.sa_period else "",
+            " | sa_damping = " + str(self.sa_damping) if self.sa_damping else "",
+            " | imt = " + str(self.imt))
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
@@ -1859,6 +1882,9 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
+    def create_display_name(self):
+        return "ground motion field | realization = %s" % self.lt_realization
+
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
         """
@@ -2123,6 +2149,15 @@ class UHS(djm.Model):
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
 
+    def create_display_name(self):
+        return "%s%s%sUHS%s%s%s" % (
+            "mean " if self.statistics == 'mean' else "",
+            "%" + str(self.quantile) + " " if self.quantile else "",
+            "quantile " if self.statistics == 'quantile' else "",
+            " | realization = " + str(self.lt_realization) + " " if self.lt_realization else "",
+            " | investigation time = " + str(self.investigation_time),
+            " | poe = " + str(self.poe))
+
     class Meta:
         db_table = 'hzrdr\".\"uhs'
 
@@ -2187,15 +2222,16 @@ class LossFraction(djm.Model):
     poe = djm.FloatField(null=True)
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
-    def create_description(self):
-        return "%s%s%sloss fractions%s%s%s%s" % (
+    def create_display_name(self):
+        return "%s%s%sloss fractions%s%s%s%s%s" % (
             str(self.loss_type) + " ",
             "quantile " if self.quantile else "",
             str(self.statistics) + " " if self.statistics else "",
             " | POE = " + str(self.poe),
             " | hazard output id = " + str(self.hazard_output.id),
             " | quantile = " + str(self.quantile) if self.quantile else "",
-            " | variable = " + str(self.variable))
+            " | variable = " + str(self.variable),
+            " | investigation time = " + str(retrieve_investigation_time(self)))
 
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
@@ -2408,15 +2444,16 @@ class LossMap(djm.Model):
     quantile = djm.FloatField(null=True)
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
-    def create_description(self):
-        return "%s%s%s%sloss maps%s%s" % (
+    def create_display_name(self):
+        return "%s%s%s%sloss maps%s%s%s" % (
             str(self.loss_type) + " ",
             "insured " if self.insured else "",
             "quantile " if self.quantile else "",
             (str(self.statistics) + " " + " | hazard output id = " +
              str(self.hazard_output.id) if self.statistics else ""),
             " | POE = " + str(self.poe) if self.poe else "",
-            " | quantile = " + str(self.quantile) if self.quantile else "")
+            " | quantile = " + str(self.quantile) if self.quantile else "",
+            " | investigation time = " + str(retrieve_investigation_time(self)))
 
     class Meta:
         db_table = 'riskr\".\"loss_map'
@@ -2515,15 +2552,16 @@ class LossCurve(djm.Model):
     quantile = djm.FloatField(null=True)
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
-    def create_description(self):
-        return "%s%s%s%s%sloss curves%s" % (
+    def create_display_name(self):
+        return "%s%s%s%s%sloss curves%s%s" % (
             str(self.loss_type) + " ",
             "insured " if self.insured else "",
             "aggregate " if self.aggregate else "",
             "quantile " if self.quantile else "",
             (str(self.statistics) + " " + " | hazard output id = " +
              str(self.hazard_output.id) if self.statistics else ""),
-            " | quantile = " + str(self.quantile) if self.quantile else "")
+            " | quantile = " + str(self.quantile) if self.quantile else "",
+            " | investigation time = " + str(retrieve_investigation_time(self)))
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -2673,10 +2711,11 @@ class BCRDistribution(djm.Model):
         "Output", related_name="risk_bcr_distribution")
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
-    def create_description(self):
-        return "%sBCR distributions%s" % (
+    def create_display_name(self):
+        return "%sBCR distributions%s%s" % (
             str(self.loss_type) + " ",
-            " | hazard output id = " + str(self.hazard_output.id))
+            " | hazard output id = " + str(self.hazard_output.id),
+            " | investigation time = " + str(retrieve_investigation_time(self)))
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -3281,10 +3320,14 @@ class HazardSite(djm.Model):
         db_table = 'hzrdi\".\"hazard_site'
 
 
+def retrieve_investigation_time(output_model):
+    # TODO: write docstring
+    return output_model.output.oq_job.calculation.investigation_time
+
 # if we split classes in different files, we need to put this function in
 # a global scope related file
 @receiver(pre_save)
-def update_description(sender, instance, *args, **kwargs):
+def update_display_name(sender, instance, *args, **kwargs):
     """
     Whenever any of the django models (sender) attempts to save data into the
     DB, it sends a signal that is intercepted by this method.
@@ -3295,8 +3338,13 @@ def update_description(sender, instance, *args, **kwargs):
     output_models = [LossCurve,
                      LossMap,
                      BCRDistribution,
-                     LossFraction]
+                     LossFraction,
+                     UHS,
+                     HazardMap,
+                     HazardCurve,
+                     Gmf]
 
     if sender in output_models:
-        instance.output.display_name = instance.create_description()
+        instance.output.display_name = instance.create_display_name()
         instance.output.save()
+
