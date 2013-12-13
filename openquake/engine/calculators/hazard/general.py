@@ -33,7 +33,6 @@ from openquake.engine.db import models
 from django.db import transaction
 
 from openquake.nrmllib import parsers as nrml_parsers
-from openquake.nrmllib.models import PointSource
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import source, exposure
@@ -215,22 +214,31 @@ class BaseHazardCalculator(base.Calculator):
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
-        Parse and validate source logic trees
+        Parse source models and validate source logic trees. It also
+        filters the sources far away and apply uncertainties to the
+        relevant ones. As a side effect it populates the instance dictionary
+        `.sources_per_model`. Notice that area sources are automatically
+        split into point sources.
         """
         logs.LOG.progress("initializing sources")
         smlt_file = self.hc.inputs['source_model_logic_tree']
         self.smlt = logictree.SourceModelLogicTree(
             file(smlt_file).read(), self.hc.base_path, smlt_file)
-        for sm in self.smlt.get_source_models():
+        # here we are doing a full enumeration of the source model logic tree;
+        # this is not bad because for very large source models there are
+        # typically very few realizations; moreover, the filtering will remove
+        # most of the sources, so the memory occupation is typically low
+        for sm, path in self.smlt.get_sm_paths():
+            apply_uncertainties = self.smlt.make_apply_uncertainties(path)
             fname = os.path.join(self.hc.base_path, sm)
-            for src_nrml in nrml_parsers.SourceModelParser(fname).parse():
-                src = source.nrml_to_hazardlib(
-                    src_nrml,
-                    self.hc.rupture_mesh_spacing,
+            for src in source.parse_source_model_smart(
+                    fname, self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization)
+                    self.hc.area_source_discretization):
+                # filtering far way sources not affecting the site collection
                 if self.hc.sites_affected_by(src):
-                    if isinstance(src_nrml, PointSource):
+                    src = apply_uncertainties(src)
+                    if src.__class__.__name__ == 'PointSource':
                         self.sources_per_model[sm, 'point'].append(src)
                     else:
                         self.sources_per_model[sm, 'other'].append(src)

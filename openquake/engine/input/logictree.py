@@ -888,11 +888,15 @@ class SourceModelLogicTree(BaseLogicTree):
                 parent.remove(prev)
                 prev = node.getprevious()
 
-    def get_source_models(self):
+    def get_sm_paths(self):
         """
-        Return a list of source model logic tree paths.
+        Yield pairs (sm_name, sm_lt_path) from the full enumeration of
+        a source model logic tree.
         """
-        return [branch.value for branch in self.root_branchset.branches]
+        for _weight, smlt_path in self.root_branchset.enumerate_paths():
+            sm_name = smlt_path[0].value
+            smlt_branch_ids = [branch.branch_id for branch in smlt_path]
+            yield sm_name, smlt_branch_ids
 
     def get_sm_weight_paths(
             self, number_of_logic_tree_samples, rnd):
