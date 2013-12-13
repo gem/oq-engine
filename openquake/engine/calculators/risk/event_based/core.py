@@ -18,9 +18,11 @@
 Core functionality for the classical PSHA risk calculator.
 """
 
+import copy
 import random
 import collections
 import itertools
+
 import numpy
 
 from django import db
@@ -327,6 +329,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
           Compute aggregate loss curves and event loss tables
         """
+        # number of ses collections
+        nsc = models.SESCollection.objects.filter(
+            output__oq_job__hazard_calculation=self.hc).count()
+        nr = models.LtRealization.objects.filter(
+            hazard_calculation=self.hc).count()
+        nr_per_ses_coll = nr // nsc  # realizations per ses collection
         with EnginePerformanceMonitor('post processing', self.job.id):
 
             time_span, tses = self.hazard_times()
@@ -343,11 +351,25 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         hazard_output=hazard_output)
                     inserter = writer.CacheInserter(models.EventLossData, 9999)
 
-                    rupture_ids = models.SESRupture.objects.filter(
-                        ses__ses_collection__lt_realization=
-                        hazard_output.output_container.lt_realization
-                    ).values_list('id', flat=True)
-
+                    # hazard_output.output_container is SESCollection object
+                    # or a Gmf object
+                    container = hazard_output.output_container
+                    if isinstance(container, models.Gmf):
+                        if self.hc.number_of_logic_tree_samples:
+                            sc_ordinal = container.lt_realization.ordinal
+                        else:  # full enumeration
+                            sc_ordinal = (container.lt_realization.ordinal //
+                                          nr_per_ses_coll)
+                        rupture_ids = models.SESRupture.objects.filter(
+                            ses__ses_collection__ordinal=sc_ordinal
+                            ).values_list('id', flat=True)
+                    elif isinstance(container, models.SESCollection):
+                        rupture_ids = models.SESRupture.objects.filter(
+                            ses__ses_collection=container
+                        ).values_list('id', flat=True)
+                    else:
+                        raise TypeError('Got %s, expected Gmf or SESCollection'
+                                        % container)
                     for rupture_id in rupture_ids:
                         if rupture_id in event_loss_table:
                             inserter.add(
@@ -405,9 +427,21 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # logic trees
         if self.rc.hazard_outputs()[0].output_type == "ses":
             ltp = logictree.LogicTreeProcessor.from_hc(self.rc)
+            rnd = random.Random()
+            rnd.seed(self.hc.random_seed)
+            hazard_outputs = []
+            for output in self.rc.hazard_outputs():
+                if not self.hc.number_of_logic_tree_samples:  # full enum
+                    wp = ltp.gmpe_lt.root_branchset.enumerate_paths()
+                else:  # a single sample
+                    seed = rnd.randint(0, models.MAX_SINT_32)
+                    wp = [ltp.gmpe_lt.sample_path(seed)]
+                for weight, gsim_lt_path in wp:
+                    ho = copy.copy(output)
+                    ho.gsims = ltp.parse_gmpe_logictree_path(gsim_lt_path)
+                    hazard_outputs.append(ho)
         else:
-            ltp = None
-
+            hazard_outputs = self.rc.hazard_outputs()
         return workflows.CalculationUnit(
             loss_type,
             workflows.ProbabilisticEventBased(
@@ -419,12 +453,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.rc.conditional_loss_poes,
                 self.rc.insured_losses),
             hazard_getters.GroundMotionValuesGetter(
-                self.rc.hazard_outputs(),
+                hazard_outputs,
                 assets,
                 self.rc.best_maximum_distance,
                 risk_model.imt,
-                self.hazard_seeds,
-                ltp))
+                self.hazard_seeds))
 
     def hazard_times(self):
         """

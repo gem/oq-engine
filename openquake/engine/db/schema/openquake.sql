@@ -388,7 +388,10 @@ ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.ses_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    lt_realization_id INTEGER NOT NULL
+    ordinal INTEGER NOT NULL,
+    sm_path VARCHAR NOT NULL,
+    sm_lt_path VARCHAR[] NOT NULL,
+    weight FLOAT
 ) TABLESPACE hzrdr_ts;
 
 -- Stochastic Event Set: A container for 1 or more ruptures associated with a
@@ -399,7 +402,7 @@ CREATE TABLE hzrdr.ses (
     investigation_time float NOT NULL,
     -- Order number of this Stochastic Event Set in a series of SESs
     -- (for a given logic tree realization).
-    ordinal INTEGER
+    ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 -- A rupture as part of a Stochastic Event Set.
@@ -438,7 +441,7 @@ CREATE TABLE hzrdr.gmf (
 CREATE TABLE hzrdr.gmf_data (
     id SERIAL PRIMARY KEY,
     gmf_id INTEGER NOT NULL, -- fk -> gmf
-    ses_id INTEGER, -- fk -> ses
+    task_no INTEGER NOT NULL,
     imt VARCHAR NOT NULL,
         CONSTRAINT hazard_curve_imt
         CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
@@ -538,10 +541,7 @@ CREATE TABLE hzrdr.lt_realization (
     -- A list of the logic tree branchIDs which indicate the path taken through the tree
     sm_lt_path VARCHAR[] NOT NULL,
     -- A list of the logic tree branchIDs which indicate the path taken through the tree
-    gsim_lt_path VARCHAR[] NOT NULL,
-    is_complete BOOLEAN DEFAULT FALSE,
-    total_items INTEGER NOT NULL,
-    completed_items INTEGER NOT NULL DEFAULT 0
+    gsim_lt_path VARCHAR[] NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 
@@ -967,13 +967,6 @@ FOREIGN KEY (output_id)
 REFERENCES uiapi.output(id)
 ON DELETE CASCADE;
 
--- hzrdr.ses_collection to hzrdr.lt_realization FK
-ALTER TABLE hzrdr.ses_collection
-ADD CONSTRAINT hzrdr_ses_collection_lt_realization_fk
-FOREIGN KEY (lt_realization_id)
-REFERENCES hzrdr.lt_realization(id)
-ON DELETE CASCADE;
-
 -- hzrdr.ses to hzrdr.ses_collection FK
 ALTER TABLE hzrdr.ses
 ADD CONSTRAINT hzrdr_ses_ses_collection_fk
@@ -1104,12 +1097,6 @@ FOREIGN KEY (gmf_id)
 REFERENCES hzrdr.gmf(id)
 ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.gmf_data
-ADD CONSTRAINT hzrdr_gmf_data_ses_fk
-FOREIGN KEY (ses_id)
-REFERENCES hzrdr.ses(id)
-ON DELETE CASCADE;
-
 
 -- this function is used in the performance_view, cannot go in functions.sql
 CREATE FUNCTION maxint(a INTEGER, b INTEGER) RETURNS INTEGER AS $$
@@ -1146,13 +1133,3 @@ INNER JOIN uiapi.oq_job AS o
 ON p.oq_job_id=o.id
 INNER JOIN uiapi.risk_calculation AS r
 ON r.id=o.risk_calculation_id;
-
--- gmf_data per job
-CREATE VIEW hzrdr.gmf_data_job AS
-   SELECT c.oq_job_id, a.*
-   FROM hzrdr.gmf_data AS a
-   INNER JOIN hzrdr.gmf AS b
-   ON a.gmf_id=b.id
-   INNER JOIN uiapi.output AS c
-   ON b.output_id=c.id
-   WHERE output_type='gmf';

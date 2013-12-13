@@ -151,7 +151,7 @@ class IntArrayField(djm.Field):
 class CharArrayField(djm.Field):
     """This field models a postgres `varchar` array."""
 
-    def db_type(self, _connection):
+    def db_type(self, _connection=None):
         return 'varchar[]'
 
     def to_python(self, value):

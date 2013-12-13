@@ -66,7 +66,6 @@ CREATE INDEX hzrdr_gmf_data_idx on hzrdr.gmf_data(site_id);
 CREATE INDEX hzrdr_gmf_imt_idx on hzrdr.gmf_data(imt);
 CREATE INDEX hzrdr_gmf_sa_period_idx on hzrdr.gmf_data(sa_period);
 CREATE INDEX hzrdr_gmf_sa_damping_idx on hzrdr.gmf_data(sa_damping);
-CREATE INDEX hzrdr_gmf_ses_idx on hzrdr.gmf_data(ses_id);
 
 -- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
