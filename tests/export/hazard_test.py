@@ -71,14 +71,6 @@ class GetResultExportDestTestCase(unittest.TestCase):
             'SES',
             'output, lt_realization'
         )
-        self.FakeCLTGMF = namedtuple(
-            'CompleteLogicTreeGMF',
-            'output'
-        )
-        self.FakeCLTSES = namedtuple(
-            'CompleteLogicTreeSES',
-            'output'
-        )
         self.FakeOutput = namedtuple(
             'Output',
             'output_type'
