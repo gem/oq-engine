@@ -69,7 +69,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
         # after filtering the source model contains 17 non-point sources
-        sources = self.calc.sources_per_model['dissFaultModel.xml', 'other']
+        sources = self.calc.sources_per_ltpath[('b1',), 'other']
         self.assertEqual(17, len(sources))
 
     @attr('slow')
@@ -107,11 +107,11 @@ store_site_model'
             # We should never try to store a site model in this case.
             self.assertEqual(0, store_sm_patch.call_count)
 
-    def _check_logic_tree_realization_sources_per_model(self, ltr):
+    def _check_logic_tree_realization_sources_per_ltpath(self, ltr):
         # the logic tree for this sample calculation only contains a single
         # source model
-        sm = self.calc.rlz_to_sm[ltr]
-        sources = self.calc.sources_per_model[sm, 'other']
+        path = tuple(ltr.sm_lt_path)
+        sources = self.calc.sources_per_ltpath[path, 'other']
         self.assertEqual(17, len(sources))
 
     def test_initialize_realizations_montecarlo(self):
@@ -143,7 +143,7 @@ store_site_model'
         self.assertEqual(['b1'], ltr2.gsim_lt_path)
 
         for ltr in (ltr1, ltr2):
-            self._check_logic_tree_realization_sources_per_model(ltr)
+            self._check_logic_tree_realization_sources_per_ltpath(ltr)
 
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_site_model()
@@ -161,7 +161,7 @@ store_site_model'
         self.assertEqual(['b1'], ltr.sm_lt_path)
         self.assertEqual(['b1'], ltr.gsim_lt_path)
 
-        self._check_logic_tree_realization_sources_per_model(ltr)
+        self._check_logic_tree_realization_sources_per_ltpath(ltr)
 
     @attr('slow')
     def test_complete_calculation_workflow(self):
@@ -292,7 +292,7 @@ store_site_model'
         self.job.status = 'clean_up'
         self.job.save()
         self.calc.clean_up()
-        self.assertEqual(0, len(self.calc.sources_per_model))
+        self.assertEqual(0, len(self.calc.sources_per_ltpath))
 
 
 def update_result_matrix(current, new):

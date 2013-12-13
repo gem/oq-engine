@@ -232,9 +232,9 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
-            sm = self.rlz_to_sm[lt_rlz]
-            sources = (self.sources_per_model[sm, 'point'] +
-                       self.sources_per_model[sm, 'other'])
+            path = tuple(lt_rlz.sm_lt_path)
+            sources = (self.sources_per_ltpath[path, 'point'] +
+                       self.sources_per_ltpath[path, 'other'])
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
                 yield self.job.id, sites, sources, lt_rlz, ltp

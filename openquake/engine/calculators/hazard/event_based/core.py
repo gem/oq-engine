@@ -259,9 +259,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         rnd = random.Random()
         rnd.seed(hc.random_seed)
         for lt_rlz in self._get_realizations():
-            sm = self.rlz_to_sm[lt_rlz]
-            sources = (self.sources_per_model[sm, 'point'] +
-                       self.sources_per_model[sm, 'other'])
+            path = tuple(lt_rlz.sm_lt_path)
+            sources = (self.sources_per_ltpath[path, 'point'] +
+                       self.sources_per_ltpath[path, 'other'])
             all_ses = list(models.SES.objects.filter(
                            ses_collection__lt_realization=lt_rlz))
 
@@ -276,7 +276,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                 yield self.job.id, block, lt_rlz
 
         # now the dictionary can be cleared to save memory
-        self.sources_per_model.clear()
+        self.sources_per_ltpath.clear()
 
     def compute_gmf_arg_gen(self):
         """
