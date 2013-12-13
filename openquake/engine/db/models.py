@@ -884,7 +884,7 @@ class HazardCalculation(djm.Model):
 
         :param src: the source object used for the filtering
         """
-        if self.maximum_distance and self.prefiltered:
+        if self.maximum_distance:
             return src.filter_sites_by_distance_to_source(
                 self.maximum_distance, self.site_collection)
         return self.site_collection

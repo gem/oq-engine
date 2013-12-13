@@ -212,12 +212,6 @@ class BaseHazardCalculator(base.Calculator):
         return models.LtRealization.objects\
             .filter(hazard_calculation=self.hc).order_by('id')
 
-    def filtered_sites(self, src):
-        """
-        Do not filter sites up front: overridden in the event based subclass
-        """
-        return self.hc.site_collection
-
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
@@ -235,7 +229,7 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization)
-                if self.filtered_sites(src):
+                if self.hc.sites_affected_by(src):
                     if isinstance(src_nrml, PointSource):
                         self.sources_per_model[sm, 'point'].append(src)
                     else:
