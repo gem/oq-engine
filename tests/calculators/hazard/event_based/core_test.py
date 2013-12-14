@@ -200,7 +200,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 191)
+        self.assertEqual(num_ruptures, 180)
 
         # check that we generated the right number of rows in GmfData
         # 1210 = 121 sites * 5 ses * 2 IMTs
@@ -232,38 +232,23 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         [rlz1, rlz2] = models.LtRealization.objects.filter(
             hazard_calculation=hc).order_by('id')
 
-        [s1, s2, s3, s4, s5] = self.calc.initialize_ses_db_records(rlz1)
-        [t1, t2, t3, t4, t5] = self.calc.initialize_ses_db_records(rlz2)
+        # create the ses collections
+        self.calc.initialize_ses_db_records(rlz1)
+        self.calc.initialize_ses_db_records(rlz2)
 
-        expected = [  # source_id, ses_id, seed
-            ('3', s1, 330046720),
-            ('3', s2, 1822220740),
-            ('3', s3, 554253128),
-            ('3', s4, 1561611437),
-            ('3', s5, 1906130136),
-            ('4', s1, 81831263),
-            ('4', s2, 505068335),
-            ('4', s3, 574098566),
-            ('4', s4, 485001436),
-            ('4', s5, 650191064),
-            ('3', t1, 1667622072),
-            ('3', t2, 1276721672),
-            ('3', t3, 1266742459),
-            ('3', t4, 1807151916),
-            ('3', t5, 1940768424),
-            ('4', t1, 212243639),
-            ('4', t2, 345634011),
-            ('4', t3, 761635408),
-            ('4', t4, 1873359443),
-            ('4', t5, 798581338),
+        expected = [  # source_id, seed
+            ('3', 540589706),
+            ('4', 721420855),
+            ('3', 762290849),
+            ('4', 710721645),
         ]
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for job_id, sss, rlz in arg_gen:
-                for src, ses, seed in sss:
+            for job_id, ss, rlz in arg_gen:
+                for src, seed in ss:
                     if src.__class__.__name__ != 'PointSource':
-                        yield src.source_id, ses, seed
+                        yield src.source_id, seed
 
         actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)
