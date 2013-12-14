@@ -80,8 +80,10 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
     sources = map(apply_uncertainties, sources)
 
-    rup_site_filter = openquake.hazardlib.calc.filters.\
-        rupture_site_distance_filter(hc.maximum_distance)
+    f = openquake.hazardlib.calc.filters
+    src_site_filter = f.source_site_noop_filter if hc.prefiltered \
+        else f.source_site_distance_filter(hc.maximum_distance)
+    rup_site_filter = f.rupture_site_distance_filter(hc.maximum_distance)
 
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
         hc_im_type, sa_period, sa_damping = imt = from_string(imt)
@@ -121,6 +123,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
                     'mag_bin_width': hc.mag_bin_width,
                     'dist_bin_width': hc.distance_bin_width,
                     'coord_bin_width': hc.coordinate_bin_width,
+                    'source_site_filter': src_site_filter,
                     'rupture_site_filter': rup_site_filter,
                 }
                 with EnginePerformanceMonitor(
