@@ -399,7 +399,7 @@ CREATE TABLE hzrdr.ses (
     investigation_time float NOT NULL,
     -- Order number of this Stochastic Event Set in a series of SESs
     -- (for a given logic tree realization).
-    ordinal INTEGER
+    ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 -- A rupture as part of a Stochastic Event Set.
@@ -538,10 +538,7 @@ CREATE TABLE hzrdr.lt_realization (
     -- A list of the logic tree branchIDs which indicate the path taken through the tree
     sm_lt_path VARCHAR[] NOT NULL,
     -- A list of the logic tree branchIDs which indicate the path taken through the tree
-    gsim_lt_path VARCHAR[] NOT NULL,
-    is_complete BOOLEAN DEFAULT FALSE,
-    total_items INTEGER NOT NULL,
-    completed_items INTEGER NOT NULL DEFAULT 0
+    gsim_lt_path VARCHAR[] NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 
