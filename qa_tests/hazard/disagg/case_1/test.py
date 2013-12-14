@@ -30,8 +30,7 @@ from openquake.engine.export import hazard as haz_export
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.disagg.case_1 import _test_data as test_data
 
-aaae = numpy.testing.assert_array_almost_equal
-aae = numpy.testing.assert_almost_equal
+aac = lambda a, b: numpy.testing.assert_allclose(a, b, atol=1e-5)
 
 
 class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
@@ -50,26 +49,26 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
         poe_002_pga = results.filter(imt='PGA', poe=0.02)
         rlz1, rlz2 = poe_002_pga.order_by('lt_realization')
 
-        aaae(test_data.RLZ_1_POE_002_PGA, rlz1.matrix)
-        aaae(test_data.RLZ_2_POE_002_PGA, rlz2.matrix)
+        aac(test_data.RLZ_1_POE_002_PGA, rlz1.matrix)
+        aac(test_data.RLZ_2_POE_002_PGA, rlz2.matrix)
 
         poe_002_sa = results.filter(imt='SA', poe=0.02)
         rlz1, rlz2 = poe_002_sa.order_by('lt_realization')
 
-        aaae(test_data.RLZ_1_POE_002_SA, rlz1.matrix)
-        aaae(test_data.RLZ_2_POE_002_SA, rlz2.matrix)
+        aac(test_data.RLZ_1_POE_002_SA, rlz1.matrix)
+        aac(test_data.RLZ_2_POE_002_SA, rlz2.matrix)
 
         poe_01_pga = results.filter(imt='PGA', poe=0.1)
         rlz1, rlz2 = poe_01_pga.order_by('lt_realization')
 
-        aaae(test_data.RLZ_1_POE_01_PGA, rlz1.matrix)
-        aaae(test_data.RLZ_2_POE_01_PGA, rlz2.matrix)
+        aac(test_data.RLZ_1_POE_01_PGA, rlz1.matrix)
+        aac(test_data.RLZ_2_POE_01_PGA, rlz2.matrix)
 
         poe_01_sa = results.filter(imt='SA', poe=0.1)
         rlz1, rlz2 = poe_01_sa.order_by('lt_realization')
 
-        aaae(test_data.RLZ_1_POE_01_SA, rlz1.matrix)
-        aaae(test_data.RLZ_2_POE_01_SA, rlz2.matrix)
+        aac(test_data.RLZ_1_POE_01_SA, rlz1.matrix)
+        aac(test_data.RLZ_2_POE_01_SA, rlz2.matrix)
 
         # Lastly, we should check an export of at least one of these results to
         # ensure that the disagg export/serialization is working properly.
@@ -124,7 +123,7 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
             self.assertEqual(matrix.attrib['type'], act_matrix.attrib['type'])
             self.assertEqual(matrix.attrib['dims'], act_matrix.attrib['dims'])
             self.assertEqual(matrix.attrib['poE'], act_matrix.attrib['poE'])
-            aae(float(act_matrix.attrib['iml']), float(matrix.attrib['iml']))
+            aac(float(act_matrix.attrib['iml']), float(matrix.attrib['iml']))
 
             # compare probabilities
             exp_probs = matrix.xpath('./nrml:prob', namespaces=PARSE_NS_MAP)
@@ -138,5 +137,5 @@ class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
 
                 self.assertEqual(prob.attrib['index'],
                                  act_prob.attrib['index'])
-                aae(float(act_prob.attrib['value']),
+                aac(float(act_prob.attrib['value']),
                     float(prob.attrib['value']))
