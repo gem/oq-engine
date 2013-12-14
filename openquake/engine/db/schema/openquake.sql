@@ -126,8 +126,8 @@ CREATE TABLE uiapi.job_stats (
     stop_time timestamp without time zone,
     -- The number of total sites in the calculation
     num_sites INTEGER,
-    disk_space BIGINT
-    -- The disk space occupation in bytes
+    disk_space BIGINT, -- The disk space occupation in bytes
+    num_sources INTEGER[] -- The number of (filtered) sources per sm_lt_path
 ) TABLESPACE uiapi_ts;
 
 

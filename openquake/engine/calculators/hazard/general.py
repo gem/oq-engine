@@ -229,17 +229,18 @@ class BaseHazardCalculator(base.Calculator):
         # this is not bad because for very large source models there are
         # typically very few realizations; moreover, the filtering will remove
         # most of the sources, so the memory occupation is typically low
+        num_sources = []  # the number of sources per sm_lt_path, saved in job_stats
         for sm, path in self.smlt.get_sm_paths():
             smpath = tuple(path)
             apply_uncertainties = self.smlt.make_apply_uncertainties(path)
             fname = os.path.join(self.hc.base_path, sm)
-            for src in source.parse_source_model_smart(
+            for sourc in source.parse_source_model_smart(
                     fname, self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization):
+                src = apply_uncertainties(sourc)
                 # filtering far way sources not affecting the site collection
                 if self.hc.sites_affected_by(src):
-                    src = apply_uncertainties(src)
                     if src.__class__.__name__ == 'PointSource':
                         self.sources_per_ltpath[smpath, 'point'].append(src)
                     else:
@@ -247,6 +248,10 @@ class BaseHazardCalculator(base.Calculator):
             n = len(self.sources_per_ltpath[smpath, 'point']) + \
                 len(self.sources_per_ltpath[smpath, 'other'])
             logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
+            num_sources.append(n)
+        js = models.JobStats.objects.get(oq_job=self.job)
+        js.num_sources = num_sources
+        js.save()
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
