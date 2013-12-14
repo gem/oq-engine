@@ -68,6 +68,10 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
                    'sites': hc.site_collection}
 
     if hc.maximum_distance:
+        if not hc.prefiltered:
+            calc_kwargs['source_site_filter'] = (
+                openquake.hazardlib.calc.filters.source_site_distance_filter(
+                    hc.maximum_distance))
         calc_kwargs['rupture_site_filter'] = (
             openquake.hazardlib.calc.filters.rupture_site_distance_filter(
                 hc.maximum_distance))
