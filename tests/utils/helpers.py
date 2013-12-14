@@ -504,35 +504,34 @@ def get_risk_job(cfg, username="openquake", hazard_calculation_id=None,
     return job
 
 
-def create_gmf_coll(hazard_job, rlz=None):
+def create_gmf(hazard_job, rlz=None):
     """
     Returns the created Gmf object.
     """
     hc = hazard_job.hazard_calculation
 
     rlz = rlz or models.LtRealization.objects.create(
-        hazard_calculation=hc, ordinal=1, seed=1, weight=None,
-        sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-        is_complete=False, total_items=1, completed_items=1)
+        hazard_calculation=hc, ordinal=0, seed=1, weight=None,
+        sm_lt_path="test_sm", gsim_lt_path="test_gsim")
 
-    gmf_coll = models.Gmf.objects.create(
+    gmf = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test Hazard output", "gmf"),
         lt_realization=rlz)
 
-    return gmf_coll
+    return gmf
 
 
 def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     """
     Returns the created records.
     """
-    gmf_coll = create_gmf_coll(hazard_job, rlz)
+    gmf = create_gmf(hazard_job, rlz)
     ses_coll = ses_coll or models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test SES Collection", "ses"),
-        lt_realization=gmf_coll.lt_realization)
-    ruptures = get_ruptures(hazard_job, ses_coll, 3)
+        lt_realization=gmf.lt_realization)
+    ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
     if points is None:
         points = [(15.310, 38.225), (15.71, 37.225),
@@ -540,7 +539,7 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
                   (15.481, 38.25)]
     for site_id in hazard_job.hazard_calculation.save_sites(points):
         records.append(models.GmfData.objects.create(
-            gmf=gmf_coll,
+            gmf=gmf,
             ses=ruptures[0].ses,
             imt="PGA",
             gmvs=[0.1, 0.2, 0.3],
@@ -566,12 +565,12 @@ def create_gmf_from_csv(job, fname):
     job.status = 'post_processing'
     job.save()
 
-    gmf_coll = create_gmf_coll(job)
+    gmf = create_gmf(job)
 
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             job, "Test SES Collection", "ses"),
-        lt_realization=gmf_coll.lt_realization)
+        lt_realization=gmf.lt_realization)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
@@ -579,20 +578,19 @@ def create_gmf_from_csv(job, fname):
         gmv_matrix = numpy.array(
             [map(float, row) for row in gmfreader]).transpose()
 
-        ruptures = get_ruptures(job, ses_coll, len(gmv_matrix[0]))
+        ruptures = create_ses_ruptures(job, ses_coll, len(gmv_matrix[0]))
 
         for i, gmvs in enumerate(gmv_matrix):
-
             point = tuple(map(float, locations[i].split()))
             [site_id] = job.hazard_calculation.save_sites([point])
             models.GmfData.objects.create(
-                gmf=gmf_coll,
+                gmf=gmf,
                 ses=ruptures[0].ses,
                 imt="PGA", gmvs=gmvs,
                 rupture_ids=[r.id for r in ruptures],
                 site_id=site_id)
 
-    return gmf_coll
+    return gmf
 
 
 def populate_gmf_data_from_csv(job, fname):
@@ -604,7 +602,7 @@ def populate_gmf_data_from_csv(job, fname):
     job.status = 'post_processing'
     job.save()
 
-    gmf_coll = models.Gmf.objects.create(
+    gmf = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
             job, "Test Hazard output", "gmf_scenario"))
 
@@ -620,11 +618,11 @@ def populate_gmf_data_from_csv(job, fname):
             [site_id] = job.hazard_calculation.save_sites([point])
             models.GmfData.objects.create(
                 imt="PGA",
-                gmf=gmf_coll,
+                gmf=gmf,
                 gmvs=gmvs,
                 site_id=site_id)
 
-    return gmf_coll
+    return gmf
 
 
 def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
@@ -647,8 +645,8 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     rlz = models.LtRealization.objects.create(
         hazard_calculation=hazard_job.hazard_calculation,
         ordinal=1, seed=1, weight=None,
-        sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-        is_complete=False, total_items=1, completed_items=1)
+        sm_lt_path="test_sm", gsim_lt_path="test_gsim")
+
     if output_type == "curve":
         models.HazardCurve.objects.create(
             lt_realization=rlz,
@@ -684,9 +682,11 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
                 site_id=site_id,
                 gmvs=[0.1, 0.2, 0.3])
 
+    elif output_type in ("ses", "gmf"):
+        hazard_output = create_gmf_data_records(hazard_job, rlz)[0].gmf
+
     else:
-        hazard_output = create_gmf_data_records(
-            hazard_job, rlz)[0].gmf
+        raise RuntimeError('Unexpected output_type: %s' % output_type)
 
     hazard_job.status = "complete"
     hazard_job.save()
@@ -707,20 +707,21 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     return job, set(params['inputs'])
 
 
-def get_ruptures(job, ses_collection, num):
+def create_ses_ruptures(job, ses_collection, num):
     """
-    :returns: a list of newly created ruptures associated with
-    `job` and an instance of
-    :class:`openquake.engine.db.models.HazardCalculation`. It also
-    creates a father :class:`openquake.engine.db.models.SES`. Each
-    rupture has a magnitude ranging from 0 to 10 and no geographic
+    :param job:
+        the current job, an instance of `openquake.engine.db.models.OqJob`
+    :param ses_collection:
+        an instance of :class:`openquake.engine.db.models.SESCollection`
+        to be associated with the newly created SES object
+    :param int num:
+        the number of ruptures to create
+    :returns:
+        a list of newly created ruptures associated with `job`.
+
+    It also creates a father :class:`openquake.engine.db.models.SES`.
+    Each rupture has a magnitude ranging from 0 to 10 and no geographic
     information.
-
-    :param ses_collection: an instance of
-    :class:`openquake.engine.db.models.SESCollection` to be associated
-    with the newly created SES object
-
-    :param int num: the number of ruptures to create
     """
     ses = models.SES.objects.create(
         ses_collection=ses_collection,
