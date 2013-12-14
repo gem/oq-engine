@@ -92,11 +92,9 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz):
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     source = {}
-    with EnginePerformanceMonitor(
-            'filtering sources', job_id, compute_ses):
-        for src, ses, seed in src_ses_seeds:
-            if src.source_id not in source:
-                source[src.source_id] = src
+    for src, ses, seed in src_ses_seeds:
+        if src.source_id not in source:
+            source[src.source_id] = src
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
