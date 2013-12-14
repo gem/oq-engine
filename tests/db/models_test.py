@@ -168,7 +168,7 @@ class SESRuptureTestCase(unittest.TestCase):
 
         lt_rlz = models.LtRealization.objects.create(
             hazard_calculation=job.hazard_calculation, ordinal=0, seed=0,
-            sm_lt_path='foo', gsim_lt_path='bar', total_items=0)
+            sm_lt_path='foo', gsim_lt_path='bar')
         output = models.Output.objects.create(
             oq_job=job, display_name='test', output_type='ses')
         ses_coll = models.SESCollection.objects.create(
@@ -262,13 +262,11 @@ class GmfsPerSesTestCase(unittest.TestCase):
         rlz1 = models.LtRealization.objects.create(
             hazard_calculation=job.hazard_calculation,
             ordinal=1, seed=1, weight=None,
-            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-            is_complete=False, total_items=1, completed_items=1)
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim")
         rlz2 = models.LtRealization.objects.create(
             hazard_calculation=job.hazard_calculation,
             ordinal=2, seed=1, weight=None,
-            sm_lt_path="test_sm", gsim_lt_path="test_gsim",
-            is_complete=False, total_items=1, completed_items=1)
+            sm_lt_path="test_sm", gsim_lt_path="test_gsim_2")
         ses_coll1 = models.SESCollection.objects.create(
             output=models.Output.objects.create_output(
                 job, "Test SES Collection 1", "ses"),
@@ -288,11 +286,9 @@ class GmfsPerSesTestCase(unittest.TestCase):
         cls.investigation_time = job.hazard_calculation.investigation_time
 
     def test_branch_lt(self):
-        all_gmfs = list(self.gmf_coll1)
-        self.assertEqual(len(all_gmfs), 1)
-        gmfs = all_gmfs[0]
+        [gmfs] = self.gmf_coll1
         expected = """\
-GMFsPerSES(investigation_time=%f, stochastic_event_set_id=%d,
+GMFsPerSES(investigation_time=%f, stochastic_event_set_id=1,
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.31000, Y= 38.22500, GMV=0.1000000>
 <X= 15.48000, Y= 38.09100, GMV=0.1000000>
@@ -311,8 +307,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.48100, Y= 38.25000, GMV=0.3000000>
 <X= 15.56500, Y= 38.17000, GMV=0.3000000>
 <X= 15.71000, Y= 37.22500, GMV=0.3000000>))""" % (
-            (self.investigation_time, gmfs.stochastic_event_set_id) +
-            self.ruptures1)
+            (self.investigation_time,) + self.ruptures1)
         self.assertEqual(str(gmfs), expected)
 
 
@@ -326,7 +321,7 @@ class PrepGeometryTestCase(unittest.TestCase):
             'region': '-1 1 1 1 1 -1 -1 -1',
             # with randomly placed commas
             'region_constraint': (
-            '-0.5 0.5 0.0, 2.0 0.5 0.5, 0.5 -0.5 -0.5, -0.5'),
+                '-0.5 0.5 0.0, 2.0 0.5 0.5, 0.5 -0.5 -0.5, -0.5'),
             'something': 'else',
         }
 
