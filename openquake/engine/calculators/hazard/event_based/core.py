@@ -33,7 +33,6 @@ For more information on computing ground motion fields, see
 
 import math
 import random
-import itertools
 import collections
 
 import numpy.random
