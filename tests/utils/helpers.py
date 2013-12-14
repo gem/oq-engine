@@ -570,7 +570,7 @@ def create_gmf_from_csv(job, fname):
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             job, "Test SES Collection", "ses"),
-        lt_realization=gmf_coll.lt_realization)
+        lt_realization=gmf.lt_realization)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
