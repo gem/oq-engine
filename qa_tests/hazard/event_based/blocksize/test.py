@@ -16,11 +16,12 @@
 This is a regression test with the goal of avoiding the reintroduction
 of a dependence from the configuration parameter concurrent_tasks.
 We use a source model with 398 sources and a single SES.
-Due to the distance filtering only 7 sources are relevant.
+Due to the distance filtering only 7 sources are relevant, but some
+of them are area sources generating a lot of point sources.
 We test the independence from the parameter concurrent_tasks, which
 determines the preferred_block_size = ceil(num_sources/concurrent_tasks)
-with 8 concurrent tasks the preferred_block_size is 1;
-with 4 concurrent tasks the preferred_block_size is 2.
+with 4 concurrent tasks the preferred_block_size is 499.
+with 8 concurrent tasks the preferred_block_size is 250.
 """
 
 import os
