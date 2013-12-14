@@ -4,14 +4,14 @@ Boore, Joyner and Fumal 1997
 
 .. module:: openquake.hazardlib.gsim.boore_1997
 
-.. autoclass:: BooreEtAl1997
+.. autoclass:: BooreEtAl1997GeometricMean
     :members:
 
-.. autoclass:: BooreEtAl1997Unspecified
+.. autoclass:: BooreEtAl1997GeometricMeanUnspecified
     :members:
 
-.. autoclass:: BooreEtAl1997Arbitrary
+.. autoclass:: BooreEtAl1997ArbitraryHorizontal
     :members:
 
-.. autoclass:: BooreEtAl1997ArbitraryUnspecified
+.. autoclass:: BooreEtAl1997ArbitraryHorizontalUnspecified
     :members:

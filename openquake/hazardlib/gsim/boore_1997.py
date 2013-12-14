@@ -14,9 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`BooreEtAl1997`, :class:'BooreEtAl1997Unspecified'
-    :class:'BooreEtAl1997Arbitrary' and
-    :class:'BooreEtAl1997ArbitraryUnspecfied'
+Module exports :class:`BooreEtAl1997GeometricMean`,
+               :class:'BooreEtAl1997GeometricMeanUnspecified'
+               :class:'BooreEtAl1997ArbitraryHorizontal' and
+               :class:'BooreEtAl1997ArbitraryHorizontalUnspecfied'
 """
 from __future__ import division
 
@@ -27,7 +28,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class BooreEtAl1997(GMPE):
+class BooreEtAl1997GeometricMean(GMPE):
     """
     Implements GMPE developed by David M. Boore and William B. Joyner and
     Thomas E. Fumal (1997). "Equations for Estimating Horizontal Response
@@ -144,18 +145,21 @@ class BooreEtAl1997(GMPE):
         """
         return C['Bv'] * np.log(vs30 / C['Va'])
 
-    #: Coefficient table is constructed from values in tables 6, 7 and 8
+    #: Coefficient table is constructed from values in Table 8
+    #: Note that for periods between 0.1 s and 0.18s the inter-event term
+    #: is originally 0. As this was causing test warnings we have set this
+    #: to an arbitrarily infinitessimal number
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      B1ss      B1rv      B1all     B2       B3        B5        Bv        Va          h        sigma1  sigma_c  sigma_r  sigma_e sigma_tot
     pga      -0.3130   -0.1170   -0.2420   0.5270    0.0000   -0.7780   -0.3710   1396.0000   5.5700   0.4310   0.1600   0.4600   0.1840    0.4950
-    0.1000    1.0060    1.0870    1.0590   0.7530   -0.2260   -0.9340   -0.2120   1112.0000   6.2700   0.4400   0.1340   0.4600   0.0000    0.4600
-    0.1100    1.0720    1.1640    1.1300   0.7320   -0.2300   -0.9370   -0.2110   1291.0000   6.6500   0.4370   0.1410   0.4590   0.0000    0.4590
-    0.1200    1.1090    1.2150    1.1740   0.7210   -0.2330   -0.9390   -0.2150   1452.0000   6.9100   0.4370   0.1480   0.4610   0.0000    0.4610
-    0.1300    1.1280    1.2460    1.2000   0.7110   -0.2330   -0.9390   -0.2210   1596.0000   7.0800   0.4350   0.1530   0.4610   0.0000    0.4610
-    0.1400    1.1350    1.2610    1.2080   0.7070   -0.2300   -0.9380   -0.2280   1718.0000   7.1800   0.4350   0.1580   0.4630   0.0000    0.4630
-    0.1500    1.1280    1.2640    1.2040   0.7020   -0.2280   -0.9370   -0.2380   1820.0000   7.2300   0.4350   0.1630   0.4650   0.0000    0.4650
-    0.1600    1.1120    1.2570    1.1920   0.7020   -0.2260   -0.9350   -0.2480   1910.0000   7.2400   0.4350   0.1660   0.4660   0.0000    0.4660
-    0.1700    1.0900    1.2420    1.1730   0.7020   -0.2210   -0.9330   -0.2580   1977.0000   7.2100   0.4350   0.1690   0.4670   0.0000    0.4670
+    0.1000    1.0060    1.0870    1.0590   0.7530   -0.2260   -0.9340   -0.2120   1112.0000   6.2700   0.4400   0.1340   0.4600    1E-20    0.4600
+    0.1100    1.0720    1.1640    1.1300   0.7320   -0.2300   -0.9370   -0.2110   1291.0000   6.6500   0.4370   0.1410   0.4590    1E-20    0.4590
+    0.1200    1.1090    1.2150    1.1740   0.7210   -0.2330   -0.9390   -0.2150   1452.0000   6.9100   0.4370   0.1480   0.4610    1E-20    0.4610
+    0.1300    1.1280    1.2460    1.2000   0.7110   -0.2330   -0.9390   -0.2210   1596.0000   7.0800   0.4350   0.1530   0.4610    1E-20    0.4610
+    0.1400    1.1350    1.2610    1.2080   0.7070   -0.2300   -0.9380   -0.2280   1718.0000   7.1800   0.4350   0.1580   0.4630    1E-20    0.4630
+    0.1500    1.1280    1.2640    1.2040   0.7020   -0.2280   -0.9370   -0.2380   1820.0000   7.2300   0.4350   0.1630   0.4650    1E-20    0.4650
+    0.1600    1.1120    1.2570    1.1920   0.7020   -0.2260   -0.9350   -0.2480   1910.0000   7.2400   0.4350   0.1660   0.4660    1E-20    0.4660
+    0.1700    1.0900    1.2420    1.1730   0.7020   -0.2210   -0.9330   -0.2580   1977.0000   7.2100   0.4350   0.1690   0.4670    1E-20    0.4670
     0.1800    1.0630    1.2220    1.1510   0.7050   -0.2160   -0.9300   -0.2700   2037.0000   7.1600   0.4350   0.1730   0.4680   0.0020    0.4680
     0.1900    1.0320    1.1980    1.1220   0.7090   -0.2120   -0.9270   -0.2810   2080.0000   7.1000   0.4350   0.1760   0.4690   0.0050    0.4690
     0.2000    0.9990    1.1700    1.0890   0.7110   -0.2070   -0.9240   -0.2920   2118.0000   7.0200   0.4350   0.1770   0.4700   0.0090    0.4700
@@ -197,7 +201,7 @@ class BooreEtAl1997(GMPE):
     """)
 
 
-class BooreEtAl1997Unspecified(BooreEtAl1997):
+class BooreEtAl1997GeometricMeanUnspecified(BooreEtAl1997GeometricMean):
     """
     Where the mechanism need not be specified it is preferable to use
     this instance of the Boore et al (1997) GMPE, which omits the need for
@@ -213,7 +217,7 @@ class BooreEtAl1997Unspecified(BooreEtAl1997):
         return C['B1all']
 
 
-class BooreEtAl1997Arbitrary(BooreEtAl1997):
+class BooreEtAl1997ArbitraryHorizontal(BooreEtAl1997GeometricMean):
     """
     Returns the ground motion values for the arbitrary horizontal component,
     rather than the geometric mean.
@@ -243,7 +247,8 @@ class BooreEtAl1997Arbitrary(BooreEtAl1997):
         return stddevs
 
 
-class BooreEtAl1997ArbitraryUnspecified(BooreEtAl1997Arbitrary):
+class BooreEtAl1997ArbitraryHorizontalUnspecified(
+        BooreEtAl1997ArbitraryHorizontal):
     """
     As for the :class:'BooreEtAl1997Arbitrary', here defined for the case
     when the style of faulting is not specified
