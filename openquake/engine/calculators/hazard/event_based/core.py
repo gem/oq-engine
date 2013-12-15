@@ -59,8 +59,6 @@ from openquake.engine.performance import EnginePerformanceMonitor
 #: hazard calculator.
 DEFAULT_GMF_REALIZATIONS = 1
 
-BLOCK_SIZE = 5000  # TODO: put this in openquake.cfg
-
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
 
@@ -295,9 +293,13 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             # compute the associated seeds
             rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
                              for _ in range(len(rupture_ids))]
+
             # we split on ruptures to avoid running out of memory
-            rupt_iter = block_splitter(rupture_ids, BLOCK_SIZE)
-            seed_iter = block_splitter(rupture_seeds, BLOCK_SIZE)
+            preferred_block_size = int(
+                math.ceil(float(len(rupture_ids)) / self.concurrent_tasks()))
+            logs.LOG.info('Using block size %d', preferred_block_size)
+            rupt_iter = block_splitter(rupture_ids, preferred_block_size)
+            seed_iter = block_splitter(rupture_seeds, preferred_block_size)
             for i, (rupts, seeds) in enumerate(zip(rupt_iter, seed_iter)):
                 yield self.job.id, gmf_coll, gsims, rupts, seeds, i
 
