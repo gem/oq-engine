@@ -139,7 +139,7 @@ def compute_gmf(job_id, gmf_coll, gsims, rupture_ids, rupture_seeds, task_no):
     Compute and save the GMFs for all the ruptures in the given block.
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    imts = map(from_string, hc.intensity_measure_types_and_levels)
+    imts = map(from_string, hc.intensity_measure_types)
     params = dict(
         correl_model=general.get_correl_model(hc),
         truncation_level=hc.truncation_level,
