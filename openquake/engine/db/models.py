@@ -1924,7 +1924,7 @@ class GmfData(djm.Model):
     respective geographical locations.
     """
     gmf = djm.ForeignKey('Gmf')
-    ses = djm.ForeignKey('SES', null=True)
+    task_no = djm.IntegerField(null=False)
     imt = djm.TextField(choices=IMT_CHOICES)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
@@ -1935,7 +1935,7 @@ class GmfData(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_data'
-        ordering = ['gmf', 'ses']
+        ordering = ['gmf', 'task_no']
 
 
 def get_gmvs_per_site(output, imt=None, sort=sorted):
