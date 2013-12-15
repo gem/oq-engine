@@ -371,23 +371,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.)
         """
-        # Parse risk models.
-        self.parse_risk_models()
-
-        # Deal with the site model and compute site data for the calculation
-        # If no site model file was specified, reference parameters are used
-        # for all sites.
-        self.initialize_site_model()
-
-        # Parse logic trees and create source Inputs.
-        self.initialize_sources()
-
-        # Now bootstrap the logic tree realizations and related data.
-        # This defines for us the "work" that needs to be done when we reach
-        # the `execute` phase.
-        rlz_callbacks = [self.initialize_ses_db_records]
-
-        self.initialize_realizations(rlz_callbacks=rlz_callbacks)
+        super(EventBasedHazardCalculator, self).pre_execute()
+        for rlz in self._get_realizations():
+            self.initialize_ses_db_records(rlz)
 
     def post_process(self):
         """

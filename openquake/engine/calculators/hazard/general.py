@@ -23,6 +23,7 @@ import random
 import collections
 
 import numpy
+import mock
 
 from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
@@ -212,8 +213,21 @@ class BaseHazardCalculator(base.Calculator):
         return models.LtRealization.objects\
             .filter(hazard_calculation=self.hc).order_by('id')
 
+    def pre_execute(self):
+        """
+        Initialize risk models, site model, sources and realizations
+        """
+        self.parse_risk_models()
+        self.initialize_site_model()
+        num_sources = self.initialize_sources()
+        if not isinstance(num_sources, mock.Mock):  # horrible hack
+            js = models.JobStats.objects.get(oq_job=self.job)
+            js.num_sources = num_sources
+            js.save()
+        self.initialize_realizations()
+
     @EnginePerformanceMonitor.monitor
-    def initialize_sources(self):
+    def initialize_sources(self, save_stats=False):
         """
         Parse source models and validate source logic trees. It also
         filters the sources far away and apply uncertainties to the
@@ -229,16 +243,15 @@ class BaseHazardCalculator(base.Calculator):
         # this is not bad because for very large source models there are
         # typically very few realizations; moreover, the filtering will remove
         # most of the sources, so the memory occupation is typically low
-        num_sources = []  # the number of sources per sm_lt_path, saved in job_stats
+        num_sources = []  # the number of sources per sm_lt_path
         for sm, path in self.smlt.get_sm_paths():
             smpath = tuple(path)
-            apply_uncertainties = self.smlt.make_apply_uncertainties(path)
-            fname = os.path.join(self.hc.base_path, sm)
-            for sourc in source.parse_source_model_smart(
-                    fname, self.hc.rupture_mesh_spacing,
+            for src in source.parse_source_model_smart(
+                    os.path.join(self.hc.base_path, sm),
+                    self.smlt.make_apply_uncertainties(path),
+                    self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization):
-                src = apply_uncertainties(sourc)
                 # filtering far way sources not affecting the site collection
                 if self.hc.sites_affected_by(src):
                     if src.__class__.__name__ == 'PointSource':
@@ -249,9 +262,7 @@ class BaseHazardCalculator(base.Calculator):
                 len(self.sources_per_ltpath[smpath, 'other'])
             logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
             num_sources.append(n)
-        js = models.JobStats.objects.get(oq_job=self.job)
-        js.num_sources = num_sources
-        js.save()
+        return num_sources
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -345,7 +356,7 @@ class BaseHazardCalculator(base.Calculator):
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
     @transaction.commit_on_success(using='job_init')
-    def initialize_realizations(self, rlz_callbacks=None):
+    def initialize_realizations(self):
         """
         Create records for the `hzrdr.lt_realization`.
 
@@ -354,40 +365,25 @@ class BaseHazardCalculator(base.Calculator):
         values are populated). In both cases we record the logic tree paths
         for both trees in the `lt_realization` record, as well as ordinal
         number of the realization (zero-based).
-
-        :param rlz_callbacks:
-            Optionally, you can specify a list of callbacks for each
-            realization.  In the case of the classical hazard calculator, for
-            example, we would include a callback function to create initial
-            records for temporary hazard curve result data.
-
-            Callbacks should accept a single argument:
-            A :class:`~openquake.engine.db.models.LtRealization` object.
         """
         logs.LOG.progress("initializing realizations")
         if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
             # random sampling of paths
-            self._initialize_realizations_montecarlo(
-                rlz_callbacks=rlz_callbacks)
+            self._initialize_realizations_montecarlo()
         else:
             # full paths enumeration
-            self._initialize_realizations_enumeration(
-                rlz_callbacks=rlz_callbacks)
+            self._initialize_realizations_enumeration()
 
-    def _initialize_realizations_enumeration(self, rlz_callbacks=None):
+    def _initialize_realizations_enumeration(self):
         """
         Perform full paths enumeration of logic trees and populate
         lt_realization table.
-
-        :param rlz_callbacks:
-            See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
         ltp = logictree.LogicTreeProcessor.from_hc(hc)
         for i, path_info in enumerate(ltp.enumerate_paths()):
             source_model_filename, weight, sm_lt_path, gsim_lt_path = path_info
-
-            lt_rlz = models.LtRealization.objects.create(
+            models.LtRealization.objects.create(
                 hazard_calculation=hc,
                 ordinal=i,
                 seed=None,
@@ -395,19 +391,10 @@ class BaseHazardCalculator(base.Calculator):
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path)
 
-            # Run realization callback (if any) to do additional initialization
-            # for each realization:
-            if rlz_callbacks is not None:
-                for cb in rlz_callbacks:
-                    cb(lt_rlz)
-
-    def _initialize_realizations_montecarlo(self, rlz_callbacks=None):
+    def _initialize_realizations_montecarlo(self):
         """
         Perform random sampling of both logic trees and populate lt_realization
         table.
-
-        :param rlz_callbacks:
-            See :meth:`initialize_realizations` for more info.
         """
         # Each realization will have two seeds:
         # One for source model logic tree, one for GSIM logic tree.
@@ -428,19 +415,13 @@ class BaseHazardCalculator(base.Calculator):
             gsim_lt_path = ltp.sample_gmpe_logictree(
                 rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
-            lt_rlz = models.LtRealization.objects.create(
+            models.LtRealization.objects.create(
                 hazard_calculation=self.hc,
                 ordinal=i,
                 seed=seed,
                 weight=None,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path)
-
-            # Run realization callback (if any) to do additional initialization
-            # for each realization:
-            if rlz_callbacks is not None:
-                for cb in rlz_callbacks:
-                    cb(lt_rlz)
 
             # update the seed for the next realization
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)

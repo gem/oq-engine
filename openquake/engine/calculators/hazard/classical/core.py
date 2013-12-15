@@ -126,14 +126,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.).
         """
-        self.parse_risk_models()
-        self.initialize_site_model()
-        self.initialize_sources()
-
-        # Now bootstrap the logic tree realizations and related data.
-        # This defines for us the "work" that needs to be done when we reach
-        # the `execute` phase.
-        self.initialize_realizations()
+        super(ClassicalHazardCalculator, self).pre_execute()
         imtls = self.hc.intensity_measure_types_and_levels
         self.curves_by_rlz = make_zeros(
             self._get_realizations(), self.hc.site_collection, imtls)
