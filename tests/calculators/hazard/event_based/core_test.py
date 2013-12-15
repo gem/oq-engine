@@ -90,21 +90,22 @@ class EventBasedHazardTestCase(unittest.TestCase):
         rupture_ids = range(2)
         ruptures = [FakeRupture(i, trt) for i in rupture_ids]
         rupture_seeds = rupture_ids
+        pga = PGA()
         gmv_dict, rup_dict = core._compute_gmf(
-            params, PGA(), {trt: gsim}, site_coll, ruptures, rupture_seeds)
+            params, [pga], {trt: gsim}, site_coll, ruptures, rupture_seeds)
         expected_rups = {
-            0: rupture_ids,
-            1: rupture_ids,
-            2: rupture_ids,
-            3: rupture_ids,
-            4: rupture_ids,
+            (pga, 0): rupture_ids,
+            (pga, 1): rupture_ids,
+            (pga, 2): rupture_ids,
+            (pga, 3): rupture_ids,
+            (pga, 4): rupture_ids,
         }
         expected_gmvs = {
-            0: [0.122149047040728, 0.0813899249039753],
-            1: [0.0541662667863476, 0.02136369236082],
-            2: [0.0772246502768338, 0.0226182956091826],
-            3: [0.166062666449449, 0.0164127269047494],
-            4: [0.133588538354143, 0.0529987707352876]
+            (pga, 0): [0.122149047040728, 0.0813899249039753],
+            (pga, 1): [0.0541662667863476, 0.02136369236082],
+            (pga, 2): [0.0772246502768338, 0.0226182956091826],
+            (pga, 3): [0.166062666449449, 0.0164127269047494],
+            (pga, 4): [0.133588538354143, 0.0529987707352876]
         }
         numpy.testing.assert_equal(rup_dict, expected_rups)
         for i, gmvs in expected_gmvs.iteritems():
@@ -198,13 +199,13 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(num_ruptures, 180)
 
         # check that we generated the right number of rows in GmfData
-        # 1210 = 121 sites * 5 ses * 2 IMTs
+        # 242 = 121 sites * 2 IMTs
         num_gmf1 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz1).count()
         num_gmf2 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz2).count()
-        self.assertEqual(num_gmf1, 1210)
-        self.assertEqual(num_gmf2, 1210)
+        self.assertEqual(num_gmf1, 242)
+        self.assertEqual(num_gmf2, 242)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
