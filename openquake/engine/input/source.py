@@ -458,6 +458,7 @@ def _mfd_to_hazardlib(src_mfd, bin_width):
         )
 
 
+# this is obsolete and will be removed (MS)
 def area_source_to_point_sources(area_src, area_src_disc):
     """
     Split an area source into a generator of point sources.
@@ -513,6 +514,7 @@ def area_source_to_point_sources(area_src, area_src_disc):
         yield pt
 
 
+# this is obsolete and will be removed (MS)
 def optimize_source_model(input_path, area_src_disc, output_path):
     """
     Parse the source model located at ``input_path``, discretize area sources
@@ -540,30 +542,84 @@ def optimize_source_model(input_path, area_src_disc, output_path):
     return output_path
 
 
-def parse_source_model_smart(fname, rupture_mesh_spacing,
+def area_to_point_sources(area_src, area_src_disc):
+    """
+    Split an area source into a generator of point sources.
+
+    MFDs will be rescaled appropriately for the number of points in the area
+    mesh.
+
+    :param area_src:
+        :class:`openquake.hazardlib.source.AreaSource`
+    :param float area_src_disc:
+        Area source discretization step, in kilometers.
+    """
+    mesh = area_src.polygon.discretize(area_src_disc)
+    num_points = len(mesh)
+    area_mfd = area_src.mfd
+
+    if isinstance(area_mfd, mfd.TruncatedGRMFD):
+        new_a_val = math.log10(10 ** area_mfd.a_val / float(num_points))
+        new_mfd = mfd.TruncatedGRMFD(
+            a_val=new_a_val,
+            b_val=area_mfd.b_val,
+            bin_width=area_mfd.bin_width,
+            min_mag=area_mfd.min_mag,
+            max_mag=area_mfd.max_mag)
+    elif isinstance(area_mfd, mfd.EvenlyDiscretizedMFD):
+        new_occur_rates = [float(x) / num_points
+                           for x in area_mfd.occurrence_rates]
+        new_mfd = mfd.EvenlyDiscretizedMFD(
+            min_mag=area_mfd.min_mag,
+            bin_width=area_mfd.bin_width,
+            occurrence_rates=new_occur_rates)
+
+    for i, (lon, lat) in enumerate(izip(mesh.lons, mesh.lats)):
+        pt = source.PointSource(
+            # Generate a new ID and name
+            source_id='%s-%s' % (area_src.source_id, i),
+            name='%s-%s' % (area_src.name, i),
+            tectonic_region_type=area_src.tectonic_region_type,
+            mfd=new_mfd,
+            rupture_mesh_spacing=area_src.rupture_mesh_spacing,
+            magnitude_scaling_relationship=
+            area_src.magnitude_scaling_relationship,
+            rupture_aspect_ratio=area_src.rupture_aspect_ratio,
+            upper_seismogenic_depth=area_src.upper_seismogenic_depth,
+            lower_seismogenic_depth=area_src.lower_seismogenic_depth,
+            location=geo.Point(lon, lat),
+            nodal_plane_distribution=area_src.nodal_plane_distribution,
+            hypocenter_distribution=area_src.hypocenter_distribution)
+        yield pt
+
+
+def parse_source_model_smart(fname, apply_uncertainties,
+                             rupture_mesh_spacing,
                              width_of_mfd_bin,
                              area_source_discretization):
     """
     Parse a NRML source model and yield hazardlib sources.
-    Notice that area sources are automatically splitted into point sources.
+    Notice that:
+
+    1) uncertainties are applied first
+    2) area sources are splitted into point sources.
 
     :param str fname: the full pathname of the source model file
+    :param apply_uncertainties: a function modifying the sources
     :param rupture_mesh_spacing: the rupture mesh spacing
     :param width_of_mfd_bin: the width of the MFD bin
     :param area_source_discretization: the area discretization parameter
     """
     for src_nrml in haz_parsers.SourceModelParser(fname).parse():
-        if isinstance(src_nrml, nrml_models.AreaSource):
-            for pt in area_source_to_point_sources(
-                    src_nrml, area_source_discretization):
-                yield nrml_to_hazardlib(
-                    pt,
-                    rupture_mesh_spacing,
-                    width_of_mfd_bin,
-                    area_source_discretization)
+        src = nrml_to_hazardlib(
+            src_nrml,
+            rupture_mesh_spacing,
+            width_of_mfd_bin,
+            area_source_discretization)
+        # the uncertainties must be applied to the original source
+        apply_uncertainties(src)
+        if isinstance(src, source.AreaSource):
+            for pt in area_to_point_sources(src, area_source_discretization):
+                yield pt
         else:
-            yield nrml_to_hazardlib(
-                src_nrml,
-                rupture_mesh_spacing,
-                width_of_mfd_bin,
-                area_source_discretization)
+            yield src

@@ -950,7 +950,6 @@ class SourceModelLogicTree(BaseLogicTree):
         def apply_uncertainties(source):
             for branchset, value in branchsets_and_uncertainties:
                 branchset.apply_uncertainty(value, source)
-            return source
         return apply_uncertainties
 
 
