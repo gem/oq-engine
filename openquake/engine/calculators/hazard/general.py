@@ -262,7 +262,7 @@ class BaseHazardCalculator(base.Calculator):
                         self.sources_per_ltpath[smpath, 'other'].append(src)
             n = len(self.sources_per_ltpath[smpath, 'point']) + \
                 len(self.sources_per_ltpath[smpath, 'other'])
-            logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
+            logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
             num_sources.append(n)
         return num_sources
 

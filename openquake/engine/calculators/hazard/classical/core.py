@@ -76,21 +76,18 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
 
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
-    with EnginePerformanceMonitor(
-            'computing hazard curves', job_id,
-            compute_hazard_curves, tracing=True):
-        curves = openquake.hazardlib.calc.hazard_curve.\
-            hazard_curves_poissonian(**calc_kwargs)
-        curves_by_imt = []
-        for imt in sorted(imts):
-            if (curves[imt] == 0.0).all():
-                # shortcut for filtered sources giving no contribution;
-                # this is essential for performance, we want to avoid
-                # returning big arrays of zeros (MS)
-                curves_by_imt.append(None)
-            else:
-                curves_by_imt.append(curves[imt])
-        return curves_by_imt, lt_rlz.ordinal
+    curves = openquake.hazardlib.calc.hazard_curve.hazard_curves_poissonian(
+        **calc_kwargs)
+    curves_by_imt = []
+    for imt in sorted(imts):
+        if (curves[imt] == 0.0).all():
+            # shortcut for filtered sources giving no contribution;
+            # this is essential for performance, we want to avoid
+            # returning big arrays of zeros (MS)
+            curves_by_imt.append(None)
+        else:
+            curves_by_imt.append(curves[imt])
+    return curves_by_imt, lt_rlz.ordinal
 
 
 def make_zeros(realizations, sites, imtls):
