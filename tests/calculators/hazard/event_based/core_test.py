@@ -156,12 +156,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
     def test_initialize_ses_db_records(self):
         hc = self.job.hazard_calculation
-
-        # Initialize sources as a setup for the test:
-        self.calc.initialize_sources()
-
-        self.calc.initialize_realizations(
-            rlz_callbacks=[self.calc.initialize_ses_db_records])
+        self.calc.pre_execute()
 
         outputs = models.Output.objects.filter(
             oq_job=self.job, output_type='ses')

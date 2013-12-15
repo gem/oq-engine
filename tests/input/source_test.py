@@ -20,6 +20,8 @@ import unittest
 
 from xml.etree import ElementTree
 
+from numpy.testing import assert_allclose
+
 from openquake.hazardlib import geo
 from openquake.hazardlib import mfd
 from openquake.hazardlib import pmf
@@ -28,7 +30,6 @@ from openquake.hazardlib import source
 from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib import models as nrml_models
 
-from openquake.engine.db import models
 from openquake.engine.input import source as source_input
 
 from tests.utils import helpers
@@ -779,3 +780,84 @@ class OptimizeSourceModelTestCase(unittest.TestCase):
         finally:
             os.unlink(in_file)
             os.unlink(out_file)
+
+
+class AreaToPointsTestCase(unittest.TestCase):
+    """
+    Tests for
+    :func:`openquake.engine.input.source.area_to_point_sources`.
+    """
+    def test_area_with_tgr_mfd(self):
+        trunc_mfd = mfd.TruncatedGRMFD(
+            a_val=2.1, b_val=4.2, bin_width=0.1, min_mag=6.55, max_mag=8.91
+        )
+        np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
+        np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
+        npd = pmf.PMF(
+            [(decimal.Decimal("0.3"), np1), (decimal.Decimal("0.7"), np2)]
+        )
+        hd = pmf.PMF(
+            [(decimal.Decimal("0.5"), 4.0), (decimal.Decimal("0.5"), 8.0)]
+        )
+        polygon = geo.Polygon(
+            [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
+             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
+        )
+        area = source.AreaSource(
+            source_id="1",
+            name="source A",
+            tectonic_region_type="Active Shallow Crust",
+            mfd=trunc_mfd,
+            rupture_mesh_spacing=MESH_SPACING,
+            magnitude_scaling_relationship=scalerel.PeerMSR(),
+            rupture_aspect_ratio=1.0,
+            upper_seismogenic_depth=0.0,
+            lower_seismogenic_depth=10.0,
+            nodal_plane_distribution=npd,
+            hypocenter_distribution=hd,
+            polygon=polygon, area_discretization=AREA_SRC_DISC
+        )
+        actual = list(source_input.area_to_point_sources(area, 10))
+        self.assertEqual(len(actual), 96)  # expected 96 points
+        self.assertEqual(actual[0].mfd.a_val, 0.1177287669604317)
+
+    def test_area_with_incr_mfd(self):
+        incr_mfd = mfd.EvenlyDiscretizedMFD(
+            min_mag=6.55, bin_width=0.1,
+            occurrence_rates=[
+                0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
+                5.080653E-4,
+            ]
+        )
+        np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
+        np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
+        npd = pmf.PMF(
+            [(decimal.Decimal("0.3"), np1), (decimal.Decimal("0.7"), np2)]
+        )
+        hd = pmf.PMF(
+            [(decimal.Decimal("0.5"), 4.0), (decimal.Decimal("0.5"), 8.0)]
+        )
+        polygon = geo.Polygon(
+            [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
+             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
+        )
+        area = source.AreaSource(
+            source_id="1",
+            name="source A",
+            tectonic_region_type="Active Shallow Crust",
+            mfd=incr_mfd,
+            rupture_mesh_spacing=MESH_SPACING,
+            magnitude_scaling_relationship=scalerel.PeerMSR(),
+            rupture_aspect_ratio=1.0,
+            upper_seismogenic_depth=0.0,
+            lower_seismogenic_depth=10.0,
+            nodal_plane_distribution=npd,
+            hypocenter_distribution=hd,
+            polygon=polygon, area_discretization=AREA_SRC_DISC
+        )
+        actual = list(source_input.area_to_point_sources(area, 10))
+        self.assertEqual(len(actual), 96)  # expected 96 points
+        assert_allclose(
+            actual[0].mfd.occurrence_rates,
+            [1.10572802083e-05, 9.197044479166666e-06, 7.6497684375e-06,
+             6.3627999999999995e-06, 5.292346875e-06])
