@@ -819,7 +819,7 @@ class AreaToPointsTestCase(unittest.TestCase):
         )
         actual = list(source_input.area_to_point_sources(area, 10))
         self.assertEqual(len(actual), 96)  # expected 96 points
-        self.assertEqual(actual[0].mfd.a_val, 0.1177287669604317)
+        self.assertAlmostEqual(actual[0].mfd.a_val, 0.1177287669604317)
 
     def test_area_with_incr_mfd(self):
         incr_mfd = mfd.EvenlyDiscretizedMFD(
