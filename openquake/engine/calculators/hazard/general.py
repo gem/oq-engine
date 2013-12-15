@@ -227,7 +227,7 @@ class BaseHazardCalculator(base.Calculator):
         self.initialize_realizations()
 
     @EnginePerformanceMonitor.monitor
-    def initialize_sources(self, save_stats=False):
+    def initialize_sources(self):
         """
         Parse source models and validate source logic trees. It also
         filters the sources far away and apply uncertainties to the
