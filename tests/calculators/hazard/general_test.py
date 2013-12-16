@@ -203,3 +203,33 @@ class ParseRiskModelsTestCase(unittest.TestCase):
             patches[i].stop()
 
         return job
+
+
+class InitializeSourcesTestCase(unittest.TestCase):
+    # this is a based on a demo with 2 sources and 2 sites
+    @classmethod
+    def setUpClass(cls):
+        cfg = helpers.get_data_path(
+            'calculators/hazard/classical/haz_map_test_job.ini')
+        job = helpers.get_hazard_job(cfg)
+        hc = job.hazard_calculation
+        cls.calc = get_calculator_class('hazard', hc.calculation_mode)(job)
+        cls.calc.initialize_site_model()
+        assert len(hc.site_collection) == 2, len(hc.site_collection)
+
+    def test_few_sites(self):
+        # site_collection is smaller than FILTERING_THRESHOLD:
+        # prefiltering is enabled and sources are filtered
+        n = self.calc.initialize_sources()
+        self.assertEqual(n, 1)  # 1 source instead of 2
+
+    def test_many_sites(self):
+        # site_collection is bigger than FILTERING_THRESHOLD:
+        # sources are not prefiltered
+        ft = models.FILTERING_THRESHOLD
+        try:
+            models.FILTERING_THRESHOLD = 0
+            n = self.calc.initialize_sources()
+            self.assertEqual(n, 2)  # the original 2 sources
+        finally:
+            models.FILTERING_THRESHOLD = ft

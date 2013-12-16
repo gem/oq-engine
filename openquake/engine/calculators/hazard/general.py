@@ -237,6 +237,7 @@ class BaseHazardCalculator(base.Calculator):
             n = len(self.sources_per_model[sm, 'point']) + \
                 len(self.sources_per_model[sm, 'other'])
             logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
+            return n
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
