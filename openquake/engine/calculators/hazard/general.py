@@ -250,16 +250,15 @@ class BaseHazardCalculator(base.Calculator):
             smpath = tuple(path)
             for src in source.parse_source_model_smart(
                     os.path.join(self.hc.base_path, sm),
+                    self.hc.sites_affected_by,
                     self.smlt.make_apply_uncertainties(path),
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization):
-                # filtering far way sources not affecting the site collection
-                if self.hc.sites_affected_by(src):
-                    if src.__class__.__name__ == 'PointSource':
-                        self.sources_per_ltpath[smpath, 'point'].append(src)
-                    else:
-                        self.sources_per_ltpath[smpath, 'other'].append(src)
+                if src.__class__.__name__ == 'PointSource':
+                    self.sources_per_ltpath[smpath, 'point'].append(src)
+                else:
+                    self.sources_per_ltpath[smpath, 'other'].append(src)
             n = len(self.sources_per_ltpath[smpath, 'point']) + \
                 len(self.sources_per_ltpath[smpath, 'other'])
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
