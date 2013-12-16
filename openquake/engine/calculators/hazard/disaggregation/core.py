@@ -81,8 +81,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
     sources = map(apply_uncertainties, sources)
 
     f = openquake.hazardlib.calc.filters
-    src_site_filter = f.source_site_noop_filter if hc.prefiltered \
-        else f.source_site_distance_filter(hc.maximum_distance)
+    src_site_filter = f.source_site_distance_filter(hc.maximum_distance)
     rup_site_filter = f.rupture_site_distance_filter(hc.maximum_distance)
 
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
