@@ -148,7 +148,7 @@ class BooreEtAl1997GeometricMean(GMPE):
     #: Coefficient table is constructed from values in Table 8
     #: Note that for periods between 0.1 s and 0.18s the inter-event term
     #: is originally 0. As this was causing test warnings we have set this
-    #: to an arbitrarily infinitessimal number
+    #: to an arbitrarily infinitesimal number
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     IMT      B1ss      B1rv      B1all     B2       B3        B5        Bv        Va          h        sigma1  sigma_c  sigma_r  sigma_e sigma_tot
     pga      -0.3130   -0.1170   -0.2420   0.5270    0.0000   -0.7780   -0.3710   1396.0000   5.5700   0.4310   0.1600   0.4600   0.1840    0.4950
@@ -203,12 +203,12 @@ class BooreEtAl1997GeometricMean(GMPE):
 
 class BooreEtAl1997GeometricMeanUnspecified(BooreEtAl1997GeometricMean):
     """
-    Where the mechanism need not be specified it is preferable to use
+    Where the faulting mechanism need not be specified it is preferable to use
     this instance of the Boore et al (1997) GMPE, which omits the need for
     rake to be defined.
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag'))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
 
     def _compute_style_of_faulting_term(self, rup, C):
         """
@@ -254,7 +254,7 @@ class BooreEtAl1997ArbitraryHorizontalUnspecified(
     when the style of faulting is not specified
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag'))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
 
     def _compute_style_of_faulting_term(self, rup, C):
         """
