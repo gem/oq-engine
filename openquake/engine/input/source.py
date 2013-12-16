@@ -593,7 +593,8 @@ def area_to_point_sources(area_src, area_src_disc):
         yield pt
 
 
-def parse_source_model_smart(fname, apply_uncertainties,
+def parse_source_model_smart(fname, is_relevant,
+                             apply_uncertainties,
                              rupture_mesh_spacing,
                              width_of_mfd_bin,
                              area_source_discretization):
@@ -601,8 +602,9 @@ def parse_source_model_smart(fname, apply_uncertainties,
     Parse a NRML source model and yield hazardlib sources.
     Notice that:
 
-    1) uncertainties are applied first
-    2) area sources are splitted into point sources.
+    1) the filter `is_relevant` is applied first
+    2) uncertainties are applied second
+    3) finally area sources are splitted into point sources.
 
     :param str fname: the full pathname of the source model file
     :param apply_uncertainties: a function modifying the sources
@@ -616,6 +618,8 @@ def parse_source_model_smart(fname, apply_uncertainties,
             rupture_mesh_spacing,
             width_of_mfd_bin,
             area_source_discretization)
+        if not is_relevant(src):
+            continue
         # the uncertainties must be applied to the original source
         apply_uncertainties(src)
         if isinstance(src, source.AreaSource):
