@@ -221,6 +221,7 @@ class BaseHazardCalculator(base.Calculator):
         smlt_file = self.hc.inputs['source_model_logic_tree']
         self.smlt = logictree.SourceModelLogicTree(
             file(smlt_file).read(), self.hc.base_path, smlt_file)
+        num_sources = []
         for sm in self.smlt.get_source_models():
             fname = os.path.join(self.hc.base_path, sm)
             for src_nrml in nrml_parsers.SourceModelParser(fname).parse():
@@ -237,7 +238,8 @@ class BaseHazardCalculator(base.Calculator):
             n = len(self.sources_per_model[sm, 'point']) + \
                 len(self.sources_per_model[sm, 'other'])
             logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
-            return n
+            num_sources.append(n)
+        return num_sources
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
