@@ -77,8 +77,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
     hc = job.hazard_calculation
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
     f = openquake.hazardlib.calc.filters
-    src_site_filter = f.source_site_noop_filter if hc.prefiltered \
-        else f.source_site_distance_filter(hc.maximum_distance)
+    src_site_filter = f.source_site_distance_filter(hc.maximum_distance)
     rup_site_filter = f.rupture_site_distance_filter(hc.maximum_distance)
 
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():

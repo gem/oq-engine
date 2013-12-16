@@ -47,6 +47,8 @@ import openquake.hazardlib.site
 from openquake.engine.db import fields
 from openquake.engine import writer
 
+# source prefiltering is enabled for #sites <= FILTERING_THRESHOLD
+FILTERING_THRESHOLD = 10000
 
 #: Kind of supported curve statistics
 STAT_CHOICES = (
@@ -672,7 +674,8 @@ class HazardCalculation(djm.Model):
         """
         Prefiltering is enabled when there are few sites (up to 10,000)
         """
-        return self.maximum_distance and len(self.site_collection) <= 10000
+        return self.maximum_distance and \
+            len(self.site_collection) <= FILTERING_THRESHOLD
 
     @property
     def vulnerability_models(self):
