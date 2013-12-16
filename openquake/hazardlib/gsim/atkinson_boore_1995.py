@@ -28,7 +28,7 @@ from openquake.hazardlib.imt import PGA, SA
 class AtkinsonBoore1995GSC(GMPE):
     """
     Implement equation used by the Geological Survey of Canada (GSC) for
-    the Canada National Seismic Hazard Model. The equation fits the table
+    the 2010 Canada National Seismic Hazard Model. The equation fits the table
     values defined by Gail M. Atkinson and David M. Boore in "Ground-Motion
     Relations for Eastern North America", Bullettin of the Seismological
     Society of America, Vol. 85, No. 1, pp. 17-30, February 1995. Table of
