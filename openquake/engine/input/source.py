@@ -602,9 +602,9 @@ def parse_source_model_smart(fname, is_relevant,
     Parse a NRML source model and yield hazardlib sources.
     Notice that:
 
-    1) the filter `is_relevant` is applied first
-    2) uncertainties are applied second
-    3) finally area sources are splitted into point sources.
+    1) uncertainties are applied first
+    2) the filter `is_relevant` is applied second
+    3) at the end area sources are splitted into point sources.
 
     :param str fname: the full pathname of the source model file
     :param apply_uncertainties: a function modifying the sources
@@ -618,10 +618,10 @@ def parse_source_model_smart(fname, is_relevant,
             rupture_mesh_spacing,
             width_of_mfd_bin,
             area_source_discretization)
-        if not is_relevant(src):
-            continue
         # the uncertainties must be applied to the original source
         apply_uncertainties(src)
+        if not is_relevant(src):
+            continue
         if isinstance(src, source.AreaSource):
             for pt in area_to_point_sources(src, area_source_discretization):
                 yield pt
