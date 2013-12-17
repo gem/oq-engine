@@ -671,8 +671,8 @@ class HazardCalculation(djm.Model):
     @property
     def prefiltered(self):
         """
-        Prefiltering is enabled when there are few sites (up to 10,000)
-        """
+        Prefiltering is enabled when there are few sites (up to %d)
+        """ % FILTERING_THRESHOLD
         return self.maximum_distance and \
             len(self.site_collection) <= FILTERING_THRESHOLD
 
@@ -880,13 +880,13 @@ class HazardCalculation(djm.Model):
     def sites_affected_by(self, src):
         """
         If the maximum_distance is set and the prefiltering is on,
-        i.e. if the computation involves only few (<=10000) sites,
+        i.e. if the computation involves only few (<=%d) sites,
         return the filtered subset of the site collection, otherwise
         return the whole connection. NB: this method returns `None`
         if the filtering does not find any site close to the source.
 
         :param src: the source object used for the filtering
-        """
+        """ % FILTERING_THRESHOLD
         if self.prefiltered:
             return src.filter_sites_by_distance_to_source(
                 self.maximum_distance, self.site_collection)
