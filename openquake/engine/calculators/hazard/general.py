@@ -30,7 +30,7 @@ from openquake.hazardlib.imt import from_string
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
-from django.db import transaction, connections
+from django.db import transaction
 
 from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.models import PointSource
@@ -210,8 +210,7 @@ class BaseHazardCalculator(base.Calculator):
         Get all of the logic tree realizations for this calculation.
         """
         return models.LtRealization.objects\
-            .filter(hazard_calculation=self.hc, is_complete=False)\
-            .order_by('id')
+            .filter(hazard_calculation=self.hc).order_by('id')
 
     def filtered_sites(self, src):
         """
@@ -225,9 +224,12 @@ class BaseHazardCalculator(base.Calculator):
         Parse and validate source logic trees
         """
         logs.LOG.progress("initializing sources")
-        for src_path in logictree.read_logic_trees(self.hc):
-            for src_nrml in nrml_parsers.SourceModelParser(
-                    os.path.join(self.hc.base_path, src_path)).parse():
+        smlt_file = self.hc.inputs['source_model_logic_tree']
+        self.smlt = logictree.SourceModelLogicTree(
+            file(smlt_file).read(), self.hc.base_path, smlt_file)
+        for sm in self.smlt.get_source_models():
+            fname = os.path.join(self.hc.base_path, sm)
+            for src_nrml in nrml_parsers.SourceModelParser(fname).parse():
                 src = source.nrml_to_hazardlib(
                     src_nrml,
                     self.hc.rupture_mesh_spacing,
@@ -235,9 +237,12 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.area_source_discretization)
                 if self.filtered_sites(src):
                     if isinstance(src_nrml, PointSource):
-                        self.sources_per_model[src_path, 'point'].append(src)
+                        self.sources_per_model[sm, 'point'].append(src)
                     else:
-                        self.sources_per_model[src_path, 'other'].append(src)
+                        self.sources_per_model[sm, 'other'].append(src)
+            n = len(self.sources_per_model[sm, 'point']) + \
+                len(self.sources_per_model[sm, 'other'])
+            logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -381,9 +386,7 @@ class BaseHazardCalculator(base.Calculator):
                 seed=None,
                 weight=weight,
                 sm_lt_path=sm_lt_path,
-                gsim_lt_path=gsim_lt_path,
-                # total_items is obsolete and will be removed
-                total_items=-1)
+                gsim_lt_path=gsim_lt_path)
 
             self.rlz_to_sm[lt_rlz] = source_model_filename
 
@@ -427,10 +430,7 @@ class BaseHazardCalculator(base.Calculator):
                 seed=seed,
                 weight=None,
                 sm_lt_path=sm_lt_path,
-                gsim_lt_path=gsim_lt_path,
-                # total_items is obsolete and will be removed
-                total_items=-1
-            )
+                gsim_lt_path=gsim_lt_path)
 
             self.rlz_to_sm[lt_rlz] = source_model_filename
 

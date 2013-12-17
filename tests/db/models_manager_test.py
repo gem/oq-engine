@@ -49,7 +49,7 @@ class TestCaseWithAJob(unittest.TestCase):
             models.LtRealization(
                 hazard_calculation=self.job.hazard_calculation,
                 ordinal=i, seed=None, weight=1 / (i + 1), sm_lt_path=[i],
-                gsim_lt_path=[i], total_items=0, completed_items=0).save()
+                gsim_lt_path=[i]).save()
 
 
 class ExposureContainedInTestCase(unittest.TestCase):
