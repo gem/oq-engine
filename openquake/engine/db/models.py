@@ -1373,7 +1373,7 @@ class HazardMap(djm.Model):
             "%" + str(self.quantile) + " " if self.quantile else "",
             "quantile " if self.statistics == 'quantile' else "",
             self.output.get_output_type_display().lower(),
-            " | realization = " + str(self.lt_realization) + " " if self.lt_realization else "",
+            " | realization = " + str(self.lt_realization.ordinal) + " " if self.lt_realization else "",
             " | investigation time = " + str(self.investigation_time),
             " | poe = " + str(self.poe),
             " | sa_period = " + str(self.sa_period) if self.sa_period else "",
@@ -1420,10 +1420,10 @@ class HazardCurve(djm.Model):
             "%" + str(self.quantile) + " " if self.quantile else "",
             "quantile " if self.statistics == 'quantile' else "",
             self.output.get_output_type_display().lower(),
-            (" | realization = " + str(self.lt_realization) +
+            (" | realization = " + str(self.lt_realization.ordinal) +
              " " if self.lt_realization else ""),
             " | investigation time = " + str(self.investigation_time),
-            " | imt = " + str(self.imt_long) if self.imt else "multi"))
+            " | imt = " + str(self.imt_long) if self.imt else " | multi"))
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
@@ -1805,7 +1805,7 @@ class Gmf(djm.Model):
     def create_display_name(self):
         return "%s | realization = %s" % (
             self.output.get_output_type_display().lower(),
-            self.lt_realization)
+            str(self.lt_realization.ordinal))
 
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
@@ -2100,7 +2100,7 @@ class UHS(djm.Model):
             "%" + str(self.quantile) + " " if self.quantile else "",
             "quantile " if self.statistics == 'quantile' else "",
             self.output.get_output_type_display().lower(),
-            " | realization = " + str(self.lt_realization) + " " if self.lt_realization else "",
+            " | realization = " + str(self.lt_realization.ordinal) + " " if self.lt_realization else "",
             " | investigation time = " + str(self.investigation_time),
             " | poe = " + str(self.poe)))
 
