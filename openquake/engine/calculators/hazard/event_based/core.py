@@ -97,11 +97,9 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
         lt_rlz.sm_lt_path)
 
     source = {}
-    with EnginePerformanceMonitor(
-            'filtering sources', job_id, compute_ses):
-        for src, ses, seed in src_ses_seeds:
-            if src.source_id not in source:
-                source[src.source_id] = apply_uncertainties(src)
+    for src, ses, seed in src_ses_seeds:
+        if src.source_id not in source:
+            source[src.source_id] = apply_uncertainties(src)
 
     # Compute and save stochastic event sets
     # For each rupture generated, we can optionally calculate a GMF
@@ -253,15 +251,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
     """
     core_calc_task = compute_ses
 
-    def filtered_sites(self, src):
-        """
-        Return the sites within maximum_distance from the source or None
-        """
-        if self.hc.maximum_distance is None:
-            return self.hc.site_collection  # do not filter
-        return src.filter_sites_by_distance_to_source(
-            self.hc.maximum_distance, self.hc.site_collection)
-
     def task_arg_gen(self, _block_size=None):
         """
         Loop through realizations and sources to generate a sequence of
@@ -281,8 +270,7 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
                        self.sources_per_model[sm, 'other'])
 
             all_ses = list(models.SES.objects.filter(
-                           ses_collection__lt_realization=lt_rlz,
-                           ordinal__isnull=False).order_by('ordinal'))
+                           ses_collection__lt_realization=lt_rlz))
 
             # source, ses, seed triples
             sss = [(src, ses, rnd.randint(0, models.MAX_SINT_32))
