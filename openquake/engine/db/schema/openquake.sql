@@ -28,9 +28,6 @@ CREATE SCHEMA hzrdr;
 CREATE SCHEMA riski;
 CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
-CREATE SCHEMA htemp;
-CREATE SCHEMA rtemp;
-
 
 
 ------------------------------------------------------------------------
@@ -79,20 +76,6 @@ CREATE TABLE hzrdi.site_model (
         CHECK(z2pt5 > 0.0)
 ) TABLESPACE hzrdi_ts;
 SELECT AddGeometryColumn('hzrdi', 'site_model', 'location', 4326, 'POINT', 2);
-
-
--- Parsed sources
-CREATE TABLE hzrdi.parsed_source (
-    id SERIAL PRIMARY KEY,
-    job_id INTEGER NOT NULL,
-    source_type VARCHAR NOT NULL
-        CONSTRAINT enforce_source_type CHECK
-        (source_type IN ('area', 'point', 'complex', 'simple', 'characteristic')),
-    nrml BYTEA NOT NULL,
-    source_model_filename VARCHAR NOT NULL,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE hzrdi_ts;
 
 
 -- An OpenQuake engine run started by the user
@@ -871,20 +854,6 @@ CREATE TABLE riski.occupancy (
     occupants float NOT NULL
 ) TABLESPACE riski_ts;
 
-
-CREATE TABLE htemp.hazard_curve_progress (
-    -- This table will contain 1 record per IMT per logic tree realization
-    -- for a given calculation.
-    id SERIAL PRIMARY KEY,
-    lt_realization_id INTEGER NOT NULL,
-    imt VARCHAR NOT NULL,
-    -- stores a pickled numpy array for intermediate results
-    -- array is 2d: sites x IMLs
-    -- each row indicates a site,
-    -- each column holds the PoE value for the IML at that index
-    result_matrix BYTEA NOT NULL
-) TABLESPACE htemp_ts;
-
 -- calculation points of interest with parameters extracted from site_model or hc
 CREATE TABLE hzrdi.hazard_site (
     id SERIAL PRIMARY KEY,
@@ -1114,13 +1083,6 @@ REFERENCES riski.exposure_data(id) ON DELETE CASCADE;
 ALTER TABLE riski.cost ADD CONSTRAINT
 riski_cost_cost_type_fk FOREIGN KEY (cost_type_id)
 REFERENCES riski.cost_type(id) ON DELETE CASCADE;
-
--- htemp.hazard_curve_progress to hzrdr.lt_realization FK
-ALTER TABLE htemp.hazard_curve_progress
-ADD CONSTRAINT htemp_hazard_curve_progress_lt_realization_fk
-FOREIGN KEY (lt_realization_id)
-REFERENCES hzrdr.lt_realization(id)
-ON DELETE CASCADE;
 
 -- hzrdi.hazard_site to uiapi.hazard_calculation FK
 ALTER TABLE hzrdi.hazard_site

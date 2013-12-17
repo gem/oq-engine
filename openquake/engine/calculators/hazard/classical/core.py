@@ -16,12 +16,13 @@
 """
 Core functionality for the classical PSHA hazard calculator.
 """
+import numpy
 
 import openquake.hazardlib
 import openquake.hazardlib.calc
-import openquake.hazardlib.imt
+from openquake.hazardlib.imt import from_string
 
-from openquake.engine import logs
+from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general as haz_general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
@@ -29,33 +30,8 @@ from openquake.engine.db import models
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 
-# FIXME: the following import must go after the openquake.engine.db import
-# so that the variable DJANGO_SETTINGS_MODULE is properly set
-from django.db import transaction
-
-
 @utils_tasks.oqtask
-def hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
-    """
-    A celery task wrapper function around :func:`compute_hazard_curves`.
-    See :func:`compute_hazard_curves` for parameter definitions.
-
-    :param ltp:
-        a :class:`openquake.engine.input.LogicTreeProcessor` instance
-    """
-    logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
-                   % (job_id, lt_rlz_id))
-
-    compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp)
-    # Last thing, signal back the control node to indicate the completion of
-    # task. The control node needs this to manage the task distribution and
-    # keep track of progress.
-    logs.LOG.debug('< task complete, signalling completion')
-
-
-# Silencing 'Too many local variables'
-# pylint: disable=R0914
-def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
+def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
     """
     Celery task for hazard curve calculator.
 
@@ -68,23 +44,17 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
 
     :param int job_id:
         ID of the currently running job.
-    :param src_ids:
-        List of ids of parsed source models to take into account.
-    :param lt_rlz_id:
-        Id of logic tree realization model to calculate for.
+    :param sources:
+        List of :class:`openquake.hazardlib.source.base.SeismicSource` objects
+    :param lt_rlz:
+        a :class:`openquake.engine.db.models.LtRealization` instance
     :param ltp:
         a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-
-    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
-
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-
-    parsed_sources = models.ParsedSource.objects.filter(pk__in=src_ids)
-
     imts = haz_general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
 
@@ -92,8 +62,7 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     calc_kwargs = {'gsims': gsims,
                    'truncation_level': hc.truncation_level,
                    'time_span': hc.investigation_time,
-                   'sources': [apply_uncertainties(s.nrml)
-                               for s in parsed_sources],
+                   'sources': map(apply_uncertainties, sources),
                    'imts': imts,
                    'sites': hc.site_collection}
 
@@ -115,57 +84,33 @@ def compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp):
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
     with EnginePerformanceMonitor(
-            'computing hazard curves', job_id, hazard_curves, tracing=True):
-        matrices = openquake.hazardlib.calc.hazard_curve.\
+            'computing hazard curves', job_id,
+            compute_hazard_curves, tracing=True):
+        curves = openquake.hazardlib.calc.hazard_curve.\
             hazard_curves_poissonian(**calc_kwargs)
-
-    with EnginePerformanceMonitor(
-            'saving hazard curves', job_id, hazard_curves, tracing=True):
-        _update_curves(hc, matrices, lt_rlz, src_ids)
-
-
-def _update_curves(hc, matrices, lt_rlz, src_ids):
-    """
-    Helper function for updating source, hazard curve, and realization progress
-    records in the database.
-
-    This is intended to be used by :func:`compute_hazard_curves`.
-
-    :param hc:
-        :class:`openquake.engine.db.models.HazardCalculation` instance.
-    :param lt_rlz:
-        :class:`openquake.engine.db.models.LtRealization` record for the
-        current realization.
-    :param src_ids:
-        List of source IDs considered for this calculation task.
-    """
-    with logs.tracing('_update_curves for all IMTs'):
-        for imt in hc.intensity_measure_types_and_levels.keys():
-            hazardlib_imt = haz_general.imt_to_hazardlib(imt)
-            matrix = matrices[hazardlib_imt]
-            if (matrix == 0.0).all():
-                # The matrix for this IMT is all zeros; there's no reason to
-                # update `hazard_curve_progress` records.
-                logs.LOG.debug('* No hazard contribution for IMT=%s' % imt)
-                continue
+        curves_by_imt = []
+        for imt in sorted(imts):
+            if (curves[imt] == 0.0).all():
+                # shortcut for filtered sources giving no contribution;
+                # this is essential for performance, we want to avoid
+                # returning big arrays of zeros (MS)
+                curves_by_imt.append(None)
             else:
-                # The is some contribution here to the hazard; we need to
-                # update.
-                with transaction.commit_on_success():
-                    logs.LOG.debug('> updating hazard for IMT=%s' % imt)
-                    query = """
-                    SELECT * FROM htemp.hazard_curve_progress
-                    WHERE lt_realization_id = %s
-                    AND imt = %s
-                    FOR UPDATE"""
-                    [hc_progress] = models.HazardCurveProgress.objects.raw(
-                        query, [lt_rlz.id, imt])
+                curves_by_imt.append(curves[imt])
+        return curves_by_imt, lt_rlz.ordinal
 
-                    hc_progress.result_matrix = update_result_matrix(
-                        hc_progress.result_matrix, matrix)
-                    hc_progress.save()
 
-                    logs.LOG.debug('< done updating hazard for IMT=%s' % imt)
+def make_zeros(realizations, sites, imtls):
+    """
+    Returns a list of R lists containing I numpy arrays of S * L zeros, where
+    R is the number of realizations, I is the number of intensity measure
+    types, S the number of sites and L the number of intensity measure levels.
+
+    :params sites: the site collection
+    :param imtls: a dictionary of intensity measure types and levels
+    """
+    return [[numpy.zeros((len(sites), len(imtls[imt])))
+             for imt in sorted(imtls)] for _ in range(len(realizations))]
 
 
 class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
@@ -177,7 +122,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
     and GMPEs (Ground Motion Prediction Equations) from logic trees.
     """
 
-    core_calc_task = hazard_curves
+    core_calc_task = compute_hazard_curves
 
     def pre_execute(self):
         """
@@ -188,53 +133,104 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.).
         """
-
-        # Parse vulnerability and exposure model
         self.parse_risk_models()
-
-        # Deal with the site model and compute site data for the calculation
-        # (if a site model was specified, that is).
         self.initialize_site_model()
-
-        # Parse logic trees and create source Inputs.
         self.initialize_sources()
 
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach
         # the `execute` phase.
-        # This will also stub out hazard curve result records. Workers will
-        # update these periodically with partial results (partial meaning,
-        # result curves for just a subset of the overall sources) when some
-        # work is complete.
-        self.initialize_realizations(
-            rlz_callbacks=[self.initialize_hazard_curve_progress])
+        self.initialize_realizations()
+        imtls = self.hc.intensity_measure_types_and_levels
+        self.curves_by_rlz = make_zeros(
+            self.rlz_to_sm, self.hc.site_collection, imtls)
 
-    def post_execute(self):
+    @EnginePerformanceMonitor.monitor
+    def task_completed(self, task_result):
+        """
+        This is used to incrementally update hazard curve results by combining
+        an initial value with some new results. (Each set of new results is
+        computed over only a subset of seismic sources defined in the
+        calculation model.)
+
+        :param task_result:
+            A pair (curves_by_imt, ordinal) where curves_by_imt is a
+            list of 2-D numpy arrays representing the new results which need
+            to be combined with the current value. These should be the same
+            shape as self.curves_by_rlz[i][j] where i is the realization ordinal
+            and j the IMT ordinal.
+        """
+        curves_by_imt, i = task_result
+        for j, matrix in enumerate(curves_by_imt):  # j is the IMT index
+            if matrix is not None:
+                self.curves_by_rlz[i][j] = 1. - (
+                    1. - self.curves_by_rlz[i][j]) * (1. - matrix)
+        self.log_percent(task_result)
+
+    # this could be parallelized in the future, however in all the cases
+    # I have seen until now, the serialized approach is fast enough (MS)
+    @EnginePerformanceMonitor.monitor
+    def save_hazard_curves(self):
         """
         Post-execution actions. At the moment, all we do is finalize the hazard
-        curve results. See
-        :meth:`openquake.engine.calculators.hazard.general.\
-BaseHazardCalculator.finalize_hazard_curves`
-        for more info.
+        curve results.
         """
-        self.finalize_hazard_curves()
+        imtls = self.hc.intensity_measure_types_and_levels
+        for i, curves_imts in enumerate(self.curves_by_rlz):
+            rlz = models.LtRealization.objects.get(
+                hazard_calculation=self.hc, ordinal=i)
 
-    def clean_up(self):
-        """
-        Delete temporary database records.
-        These records represent intermediate copies of final calculation
-        results and are no longer needed.
+            # create a new `HazardCurve` 'container' record for each
+            # realization (virtual container for multiple imts)
+            models.HazardCurve.objects.create(
+                output=models.Output.objects.create(
+                    oq_job=self.job, output_type="hazard_curve_multi"),
+                lt_realization=rlz,
+                imt=None,
+                investigation_time=self.hc.investigation_time)
 
-        In this case, this includes all of the data for this calculation in the
-        tables found in the `htemp` schema space.
-        """
-        self.sources_per_rlz.clear()
-        logs.LOG.debug('> cleaning up temporary DB data')
-        models.HazardCurveProgress.objects.filter(
-            lt_realization__hazard_calculation=self.hc.id).delete()
-        logs.LOG.debug('< done cleaning up temporary DB data')
+            # create a new `HazardCurve` 'container' record for each
+            # realization for each intensity measure type
+            for imt, curves_by_imt in zip(sorted(imtls), curves_imts):
+                hc_im_type, sa_period, sa_damping = from_string(imt)
+
+                # save output
+                hco = models.Output.objects.create(
+                    oq_job=self.job,
+                    output_type='hazard_curve'
+                )
+
+                # save hazard_curve
+                haz_curve = models.HazardCurve.objects.create(
+                    output=hco,
+                    lt_realization=rlz,
+                    investigation_time=self.hc.investigation_time,
+                    imt=hc_im_type,
+                    imls=imtls[imt],
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                )
+
+                # save hazard_curve_data
+                points = self.hc.points_to_compute()
+                logs.LOG.info('saving %d hazard curves for %s, imt=%s',
+                              len(points), hco, imt)
+                writer.CacheInserter.saveall([
+                    models.HazardCurveData(
+                        hazard_curve=haz_curve,
+                        poes=list(poes),
+                        location='POINT(%s %s)' % (p.longitude, p.latitude),
+                        weight=rlz.weight)
+                    for p, poes in zip(points, curves_by_imt)])
+        del self.curves_by_rlz  # save memory for the post_processing phase
+
+    post_execute = save_hazard_curves
 
     def post_process(self):
+        """
+        Optionally generates aggregate curves, hazard maps and
+        uniform_hazard_spectra.
+        """
         logs.LOG.debug('> starting post processing')
 
         # means/quantiles:
@@ -248,31 +244,10 @@ BaseHazardCalculator.finalize_hazard_curves`
         if self.hc.hazard_maps or self.hc.uniform_hazard_spectra:
             self.parallelize(
                 post_proc.hazard_curves_to_hazard_map_task,
-                post_proc.hazard_curves_to_hazard_map_task_arg_gen(self.job))
+                post_proc.hazard_curves_to_hazard_map_task_arg_gen(self.job),
+                self.log_percent)
 
         if self.hc.uniform_hazard_spectra:
             post_proc.do_uhs_post_proc(self.job)
 
         logs.LOG.debug('< done with post processing')
-
-
-def update_result_matrix(current, new):
-    """
-    Use the following formula to combine multiple iterations of results:
-
-    `result = 1 - (1 - current) * (1 - new)`
-
-    This is used to incrementally update hazard curve results by combining an
-    initial value with some new results. (Each set of new results is computed
-    over only a subset of seismic sources defined in the calculation model.)
-
-    Parameters are expected to be multi-dimensional numpy arrays, but the
-    formula will also work with scalars.
-
-    :param current:
-        Numpy array representing the current result matrix value.
-    :param new:
-        Numpy array representing the new results which need to be combined with
-        the current value. This should be the same shape as `current`.
-    """
-    return 1 - (1 - current) * (1 - new)

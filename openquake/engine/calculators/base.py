@@ -43,7 +43,6 @@ class Calculator(object):
         self.job = job
         self.num_tasks = None
         self.progress_handler = DEFAULT_PROGRESS_HANDLER
-        self.sources_per_rlz = {}  # (rlz_id, source_type) -> source_ids
 
     def register_progress_handler(self, fn):
         """
@@ -58,6 +57,13 @@ class Calculator(object):
         self.progress_handler = fn
 
     def monitor(self, operation):
+        """
+        Return a :class:`openquake.engine.performance.EnginePerformanceMonitor`
+        instance, associated to the operation and with tracing and flushing
+        enabled.
+
+        :param str operation: the operation to monitor
+        """
         return EnginePerformanceMonitor(
             operation, self.job.id, tracing=True, flush=True)
 
@@ -78,7 +84,7 @@ class Calculator(object):
 
         Subclasses must implement this.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def concurrent_tasks(self):
         """
@@ -86,9 +92,9 @@ class Calculator(object):
 
         Subclasses must implement this.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
-    def parallelize(self, task_func, task_arg_gen):
+    def parallelize(self, task_func, task_arg_gen, task_completed):
         """
         Given a callable and a task arg generator, build an argument list and
         apply the callable to the arguments in parallel. The order is not
@@ -103,6 +109,10 @@ class Calculator(object):
         NB: if the environment variable OQ_NO_DISTRIBUTE is set the
         tasks are run sequentially in the current process.
         """
+        arglist = self.initialize_percent(task_func, task_arg_gen)
+        tasks.parallelize(task_func, arglist, task_completed)
+
+    def initialize_percent(self, task_func, task_arg_gen):
         self.taskname = task_func.__name__
         arglist = list(task_arg_gen)
         self.num_tasks = len(arglist)
@@ -110,7 +120,7 @@ class Calculator(object):
         self.percent = 0.0
         logs.LOG.progress(
             'spawning %d tasks of kind %s', self.num_tasks, self.taskname)
-        tasks.parallelize(task_func, arglist, self.task_completed)
+        return arglist
 
     def task_completed(self, task_result):
         """
@@ -122,7 +132,7 @@ class Calculator(object):
         """
         self.log_percent(task_result)
 
-    def log_percent(self, task_result):
+    def log_percent(self, task_result=None):
         """
         Log the progress percentage, if changed.
         It is called at each task completion.
@@ -149,7 +159,8 @@ class Calculator(object):
         parallelize distribution, but it can be overridden is subclasses.
         """
         self.parallelize(self.core_calc_task,
-                         self.task_arg_gen(self.block_size()))
+                         self.task_arg_gen(self.block_size()),
+                         self.task_completed)
 
     def post_execute(self):
         """
@@ -168,7 +179,7 @@ class Calculator(object):
         Util function for getting :class:`openquake.engine.db.models.Output`
         objects to be exported.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def _do_export(self, output_id, export_dir, export_type):
         """
@@ -211,4 +222,3 @@ class Calculator(object):
     def clean_up(self, *args, **kwargs):
         """Implement this method in subclasses to perform clean-up actions
            like garbage collection, etc."""
-        self.sources_per_rlz.clear()

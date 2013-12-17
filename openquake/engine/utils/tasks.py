@@ -31,16 +31,16 @@ from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
-def _map_reduce(task_func, task_args, agg, acc):
+def map_reduce(task, task_args, agg, acc):
     """
-    Given a callable and an iterable of positional arguments, apply the
-    callable to the arguments in parallel and return an aggregate
+    Given a task and an iterable of positional arguments, apply the
+    task function to the arguments in parallel and return an aggregate
     result depending on the initial value of the accumulator
     and on the aggregation function. To save memory, the order is
     not preserved and there is no list with the intermediated results:
     the accumulator is incremented as soon as a task result comes.
 
-    :param task_func: a `celery` task callable.
+    :param task: a `celery` task callable.
     :param task_args: an iterable over positional arguments
     :param agg: the aggregation function, (acc, val) -> new acc
     :param acc: the initial value of the accumulator
@@ -48,8 +48,8 @@ def _map_reduce(task_func, task_args, agg, acc):
 
     NB: if the environment variable OQ_NO_DISTRIBUTE is set the
     tasks are run sequentially in the current process and then
-    map_reduce(task_func, task_args, agg, acc) is the same as
-    reduce(agg, itertools.starmap(task_func, task_args), acc).
+    map_reduce(task, task_args, agg, acc) is the same as
+    reduce(agg, itertools.starmap(task, task_args), acc).
     Users of map_reduce should be aware of the fact that when
     thousands of tasks are spawned and large arguments are passed
     or large results are returned they may incur in memory issue:
@@ -58,38 +58,32 @@ def _map_reduce(task_func, task_args, agg, acc):
     """
     if no_distribute():
         for the_args in task_args:
-            acc = agg(acc, task_func(*the_args))
+            acc = agg(acc, task.task_func(*the_args))
     else:
-        taskset = TaskSet(tasks=map(task_func.subtask, task_args))
+        taskset = TaskSet(tasks=map(task.subtask, task_args))
         for result in taskset.apply_async():
-            if isinstance(result, Exception):
-                # TODO: kill all the other tasks
-                raise result
             acc = agg(acc, result)
     return acc
 
 
 # used to implement BaseCalculator.parallelize, which takes in account
 # the `concurrent_task` concept to avoid filling the Celery queue
-def parallelize(task_func, task_args, side_effect=lambda val: None):
+def parallelize(task, task_args, side_effect=lambda val: None):
     """
-    Given a callable and an iterable of positional arguments, apply the
+    Given a celery task and an iterable of positional arguments, apply the
     callable to the arguments in parallel. It is possible to pass a
     function side_effect(val) which takes the return value of the
     callable and does something with it (such as saving or printing
     it). Notice that the order is not preserved. parallelize returns None.
 
-    :param task_func: a `celery` task callable.
+    :param task: a celery task
     :param task_args: an iterable over positional arguments
     :param side_effect: a function val -> None
 
     NB: if the environment variable OQ_NO_DISTRIBUTE is set the
     tasks are run sequentially in the current process.
     """
-    def noagg(acc, val):
-        side_effect(val)
-
-    _map_reduce(task_func, task_args, noagg, None)
+    map_reduce(task, task_args, lambda acc, val: side_effect(val), None)
 
 
 def oqtask(task_func):
@@ -101,16 +95,14 @@ def oqtask(task_func):
     """
 
     @wraps(task_func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args):
         """
         Initialize logs, make sure the job is still running, and run the task
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # job_id is always assumed to be the first argument passed to
-        # the task, or a keyword argument
-        # this is the only required argument
-        job_id = kwargs.get('job_id') or args[0]
+        # job_id is always assumed to be the first argument
+        job_id = args[0]
         job = models.OqJob.objects.get(id=job_id)
         if job.is_running is False:
             # the job was killed, it is useless to run the task
@@ -134,7 +126,7 @@ def oqtask(task_func):
                     calculation, models.HazardCalculation) else'risk',
                 calc_id=calculation.id)
             try:
-                return task_func(*args, **kwargs)
+                return task_func(*args)
             finally:
                 CacheInserter.flushall()
                 # the task finished, we can remove from the performance
@@ -145,4 +137,5 @@ def oqtask(task_func):
                     task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, queue=celery_queue)
+    tsk.task_func = task_func
     return tsk

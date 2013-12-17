@@ -246,23 +246,6 @@ class SESRuptureTestCase(unittest.TestCase):
         source_rupture.old_depths = depths
 
 
-class ParseImtTestCase(unittest.TestCase):
-    """
-    Tests the parse_imt utility function
-    """
-    def test_sa(self):
-        hc_im_type, sa_period, sa_damping = models.parse_imt("SA(0.1)")
-        self.assertEqual("SA", hc_im_type)
-        self.assertEqual(0.1, sa_period)
-        self.assertEqual(models.DEFAULT_SA_DAMPING, sa_damping)
-
-    def test_pga(self):
-        hc_im_type, sa_period, sa_damping = models.parse_imt("PGA")
-        self.assertEqual("PGA", hc_im_type)
-        self.assertEqual(None, sa_period)
-        self.assertEqual(None, sa_damping)
-
-
 def get_tags(gmf_data):
     """
     Get the rupture tags associated to a given gmf_data record
@@ -287,12 +270,16 @@ class GmfsPerSesTestCase(unittest.TestCase):
             sm_lt_path="test_sm", gsim_lt_path="test_gsim",
             is_complete=False, total_items=1, completed_items=1)
         ses_coll1 = models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection 1", "ses"),
+            output=models.Output.objects.create(
+                oq_job=job,
+                display_name="Test SES Collection 1",
+                output_type="ses"),
             lt_realization=rlz1)
         ses_coll2 = models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection 2", "ses"),
+            output=models.Output.objects.create(
+                oq_job=job,
+                display_name="Test SES Collection 2",
+                output_type="ses"),
             lt_realization=rlz2)
         gmf_data1 = helpers.create_gmf_data_records(job, rlz1, ses_coll1)[0]
         points = [(15.3, 38.22), (15.7, 37.22),
@@ -370,8 +357,8 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         calc = cls_core.ClassicalHazardCalculator(job)
 
         # Bootstrap the `hazard_site` table:
-        calc.initialize_sources()
         calc.initialize_site_model()
+        calc.initialize_sources()
 
         site_coll = job.hazard_calculation.site_collection
         # Since we're using a pretty big site model, it's a bit excessive to

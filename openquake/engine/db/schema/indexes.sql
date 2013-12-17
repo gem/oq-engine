@@ -29,9 +29,6 @@ ON hzrdi.hazard_site(hazard_calculation_id);
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_job_id_idx ON hzrdi.site_model(job_id);
 
--- hzrdi.parsed_source
-CREATE INDEX hzrdi_parsed_source_job_id_idx ON hzrdi.parsed_source(job_id);
-
 -- indexes for the uiapi.performance table
 CREATE INDEX uiapi_performance_oq_job_id_idx ON uiapi.performance(oq_job_id);
 CREATE INDEX uiapi_oq_job_user_name_idx ON uiapi.oq_job(user_name);
@@ -94,6 +91,3 @@ CREATE INDEX riski_exposure_data_exposure_model_id_idx on riski.exposure_data(ex
 CREATE INDEX riski_exposure_data_site_stx_idx ON riski.exposure_data(ST_X(geometry(site)));
 CREATE INDEX riski_exposure_data_site_sty_idx ON riski.exposure_data(ST_Y(geometry(site)));
 CREATE INDEX riski_cost_type_name_idx ON riski.cost_type(name);
-
--- htemp indexes
-CREATE INDEX htemp_hazard_curve_progress_lt_realization_id_idx on htemp.hazard_curve_progress(lt_realization_id);

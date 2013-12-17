@@ -20,9 +20,10 @@ Disaggregation calculator core functionality
 import numpy
 
 import openquake.hazardlib
+from openquake.hazardlib.imt import from_string
 from openquake.engine import logs
-from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.calculators.hazard.classical import core
+from openquake.engine.calculators.hazard.classical.core import \
+    ClassicalHazardCalculator
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import general as general_utils
@@ -31,25 +32,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @utils_tasks.oqtask
-def compute_hazard_curves_task(job_id, src_ids, lt_rlz_id, ltp):
-    """
-    Task wrapper around
-
-    :func:`openquake.engine.calculators.hazard.classical.core.compute_hazard_curves`.
-    """
-    core.compute_hazard_curves(job_id, src_ids, lt_rlz_id, ltp)
-
-
-@utils_tasks.oqtask
-def disagg_task(job_id, sites, src_ids, lt_rlz_id, ltp):
-    """
-    Task wrapper around
-    :func:`openquake.engine.calculators.hazard.disaggregation.core.compute_disagg`.
-    """
-    compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp)
-
-
-def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
+def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
     """
     Calculate disaggregation histograms and saving the results to the database.
 
@@ -72,10 +55,10 @@ def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
         `list` of :class:`openquake.hazardlib.site.Site` objects, which
         indicate the locations (and associated soil parameters) for which we
         need to compute disaggregation histograms.
-    :param list src_ids:
-        `list` of ParsedSource objects ids
-    :param int lt_rlz_id:
-        ID of the :class:`openquake.engine.db.models.LtRealization` for which
+    :param list sources:
+        `list` of hazardlib source objects
+    :param lt_rlz:
+        instance of :class:`openquake.engine.db.models.LtRealization` for which
         we want to compute disaggregation histograms. This realization will
         determine which hazard curve results to use as a basis for the
         calculation.
@@ -84,18 +67,18 @@ def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
     """
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
+    assert sites, sites
+    assert sources, sources
     logs.LOG.debug(
         '> computing disaggregation for %(np)s sites for realization %(rlz)s'
-        % dict(np=len(sites), rlz=lt_rlz_id))
+        % dict(np=len(sites), rlz=lt_rlz.id))
 
     job = models.OqJob.objects.get(id=job_id)
     hc = job.hazard_calculation
-    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     apply_uncertainties = ltp.parse_source_model_logictree_path(
         lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-    sources = [apply_uncertainties(s.nrml)
-               for s in models.ParsedSource.objects.filter(pk__in=src_ids)]
+    sources = map(apply_uncertainties, sources)
 
     # Make filters for distance to source and distance to rupture:
     # a better approach would be to filter the sources on distance
@@ -106,8 +89,7 @@ def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
         rupture_site_distance_filter(hc.maximum_distance)
 
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
-        hazardlib_imt = haz_general.imt_to_hazardlib(imt)
-        hc_im_type, sa_period, sa_damping = models.parse_imt(imt)
+        hc_im_type, sa_period, sa_damping = imt = from_string(imt)
 
         imls = numpy.array(imls[::-1])
 
@@ -116,7 +98,7 @@ def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
             # get curve for this point/IMT/realization
             [curve] = models.HazardCurveData.objects.filter(
                 location=site.location.wkt2d,
-                hazard_curve__lt_realization=lt_rlz_id,
+                hazard_curve__lt_realization=lt_rlz,
                 hazard_curve__imt=hc_im_type,
                 hazard_curve__sa_period=sa_period,
                 hazard_curve__sa_damping=sa_damping,
@@ -135,7 +117,7 @@ def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
                 calc_kwargs = {
                     'sources': sources,
                     'site': site,
-                    'imt': hazardlib_imt,
+                    'imt': imt,
                     'iml': iml,
                     'gsims': gsims,
                     'time_span': hc.investigation_time,
@@ -148,14 +130,14 @@ def compute_disagg(job_id, sites, src_ids, lt_rlz_id, ltp):
                     'rupture_site_filter': rup_site_filter,
                 }
                 with EnginePerformanceMonitor(
-                        'computing disaggregation', job_id, disagg_task):
+                        'computing disaggregation', job_id, compute_disagg):
                     bin_edges, diss_matrix = openquake.hazardlib.calc.\
                         disagg.disaggregation_poissonian(**calc_kwargs)
                     if not bin_edges:  # no ruptures generated
                         continue
 
                 with EnginePerformanceMonitor(
-                        'saving disaggregation', job_id, disagg_task):
+                        'saving disaggregation', job_id, compute_disagg):
                     _save_disagg_matrix(
                         job, site, bin_edges, diss_matrix, lt_rlz,
                         hc.investigation_time, hc_im_type, iml, poe, sa_period,
@@ -200,20 +182,9 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
     :param float sa_damping:
         Spectral Acceleration damping; only relevant when ``imt`` is 'SA'.
     """
-    # Silencing 'Too many arguments', 'Too many local variables'
-    # pylint: disable=R0913,R0914
-    disp_name = _DISAGG_RES_NAME_FMT
-    disp_imt = imt
-    if disp_imt == 'SA':
-        disp_imt = 'SA(%s)' % sa_period
 
-    disp_name_args = dict(poe=poe, rlz=lt_rlz.id, imt=disp_imt,
-                          wkt=site.location.wkt2d)
-    disp_name %= disp_name_args
-
-    output = models.Output.objects.create_output(
-        job, disp_name, 'disagg_matrix'
-    )
+    output = models.Output.objects.create(oq_job=job,
+                                          output_type='disagg_matrix')
 
     mag, dist, lon, lat, eps, trts = bin_edges
     models.DisaggResult.objects.create(
@@ -236,7 +207,7 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
     )
 
 
-class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
+class DisaggHazardCalculator(ClassicalHazardCalculator):
     """
     A calculator which performs disaggregation calculations in a distributed /
     parallelized fashion.
@@ -244,38 +215,6 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
     See :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
     details about the nature of this type of calculation.
     """
-    core_calc_task = compute_hazard_curves_task
-
-    def pre_execute(self):
-        """
-        Do pre-execution work. At the moment, this work entails:
-        parsing and initializing sources, parsing and initializing the
-        site model (if there is one), parsing vulnerability and
-        exposure files, and generating logic tree realizations. (The
-        latter piece basically defines the work to be done in the
-        `execute` phase.)
-        """
-
-        # Parse risk models.
-        self.parse_risk_models()
-
-        # Deal with the site model and compute site data for the calculation
-        # (if a site model was specified, that is).
-        self.initialize_site_model()
-
-        # Parse logic trees and create source Inputs.
-        self.initialize_sources()
-
-        # Now bootstrap the logic tree realizations and related data.
-        # This defines for us the "work" that needs to be done when we reach
-        # the `execute` phase.
-        # This will also stub out hazard curve result records. Workers will
-        # update these periodically with partial results (partial meaning,
-        # result curves for just a subset of the overall sources) when some
-        # work is complete.
-        self.initialize_realizations(
-            rlz_callbacks=[self.initialize_hazard_curve_progress])
-
     def disagg_task_arg_gen(self, block_size):
         """
         Generate task args for the second phase of disaggregation calculations.
@@ -290,35 +229,21 @@ class DisaggHazardCalculator(haz_general.BaseHazardCalculator):
             hazard_calculation=self.hc)
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
-            src_ids = (self.sources_per_rlz[lt_rlz.id, 'point'] +
-                       self.sources_per_rlz[lt_rlz.id, 'other'])
+            sm = self.rlz_to_sm[lt_rlz]
+            sources = (self.sources_per_model[sm, 'point'] +
+                       self.sources_per_model[sm, 'other'])
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
-                yield self.job.id, sites, src_ids, lt_rlz.id, ltp
+                yield self.job.id, sites, sources, lt_rlz, ltp
 
     def post_execute(self):
         """
-        Finalize the hazard curves computed in the execute phase
-        and start the disaggregation phase.
+        Start the disaggregation phase after hazard curve finalization.
         """
-        self.finalize_hazard_curves()
-        self.parallelize(disagg_task,
-                         self.disagg_task_arg_gen(self.block_size()))
-
-    def clean_up(self):
-        """
-        Delete temporary database records.
-        These records represent intermediate copies of final calculation
-        results and are no longer needed.
-
-        In this case, this includes all of the data for this calculation in the
-        tables found in the `htemp` schema space.
-        """
-        self.sources_per_rlz.clear()
-        logs.LOG.debug('> cleaning up temporary DB data')
-        models.HazardCurveProgress.objects.filter(
-            lt_realization__hazard_calculation=self.hc.id).delete()
-        logs.LOG.debug('< done cleaning up temporary DB data')
+        super(DisaggHazardCalculator, self).post_execute()
+        self.parallelize(
+            compute_disagg,
+            self.disagg_task_arg_gen(self.block_size()),
+            self.log_percent)

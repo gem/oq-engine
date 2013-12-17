@@ -32,6 +32,8 @@ from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.writer import CacheInserter
 
+# cutoff value for the poe
+EPSILON = 1E-30
 
 # Number of locations considered by each task
 DEFAULT_LOCATIONS_PER_TASK = 1000
@@ -71,10 +73,15 @@ def compute_hazard_maps(curves, imls, poes):
         poes = poes.reshape(1)
 
     result = []
-    imls = numpy.array(imls[::-1])
+    imls = numpy.log(numpy.array(imls[::-1]))
 
     for curve in curves:
-        hmap_val = numpy.interp(poes, curve[::-1], imls)
+        curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
+        # exp-log interpolation, to reduce numerical errors
+        # see https://bugs.launchpad.net/oq-engine/+bug/1252770
+        hmap_val = numpy.exp(numpy.interp(
+            numpy.log(poes), numpy.log(curve_cutoff), imls))
+
         result.append(hmap_val)
 
     return numpy.array(result).transpose()
@@ -296,29 +303,22 @@ def _save_uhs(job, uhs_results, poe, rlz=None, statistics=None, quantile=None):
     :param float quantile:
         Specify only if ``statistics`` == 'quantile'.
     """
-    output = models.Output(
+    output = models.Output.objects.create(
         oq_job=job,
         output_type='uh_spectra'
     )
     uhs = models.UHS(
+        output=output,
         poe=poe,
         investigation_time=job.hazard_calculation.investigation_time,
-        periods=uhs_results['periods'],
+        periods=uhs_results['periods']
     )
     if rlz is not None:
         uhs.lt_realization = rlz
-        #output.display_name = _UHS_DISP_NAME_FMT % dict(poe=poe, rlz=rlz.id)
     elif statistics is not None:
         uhs.statistics = statistics
         if statistics == 'quantile':
             uhs.quantile = quantile
-            #output.display_name = (_UHS_DISP_NAME_QUANTILE_FMT
-            #                       % dict(poe=poe, quantile=quantile))
-        #else:
-            # mean
-            #output.display_name = _UHS_DISP_NAME_MEAN_FMT % dict(poe=poe)
-    output.save()
-    uhs.output = output
     # This should fail if neither `lt_realization` nor `statistics` is defined:
     uhs.save()
 

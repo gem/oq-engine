@@ -244,8 +244,10 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
             is_complete=False, total_items=1, completed_items=1)
         hazard_output = models.HazardCurve.objects.create(
             lt_realization=rlz,
-            output=models.Output.objects.create_output(
-                hazard_job, "Test Hazard output", "hazard_curve"),
+            output=models.Output.objects.create(
+                oq_job=hazard_job,
+                display_name="Test Hazard output",
+                output_type="hazard_curve"),
             investigation_time=hc.investigation_time,
             imt="PGA", imls=[0.1, 0.2, 0.3])
         params = {
@@ -301,11 +303,15 @@ class DeleteHazCalcTestCase(unittest.TestCase):
                                             username=getpass.getuser())
         hazard_calc = hazard_job.hazard_calculation
 
-        models.Output.objects.create_output(
-            hazard_job, 'test_curves_1', output_type='hazard_curve'
+        models.Output.objects.create(
+            oq_job=hazard_job,
+            display_name='test_curves_1',
+            output_type='hazard_curve'
         )
-        models.Output.objects.create_output(
-            hazard_job, 'test_curves_2', output_type='hazard_curve'
+        models.Output.objects.create(
+            oq_job=hazard_job,
+            display_name='test_curves_2',
+            output_type='hazard_curve'
         )
 
         # Sanity check: make sure the hazard calculation and outputs exist in
@@ -390,11 +396,15 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         )
         risk_calc = risk_job.risk_calculation
 
-        models.Output.objects.create_output(
-            risk_job, 'test_curves_1', output_type='loss_curve'
+        models.Output.objects.create(
+            oq_job=risk_job,
+            display_name='test_curves_1',
+            output_type='loss_curve'
         )
-        models.Output.objects.create_output(
-            risk_job, 'test_curves_2', output_type='loss_curve'
+        models.Output.objects.create(
+            oq_job=risk_job,
+            display_name='test_curves_2',
+            output_type='loss_curve'
         )
 
         # Sanity check: make sure the risk calculation and outputs exist in

@@ -41,6 +41,8 @@ This could be the target for future optimizations.
 import itertools
 import numpy
 
+from openquake.hazardlib.imt import from_string
+
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 
@@ -86,13 +88,12 @@ def gmf_to_hazard_curve_arg_gen(job):
     duration = hc.ses_per_logic_tree_path * invest_time
 
     for raw_imt, imls in hc.intensity_measure_types_and_levels.iteritems():
-        imt, sa_period, sa_damping = models.parse_imt(raw_imt)
+        imt, sa_period, sa_damping = from_string(raw_imt)
 
         for lt_rlz in lt_realizations:
-            hc_output = models.Output.objects.create_output(
-                job,
-                HAZ_CURVE_DISP_NAME_FMT % dict(imt=raw_imt, rlz=lt_rlz.id),
-                'hazard_curve')
+            hc_output = models.Output.objects.create(
+                oq_job=job,
+                output_type='hazard_curve')
 
             # Create the hazard curve "collection":
             hc_coll = models.HazardCurve.objects.create(

@@ -25,6 +25,7 @@ from openquake.nrmllib.hazard.parsers import RuptureModelParser
 
 # HAZARDLIB
 from openquake.hazardlib.calc import ground_motion_fields
+from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
 from openquake.engine.calculators.hazard import general as haz_general
@@ -34,9 +35,6 @@ from openquake.engine.input import source
 from openquake.engine import writer
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
-
-
-BLOCK_SIZE = 1000  # TODO: decide where to put this parameter
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
@@ -68,8 +66,7 @@ def compute_gmfs(job_id, sites, rupture, gmf_id, realizations):
         Number of realizations to create.
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    imts = [haz_general.imt_to_hazardlib(x)
-            for x in hc.intensity_measure_types]
+    imts = [from_string(x) for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     correlation_model = haz_general.get_correl_model(hc)
 
@@ -103,14 +100,7 @@ def save_gmf(gmf_id, gmf_dict, sites):
         # we want it is an array; it handles subscripting
         # in the way that we want
         gmfarray = numpy.array(gmfs_)
-
-        sa_period = None
-        sa_damping = None
-        if isinstance(imt, openquake.hazardlib.imt.SA):
-            sa_period = imt.period
-            sa_damping = imt.damping
-        imt_name = imt.__class__.__name__
-
+        imt_name, sa_period, sa_damping = imt
         for i, site in enumerate(sites):
             inserter.add(models.GmfData(
                 gmf_id=gmf_id,
@@ -177,6 +167,13 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # create an associated gmf record
         self.gmf = models.Gmf.objects.create(output=output)
 
+    def block_size(self):
+        """
+        Block size for the scenario calculator. For the moment hard-coded to
+        1000.
+        """
+        return 1000
+
     def task_arg_gen(self, block_size):
         """
         Loop through realizations and sources to generate a sequence of
@@ -187,11 +184,11 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         (task_seed will be used to seed numpy for temporal occurence sampling).
 
         :param int block_size:
-            The number of work items for each task. Fixed to 1.
+            The number of work items for each task. Fixed to 1000.
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-        for sites in block_splitter(self.hc.site_collection, BLOCK_SIZE):
+        for sites in block_splitter(self.hc.site_collection, block_size):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
             yield (self.job.id, models.SiteCollection(sites),
                    self.rupture, self.gmf.id, task_seed,

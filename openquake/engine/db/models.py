@@ -27,7 +27,6 @@ Model representations of the OpenQuake DB tables.
 
 import collections
 import operator
-import re
 from datetime import datetime
 
 
@@ -42,17 +41,13 @@ from django.dispatch import receiver
 from django.contrib.gis.db import models as djm
 from shapely import wkt
 
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import geo as hazardlib_geo
 from openquake.hazardlib import source as hazardlib_source
 import openquake.hazardlib.site
 
 from openquake.engine.db import fields
 from openquake.engine import writer
-
-
-#: Default Spectral Acceleration damping. At the moment, this is not
-#: configurable.
-DEFAULT_SA_DAMPING = 5.0
 
 
 #: Kind of supported curve statistics
@@ -267,26 +262,6 @@ class RevisionInfo(djm.Model):
 
 
 ## Tables in the 'hzrdi' (Hazard Input) schema.
-
-
-class ParsedSource(djm.Model):
-    """Stores parsed hazard input model sources in serialized python object
-       tree format."""
-    job = djm.ForeignKey('OqJob')
-    SRC_TYPE_CHOICES = (
-        (u'area', u'Area'),
-        (u'point', u'Point'),
-        (u'complex', u'Complex'),
-        (u'simple', u'Simple'),
-        (u'characteristic', u'Characteristic'),
-    )
-    source_type = djm.TextField(choices=SRC_TYPE_CHOICES)
-    source_model_filename = djm.TextField(null=False)
-    nrml = fields.PickleField(help_text="NRML object representing the source")
-
-    class Meta:
-        db_table = 'hzrdi\".\"parsed_source'
-
 
 class SiteModel(djm.Model):
     '''
@@ -689,11 +664,9 @@ class HazardCalculation(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"hazard_calculation'
 
-    def __init__(self, *args, **kwargs):
-        # A place to cache computation geometry. Recomputing this many times
-        # for large regions is wasteful.
-        self._points_to_compute = None
-        super(HazardCalculation, self).__init__(*args, **kwargs)
+    # class attributes used as defaults; I am avoiding `__init__`
+    # to avoid issues with Django caching mechanism (MS)
+    _points_to_compute = None
 
     def individual_curves_per_location(self):
         """
@@ -703,6 +676,13 @@ class HazardCalculation(djm.Model):
         """
         realizations_nr = self.ltrealization_set.count()
         return realizations_nr
+
+    @property
+    def prefiltered(self):
+        """
+        Prefiltering is enabled when there are few sites (up to a thousand)
+        """
+        return len(self.site_collection) <= 1000
 
     @property
     def vulnerability_models(self):
@@ -825,9 +805,10 @@ class HazardCalculation(djm.Model):
         if self.id in SiteCollection.cache:
             return SiteCollection.cache[self.id]
 
-        site_model_inp = self.site_model
         hsites = HazardSite.objects.filter(
             hazard_calculation=self).order_by('id')
+        if not hsites:
+            raise RuntimeError('No sites were imported!')
         # NB: the sites MUST be ordered. The issue is that the disaggregation
         # calculator has a for loop of kind
         # for site in sites:
@@ -838,6 +819,7 @@ class HazardCalculation(djm.Model):
         # qa_tests/hazard/disagg/case_1/test.py fails with a bad
         # error message
         sites = []
+        site_model_inp = self.site_model
         for hsite in hsites:
             pt = openquake.hazardlib.geo.point.Point(
                 hsite.location.x, hsite.location.y)
@@ -856,9 +838,8 @@ class HazardCalculation(djm.Model):
             sites.append(openquake.hazardlib.site.Site(
                          pt, vs30, measured, z1pt0, z2pt5, hsite.id))
 
-        sitecoll = SiteCollection.cache[self.id] = \
-            SiteCollection(sites) if sites else None
-        return sitecoll
+        sc = SiteCollection.cache[self.id] = SiteCollection(sites)
+        return sc
 
     def get_imts(self):
         """
@@ -903,6 +884,21 @@ class HazardCalculation(djm.Model):
                               * n_lt_realizations)
 
         return investigation_time
+
+    def sites_affected_by(self, src):
+        """
+        If the maximum_distance is set and the prefiltered is on,
+        i.e. if the computation involves only few (<=1000) sites,
+        return the filtered subset of the site collection, otherwise
+        return the whole connection. NB: this method returns `None`
+        if the filtering does not find any site close to the source.
+
+        :param src: the source object used for the filtering
+        """
+        if self.maximum_distance and self.prefiltered:
+            return src.filter_sites_by_distance_to_source(
+                self.maximum_distance, self.site_collection)
+        return self.site_collection
 
 
 class RiskCalculation(djm.Model):
@@ -1205,28 +1201,6 @@ def _prep_geometry(kwargs):
     return kwargs
 
 
-class OutputManager(djm.Manager):
-    """
-    Manager class to filter and create Output objects
-    """
-    def create_output_new(self, job, output_type):
-        """
-        Create an output for the given `job`, `display_name` and
-        `output_type` (default to hazard_curve)
-        """
-        return self.create(oq_job=job,
-                           output_type=output_type)
-
-    def create_output(self, job, display_name, output_type):
-        """
-        Create an output for the given `job`, `display_name` and
-        `output_type` (default to hazard_curve)
-        """
-        return self.create(oq_job=job,
-                           display_name=display_name,
-                           output_type=output_type)
-
-
 class Output(djm.Model):
     '''
     A single artifact which is a result of an OpenQuake job.
@@ -1282,8 +1256,6 @@ class Output(djm.Model):
     output_type = djm.TextField(
         choices=HAZARD_OUTPUT_TYPE_CHOICES + RISK_OUTPUT_TYPE_CHOICES)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    objects = OutputManager()
 
     def __str__(self):
         return "%d||%s||%s" % (self.id, self.output_type, self.display_name)
@@ -1406,16 +1378,17 @@ class HazardMap(djm.Model):
     imls = fields.FloatArrayField()
 
     def create_display_name(self):
-        return "%s%s%shazard map%s%s%s%s%s%s" % (
+        return "".join((
             "mean " if self.statistics == 'mean' else "",
             "%" + str(self.quantile) + " " if self.quantile else "",
             "quantile " if self.statistics == 'quantile' else "",
+            self.output.get_output_type_display().lower(),
             " | realization = " + str(self.lt_realization) + " " if self.lt_realization else "",
             " | investigation time = " + str(self.investigation_time),
             " | poe = " + str(self.poe),
             " | sa_period = " + str(self.sa_period) if self.sa_period else "",
             " | sa_damping = " + str(self.sa_damping) if self.sa_damping else "",
-            " | imt = " + str(self.imt))
+            " | imt = " + str(self.imt)))
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_map'
@@ -1428,23 +1401,6 @@ class HazardMap(djm.Model):
 
     def __repr__(self):
         return self.__str__()
-
-
-def parse_imt(imt):
-    """
-    Given an intensity measure type in long form (with attributes),
-    return the intensity measure type, the sa_period and sa_damping
-    """
-    sa_period = None
-    sa_damping = None
-    if 'SA' in imt:
-        match = re.match(r'^SA\(([^)]+?)\)$', imt)
-        sa_period = float(match.group(1))
-        sa_damping = DEFAULT_SA_DAMPING
-        hc_im_type = 'SA'  # don't include the period
-    else:
-        hc_im_type = imt
-    return hc_im_type, sa_period, sa_damping
 
 
 class HazardCurve(djm.Model):
@@ -1469,15 +1425,15 @@ class HazardCurve(djm.Model):
     sa_damping = djm.FloatField(null=True)
 
     def create_display_name(self):
-        return "%s%s%shazard map%s%s%s%s%s" % (
+        return "".join((
             "mean " if self.statistics == 'mean' else "",
             "%" + str(self.quantile) + " " if self.quantile else "",
             "quantile " if self.statistics == 'quantile' else "",
-            " | realization = " + str(self.lt_realization) + " " if self.lt_realization else "",
+            self.output.get_output_type_display().lower(),
+            (" | realization = " + str(self.lt_realization) +
+             " " if self.lt_realization else ""),
             " | investigation time = " + str(self.investigation_time),
-            " | sa_period = " + str(self.sa_period) if self.sa_period else "",
-            " | sa_damping = " + str(self.sa_damping) if self.sa_damping else "",
-            " | imt = " + str(self.imt))
+            " | imt = " + str(self.imt_long) if self.imt else "multi"))
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
@@ -1883,7 +1839,9 @@ class Gmf(djm.Model):
         db_table = 'hzrdr\".\"gmf'
 
     def create_display_name(self):
-        return "ground motion field | realization = %s" % self.lt_realization
+        return "%s | realization = %s" % (
+            self.output.get_output_type_display().lower(),
+            self.lt_realization)
 
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
@@ -2027,9 +1985,9 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     hc = job.hazard_calculation
     coll = output.gmf
     if imt is None:
-        imts = [parse_imt(x) for x in hc.intensity_measure_types]
+        imts = [from_string(x) for x in hc.intensity_measure_types]
     else:
-        imts = [parse_imt(imt)]
+        imts = [from_string(imt)]
     for imt, sa_period, sa_damping in imts:
         for gmf in GmfData.objects.filter(
                 gmf=coll, imt=imt,
@@ -2056,9 +2014,9 @@ def get_gmfs_scenario(output, imt=None):
     hc = job.hazard_calculation
     coll = output.gmf
     if imt is None:
-        imts = [parse_imt(x) for x in hc.intensity_measure_types]
+        imts = [from_string(x) for x in hc.intensity_measure_types]
     else:
-        imts = [parse_imt(imt)]
+        imts = [from_string(imt)]
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
         for gmf in GmfData.objects.filter(
@@ -2150,13 +2108,14 @@ class UHS(djm.Model):
     quantile = djm.FloatField(null=True)
 
     def create_display_name(self):
-        return "%s%s%sUHS%s%s%s" % (
+        return "".join((
             "mean " if self.statistics == 'mean' else "",
             "%" + str(self.quantile) + " " if self.quantile else "",
             "quantile " if self.statistics == 'quantile' else "",
+            self.output.get_output_type_display().lower(),
             " | realization = " + str(self.lt_realization) + " " if self.lt_realization else "",
             " | investigation time = " + str(self.investigation_time),
-            " | poe = " + str(self.poe))
+            " | poe = " + str(self.poe)))
 
     class Meta:
         db_table = 'hzrdr\".\"uhs'
@@ -2223,15 +2182,16 @@ class LossFraction(djm.Model):
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     def create_display_name(self):
-        return "%s%s%sloss fractions%s%s%s%s%s" % (
+        return "".join((
             str(self.loss_type) + " ",
             "quantile " if self.quantile else "",
             str(self.statistics) + " " if self.statistics else "",
-            " | POE = " + str(self.poe),
+            self.output.get_output_type_display().lower(),
+            " | poe = " + str(self.poe),
             " | hazard output id = " + str(self.hazard_output.id),
             " | quantile = " + str(self.quantile) if self.quantile else "",
             " | variable = " + str(self.variable),
-            " | investigation time = " + str(retrieve_investigation_time(self)))
+            " | investigation time = " + str(retrieve_investigation_time(self))))
 
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
@@ -2445,15 +2405,16 @@ class LossMap(djm.Model):
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     def create_display_name(self):
-        return "%s%s%s%sloss maps%s%s%s" % (
+        return "".join((
             str(self.loss_type) + " ",
             "insured " if self.insured else "",
             "quantile " if self.quantile else "",
+            self.output.get_output_type_display().lower(),
             (str(self.statistics) + " " + " | hazard output id = " +
              str(self.hazard_output.id) if self.statistics else ""),
-            " | POE = " + str(self.poe) if self.poe else "",
+            " | poe = " + str(self.poe) if self.poe else "",
             " | quantile = " + str(self.quantile) if self.quantile else "",
-            " | investigation time = " + str(retrieve_investigation_time(self)))
+            " | investigation time = " + str(retrieve_investigation_time(self))))
 
     class Meta:
         db_table = 'riskr\".\"loss_map'
@@ -2511,6 +2472,14 @@ class AggregateLoss(djm.Model):
     class Meta:
         db_table = 'riskr\".\"aggregate_loss'
 
+    def create_display_name(self):
+        return "".join((
+            str(self.loss_type) + " ",
+            "insured " if self.insured else "",
+            self.output.get_output_type_display().lower(),
+            " | investigation time = " + str(
+                retrieve_investigation_time(self))))
+
     @property
     def output_hash(self):
         """
@@ -2553,15 +2522,16 @@ class LossCurve(djm.Model):
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     def create_display_name(self):
-        return "%s%s%s%s%sloss curves%s%s" % (
+        return "".join((
             str(self.loss_type) + " ",
             "insured " if self.insured else "",
             "aggregate " if self.aggregate else "",
             "quantile " if self.quantile else "",
+            self.output.get_output_type_display().lower(),
             (str(self.statistics) + " " + " | hazard output id = " +
              str(self.hazard_output.id) if self.statistics else ""),
             " | quantile = " + str(self.quantile) if self.quantile else "",
-            " | investigation time = " + str(retrieve_investigation_time(self)))
+            " | investigation time = " + str(retrieve_investigation_time(self))))
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -2663,6 +2633,12 @@ class EventLoss(djm.Model):
         "Output", related_name="risk_event_loss_tables")
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
+    def create_display_name(self):
+        return "".join((
+            str(self.loss_type),
+            self.output.get_output_type_display().lower()
+        ))
+
     class Meta:
         db_table = 'riskr\".\"event_loss'
 
@@ -2712,10 +2688,12 @@ class BCRDistribution(djm.Model):
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
     def create_display_name(self):
-        return "%sBCR distributions%s%s" % (
+        return "".join((
             str(self.loss_type) + " ",
+            self.output.get_output_type_display().lower(),
             " | hazard output id = " + str(self.hazard_output.id),
-            " | investigation time = " + str(retrieve_investigation_time(self)))
+            (" | investigation time = " +
+             str(retrieve_investigation_time(self)))))
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -3284,24 +3262,6 @@ class Cost(djm.Model):
 ## Tables in the 'htemp' schema.
 
 
-class HazardCurveProgress(djm.Model):
-    """
-    Store intermediate results of hazard curve calculations (as a pickled numpy
-    array) for a single logic tree realization.
-    """
-
-    lt_realization = djm.ForeignKey('LtRealization')
-    imt = djm.TextField()
-    # stores a pickled numpy array for intermediate results
-    # array is 2d: sites x IMLs
-    # each row indicates a site,
-    # each column holds the PoE vaue for the IML at that index
-    result_matrix = fields.NumpyListField(default=None)
-
-    class Meta:
-        db_table = 'htemp\".\"hazard_curve_progress'
-
-
 class HazardSite(djm.Model):
     """
     Contains pre-computed site parameter matrices. ``lons`` and ``lats``
@@ -3335,16 +3295,8 @@ def update_display_name(sender, instance, *args, **kwargs):
     saving the record in the DB, the instance creates its own description and
     saves it into the display_name field of the output table.
     """
-    output_models = [LossCurve,
-                     LossMap,
-                     BCRDistribution,
-                     LossFraction,
-                     UHS,
-                     HazardMap,
-                     HazardCurve,
-                     Gmf]
 
-    if sender in output_models:
+    if hasattr(sender, "create_display_name"):
         instance.output.display_name = instance.create_display_name()
         instance.output.save()
 

@@ -32,12 +32,12 @@ import cPickle as pickle
 from openquake.hazardlib import geo, const
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc.gmf import ground_motion_field_with_residuals
+from openquake.hazardlib.imt import from_string
 
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.performance import DummyMonitor, LightMonitor
 from openquake.engine.calculators.hazard import general
-from openquake.engine.input import logictree
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
@@ -70,7 +70,7 @@ class HazardGetter(object):
         self.assets = assets
         self.max_distance = max_distance
         self.imt = imt
-        self.imt_type, self.sa_period, self.sa_damping = models.parse_imt(imt)
+        self.imt_type, self.sa_period, self.sa_damping = from_string(imt)
         # FIXME(lp). It is better to directly store the convex hull
         # instead of the mesh. We are not doing it because
         # hazardlib.Polygon is not (yet) pickeable
@@ -434,7 +434,7 @@ class GroundMotionValuesCalcGetter(object):
             Correlation model is not used if ``truncation_level`` is zero.
         """
 
-        self.imt = general.imt_to_hazardlib(imt)
+        self.imt = from_string(imt)
         self.site_collection = site_collection
         self.sites_assets = sites_assets
         self.truncation_level = truncation_level

@@ -24,7 +24,7 @@ from openquake.engine.db import models
 class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
     EXPECTED_LOSS_CURVE_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <lossCurves investigationTime="50.0" statistics="mean" unit="USD">
+  <lossCurves investigationTime="50.0" statistics="mean" unit="USD" lossType="structural">
     <lossCurve assetRef="a1">
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
@@ -41,7 +41,7 @@ class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4">
   <lossMap investigationTime="50.0" poE="0.01"
-           statistics="mean" lossCategory="single_asset" unit="USD">
+           statistics="mean" lossCategory="single_asset" unit="USD" lossType="structural">
     <node>
       <gml:Point>
         <gml:pos>1.0 1.0</gml:pos>
@@ -73,8 +73,10 @@ class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
 
         models.HazardCurveData.objects.create(
             hazard_curve=models.HazardCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job, "Test Hazard curve", "hazard_curve"),
+                output=models.Output.objects.create(
+                    oq_job=job,
+                    display_name="Test Hazard curve",
+                    output_type="hazard_curve"),
                 investigation_time=50,
                 imt="PGA", imls=[hz[0] for hz in hazard_curve],
                 statistics="mean"),
