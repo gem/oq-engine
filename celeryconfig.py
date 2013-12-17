@@ -63,6 +63,8 @@ CELERY_RESULT_BACKEND = "amqp"
 # performance issues with respect to cluster utilization.)
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
+# This improves peformances since we are not using RATE_LIMITS
+CELERY_DISABLE_RATE_LIMITS = True
 
 HAZARD_MODULES = get_core_modules(hazard)
 
