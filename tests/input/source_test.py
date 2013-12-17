@@ -28,7 +28,6 @@ from openquake.hazardlib import source
 from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib import models as nrml_models
 
-from openquake.engine.db import models
 from openquake.engine.input import source as source_input
 
 from tests.utils import helpers
