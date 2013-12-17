@@ -66,8 +66,12 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
                    'sites': hc.site_collection}
 
     if hc.maximum_distance:
-        # NB: add a source site filter anyway, even if the sources were
-        # prefiltered, because it makes a LOT of difference (MS)
+        # NB: (MS) we add a source site filter anyway, even if the sources were
+        # prefiltered, because it makes a LOT of difference: inside
+        # hazard_curves_poissonian there is a loop on the filtered sites
+        # (s_sites) and the rupture filter is applied only over such sites;
+        # look at hazardlib.calc.hazard_curve.hazard_curves_poissonian, line
+        # `for rupture, r_sites in rupture_site_filter(ruptures_sites)`
         calc_kwargs['source_site_filter'] = (
             openquake.hazardlib.calc.filters.source_site_distance_filter(
                 hc.maximum_distance))
