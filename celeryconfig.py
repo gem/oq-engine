@@ -48,6 +48,9 @@ BROKER_PORT = int(amqp.get("port"))
 BROKER_USER = amqp.get("user")
 BROKER_PASSWORD = amqp.get("password")
 BROKER_VHOST = amqp.get("vhost")
+# Force BROKER_POOL_LIMIT to 1024 so it can reuse a single connection
+# fixes https://bugs.launchpad.net/oq-engine/+bug/1250402
+BROKER_POOL_LIMIT = 1024
 
 CELERY_RESULT_BACKEND = "amqp"
 
