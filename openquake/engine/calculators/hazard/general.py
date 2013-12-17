@@ -129,16 +129,12 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-
         # a dictionary (sm_lt_path, source_type) -> source_ids
         self.sources_per_ltpath = collections.defaultdict(list)
-        # a dictionary rlz -> source model name (in the logic tree)
-        self.rlz_to_sm = {}
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
         self.sources_per_ltpath.clear()
-        self.rlz_to_sm.clear()
 
     @property
     def hc(self):
