@@ -87,17 +87,6 @@ def compute_hazard_maps(curves, imls, poes):
     return numpy.array(result).transpose()
 
 
-_HAZ_MAP_DISP_NAME_MEAN_FMT = 'Mean Hazard map(%(poe)s) %(imt)s'
-_HAZ_MAP_DISP_NAME_QUANTILE_FMT = (
-    '%(quantile)s Quantile Hazard Map(%(poe)s) %(imt)s')
-# Hazard maps for a specific end branch
-_HAZ_MAP_DISP_NAME_FMT = 'Hazard Map(%(poe)s) %(imt)s rlz-%(rlz)s'
-
-_UHS_DISP_NAME_MEAN_FMT = 'Mean UHS (%(poe)s)'
-_UHS_DISP_NAME_QUANTILE_FMT = '%(quantile)s Quantile UHS (%(poe)s)'
-_UHS_DISP_NAME_FMT = 'UHS (%(poe)s) rlz-%(rlz)s'
-
-
 # Silencing 'Too many local variables'
 # pylint: disable=R0914
 def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
@@ -142,18 +131,8 @@ def hazard_curves_to_hazard_map(job_id, hazard_curve_id, poes):
             lons[loc_idx] = hcd[loc_idx][0]
             lats[loc_idx] = hcd[loc_idx][1]
 
-        # Create 'Output' records for the map for this PoE
-        if hc.statistics == 'mean':
-            disp_name = _HAZ_MAP_DISP_NAME_MEAN_FMT % dict(poe=poe, imt=imt)
-        elif hc.statistics == 'quantile':
-            disp_name = _HAZ_MAP_DISP_NAME_QUANTILE_FMT % dict(
-                poe=poe, imt=imt, quantile=hc.quantile)
-        else:
-            disp_name = _HAZ_MAP_DISP_NAME_FMT % dict(
-                poe=poe, imt=imt, rlz=hc.lt_realization.id)
-
-        output = models.Output.objects.create_output(
-            job, disp_name, 'hazard_map'
+        output = models.Output.objects.create(
+            oq_job=job, output_type='hazard_map'
         )
         # Save the complete hazard map
         models.HazardMap.objects.create(

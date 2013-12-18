@@ -365,7 +365,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         """
         output = models.Output.objects.create(
             oq_job=self.job,
-            #display_name='SES Collection rlz-%s' % lt_rlz.id,
             output_type='ses')
 
         ses_coll = models.SESCollection.objects.create(
@@ -374,7 +373,6 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         if self.job.hazard_calculation.ground_motion_fields:
             output = models.Output.objects.create(
                 oq_job=self.job,
-                #display_name='GMF rlz-%s' % lt_rlz.id,
                 output_type='gmf')
 
             models.Gmf.objects.create(

@@ -1215,7 +1215,7 @@ class Output(djm.Model):
 
     oq_job = djm.ForeignKey('OqJob')  # nullable in the case of an output
     # coming from an external source, with no job associated
-    display_name = djm.TextField(blank=True, default='')
+    display_name = djm.TextField(null=True, blank=True, default='')
     HAZARD_OUTPUT_TYPE_CHOICES = (
         (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'gmf', u'Ground Motion Field'),
@@ -3261,7 +3261,9 @@ class HazardSite(djm.Model):
 
 
 def retrieve_investigation_time(output_model):
-    # TODO: write docstring
+    """
+    It retrieves the investigation time of the calculation
+    """
     return output_model.output.oq_job.calculation.investigation_time
 
 # if we split classes in different files, we need to put this function in
@@ -3271,9 +3273,10 @@ def update_display_name(sender, instance, *args, **kwargs):
     """
     Whenever any of the django models (sender) attempts to save data into the
     DB, it sends a signal that is intercepted by this method.
-    If the sender is one of the output models listed in output_models, before
-    saving the record in the DB, the instance creates its own description and
-    saves it into the display_name field of the output table.
+    If the sender is one of the output models (and therefore it contains the
+    method create_display_name), before saving the record in the DB, the
+    instance creates its own description and saves it into the display_name
+    field of the output table.
     """
 
     if hasattr(sender, "create_display_name"):
