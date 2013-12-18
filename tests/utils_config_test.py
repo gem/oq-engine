@@ -290,43 +290,6 @@ class IsReadableTestCase(unittest.TestCase):
         self.assertTrue(config.Config().is_readable())
 
 
-class HazardBlockSizeTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.config.hazard_block_size()."""
-
-    def test_not_configured(self):
-        """
-        The hazard block size was not set in openquake.cfg, the default
-        is returned.
-        """
-        with patch("openquake.engine.utils.config.get") as mget:
-            mget.return_value = None
-            self.assertEqual(8192, config.hazard_block_size())
-
-    def test_not_configured_default_overriden(self):
-        """
-        The hazard block size was not set in openquake.cfg, the default
-        is specified by the caller is returned.
-        """
-        with patch("openquake.engine.utils.config.get") as mget:
-            mget.return_value = None
-            self.assertEqual(333, config.hazard_block_size(333))
-
-    def test_configured(self):
-        """The hazard block size *was* configured in openquake.cfg"""
-        with patch("openquake.engine.utils.config.get") as mget:
-            mget.return_value = "33"
-            self.assertEqual(33, config.hazard_block_size())
-
-    def test_configuration_invalid(self):
-        """
-        The hazard block size *was* configured in openquake.cfg but
-        the setting is not a valid number.
-        """
-        with patch("openquake.engine.utils.config.get") as mget:
-            mget.return_value = "not a number"
-            self.assertRaises(ValueError, config.hazard_block_size)
-
-
 class FlagSetTestCase(ConfigTestCase, unittest.TestCase):
     """
     Tests for openquake.engine.utils.config.flag_set()

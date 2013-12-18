@@ -218,15 +218,10 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
     See :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
     details about the nature of this type of calculation.
     """
-    def disagg_task_arg_gen(self, block_size):
+    def disagg_task_arg_gen(self):
         """
         Generate task args for the second phase of disaggregation calculations.
         This phase is concerned with computing the disaggregation histograms.
-
-        :param int block_size:
-            The number of items per task. In this case, this the number of
-            sources for hazard curve calc task, or number of sites for disagg
-            calc tasks.
         """
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc)
@@ -235,8 +230,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
             path = tuple(lt_rlz.sm_lt_path)
-            sources = (self.sources_per_ltpath[path, 'point'] +
-                       self.sources_per_ltpath[path, 'other'])
+            sources = self.sources_per_ltpath[path]
+            block_size = self.calc_block_size(len(self.hc.site_collection))
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
                 yield self.job.id, sites, sources, lt_rlz, ltp
@@ -247,6 +242,4 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         """
         super(DisaggHazardCalculator, self).post_execute()
         self.parallelize(
-            compute_disagg,
-            self.disagg_task_arg_gen(self.block_size()),
-            self.log_percent)
+            compute_disagg, self.disagg_task_arg_gen(), self.log_percent)

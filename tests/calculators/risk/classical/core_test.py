@@ -41,9 +41,7 @@ class ClassicalRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
 
         try:
             mocked_writer = patch.start()
-
-            classical.classical(*self.calculator.task_arg_gen(
-                self.calculator.block_size()).next())
+            classical.classical(*self.calculator.task_arg_gen().next())
         finally:
             patch.stop()
 
