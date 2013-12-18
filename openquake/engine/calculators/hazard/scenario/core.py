@@ -36,6 +36,8 @@ from openquake.engine import writer
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
+BLOCK_SIZE = 1000  # for the moment hard-coded
+
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
@@ -159,14 +161,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # create an associated gmf record
         self.gmf = models.Gmf.objects.create(output=output)
 
-    def block_size(self):
-        """
-        Block size for the scenario calculator. For the moment hard-coded to
-        1000.
-        """
-        return 1000
-
-    def task_arg_gen(self, block_size):
+    def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -180,7 +175,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-        blocks = block_splitter(self.hc.site_collection, block_size)
+        blocks = block_splitter(self.hc.site_collection, BLOCK_SIZE)
         for task_no, sites in enumerate(blocks):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
             yield (self.job.id, models.SiteCollection(sites),

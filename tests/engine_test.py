@@ -645,8 +645,8 @@ class ProgressHandlerTestCase(unittest.TestCase):
         def block_size(self):
             return -1
 
-        def task_arg_gen(self, block_size):
-            return (range(block_size) for _ in range(block_size))
+        def task_arg_gen(self):
+            return [(1, 1), (1, 2)]
 
         def _get_outputs_for_export(self):
             return []

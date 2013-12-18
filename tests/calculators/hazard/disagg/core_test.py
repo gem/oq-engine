@@ -78,7 +78,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         finally:
             del os.environ['OQ_NO_DISTRIBUTE']
 
-        diss1, diss2, diss3, diss4 = list(self.calc.disagg_task_arg_gen(1))
+        diss1, diss2, diss3, diss4 = list(self.calc.disagg_task_arg_gen())
 
         base_path = 'openquake.engine.calculators.hazard.disaggregation.core'
 

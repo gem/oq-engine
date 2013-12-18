@@ -69,7 +69,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
         # after filtering the source model contains 17 non-point sources
-        sources = self.calc.sources_per_ltpath[('b1',), 'other']
+        sources = self.calc.sources_per_ltpath[('b1',)]
         self.assertEqual(17, len(sources))
 
     @attr('slow')
@@ -111,7 +111,7 @@ store_site_model'
         # the logic tree for this sample calculation only contains a single
         # source model
         path = tuple(ltr.sm_lt_path)
-        sources = self.calc.sources_per_ltpath[path, 'other']
+        sources = self.calc.sources_per_ltpath[path]
         self.assertEqual(17, len(sources))
 
     def test_initialize_realizations_montecarlo(self):

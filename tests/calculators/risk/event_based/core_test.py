@@ -59,8 +59,7 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
                 p.start() for p in patches]
 
             event_based.event_based(
-                *self.calculator.task_arg_gen(
-                    self.calculator.block_size()).next())
+                *self.calculator.task_arg_gen().next())
 
             # we expect 1 asset being filtered out by the region
             # constraint, so there are only four loss curves (2 of them
