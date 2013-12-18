@@ -1,4 +1,3 @@
-GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.source_progress       TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.hazard_curve_progress TO oq_job_init;
 GRANT SELECT,INSERT        ON hzrdr.hazard_curve      TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON hzrdr.hazard_curve_data TO oq_job_init;
