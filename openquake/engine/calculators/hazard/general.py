@@ -540,7 +540,7 @@ class BaseHazardCalculator(base.Calculator):
             container_ids = dict()
             if self.hc.mean_hazard_curves:
                 mean_output = models.Output.objects.create(
-                    job=self.job,
+                    oq_job=self.job,
                     output_type='hazard_curve'
                 )
                 mean_hc = models.HazardCurve.objects.create(
@@ -557,7 +557,7 @@ class BaseHazardCalculator(base.Calculator):
             if self.hc.quantile_hazard_curves:
                 for quantile in self.hc.quantile_hazard_curves:
                     q_output = models.Output.objects.create(
-                        job=self.job,
+                        oq_job=self.job,
                         output_type='hazard_curve'
                     )
                     q_hc = models.HazardCurve.objects.create(
