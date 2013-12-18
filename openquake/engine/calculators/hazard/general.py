@@ -212,12 +212,6 @@ class BaseHazardCalculator(base.Calculator):
         return models.LtRealization.objects\
             .filter(hazard_calculation=self.hc).order_by('id')
 
-    def filtered_sites(self, src):
-        """
-        Do not filter sites up front: overridden in the event based subclass
-        """
-        return self.hc.site_collection
-
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
@@ -227,6 +221,7 @@ class BaseHazardCalculator(base.Calculator):
         smlt_file = self.hc.inputs['source_model_logic_tree']
         self.smlt = logictree.SourceModelLogicTree(
             file(smlt_file).read(), self.hc.base_path, smlt_file)
+        num_sources = []
         for sm in self.smlt.get_source_models():
             fname = os.path.join(self.hc.base_path, sm)
             for src_nrml in nrml_parsers.SourceModelParser(fname).parse():
@@ -235,7 +230,7 @@ class BaseHazardCalculator(base.Calculator):
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
                     self.hc.area_source_discretization)
-                if self.filtered_sites(src):
+                if self.hc.sites_affected_by(src):
                     if isinstance(src_nrml, PointSource):
                         self.sources_per_model[sm, 'point'].append(src)
                     else:
@@ -243,6 +238,8 @@ class BaseHazardCalculator(base.Calculator):
             n = len(self.sources_per_model[sm, 'point']) + \
                 len(self.sources_per_model[sm, 'other'])
             logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
+            num_sources.append(n)
+        return num_sources
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):

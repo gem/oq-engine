@@ -80,13 +80,9 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
     sources = map(apply_uncertainties, sources)
 
-    # Make filters for distance to source and distance to rupture:
-    # a better approach would be to filter the sources on distance
-    # before, see the comment in the classical calculator
-    src_site_filter = openquake.hazardlib.calc.filters.\
-        source_site_distance_filter(hc.maximum_distance)
-    rup_site_filter = openquake.hazardlib.calc.filters.\
-        rupture_site_distance_filter(hc.maximum_distance)
+    f = openquake.hazardlib.calc.filters
+    src_site_filter = f.source_site_distance_filter(hc.maximum_distance)
+    rup_site_filter = f.rupture_site_distance_filter(hc.maximum_distance)
 
     for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
         hc_im_type, sa_period, sa_damping = imt = from_string(imt)

@@ -67,19 +67,12 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
                    'sites': hc.site_collection}
 
     if hc.maximum_distance:
-        dist = hc.maximum_distance
-        # NB: a better approach could be to filter the sources by distance
-        # at the beginning and to store into the database only the relevant
-        # sources, as we do in the event based calculator: I am not doing that
-        # for the classical calculator because I wonder about the performance
-        # impact in in SHARE-like calculations. So at the moment we store
-        # everything in the database and we filter on the workers. This
-        # will probably change in the future (MS).
         calc_kwargs['source_site_filter'] = (
-            openquake.hazardlib.calc.filters.source_site_distance_filter(dist))
+            openquake.hazardlib.calc.filters.source_site_distance_filter(
+                hc.maximum_distance))
         calc_kwargs['rupture_site_filter'] = (
             openquake.hazardlib.calc.filters.rupture_site_distance_filter(
-                dist))
+                hc.maximum_distance))
 
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
