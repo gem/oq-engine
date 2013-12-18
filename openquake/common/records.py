@@ -263,17 +263,59 @@ class CostType(Record):
 
 class Asset(Record):
     convertername = 'Exposure'
-    pkey = Unique('id')
+    pkey = Unique('asset_ref')
 
-    id = Field(str)
+    asset_ref = Field(str)
     taxonomy = Field(str)
     number = Field(float)
     area = Field(float)
-    location = Field(int)
+    location_id = Field(int)
 
     def to_node(self):
         return Node('asset', dict(id=self[0], taxonomy=self[1],
                                   number=self[2], area=self[3]))
+
+
+class Occupancy(Record):
+    convertername = 'Exposure'
+    pkey = Unique('asset_ref', 'period')
+
+    asset_ref = Field(str)
+    period = Field(str)
+    occupants = Field(valid.positivefloat)
+
+    def to_node(self):
+        return Node('occupancy', dict(period=self[1], occupants=self[2]))
+
+
+class Cost(Record):
+    convertername = 'Exposure'
+    pkey = Unique('asset_ref', 'type')
+
+    asset_ref = Field(str)
+    type = Field(str)
+    value = Field(valid.positivefloat)
+    retrofitted = Field(valid.positivefloat)
+    deductible = Field(valid.boolean)
+    insurance_limit = Field(valid.boolean)
+
+    def to_node(self):
+        """
+        Here are two examples:
+
+        <cost type="structural" value="150000" deductible=".1"
+              insuranceLimit="0.8" retrofitted="109876"/>
+        <cost type="non_structural" value="25000" deductible=".09"
+              insuranceLimit="0.82"/>
+        """
+        node = Node('cost', dict(type=self[1], value=self[2]))
+        if self[3]:
+            node['retrofitted'] = self[3]
+        if self[4]:
+            node['deductible'] = self[4]
+        if self[5]:
+            node['insuranceLimit'] = self[5]
+        return node
 
 
 # gmf records

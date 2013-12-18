@@ -72,10 +72,6 @@ xmlns:gml="http://www.opengis.net/gml"
                     <cost type="contents" value="30.95"/>
                     <cost type="structural" value="500000"/>
                 </costs>
-                <occupancies>
-                    <occupancy occupants="36" period="early morning"/>
-                    <occupancy occupants="5" period="late afternoon"/>
-                </occupancies>
             </asset>
         </assets>
     </exposureModel>

@@ -64,10 +64,8 @@ class ConvertGoodFilesTestCase(unittest.TestCase):
     def test_exposure_population(self):
         self.check_round_trip('exposure-population.xml')
 
-    ## TEMPORARILY COMMENTED OUT TEST
-
-    #def test_exposure_buildings(self):
-    #    self.check_round_trip('exposure-buildings.xml')
+    def test_exposure_buildings(self):
+        self.check_round_trip('exposure-buildings.xml')
 
     def test_gmf_scenario(self):
         self.check_round_trip('gmf-scenario.xml')

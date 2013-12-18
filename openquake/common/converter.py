@@ -267,88 +267,6 @@ class FragilityContinuous(Converter):
 
 ############################# exposure #################################
 
-COSTCOLUMNS = 'value deductible insuranceLimit retrofitted'.split()
-PERIODS = 'day', 'night', 'transit', 'early_morning', 'late_afternoon'
-## TODO: the occupancy periods should be inferred from the NRML file,
-## not hardcoded, exactly as the cost types
-## NB: they must be valid Python names, with no spaces inside
-
-
-def getcosts(asset, costcolumns):
-    """
-    Extracts different costs from an asset node. If a cost is not available
-    returns an empty string for it. Returns a list with the same length of
-    the cost columns.
-    """
-    row = dict.fromkeys(costcolumns, '')
-    for cost in asset.costs:
-        for kind in COSTCOLUMNS:
-            row['%s__%s' % (cost['type'], kind)] = cost.attrib.get(kind, '')
-    return [row[cc] for cc in costcolumns]
-
-
-def getcostcolumns(costtypes):
-    """
-    Extracts the kind of costs from a CostTypes node. Those will correspond
-    to columns names in the .csv representation of the exposure.
-    """
-    cols = []
-    for cost in costtypes:
-        for kind in COSTCOLUMNS:
-            cols.append('%s__%s' % (cost['name'], kind))
-    return cols
-
-
-def getoccupancies(asset):
-    """
-    Extracts the occupancies from an asset node.
-    """
-    dic = dict(('occupancy__' + occ['period'], occ['occupants'])
-               for occ in asset.occupancies)
-    return [dic.get('occupancy__%s' % period, '') for period in PERIODS]
-
-
-def assetgenerator(assets, location_node, costtypes):
-    """
-    Convert assets into asset nodes.
-
-    :param assets: an iterable over dictionaries
-    :param costtypes: list of dictionaries with the cost types
-
-    :returns: an iterable over Node objects describing exposure assets
-    """
-    for asset in assets:
-        nodes = [location_node[(asset['location'],)]]
-        costnodes = []
-        for costtype in costtypes:
-            keepnode = True
-            attr = dict(type=costtype['name'])
-            for costcol in COSTCOLUMNS:
-                value = asset['%s.%s' % (costtype['name'], costcol)]
-                if value:
-                    attr[costcol] = value
-                elif costcol == 'value':
-                    keepnode = False  # ignore costs without value
-            if keepnode:
-                costnodes.append(Node('cost', attr))
-        if costnodes:
-            nodes.append(Node('costs', {}, nodes=costnodes))
-        has_occupancies = any('occupancy__%s' % period in asset
-                              for period in PERIODS)
-        if has_occupancies:
-            occ = []
-            for period in PERIODS:
-                occupancy = asset['occupancy__' + period]
-                if occupancy:
-                    occ.append(Node('occupancy',
-                                    dict(occupants=occupancy, period=period)))
-            nodes.append(Node('occupancies', {}, nodes=occ))
-        attr = dict(id=asset['id'], number=asset['number'],
-                    taxonomy=asset['taxonomy'])
-        if 'area' in asset:
-            attr['area'] = asset['area']
-        yield Node('asset', attr, nodes=nodes)
-
 
 class Exposure(Converter):
     """A converter for exposureModel nodes"""
@@ -363,7 +281,6 @@ class Exposure(Converter):
                 yield records.CostType(c['name'], c['type'], c['unit'],
                                        c.attrib.get('retrofittedType', ''),
                                        c.attrib.get('retrofittedUnit', ''))
-            #costcolumns = getcostcolumns(node.conversions.costTypes)
             conv = node.conversions
             yield records.Exposure(
                 node['id'],
@@ -384,16 +301,40 @@ class Exposure(Converter):
         locations = {}  # location -> id
         loc_counter = itertools.count(1)
         for asset in node.assets:
-            # getcosts(asset, costcolumns) + getoccupancies(asset)
+            asset_ref = asset['id']
+
+            # convert occupancies
+            try:
+                occupancies = asset.occupancies
+            except NameError:
+                occupancies = []
+            for occupancy in occupancies:
+                yield records.Occupancy(
+                    asset_ref, occupancy['period'], occupancy['occupants'])
+
+            # convert costs
+            try:
+                costs = asset.costs
+            except NameError:
+                costs = []
+            for cost in costs:
+                yield records.Cost(
+                    asset_ref, cost['type'], cost['value'],
+                    cost.attrib.get('retrofitted'),
+                    cost.attrib.get('deductible'),
+                    cost.attrib.get('insuranceLimit'))
+
+            # convert locations
             loc = asset.location['lon'], asset.location['lat']
             try:
                 loc_id = locations[loc]
             except KeyError:
-                loc_id = locations[loc] = loc_counter.next()
+                loc_id = locations[loc] = str(loc_counter.next())
+            yield records.Location(loc_id, loc[0], loc[1])
 
-            yield records.Location(str(loc_id), loc[0], loc[1])
+            # convert assets
             yield records.Asset(
-                asset['id'], asset['taxonomy'],  asset['number'],
+                asset_ref, asset['taxonomy'],  asset['number'],
                 asset.attrib.get('area', ''), loc_id)
 
     def to_node(self):
@@ -414,18 +355,64 @@ class Exposure(Converter):
 
         with a variable number of columns depending on the metadata.
         """
-        tset = self.tableset
-        exp = tset.tableExposure[0].to_node()
+        t = self.tableset
+        exp = t.tableExposure[0].to_node()
         if exp['category'] == 'buildings':
-            exp.conversions.costTypes.nodes = ctypes = [
-                c.to_node() for c in tset.tableCostType]
-            # costcolumns = getcostcolumns(exp.conversions.costTypes)
+            cost_types = [c.name for c in t.tableCostType]
+            exp.conversions.costTypes.nodes = [
+                c.to_node() for c in t.tableCostType]
         else:
-            ctypes = []
-        location_dict = record.nodedict(tset.tableLocation)
-        exp.assets.nodes = assetgenerator(
-            tset.tableAsset, location_dict, ctypes)
+            cost_types = []
+        if t.tableOccupancy:
+            # extract the occupancies corresponding to the first asset
+            _asset_ref, occupancies = groupby(
+                t.tableOccupancy, ['asset_ref']).next()
+            periods = sorted(occ.period for occ in occupancies)
+        else:
+            periods = []
+        exp.assets.nodes = self._assetgenerator(
+            t.tableAsset, cost_types, periods)
         return exp
+
+    def _assetgenerator(self, assets, costtypes, periods):
+        """
+        Convert assets into asset nodes.
+
+        :param assets: asset records
+        :param costtypes: the valid cost types
+        :param periods: the valid periods
+
+        :returns: an iterable over Node objects describing exposure assets
+        """
+        # each asset contains the subnodes location, costs and occupancies
+        loc_dict = record.nodedict(self.tableset.tableLocation)
+        cost_dict = record.nodedict(self.tableset.tableCost)
+        occ_dict = record.nodedict(self.tableset.tableOccupancy)
+        for asset in assets:
+            ref = asset['asset_ref']
+            nodes = []
+            location = loc_dict[(asset['location_id'],)]
+            nodes.append(location)
+
+            costnodes = []
+            for ctype in costtypes:
+                cost = cost_dict.get((ref, ctype))
+                if cost is not None:
+                    costnodes.append(cost)
+            if costnodes:
+                nodes.append(Node('costs', {}, nodes=costnodes))
+
+            occupancynodes = []
+            for period in periods:
+                occupancy = occ_dict.get((ref, period))
+                if occupancy is not None:
+                    occupancynodes.append(occupancy)
+            if occupancynodes:
+                nodes.append(Node('occupancies', {}, nodes=occupancynodes))
+
+            assetnode = asset.to_node()
+            assetnode.nodes = nodes
+            yield assetnode
 
 
 ################################# gmf ##################################

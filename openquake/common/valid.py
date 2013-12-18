@@ -128,6 +128,24 @@ def positivefloat(text):
         raise ValueError('float %d < 0' % f)
     return f
 
+
+_BOOL_DICT = {
+    '0': False,
+    '1': True,
+    'false': False,
+    'true': True,
+}
+
+
+def boolean(text):
+    """String -> boolean"""
+    t = text.lower()
+    try:
+        return _BOOL_DICT[t]
+    except KeyError:
+        raise ValueError('Not a boolean: %s' % text)
+
+
 probability = FloatRange(0, 1)
 
 IMT = collections.namedtuple('IMT', 'imt saPeriod saDamping')

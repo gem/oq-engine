@@ -407,6 +407,8 @@ class Table(collections.MutableSequence):
         self._records = []
         for rec in records:
             self.append(rec)
+        self.attr = {}  # a dictionary that can be populated by extension
+        # modules, for instance a GUI could add visualization settings here
 
     def __getitem__(self, i):
         """Return the i-th record"""
