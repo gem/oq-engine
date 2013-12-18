@@ -248,18 +248,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """
     core_calc_task = compute_ses
 
-    def preferred_block_size(self, num_items):
-        """
-        Return the preferred block size, depending on the parameter
-        concurrent tasks. Notice that in order to save memory there
-        is a maximum block size of 1000 items.
-
-        :param int num_items: the number of items to split in blocks
-        """
-        pbs = int(math.ceil(float(num_items) / self.concurrent_tasks()))
-        return min(pbs, 1000)
-
-    def task_arg_gen(self, _block_size=None):
+    def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -271,14 +260,13 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rnd.seed(hc.random_seed)
         for lt_rlz in self._get_realizations():
             path = tuple(lt_rlz.sm_lt_path)
-            sources = (self.sources_per_ltpath[path, 'point'] +
-                       self.sources_per_ltpath[path, 'other'])
+            sources = self.sources_per_ltpath[path]
             ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in sources]  # source, seed pairs
-            preferred_block_size = self.preferred_block_size(len(sources))
-            logs.LOG.info('Using block size %d', preferred_block_size)
-            for block in block_splitter(ss, preferred_block_size):
+            block_size = self.calc_block_size(len(sources))
+            logs.LOG.info('Using block size %d', block_size)
+            for block in block_splitter(ss, block_size):
                 yield self.job.id, block, ses_coll
 
         # now the sources_per_ltpath dictionary can be cleared to save memory
@@ -307,10 +295,10 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                              for _ in range(len(rupture_ids))]
 
             # we split on ruptures to avoid running out of memory
-            preferred_block_size = self.preferred_block_size(len(rupture_ids))
-            logs.LOG.info('Using block size %d', preferred_block_size)
-            rupt_iter = block_splitter(rupture_ids, preferred_block_size)
-            seed_iter = block_splitter(rupture_seeds, preferred_block_size)
+            block_size = self.calc_block_size(len(rupture_ids))
+            logs.LOG.info('Using block size %d', block_size)
+            rupt_iter = block_splitter(rupture_ids, block_size)
+            seed_iter = block_splitter(rupture_seeds, block_size)
             for i, (rupts, seeds) in enumerate(zip(rupt_iter, seed_iter)):
                 yield self.job.id, gmf_coll, gsims, rupts, seeds, i
 
