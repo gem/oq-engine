@@ -19,6 +19,7 @@
 """Common code for the hazard calculators."""
 
 import os
+import math
 import random
 import collections
 
@@ -144,19 +145,16 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
-    def block_size(self):
+    def calc_block_size(self, num_items):
         """
-        For hazard calculators, the number of work items per task
-        is specified in the configuration file.
-        """
-        return int(config.get('hazard', 'block_size'))
+        Return the preferred block size, depending on the parameter
+        concurrent tasks. Notice that in order to save memory there
+        is a maximum block size of 1000 items.
 
-    def point_source_block_size(self):
+        :param int num_items: the number of items to split in blocks
         """
-        Similar to :meth:`block_size`, except that this parameter applies
-        specifically to grouping of point sources.
-        """
-        return int(config.get('hazard', 'point_source_block_size'))
+        pbs = int(math.ceil(float(num_items) / self.concurrent_tasks()))
+        return min(pbs, 1000)
 
     def concurrent_tasks(self):
         """
@@ -165,7 +163,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
-    def task_arg_gen(self, block_size):
+    def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -174,31 +172,15 @@ class BaseHazardCalculator(base.Calculator):
         (job_id, realization_id, source_id_list).
 
         Override this in subclasses as necessary.
-
-        :param int block_size:
-            The (max) number of work items for each each task. In this case,
-            sources.
         """
-        point_source_block_size = self.point_source_block_size()
-
         realizations = self._get_realizations()
-
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         for lt_rlz in realizations:
             path = tuple(lt_rlz.sm_lt_path)
-
-            # first non-point sources, which are potentially slow
-            other_sources = self.sources_per_ltpath[path, 'other']
-            for block in block_splitter(other_sources, block_size):
-                yield self.job.id, block, lt_rlz, ltp
-
-            # then point sources, which are more homogeneous
-            # we separate point sources from all the other types, since
-            # we distribute point sources with a different block size
-            point_sources = self.sources_per_ltpath[path, 'point']
-            for block in block_splitter(point_sources,
-                                        point_source_block_size):
+            sources = self.sources_per_ltpath[path]
+            block_size = self.calc_block_size(len(sources))
+            for block in block_splitter(sources, block_size):
                 yield self.job.id, block, lt_rlz, ltp
 
     def _get_realizations(self):
@@ -244,19 +226,15 @@ class BaseHazardCalculator(base.Calculator):
         num_sources = []  # the number of sources per sm_lt_path
         for sm, path in self.smlt.get_sm_paths():
             smpath = tuple(path)
-            for src in source.parse_source_model_smart(
+            self.sources_per_ltpath[smpath] = sources = list(
+                source.parse_source_model_smart(
                     os.path.join(self.hc.base_path, sm),
                     self.hc.sites_affected_by,
                     self.smlt.make_apply_uncertainties(path),
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization):
-                if src.__class__.__name__ == 'PointSource':
-                    self.sources_per_ltpath[smpath, 'point'].append(src)
-                else:
-                    self.sources_per_ltpath[smpath, 'other'].append(src)
-            n = len(self.sources_per_ltpath[smpath, 'point']) + \
-                len(self.sources_per_ltpath[smpath, 'other'])
+                    self.hc.area_source_discretization))
+            n = len(sources)
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
             num_sources.append(n)
         return num_sources
