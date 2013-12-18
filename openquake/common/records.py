@@ -106,7 +106,7 @@ class FFSetDiscrete(Record):
 
     ordinal = Field(int)
     taxonomy = Field(str)
-    noDamageLimit = Field(valid.NoneOr(float))
+    noDamageLimit = Field(valid.NoneOr(valid.positivefloat))
     IMT = Field(valid.IMTstr)
     imlUnit = Field(str)
 
@@ -268,8 +268,8 @@ class Asset(Record):
     asset_ref = Field(str)
     taxonomy = Field(str)
     number = Field(float)
-    area = Field(float)
-    location_id = Field(int)
+    area = Field(valid.NoneOr(valid.positivefloat))
+    location_id = Field(valid.positiveint)
 
     def to_node(self):
         attr = dict(id=self[0], taxonomy=self[1], number=self[2])
@@ -297,9 +297,9 @@ class Cost(Record):
     asset_ref = Field(str)
     type = Field(str)
     value = Field(valid.positivefloat)
-    retrofitted = Field(valid.positivefloat)
-    deductible = Field(valid.boolean)
-    insurance_limit = Field(valid.boolean)
+    retrofitted = Field(valid.NoneOr(valid.positivefloat))
+    deductible = Field(valid.NoneOr(valid.positivefloat))
+    insurance_limit = Field(valid.NoneOr(valid.positivefloat))
 
     def to_node(self):
         """

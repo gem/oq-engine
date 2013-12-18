@@ -276,26 +276,34 @@ class Exposure(Converter):
         """
         Convert the node into a sequence of Exposure records
         """
+        taxonomysource = node.attrib.get('taxonomySource', 'UNKNOWN')
         if node['category'] == 'buildings':
             for c in node.conversions.costTypes:
                 yield records.CostType(c['name'], c['type'], c['unit'],
                                        c.attrib.get('retrofittedType', ''),
                                        c.attrib.get('retrofittedUnit', ''))
             conv = node.conversions
+            try:
+                area = conv.area
+                area_type = area['type']
+                area_unit = area['unit']
+            except NameError:
+                area_type = ''
+                area_unit = ''
             yield records.Exposure(
                 node['id'],
                 node['category'],
-                node['taxonomySource'],
+                taxonomysource,
                 node.description.text.strip(),
-                conv.area['type'],
-                conv.area['unit'],
+                area_type,
+                area_unit,
                 conv.deductible['isAbsolute'],
                 conv.insuranceLimit['isAbsolute'])
         else:
             yield records.Exposure(
                 node['id'],
                 node['category'],
-                node['taxonomySource'],
+                taxonomysource,
                 node.description.text.strip())
 
         locations = {}  # location -> id
@@ -320,17 +328,17 @@ class Exposure(Converter):
             for cost in costs:
                 yield records.Cost(
                     asset_ref, cost['type'], cost['value'],
-                    cost.attrib.get('retrofitted'),
-                    cost.attrib.get('deductible'),
-                    cost.attrib.get('insuranceLimit'))
+                    cost.attrib.get('retrofitted', ''),
+                    cost.attrib.get('deductible', ''),
+                    cost.attrib.get('insuranceLimit', ''))
 
             # convert locations
             loc = asset.location['lon'], asset.location['lat']
-            try:
+            try:  # known location
                 loc_id = locations[loc]
-            except KeyError:
+            except KeyError:  # yield only new locations
                 loc_id = locations[loc] = str(loc_counter.next())
-            yield records.Location(loc_id, loc[0], loc[1])
+                yield records.Location(loc_id, loc[0], loc[1])
 
             # convert assets
             yield records.Asset(
