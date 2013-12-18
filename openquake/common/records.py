@@ -272,8 +272,10 @@ class Asset(Record):
     location_id = Field(int)
 
     def to_node(self):
-        return Node('asset', dict(id=self[0], taxonomy=self[1],
-                                  number=self[2], area=self[3]))
+        attr = dict(id=self[0], taxonomy=self[1], number=self[2])
+        if self[3]:
+            attr['area'] = self[3]
+        return Node('asset', attr)
 
 
 class Occupancy(Record):
