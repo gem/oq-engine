@@ -35,7 +35,7 @@ from scipy import interpolate
 
 from django.db import transaction, connections
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from django.contrib.gis.db import models as djm
@@ -1372,15 +1372,16 @@ class HazardMap(djm.Model):
 
     def create_display_name(self):
         return "".join((
-            "mean " if self.statistics == 'mean' else "",
-            "%" + str(self.quantile) + " " if self.quantile else "",
-            "quantile " if self.statistics == 'quantile' else "",
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
-            " | realization = " + str(self.lt_realization.ordinal) + " " if self.lt_realization else "",
+            " | realization = " + str(
+                self.lt_realization.ordinal) if self.lt_realization else "",
             " | investigation time = " + str(self.investigation_time),
             " | poe = " + str(self.poe),
             " | sa_period = " + str(self.sa_period) if self.sa_period else "",
-            " | sa_damping = " + str(self.sa_damping) if self.sa_damping else "",
+            " | sa_damping = " + str(
+                self.sa_damping) if self.sa_damping else "",
             " | imt = " + str(self.imt)))
 
     class Meta:
@@ -1419,12 +1420,11 @@ class HazardCurve(djm.Model):
 
     def create_display_name(self):
         return "".join((
-            "mean " if self.statistics == 'mean' else "",
-            "%" + str(self.quantile) + " " if self.quantile else "",
-            "quantile " if self.statistics == 'quantile' else "",
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
-            (" | realization = " + str(self.lt_realization.ordinal) +
-             " " if self.lt_realization else ""),
+            " | realization = " + str(
+                self.lt_realization.ordinal) + if self.lt_realization else "",
             " | investigation time = " + str(self.investigation_time),
             " | imt = " + str(self.imt_long) if self.imt else " | multi"))
 
@@ -1806,9 +1806,11 @@ class Gmf(djm.Model):
         db_table = 'hzrdr\".\"gmf'
 
     def create_display_name(self):
+        # FIXME: Impossible to retrieve lt_realization. It doesn't seem to be
+        # properly initialized when I attempt to access it
         return "%s | realization = %s" % (
             self.output.get_output_type_display().lower(),
-            str(self.lt_realization.ordinal))
+            str(self.lt_realization.ordinal) if self.lt_realization else "")
 
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
@@ -2099,11 +2101,11 @@ class UHS(djm.Model):
 
     def create_display_name(self):
         return "".join((
-            "mean " if self.statistics == 'mean' else "",
-            "%" + str(self.quantile) + " " if self.quantile else "",
-            "quantile " if self.statistics == 'quantile' else "",
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
-            " | realization = " + str(self.lt_realization.ordinal) + " " if self.lt_realization else "",
+            " | realization = " + str(
+                self.lt_realization.ordinal) if self.lt_realization else "",
             " | investigation time = " + str(self.investigation_time),
             " | poe = " + str(self.poe)))
 
@@ -2167,14 +2169,14 @@ class LossFraction(djm.Model):
     def create_display_name(self):
         return "".join((
             str(self.loss_type) + " ",
-            "quantile " if self.quantile else "",
-            str(self.statistics) + " " if self.statistics else "",
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
             " | poe = " + str(self.poe),
             " | hazard output id = " + str(self.hazard_output.id),
-            " | quantile = " + str(self.quantile) if self.quantile else "",
             " | variable = " + str(self.variable),
-            " | investigation time = " + str(retrieve_investigation_time(self))))
+            " | investigation time = " + str(
+                retrieve_investigation_time(self))))
 
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
@@ -2391,13 +2393,13 @@ class LossMap(djm.Model):
         return "".join((
             str(self.loss_type) + " ",
             "insured " if self.insured else "",
-            "quantile " if self.quantile else "",
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
-            (str(self.statistics) + " " + " | hazard output id = " +
-             str(self.hazard_output.id) if self.statistics else ""),
+            " | hazard output id = " + str(self.hazard_output.id),
             " | poe = " + str(self.poe) if self.poe else "",
-            " | quantile = " + str(self.quantile) if self.quantile else "",
-            " | investigation time = " + str(retrieve_investigation_time(self))))
+            " | investigation time = " + str(
+                retrieve_investigation_time(self))))
 
     class Meta:
         db_table = 'riskr\".\"loss_map'
@@ -2509,12 +2511,12 @@ class LossCurve(djm.Model):
             str(self.loss_type) + " ",
             "insured " if self.insured else "",
             "aggregate " if self.aggregate else "",
-            "quantile " if self.quantile else "",
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
-            (str(self.statistics) + " " + " | hazard output id = " +
-             str(self.hazard_output.id) if self.statistics else ""),
-            " | quantile = " + str(self.quantile) if self.quantile else "",
-            " | investigation time = " + str(retrieve_investigation_time(self))))
+            " | hazard output id = " + str(self.hazard_output.id),
+            " | investigation time = " + str(
+                retrieve_investigation_time(self))))
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -3271,7 +3273,7 @@ def retrieve_investigation_time(output_model):
 
 # if we split classes in different files, we need to put this function in
 # a global scope related file
-@receiver(pre_save)
+@receiver(post_save)
 def update_display_name(sender, instance, *args, **kwargs):
     """
     Whenever any of the django models (sender) attempts to save data into the
