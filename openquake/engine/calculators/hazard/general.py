@@ -145,16 +145,18 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
-    def calc_block_size(self, num_items):
+    def block_split(self, items, max_block_size=1000):
         """
-        Return the preferred block size, depending on the parameter
+        Split the given items in blocks, depending on the parameter
         concurrent tasks. Notice that in order to save memory there
         is a maximum block size of 1000 items.
 
-        :param int num_items: the number of items to split in blocks
+        :param list items: the items to split in blocks
         """
-        pbs = int(math.ceil(float(num_items) / self.concurrent_tasks()))
-        return min(pbs, 1000)
+        bs_float = float(len(items)) / self.concurrent_tasks()
+        bs = min(int(math.ceil(bs_float)), max_block_size)
+        logs.LOG.warn('Using block size=%d', bs)
+        return block_splitter(items, bs)
 
     def concurrent_tasks(self):
         """
@@ -179,8 +181,7 @@ class BaseHazardCalculator(base.Calculator):
         for lt_rlz in realizations:
             path = tuple(lt_rlz.sm_lt_path)
             sources = self.sources_per_ltpath[path]
-            block_size = self.calc_block_size(len(sources))
-            for block in block_splitter(sources, block_size):
+            for block in self.block_split(sources):
                 yield self.job.id, block, lt_rlz, ltp
 
     def _get_realizations(self):

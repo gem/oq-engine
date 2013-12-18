@@ -33,10 +33,7 @@ from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
-from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
-
-BLOCK_SIZE = 1000  # for the moment hard-coded
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
@@ -169,13 +166,11 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         Yielded results are 6-uples of the form (job_id,
         sites, rupture_id, gmf_id, task_seed, realizations, task_no)
         (task_seed will be used to seed numpy for temporal occurence sampling).
-
-        :param int block_size:
-            The number of work items for each task. Fixed to 1000.
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-        blocks = block_splitter(self.hc.site_collection, BLOCK_SIZE)
+        # TODO: fix the block size dependency
+        blocks = self.block_split(self.hc.site_collection)
         for task_no, sites in enumerate(blocks):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
             yield (self.job.id, models.SiteCollection(sites),
