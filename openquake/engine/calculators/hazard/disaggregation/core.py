@@ -231,9 +231,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         for lt_rlz in realizations:
             path = tuple(lt_rlz.sm_lt_path)
             sources = self.sources_per_ltpath[path]
-            block_size = self.calc_block_size(len(self.hc.site_collection))
-            for sites in general_utils.block_splitter(
-                    self.hc.site_collection, block_size):
+            for sites in self.block_split(self.hc.site_collection):
                 yield self.job.id, sites, sources, lt_rlz, ltp
 
     def post_execute(self):
