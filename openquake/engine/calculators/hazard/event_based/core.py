@@ -31,7 +31,6 @@ For more information on computing ground motion fields, see
 :mod:`openquake.hazardlib.calc.gmf`.
 """
 
-import math
 import random
 import collections
 
@@ -264,9 +263,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in sources]  # source, seed pairs
-            block_size = self.calc_block_size(len(sources))
-            logs.LOG.info('Using block size %d', block_size)
-            for block in block_splitter(ss, block_size):
+            for block in self.block_split(ss):
                 yield self.job.id, block, ses_coll
 
         # now the sources_per_ltpath dictionary can be cleared to save memory
