@@ -1424,7 +1424,7 @@ class HazardCurve(djm.Model):
             self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
             " | realization = " + str(
-                self.lt_realization.ordinal) + if self.lt_realization else "",
+                self.lt_realization.ordinal) if self.lt_realization else "",
             " | investigation time = " + str(self.investigation_time),
             " | imt = " + str(self.imt_long) if self.imt else " | multi"))
 
