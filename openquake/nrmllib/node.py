@@ -527,6 +527,7 @@ def node_to_nrml(node, output=sys.stdout, nsmap=None):
     :params output: a file-like object in write or read-write mode
     :params nsmap: a dictionary with the XML namespaces (default the NRML ones)
     """
+    assert isinstance(node, Node), node  # better safe than sorry
     nsmap = nsmap or nrmllib.SERIALIZE_NS_MAP
     root = Node('nrml', nodes=[node])
     for nsname, nsvalue in nsmap.iteritems():
