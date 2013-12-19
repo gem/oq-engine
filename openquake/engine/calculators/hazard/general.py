@@ -129,7 +129,7 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary (sm_lt_path, source_type) -> source_ids
+        # a dictionary (sm_lt_path, source_type) -> sources
         self.sources_per_ltpath = collections.defaultdict(list)
 
     def clean_up(self, *args, **kwargs):
