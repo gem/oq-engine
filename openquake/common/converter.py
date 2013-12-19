@@ -27,7 +27,7 @@ This module contains converter classes working on nodes of kind
 """
 import itertools
 from openquake.risklib import scientific
-from openquake.nrmllib.node import Node
+from openquake.nrmllib.node import Node, node_from_xml
 from openquake.common import record, records
 
 
@@ -60,6 +60,14 @@ class Converter(object):
         tset = record.TableSet(convertertype)
         tset.insert_all(convertertype.node_to_records(node))
         return convertertype(tset)
+
+    @classmethod
+    def from_nrml(cls, nrmlfile):
+        """
+        Return a specialized Converter instance from a file or filename
+        """
+        [node] = node_from_xml(nrmlfile)
+        return cls.from_node(node)
 
     @classmethod
     def node_to_records(cls, node):
