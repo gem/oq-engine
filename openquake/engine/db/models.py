@@ -1376,7 +1376,7 @@ class HazardMap(djm.Model):
             self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
             (" | realization = " + str(self.lt_realization.ordinal) if hasattr(
-                self, 'lt_realization') else ""),
+                self, 'lt_realization') and hasattr(self.lt_realization, 'ordinal') else ""),
             " | investigation time = " + str(self.investigation_time),
             " | poe = " + str(self.poe),
             " | sa_period = " + str(self.sa_period) if self.sa_period else "",
@@ -1424,7 +1424,7 @@ class HazardCurve(djm.Model):
             self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
             (" | realization = " + str(self.lt_realization.ordinal) if hasattr(
-                self, 'lt_realization') else ""),
+                self, 'lt_realization') and hasattr(self.lt_realization, 'ordinal') else ""),
             " | investigation time = " + str(self.investigation_time),
             " | imt = " + str(self.imt_long) if self.imt else " | multi"))
 
@@ -1811,7 +1811,7 @@ class Gmf(djm.Model):
         return "%s | realization = %s" % (
             self.output.get_output_type_display().lower(),
             str(self.lt_realization.ordinal) if hasattr(
-                self, 'lt_realization') else "")
+                self, 'lt_realization') and hasattr(self.lt_realization, 'ordinal') else "")
 
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
@@ -2106,7 +2106,7 @@ class UHS(djm.Model):
             self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
             (" | realization = " + str(self.lt_realization.ordinal) if hasattr(
-                self, 'lt_realization') else ""),
+                self, 'lt_realization') and hasattr(self.lt_realization, 'ordinal') else ""),
             " | investigation time = " + str(self.investigation_time),
             " | poe = " + str(self.poe)))
 
@@ -2174,7 +2174,8 @@ class LossFraction(djm.Model):
             self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
             " | poe = " + str(self.poe),
-            " | hazard output id = " + str(self.hazard_output.id),
+            " | hazard output id = " + str(self.hazard_output.id) if hasattr(
+                self, 'hazard_output') and hasattr(self.hazard_output, 'id') else "",
             " | variable = " + str(self.variable),
             " | investigation time = " + str(
                 retrieve_investigation_time(self))))
@@ -2397,7 +2398,8 @@ class LossMap(djm.Model):
             str(self.quantile) + "% " if self.quantile else "",
             self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
-            " | hazard output id = " + str(self.hazard_output.id),
+            " | hazard output id = " + str(self.hazard_output.id) if hasattr(
+                self, 'hazard_output') and hasattr(self.hazard_output, 'id') else "",
             " | poe = " + str(self.poe) if self.poe else "",
             " | investigation time = " + str(
                 retrieve_investigation_time(self))))
@@ -2515,7 +2517,8 @@ class LossCurve(djm.Model):
             str(self.quantile) + "% " if self.quantile else "",
             self.statistics + " " if self.statistics else "",
             self.output.get_output_type_display().lower(),
-            " | hazard output id = " + str(self.hazard_output.id),
+            " | hazard output id = " + str(self.hazard_output.id) if hasattr(
+                self, 'hazard_output') and hasattr(self.hazard_output, 'id') else "",
             " | investigation time = " + str(
                 retrieve_investigation_time(self))))
 
@@ -2677,7 +2680,8 @@ class BCRDistribution(djm.Model):
         return "".join((
             str(self.loss_type) + " ",
             self.output.get_output_type_display().lower(),
-            " | hazard output id = " + str(self.hazard_output.id),
+            " | hazard output id = " + str(self.hazard_output.id) if hasattr(
+                self, 'hazard_output') and hasattr(self.hazard_output, 'id') else "",
             (" | investigation time = " +
              str(retrieve_investigation_time(self)))))
 
