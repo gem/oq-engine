@@ -166,18 +166,18 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
         models.Output.objects.create(
             oq_job=self.job,
-            display_name="Damage Distribution per Asset",
+            display_name="damage distribution per asset",
             output_type="dmg_dist_per_asset")
 
         models.Output.objects.create(
             oq_job=self.job,
-            display_name="Collapse Map per Asset",
+            display_name="collapse map per asset",
             output_type="collapse_map")
 
         if self.ddpt:
             models.Output.objects.create(
                 oq_job=self.job,
-                display_name="Damage Distribution per Taxonomy",
+                display_name="damage distribution per taxonomy",
                 output_type="dmg_dist_per_taxonomy")
 
         tot = None
@@ -191,7 +191,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         if tot is not None:
             models.Output.objects.create(
                 oq_job=self.job,
-                display_name="Damage Distribution Total",
+                display_name="damage distribution total",
                 output_type="dmg_dist_total")
             writers.total_damage_distribution(tot, self.damage_state_ids)
 

@@ -517,7 +517,7 @@ def create_gmf(hazard_job, rlz=None):
     gmf = models.Gmf.objects.create(
         output=models.Output.objects.create(
             oq_job=hazard_job,
-            display_name="Test Hazard output",
+            display_name="test hazard output",
             output_type="gmf"),
         lt_realization=rlz)
 
@@ -532,7 +532,7 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     ses_coll = ses_coll or models.SESCollection.objects.create(
         output=models.Output.objects.create(
             oq_job=hazard_job,
-            display_name="Test SES Collection",
+            display_name="test SES collection",
             output_type="ses"),
         lt_realization=gmf.lt_realization)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
@@ -574,7 +574,7 @@ def create_gmf_from_csv(job, fname):
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create(
             oq_job=job,
-            display_name="Test SES Collection",
+            display_name="test SES collection",
             output_type="ses"),
             lt_realization=gmf.lt_realization)
     with open(fname, 'rb') as csvfile:
@@ -611,7 +611,7 @@ def populate_gmf_data_from_csv(job, fname):
     gmf = models.Gmf.objects.create(
         output=models.Output.objects.create(
             oq_job=job,
-            display_name="Test Hazard output",
+            display_name="test hazard output",
             output_type="gmf_scenario"))
 
     with open(fname, 'rb') as csvfile:
@@ -660,7 +660,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             lt_realization=rlz,
             output=models.Output.objects.create(
                 oq_job=hazard_job,
-                display_name="Test Hazard output",
+                display_name="test hazard output",
                 output_type="hazard_curve_multi"),
             investigation_time=hc.investigation_time)
 
@@ -668,7 +668,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
             lt_realization=rlz,
             output=models.Output.objects.create(
                 oq_job=hazard_job,
-                display_name="Test Hazard output",
+                display_name="test hazard output",
                 output_type="hazard_curve"),
             investigation_time=hc.investigation_time,
             imt="PGA", imls=[0.1, 0.2, 0.3])
@@ -684,7 +684,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         hazard_output = models.Gmf.objects.create(
             output=models.Output.objects.create(
                 oq_job=hazard_job,
-                display_name="Test gmf scenario output",
+                display_name="test GMF scenario output",
                 output_type="gmf_scenario"))
 
         site_ids = hazard_job.hazard_calculation.save_sites(

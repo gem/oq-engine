@@ -59,7 +59,7 @@ class ClassicalBCRCase1TestCase(risk.BaseRiskQATestCase):
             hazard_curve=models.HazardCurve.objects.create(
                 output=models.Output.objects.create(
                     oq_job=job,
-                    display_name="Test Hazard curve",
+                    display_name="test hazard curve",
                     output_type="hazard_curve"),
                 investigation_time=50, imt="PGA",
                 imls=[hz[0] for hz in hazard_curve], statistics="mean"),

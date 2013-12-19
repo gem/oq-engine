@@ -270,13 +270,13 @@ class GmfsPerSesTestCase(unittest.TestCase):
         ses_coll1 = models.SESCollection.objects.create(
             output=models.Output.objects.create(
                 oq_job=job,
-                display_name="Test SES Collection 1",
+                display_name="test SES collection 1",
                 output_type="ses"),
             lt_realization=rlz1)
         ses_coll2 = models.SESCollection.objects.create(
             output=models.Output.objects.create(
                 oq_job=job,
-                display_name="Test SES Collection 2",
+                display_name="test SES collection 2",
                 output_type="ses"),
             lt_realization=rlz2)
         gmf_data1 = helpers.create_gmf_data_records(job, rlz1, ses_coll1)[0]

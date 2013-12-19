@@ -3290,6 +3290,7 @@ def update_display_name(sender, instance, *args, **kwargs):
     """
 
     if hasattr(sender, "create_display_name"):
-        instance.output.display_name = instance.create_display_name()
+        instance.output.display_name += (" | " if instance.output.display_name
+                                         else "") + instance.create_display_name()
         instance.output.save()
 

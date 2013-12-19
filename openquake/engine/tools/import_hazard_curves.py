@@ -30,7 +30,7 @@ def import_hazard_curves(fileobj):
     # XXX: what about the maximum_distance?
 
     out = models.Output.objects.create(
-        display_name='Imported from %r' % fname, output_type='hazard_curve')
+        display_name='imported from %r' % fname, output_type='hazard_curve')
 
     f = StringIO()
     # convert the XML into a tab-separated StringIO

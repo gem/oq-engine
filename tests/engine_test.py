@@ -245,7 +245,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
             lt_realization=rlz,
             output=models.Output.objects.create(
                 oq_job=hazard_job,
-                display_name="Test Hazard output",
+                display_name="test hazard output",
                 output_type="hazard_curve"),
             investigation_time=hc.investigation_time,
             imt="PGA", imls=[0.1, 0.2, 0.3])
