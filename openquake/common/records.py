@@ -263,16 +263,16 @@ class Asset(Record):
     convertername = 'Exposure'
     pkey = Unique('asset_ref')
 
+    location_id = Field(valid.positiveint)
     asset_ref = Field(str)
     taxonomy = Field(str)
     number = Field(float)
     area = Field(valid.NoneOr(valid.positivefloat))
-    location_id = Field(valid.positiveint)
 
     def to_node(self):
-        attr = dict(id=self[0], taxonomy=self[1], number=self[2])
-        if self[3]:
-            attr['area'] = self[3]
+        attr = dict(id=self[1], taxonomy=self[2], number=self[3])
+        if self[4]:
+            attr['area'] = self[4]
         return Node('asset', attr)
 
 

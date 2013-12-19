@@ -342,8 +342,8 @@ class Exposure(Converter):
 
             # convert assets
             yield records.Asset(
-                asset_ref, asset['taxonomy'],  asset['number'],
-                asset.attrib.get('area', ''), loc_id)
+                loc_id, asset_ref, asset['taxonomy'],  asset['number'],
+                asset.attrib.get('area', ''))
 
     def to_node(self):
         """
