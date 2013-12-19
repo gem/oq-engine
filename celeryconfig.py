@@ -48,6 +48,11 @@ BROKER_PORT = int(amqp.get("port"))
 BROKER_USER = amqp.get("user")
 BROKER_PASSWORD = amqp.get("password")
 BROKER_VHOST = amqp.get("vhost")
+# BROKER_POOL_LIMIT enables a connections pool so Celery can reuse
+# a single connection to RabbitMQ. Value 10 is the default from
+# Celery 2.5 where this feature is enabled by default.
+# Fixes https://bugs.launchpad.net/oq-engine/+bug/1250402
+BROKER_POOL_LIMIT = 10
 
 CELERY_RESULT_BACKEND = "amqp"
 
