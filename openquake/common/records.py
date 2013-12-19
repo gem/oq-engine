@@ -79,7 +79,6 @@ class DiscreteVulnerabilityData(Record):
 # fragility records (discrete)
 
 class FragilityDiscrete(Record):
-    hidden = True
     convertername = 'FragilityDiscrete'
     pkey = Unique('format')
 
@@ -137,7 +136,6 @@ class FFDataDiscrete(Record):
 # fragility records (continuous)
 
 class FragilityContinuous(Record):
-    hidden = True
     convertername = 'FragilityContinuous'
     pkey = Unique('format')
 

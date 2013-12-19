@@ -410,6 +410,10 @@ class Table(collections.MutableSequence):
         self.attr = {}  # a dictionary that can be populated by extension
         # modules, for instance a GUI could add visualization settings here
 
+    @property
+    def name(self):
+        return 'table' + self.recordtype.__name__
+
     def __getitem__(self, i):
         """Return the i-th record"""
         return self._records[i]
@@ -426,10 +430,6 @@ class Table(collections.MutableSequence):
             key = getattr(self._records[i], name)
             del unique.dict[key]
         del self._records[i]
-
-    def __len__(self):
-        """The number of records stored in the table"""
-        return len(self._records)
 
     def insert(self, position, rec):
         """
@@ -465,10 +465,6 @@ class Table(collections.MutableSequence):
         """True if all the records in the table are valid"""
         return all(rec.is_valid() for rec in self)
 
-    def __str__(self):
-        """CSV representation of the whole table"""
-        return '\n'.join(map(str, self))
-
     def __eq__(self, other):
         """
         A table is equal to another sequence if they have the same
@@ -486,24 +482,32 @@ class Table(collections.MutableSequence):
             return True
         return not self == other
 
+    def __str__(self):
+        """CSV representation of the whole table"""
+        return '\n'.join(map(str, self))
+
     def __repr__(self):
         """String representation of table displaying the record type name"""
         return '<%s %d records>' % (self.recordtype.__name__, len(self))
+
+    def __len__(self):
+        """The number of records stored in the table"""
+        return len(self._records)
 
 
 class TableSet(object):
     """
     A set of tables associated to the same converter
     """
-    def __init__(self, convertertype):
+    def __init__(self, convertertype, tables=None):
         self.convertertype = convertertype
         self.name = convertertype.__name__
-        self.tables = []
+        self.tables = tables or [
+            Table(rt, [], ordinal)
+            for ordinal, rt in enumerate(convertertype.recordtypes())]
         self.fkdict = {}
-        for ordinal, rt in enumerate(convertertype.recordtypes()):
-            tbl = Table(rt, [], ordinal)
-            if not getattr(rt, 'hidden', None):
-                self.tables.append(tbl)
+        for tbl in self.tables:
+            rt = tbl.recordtype
             setattr(self, 'table' + rt.__name__, tbl)
             for fkey in rt.get_descriptors(ForeignKey):
                 target = fkey.unique
@@ -511,11 +515,16 @@ class TableSet(object):
                 target_tbl = getattr(self, target_name)
                 self.fkdict[fkey] = target_tbl._unique_data[target.name]
 
+    def __getitem__(self, sliceobj):
+        return self.__class__(self.convertertype, self.tables[sliceobj])
+
     def __iter__(self):
         """
         Returns only the nonempty tables
         """
-        return iter(self.tables)
+        for table in self.tables:
+            if len(table):
+                yield table
 
     def check_fk(self, rec):
         """
@@ -561,4 +570,4 @@ class TableSet(object):
         return '<%s %s>' % (self.name, self.tables)
 
     def __len__(self):
-        return sum(1 for tbl in self.tables)
+        return len(self.tables)
