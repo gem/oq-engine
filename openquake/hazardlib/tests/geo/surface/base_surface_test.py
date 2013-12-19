@@ -35,8 +35,7 @@ class DummySurface(BaseQuadrilateralSurface):
         return RectangularMesh.from_points_list(points)
 
     def get_strike(self):
-        top_edge = list(self.get_mesh()[0:1])
-        return top_edge[1].azimuth(top_edge[0])
+        raise NotImplementedError()
 
     def get_dip(self):
         raise NotImplementedError()
@@ -125,18 +124,18 @@ class GetRXDistanceTestCase(unittest.TestCase):
         surface = DummySurface(corners)
         return surface
 
-    def test1_site_on_the_footwall(self):
+    def test1_site_on_the_hanging_wall(self):
         surface = self._test1to7surface()
         sites = Mesh.from_points_list([Point(0.05, 0.05), Point(40.0, 0.05)])
         dists = surface.get_rx_distance(sites)
-        expected_dists = [-5.559752615413244] * 2
+        expected_dists = [5.559752615413244] * 2
         self.assertTrue(numpy.allclose(dists, expected_dists))
 
-    def test2_site_on_the_hanging_wall(self):
+    def test2_site_on_the_foot_wall(self):
         surface = self._test1to7surface()
         sites = Mesh.from_points_list([Point(0.05, -0.05), Point(-140, -0.05)])
         dists = surface.get_rx_distance(sites)
-        expected_dists = [5.559752615413244] * 2
+        expected_dists = [-5.559752615413244] * 2
         self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test3_site_on_centroid(self):
@@ -164,23 +163,23 @@ class GetRXDistanceTestCase(unittest.TestCase):
         surface = self._test1to7surface()
         sites = Mesh.from_points_list([Point(0.05, -1), Point(20, 1)])
         dists = surface.get_rx_distance(sites)
-        expected_dists = [111.19505230826488, -111.19505230826488]
+        expected_dists = [-111.19505230826488, +111.19505230826488]
         self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test7_ten_degrees_distance(self):
         surface = self._test1to7surface()
         sites = Mesh.from_points_list([Point(0, -10), Point(-15, 10)])
         dists = surface.get_rx_distance(sites)
-        expected_dists = [1111.9505230826488, -1111.9505230826488]
+        expected_dists = [-1111.9505230826488, +1111.9505230826488]
         self.assertTrue(numpy.allclose(dists, expected_dists))
 
-    def test8_strike_of_45_degrees(self):
+    def test8_strike_of_255_degrees(self):
         corners = [[(0.05, 0.05, 8), (-0.05, -0.05, 8)],
                    [(0.05, 0.05, 9), (-0.05, -0.05, 9)]]
         surface = DummySurface(corners)
         sites = Mesh.from_points_list([Point(0.05, 0)])
         self.assertAlmostEqual(surface.get_rx_distance(sites)[0],
-                               3.9313415355436705, places=4)
+                               -3.9313415355436705, places=4)
 
 
 class GetTopEdgeDepthTestCase(unittest.TestCase):
