@@ -458,7 +458,7 @@ def _mfd_to_hazardlib(src_mfd, bin_width):
         )
 
 
-def area_source_to_point_sources(area_src, area_src_disc):
+def area_to_point_sources(area_src, area_src_disc):
     """
     Split an area source into a generator of point sources.
 
@@ -466,75 +466,80 @@ def area_source_to_point_sources(area_src, area_src_disc):
     mesh.
 
     :param area_src:
-        :class:`openquake.nrmllib.models.AreaSource`
+        :class:`openquake.hazardlib.source.AreaSource`
     :param float area_src_disc:
         Area source discretization step, in kilometers.
     """
-    shapely_polygon = wkt.loads(area_src.geometry.wkt)
-    area_polygon = geo.Polygon(
-        # We ignore the last coordinate in the sequence here, since it is a
-        # duplicate of the first. hazardlib will close the loop for us.
-        [geo.Point(*x) for x in list(shapely_polygon.exterior.coords)[:-1]]
-    )
-
-    mesh = area_polygon.discretize(area_src_disc)
+    mesh = area_src.polygon.discretize(area_src_disc)
     num_points = len(mesh)
-
     area_mfd = area_src.mfd
 
-    if isinstance(area_mfd, nrml_models.TGRMFD):
+    if isinstance(area_mfd, mfd.TruncatedGRMFD):
         new_a_val = math.log10(10 ** area_mfd.a_val / float(num_points))
-        new_mfd = nrml_models.TGRMFD(a_val=new_a_val, b_val=area_mfd.b_val,
-                                     min_mag=area_mfd.min_mag,
-                                     max_mag=area_mfd.max_mag)
-    elif isinstance(area_mfd, nrml_models.IncrementalMFD):
-        new_occur_rates = [float(x) / num_points for x in area_mfd.occur_rates]
-        new_mfd = nrml_models.IncrementalMFD(min_mag=area_mfd.min_mag,
-                                             bin_width=area_mfd.bin_width,
-                                             occur_rates=new_occur_rates)
+        new_mfd = mfd.TruncatedGRMFD(
+            a_val=new_a_val,
+            b_val=area_mfd.b_val,
+            bin_width=area_mfd.bin_width,
+            min_mag=area_mfd.min_mag,
+            max_mag=area_mfd.max_mag)
+    elif isinstance(area_mfd, mfd.EvenlyDiscretizedMFD):
+        new_occur_rates = [float(x) / num_points
+                           for x in area_mfd.occurrence_rates]
+        new_mfd = mfd.EvenlyDiscretizedMFD(
+            min_mag=area_mfd.min_mag,
+            bin_width=area_mfd.bin_width,
+            occurrence_rates=new_occur_rates)
 
     for i, (lon, lat) in enumerate(izip(mesh.lons, mesh.lats)):
-        pt = nrml_models.PointSource(
+        pt = source.PointSource(
             # Generate a new ID and name
-            id='%s-%s' % (area_src.id, i),
+            source_id='%s-%s' % (area_src.source_id, i),
             name='%s-%s' % (area_src.name, i),
-            trt=area_src.trt,
-            geometry=nrml_models.PointGeometry(
-                upper_seismo_depth=area_src.geometry.upper_seismo_depth,
-                lower_seismo_depth=area_src.geometry.lower_seismo_depth,
-                wkt='POINT(%s %s)' % (lon, lat)
-            ),
-            mag_scale_rel=area_src.mag_scale_rel,
-            rupt_aspect_ratio=area_src.rupt_aspect_ratio,
+            tectonic_region_type=area_src.tectonic_region_type,
             mfd=new_mfd,
-            nodal_plane_dist=area_src.nodal_plane_dist,
-            hypo_depth_dist=area_src.hypo_depth_dist
-        )
+            rupture_mesh_spacing=area_src.rupture_mesh_spacing,
+            magnitude_scaling_relationship=
+            area_src.magnitude_scaling_relationship,
+            rupture_aspect_ratio=area_src.rupture_aspect_ratio,
+            upper_seismogenic_depth=area_src.upper_seismogenic_depth,
+            lower_seismogenic_depth=area_src.lower_seismogenic_depth,
+            location=geo.Point(lon, lat),
+            nodal_plane_distribution=area_src.nodal_plane_distribution,
+            hypocenter_distribution=area_src.hypocenter_distribution)
         yield pt
 
 
-def optimize_source_model(input_path, area_src_disc, output_path):
+def parse_source_model_smart(fname, is_relevant,
+                             apply_uncertainties,
+                             rupture_mesh_spacing,
+                             width_of_mfd_bin,
+                             area_source_discretization):
     """
-    Parse the source model located at ``input_path``, discretize area sources
-    by ``area_src_disc``, and write the optimized model to ``output_path``.
+    Parse a NRML source model and yield hazardlib sources.
+    Notice that:
 
-    :returns:
-        ``output_path``
+    1) uncertainties are applied first
+    2) the filter `is_relevant` is applied second
+    3) at the end area sources are splitted into point sources.
+
+    :param str fname: the full pathname of the source model file
+    :param apply_uncertainties: a function modifying the sources
+    :param rupture_mesh_spacing: the rupture mesh spacing
+    :param width_of_mfd_bin: the width of the MFD bin
+    :param area_source_discretization: the area discretization parameter
     """
-    parser = haz_parsers.SourceModelParser(input_path)
-    src_model = parser.parse()
-
-    def split_area(model):
-        for src in model:
-            if isinstance(src, nrml_models.AreaSource):
-                for pt in area_source_to_point_sources(src, area_src_disc):
-                    yield pt
-            else:
-                yield src
-
-    out_source_model = nrml_models.SourceModel(name=src_model.name,
-                                               sources=split_area(src_model))
-    writer = haz_writers.SourceModelXMLWriter(output_path)
-    writer.serialize(out_source_model)
-
-    return output_path
+    for src_nrml in haz_parsers.SourceModelParser(fname).parse():
+        src = nrml_to_hazardlib(
+            src_nrml,
+            rupture_mesh_spacing,
+            width_of_mfd_bin,
+            area_source_discretization)
+        # the uncertainties must be applied to the original source
+        apply_uncertainties(src)
+        if not is_relevant(src):
+            continue
+        if isinstance(src, source.AreaSource):
+            for pt in area_to_point_sources(src, area_source_discretization):
+                yield pt
+        else:
+            yield src

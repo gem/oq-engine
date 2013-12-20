@@ -375,6 +375,7 @@ class JobStats(djm.Model):
     num_sites = djm.IntegerField(null=True)
     # The disk space occupation in bytes
     disk_space = djm.IntegerField(null=True)
+    num_sources = fields.IntArrayField(null=True)
 
     class Meta:
         db_table = 'uiapi\".\"job_stats'
