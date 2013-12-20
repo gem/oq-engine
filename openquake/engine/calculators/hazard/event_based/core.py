@@ -59,6 +59,9 @@ from openquake.engine.performance import EnginePerformanceMonitor
 #: hazard calculator.
 DEFAULT_GMF_REALIZATIONS = 1
 
+# this is needed to avoid running out of memory
+MAX_BLOCK_SIZE = 1000
+
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
 
@@ -252,12 +255,12 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         Return the preferred block size, depending on the parameter
         concurrent tasks. Notice that in order to save memory there
-        is a maximum block size of 1000 items.
+        is a maximum block size of %d items.
 
         :param int num_items: the number of items to split in blocks
-        """
+        """ % MAX_BLOCK_SIZE
         pbs = int(math.ceil(float(num_items) / self.concurrent_tasks()))
-        return min(pbs, 1000)
+        return min(pbs, MAX_BLOCK_SIZE)
 
     def task_arg_gen(self, _block_size=None):
         """
