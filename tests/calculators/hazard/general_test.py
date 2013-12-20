@@ -206,7 +206,7 @@ class ParseRiskModelsTestCase(unittest.TestCase):
 
 
 class InitializeSourcesTestCase(unittest.TestCase):
-    # this is a based on a demo with 2 sources, 2 sites
+    # this is a based on a demo with 3 realizations, 2 sources and 2 sites
     @classmethod
     def setUpClass(cls):
         cfg = helpers.get_data_path(
@@ -221,7 +221,7 @@ class InitializeSourcesTestCase(unittest.TestCase):
         # site_collection is smaller than FILTERING_THRESHOLD:
         # prefiltering is enabled and sources are filtered
         n = self.calc.initialize_sources()
-        self.assertEqual(n, [1])  # 1 source instead of 2
+        self.assertEqual(n, [1, 1, 1])  # 1 source instead of 2
 
     def test_many_sites(self):
         # site_collection is bigger than FILTERING_THRESHOLD:
@@ -230,6 +230,6 @@ class InitializeSourcesTestCase(unittest.TestCase):
         try:
             models.FILTERING_THRESHOLD = 0
             n = self.calc.initialize_sources()
-            self.assertEqual(n, [2])  # the original 2 sources
+            self.assertEqual(n, [2, 2, 2])  # the original 2 sources
         finally:
             models.FILTERING_THRESHOLD = ft

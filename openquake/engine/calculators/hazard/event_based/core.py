@@ -33,7 +33,6 @@ For more information on computing ground motion fields, see
 
 import math
 import random
-import itertools
 import collections
 
 import numpy.random
@@ -69,7 +68,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 # Disabling pylint for 'Too many local variables'
 # pylint: disable=R0914
 @tasks.oqtask
-def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
+def compute_ses(job_id, src_seeds, ses_coll):
     """
     Celery task for the stochastic event set calculator.
 
@@ -84,44 +83,38 @@ def compute_ses(job_id, src_ses_seeds, lt_rlz, ltp):
 
     :param int job_id:
         ID of the currently running job.
-    :param src_ses_seeds:
-        List of triples (src_id, ses, seed)
-        Stochastic Event Set object
-    :param lt_rlz:
-        Logic Tree realization object
-    :param ltp:
-        A :class:`openquake.engine.input.LogicTreeProcessor` instance
+    :param src_seeds:
+        List of pairs (source, seed)
+    :param ses_coll:
+        an instance of :class:`openquake.engine.db.models.SESCollection`
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
-
-    source = {}
-    for src, ses, seed in src_ses_seeds:
-        if src.source_id not in source:
-            source[src.source_id] = apply_uncertainties(src)
+    rnd = random.Random()
+    all_ses = models.SES.objects.filter(ses_collection=ses_coll)
 
     # Compute and save stochastic event sets
-    # For each rupture generated, we can optionally calculate a GMF
     with EnginePerformanceMonitor('computing ses', job_id, compute_ses):
         ruptures = []
-        for src, ses, seed in src_ses_seeds:
-            numpy.random.seed(seed)
-            rupts = stochastic.stochastic_event_set_poissonian(
-                [source[src.source_id]], hc.investigation_time)
-            for i, r in enumerate(rupts):
-                rup = models.SESRupture(
-                    ses=ses,
-                    rupture=r,
-                    tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
-                        lt_rlz.ordinal, ses.ordinal, src.source_id, i),
-                    hypocenter=r.hypocenter.wkt2d,
-                    magnitude=r.mag,
-                )
-                ruptures.append(rup)
-        if not ruptures:
-            return
-        source.clear()  # save a little memory
+        for src, seed in src_seeds:
+            rnd.seed(seed)
+            for ses in all_ses:
+                numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
+                rupts = stochastic.stochastic_event_set_poissonian(
+                    [src], hc.investigation_time)
+                for i, r in enumerate(rupts):
+                    rup = models.SESRupture(
+                        ses=ses,
+                        rupture=r,
+                        tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
+                            ses_coll.lt_realization.ordinal, ses.ordinal,
+                            src.source_id, i),
+                        hypocenter=r.hypocenter.wkt2d,
+                        magnitude=r.mag,
+                    )
+                    ruptures.append(rup)
+
+    if not ruptures:
+        return
 
     with EnginePerformanceMonitor('saving ses', job_id, compute_ses):
         _save_ses_ruptures(ruptures)
@@ -261,29 +254,21 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        realizations = self._get_realizations()
-
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        for lt_rlz in realizations:
-            sm = self.rlz_to_sm[lt_rlz]
-            sources = (self.sources_per_model[sm, 'point'] +
-                       self.sources_per_model[sm, 'other'])
-
-            all_ses = list(models.SES.objects.filter(
-                           ses_collection__lt_realization=lt_rlz))
-
-            # source, ses, seed triples
-            sss = [(src, ses, rnd.randint(0, models.MAX_SINT_32))
-                   for src, ses in itertools.product(sources, all_ses)]
+        for lt_rlz in self._get_realizations():
+            path = tuple(lt_rlz.sm_lt_path)
+            sources = (self.sources_per_ltpath[path, 'point'] +
+                       self.sources_per_ltpath[path, 'other'])
+            ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
+            ss = [(src, rnd.randint(0, models.MAX_SINT_32))
+                  for src in sources]  # source, seed pairs
             preferred_block_size = int(
-                math.ceil(float(len(sources) * len(all_ses)) /
-                          self.concurrent_tasks()))
+                math.ceil(float(len(sources)) / self.concurrent_tasks()))
             logs.LOG.info('Using block size %d', preferred_block_size)
-            for block in block_splitter(sss, preferred_block_size):
-                yield self.job.id, block, lt_rlz, ltp
+            for block in block_splitter(ss, preferred_block_size):
+                yield self.job.id, block, ses_coll
 
-        # now the dictionary can be cleared to save memory
-        self.sources_per_model.clear()
+        # now the sources_per_ltpath dictionary can be cleared to save memory
+        self.sources_per_ltpath.clear()
 
     def compute_gmf_arg_gen(self):
         """
@@ -386,23 +371,9 @@ class EventBasedHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.)
         """
-        # Parse risk models.
-        self.parse_risk_models()
-
-        # Deal with the site model and compute site data for the calculation
-        # If no site model file was specified, reference parameters are used
-        # for all sites.
-        self.initialize_site_model()
-
-        # Parse logic trees and create source Inputs.
-        self.initialize_sources()
-
-        # Now bootstrap the logic tree realizations and related data.
-        # This defines for us the "work" that needs to be done when we reach
-        # the `execute` phase.
-        rlz_callbacks = [self.initialize_ses_db_records]
-
-        self.initialize_realizations(rlz_callbacks=rlz_callbacks)
+        super(EventBasedHazardCalculator, self).pre_execute()
+        for rlz in self._get_realizations():
+            self.initialize_ses_db_records(rlz)
 
     def post_process(self):
         """
