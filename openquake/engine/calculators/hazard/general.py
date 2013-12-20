@@ -33,7 +33,6 @@ from openquake.engine.db import models
 from django.db import transaction
 
 from openquake.nrmllib import parsers as nrml_parsers
-from openquake.nrmllib.models import PointSource
 from openquake.nrmllib.risk import parsers
 
 from openquake.engine.input import source, exposure
@@ -130,15 +129,12 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary (sm_name, source_type) -> source_ids
-        self.sources_per_model = collections.defaultdict(list)
-        # a dictionary rlz -> source model name (in the logic tree)
-        self.rlz_to_sm = {}
+        # a dictionary (sm_lt_path, source_type) -> sources
+        self.sources_per_ltpath = collections.defaultdict(list)
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
-        self.sources_per_model.clear()
-        self.rlz_to_sm.clear()
+        self.sources_per_ltpath.clear()
 
     @property
     def hc(self):
@@ -190,19 +186,19 @@ class BaseHazardCalculator(base.Calculator):
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
         for lt_rlz in realizations:
-            sm = self.rlz_to_sm[lt_rlz]
+            path = tuple(lt_rlz.sm_lt_path)
 
-            # separate point sources from all the other types, since
-            # we distribution point sources in different sized chunks
-            # point sources first
-            point_sources = self.sources_per_model[sm, 'point']
-            for block in block_splitter(point_sources,
-                                        point_source_block_size):
+            # first non-point sources, which are potentially slow
+            other_sources = self.sources_per_ltpath[path, 'other']
+            for block in block_splitter(other_sources, block_size):
                 yield self.job.id, block, lt_rlz, ltp
 
-            # now for area and fault sources
-            other_sources = self.sources_per_model[sm, 'other']
-            for block in block_splitter(other_sources, block_size):
+            # then point sources, which are more homogeneous
+            # we separate point sources from all the other types, since
+            # we distribute point sources with a different block size
+            point_sources = self.sources_per_ltpath[path, 'point']
+            for block in block_splitter(point_sources,
+                                        point_source_block_size):
                 yield self.job.id, block, lt_rlz, ltp
 
     def _get_realizations(self):
@@ -212,32 +208,56 @@ class BaseHazardCalculator(base.Calculator):
         return models.LtRealization.objects\
             .filter(hazard_calculation=self.hc).order_by('id')
 
+    def pre_execute(self):
+        """
+        Initialize risk models, site model, sources and realizations
+        """
+        self.parse_risk_models()
+        self.initialize_site_model()
+        num_sources = self.initialize_sources()
+        try:
+            js = models.JobStats.objects.get(oq_job=self.job)
+            js.num_sources = num_sources
+            js.save()
+        except Exception as e:
+            # this is normal in tests where everything is mocked
+            logs.LOG.warn('Could not save job_stats.num_sources: %s', e)
+        self.initialize_realizations()
+
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
-        Parse and validate source logic trees
+        Parse source models and validate source logic trees. It also
+        filters the sources far away and apply uncertainties to the
+        relevant ones. As a side effect it populates the instance dictionary
+        `.sources_per_ltpath`. Notice that area sources are automatically
+        split into point sources.
         """
         logs.LOG.progress("initializing sources")
         smlt_file = self.hc.inputs['source_model_logic_tree']
         self.smlt = logictree.SourceModelLogicTree(
             file(smlt_file).read(), self.hc.base_path, smlt_file)
-        num_sources = []
-        for sm in self.smlt.get_source_models():
-            fname = os.path.join(self.hc.base_path, sm)
-            for src_nrml in nrml_parsers.SourceModelParser(fname).parse():
-                src = source.nrml_to_hazardlib(
-                    src_nrml,
+        # here we are doing a full enumeration of the source model logic tree;
+        # this is not bad because for very large source models there are
+        # typically very few realizations; moreover, the filtering will remove
+        # most of the sources, so the memory occupation is typically low
+        num_sources = []  # the number of sources per sm_lt_path
+        for sm, path in self.smlt.get_sm_paths():
+            smpath = tuple(path)
+            for src in source.parse_source_model_smart(
+                    os.path.join(self.hc.base_path, sm),
+                    self.hc.sites_affected_by,
+                    self.smlt.make_apply_uncertainties(path),
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization)
-                if self.hc.sites_affected_by(src):
-                    if isinstance(src_nrml, PointSource):
-                        self.sources_per_model[sm, 'point'].append(src)
-                    else:
-                        self.sources_per_model[sm, 'other'].append(src)
-            n = len(self.sources_per_model[sm, 'point']) + \
-                len(self.sources_per_model[sm, 'other'])
-            logs.LOG.info('Found %d relevant source(s) for %s', n, sm)
+                    self.hc.area_source_discretization):
+                if src.__class__.__name__ == 'PointSource':
+                    self.sources_per_ltpath[smpath, 'point'].append(src)
+                else:
+                    self.sources_per_ltpath[smpath, 'other'].append(src)
+            n = len(self.sources_per_ltpath[smpath, 'point']) + \
+                len(self.sources_per_ltpath[smpath, 'other'])
+            logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
             num_sources.append(n)
         return num_sources
 
@@ -333,7 +353,7 @@ class BaseHazardCalculator(base.Calculator):
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
     @transaction.commit_on_success(using='job_init')
-    def initialize_realizations(self, rlz_callbacks=None):
+    def initialize_realizations(self):
         """
         Create records for the `hzrdr.lt_realization`.
 
@@ -342,42 +362,25 @@ class BaseHazardCalculator(base.Calculator):
         values are populated). In both cases we record the logic tree paths
         for both trees in the `lt_realization` record, as well as ordinal
         number of the realization (zero-based).
-
-        :param rlz_callbacks:
-            Optionally, you can specify a list of callbacks for each
-            realization.  In the case of the classical hazard calculator, for
-            example, we would include a callback function to create initial
-            records for temporary hazard curve result data.
-
-            Callbacks should accept a single argument:
-            A :class:`~openquake.engine.db.models.LtRealization` object.
         """
         logs.LOG.progress("initializing realizations")
         if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
             # random sampling of paths
-            self._initialize_realizations_montecarlo(
-                rlz_callbacks=rlz_callbacks)
+            self._initialize_realizations_montecarlo()
         else:
             # full paths enumeration
-            self._initialize_realizations_enumeration(
-                rlz_callbacks=rlz_callbacks)
+            self._initialize_realizations_enumeration()
 
-    def _initialize_realizations_enumeration(self, rlz_callbacks=None):
+    def _initialize_realizations_enumeration(self):
         """
         Perform full paths enumeration of logic trees and populate
         lt_realization table.
-
-        :param rlz_callbacks:
-            See :meth:`initialize_realizations` for more info.
         """
         hc = self.job.hazard_calculation
         ltp = logictree.LogicTreeProcessor.from_hc(hc)
-        self.rlz_to_sm = {}
-
         for i, path_info in enumerate(ltp.enumerate_paths()):
             source_model_filename, weight, sm_lt_path, gsim_lt_path = path_info
-
-            lt_rlz = models.LtRealization.objects.create(
+            models.LtRealization.objects.create(
                 hazard_calculation=hc,
                 ordinal=i,
                 seed=None,
@@ -385,21 +388,10 @@ class BaseHazardCalculator(base.Calculator):
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path)
 
-            self.rlz_to_sm[lt_rlz] = source_model_filename
-
-            # Run realization callback (if any) to do additional initialization
-            # for each realization:
-            if rlz_callbacks is not None:
-                for cb in rlz_callbacks:
-                    cb(lt_rlz)
-
-    def _initialize_realizations_montecarlo(self, rlz_callbacks=None):
+    def _initialize_realizations_montecarlo(self):
         """
         Perform random sampling of both logic trees and populate lt_realization
         table.
-
-        :param rlz_callbacks:
-            See :meth:`initialize_realizations` for more info.
         """
         # Each realization will have two seeds:
         # One for source model logic tree, one for GSIM logic tree.
@@ -408,7 +400,6 @@ class BaseHazardCalculator(base.Calculator):
         rnd.seed(seed)
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        self.rlz_to_sm = {}
 
         # The first realization gets the seed we specified in the config file.
         for i in xrange(self.hc.number_of_logic_tree_samples):
@@ -421,21 +412,13 @@ class BaseHazardCalculator(base.Calculator):
             gsim_lt_path = ltp.sample_gmpe_logictree(
                 rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
-            lt_rlz = models.LtRealization.objects.create(
+            models.LtRealization.objects.create(
                 hazard_calculation=self.hc,
                 ordinal=i,
                 seed=seed,
                 weight=None,
                 sm_lt_path=sm_lt_path,
                 gsim_lt_path=gsim_lt_path)
-
-            self.rlz_to_sm[lt_rlz] = source_model_filename
-
-            # Run realization callback (if any) to do additional initialization
-            # for each realization:
-            if rlz_callbacks is not None:
-                for cb in rlz_callbacks:
-                    cb(lt_rlz)
 
             # update the seed for the next realization
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)

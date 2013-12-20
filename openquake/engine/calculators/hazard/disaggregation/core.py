@@ -75,11 +75,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
 
     job = models.OqJob.objects.get(id=job_id)
     hc = job.hazard_calculation
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-    sources = map(apply_uncertainties, sources)
-
     f = openquake.hazardlib.calc.filters
     src_site_filter = f.source_site_distance_filter(hc.maximum_distance)
     rup_site_filter = f.rupture_site_distance_filter(hc.maximum_distance)
@@ -238,9 +234,9 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
-            sm = self.rlz_to_sm[lt_rlz]
-            sources = (self.sources_per_model[sm, 'point'] +
-                       self.sources_per_model[sm, 'other'])
+            path = tuple(lt_rlz.sm_lt_path)
+            sources = (self.sources_per_ltpath[path, 'point'] +
+                       self.sources_per_ltpath[path, 'other'])
             for sites in general_utils.block_splitter(
                     self.hc.site_collection, block_size):
                 yield self.job.id, sites, sources, lt_rlz, ltp

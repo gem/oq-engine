@@ -53,8 +53,6 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
         a :class:`openquake.engine.input.LogicTreeProcessor` instance
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    apply_uncertainties = ltp.parse_source_model_logictree_path(
-        lt_rlz.sm_lt_path)
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
     imts = haz_general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
@@ -63,11 +61,17 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
     calc_kwargs = {'gsims': gsims,
                    'truncation_level': hc.truncation_level,
                    'time_span': hc.investigation_time,
-                   'sources': map(apply_uncertainties, sources),
+                   'sources': sources,
                    'imts': imts,
                    'sites': hc.site_collection}
 
     if hc.maximum_distance:
+        # NB: (MS) we add a source site filter anyway, even if the sources were
+        # prefiltered, because it makes a LOT of difference: inside
+        # hazard_curves_poissonian there is a loop on the filtered sites
+        # (s_sites) and the rupture filter is applied only over such sites;
+        # look at hazardlib.calc.hazard_curve.hazard_curves_poissonian, line
+        # `for rupture, r_sites in rupture_site_filter(ruptures_sites)`
         calc_kwargs['source_site_filter'] = (
             openquake.hazardlib.calc.filters.source_site_distance_filter(
                 hc.maximum_distance))
@@ -77,21 +81,18 @@ def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
 
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
-    with EnginePerformanceMonitor(
-            'computing hazard curves', job_id,
-            compute_hazard_curves, tracing=True):
-        curves = openquake.hazardlib.calc.hazard_curve.\
-            hazard_curves_poissonian(**calc_kwargs)
-        curves_by_imt = []
-        for imt in sorted(imts):
-            if (curves[imt] == 0.0).all():
-                # shortcut for filtered sources giving no contribution;
-                # this is essential for performance, we want to avoid
-                # returning big arrays of zeros (MS)
-                curves_by_imt.append(None)
-            else:
-                curves_by_imt.append(curves[imt])
-        return curves_by_imt, lt_rlz.ordinal
+    curves = openquake.hazardlib.calc.hazard_curve.hazard_curves_poissonian(
+        **calc_kwargs)
+    curves_by_imt = []
+    for imt in sorted(imts):
+        if (curves[imt] == 0.0).all():
+            # shortcut for filtered sources giving no contribution;
+            # this is essential for performance, we want to avoid
+            # returning big arrays of zeros (MS)
+            curves_by_imt.append(None)
+        else:
+            curves_by_imt.append(curves[imt])
+    return curves_by_imt, lt_rlz.ordinal
 
 
 def make_zeros(realizations, sites, imtls):
@@ -127,17 +128,10 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         latter piece basically defines the work to be done in the
         `execute` phase.).
         """
-        self.parse_risk_models()
-        self.initialize_site_model()
-        self.initialize_sources()
-
-        # Now bootstrap the logic tree realizations and related data.
-        # This defines for us the "work" that needs to be done when we reach
-        # the `execute` phase.
-        self.initialize_realizations()
+        super(ClassicalHazardCalculator, self).pre_execute()
         imtls = self.hc.intensity_measure_types_and_levels
         self.curves_by_rlz = make_zeros(
-            self.rlz_to_sm, self.hc.site_collection, imtls)
+            self._get_realizations(), self.hc.site_collection, imtls)
 
     @EnginePerformanceMonitor.monitor
     def task_completed(self, task_result):
@@ -151,8 +145,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             A pair (curves_by_imt, ordinal) where curves_by_imt is a
             list of 2-D numpy arrays representing the new results which need
             to be combined with the current value. These should be the same
-            shape as self.curves_by_rlz[i][j] where i is the realization ordinal
-            and j the IMT ordinal.
+            shape as self.curves_by_rlz[i][j] where i is the realization
+            ordinal and j the IMT ordinal.
         """
         curves_by_imt, i = task_result
         for j, matrix in enumerate(curves_by_imt):  # j is the IMT index
