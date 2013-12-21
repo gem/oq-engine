@@ -93,15 +93,16 @@ def compute_ses(job_id, src_seeds, ses_coll):
     rnd = random.Random()
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
     tom = PoissonTOM(hc.investigation_time)
+    ruptures = []
 
     # Compute and save stochastic event sets
     with EnginePerformanceMonitor('computing ses', job_id, compute_ses):
-        ruptures = []
         for src, seed in src_seeds:
             rnd.seed(seed)
+            rupts = list(src.iter_ruptures(tom))
             for ses in all_ses:
                 numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                for r in src.iter_ruptures(tom):
+                for r in rupts:
                     for i in xrange(r.sample_number_of_occurrences()):
                         rup = models.SESRupture(
                             ses=ses,
