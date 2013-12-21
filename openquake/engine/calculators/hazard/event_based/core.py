@@ -40,7 +40,7 @@ import numpy.random
 from django.db import transaction
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf
-from openquake.hazardlib.calc import stochastic
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.imt import from_string
 
 from openquake.engine import writer, logs
@@ -92,6 +92,7 @@ def compute_ses(job_id, src_seeds, ses_coll):
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     rnd = random.Random()
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
+    tom = PoissonTOM(hc.investigation_time)
 
     # Compute and save stochastic event sets
     with EnginePerformanceMonitor('computing ses', job_id, compute_ses):
@@ -100,19 +101,18 @@ def compute_ses(job_id, src_seeds, ses_coll):
             rnd.seed(seed)
             for ses in all_ses:
                 numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                rupts = stochastic.stochastic_event_set_poissonian(
-                    [src], hc.investigation_time)
-                for i, r in enumerate(rupts):
-                    rup = models.SESRupture(
-                        ses=ses,
-                        rupture=r,
-                        tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
-                            ses_coll.lt_realization.ordinal, ses.ordinal,
-                            src.source_id, i),
-                        hypocenter=r.hypocenter.wkt2d,
-                        magnitude=r.mag,
-                    )
-                    ruptures.append(rup)
+                for r in src.iter_ruptures(tom):
+                    for i in xrange(r.sample_number_of_occurrences()):
+                        rup = models.SESRupture(
+                            ses=ses,
+                            rupture=r,
+                            tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
+                                ses_coll.lt_realization.ordinal, ses.ordinal,
+                                src.source_id, i),
+                            hypocenter=r.hypocenter.wkt2d,
+                            magnitude=r.mag,
+                        )
+                        ruptures.append(rup)
 
     if not ruptures:
         return
