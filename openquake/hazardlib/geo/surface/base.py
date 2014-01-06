@@ -21,7 +21,7 @@ import abc
 
 import numpy
 
-from openquake.hazardlib.geo import geodetic, utils
+from openquake.hazardlib.geo import geodetic, utils, Point
 
 
 class BaseSurface(object):
@@ -231,14 +231,33 @@ class BaseQuadrilateralSurface(BaseSurface):
         <.base.BaseSurface.get_rx_distance>`
         for spec of input and result values.
 
-        Base class calls
-        :func:`openquake.hazardlib.geo.geodetic.distance_to_arc`.
+        The method extracts the top edge of the surface. For each point in mesh,
+        it then computes the Rx distance to each segment the top edge is made
+        of. The calculation is done by calling the function
+        :func:`openquake.hazardlib.geo.geodetic.distance_to_arc`. The final Rx
+        distance matrix is then constructed by taking, for each point in mesh,
+        the minimum Rx distance value computed.
         """
-        top_edge_centroid = self._get_top_edge_centroid()
-        return geodetic.distance_to_arc(
-            top_edge_centroid.longitude, top_edge_centroid.latitude,
-            self.get_strike(), mesh.lons, mesh.lats
-        )
+        top_edge = self.get_mesh()[0:1]
+
+        dists = []
+        for i in range(top_edge.lons.shape[1] - 1):
+            p1 = Point(
+                top_edge.lons[0, i], top_edge.lats[0, i], top_edge.depths[0, i]
+            )
+            p2 = Point(
+                top_edge.lons[0, i + 1], top_edge.lats[0, i + 1],
+                top_edge.depths[0, i + 1]
+            )
+            azimuth = p1.azimuth(p2)
+            dists.append(
+                geodetic.distance_to_arc(
+                    p1.longitude, p1.latitude, azimuth, mesh.lons, mesh.lats
+                )
+            )
+        dists = numpy.array(dists)
+
+        return numpy.min(dists, axis=0)
 
     def get_top_edge_depth(self):
         """

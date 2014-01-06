@@ -505,6 +505,20 @@ class PlanarSurface(BaseQuadrilateralSurface):
 
         return jb_dists.reshape(mesh.lons.shape)
 
+    def get_rx_distance(self, mesh):
+        """
+        See :meth:`superclass method
+        <.base.BaseQuadrilateralSurface.get_rx_distance>`
+        for spec of input and result values.
+
+        This is an optimized version specific to planar surface that doesn't
+        make use of the mesh.
+        """
+        return geodetic.distance_to_arc(
+            self.corner_lons[0], self.corner_lats[0], self.strike, mesh.lons,
+            mesh.lats
+        )
+
     def get_width(self):
         """
         Return surface's width value (in km) as computed in the constructor
