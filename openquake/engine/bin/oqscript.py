@@ -219,16 +219,6 @@ def set_up_arg_parser():
         help=('List outputs which were imported from a file, not calculated '
               'from a job'))
 
-    pre_proc_grp = parser.add_argument_group('Pre-processing')
-    pre_proc_grp.add_argument(
-        '--optimize-source-model',
-        '--osm',
-        help=('Optimize a source model by discretizating an area source into'
-              ' point sources, given a discretization step (in km)'),
-        nargs=3,
-        metavar=('INPUT_FILE', 'AREA_DISCRETIZATION', 'OUTPUT_FILE')
-    )
-
     return parser
 
 
@@ -401,17 +391,6 @@ def confirm(prompt):
         return answer == 'y'
 
 
-def optimize_source_model(input_path, area_src_disc, output_path):
-    """
-    Read a source model and generate a new one, converting area sources to
-    point sources.
-    """
-    area_src_disc = float(area_src_disc)
-    source.optimize_source_model(input_path, area_src_disc,
-                                 output_path)
-    engine.complain_and_exit(output_path)
-
-
 def main():
     arg_parser = set_up_arg_parser()
 
@@ -424,9 +403,6 @@ def main():
         os.environ[config.OQ_CONFIG_FILE_VAR] = \
             abspath(expanduser(args.config_file))
         config.refresh()
-
-    if args.optimize_source_model:
-        optimize_source_model(*args.optimize_source_model)
 
     if args.no_distribute:
         os.environ[openquake.engine.NO_DISTRIBUTE_VAR] = '1'
