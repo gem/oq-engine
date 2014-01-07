@@ -42,9 +42,9 @@ class ClassicalHazardCase13TestCase(BaseQATestCase):
             fname = '%s_%s_expected_curves_PGA.dat' % (sm_path, gsim_path)
             compare_hazard_curve_with_csv(
                 hc, [sm_path], [gsim_path], 'PGA', None, None,
-                os.path.join(csvdir, fname), ' ', rtol=0.2)
+                os.path.join(csvdir, fname), ' ', rtol=0.3)
 
             fname = '%s_%s_expected_curves_SA02.dat' % (sm_path, gsim_path)
             compare_hazard_curve_with_csv(
                 hc, [sm_path], [gsim_path], 'SA', 0.2, 5.0,
-                os.path.join(csvdir, fname), ' ', rtol=0.2)
+                os.path.join(csvdir, fname), ' ', rtol=0.3)
