@@ -132,6 +132,14 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
         imtls = self.hc.intensity_measure_types_and_levels
         self.curves_by_rlz = make_zeros(
             self._get_realizations(), self.hc.site_collection, imtls)
+        n_rlz = len(self._get_realizations())
+        n_levels = sum(len(lvls) for lvls in imtls.itervalues()
+                       ) / float(len(imtls))
+        n_sites = len(self.hc.site_collection)
+        total = n_rlz * len(imtls) * n_levels * n_sites
+        logs.LOG.info('Considering %d realization(s), %d IMT(s), %d level(s) '
+                      'and %d sites, total %d', n_rlz, len(imtls), n_levels,
+                      n_sites, total)
 
     @EnginePerformanceMonitor.monitor
     def task_completed(self, task_result):
