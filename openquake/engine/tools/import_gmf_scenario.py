@@ -23,7 +23,7 @@ def import_rows(hc, gmf_coll, rows):
         gmfs.append(
             models.GmfData(
                 imt=imt_type, sa_period=sa_period, sa_damping=sa_damping,
-                gmvs=gmvs, site_id=site_id[wkt], gmf=gmf_coll))
+                gmvs=gmvs, site_id=site_id[wkt], gmf=gmf_coll, task_no=0))
     del site_id
     writer.CacheInserter.saveall(gmfs)
 
