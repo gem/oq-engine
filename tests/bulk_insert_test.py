@@ -33,7 +33,7 @@ class DummyConnection(object):
     @property
     def description(self):
         # a mock to the test insertion in the GmfData table
-        return [['id'], ['gmf_id'], ['ses_id'], ['imt'], ['sa_period'],
+        return [['id'], ['gmf_id'], ['task_no'], ['imt'], ['sa_period'],
                 ['sa_damping'], ['gmvs'], ['rupture_ids'], ['site_id']]
 
     def cursor(self):
@@ -80,5 +80,5 @@ class CacheInserterTestCase(unittest.TestCase):
         self.assertEqual(connection.table, '"hzrdr"."gmf_data"')
         self.assertEqual(
             connection.columns,
-            ['gmf_id', 'ses_id', 'imt', 'sa_period', 'sa_damping',
+            ['gmf_id', 'task_no', 'imt', 'sa_period', 'sa_damping',
              'gmvs', 'rupture_ids', 'site_id'])
