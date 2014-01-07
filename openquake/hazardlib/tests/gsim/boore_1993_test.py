@@ -17,12 +17,13 @@ from openquake.hazardlib.gsim.boore_1993 import (
     BooreEtAl1993GSCBest,
     BooreEtAl1993GSCUpperLimit,
     BooreEtAl1993GSCLowerLimit,
-    )
+)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # All test data were generated from the hazardlib implementation
 # Proper test data from original author or alternative implementation
 # should be provided
+
 
 class BooreEtAl1993GSCBestTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1993GSCBest
@@ -35,6 +36,7 @@ class BooreEtAl1993GSCBestTestCase(BaseGSIMTestCase):
         self.check('B93GSC/B93GSCBest_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
 
+
 class BooreEtAl1993GSCUpperLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = BooreEtAl1993GSCUpperLimit
 
@@ -44,4 +46,16 @@ class BooreEtAl1993GSCUpperLimitTestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('B93GSC/B93GSCUpperLimit_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
+
+class BooreEtAl1993GSCLowerLimitTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = BooreEtAl1993GSCLowerLimit
+
+    def test_mean(self):
+        self.check('B93GSC/B93GSCLowerLimit_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check('B93GSC/B93GSCLowerLimit_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
