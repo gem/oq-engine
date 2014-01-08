@@ -126,7 +126,7 @@ class AtkinsonBoore1995GSCLowerLimit(AtkinsonBoore1995GSCBest):
     "Ground-Motion Relations for Eastern North America", Bullettin of the
     Seismological Society of America, Vol. 85, No. 1, pp. 17-30, February 1995.
     Table of coefficients were provided by GSC and are associated to the 'Lower
-    Limit' case (that is mean value - 0.7 nat log).
+    Limit' case (that is mean value decreased).
     """
 
     #: coefficient table provided by GSC
@@ -149,7 +149,7 @@ class AtkinsonBoore1995GSCUpperLimit(AtkinsonBoore1995GSCBest):
     "Ground-Motion Relations for Eastern North America", Bullettin of the
     Seismological Society of America, Vol. 85, No. 1, pp. 17-30, February 1995.
     Table of coefficients were provided by GSC and are associated to the 'Upper
-    Limit' case (that is mean value + 0.7 nat log).
+    Limit' case (that is mean value increased).
     """
 
     #: coefficient table provided by GSC
