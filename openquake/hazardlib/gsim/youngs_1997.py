@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`YoungsEtAl1997SInter`, class:`YoungsEtAl1997SSlab`.
+Module exports :class:`YoungsEtAl1997SInter`, :class:`YoungsEtAl1997SSlab`,
+:class:`YoungsEtAl1997GSCSSlabBest`, :class:`YoungsEtAl1997GSCSSlabUpperLimit`,
+:class:`YoungsEtAl1997GSCSSlabLowerLimit`.
 """
 from __future__ import division
 
@@ -224,5 +226,72 @@ class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
             mean[idx_rock] += 0.3846
 
         mean[idx_soil] += 0.3643
+
+        return mean, stddevs
+
+
+class YoungsEtAl1997GSCSSlabBest(YoungsEtAl1997SSlab):
+    """
+    Implement modification to :class:`YoungsEtAl1997SSlab` as defined by GSC
+    (Geological Survey of Canada) for the 2010 Western Canada Model.
+    Includes adjustement for firm ground. The model is associated to the 'Best'
+    case, that is mean value unaffected.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        mean, stddevs = super(YoungsEtAl1997GSCSSlabBest, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        # this is the firm ground adjustment
+        mean += np.log(1.162)
+
+        return mean, stddevs
+
+
+class YoungsEtAl1997GSCSSlabUpperLimit(YoungsEtAl1997GSCSSlabBest):
+    """
+    Implement modification to :class:`YoungsEtAl1997SSlab` as defined by GSC
+    (Geological Survey of Canada) for the 2010 Western Canada Model.
+    Includes adjustement for firm ground. The model is associated to the 'Upper
+    Limit' case, that is mean value plus 0.7 natural logarithm.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        mean, stddevs = super(YoungsEtAl1997GSCSSlabUpperLimit, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        mean += 0.7
+
+        return mean, stddevs
+
+
+class YoungsEtAl1997GSCSSlabLowerLimit(YoungsEtAl1997GSCSSlabBest):
+    """
+    Implement modification to :class:`YoungsEtAl1997SSlab` as defined by GSC
+    (Geological Survey of Canada) for the 2010 Western Canada Model.
+    Includes adjustement for firm ground. The model is associated to the 'Lower
+    Limit' case, that is mean value minus 0.7 natural logarithm.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        mean, stddevs = super(YoungsEtAl1997GSCSSlabLowerLimit, self).\
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        mean -= 0.7
 
         return mean, stddevs
