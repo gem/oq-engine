@@ -23,7 +23,7 @@ from openquake.engine.db import models
 
 from lxml import etree
 
-from tests.utils import helpers
+from openquake.engine.tests.utils import helpers
 
 
 class BaseQATestCase(unittest.TestCase):
