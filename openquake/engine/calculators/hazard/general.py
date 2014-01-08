@@ -156,6 +156,7 @@ class BaseHazardCalculator(base.Calculator):
 
         :param list items: the items to split in blocks
         """ % MAX_BLOCK_SIZE
+        assert len(items) > 0, 'No items in %s' % items
         bs_float = float(len(items)) / self.concurrent_tasks()
         bs = min(int(math.ceil(bs_float)), max_block_size)
         logs.LOG.warn('Using block size=%d', bs)
