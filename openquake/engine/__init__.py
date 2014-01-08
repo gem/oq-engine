@@ -51,16 +51,12 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 from openquake.engine.utils import general as general_utils
 
-# Please note: the release date should always have a value of 0 (zero) in the
-# master branch. It will only be set to a meaningful value in *packaged* and
-# released OpenQuake code.
-__version_tuple__ = (
-    1,  # major
-    0,  # minor
-    0,  # sprint number
-    0)  # release date (seconds since the "Epoch"), do *not* set in master!
-
-__version__ = '.'.join(str(x) for x in __version_tuple__[:3])
+# version number follows the syntax <major>.<minor>.<patchlevel>[<suffix>]
+# where major, minor and patchlevel are numbers.
+# suffix follows the ubuntu versioning rules.
+# for development version suffix is:
+#  "-" + <pkg-version> + "+dev" + <secs_since_epoch> + "-" + <commit-id>
+__version__ = '1.0.0'
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
