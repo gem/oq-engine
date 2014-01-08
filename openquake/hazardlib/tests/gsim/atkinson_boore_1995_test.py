@@ -13,19 +13,52 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.atkinson_boore_1995 import AtkinsonBoore1995GSC
+from openquake.hazardlib.gsim.atkinson_boore_1995 import (
+    AtkinsonBoore1995GSCBest,
+    AtkinsonBoore1995GSCLowerLimit,
+    AtkinsonBoore1995GSCUpperLimit
+)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
+# All test data were generated from the hazardlib implementation.
+# Test data from alternative implementation or from original author
+# would be better for more robust checking
 
-class AtkinsonBoore1995GSCTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = AtkinsonBoore1995GSC
 
-    # Test data generated from Excel implementation
+class AtkinsonBoore1995GSCBestTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore1995GSCBest
+
 
     def test_mean(self):
-        self.check('AB95/AB95GSC_MEAN.csv',
+        self.check('AB95/AB95GSCBest_MEAN.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('AB95/AB95GSC_STD_TOTAL.csv',
+        self.check('AB95/AB95GSCBest_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
+
+class AtkinsonBoore1995GSCLowerLimitTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore1995GSCLowerLimit
+
+
+    def test_mean(self):
+        self.check('AB95/AB95GSCLowerLimit_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check('AB95/AB95GSCLowerLimit_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
+
+class AtkinsonBoore1995GSCLowerLimitTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore1995GSCUpperLimit
+
+
+    def test_mean(self):
+        self.check('AB95/AB95GSCUpperLimit_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check('AB95/AB95GSCLowerLimit_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)

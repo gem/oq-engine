@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AtkinsonBoore1995GSC`.
+Module exports :class:`AtkinsonBoore1995GSCBest`,
+:class:`AtkinsonBoore1995GSCLowerLimit`,
+:class:`AtkinsonBoore1995GSCUpperLimit`
 """
 from __future__ import division
 
@@ -25,14 +27,15 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class AtkinsonBoore1995GSC(GMPE):
+class AtkinsonBoore1995GSCBest(GMPE):
     """
     Implement equation used by the Geological Survey of Canada (GSC) for
-    the 2010 Canada National Seismic Hazard Model. The equation fits the table
-    values defined by Gail M. Atkinson and David M. Boore in "Ground-Motion
-    Relations for Eastern North America", Bullettin of the Seismological
-    Society of America, Vol. 85, No. 1, pp. 17-30, February 1995. Table of
-    coefficients were provided by GSC.
+    the 2010 Eastern Canada National Seismic Hazard Model. The equation fits
+    the table values defined by Gail M. Atkinson and David M. Boore in
+    "Ground-Motion Relations for Eastern North America", Bullettin of the
+    Seismological Society of America, Vol. 85, No. 1, pp. 17-30, February 1995.
+    Table of coefficients were provided by GSC and are associated to the 'Best'
+    case (that is mean value unaffected).
     """
     #: Supported tectonic region type is stable continental, given
     #: that the equations have been derived for Eastern North America
@@ -104,15 +107,58 @@ class AtkinsonBoore1995GSC(GMPE):
 
     #: coefficient table provided by GSC
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT      c1          c2           c3           c4          c5           c6          c7           c8
-    pga     -0.1329E+01  0.1272E+01  -0.8240E-01  -0.2556E+01  0.1722E+00  -0.1960E+01  0.1746E+00  -0.4535E-02
-    0.0500  -0.1538E+01  0.1465E+01  -0.8818E-01  -0.2297E+01  0.1360E+00  -0.2466E+01  0.1475E+00  -0.4297E-02
-    0.0769  -0.2269E+01  0.1423E+01  -0.7964E-01  -0.2088E+01  0.1260E+00  -0.1623E+01  0.9561E-01  -0.4684E-02
-    0.1266  -0.3481E+01  0.1612E+01  -0.9036E-01  -0.2020E+01  0.1238E+00  -0.1242E+01  0.6531E-01  -0.3972E-02
-    0.2000  -0.5487E+01  0.1932E+01  -0.1029E+00  -0.1818E+01  0.9797E-01  -0.1076E+01  0.6075E-01  -0.3325E-02
-    0.3125  -0.7567E+01  0.2284E+01  -0.1193E+00  -0.1734E+01  0.8814E-01  -0.9551E+00  0.4392E-01  -0.2570E-02
-    0.5000  -0.9476E+01  0.2503E+01  -0.1231E+00  -0.1631E+01  0.7610E-01  -0.1049E+01  0.6224E-01  -0.1959E-02
-    0.7692  -0.1060E+02  0.2470E+01  -0.1086E+00  -0.1539E+01  0.6442E-01  -0.9642E+00  0.5758E-01  -0.1640E-02
-    1.2500  -0.1159E+02  0.2470E+01  -0.1032E+00  -0.1504E+01  0.5929E-01  -0.8648E+00  0.4812E-01  -0.1375E-02
-    2.0000  -0.1321E+02  0.2945E+01  -0.1567E+00  -0.1864E+01  0.1162E+00  -0.7653E+00  0.2729E-01  -0.9921E-03
+    IMT      c1      c2      c3        c4     c5        c6      c7        c8
+    pga     -1.329   1.272  -0.08240  -2.556  0.17220  -1.9600  0.17460  -0.0045350
+    0.1     -2.907   1.522  -0.08528  -2.052  0.12484  -1.4224  0.07965  -0.0043090
+    0.2     -5.487   1.932  -0.10290  -1.818  0.09797  -1.0760  0.06075  -0.0033250
+    0.3     -7.567   2.284  -0.11930  -1.734  0.08814  -0.9551  0.04392  -0.0025700
+    0.5     -9.476   2.503  -0.12310  -1.631  0.07610  -1.0490  0.06224  -0.0019590
+    1.0     -11.134  2.470  -0.10569  -1.520  0.06165  -0.9106  0.05248  -0.001497
+    2.0     -13.210  2.945  -0.15670  -1.864  0.11620  -0.7653  0.02729  -0.0009921
+    """)
+
+
+class AtkinsonBoore1995GSCLowerLimit(AtkinsonBoore1995GSCBest):
+    """
+    Implement equation used by the Geological Survey of Canada (GSC) for
+    the 2010 Eastern Canada National Seismic Hazard Model. The equation fits
+    the table values defined by Gail M. Atkinson and David M. Boore in
+    "Ground-Motion Relations for Eastern North America", Bullettin of the
+    Seismological Society of America, Vol. 85, No. 1, pp. 17-30, February 1995.
+    Table of coefficients were provided by GSC and are associated to the 'Lower
+    Limit' case (that is mean value - 0.7 nat log).
+    """
+
+    #: coefficient table provided by GSC
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    IMT      c1      c2      c3        c4     c5        c6      c7        c8
+    pga     -2.204   1.272  -0.08240  -2.556  0.17220  -1.9600  0.17460  -0.0045350
+    0.1     -3.782   1.522  -0.08528  -2.052  0.12484  -1.4224  0.07965  -0.0043090
+    0.2     -6.224   1.932  -0.10290  -1.818  0.09797  -1.0760  0.06075  -0.0033250
+    0.3     -8.212   2.284  -0.11930  -1.734  0.08814  -0.9551  0.04392  -0.0025700
+    0.5     -10.029  2.503  -0.12310  -1.631  0.07610  -1.0490  0.06224  -0.0019590
+    1.0     -11.548  2.470  -0.10569  -1.520  0.06165  -0.9106  0.05248  -0.001497
+    """)
+
+
+class AtkinsonBoore1995GSCUpperLimit(AtkinsonBoore1995GSCBest):
+    """
+    Implement equation used by the Geological Survey of Canada (GSC) for
+    the 2010 Eastern Canada National Seismic Hazard Model. The equation fits
+    the table values defined by Gail M. Atkinson and David M. Boore in
+    "Ground-Motion Relations for Eastern North America", Bullettin of the
+    Seismological Society of America, Vol. 85, No. 1, pp. 17-30, February 1995.
+    Table of coefficients were provided by GSC and are associated to the 'Upper
+    Limit' case (that is mean value + 0.7 nat log).
+    """
+
+    #: coefficient table provided by GSC
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    IMT      c1      c2      c3        c4     c5        c6      c7        c8
+    pga     -1.030   1.272  -0.08240  -2.556  0.17220  -1.9600  0.17460  -0.0045350
+    0.1     -2.608   1.522  -0.08528  -2.052  0.12484  -1.4224  0.07965  -0.0043090
+    0.2     -4.911   1.932  -0.10290  -1.818  0.09797  -1.0760  0.06075  -0.0033250
+    0.3     -6.784   2.284  -0.11930  -1.734  0.08814  -0.9551  0.04392  -0.0025700
+    0.5     -8.509   2.503  -0.12310  -1.631  0.07610  -1.0490  0.06224  -0.0019590
+    1.0     -9.891   2.470  -0.10569  -1.520  0.06165  -0.9106  0.05248  -0.001497
     """)
