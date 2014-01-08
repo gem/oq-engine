@@ -12,4 +12,3 @@ Atkinson and Boore 1995
 
 .. autoclass:: AtkinsonBoore1995GSCLowerLimit
     :members:
-
