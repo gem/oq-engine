@@ -52,7 +52,7 @@ from openquake.engine.job.validation import validate
 
 CD = os.path.dirname(__file__)  # current directory
 
-RUNNER = os.path.abspath(os.path.join(CD, '../../bin/openquake'))
+RUNNER = os.path.abspath(os.path.join(CD, '../../../../bin/openquake'))
 
 DATA_DIR = os.path.abspath(os.path.join(CD, '../data'))
 
