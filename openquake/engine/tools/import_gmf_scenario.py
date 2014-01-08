@@ -47,7 +47,7 @@ def import_gmf_scenario(fileobj):
     # XXX: probably the maximum_distance should be entered by the user
 
     out = models.Output.objects.create(
-        display_name='Imported from %r' % fname, output_type='gmf_scenario')
+        display_name='imported from %r' % fname, output_type='gmf_scenario')
 
     gmf_coll = models.Gmf.objects.create(output=out)
 

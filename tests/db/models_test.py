@@ -268,12 +268,16 @@ class GmfsPerSesTestCase(unittest.TestCase):
             ordinal=2, seed=1, weight=None,
             sm_lt_path="test_sm", gsim_lt_path="test_gsim_2")
         ses_coll1 = models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection 1", "ses"),
+            output=models.Output.objects.create(
+                oq_job=job,
+                display_name="test SES collection 1",
+                output_type="ses"),
             lt_realization=rlz1)
         ses_coll2 = models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection 2", "ses"),
+            output=models.Output.objects.create(
+                oq_job=job,
+                display_name="test SES collection 2",
+                output_type="ses"),
             lt_realization=rlz2)
         gmf_data1 = helpers.create_gmf_data_records(job, rlz1, ses_coll1)[0]
         points = [(15.3, 38.22), (15.7, 37.22),

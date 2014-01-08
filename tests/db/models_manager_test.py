@@ -52,25 +52,6 @@ class TestCaseWithAJob(unittest.TestCase):
                 gsim_lt_path=[i]).save()
 
 
-class OutputManagerTestCase(TestCaseWithAJob):
-    """
-    Test the OutputManager
-    """
-
-    def setUp(self):
-        super(OutputManagerTestCase, self).setUp()
-        self.manager = models.Output.objects
-
-    def test_create_output(self):
-        output = self.manager.create_output(
-            self.job, "fake output", "hazard_curve")
-        self.assertEqual(1, self.manager.filter(pk=output.id).count())
-
-        output = self.manager.create_output(
-            self.job, "another fake output", "hazard_map")
-        self.assertEqual(1, self.manager.filter(pk=output.id).count())
-
-
 class ExposureContainedInTestCase(unittest.TestCase):
     def setUp(self):
         self.job, _ = helpers.get_fake_risk_job(

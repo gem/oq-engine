@@ -174,20 +174,9 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
     :param float sa_damping:
         Spectral Acceleration damping; only relevant when ``imt`` is 'SA'.
     """
-    # Silencing 'Too many arguments', 'Too many local variables'
-    # pylint: disable=R0913,R0914
-    disp_name = _DISAGG_RES_NAME_FMT
-    disp_imt = imt
-    if disp_imt == 'SA':
-        disp_imt = 'SA(%s)' % sa_period
 
-    disp_name_args = dict(poe=poe, rlz=lt_rlz.id, imt=disp_imt,
-                          wkt=site.location.wkt2d)
-    disp_name %= disp_name_args
-
-    output = models.Output.objects.create_output(
-        job, disp_name, 'disagg_matrix'
-    )
+    output = models.Output.objects.create(oq_job=job,
+                                          output_type='disagg_matrix')
 
     mag, dist, lon, lat, eps, trts = bin_edges
     models.DisaggResult.objects.create(

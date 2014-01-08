@@ -91,10 +91,9 @@ def gmf_to_hazard_curve_arg_gen(job):
         imt, sa_period, sa_damping = from_string(raw_imt)
 
         for lt_rlz in lt_realizations:
-            hc_output = models.Output.objects.create_output(
-                job,
-                HAZ_CURVE_DISP_NAME_FMT % dict(imt=raw_imt, rlz=lt_rlz.id),
-                'hazard_curve')
+            hc_output = models.Output.objects.create(
+                oq_job=job,
+                output_type='hazard_curve')
 
             # Create the hazard curve "collection":
             hc_coll = models.HazardCurve.objects.create(

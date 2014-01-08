@@ -35,6 +35,8 @@ from scipy import interpolate
 
 from django.db import transaction, connections
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 from django.contrib.gis.db import models as djm
 from shapely import wkt
@@ -1192,20 +1194,6 @@ def _prep_geometry(kwargs):
     return kwargs
 
 
-class OutputManager(djm.Manager):
-    """
-    Manager class to filter and create Output objects
-    """
-    def create_output(self, job, display_name, output_type):
-        """
-        Create an output for the given `job`, `display_name` and
-        `output_type` (default to hazard_curve)
-        """
-        return self.create(oq_job=job,
-                           display_name=display_name,
-                           output_type=output_type)
-
-
 class Output(djm.Model):
     '''
     A single artifact which is a result of an OpenQuake job.
@@ -1231,7 +1219,7 @@ class Output(djm.Model):
 
     oq_job = djm.ForeignKey('OqJob')  # nullable in the case of an output
     # coming from an external source, with no job associated
-    display_name = djm.TextField()
+    display_name = djm.TextField(null=True, blank=True, default='')
     HAZARD_OUTPUT_TYPE_CHOICES = (
         (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'gmf', u'Ground Motion Field'),
@@ -1261,8 +1249,6 @@ class Output(djm.Model):
     output_type = djm.TextField(
         choices=HAZARD_OUTPUT_TYPE_CHOICES + RISK_OUTPUT_TYPE_CHOICES)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    objects = OutputManager()
 
     def __str__(self):
         return "%d||%s||%s" % (self.id, self.output_type, self.display_name)
@@ -1385,6 +1371,20 @@ class HazardMap(djm.Model):
     lats = fields.FloatArrayField()
     imls = fields.FloatArrayField()
 
+    def create_display_name(self):
+        return "".join((
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
+            self.output.get_output_type_display().lower(),
+            (" | realization = " + str(self.lt_realization.ordinal) if hasattr(
+                self, 'lt_realization') and hasattr(self.lt_realization, 'ordinal') else ""),
+            " | investigation time = " + str(self.investigation_time),
+            " | poe = " + str(self.poe),
+            " | sa_period = " + str(self.sa_period) if self.sa_period else "",
+            " | sa_damping = " + str(
+                self.sa_damping) if self.sa_damping else "",
+            " | imt = " + str(self.imt)))
+
     class Meta:
         db_table = 'hzrdr\".\"hazard_map'
 
@@ -1418,6 +1418,16 @@ class HazardCurve(djm.Model):
     quantile = djm.FloatField(null=True)
     sa_period = djm.FloatField(null=True)
     sa_damping = djm.FloatField(null=True)
+
+    def create_display_name(self):
+        return "".join((
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
+            self.output.get_output_type_display().lower(),
+            (" | realization = " + str(self.lt_realization.ordinal) if hasattr(
+                self, 'lt_realization') and hasattr(self.lt_realization, 'ordinal') else ""),
+            " | investigation time = " + str(self.investigation_time),
+            " | imt = " + str(self.imt_long) if self.imt else " | multi"))
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
@@ -1796,6 +1806,14 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
+    def create_display_name(self):
+        # FIXME: Impossible to retrieve lt_realization. It doesn't seem to be
+        # properly initialized when I attempt to access it
+        return "%s | realization = %s" % (
+            self.output.get_output_type_display().lower(),
+            str(self.lt_realization.ordinal) if hasattr(
+                self, 'lt_realization') and hasattr(self.lt_realization, 'ordinal') else "")
+
     # this part is tested in models_test:GmfsPerSesTestCase
     def __iter__(self):
         """
@@ -2083,6 +2101,16 @@ class UHS(djm.Model):
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
 
+    def create_display_name(self):
+        return "".join((
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
+            self.output.get_output_type_display().lower(),
+            (" | realization = " + str(self.lt_realization.ordinal) if hasattr(
+                self, 'lt_realization') and hasattr(self.lt_realization, 'ordinal') else ""),
+            " | investigation time = " + str(self.investigation_time),
+            " | poe = " + str(self.poe)))
+
     class Meta:
         db_table = 'hzrdr\".\"uhs'
 
@@ -2139,6 +2167,19 @@ class LossFraction(djm.Model):
     quantile = djm.FloatField(null=True)
     poe = djm.FloatField(null=True)
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
+
+    def create_display_name(self):
+        return "".join((
+            str(self.loss_type) + " ",
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
+            self.output.get_output_type_display().lower(),
+            " | poe = " + str(self.poe),
+            " | hazard output id = " + str(self.hazard_output.id) if hasattr(
+                self, 'hazard_output') and hasattr(self.hazard_output, 'id') else "",
+            " | variable = " + str(self.variable),
+            " | investigation time = " + str(
+                retrieve_investigation_time(self))))
 
     class Meta:
         db_table = 'riskr\".\"loss_fraction'
@@ -2351,6 +2392,19 @@ class LossMap(djm.Model):
     quantile = djm.FloatField(null=True)
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
+    def create_display_name(self):
+        return "".join((
+            str(self.loss_type) + " ",
+            "insured " if self.insured else "",
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
+            self.output.get_output_type_display().lower(),
+            " | hazard output id = " + str(self.hazard_output.id) if hasattr(
+                self, 'hazard_output') and hasattr(self.hazard_output, 'id') else "",
+            " | poe = " + str(self.poe) if self.poe else "",
+            " | investigation time = " + str(
+                retrieve_investigation_time(self))))
+
     class Meta:
         db_table = 'riskr\".\"loss_map'
 
@@ -2407,6 +2461,14 @@ class AggregateLoss(djm.Model):
     class Meta:
         db_table = 'riskr\".\"aggregate_loss'
 
+    def create_display_name(self):
+        return "".join((
+            str(self.loss_type) + " ",
+            "insured " if self.insured else "",
+            self.output.get_output_type_display().lower(),
+            " | investigation time = " + str(
+                retrieve_investigation_time(self))))
+
     @property
     def output_hash(self):
         """
@@ -2447,6 +2509,19 @@ class LossCurve(djm.Model):
     statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
+
+    def create_display_name(self):
+        return "".join((
+            str(self.loss_type) + " ",
+            "insured " if self.insured else "",
+            "aggregate " if self.aggregate else "",
+            str(self.quantile) + "% " if self.quantile else "",
+            self.statistics + " " if self.statistics else "",
+            self.output.get_output_type_display().lower(),
+            " | hazard output id = " + str(self.hazard_output.id) if hasattr(
+                self, 'hazard_output') and hasattr(self.hazard_output, 'id') else "",
+            " | investigation time = " + str(
+                retrieve_investigation_time(self))))
 
     class Meta:
         db_table = 'riskr\".\"loss_curve'
@@ -2548,6 +2623,12 @@ class EventLoss(djm.Model):
         "Output", related_name="risk_event_loss_tables")
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
 
+    def create_display_name(self):
+        return "".join((
+            str(self.loss_type),
+            self.output.get_output_type_display().lower()
+        ))
+
     class Meta:
         db_table = 'riskr\".\"event_loss'
 
@@ -2595,6 +2676,15 @@ class BCRDistribution(djm.Model):
     hazard_output = djm.ForeignKey(
         "Output", related_name="risk_bcr_distribution")
     loss_type = djm.TextField(choices=zip(LOSS_TYPES, LOSS_TYPES))
+
+    def create_display_name(self):
+        return "".join((
+            str(self.loss_type) + " ",
+            self.output.get_output_type_display().lower(),
+            " | hazard output id = " + str(self.hazard_output.id) if hasattr(
+                self, 'hazard_output') and hasattr(self.hazard_output, 'id') else "",
+            (" | investigation time = " +
+             str(retrieve_investigation_time(self)))))
 
     class Meta:
         db_table = 'riskr\".\"bcr_distribution'
@@ -3179,3 +3269,29 @@ class HazardSite(djm.Model):
 
     class Meta:
         db_table = 'hzrdi\".\"hazard_site'
+
+
+def retrieve_investigation_time(output_model):
+    """
+    It retrieves the investigation time of the calculation
+    """
+    return output_model.output.oq_job.calculation.investigation_time
+
+# if we split classes in different files, we need to put this function in
+# a global scope related file
+@receiver(post_save)
+def update_display_name(sender, instance, *args, **kwargs):
+    """
+    Whenever any of the django models (sender) attempts to save data into the
+    DB, it sends a signal that is intercepted by this method.
+    If the sender is one of the output models (and therefore it contains the
+    method create_display_name), before saving the record in the DB, the
+    instance creates its own description and saves it into the display_name
+    field of the output table.
+    """
+
+    if hasattr(sender, "create_display_name"):
+        instance.output.display_name += (" | " if instance.output.display_name
+                                         else "") + instance.create_display_name()
+        instance.output.save()
+

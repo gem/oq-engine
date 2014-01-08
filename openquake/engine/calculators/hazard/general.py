@@ -498,9 +498,8 @@ class BaseHazardCalculator(base.Calculator):
             # create a new `HazardCurve` 'container' record for mean
             # curves (virtual container for multiple imts)
             models.HazardCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "mean-curves-multi-imt",
-                    "hazard_curve_multi"),
+                output=models.Output.objects.create(
+                    oq_job=self.job, output_type="hazard_curve_multi"),
                 statistics="mean",
                 imt=None,
                 investigation_time=self.hc.investigation_time)
@@ -510,9 +509,8 @@ class BaseHazardCalculator(base.Calculator):
                 # create a new `HazardCurve` 'container' record for quantile
                 # curves (virtual container for multiple imts)
                 models.HazardCurve.objects.create(
-                    output=models.Output.objects.create_output(
-                        self.job, 'quantile(%s)-curves' % quantile,
-                        "hazard_curve_multi"),
+                    output=models.Output.objects.create(
+                        oq_job=self.job, output_type="hazard_curve_multi"),
                     statistics="quantile",
                     imt=None,
                     quantile=quantile,
@@ -524,9 +522,8 @@ class BaseHazardCalculator(base.Calculator):
             # prepare `output` and `hazard_curve` containers in the DB:
             container_ids = dict()
             if self.hc.mean_hazard_curves:
-                mean_output = models.Output.objects.create_output(
-                    job=self.job,
-                    display_name='Mean Hazard Curves %s' % imt,
+                mean_output = models.Output.objects.create(
+                    oq_job=self.job,
                     output_type='hazard_curve'
                 )
                 mean_hc = models.HazardCurve.objects.create(
@@ -542,11 +539,8 @@ class BaseHazardCalculator(base.Calculator):
 
             if self.hc.quantile_hazard_curves:
                 for quantile in self.hc.quantile_hazard_curves:
-                    q_output = models.Output.objects.create_output(
-                        job=self.job,
-                        display_name=(
-                            '%s quantile Hazard Curves %s' % (quantile, imt)
-                        ),
+                    q_output = models.Output.objects.create(
+                        oq_job=self.job,
                         output_type='hazard_curve'
                     )
                     q_hc = models.HazardCurve.objects.create(

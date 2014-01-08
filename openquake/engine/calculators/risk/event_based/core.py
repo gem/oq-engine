@@ -334,11 +334,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 for hazard_output in self.rc.hazard_outputs():
 
                     event_loss = models.EventLoss.objects.create(
-                        output=models.Output.objects.create_output(
-                            self.job,
-                            "Event Loss Table. type=%s, hazard=%s" % (
-                                loss_type, hazard_output.id),
-                            "event_loss"),
+                        output=models.Output.objects.create(
+                            oq_job=self.job,
+                            output_type="event_loss"),
                         loss_type=loss_type,
                         hazard_output=hazard_output)
                     inserter = writer.CacheInserter(models.EventLossData, 9999)
@@ -376,12 +374,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                                 aggregate=True, insured=False,
                                 hazard_output=hazard_output,
                                 loss_type=loss_type,
-                                output=models.Output.objects.create_output(
-                                    self.job,
-                                    "aggregate loss curves. "
-                                    "loss_type=%s hazard=%s" % (
-                                        loss_type, hazard_output),
-                                    "agg_loss_curve")),
+                                output=models.Output.objects.create(
+                                    oq_job=self.job,
+                                    output_type="agg_loss_curve")),
                             losses=aggregate_loss_losses,
                             poes=aggregate_loss_poes,
                             average_loss=scientific.average_loss(

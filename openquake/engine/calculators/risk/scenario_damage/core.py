@@ -164,18 +164,21 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         Save the damage distributions by taxonomy and total on the db.
         """
 
-        models.Output.objects.create_output(
-            self.job, "Damage Distribution per Asset",
-            "dmg_dist_per_asset")
+        models.Output.objects.create(
+            oq_job=self.job,
+            display_name="damage distribution per asset",
+            output_type="dmg_dist_per_asset")
 
-        models.Output.objects.create_output(
-            self.job, "Collapse Map per Asset",
-            "collapse_map")
+        models.Output.objects.create(
+            oq_job=self.job,
+            display_name="collapse map per asset",
+            output_type="collapse_map")
 
         if self.ddpt:
-            models.Output.objects.create_output(
-                self.job, "Damage Distribution per Taxonomy",
-                "dmg_dist_per_taxonomy")
+            models.Output.objects.create(
+                oq_job=self.job,
+                display_name="damage distribution per taxonomy",
+                output_type="dmg_dist_per_taxonomy")
 
         tot = None
         for taxonomy, fractions in self.ddpt.iteritems():
@@ -186,9 +189,10 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             tot += fractions
 
         if tot is not None:
-            models.Output.objects.create_output(
-                self.job, "Damage Distribution Total",
-                "dmg_dist_total")
+            models.Output.objects.create(
+                oq_job=self.job,
+                display_name="damage distribution total",
+                output_type="dmg_dist_total")
             writers.total_damage_distribution(tot, self.damage_state_ids)
 
     def get_risk_models(self, retrofitted=False):

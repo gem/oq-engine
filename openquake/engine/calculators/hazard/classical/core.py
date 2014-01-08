@@ -30,7 +30,6 @@ from openquake.engine.db import models
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 
-
 @utils_tasks.oqtask
 def compute_hazard_curves(job_id, sources, lt_rlz, ltp):
     """
@@ -179,9 +178,8 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
             # create a new `HazardCurve` 'container' record for each
             # realization (virtual container for multiple imts)
             models.HazardCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
-                    "hazard_curve_multi"),
+                output=models.Output.objects.create(
+                    oq_job=self.job, output_type="hazard_curve_multi"),
                 lt_realization=rlz,
                 imt=None,
                 investigation_time=self.hc.investigation_time)
@@ -194,8 +192,7 @@ class ClassicalHazardCalculator(haz_general.BaseHazardCalculator):
                 # save output
                 hco = models.Output.objects.create(
                     oq_job=self.job,
-                    display_name="Hazard Curve rlz-%s" % rlz.id,
-                    output_type='hazard_curve',
+                    output_type='hazard_curve'
                 )
 
                 # save hazard_curve

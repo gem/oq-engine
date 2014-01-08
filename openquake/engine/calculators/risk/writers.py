@@ -416,20 +416,15 @@ class LossCurveMapBuilder(OutputBuilder):
         lc = [models.LossCurve.objects.create(
             hazard_output_id=hazard_output.id,
             loss_type=loss_type,
-            output=models.Output.objects.create_output(
-                self.calc.job,
-                "loss curves. type=%s, hazard=%s" % (
-                    loss_type, hazard_output.id), self.LOSS_CURVE_TYPE))]
+            output=models.Output.objects.create(
+                oq_job=self.calc.job, output_type=self.LOSS_CURVE_TYPE))]
 
         maps = [models.LossMap.objects.create(
             hazard_output_id=hazard_output.id,
             loss_type=loss_type,
-            output=models.Output.objects.create_output(
-                self.calc.job,
-                "loss maps. type=%s poe=%s, hazard=%s" % (
-                    loss_type, poe, hazard_output.id),
-                "loss_map"), poe=poe)
-                for poe in self.calc.rc.conditional_loss_poes or []]
+            output=models.Output.objects.create(
+                oq_job=self.calc.job, output_type="loss_map"),
+            poe=poe) for poe in self.calc.rc.conditional_loss_poes or []]
 
         if loss_type != "fatalities" and self.calc.rc.insured_losses:
             ins = [
@@ -437,11 +432,9 @@ class LossCurveMapBuilder(OutputBuilder):
                     insured=True,
                     loss_type=loss_type,
                     hazard_output=hazard_output,
-                    output=models.Output.objects.create_output(
-                        self.calc.job,
-                        "insured loss curves. type=%s hazard %s" % (
-                            loss_type, hazard_output),
-                        self.LOSS_CURVE_TYPE))]
+                    output=models.Output.objects.create(
+                        oq_job=self.calc.job,
+                        output_type=self.LOSS_CURVE_TYPE))]
         else:
             ins = []
 
@@ -449,17 +442,15 @@ class LossCurveMapBuilder(OutputBuilder):
 
     def statistical_outputs(self, loss_type):
         mean_loss_curve = [models.LossCurve.objects.create(
-            output=models.Output.objects.create_output(
-                job=self.calc.job,
-                display_name='Mean Loss Curves. type=%s' % loss_type,
+            output=models.Output.objects.create(
+                oq_job=self.calc.job,
                 output_type='loss_curve'),
             statistics='mean', loss_type=loss_type)]
 
         if loss_type != "fatalities" and self.calc.rc.insured_losses:
             mean_insured_loss_curve = [models.LossCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job=self.calc.job,
-                    display_name='Mean Insured Curves. type=%s' % loss_type,
+                output=models.Output.objects.create(
+                    oq_job=self.calc.job,
                     output_type='loss_curve'),
                 statistics='mean', insured=True, loss_type=loss_type)]
         else:
@@ -469,10 +460,8 @@ class LossCurveMapBuilder(OutputBuilder):
         quantile_insured_loss_curves = []
         for quantile in self.calc.rc.quantile_loss_curves or []:
             quantile_loss_curves.append(models.LossCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    job=self.calc.job,
-                    display_name='%s Quantile Loss Curves. type=%s' % (
-                        quantile, loss_type),
+                output=models.Output.objects.create(
+                    oq_job=self.calc.job,
                     output_type='loss_curve'),
                 statistics='quantile',
                 quantile=quantile,
@@ -480,11 +469,8 @@ class LossCurveMapBuilder(OutputBuilder):
             if loss_type != "fatalities" and self.calc.rc.insured_losses:
                 quantile_insured_loss_curves.append(
                     models.LossCurve.objects.create(
-                        output=models.Output.objects.create_output(
-                            job=self.calc.job,
-                            display_name=(
-                                '%s Quantile Insured Loss Curves. type=%s' % (
-                                    quantile, loss_type)),
+                        output=models.Output.objects.create(
+                            oq_job=self.calc.job,
                             output_type='loss_curve'),
                         statistics='quantile',
                         insured=True,
@@ -494,10 +480,8 @@ class LossCurveMapBuilder(OutputBuilder):
         mean_loss_maps = []
         for poe in self.calc.rc.conditional_loss_poes or []:
             mean_loss_maps.append(models.LossMap.objects.create(
-                output=models.Output.objects.create_output(
-                    job=self.calc.job,
-                    display_name="Mean Loss Map type=%s poe=%.4f" % (
-                        loss_type, poe),
+                output=models.Output.objects.create(
+                    oq_job=self.calc.job,
                     output_type="loss_map"),
                 statistics="mean",
                 loss_type=loss_type,
@@ -506,12 +490,11 @@ class LossCurveMapBuilder(OutputBuilder):
         quantile_loss_maps = []
         for quantile in self.calc.rc.quantile_loss_curves or []:
             for poe in self.calc.rc.conditional_loss_poes or []:
-                name = "%.4f Quantile Loss Map type=%s poe=%.4f" % (
-                    quantile, loss_type, poe)
+                #name = "%.4f Quantile Loss Map type=%s poe=%.4f" % (
+                #    quantile, loss_type, poe)
                 quantile_loss_maps.append(models.LossMap.objects.create(
-                    output=models.Output.objects.create_output(
-                        job=self.calc.job,
-                        display_name=name,
+                    output=models.Output.objects.create(
+                        oq_job=self.calc.job,
                         output_type="loss_map"),
                     statistics="quantile",
                     quantile=quantile,
@@ -530,15 +513,15 @@ class EventLossCurveMapBuilder(LossCurveMapBuilder):
 class LossMapBuilder(OutputBuilder):
     def individual_outputs(self, loss_type, hazard_output):
         loss_maps = [models.LossMap.objects.create(
-            output=models.Output.objects.create_output(
-                self.calc.job, "Loss Map", "loss_map"),
+            output=models.Output.objects.create(
+                oq_job=self.calc.job, output_type="loss_map"),
             hazard_output=hazard_output,
             loss_type=loss_type)]
 
         if self.calc.rc.insured_losses:
             loss_maps.append(models.LossMap.objects.create(
-                output=models.Output.objects.create_output(
-                    self.calc.job, "Insured Loss Map", "loss_map"),
+                output=models.Output.objects.create(
+                    oq_job=self.calc.job, output_type="loss_map"),
                 hazard_output=hazard_output,
                 loss_type=loss_type,
                 insured=True))
@@ -551,10 +534,9 @@ class BCRMapBuilder(OutputBuilder):
         return [models.BCRDistribution.objects.create(
                 hazard_output=hazard_output,
                 loss_type=loss_type,
-                output=models.Output.objects.create_output(
-                    self.calc.job,
-                    "BCR Map. type=%s hazard=%s" % (loss_type, hazard_output),
-                    "bcr_distribution"))]
+                output=models.Output.objects.create(
+                    oq_job=self.calc.job,
+                    output_type="bcr_distribution"))]
 
 
 class LossFractionBuilder(OutputBuilder):
@@ -564,12 +546,12 @@ class LossFractionBuilder(OutputBuilder):
         loss_fractions = []
         if self.calc.rc.sites_disagg:
             for variable in variables:
-                name = ("loss fractions. type=%s variable=%s "
-                        "hazard=%s" % (loss_type, hazard_output, variable))
+                #name = ("loss fractions. type=%s variable=%s "
+                #        "hazard=%s" % (loss_type, hazard_output, variable))
                 loss_fractions.append(
                     models.LossFraction.objects.create(
-                        output=models.Output.objects.create_output(
-                            self.calc.job, name, "loss_fraction"),
+                        output=models.Output.objects.create(
+                            oq_job=self.calc.job, output_type="loss_fraction"),
                         hazard_output=hazard_output,
                         loss_type=loss_type,
                         variable=variable))
@@ -585,10 +567,8 @@ class ConditionalLossFractionBuilder(OutputBuilder):
                 variable="taxonomy",
                 poe=poe,
                 loss_type=loss_type,
-                output=models.Output.objects.create_output(
-                    job=self.calc.job,
-                    display_name="Mean Loss Fractions. type=%s poe=%.4f" % (
-                        loss_type, poe),
+                output=models.Output.objects.create(
+                    oq_job=self.calc.job,
                     output_type="loss_fraction"),
                 statistics="mean"))
 
@@ -598,11 +578,8 @@ class ConditionalLossFractionBuilder(OutputBuilder):
                     variable="taxonomy",
                     poe=poe,
                     loss_type=loss_type,
-                    output=models.Output.objects.create_output(
-                        job=self.calc.job,
-                        display_name=("%.4f Quantile Loss Fractions "
-                                      "loss_type=%s poe=%.4f" % (
-                                          quantile, loss_type, poe)),
+                    output=models.Output.objects.create(
+                        oq_job=self.calc.job,
                         output_type="loss_fraction"),
                     statistics="quantile",
                     quantile=quantile))
@@ -617,11 +594,9 @@ class ConditionalLossFractionBuilder(OutputBuilder):
                 hazard_output_id=hazard_output.id,
                 variable="taxonomy",
                 loss_type=loss_type,
-                output=models.Output.objects.create_output(
-                    self.calc.job,
-                    "loss fractions. type=%s poe=%s hazard=%s" % (
-                        loss_type, poe, hazard_output.id),
-                    "loss_fraction"),
+                output=models.Output.objects.create(
+                    oq_job=self.calc.job,
+                    output_type="loss_fraction"),
                 poe=poe))
 
         return loss_fractions

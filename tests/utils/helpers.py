@@ -515,8 +515,10 @@ def create_gmf(hazard_job, rlz=None):
         sm_lt_path="test_sm", gsim_lt_path="test_gsim")
 
     gmf = models.Gmf.objects.create(
-        output=models.Output.objects.create_output(
-            hazard_job, "Test Hazard output", "gmf"),
+        output=models.Output.objects.create(
+            oq_job=hazard_job,
+            display_name="test hazard output",
+            output_type="gmf"),
         lt_realization=rlz)
 
     return gmf
@@ -528,8 +530,10 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     """
     gmf = create_gmf(hazard_job, rlz)
     ses_coll = ses_coll or models.SESCollection.objects.create(
-        output=models.Output.objects.create_output(
-            hazard_job, "Test SES Collection", "ses"),
+        output=models.Output.objects.create(
+            oq_job=hazard_job,
+            display_name="test SES collection",
+            output_type="ses"),
         lt_realization=gmf.lt_realization)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
@@ -568,9 +572,11 @@ def create_gmf_from_csv(job, fname):
     gmf = create_gmf(job)
 
     ses_coll = models.SESCollection.objects.create(
-        output=models.Output.objects.create_output(
-            job, "Test SES Collection", "ses"),
-        lt_realization=gmf.lt_realization)
+        output=models.Output.objects.create(
+            oq_job=job,
+            display_name="test SES collection",
+            output_type="ses"),
+            lt_realization=gmf.lt_realization)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
@@ -603,8 +609,10 @@ def populate_gmf_data_from_csv(job, fname):
     job.save()
 
     gmf = models.Gmf.objects.create(
-        output=models.Output.objects.create_output(
-            job, "Test Hazard output", "gmf_scenario"))
+        output=models.Output.objects.create(
+            oq_job=job,
+            display_name="test hazard output",
+            output_type="gmf_scenario"))
 
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
@@ -651,14 +659,18 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     if output_type == "curve":
         models.HazardCurve.objects.create(
             lt_realization=rlz,
-            output=models.Output.objects.create_output(
-                hazard_job, "Test Hazard output", "hazard_curve_multi"),
+            output=models.Output.objects.create(
+                oq_job=hazard_job,
+                display_name="test hazard output",
+                output_type="hazard_curve_multi"),
             investigation_time=hc.investigation_time)
 
         hazard_output = models.HazardCurve.objects.create(
             lt_realization=rlz,
-            output=models.Output.objects.create_output(
-                hazard_job, "Test Hazard output", "hazard_curve"),
+            output=models.Output.objects.create(
+                oq_job=hazard_job,
+                display_name="test hazard output",
+                output_type="hazard_curve"),
             investigation_time=hc.investigation_time,
             imt="PGA", imls=[0.1, 0.2, 0.3])
 
@@ -671,8 +683,10 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
 
     elif output_type == "gmf_scenario":
         hazard_output = models.Gmf.objects.create(
-            output=models.Output.objects.create_output(
-                hazard_job, "Test gmf scenario output", "gmf_scenario"))
+            output=models.Output.objects.create(
+                oq_job=hazard_job,
+                display_name="test GMF scenario output",
+                output_type="gmf_scenario"))
 
         site_ids = hazard_job.hazard_calculation.save_sites(
             [(15.48, 38.0900001), (15.565, 38.17), (15.481, 38.25)])

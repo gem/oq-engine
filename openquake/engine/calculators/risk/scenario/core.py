@@ -141,10 +141,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         for loss_type, aggregate_losses in self.aggregate_losses.items():
             with db.transaction.commit_on_success(using='job_init'):
                 models.AggregateLoss.objects.create(
-                    output=models.Output.objects.create_output(
-                        self.job,
-                        "aggregate loss. type=%s" % loss_type,
-                        "aggregate_loss"),
+                    output=models.Output.objects.create(
+                        oq_job=self.job,
+                        output_type="aggregate_loss"),
                     loss_type=loss_type,
                     mean=numpy.mean(aggregate_losses),
                     std_dev=numpy.std(aggregate_losses, ddof=1))
@@ -152,10 +151,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 if self.rc.insured_losses:
                     insured_losses = self.insured_losses[loss_type]
                     models.AggregateLoss.objects.create(
-                        output=models.Output.objects.create_output(
-                            self.job,
-                            "insured aggregate loss. type=%s" % loss_type,
-                            "aggregate_loss"),
+                        output=models.Output.objects.create(
+                            oq_job=self.job,
+                            output_type="aggregate_loss"),
                         insured=True,
                         loss_type=loss_type,
                         mean=numpy.mean(insured_losses),
