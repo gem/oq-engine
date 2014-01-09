@@ -52,6 +52,7 @@ import os
 import subprocess
 from openquake.engine.utils import general as general_utils
 
+
 def git_suffix():
     """
     extract short git hash if runned from sources
@@ -65,7 +66,8 @@ def git_suffix():
     py_dir = os.path.dirname(__file__)
     os.chdir(py_dir)
     try:
-        process = subprocess.Popen(['git', 'rev-parse', '--short', 'HEAD'], stdout=subprocess.PIPE)
+        process = subprocess.Popen(['git', 'rev-parse', '--short', 'HEAD'],
+                                   stdout=subprocess.PIPE)
         output = process.communicate()[0]
         os.chdir(old_dir)
         return "-git" + output
@@ -82,7 +84,7 @@ def git_suffix():
 # NB: the next line is managed by packager.sh script (we retrieve the version
 #     using sed and optionally replace it)
 __version__ = '1.0.0'
-__version__ +=  git_suffix()
+__version__ += git_suffix()
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
