@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`BergeThierryEtAl2003`.
+Module exports :class:`BergeThierryEtAl2003SIGMA`.
 """
 from __future__ import division
 
@@ -34,8 +34,8 @@ class BergeThierryEtAl2003SIGMA(GMPE):
     published as "New Empirical Response Spectral Attenuation Laws For Moderate
     European Earthquakes" (2003, Journal of Earthquake Engineering, 193-222)
     The class implements also adjustment of the sigma value as required by
-    the SIGMA project making the GMPE usable with Mw (the GMPE was originally
-    developed for Ms).
+    the SIGMA project to make the GMPE usable with Mw (the GMPE was
+    originally developed for Ms).
     """
     #: Supported tectonic region type is active shallow crust, see
     #: `Introduction`, page 194.
