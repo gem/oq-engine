@@ -164,10 +164,12 @@ usage () {
     echo "       if -D is present a package with self-computed version is produced."
     echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
     echo
-    echo "    $0 pkgtest <branch-name>                     install oq-engine package and related dependencies into"
+    echo "    $0 pkgtest <branch-name>"
+    echo "                                                 install oq-engine package and related dependencies into"
     echo "                                                 an ubuntu lxc environment and run package tests and demos"
 
-    echo "    $0 devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
+    echo "    $0 devtest <branch-name>"
+    echo "                                                 put oq-engine and oq-* dependencies sources in a lxc,"
     echo "                                                 setup environment and run development tests."
     echo
     exit $ret
@@ -758,7 +760,7 @@ cd "$GEM_BUILD_SRC"
 dt="$(date +%s)"
 
 # version from setup.py
-stp_vers="$(cat setup.py | grep "^version[     ]*=[    ]*['\"]" | sed -n "s/^version[  ]*=[    ]*['\"]//g;s/['\"].*//gp")"
+stp_vers="$(cat setup.py | sed -n "s/^version[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 stp_maj="$(echo "$stp_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 stp_min="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
@@ -766,10 +768,11 @@ stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')
 # echo "stp [$stp_vers] [$stp_maj] [$stp_min] [$stp_bfx] [$stp_suf]"
 
 # version info from openquake/engine/__init__.py
-ini_maj="$(cat openquake/engine/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-ini_min="$(cat openquake/engine/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-ini_bfx="$(cat openquake/engine/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-ini_suf="" # currently not included into the version array structure
+ini_vers="$(cat openquake/engine/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
+ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
+ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+ini_suf="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')"
 # echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
 
 # version info from debian/changelog
@@ -809,6 +812,8 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     )  > debian/changelog
     cat debian/changelog.orig >> debian/changelog
     rm debian/changelog.orig
+
+    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}'/g" openquake/engine/__init__.py
 fi
 
 if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \
