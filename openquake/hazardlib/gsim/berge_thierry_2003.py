@@ -33,6 +33,9 @@ class BergeThierryEtAl2003SIGMA(GMPE):
     Oona Scoti, Daphne-Anne Griot-Pommera, and Yoshimitsu Fukushima and
     published as "New Empirical Response Spectral Attenuation Laws For Moderate
     European Earthquakes" (2003, Journal of Earthquake Engineering, 193-222)
+    The class implements also adjustment of the sigma value as required by
+    the SIGMA project making the GMPE usable with Mw (the GMPE was originally
+    developed for Ms).
     """
     #: Supported tectonic region type is active shallow crust, see
     #: `Introduction`, page 194.
@@ -101,9 +104,14 @@ class BergeThierryEtAl2003SIGMA(GMPE):
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                    for stddev_type in stddev_types)
-        stddevs = [
-            np.zeros(num_sites) + C['sigma'] * np.log(10) for _ in stddev_types
-        ]
+
+        # adjustement for sigma, as explained in section 3.7.3 in
+        # Delivrable_SIGMA-V02-2012-D4-18+reviews
+        sigma = np.zeros(num_sites) + C['sigma'] * np.log(10)
+        sigma = np.sqrt(sigma ** 2 + (C['a'] ** 2) * (0.2 ** 2))
+
+        stddevs = [sigma for _ in stddev_types]
+
         return stddevs
 
     #: Coefficient tables are constructed from the electronic suplements of
