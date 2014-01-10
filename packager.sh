@@ -71,7 +71,7 @@ sig_hand () {
     if [ "$lxc_name" != "" ]; then
         set +e
         scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
-        scp "${lxc_ip}:ssh.log" devtest.history
+        scp "${lxc_ip}:ssh.log" ssh.history
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         if [ -f "${upper}.dsk" ]; then
@@ -303,8 +303,6 @@ _devtest_innervm_run () {
         fi
     fi
 
-    scp "${lxc_ip}:ssh.log" devtest.history
-
     # TODO: version check
 #    echo "NOW PRESS ENTER TO CONTINUE"
 #    read aaa
@@ -416,8 +414,6 @@ _pkgtest_innervm_run () {
             cd -
         done"
     fi
-
-    scp "${lxc_ip}:ssh.log" pkgtest.history
 
     trap ERR
 
@@ -576,6 +572,10 @@ devtest_run () {
     set +e
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
+
+    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
+    scp "${lxc_ip}:ssh.log" devtest.history
+
     sudo lxc-shutdown -n $lxc_name -w -t 10
 
     # NOTE: pylint returns errors too frequently to consider them a critical event
@@ -645,8 +645,10 @@ EOF
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
+
     scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
-    scp "${lxc_ip}:ssh.log" devtest.history
+    scp "${lxc_ip}:ssh.log" pkgtest.history
+
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
 
