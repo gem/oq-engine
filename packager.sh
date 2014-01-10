@@ -645,6 +645,8 @@ EOF
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
+    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
+    scp "${lxc_ip}:ssh.log" devtest.history
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
 
