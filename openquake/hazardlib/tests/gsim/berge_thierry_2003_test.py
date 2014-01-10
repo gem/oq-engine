@@ -20,6 +20,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 # test data generated from hazardlib implementation. Test data from
 # original authors are needed for more robust testing
 
+
 class BergeThierryEtAl2003SIGMATestCase(BaseGSIMTestCase):
     GSIM_CLASS = BergeThierryEtAl2003SIGMA
 
