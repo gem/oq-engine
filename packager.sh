@@ -269,6 +269,8 @@ _devtest_innervm_run () {
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        # wait for celeryd startup time
+        sleep 5
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine ;
