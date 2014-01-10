@@ -39,11 +39,10 @@ import numpy.random
 from django.db import transaction
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf
-from openquake.hazardlib.calc import stochastic
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.imt import from_string
 
-from openquake.engine import writer, logs
-from openquake.engine.utils.general import block_splitter
+from openquake.engine import writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as cls_post_proc)
@@ -88,27 +87,28 @@ def compute_ses(job_id, src_seeds, ses_coll):
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     rnd = random.Random()
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
+    tom = PoissonTOM(hc.investigation_time)
+    ruptures = []
 
     # Compute and save stochastic event sets
     with EnginePerformanceMonitor('computing ses', job_id, compute_ses):
-        ruptures = []
         for src, seed in src_seeds:
             rnd.seed(seed)
+            rupts = list(src.iter_ruptures(tom))
             for ses in all_ses:
                 numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                rupts = stochastic.stochastic_event_set_poissonian(
-                    [src], hc.investigation_time)
-                for i, r in enumerate(rupts):
-                    rup = models.SESRupture(
-                        ses=ses,
-                        rupture=r,
-                        tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
-                            ses_coll.lt_realization.ordinal, ses.ordinal,
-                            src.source_id, i),
-                        hypocenter=r.hypocenter.wkt2d,
-                        magnitude=r.mag,
-                    )
-                    ruptures.append(rup)
+                for r in rupts:
+                    for i in xrange(r.sample_number_of_occurrences()):
+                        rup = models.SESRupture(
+                            ses=ses,
+                            rupture=r,
+                            tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
+                                ses_coll.lt_realization.ordinal, ses.ordinal,
+                                src.source_id, i),
+                            hypocenter=r.hypocenter.wkt2d,
+                            magnitude=r.mag,
+                        )
+                        ruptures.append(rup)
 
     if not ruptures:
         return
@@ -131,7 +131,7 @@ def _save_ses_ruptures(ruptures):
 
 
 @tasks.oqtask
-def compute_gmf(job_id, gmf_coll, gsims, rupture_ids, rupture_seeds, task_no):
+def compute_gmf(job_id, gmf_coll, gsims, rupt_seeds, task_no):
     """
     Compute and save the GMFs for all the ruptures in the given block.
     """
@@ -141,6 +141,7 @@ def compute_gmf(job_id, gmf_coll, gsims, rupture_ids, rupture_seeds, task_no):
         correl_model=general.get_correl_model(hc),
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
+    rupture_ids, rupture_seeds = zip(*rupt_seeds)
 
     with EnginePerformanceMonitor(
             'reading ruptures', job_id, compute_gmf):
@@ -247,7 +248,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """
     core_calc_task = compute_ses
 
-    def task_arg_gen(self):
+    def task_arg_gen(self, _block_size=None):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -288,16 +289,12 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             if not rupture_ids:
                 continue
             # compute the associated seeds
-            rupture_seeds = [rnd.randint(0, models.MAX_SINT_32)
-                             for _ in range(len(rupture_ids))]
+            rupture_seeds = [(rid, rnd.randint(0, models.MAX_SINT_32))
+                             for rid in rupture_ids]
 
             # we split on ruptures to avoid running out of memory
-            block_size = self.calc_block_size(len(rupture_ids))
-            logs.LOG.info('Using block size %d', block_size)
-            rupt_iter = block_splitter(rupture_ids, block_size)
-            seed_iter = block_splitter(rupture_seeds, block_size)
-            for i, (rupts, seeds) in enumerate(zip(rupt_iter, seed_iter)):
-                yield self.job.id, gmf_coll, gsims, rupts, seeds, i
+            for i, rupt_seeds in enumerate(self.block_split(rupture_seeds)):
+                yield self.job.id, gmf_coll, gsims, rupt_seeds, i
 
     def post_execute(self):
         """
