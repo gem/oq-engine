@@ -159,6 +159,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # create an associated gmf record
         self.gmf = models.Gmf.objects.create(output=output)
 
+    def _get_realizations(self):
+        return range(self.hc.number_of_ground_motion_fields)
+
     def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of

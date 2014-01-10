@@ -52,6 +52,9 @@ from openquake.engine.utils import config
 from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
+# this is needed to avoid running out of memory
+MAX_BLOCK_SIZE = 1000
+
 #: Maximum number of hazard curves to cache, for selects or inserts
 CURVE_CACHE_SIZE = 100000
 
@@ -130,7 +133,7 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary (sm_lt_path, source_type) -> source_ids
+        # a dictionary (sm_lt_path, source_type) -> sources
         self.sources_per_ltpath = collections.defaultdict(list)
 
     def clean_up(self, *args, **kwargs):
@@ -145,15 +148,17 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
-    def block_split(self, items, max_block_size=1000):
+    def block_split(self, items, max_block_size=MAX_BLOCK_SIZE):
         """
         Split the given items in blocks, depending on the parameter
         concurrent tasks. Notice that in order to save memory there
-        is a maximum block size of 1000 items.
+        is a maximum block size of %d items.
 
         :param list items: the items to split in blocks
-        """
-        bs_float = float(len(items)) / self.concurrent_tasks()
+        """ % MAX_BLOCK_SIZE
+        assert len(items) > 0, 'No items in %s' % items
+        num_rlzs = len(self._get_realizations())
+        bs_float = float(len(items)) / self.concurrent_tasks() * num_rlzs
         bs = min(int(math.ceil(bs_float)), max_block_size)
         logs.LOG.warn('Using block size=%d', bs)
         return block_splitter(items, bs)
