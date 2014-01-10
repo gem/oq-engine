@@ -17,10 +17,16 @@ from openquake.hazardlib.gsim.berge_thierry_2003 import \
     BergeThierryEtAl2003SIGMA
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
+# test data generated from hazardlib implementation. Test data from
+# original authors are needed for more robust testing
 
 class BergeThierryEtAl2003SIGMATestCase(BaseGSIMTestCase):
     GSIM_CLASS = BergeThierryEtAl2003SIGMA
 
     def test_mean(self):
-        self.check('B03/BE03_MEAN_g.csv',
+        self.check('B03/BergeThierryEtAl2003SIGMA_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check('B03/BergeThierryEtAl2003SIGMA_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
