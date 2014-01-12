@@ -1,9 +1,10 @@
 import os
+import time
 import argparse
 from openquake.nrmllib.hazard.parsers import GMFScenarioParser
 from openquake.hazardlib.imt import from_string
 from openquake.engine.db import models
-from openquake.engine import writer
+from openquake.engine import writer, engine
 
 
 def import_rows(hc, gmf_coll, rows):
@@ -38,16 +39,24 @@ def import_gmf_scenario(fileobj):
     and the generated :class:`openquake.engine.db.models.HazardCalculation`
     object.
     """
+    t0 = time.time()
     fname = fileobj.name
 
+    job = engine.prepare_job()
     hc = models.HazardCalculation.objects.create(
         base_path=os.path.dirname(fname),
         description='Scenario importer, file %s' % os.path.basename(fname),
-        calculation_mode='scenario', maximum_distance=100)
+        calculation_mode='scenario',
+        maximum_distance=100,
+        intensity_measure_types_and_levels={},
+        inputs={},
+    )
     # XXX: probably the maximum_distance should be entered by the user
 
     out = models.Output.objects.create(
-        display_name='Imported from %r' % fname, output_type='gmf_scenario')
+        oq_job=job,
+        display_name='Imported from %r' % fname,
+        output_type='gmf_scenario')
 
     gmf_coll = models.Gmf.objects.create(output=out)
 
@@ -55,6 +64,7 @@ def import_gmf_scenario(fileobj):
     if fname.endswith('.xml'):
         # convert the XML into a tab-separated StringIO
         for imt, gmvs, loc in GMFScenarioParser(fileobj).parse():
+            hc.intensity_measure_types_and_levels[imt] = []
             imt_type, sa_period, sa_damping = from_string(imt)
             sa_period = '\N' if sa_period is None else str(sa_period)
             sa_damping = '\N' if sa_damping is None else str(sa_damping)
@@ -64,7 +74,12 @@ def import_gmf_scenario(fileobj):
         for line in fileobj:
             rows.append(line.split('\t'))
     import_rows(hc, gmf_coll, rows)
-    return out, hc
+    hc.save()  # update intensity_measure_types_and_levels
+    job.hazard_calculation = hc
+    job.duration = time.time() - t0
+    job.status = 'complete'
+    job.save()
+    return out
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
