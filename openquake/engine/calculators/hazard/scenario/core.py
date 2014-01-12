@@ -33,6 +33,7 @@ from openquake.engine.utils import tasks
 from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
+from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
@@ -173,7 +174,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
         # TODO: fix the block size dependency
-        blocks = self.block_split(self.hc.site_collection)
+        blocks = block_splitter(self.hc.site_collection, 1000)
         for task_no, sites in enumerate(blocks):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
             yield (self.job.id, models.SiteCollection(sites),
