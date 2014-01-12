@@ -32,6 +32,6 @@ PGV	\N	\N	{0.2}	POINT(0.0 0.0)
 PGV	\N	\N	{1.4}	POINT(1.0 0.0)
 '''))
         test_data.name = 'test_data'
-        out, _hc = import_gmf_scenario.import_gmf_scenario(test_data)
+        out = import_gmf_scenario.import_gmf_scenario(test_data)
         n = models.GmfData.objects.filter(gmf__output=out).count()
         assert_equal(n, 8)  # 8 rows entered

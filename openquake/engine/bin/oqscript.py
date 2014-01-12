@@ -291,7 +291,8 @@ def list_imported_outputs():
     """
     List outputs which were imported from a file, not calculated from a job
     """
-    outputs = models.Output.objects.filter(oq_job__isnull=True)
+    outputs = models.Output.objects.filter(
+        oq_job__hazard_calculation__description='Imported from ')
     engine.print_outputs_summary(outputs)
 
 
