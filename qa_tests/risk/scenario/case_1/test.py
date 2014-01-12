@@ -18,6 +18,7 @@ from nose.plugins.attrib import attr
 from qa_tests import risk
 from tests.utils import helpers
 from openquake.engine.db import models
+from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 
 
 class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
@@ -58,6 +59,20 @@ class ScenarioRiskCase1TestCase(risk.BaseRiskQATestCase):
                  [180.7175, 92.2122]],
                 [1053.09, 246.62],
                 [[147.49208753, 141.02819028],
-                 [104.85957932,145.36984417],
+                 [104.85957932, 145.36984417],
                  [76.75091081, 69.96900115]],
                 [329.10257766, 193.67786848]]
+
+
+class ImportGmfScenarioTestCase(risk.BaseRiskQATestCase):
+    output_type = "gmf_scenario"
+
+    @attr('qa', 'risk', 'scenario')
+    def test(self):
+        # check that the imported GMFs can be read by the risk calculator
+        self._run_test()
+
+    def get_hazard_job(self):
+        with open('gmf-scenario.xml') as data:
+            output = import_gmf_scenario(data)
+        return output.oq_job
