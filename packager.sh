@@ -70,6 +70,8 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
+        scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
+        scp "${lxc_ip}:ssh.log" ssh.history
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         if [ -f "${upper}.dsk" ]; then
@@ -271,10 +273,12 @@ _devtest_innervm_run () {
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        # wait for celeryd startup time
+        sleep 5
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine ;
-                 nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest tests/
+                 nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
                  nosetests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
@@ -300,8 +304,6 @@ _devtest_innervm_run () {
             cp $HOME/fake-data/oq-engine/* .
         fi
     fi
-
-    scp "${lxc_ip}:ssh.log" devtest.history
 
     # TODO: version check
 #    echo "NOW PRESS ENTER TO CONTINUE"
@@ -414,8 +416,6 @@ _pkgtest_innervm_run () {
             cd -
         done"
     fi
-
-    scp "${lxc_ip}:ssh.log" pkgtest.history
 
     trap ERR
 
@@ -574,6 +574,10 @@ devtest_run () {
     set +e
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
+
+    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
+    scp "${lxc_ip}:ssh.log" devtest.history
+
     sudo lxc-shutdown -n $lxc_name -w -t 10
 
     # NOTE: pylint returns errors too frequently to consider them a critical event
@@ -643,6 +647,10 @@ EOF
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
+
+    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
+    scp "${lxc_ip}:ssh.log" pkgtest.history
+
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
 
