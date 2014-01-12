@@ -49,18 +49,42 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
+import subprocess
 from openquake.engine.utils import general as general_utils
 
-# Please note: the release date should always have a value of 0 (zero) in the
-# master branch. It will only be set to a meaningful value in *packaged* and
-# released OpenQuake code.
-__version_tuple__ = (
-    1,  # major
-    0,  # minor
-    0,  # sprint number
-    0)  # release date (seconds since the "Epoch"), do *not* set in master!
 
-__version__ = '.'.join(str(x) for x in __version_tuple__[:3])
+def git_suffix():
+    """
+    extract short git hash if runned from sources
+
+    :returns:
+        `<short git hash>` if git repository found
+
+        `""` otherwise.
+    """
+    old_dir = os.getcwd()
+    py_dir = os.path.dirname(__file__)
+    os.chdir(py_dir)
+    try:
+        process = subprocess.Popen(['git', 'rev-parse', '--short', 'HEAD'],
+                                   stdout=subprocess.PIPE)
+        output = process.communicate()[0]
+        os.chdir(old_dir)
+        return "-git" + output
+    except Exception:
+        # trapping everything on purpose
+        os.chdir(old_dir)
+        return ''
+
+# version number follows the syntax <major>.<minor>.<patchlevel>[<suffix>]
+# where major, minor and patchlevel are numbers.
+# suffix follows the ubuntu versioning rules.
+# for development version suffix is:
+#  "-" + <pkg-version> + "+dev" + <secs_since_epoch> + "-" + <commit-id>
+# NB: the next line is managed by packager.sh script (we retrieve the version
+#     using sed and optionally replace it)
+__version__ = '1.0.0'
+__version__ += git_suffix()
 
 # The path to the OpenQuake root directory
 OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
