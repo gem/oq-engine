@@ -273,7 +273,7 @@ CREATE TABLE uiapi.cnode_stats (
 -- or in the database.
 CREATE TABLE uiapi.output (
     id SERIAL PRIMARY KEY,
-    oq_job_id INTEGER,
+    oq_job_id INTEGER NOT NULL,
     -- The full path of the output file on the server, optional and only set
     -- for outputs with NRML/XML files.
     display_name VARCHAR NOT NULL,
