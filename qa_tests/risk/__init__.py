@@ -23,7 +23,7 @@ import StringIO
 import shutil
 
 from qa_tests import _utils as qa_utils
-from tests.utils import helpers
+from openquake.engine.tests.utils import helpers
 
 from openquake.engine import export
 from openquake.engine.db import models

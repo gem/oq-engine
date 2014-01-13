@@ -16,7 +16,7 @@
 from nose.plugins.attrib import attr as noseattr
 
 from qa_tests import risk
-from tests.utils import helpers
+from openquake.engine.tests.utils import helpers
 
 from openquake.engine.db import models
 

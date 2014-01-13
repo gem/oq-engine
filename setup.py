@@ -35,7 +35,7 @@ setup(
         "Topic :: Utilities",
     ],
     packages=find_packages(exclude=["qa_tests", "qa_tests.*",
-                                    "tools", "tests", "tests.*",
+                                    "tools",
                                     "openquake.engine.bin",
                                     "openquake.engine.bin.*"]),
     py_modules=PY_MODULES,
