@@ -9,3 +9,12 @@ Youngs et al. 1997
 
 .. autoclass:: YoungsEtAl1997SSlab
     :members:
+
+.. autoclass:: YoungsEtAl1997GSCSSlabBest
+    :members:
+
+.. autoclass:: YoungsEtAl1997GSCSSlabUpperLimit
+    :members:
+
+.. autoclass:: YoungsEtAl1997GSCSSlabLowerLimit
+    :members:
