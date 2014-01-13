@@ -21,7 +21,6 @@ from __future__ import division
 import numpy as np
 
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-from openquake.hazardlib.imt import PGA
 
 
 class BooreAtkinson2011(BooreAtkinson2008):
@@ -39,41 +38,15 @@ class BooreAtkinson2011(BooreAtkinson2008):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
-        C = self.COEFFS[imt]
-        C_SR = self.COEFFS_SOIL_RESPONSE[imt]
 
-        # compute PGA on rock conditions - needed to compute non-linear
-        # site amplification term
-        pga4nl = self._get_pga_on_rock(rup, dists, C)
+        # get mean and std using the superclass
+        mean, stddevs = super(BooreAtkinson2011, self).get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         # correction factor (see Atkinson and Boore, 2011; equation 5 at
         # page 1126 and nga08_gm_tmr.for line 508
-
-        """
         corr_fact = 10.0**(np.max([0, 3.888 - 0.674 * rup.mag]) -
                            (np.max([0, 2.933 - 0.510 * rup.mag]) *
-                            np.log(dists.rjb + 10.)))
-        """
-        corr_fact = 1
+                            np.log10(dists.rjb + 10.)))
 
-        # equation 1, pag 106, without sigma term, that is only the first 3
-        # terms. The third term (site amplification) is computed as given in
-        # equation (6), that is the sum of a linear term - equation (7) - and
-        # a non-linear one - equations (8a) to (8c).
-        # Mref, Rref values are given in the caption to table 6, pag 119.
-        if imt == PGA():
-            # avoid recomputing PGA on rock, just add site terms
-            mean = np.log(pga4nl) + \
-                self._get_site_amplification_linear(sites, C_SR) + \
-                self._get_site_amplification_non_linear(sites, pga4nl, C_SR)
-        else:
-            mean = self._compute_magnitude_scaling(rup, C) + \
-                self._compute_distance_scaling(rup, dists, C) + \
-                self._get_site_amplification_linear(sites, C_SR) + \
-                self._get_site_amplification_non_linear(sites, pga4nl, C_SR)
-
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
-
-        return mean*corr_fact, stddevs
+        return np.log(np.exp(mean)*corr_fact), stddevs

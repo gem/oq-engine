@@ -27,4 +27,4 @@ class BooreAtkinson2011TestCase(BaseGSIMTestCase):
 
     def test_mean_normal(self):
         self.check('BA11/BA11_MEDIAN.csv',
-                   max_discrep_percentage=0.8)
+                   max_discrep_percentage=1.1)
