@@ -70,6 +70,8 @@ sig_hand () {
     echo "signal trapped"
     if [ "$lxc_name" != "" ]; then
         set +e
+        scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
+        scp "${lxc_ip}:ssh.log" ssh.history
         echo "Destroying [$lxc_name] lxc"
         upper="$(mount | grep "${lxc_name}.*upperdir" | sed 's@.*upperdir=@@g;s@,.*@@g')"
         if [ -f "${upper}.dsk" ]; then
@@ -164,10 +166,12 @@ usage () {
     echo "       if -D is present a package with self-computed version is produced."
     echo "       if -U is present no sign are perfomed using gpg key related to the mantainer."
     echo
-    echo "    $0 pkgtest <branch-name>                     install oq-engine package and related dependencies into"
+    echo "    $0 pkgtest <branch-name>"
+    echo "                                                 install oq-engine package and related dependencies into"
     echo "                                                 an ubuntu lxc environment and run package tests and demos"
 
-    echo "    $0 devtest <branch-name> put oq-engine and oq-* dependencies sources in a lxc,"
+    echo "    $0 devtest <branch-name>"
+    echo "                                                 put oq-engine and oq-* dependencies sources in a lxc,"
     echo "                                                 setup environment and run development tests."
     echo
     exit $ret
@@ -269,10 +273,12 @@ _devtest_innervm_run () {
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ; cd oq-engine ; celeryd >/tmp/celeryd.log 2>&1 3>&1 &"
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        # wait for celeryd startup time
+        sleep 5
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine ;
-                 nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest tests/
+                 nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
                  nosetests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
@@ -298,8 +304,6 @@ _devtest_innervm_run () {
             cp $HOME/fake-data/oq-engine/* .
         fi
     fi
-
-    scp "${lxc_ip}:ssh.log" devtest.history
 
     # TODO: version check
 #    echo "NOW PRESS ENTER TO CONTINUE"
@@ -412,8 +416,6 @@ _pkgtest_innervm_run () {
             cd -
         done"
     fi
-
-    scp "${lxc_ip}:ssh.log" pkgtest.history
 
     trap ERR
 
@@ -572,6 +574,10 @@ devtest_run () {
     set +e
     _devtest_innervm_run "$branch_id" "$lxc_ip"
     inner_ret=$?
+
+    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
+    scp "${lxc_ip}:ssh.log" devtest.history
+
     sudo lxc-shutdown -n $lxc_name -w -t 10
 
     # NOTE: pylint returns errors too frequently to consider them a critical event
@@ -641,6 +647,10 @@ EOF
     set +e
     _pkgtest_innervm_run $lxc_ip
     inner_ret=$?
+
+    scp "${lxc_ip}:/tmp/celeryd.log" celeryd.log
+    scp "${lxc_ip}:ssh.log" pkgtest.history
+
     sudo lxc-shutdown -n $lxc_name -w -t 10
     set -e
 
@@ -758,7 +768,7 @@ cd "$GEM_BUILD_SRC"
 dt="$(date +%s)"
 
 # version from setup.py
-stp_vers="$(cat setup.py | grep "^version[     ]*=[    ]*['\"]" | sed -n "s/^version[  ]*=[    ]*['\"]//g;s/['\"].*//gp")"
+stp_vers="$(cat setup.py | sed -n "s/^version[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
 stp_maj="$(echo "$stp_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
 stp_min="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
 stp_bfx="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
@@ -766,10 +776,11 @@ stp_suf="$(echo "$stp_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')
 # echo "stp [$stp_vers] [$stp_maj] [$stp_min] [$stp_bfx] [$stp_suf]"
 
 # version info from openquake/engine/__init__.py
-ini_maj="$(cat openquake/engine/__init__.py | grep '# major' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-ini_min="$(cat openquake/engine/__init__.py | grep '# minor' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-ini_bfx="$(cat openquake/engine/__init__.py | grep '# sprint number' | sed -n 's/^[ ]*//g;s/,.*//gp')"
-ini_suf="" # currently not included into the version array structure
+ini_vers="$(cat openquake/engine/__init__.py | sed -n "s/^__version__[  ]*=[    ]*['\"]\([^'\"]\+\)['\"].*/\1/gp")"
+ini_maj="$(echo "$ini_vers" | sed -n 's/^\([0-9]\+\).*/\1/gp')"
+ini_min="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+ini_bfx="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.\([0-9]\+\).*/\1/gp')"
+ini_suf="$(echo "$ini_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+\(.*\)/\1/gp')"
 # echo "ini [] [$ini_maj] [$ini_min] [$ini_bfx] [$ini_suf]"
 
 # version info from debian/changelog
@@ -809,6 +820,8 @@ if [ $BUILD_DEVEL -eq 1 ]; then
     )  > debian/changelog
     cat debian/changelog.orig >> debian/changelog
     rm debian/changelog.orig
+
+    sed -i "s/^__version__[  ]*=.*/__version__ = '${pkg_maj}.${pkg_min}.${pkg_bfx}${pkg_deb}+dev${dt}-${hash}'/g" openquake/engine/__init__.py
 fi
 
 if [  "$ini_maj" != "$pkg_maj" -o "$ini_maj" != "$stp_maj" -o \

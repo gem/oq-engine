@@ -16,7 +16,7 @@
 from nose.plugins.attrib import attr
 
 from qa_tests import risk
-from tests.utils import helpers
+from openquake.engine.tests.utils import helpers
 from openquake.engine.db import models
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 

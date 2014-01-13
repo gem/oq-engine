@@ -71,13 +71,7 @@ HAZARD_MODULES = get_core_modules(hazard)
 
 RISK_MODULES = get_core_modules(risk)
 
-CELERY_IMPORTS = HAZARD_MODULES + RISK_MODULES
-
-try:
-    imp.find_module("tasks", [os.path.join(x, "tests/utils")
-                              for x in sys.path])
-    CELERY_IMPORTS.append("tests.utils.tasks")
-except ImportError:
-    pass
+CELERY_IMPORTS = HAZARD_MODULES + RISK_MODULES + [
+    "openquake.engine.tests.utils.tasks"]
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.engine.settings"
