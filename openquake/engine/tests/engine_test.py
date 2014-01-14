@@ -632,37 +632,3 @@ class RunCalcTestCase(unittest.TestCase):
         self.assertEqual(1, mm['cleanup'].call_count)
         self.assertEqual(((self.job, ), {'terminate': engine.TERMINATE}),
                          mm['cleanup'].call_args)
-
-
-class ProgressHandlerTestCase(unittest.TestCase):
-    class FakeCalc(base.Calculator):
-        class Task(object):
-            subtask = lambda fn: fn
-        core_calc_task = Task
-
-        hc = mock.Mock()
-
-        def block_size(self):
-            return -1
-
-        def task_arg_gen(self, block_size):
-            return (range(block_size) for _ in range(block_size))
-
-        def _get_outputs_for_export(self):
-            return []
-
-    def setUp(self):
-        pass
-
-    def test_do_run_calc(self):
-        with helpers.MultiMock(
-                sj='openquake.engine.engine._switch_to_job_phase'):
-            progress_handler = mock.Mock()
-            calc = self.FakeCalc(mock.Mock())
-            calc.register_progress_handler(progress_handler)
-
-            engine._do_run_calc(calc.job, [], calc, "hazard")
-
-        self.assertTrue(progress_handler.call_count > 0)
-        self.assertEqual((('calculation complete', self.FakeCalc.hc), {}),
-                         progress_handler.call_args)
