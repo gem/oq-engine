@@ -174,6 +174,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
         # TODO: fix the block size dependency
+        # (https://bugs.launchpad.net/oq-engine/+bug/1225287)
+        # then self.block_split can be used, consistently with the
+        # other calculators
         blocks = block_splitter(self.hc.site_collection, 1000)
         for task_no, sites in enumerate(blocks):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
