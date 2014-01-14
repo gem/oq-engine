@@ -48,9 +48,7 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
             'openquake.engine.calculators.risk.writers.loss_map',)
         try:
             write_lossmap_mock = patch_dbwriter.start()
-            scenario.scenario(
-                *self.calculator.task_arg_gen(
-                    self.calculator.block_size()).next())
+            scenario.scenario(*self.calculator.task_arg_gen().next())
         finally:
             patch_dbwriter.stop()
 

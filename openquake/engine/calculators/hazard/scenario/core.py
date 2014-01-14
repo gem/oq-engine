@@ -159,14 +159,10 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # create an associated gmf record
         self.gmf = models.Gmf.objects.create(output=output)
 
-    def block_size(self):
-        """
-        Block size for the scenario calculator. For the moment hard-coded to
-        1000.
-        """
-        return 1000
+    def _get_realizations(self):
+        return range(self.hc.number_of_ground_motion_fields)
 
-    def task_arg_gen(self, block_size):
+    def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
@@ -174,13 +170,14 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         Yielded results are 6-uples of the form (job_id,
         sites, rupture_id, gmf_id, task_seed, realizations, task_no)
         (task_seed will be used to seed numpy for temporal occurence sampling).
-
-        :param int block_size:
-            The number of work items for each task. Fixed to 1000.
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-        blocks = block_splitter(self.hc.site_collection, block_size)
+        # TODO: fix the block size dependency
+        # (https://bugs.launchpad.net/oq-engine/+bug/1225287)
+        # then self.block_split can be used, consistently with the
+        # other calculators
+        blocks = block_splitter(self.hc.site_collection, 1000)
         for task_no, sites in enumerate(blocks):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
             yield (self.job.id, models.SiteCollection(sites),
