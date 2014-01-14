@@ -67,20 +67,9 @@ class Calculator(object):
         return EnginePerformanceMonitor(
             operation, self.job.id, tracing=True, flush=True)
 
-    def task_arg_gen(self, block_size):
+    def task_arg_gen(self):
         """
         Generator function for creating the arguments for each task.
-
-        Subclasses must implement this.
-
-        :param int block_size:
-            The number of work items per task (sources, sites, etc.).
-        """
-        raise NotImplementedError
-
-    def block_size(self):
-        """
-        Number of work items per task.
 
         Subclasses must implement this.
         """
@@ -159,7 +148,7 @@ class Calculator(object):
         parallelize distribution, but it can be overridden is subclasses.
         """
         self.parallelize(self.core_calc_task,
-                         self.task_arg_gen(self.block_size()),
+                         self.task_arg_gen(),
                          self.task_completed)
 
     def post_execute(self):
