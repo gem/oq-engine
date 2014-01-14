@@ -131,7 +131,7 @@ def _save_ses_ruptures(ruptures):
 
 
 @tasks.oqtask
-def compute_gmf(job_id, gmf_coll, gsims, rupt_seeds, task_no):
+def compute_gmf(job_id, gmf_coll, gsims, rupt_seed_pairs, task_no):
     """
     Compute and save the GMFs for all the ruptures in the given block.
     """
@@ -141,7 +141,7 @@ def compute_gmf(job_id, gmf_coll, gsims, rupt_seeds, task_no):
         correl_model=general.get_correl_model(hc),
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
-    rupture_ids, rupture_seeds = zip(*rupt_seeds)
+    rupture_ids, rupture_seeds = zip(*rupt_seed_pairs)
 
     with EnginePerformanceMonitor(
             'reading ruptures', job_id, compute_gmf):
@@ -289,12 +289,12 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             if not rupture_ids:
                 continue
             # compute the associated seeds
-            rupture_seeds = [(rid, rnd.randint(0, models.MAX_SINT_32))
-                             for rid in rupture_ids]
+            rupture_seed_pairs = [(rid, rnd.randint(0, models.MAX_SINT_32))
+                                  for rid in rupture_ids]
 
             # we split on ruptures to avoid running out of memory
-            for i, rupt_seeds in enumerate(self.block_split(rupture_seeds)):
-                yield self.job.id, gmf_coll, gsims, rupt_seeds, i
+            for i, rs_pairs in enumerate(self.block_split(rupture_seed_pairs)):
+                yield self.job.id, gmf_coll, gsims, rs_pairs, i
 
     def post_execute(self):
         """
