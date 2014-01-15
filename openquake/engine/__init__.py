@@ -66,6 +66,9 @@ def git_suffix():
     py_dir = os.path.dirname(__file__)
     os.chdir(py_dir)
     try:
+        # with this fix we are missing the case where we are really in git
+        # installation scenario but, for some reason, git not works properly
+        # and not return the hash but it is an acceptable compromise
         process = subprocess.Popen(['git', 'rev-parse', '--short', 'HEAD'],
                                    stdout=subprocess.PIPE, stderr=FNULL)
         output = process.communicate()[0]
