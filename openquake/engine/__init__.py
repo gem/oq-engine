@@ -67,7 +67,7 @@ def git_suffix():
     os.chdir(py_dir)
     try:
         process = subprocess.Popen(['git', 'rev-parse', '--short', 'HEAD'],
-                                   stdout=subprocess.PIPE)
+                                   stdout=subprocess.PIPE, stderr=FNULL)
         output = process.communicate()[0]
         os.chdir(old_dir)
         return "-git" + output
