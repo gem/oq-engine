@@ -287,11 +287,13 @@ def list_calculations(calc_manager):
             )
 
 
+# TODO: the command-line switches are not tested, included this one
 def list_imported_outputs():
     """
     List outputs which were imported from a file, not calculated from a job
     """
-    outputs = models.Output.objects.filter(oq_job__isnull=True)
+    outputs = models.Output.objects.filter(
+        oq_job__hazard_calculation__description__contains=' importer, file ')
     engine.print_outputs_summary(outputs)
 
 
@@ -448,14 +450,14 @@ def main():
     # import
     elif args.load_gmf is not None:
         with open(args.load_gmf) as f:
-            out, hc = import_gmf_scenario(f)
+            out = import_gmf_scenario(f)
             print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, hc.id)
+                % (out.id, out.output_type, out.oq_job.hazard_calculation.id)
     elif args.load_curve is not None:
         with open(args.load_curve) as f:
-            out, hc = import_hazard_curves(f)
+            out = import_hazard_curves(f)
             print 'Added output id=%d of type %s; hazard_calculation_id=%d'\
-                % (out.id, out.output_type, hc.id)
+                % (out.id, out.output_type, out.oq_job.hazard_calculation.id)
     elif args.list_imported_outputs:
         list_imported_outputs()
     elif args.delete_uncompleted_calculations:

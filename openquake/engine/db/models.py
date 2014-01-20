@@ -1229,9 +1229,10 @@ class Output(djm.Model):
         'statistical_params',
         'statistics quantile')
 
-    oq_job = djm.ForeignKey('OqJob')  # nullable in the case of an output
-    # coming from an external source, with no job associated
+    oq_job = djm.ForeignKey('OqJob', null=False)
+
     display_name = djm.TextField()
+
     HAZARD_OUTPUT_TYPE_CHOICES = (
         (u'disagg_matrix', u'Disaggregation Matrix'),
         (u'gmf', u'Ground Motion Field'),
