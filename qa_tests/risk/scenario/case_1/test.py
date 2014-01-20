@@ -73,6 +73,6 @@ class ImportGmfScenarioTestCase(risk.BaseRiskQATestCase):
         self._run_test()
 
     def get_hazard_job(self):
-        with open('gmf-scenario.xml') as data:
+        with open(self._test_path('gmf-scenario.xml')) as data:
             output = import_gmf_scenario(data)
         return output.oq_job
