@@ -6,6 +6,7 @@ from django.db import connections
 
 from openquake.nrmllib.hazard.parsers import HazardCurveXMLParser
 from openquake.engine.db import models
+from openquake.engine import engine
 
 
 def import_hazard_curves(fileobj):
@@ -23,6 +24,7 @@ def import_hazard_curves(fileobj):
     """
     fname = fileobj.name
     curs = connections['job_init'].cursor().cursor.cursor  # DB API cursor
+    job = engine.prepare_job()
     hc = models.HazardCalculation.objects.create(
         base_path=os.path.dirname(fname),
         description='HazardCurve importer, file %s' % os.path.basename(fname),
@@ -30,7 +32,8 @@ def import_hazard_curves(fileobj):
     # XXX: what about the maximum_distance?
 
     out = models.Output.objects.create(
-        display_name='Imported from %r' % fname, output_type='hazard_curve')
+        display_name='Imported from %r' % fname, output_type='hazard_curve',
+        oq_job=job)
 
     f = StringIO()
     # convert the XML into a tab-separated StringIO
@@ -64,7 +67,9 @@ def import_hazard_curves(fileobj):
         curs.connection.commit()
     finally:
         f.close()
-    return out, hc
+    job.hazard_calculation = hc
+    job.save()
+    return out
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()

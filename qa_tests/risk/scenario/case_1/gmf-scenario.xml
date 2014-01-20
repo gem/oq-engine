@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- GMF model for Scenario calculator results.
+     Note that the structure varies slightly in the Event-Based calculator
+     GMF results. -->
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <gmfSet>
+        <!-- It is not typical to have <gmf>s in one result file with different
+             intensity measure types; this example is meant to illustrate the
+             association of these attributes with a particular <gmf>. -->
+        <gmf IMT="SA" saPeriod="0.025" saDamping="5.0">
+            <node gmv="0.2" lon="15.48" lat="38.09" />
+            <node gmv="1.4" lon="15.56" lat="38.17" />
+            <node gmv="0.6" lon="15.48" lat="38.25" />
+        </gmf>
+        <gmf IMT="PGA">
+            <node gmv="0.2" lon="15.48" lat="38.09" />
+            <node gmv="1.4" lon="15.56" lat="38.17" />
+            <node gmv="0.6" lon="15.48" lat="38.25" />
+        </gmf>
+        <gmf IMT="PGV">
+            <node gmv="0.2" lon="15.48" lat="38.09" />
+            <node gmv="1.4" lon="15.56" lat="38.17" />
+            <node gmv="0.6" lon="15.48" lat="38.25" />
+        </gmf>
+    </gmfSet>
+</nrml>
