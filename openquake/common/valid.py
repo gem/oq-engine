@@ -159,6 +159,7 @@ probability = FloatRange(0, 1)
 
 IMT = collections.namedtuple('IMT', 'imt saPeriod saDamping')
 
+
 def IMTstr(text):
     """String -> namedtuple with fields imt, saPeriod, saDamping"""
     mo = re.match(r'PGA|PGV|PGD|IA|RSD|MMI|SA\((\d+\.?\d*)\)', text)
