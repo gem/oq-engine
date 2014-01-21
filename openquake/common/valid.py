@@ -49,6 +49,7 @@ class Choice(object):
         if not value in self.choices:
             raise ValueError('%r is not a valid choice in %s' % (
                              value, self.choices))
+        return value
 
 category = Choice('population', 'buildings')
 
@@ -83,6 +84,13 @@ class FloatRange(object):
             raise ValueError('%r is smaller than the min, %r' %
                              (f, self.minrange))
         return f
+
+
+def not_empty(text):
+    """Check that the string is not empty"""
+    if not text:
+        raise ValueError('Got an empty string')
+    return text
 
 
 def namelist(text):

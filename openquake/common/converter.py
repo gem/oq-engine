@@ -379,6 +379,11 @@ class Exposure(Converter):
                 c.to_node() for c in t.tableCostType]
         else:
             cost_types = []
+            area_type = t.tableExposure[0].area_type
+            area_unit = t.tableExposure[0].area_unit
+            if area_type and area_unit:
+                # insert after the description node
+                exp.nodes.insert(1, Node('conversions', {}, nodes=[Node('area', {'type': area_type, 'unit': area_unit})]))
         if t.tableOccupancy:
             # extract the occupancies corresponding to the first asset
             _asset_ref, occupancies = groupby(

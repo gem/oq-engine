@@ -34,10 +34,10 @@ class DiscreteVulnerabilitySet(Record):
 
     def to_node(self):
         node = Node('discreteVulnerabilitySet', dict(
-            vulnerabilitySetID=self[0],
-            assetCategory=self[1],
-            lossCategory=self[2]))
-        node.append(Node('IML', dict(IMT=self[3])))
+            vulnerabilitySetID=self['vulnerabilitySetID'],
+            assetCategory=self['assetCategory'],
+            lossCategory=self['lossCategory']))
+        node.append(Node('IML', dict(IMT=self['IMT'])))
         return node
 
 
@@ -52,8 +52,8 @@ class DiscreteVulnerability(Record):
 
     def to_node(self):
         node = Node('discreteVulnerability',
-                    dict(vulnerabilityFunctionID=self[1],
-                         probabilisticDistribution=self[2]))
+            dict(vulnerabilityFunctionID=self['vulnerabilityFunctionID'],
+                 probabilisticDistribution=self['probabilisticDistribution']))
         node.append(Node('lossRatio'))
         node.append(Node('coefficientsVariation'))
         return node
@@ -87,9 +87,9 @@ class FragilityDiscrete(Record):
     limitStates = Field(valid.namelist)
 
     def to_node(self):
-        node = Node('fragilityModel', dict(format=self[0]))
-        node.append(Node('description', text=self[1]))
-        node.append(Node('limitStates', text=self[2]))
+        node = Node('fragilityModel', dict(format=self['format']))
+        node.append(Node('description', text=self['description']))
+        node.append(Node('limitStates', text=self['limitStates']))
         return node
 
 
@@ -111,11 +111,12 @@ class FFSetDiscrete(Record):
 
     def to_node(self):
         node = Node('ffs')
-        ndl = self[2]
+        ndl = self['noDamageLimit']
         if ndl:
             node['noDamageLimit'] = ndl
-        node.append(Node('taxonomy', text=self[1]))
-        node.append(Node('IML', dict(IMT=self[3], imlUnit=self[4])))
+        node.append(Node('taxonomy', text=self['taxonomy']))
+        node.append(Node('IML', dict(IMT=self['IMT'],
+                                     imlUnit=self['imlUnit'])))
         return node
 
 
@@ -144,9 +145,9 @@ class FragilityContinuous(Record):
     limitStates = Field(valid.namelist)
 
     def to_node(self):
-        node = Node('fragilityModel', dict(format=self[0]))
-        node.append(Node('description', text=self[1]))
-        node.append(Node('limitStates', text=self[2]))
+        node = Node('fragilityModel', dict(format=self['format']))
+        node.append(Node('description', text=self['description']))
+        node.append(Node('limitStates', text=self['limitStates']))
         return node
 
 
@@ -171,15 +172,16 @@ class FFSetContinuous(Record):
 
     def to_node(self):
         node = Node('ffs')
-        node.append(Node('taxonomy', text=self[1]))
-        ndl = self[2]
+        node.append(Node('taxonomy', text=self['taxonomy']))
+        ndl = self['noDamageLimit']
         if ndl:
             node['noDamageLimit'] = ndl
-        typ = self[3]
+        typ = self['type']
         if typ:
             node['type'] = typ
-        node.append(Node('IML', dict(IMT=self[4], imlUnit=self[5],
-                                     minIML=self[6], maxIML=self[7])))
+        node.append(Node('IML',
+                         dict(IMT=self['IMT'], imlUnit=self['imlUnit'],
+                              minIML=self['minIML'], maxIML=self['maxIML'])))
         return node
 
 
@@ -205,7 +207,7 @@ class Location(Record):
     lat = Field(valid.latitude)
 
     def to_node(self):
-        return Node('location', dict(lon=self[1], lat=self[2]))
+        return Node('location', dict(lon=self['lon'], lat=self['lat']))
 
 
 # exposure records
@@ -214,27 +216,30 @@ class Exposure(Record):
     convertername = 'Exposure'
     pkey = Unique('id')
 
-    id = Field(str)
+    id = Field(valid.not_empty)
     category = Field(valid.category)
     taxonomySource = Field(str)
     description = Field(str)
-    area_type = Field(str)
+    area_type = Field(valid.NoneOr(valid.Choice('aggregated', 'per_asset')))
     area_unit = Field(str)
     deductible_is_absolute = Field(bool)
     insurance_limit_is_absolute = Field(bool)
 
     def to_node(self):
         node = Node('exposureModel', dict(
-            id=self[0],
-            category=self[1],
-            taxonomySource=self[2]))
-        node.append(Node('description', text=self[3]))
+            id=self['id'],
+            category=self['category'],
+            taxonomySource=self['taxonomySource']))
+        node.append(Node('description', text=self['description']))
         if node['category'] == 'buildings':
             conv = Node('conversions')
-            conv.append(Node('area', dict(type=self[4], unit=self[5])))
+            conv.append(Node('area', dict(type=self['area_type'],
+                                          unit=self['area_unit'])))
             conv.append(Node('costTypes'))
-            conv.append(Node('deductible', dict(isAbsolute=self[6])))
-            conv.append(Node('insuranceLimit', dict(isAbsolute=self[7])))
+            conv.append(Node('deductible', dict(
+                isAbsolute=self['deductible_is_absolute'])))
+            conv.append(Node('insuranceLimit', dict(
+                isAbsolute=self['insurance_limit_is_absolute'])))
             node.append(conv)
         node.append(Node('assets'))
         return node
@@ -251,11 +256,11 @@ class CostType(Record):
     retrofittedUnit = Field(str)
 
     def to_node(self):
-        attr = dict(name=self[0], type=self[1], unit=self[2])
-        if self[3]:
-            attr['retrofittedType'] = self[3]
-        if self[4]:
-            attr['retrofittedUnit'] = self[4]
+        attr = dict(name=self['name'], type=self['type'], unit=self['unit'])
+        if self['retrofittedType']:
+            attr['retrofittedType'] = self['retrofittedType']
+        if self['retrofittedUnit']:
+            attr['retrofittedUnit'] = self['retrofittedUnit']
         return Node('costType', attr)
 
 
@@ -270,9 +275,11 @@ class Asset(Record):
     area = Field(valid.NoneOr(valid.positivefloat))
 
     def to_node(self):
-        attr = dict(id=self[1], taxonomy=self[2], number=self[3])
-        if self[4]:
-            attr['area'] = self[4]
+        attr = dict(id=self['asset_ref'],
+                    taxonomy=self['taxonomy'],
+                    number=self['number'])
+        if self['area']:
+            attr['area'] = self['area']
         return Node('asset', attr)
 
 
@@ -285,7 +292,8 @@ class Occupancy(Record):
     occupants = Field(valid.positivefloat)
 
     def to_node(self):
-        return Node('occupancy', dict(period=self[1], occupants=self[2]))
+        return Node('occupancy', dict(period=self['period'],
+                                      occupants=self['occupants']))
 
 
 class Cost(Record):
@@ -308,13 +316,13 @@ class Cost(Record):
         <cost type="non_structural" value="25000" deductible=".09"
               insuranceLimit="0.82"/>
         """
-        node = Node('cost', dict(type=self[1], value=self[2]))
-        if self[3]:
-            node['retrofitted'] = self[3]
-        if self[4]:
-            node['deductible'] = self[4]
-        if self[5]:
-            node['insuranceLimit'] = self[5]
+        node = Node('cost', dict(type=self['type'], value=self['value']))
+        if self['retrofitted']:
+            node['retrofitted'] = self['retrofitted']
+        if self['deductible']:
+            node['deductible'] = self['deductible']
+        if self['insurance_limit']:
+            node['insuranceLimit'] = self['insurance_limit']
         return node
 
 
@@ -328,8 +336,9 @@ class GmfCollection(Record):
     gsimTreePath = Field(str)
 
     def to_node(self):
-        return Node('gmfCollection', dict(sourceModelTreePath=self[0],
-                                          gsimTreePath=self[1]))
+        return Node('gmfCollection',
+                    dict(sourceModelTreePath=self['sourceModelTreePath'],
+                         gsimTreePath=self['gsimTreePath']))
 
 
 class GmfSet(Record):
@@ -341,10 +350,10 @@ class GmfSet(Record):
 
     def to_node(self):
         dic = {}
-        if self[0] != '0':
-            dic['stochasticEventSetId'] = self[0]
+        if self['stochasticEventSetId'] != '0':
+            dic['stochasticEventSetId'] = self['stochasticEventSetId']
         if self[1]:
-            dic['investigationTime'] = self[1]
+            dic['investigationTime'] = self['investigationTime']
         return Node('gmfSet', dic)
 
 
@@ -357,12 +366,12 @@ class Gmf(Record):
     ruptureId = Field(str)
 
     def to_node(self):
-        imt = self[1]
+        imt = self['imtStr']
         if imt.startswith('SA'):
             attr = dict(IMT='SA', saPeriod=imt[3:-1], saDamping='5.0')
         else:
             attr = dict(IMT=imt)
-        rup = self[2]
+        rup = self['ruptureId']
         if rup:
             attr['ruptureId'] = rup
         return Node('gmf', attr)
@@ -380,4 +389,6 @@ class GmfData(Record):
     gmv = Field(float)
 
     def to_node(self):
-        return Node('node', dict(lon=self[3], lat=self[4], gmv=self[5]))
+        return Node('node', dict(lon=self['lon'],
+                                 lat=self['lat'],
+                                 gmv=self['gmv']))

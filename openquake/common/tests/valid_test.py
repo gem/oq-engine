@@ -65,3 +65,15 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(valid.IMTstr('PGV'), ('PGV', None, None))
         with self.assertRaises(ValueError):
             valid.IMTstr('S(1)')
+
+    def test_choice(self):
+        validator = valid.Choice('aggregated', 'per_asset')
+        self.assertEqual(validator('aggregated'), 'aggregated')
+        self.assertEqual(validator('per_asset'), 'per_asset')
+        with self.assertRaises(ValueError):
+            validator('xxx')
+
+    def test_empty(self):
+        self.assertEqual(valid.not_empty("text"), "text")
+        with self.assertRaises(ValueError):
+            valid.not_empty("")
