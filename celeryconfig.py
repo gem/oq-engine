@@ -25,7 +25,6 @@ eventually.
 
 import os
 import sys
-import imp
 
 # just in the case that are you using oq-engine from sources
 # with the rest of oq libraries installed into the system (or a
@@ -64,8 +63,11 @@ CELERY_RESULT_BACKEND = "amqp"
 # reserve 4 tasks at once. For long running calculations with lots of long,
 # heavy tasks, this greedy prefetching is not recommended and can result in
 # performance issues with respect to cluster utilization.)
+# CELERY_MAX_CACHED_RESULTS disable the cache on the results: this means
+# that map_reduce will not leak memory by keeping the intermediate results
 CELERY_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
+CELERY_MAX_CACHED_RESULTS = 1
 
 HAZARD_MODULES = get_core_modules(hazard)
 
