@@ -147,9 +147,10 @@ _BOOL_DICT = {
 
 def boolean(text):
     """String -> boolean"""
-    t = text.lower()
+    if text.lower() in _BOOL_DICT and text.lower() != text:
+        raise ValueError('%r is not a lowercase string' % text)
     try:
-        return _BOOL_DICT[t]
+        return _BOOL_DICT[text]
     except KeyError:
         raise ValueError('Not a boolean: %s' % text)
 
@@ -157,7 +158,6 @@ def boolean(text):
 probability = FloatRange(0, 1)
 
 IMT = collections.namedtuple('IMT', 'imt saPeriod saDamping')
-
 
 def IMTstr(text):
     """String -> namedtuple with fields imt, saPeriod, saDamping"""

@@ -77,3 +77,23 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(valid.not_empty("text"), "text")
         with self.assertRaises(ValueError):
             valid.not_empty("")
+
+    def test_boolean(self):
+        self.assertEqual(valid.boolean('0'), False)
+        self.assertEqual(valid.boolean('1'), True)
+        self.assertEqual(valid.boolean('false'), False)
+        self.assertEqual(valid.boolean('true'), True)
+        with self.assertRaises(ValueError):
+            valid.boolean('')
+        with self.assertRaises(ValueError):
+            valid.boolean('xxx')
+        with self.assertRaises(ValueError):
+            valid.boolean('True')
+        with self.assertRaises(ValueError):
+            valid.boolean('False')
+
+    def test_none_or(self):
+        validator = valid.NoneOr(valid.boolean)
+        self.assertEqual(validator(''), None)
+        with self.assertRaises(ValueError):
+            validator('xxx')

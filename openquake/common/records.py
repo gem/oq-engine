@@ -104,7 +104,7 @@ class FFSetDiscrete(Record):
     pkey = Unique('ordinal')
 
     ordinal = Field(int)
-    taxonomy = Field(str)
+    taxonomy = Field(valid.not_empty)
     noDamageLimit = Field(valid.NoneOr(valid.positivefloat))
     IMT = Field(valid.IMTstr)
     imlUnit = Field(str)
@@ -162,8 +162,8 @@ class FFSetContinuous(Record):
     pkey = Unique('ordinal')
 
     ordinal = Field(int)
-    taxonomy = Field(str)
-    noDamageLimit = Field(valid.NoneOr(float))
+    taxonomy = Field(valid.not_empty)
+    noDamageLimit = Field(valid.NoneOr(valid.positivefloat))
     type = Field(str)
     IMT = Field(str)
     imlUnit = Field(str)
@@ -222,8 +222,8 @@ class Exposure(Record):
     description = Field(str)
     area_type = Field(valid.NoneOr(valid.Choice('aggregated', 'per_asset')))
     area_unit = Field(str)
-    deductible_is_absolute = Field(bool)
-    insurance_limit_is_absolute = Field(bool)
+    deductible_is_absolute = Field(valid.NoneOr(valid.boolean))
+    insurance_limit_is_absolute = Field(valid.NoneOr(valid.boolean))
 
     def to_node(self):
         node = Node('exposureModel', dict(
@@ -250,7 +250,7 @@ class CostType(Record):
     pkey = Unique('name')
 
     name = Field(str)
-    type = Field(str)
+    type = Field(valid.Choice('aggregated', 'per_asset', 'per_area'))
     unit = Field(str)
     retrofittedType = Field(str)
     retrofittedUnit = Field(str)
@@ -270,8 +270,8 @@ class Asset(Record):
 
     location_id = Field(valid.positiveint)
     asset_ref = Field(str)
-    taxonomy = Field(str)
-    number = Field(float)
+    taxonomy = Field(valid.not_empty)
+    number = Field(valid.positivefloat)
     area = Field(valid.NoneOr(valid.positivefloat))
 
     def to_node(self):
