@@ -234,15 +234,35 @@ class LightMonitor(object):
     performance as stated in the "Algorithms" chapter in the Python
     Cookbook.
     """
+    def __init__(self, operation, job_id, task=None):
+        self.operation = operation
+        self.job_id = job_id
+        if task is not None:
+            self.task = task
+            self.task_id = task.request.id
+        else:
+            self.task = None
+            self.task_id = None
+        self.t0 = time.time()
+        self.start_time = datetime.fromtimestamp(self.t0)
+        self.duration = 0
 
     def __enter__(self):
         self.t0 = time.time()
         return self
 
-    def __init__(self, counter, operation):
-        self.counter = counter
-        self.operation = operation
-        self.t0 = None
-
     def __exit__(self, etype, exc, tb):
-        self.counter.update({self.operation: time.time() - self.t0})
+        self.duration += time.time() - self.t0
+
+    def copy(self, operation):
+        return self.__class__(operation, self.job_id, self.task)
+
+    def flush(self):
+        models.Performance.objects.create(
+            oq_job_id=self.job_id,
+            task_id=self.task_id,
+            task=getattr(self.task, '__name__', None),
+            operation=self.operation,
+            start_time=self.start_time,
+            duration=self.duration)
+        self.__init__(self.operation, self.job_id, self.task)
