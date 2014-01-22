@@ -208,3 +208,10 @@ class SeismicSource(object):
         return [(mag, occ_rate)
                 for (mag, occ_rate) in self.mfd.get_annual_occurrence_rates()
                 if min_rate is None or occ_rate > min_rate]
+
+    def __repr__(self):
+        """
+        String representation of a source, displaying the source class name
+        and the source id.
+        """
+        return '<%s %s>' % (self.__class__.__name__, self.source_id)
