@@ -260,6 +260,18 @@ class Record(collections.Sequence):
     __metaclass__ = MetaRecord
     convertername = 'Converter'
 
+    @classmethod
+    def get_field_index(cls, field_name):
+        """
+        Return the index associated to the field name. As a special case,
+        if field_name is an integer, return it
+        """
+        if isinstance(field_name, str):
+            i = cls._name2index[field_name]
+        else:
+            i = field_name
+        return i
+
     def init(self):
         """To override for post-initialization operations"""
 
@@ -272,8 +284,7 @@ class Record(collections.Sequence):
         """
         if i is None:
             return all(self.is_valid(i) for i in range(len(self)))
-        if isinstance(i, str):
-            i = self._name2index[i]
+        i = self.get_field_index(i)
         try:
             self.fields[i].cast(self[i])
         except ValueError:
@@ -310,8 +321,7 @@ class Record(collections.Sequence):
 
     def __getitem__(self, i):
         """Return the field 'i', where 'i' can be an integer or a field name"""
-        if isinstance(i, str):
-            i = self._name2index[i]
+        i = self.get_field_index(i)
         return self.row[i]
 
     def __setitem__(self, i, value):
@@ -319,8 +329,7 @@ class Record(collections.Sequence):
         Set the column 'i', where 'i' can be an integer or a field name.
         If the value is invalid, raise a ValueError.
         """
-        if isinstance(i, str):
-            i = self._name2index[i]
+        i = self.get_field_index(i)
         self.fields[i].cast(value)
         self.row[i] = value
 
@@ -328,8 +337,7 @@ class Record(collections.Sequence):
         """
         Delete the column 'i', where 'i' can be an integer or a field name
         """
-        if isinstance(i, str):
-            i = self._name2index[i]
+        i = self.get_field_index(i)
         del self.row[i]
 
     def __eq__(self, other):
