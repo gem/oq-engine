@@ -71,10 +71,6 @@ class DiscreteVulnerabilityData(Record):
     lossRatio = Field(float)
     coefficientsVariation = Field(float)
 
-    # some properties useful for plotting the record
-    x = property(lambda self: self.IML)
-    y = property(lambda self: self.lossRatio)
-
 
 # fragility records (discrete)
 
@@ -128,10 +124,6 @@ class FFDataDiscrete(Record):
     ffs_ordinal = Field(int)
     iml = Field(float)
     poe = Field(valid.probability)
-
-    # some properties useful for plotting the record
-    x = property(lambda self: self.iml)
-    y = property(lambda self: self.poe)
 
 
 # fragility records (continuous)
