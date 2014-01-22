@@ -330,7 +330,7 @@ GROUP BY site_id ORDER BY site_id;
         hc = hazard_output.output.oq_job.hazard_calculation
         truncation_level = hc.truncation_level
         gsims = self.logic_tree_processor.parse_gmpe_logictree_path(
-                hazard_output.lt_realization.gsim_lt_path)
+            hazard_output.lt_realization.gsim_lt_path)
         if hc.ground_motion_correlation_model is not None:
             model = general.get_correl_model(hc)
         else:
@@ -375,10 +375,10 @@ GROUP BY site_id ORDER BY site_id;
             self.imt, hc.site_collection, site_assets,
             truncation_level, gsims, model)
 
-        with monitor.copy('computing gmvs'):
+        lmon = LightMonitor(monitor.operation, monitor.job_id, monitor.task)
+        with lmon:
             all_assets, gmvs = calc_getter.compute(
-                r_objs, r_seeds, r_ids, hc.maximum_distance)
-
+                r_objs, r_seeds, r_ids, hc.maximum_distance, lmon)
         return all_assets, (gmvs, r_ids)
 
 
@@ -536,7 +536,8 @@ class GroundMotionValuesCalcGetter(object):
             [const.StdDev.TOTAL])
         return gsim, cond
 
-    def compute(self, ruptures, rupture_seeds, rupture_ids, maximum_distance):
+    def compute(self, ruptures, rupture_seeds, rupture_ids, maximum_distance,
+                lmon):
         """
         Compute ground motion values radiated from `ruptures`.
 
@@ -552,6 +553,8 @@ class GroundMotionValuesCalcGetter(object):
         :param float maximum_distance:
             the maximum distance threshold used to filter the sites to be
             considered for each rupture
+        :param lmon:
+            a :class:`openquake.engine.performance.LightMonitor` instance
         :returns:
             a tuple with two elements. The first one is a list of A numpy
             array. Each of them contains the ground motion values associated
@@ -560,28 +563,30 @@ class GroundMotionValuesCalcGetter(object):
         """
         all_gmvs = []
         all_assets = []
-
         site_gmv = collections.defaultdict(dict)
-        performance_dict = collections.Counter()
+
+        filtering_mon = lmon.copy('filtering sites')
+        epsilon_mon = lmon.copy('generating epsilons')
+        gmf_mon = lmon.copy('compute ground motion fields')
+        collecting_mon = lmon.copy('collecting gmvs')
 
         for rupture, rupture_seed, rupture_id in itertools.izip(
                 ruptures, rupture_seeds, rupture_ids):
 
             gsim, tstddev = self.gsim(rupture)
 
-            with LightMonitor(performance_dict, 'filtering sites'):
+            with filtering_mon:
                 sites_of_interest, mask = self.sites_of_interest(
                     rupture, maximum_distance)
 
             if not sites_of_interest:
                 continue
 
-            with LightMonitor(performance_dict, 'generating epsilons'):
+            with epsilon_mon:
                 (total, inter, intra) = self.epsilons(
                     rupture_seed, mask, tstddev)
 
-            with LightMonitor(
-                    performance_dict, 'compute ground motion fields'):
+            with gmf_mon:
                 gmf = ground_motion_field_with_residuals(
                     rupture, sites_of_interest,
                     self.imt, gsim, self.truncation_level,
@@ -589,12 +594,15 @@ class GroundMotionValuesCalcGetter(object):
                     intra_residual_epsilons=intra,
                     inter_residual_epsilons=inter)
 
-            with LightMonitor(performance_dict, 'collecting gmvs'):
+            with collecting_mon:
                 for site, gmv in itertools.izip(sites_of_interest, gmf):
                     site_gmv[site.id][rupture_id] = gmv
 
-        logs.LOG.debug('Disaggregation of the time spent in the loop %s' % (
-            performance_dict))
+        # save monitoring information
+        filtering_mon.flush()
+        epsilon_mon.flush()
+        gmf_mon = lmon.flush()
+        collecting_mon.flush()
 
         for site_id, assets in self.sites_assets:
             n_assets = len(assets)
