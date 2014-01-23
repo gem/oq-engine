@@ -27,7 +27,7 @@ import numpy
 
 from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
-
+from openquake.hazardlib.tom import PoissonTOM
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
@@ -175,19 +175,19 @@ class BaseHazardCalculator(base.Calculator):
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
 
-        For this default implementation, yielded results are triples of
-        (job_id, realization_id, source_id_list).
+        For this default implementation, yielded results are quartets
+        (job_id, sources, tom, rlzs, gsim_dicts).
 
         Override this in subclasses as necessary.
         """
-        realizations = self._get_realizations()
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-
-        for lt_rlz in realizations:
-            path = tuple(lt_rlz.sm_lt_path)
-            sources = self.sources_per_ltpath[path]
+        tom = PoissonTOM(self.hc.investigation_time)
+        for ltpath, rlzs in self.rlzs_per_ltpath.iteritems():
+            sources = self.sources_per_ltpath[ltpath]
+            gsim_dicts = [ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path)
+                          for rlz in rlzs]
             for block in self.block_split(sources):
-                yield self.job.id, block, lt_rlz, ltp
+                yield self.job.id, block, tom, rlzs, gsim_dicts
 
     def _get_realizations(self):
         """
@@ -211,6 +211,11 @@ class BaseHazardCalculator(base.Calculator):
             # this is normal in tests where everything is mocked
             logs.LOG.warn('Could not save job_stats.num_sources: %s', e)
         self.initialize_realizations()
+
+        self.rlzs_per_ltpath = collections.defaultdict(list)
+        for rlz in self._get_realizations():
+            ltpath = tuple(rlz.sm_lt_path)
+            self.rlzs_per_ltpath[ltpath].append(rlz)
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
