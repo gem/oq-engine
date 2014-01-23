@@ -91,7 +91,7 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
     dic = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
                       for imt in sorted(imts)])
                for rlz, curv in curves.iteritems())
-    results.append(tasks.eager_result(dic))
+    results.append(dic)
     return results
 
 
@@ -147,14 +147,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             shape as self.curves_by_rlz[i][j] where i is the realization
             ordinal and j the IMT ordinal.
         """
-        for celery_result in task_results:
-            result = celery_result.get()
-            if isinstance(result, dict):
-                reslist = [result]
-            else:
-                reslist = [r.get() for r in result]
-            for res in reslist:
-                for rlz, curves_by_imt in res.iteritems():
+        for res in task_results:
+            for dic in (res.get() if hasattr(res, 'result') else [res]):
+                for rlz, curves_by_imt in dic.iteritems():
                     for j, curves in enumerate(curves_by_imt):
                         # j is the IMT index
                         self.curves_by_rlz[rlz][j] = 1. - (
