@@ -65,7 +65,7 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
             continue
         ruptures = list(source.iter_ruptures(tom))
         if num_sources > 1 and len(ruptures) > MAX_RUPTURES:  # spawn a task
-            results.extend(
+            results.append(
                 compute_hazard_curves.delay(
                     job_id, [source], tom, gsims_by_rlz))
             continue
@@ -147,13 +147,19 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             shape as self.curves_by_rlz[i][j] where i is the realization
             ordinal and j the IMT ordinal.
         """
-        for task_result in task_results:
-            for rlz, curves_by_imt in task_result.result.iteritems():
-                for j, curves in enumerate(curves_by_imt):
-                    # j is the IMT index
-                    self.curves_by_rlz[rlz][j] = 1. - (
-                        1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
-        self.log_percent()
+        for celery_result in task_results:
+            result = celery_result.get()
+            if isinstance(result, dict):
+                reslist = [result]
+            else:
+                reslist = [r.get() for r in result]
+            for res in reslist:
+                for rlz, curves_by_imt in res.iteritems():
+                    for j, curves in enumerate(curves_by_imt):
+                        # j is the IMT index
+                        self.curves_by_rlz[rlz][j] = 1. - (
+                            1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
+            self.log_percent()
 
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)
