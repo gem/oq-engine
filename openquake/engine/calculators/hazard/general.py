@@ -176,7 +176,7 @@ class BaseHazardCalculator(base.Calculator):
         task arg tuples. Each tuple of args applies to a single task.
 
         For this default implementation, yielded results are quartets
-        (job_id, sources, tom, rlzs, gsim_dicts).
+        (job_id, sources, tom, gsims_by_rlz).
 
         Override this in subclasses as necessary.
         """
@@ -184,10 +184,11 @@ class BaseHazardCalculator(base.Calculator):
         tom = PoissonTOM(self.hc.investigation_time)
         for ltpath, rlzs in self.rlzs_per_ltpath.iteritems():
             sources = self.sources_per_ltpath[ltpath]
-            gsim_dicts = [ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path)
-                          for rlz in rlzs]
+            gsims_by_rlz = collections.OrderedDict(
+                (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
+                for rlz in rlzs)
             for block in self.block_split(sources):
-                yield self.job.id, block, tom, rlzs, gsim_dicts
+                yield self.job.id, block, tom, gsims_by_rlz
 
     def _get_realizations(self):
         """
