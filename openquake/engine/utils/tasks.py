@@ -31,7 +31,7 @@ from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
-def map_reduce(task, task_args, agg, acc=None):
+def map_reduce(task, task_args, agg, acc):
     """
     Given a task and an iterable of positional arguments, apply the
     task function to the arguments in parallel and return an aggregate
@@ -43,7 +43,7 @@ def map_reduce(task, task_args, agg, acc=None):
     :param task: a `celery` task callable.
     :param task_args: an iterable over positional arguments
     :param agg: the aggregation function, (acc, val) -> new acc
-    :param acc: the initial value of the accumulator (or None)
+    :param acc: the initial value of the accumulator
     :returns: the final value of the accumulator
 
     NB: if the environment variable OQ_NO_DISTRIBUTE is set the
@@ -59,11 +59,11 @@ def map_reduce(task, task_args, agg, acc=None):
     if no_distribute():
         for the_args in task_args:
             result = task(*the_args)
-            acc = result if acc is None else agg(acc, result)
+            acc = agg(acc, result)
     else:
         taskset = TaskSet(tasks=map(task.subtask, task_args))
         for result in taskset.apply_async():
-            acc = result if acc is None else agg(acc, result)
+            acc = agg(acc, result)
     return acc
 
 
