@@ -33,11 +33,11 @@ from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
-def eager_result(res):
+def eager_result(val):
     """
-    Convert an object into a celery EagerResult object
+    Convert a value into a celery EagerResult object
     """
-    return EagerResult(gen_unique_id(), res, 'SUCCESS')
+    return EagerResult(gen_unique_id(), val, 'SUCCESS')
 
 
 def map_reduce(task, task_args, agg, acc):
