@@ -214,9 +214,16 @@ class Exposure(Record):
     taxonomySource = Field(str)
     description = Field(str)
     area_type = Field(valid.NoneOr(valid.Choice('aggregated', 'per_asset')))
-    area_unit = Field(str)
+    area_unit = Field(valid.NoneOr(str))
     deductible_is_absolute = Field(valid.NoneOr(valid.boolean))
     insurance_limit_is_absolute = Field(valid.NoneOr(valid.boolean))
+
+    def check_area(self):
+        return (self.area_type is None and self.area_unit is None) or \
+               (self.area_type is not None and self.area_unit is not None)
+
+    _constraints = [check_area]
+
 
     def to_node(self):
         node = Node('exposureModel', dict(

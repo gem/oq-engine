@@ -193,6 +193,8 @@ class MetaRecord(abc.ABCMeta):
         if '_ntuple' not in dic:
             dic['_ntuple'] = collections.namedtuple(name, fieldnames)
         dic['_ordinal'] = mcl._counter.next()
+        if '_constraints' not in dic:
+            dic['_constraints'] = []
         return super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
 
     def __init__(cls, name, bases, dic):
@@ -239,6 +241,9 @@ class MetaRecord(abc.ABCMeta):
         return [v.__get__(None, cls) for v in vars(cls).values()
                 if isinstance(v, descriptor_cls)]
 
+    def add_check(cls, constraint):
+        cls._constraints.append(constraint)
+
     def __len__(cls):
         """Returns the number of fields defined in cls"""
         return len(cls.fields)
@@ -283,7 +288,8 @@ class Record(collections.Sequence):
         field.
         """
         if i is None:
-            return all(self.is_valid(i) for i in range(len(self)))
+            return all(self.is_valid(i) for i in range(len(self))) and all(
+                constraint(self) for constraint in self._constraints)
         i = self.get_field_index(i)
         try:
             self.fields[i].cast(self[i])
