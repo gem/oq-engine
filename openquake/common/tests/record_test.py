@@ -51,7 +51,3 @@ class RecordTest(unittest.TestCase):
         self.assertEqual(self.r.to_tuple(), ('1', 'population', '', 'test',
                                              'per_asset', None, None, None))
         self.assertFalse(self.r.is_valid())
-
-
-#    deductible_is_absolute = Field(valid.NoneOr(valid.boolean))
-#   insurance_limit_is_absolute = Field(valid.NoneOr(valid.boolean))
