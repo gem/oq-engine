@@ -128,7 +128,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                       n_levels, n_sites, total)
         self.curves_by_rlz = collections.OrderedDict(
             (rlz, [numpy.zeros((n_sites, len(self.imtls[imt])))
-                   for imt in self.imtls])
+                   for imt in sorted(self.imtls)])
             for rlz in realizations)
 
     @EnginePerformanceMonitor.monitor
