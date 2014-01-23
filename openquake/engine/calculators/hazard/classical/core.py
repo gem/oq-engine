@@ -31,6 +31,9 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
+MAX_RUPTURES = 1000  # if there are more ruptures, spawn a separate task
+
+
 @tasks.oqtask
 def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
     """
@@ -45,24 +48,28 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
     :param gsim_dicts:
         a list of gsim dictionaries, one for each GMPE realization
     """
+    results = []
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    return _compute_curves(hc, sources, tom, gsims_by_rlz)
-
-
-def _compute_curves(hc, sources, tom, gsims_by_rlz):
     total_sites = len(hc.site_collection)
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
                              for imt in imts))
                   for rlz in gsims_by_rlz)
+    num_sources = len(sources)
     for source in sources:
         s_sites = source.filter_sites_by_distance_to_source(
             hc.maximum_distance, hc.site_collection
         ) if hc.maximum_distance else hc.site_collection
         if s_sites is None:
             continue
-        for rupture in source.iter_ruptures(tom):
+        ruptures = list(source.iter_ruptures(tom))
+        if num_sources > 1 and len(ruptures) > MAX_RUPTURES:  # spawn a task
+            result = compute_hazard_curves.delay(
+                job_id, [source], tom, gsims_by_rlz)
+            results.append(result)
+            continue
+        for rupture in ruptures:
             r_sites = rupture.source_typology.\
                 filter_sites_by_distance_to_rupture(
                     rupture, hc.maximum_distance, s_sites
@@ -81,9 +88,11 @@ def _compute_curves(hc, sources, tom, gsims_by_rlz):
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    return dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
-                       for imt in sorted(imts)])
-                for rlz, curv in curves.iteritems())
+    dic = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
+                      for imt in sorted(imts)])
+               for rlz, curv in curves.iteritems())
+    results.append(tasks.eager_result(dic))
+    return results
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -123,7 +132,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             for rlz in realizations)
 
     @EnginePerformanceMonitor.monitor
-    def task_completed(self, task_result):
+    def task_completed(self, task_results):
         """
         This is used to incrementally update hazard curve results by combining
         an initial value with some new results. (Each set of new results is
@@ -138,11 +147,12 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             shape as self.curves_by_rlz[i][j] where i is the realization
             ordinal and j the IMT ordinal.
         """
-        for rlz, curves_by_imt in task_result.iteritems():
-            for j, curves in enumerate(curves_by_imt):
-                # j is the IMT index
-                self.curves_by_rlz[rlz][j] = 1. - (
-                    1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
+        for task_result in task_results:
+            for rlz, curves_by_imt in task_result.result.iteritems():
+                for j, curves in enumerate(curves_by_imt):
+                    # j is the IMT index
+                    self.curves_by_rlz[rlz][j] = 1. - (
+                        1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
         self.log_percent()
 
     # this could be parallelized in the future, however in all the cases
