@@ -51,7 +51,8 @@ class DiscreteVulnerability(Record):
     probabilisticDistribution = Field(str)
 
     def to_node(self):
-        node = Node('discreteVulnerability',
+        node = Node(
+            'discreteVulnerability',
             dict(vulnerabilityFunctionID=self['vulnerabilityFunctionID'],
                  probabilisticDistribution=self['probabilisticDistribution']))
         node.append(Node('lossRatio'))
@@ -177,7 +178,7 @@ class FFSetContinuous(Record):
         return node
 
 
-class FFDContinuos(Record):
+class FFDataContinuous(Record):
     convertername = 'FragilityContinuous'
     pkey = Unique('limitState', 'ffs_ordinal', 'param')
 

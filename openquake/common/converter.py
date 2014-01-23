@@ -245,9 +245,9 @@ class FragilityContinuous(Converter):
             for ls, ffc in zip(limitStates, ffs.getnodes('ffc')):
                 assert ls == ffc['ls'], 'Expected %s, got %s' % (
                     ls, ffc['ls'])
-                yield records.FFDContinuos(
+                yield records.FFDataContinuous(
                     ls, ffs_ordinal, 'mean', ffc.params['mean'])
-                yield records.FFDContinuos(
+                yield records.FFDataContinuous(
                     ls, ffs_ordinal, 'stddev', ffc.params['stddev'])
 
     def to_node(self):
@@ -259,7 +259,7 @@ class FragilityContinuous(Converter):
         ffs_node = record.nodedict(tset.tableFFSetContinuous)
         frag.nodes.extend(ffs_node.values())
         for (ls, ordinal), data in groupby(
-                tset.tableFFDContinuos, ['limitState', 'ffs_ordinal']):
+                tset.tableFFDataContinuous, ['limitState', 'ffs_ordinal']):
             data = list(data)
             n = Node('ffc', dict(ls=ls))
             param = dict(row[2:] for row in data)  # param, value
