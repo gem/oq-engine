@@ -65,9 +65,9 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
             continue
         ruptures = list(source.iter_ruptures(tom))
         if num_sources > 1 and len(ruptures) > MAX_RUPTURES:  # spawn a task
-            result = compute_hazard_curves.delay(
-                job_id, [source], tom, gsims_by_rlz)
-            results.append(result)
+            results.extend(
+                compute_hazard_curves.delay(
+                    job_id, [source], tom, gsims_by_rlz))
             continue
         for rupture in ruptures:
             r_sites = rupture.source_typology.\
