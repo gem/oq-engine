@@ -32,7 +32,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @tasks.oqtask
-def compute_hazard_curves(job_id, sources, tom, rlzs, gsim_dicts):
+def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -46,15 +46,16 @@ def compute_hazard_curves(job_id, sources, tom, rlzs, gsim_dicts):
         a list of gsim dictionaries, one for each GMPE realization
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    return zip(rlzs, _compute_curves(hc, sources, tom, gsim_dicts))
+    return _compute_curves(hc, sources, tom, gsims_by_rlz)
 
 
-def _compute_curves(hc, sources, tom, gsim_dicts):
+def _compute_curves(hc, sources, tom, gsims_by_rlz):
     total_sites = len(hc.site_collection)
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
-    curves = [dict((imt, numpy.ones([total_sites, len(imts[imt])]))
-                   for imt in imts) for _ in gsim_dicts]
+    curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
+                             for imt in imts))
+                  for rlz in gsims_by_rlz)
     for source in sources:
         s_sites = source.filter_sites_by_distance_to_source(
             hc.maximum_distance, hc.site_collection
@@ -69,8 +70,8 @@ def _compute_curves(hc, sources, tom, gsim_dicts):
             if r_sites is None:
                 continue
             prob = rupture.get_probability_one_or_more_occurrences()
-            for curv, gsim_dict in zip(curves, gsim_dicts):
-                gsim = gsim_dict[rupture.tectonic_region_type]
+            for rlz, curv in curves.iteritems():
+                gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
                 sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
                 for imt in imts:
                     poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
@@ -80,22 +81,9 @@ def _compute_curves(hc, sources, tom, gsim_dicts):
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    return [[0 if (curv[imt] == 1.0).all()
-            else 1. - curv[imt] for imt in sorted(imts)]
-            for curv in curves]
-
-
-def make_zeros(realizations, sites, imtls):
-    """
-    Returns a list of R lists containing I numpy arrays of S * L zeros, where
-    R is the number of realizations, I is the number of intensity measure
-    types, S the number of sites and L the number of intensity measure levels.
-
-    :params sites: the site collection
-    :param imtls: a dictionary of intensity measure types and levels
-    """
-    return [[numpy.zeros((len(sites), len(imtls[imt])))
-             for imt in sorted(imtls)] for _ in range(len(realizations))]
+    return dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
+                       for imt in sorted(imts)])
+                for rlz, curv in curves.iteritems())
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -150,7 +138,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             shape as self.curves_by_rlz[i][j] where i is the realization
             ordinal and j the IMT ordinal.
         """
-        for rlz, curves_by_imt in task_result:
+        for rlz, curves_by_imt in task_result.iteritems():
             for j, curves in enumerate(curves_by_imt):
                 # j is the IMT index
                 self.curves_by_rlz[rlz][j] = 1. - (
