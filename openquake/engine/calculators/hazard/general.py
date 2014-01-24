@@ -49,7 +49,7 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter, ItemCollector
+from openquake.engine.utils.general import block_splitter, BlockSplitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -158,8 +158,8 @@ class BaseHazardCalculator(base.Calculator):
         """ % MAX_BLOCK_SIZE
         assert len(items) > 0, 'No items in %s' % items
         num_rlzs = len(self._get_realizations())
-        bs_float = float(len(items)) / self.concurrent_tasks() * num_rlzs
-        bs = min(int(math.ceil(bs_float)), max_block_size)
+        bs = min(ceil(len(items)), ceil(self.concurrent_tasks(), num_rlzs),
+                 max_block_size)
         logs.LOG.warn('Using block size=%d', bs)
         return block_splitter(items, bs)
 
@@ -230,27 +230,28 @@ class BaseHazardCalculator(base.Calculator):
         smlt_file = self.hc.inputs['source_model_logic_tree']
         self.smlt = logictree.SourceModelLogicTree(
             file(smlt_file).read(), self.hc.base_path, smlt_file)
+        sm_paths = list(self.smlt.get_sm_paths())
+
+        nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
+        split = BlockSplitter(nblocks).split_on_max_weight
+
         # here we are doing a full enumeration of the source model logic tree;
         # this is not bad because for very large source models there are
         # typically very few realizations; moreover, the filtering will remove
         # most of the sources, so the memory occupation is typically low
         num_sources = []  # the number of sources per sm_lt_path
-        for sm, path in self.smlt.get_sm_paths():
+        for sm, path in sm_paths:
             smpath = tuple(path)
-            self.sources_per_ltpath[smpath] = source_blocks = []
-            collector = ItemCollector(
-                source.MAX_RUPTURES, source_blocks.append)
-            n = 0
-            for src, weight in source.parse_source_model_smart(
-                    os.path.join(self.hc.base_path, sm),
-                    self.hc.sites_affected_by,
-                    self.smlt.make_apply_uncertainties(path),
-                    self.hc.rupture_mesh_spacing,
-                    self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization):
-                collector.add(src, weight)
-                n += 1
-            collector.close()
+            source_weight_pairs = source.parse_source_model_smart(
+                os.path.join(self.hc.base_path, sm),
+                self.hc.sites_affected_by,
+                self.smlt.make_apply_uncertainties(path),
+                self.hc.rupture_mesh_spacing,
+                self.hc.width_of_mfd_bin,
+                self.hc.area_source_discretization)
+            blocks = split(list(source_weight_pairs))
+            self.sources_per_ltpath[smpath] = blocks
+            n = sum(len(block) for block in blocks)
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
             num_sources.append(n)
         return num_sources
