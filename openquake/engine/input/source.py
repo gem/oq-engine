@@ -29,7 +29,7 @@ from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
 from shapely import wkt
 
-MAX_RUPTURES = 1000  # if there are more ruptures, split the source
+MAX_RUPTURES = 500  # if there are more ruptures, split the source
 
 
 # Silencing 'Access to protected member' (WRT hazardlib polygons)

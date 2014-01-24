@@ -21,6 +21,7 @@
 Utility functions of general interest.
 """
 
+import math
 import cPickle
 
 
@@ -40,32 +41,6 @@ class _WeightedSequence(object):
     def __cmp__(self, other):
         """Ensure ordering by reverse weight"""
         return -cmp(self.weight, other.weight)
-
-
-class ItemCollector(object):
-    """
-    Collects weighted items in sequences with total weight smaller
-    than the max_weight, with the exception of single-item sequences.
-    """
-    def __init__(self, max_weight, callback):
-        self.ws = _WeightedSequence()
-        self.max_weight = max_weight
-        self.callback = callback
-
-    def add(self, item, weight=1):
-        if weight <= 0:  # ignore items with zero weight
-            return
-        if self.ws.weight + weight > self.max_weight:
-            ws = _WeightedSequence()
-            ws.add(item, weight)
-            self.callback(self.ws.seq)
-            self.ws = ws
-        else:
-            self.ws.add(item, weight)
-
-    def close(self):
-        if self.ws.seq:
-            self.callback(self.ws.seq)
 
 
 def singleton(cls):
@@ -100,6 +75,52 @@ class MemoizeMutable:
 def str2bool(value):
     """Convert a string representation of a boolean value to a bool."""
     return value.lower() in ("true", "yes", "t", "1")
+
+
+def ceil(dividend, factor):
+    """
+    """
+    assert factor > 0
+    return int(math.ceil(float(dividend) / factor))
+
+
+class BlockSplitter(object):
+    """
+    """
+    def __init__(self, num_blocks, max_block_size=None):
+        self.num_blocks = num_blocks
+        self.max_block_size = max_block_size
+
+    def split_on_max_weight(self, sequence):
+        """
+        :param sequence:
+            a sequence of pairs (item, weight)
+        """
+        return list(self._split_on_max_weight(sequence))
+
+    def split(self, sequence):
+        """
+        """
+        return self.split_on_max_weight([(item, 1) for item in sequence])
+
+    def _split_on_max_weight(self, sequence):
+        total_weight = float(sum(item[1] for item in sequence))
+        max_weight = ceil(total_weight, self.num_blocks)
+        ws = _WeightedSequence()
+        for item, weight in sequence:
+            if weight <= 0:  # ignore items with 0 weight
+                continue
+            ws_long = self.max_block_size and len(ws.seq) > self.max_block_size
+            if (ws.weight + weight > max_weight or ws_long):
+                # would go above the max
+                new_ws = _WeightedSequence()
+                new_ws.add(item, weight)
+                yield ws.seq
+                ws = new_ws
+            else:
+                ws.add(item, weight)
+        if ws.seq:
+            yield ws.seq
 
 
 def block_splitter(data, block_size):
