@@ -29,10 +29,11 @@ from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
 from shapely import wkt
 
+MAX_RUPTURES = 1000  # if there are more ruptures, split the source
+
+
 # Silencing 'Access to protected member' (WRT hazardlib polygons)
 # pylint: disable=W0212
-
-
 def nrml_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
     """
     Convert a seismic source or rupture object from the NRML representation to
@@ -567,8 +568,9 @@ def parse_source_model_smart(fname, is_relevant,
         apply_uncertainties(src)
         if not is_relevant(src):
             continue
-        if src.count_ruptures() > 1000:
+        num_ruptures = src.count_ruptures()
+        if num_ruptures > MAX_RUPTURES:
             for s in split_source(src, area_source_discretization):
-                yield s
+                yield s, s.count_ruptures()
         else:
-            yield src
+            yield src, num_ruptures
