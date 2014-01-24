@@ -318,7 +318,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         )
         actual_ruptures = list(point_source.iter_ruptures(tom))
         self.assertEqual(len(actual_ruptures),
-                         point_source.count_ruptures(tom))
+                         point_source.count_ruptures())
         expected_ruptures = {
             (mag1, nodalplane1.rake, hypocenter1): (
                 # probabilistic rupture's occurrence rate

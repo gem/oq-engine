@@ -151,7 +151,7 @@ class SimpleFaultSource(SeismicSource):
                         occurrence_rate, temporal_occurrence_model
                     )
 
-    def count_ruptures(self, temporal_occurrence_model):
+    def count_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.SeismicSource.count_ruptures`.

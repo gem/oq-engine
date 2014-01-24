@@ -129,19 +129,17 @@ class AreaSource(PointSource):
                 )
                 yield rupture
 
-    def count_ruptures(self, temporal_occurrence_model):
+    def count_ruptures(self):
         """
         See
         :meth:`openquake.hazardlib.source.base.SeismicSource.count_ruptures`
         for description of parameters and return value.
         """
-        counts = 0
         polygon_mesh = self.polygon.discretize(self.area_discretization)
-        for epicenter in polygon_mesh:
-            for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
-                for (np_prob, np) in self.nodal_plane_distribution.data:
-                    counts += len(self.hypocenter_distribution.data)
-        return counts
+        return (len(polygon_mesh) *
+                len(self.get_annual_occurrence_rates()) *
+                len(self.nodal_plane_distribution.data) *
+                len(self.hypocenter_distribution.data))
 
     def filter_sites_by_distance_to_source(self, integration_distance, sites):
         """

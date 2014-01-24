@@ -187,16 +187,14 @@ class PointSource(SeismicSource):
                         occurrence_rate, temporal_occurrence_model
                     )
 
-    def count_ruptures(self, temporal_occurrence_model):
+    def count_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.SeismicSource.count_ruptures`.
         """
-        counts = 0
-        for _ in self.get_annual_occurrence_rates():
-            for _ in self.nodal_plane_distribution.data:
-                counts += len(self.hypocenter_distribution.data)
-        return counts
+        return (len(self.get_annual_occurrence_rates()) *
+                len(self.nodal_plane_distribution.data) *
+                len(self.hypocenter_distribution.data))
 
     def _get_rupture_dimensions(self, mag, nodal_plane):
         """

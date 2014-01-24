@@ -82,7 +82,7 @@ class CharacteristicFaultSourceIterRuptures(_BaseFaultSourceTestCase):
         source = self._make_source()
         ruptures = [rup for rup in source.iter_ruptures(self.TOM)]
 
-        self.assertTrue(len(ruptures) == source.count_ruptures(self.TOM))
+        self.assertTrue(len(ruptures) == source.count_ruptures())
 
         self.assertTrue(ruptures[0].mag == 5.0)
         self.assertTrue(ruptures[1].mag == 5.1)

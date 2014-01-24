@@ -68,7 +68,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
         tom = PoissonTOM(50)
         ruptures = list(source.iter_ruptures(tom))
         self.assertEqual(
-            len(ruptures), source.count_ruptures(tom))  # 9 * 2 ruptures
+            len(ruptures), source.count_ruptures())  # 9 * 2 ruptures
         # resulting 3x3 mesh has points in these coordinates:
         lons = [-1.4, -0.8, -0.2]
         lats = [-0.6, -1.2, -1.8]
