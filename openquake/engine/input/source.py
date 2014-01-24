@@ -15,6 +15,7 @@
 
 import sys
 import math
+import copy
 
 from itertools import izip
 
@@ -26,7 +27,6 @@ from openquake.hazardlib import source
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
-from openquake.nrmllib.hazard import writers as haz_writers
 from shapely import wkt
 
 # Silencing 'Access to protected member' (WRT hazardlib polygons)
@@ -509,6 +509,35 @@ def area_to_point_sources(area_src, area_src_disc):
         yield pt
 
 
+def split_fault_source(src):
+    """
+    """
+    i = 0  # splitted source index
+    for mag, rate in src.mfd.get_annual_occurrence_rates():
+        if rate:  # ignore zero occurency rate
+            new_src = copy.copy(src)
+            new_src.source_id = '%s-%s' % (src.source_id, i)
+            new_src.mfd = mfd.EvenlyDiscretizedMFD(
+                min_mag=mag, bin_width=src.mfd.bin_width,
+                occurrence_rates=[rate])
+            i += 1
+        yield new_src
+
+
+def split_source(src, area_source_discretization):
+    """
+    """
+    if isinstance(src, source.AreaSource):
+        for s in area_to_point_sources(src, area_source_discretization):
+            yield s
+    elif isinstance(
+            src, (source.SimpleFaultSource, source.ComplexFaultSource)):
+        for s in split_fault_source(src):
+            yield s
+    else:
+        yield src
+
+
 def parse_source_model_smart(fname, is_relevant,
                              apply_uncertainties,
                              rupture_mesh_spacing,
@@ -538,8 +567,8 @@ def parse_source_model_smart(fname, is_relevant,
         apply_uncertainties(src)
         if not is_relevant(src):
             continue
-        if isinstance(src, source.AreaSource):
-            for pt in area_to_point_sources(src, area_source_discretization):
-                yield pt
+        if src.count_ruptures() > 1000:
+            for s in split_source(src, area_source_discretization):
+                yield s
         else:
             yield src
