@@ -46,6 +46,7 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
     def setUp(self):
         class FakeSource(SeismicSource):
             iter_ruptures = None
+            count_ruptures = None
             get_rupture_enclosing_polygon = None
         self.source_class = FakeSource
         mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
@@ -79,6 +80,7 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
 class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
     def setUp(self):
         super(SeismicSourceFilterSitesTestCase, self).setUp()
+
         def get_rup_encl_poly(dilation=0):
             if dilation:
                 return self.POLYGON.dilate(dilation)
@@ -132,6 +134,7 @@ class SeismicSourceFilterSitesByRuptureTestCase(_BaseSeismicSourceTestCase):
         surface_mesh = RectangularMesh(self.POLYGON.lons.reshape((2, 2)),
                                        self.POLYGON.lats.reshape((2, 2)),
                                        depths=None)
+
         class rupture(object):
             class surface(object):
                 @classmethod

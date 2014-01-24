@@ -25,7 +25,8 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.area import AreaSource
 
-from openquake.hazardlib.tests.source.base_test import SeismicSourceFilterSitesTestCase
+from openquake.hazardlib.tests.source.base_test import \
+    SeismicSourceFilterSitesTestCase
 from openquake.hazardlib.tests import assert_pickleable
 
 
@@ -64,8 +65,10 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                                                 Point(0, 0), Point(-2, 0)]),
                                        discretization=66.7,
                                        rupture_mesh_spacing=5)
-        ruptures = list(source.iter_ruptures(PoissonTOM(50)))
-        self.assertEqual(len(ruptures), 9 * 2)
+        tom = PoissonTOM(50)
+        ruptures = list(source.iter_ruptures(tom))
+        self.assertEqual(
+            len(ruptures), source.count_ruptures())  # 9 * 2 ruptures
         # resulting 3x3 mesh has points in these coordinates:
         lons = [-1.4, -0.8, -0.2]
         lats = [-0.6, -1.2, -1.8]

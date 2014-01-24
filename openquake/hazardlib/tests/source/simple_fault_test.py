@@ -27,7 +27,8 @@ from openquake.hazardlib.tom import PoissonTOM
 
 from openquake.hazardlib.tests import assert_angles_equal, assert_pickleable
 from openquake.hazardlib.tests.geo.surface._utils import assert_mesh_is
-from openquake.hazardlib.tests.source import _simple_fault_test_data as test_data
+from openquake.hazardlib.tests.source import \
+    _simple_fault_test_data as test_data
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
@@ -66,7 +67,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
             self.assertIs(rupture.temporal_occurrence_model, tom)
             self.assertIs(rupture.tectonic_region_type, self.TRT)
             self.assertEqual(rupture.rake, self.RAKE)
-        self.assertEqual(len(expected_ruptures), len(ruptures))
+        self.assertEqual(len(expected_ruptures), source.count_ruptures())
         for i in xrange(len(expected_ruptures)):
             expected_rupture, rupture = expected_ruptures[i], ruptures[i]
             self.assertAlmostEqual(rupture.mag, expected_rupture['mag'])
