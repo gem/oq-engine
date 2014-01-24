@@ -29,7 +29,8 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.site import Site, SiteCollection
 
-from openquake.hazardlib.tests.geo.surface import _planar_test_data as planar_surface_test_data
+from openquake.hazardlib.tests.geo.surface import \
+    _planar_test_data as planar_surface_test_data
 from openquake.hazardlib.tests import assert_pickleable
 
 
@@ -67,7 +68,8 @@ class PointSourceCreationTestCase(unittest.TestCase):
         self.assertEqual(ae.exception.message, msg)
 
     def test_negative_upper_seismogenic_depth(self):
-        self.assert_failed_creation(ValueError,
+        self.assert_failed_creation(
+            ValueError,
             'upper seismogenic depth must be non-negative',
             upper_seismogenic_depth=-0.1
         )
@@ -78,19 +80,22 @@ class PointSourceCreationTestCase(unittest.TestCase):
         self.assert_failed_creation(ValueError, msg, rupture_mesh_spacing=0)
 
     def test_lower_depth_above_upper_depth(self):
-        self.assert_failed_creation(ValueError,
+        self.assert_failed_creation(
+            ValueError,
             'lower seismogenic depth must be below upper seismogenic depth',
             upper_seismogenic_depth=10, lower_seismogenic_depth=8
         )
 
     def test_lower_depth_equal_to_upper_depth(self):
-        self.assert_failed_creation(ValueError,
+        self.assert_failed_creation(
+            ValueError,
             'lower seismogenic depth must be below upper seismogenic depth',
             upper_seismogenic_depth=10, lower_seismogenic_depth=10
         )
 
     def test_hypocenter_depth_out_of_seismogenic_layer(self):
-        self.assert_failed_creation(ValueError,
+        self.assert_failed_creation(
+            ValueError,
             'depths of all hypocenters must be in between '
             'lower and upper seismogenic depths',
             upper_seismogenic_depth=3, lower_seismogenic_depth=8,
@@ -99,13 +104,15 @@ class PointSourceCreationTestCase(unittest.TestCase):
         )
 
     def test_negative_aspect_ratio(self):
-        self.assert_failed_creation(ValueError,
+        self.assert_failed_creation(
+            ValueError,
             'rupture aspect ratio must be positive',
             rupture_aspect_ratio=-1
         )
 
     def test_zero_aspect_ratio(self):
-        self.assert_failed_creation(ValueError,
+        self.assert_failed_creation(
+            ValueError,
             'rupture aspect ratio must be positive',
             rupture_aspect_ratio=0
         )
@@ -310,7 +317,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
             location, nodal_plane_distribution, hypocenter_distribution
         )
         actual_ruptures = list(point_source.iter_ruptures(tom))
-        self.assertEqual(len(actual_ruptures), 8)
+        self.assertEqual(len(actual_ruptures),
+                         point_source.count_ruptures(tom))
         expected_ruptures = {
             (mag1, nodalplane1.rake, hypocenter1): (
                 # probabilistic rupture's occurrence rate
@@ -384,14 +392,16 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
             min_mag=5., bin_width=0.1, occurrence_rates=[2.180e-07]
         )
         nodal_plane_dist = PMF([(1., NodalPlane(135., 20., 90.))])
-        src = PointSource(source_id='1', name='pnt', tectonic_region_type='asc',
-                 mfd=mfd, rupture_mesh_spacing=1,
-                 magnitude_scaling_relationship=WC1994(),
-                 rupture_aspect_ratio=1.,
-                 upper_seismogenic_depth=0, lower_seismogenic_depth=26,
-                 location=Point(-165.125, -83.600),
-                 nodal_plane_distribution=nodal_plane_dist,
-                 hypocenter_distribution=PMF([(1., 9.)]))
+        src = PointSource(
+            source_id='1', name='pnt',
+            tectonic_region_type='asc',
+            mfd=mfd, rupture_mesh_spacing=1,
+            magnitude_scaling_relationship=WC1994(),
+            rupture_aspect_ratio=1.,
+            upper_seismogenic_depth=0, lower_seismogenic_depth=26,
+            location=Point(-165.125, -83.600),
+            nodal_plane_distribution=nodal_plane_dist,
+            hypocenter_distribution=PMF([(1., 9.)]))
         ruptures = list(src.iter_ruptures(PoissonTOM(50.)))
         self.assertEqual(len(ruptures), 1)
 

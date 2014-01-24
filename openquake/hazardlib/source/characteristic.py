@@ -106,3 +106,10 @@ class CharacteristicFaultSource(SeismicSource):
                 self.surface, type(self), occurrence_rate,
                 temporal_occurrence_model
             )
+
+    def count_ruptures(self, temporal_occurrence_model):
+        """
+        See :meth:
+        `openquake.hazardlib.source.base.SeismicSource.count_ruptures`.
+        """
+        return len(self.get_annual_occurrence_rates())

@@ -18,7 +18,7 @@ import numpy
 
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
-from openquake.hazardlib.geo import Point, Polygon, Mesh
+from openquake.hazardlib.geo import Point, Mesh
 from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 
@@ -50,7 +50,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
             mfd=EvenlyDiscretizedMFD(self.MIN_MAG, self.BIN_WIDTH, self.RATES),
             surface=PlanarSurface(self.MESH_SPACING, self.STRIKE, self.DIP,
                                   points[0], points[1], points[3], points[2]),
-            rake = self.RAKE
+            rake=self.RAKE
         )
         assert_pickleable(source)
         return source
@@ -75,13 +75,14 @@ class CharacteristicFaultSourceGetRuptureEnclosingPolygon(
             poly.lats, mesh.get_convex_hull().dilate(5.0).lats
         )
 
+
 class CharacteristicFaultSourceIterRuptures(_BaseFaultSourceTestCase):
 
     def test(self):
         source = self._make_source()
         ruptures = [rup for rup in source.iter_ruptures(self.TOM)]
 
-        self.assertTrue(len(ruptures) == 3)
+        self.assertTrue(len(ruptures) == source.count_ruptures(self.TOM))
 
         self.assertTrue(ruptures[0].mag == 5.0)
         self.assertTrue(ruptures[1].mag == 5.1)

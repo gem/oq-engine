@@ -24,7 +24,8 @@ from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.scalerel.peer import PeerMSR
 
 from openquake.hazardlib.tests.source import simple_fault_test
-from openquake.hazardlib.tests.source import _complex_fault_test_data as test_data
+from openquake.hazardlib.tests.source import \
+    _complex_fault_test_data as test_data
 from openquake.hazardlib.tests import assert_pickleable
 
 
@@ -56,6 +57,7 @@ class ComplexFaultSourceSimpleGeometryIterRupturesTestCase(
 
 class ComplexFaultSourceIterRupturesTestCase(
         simple_fault_test._BaseFaultSourceTestCase):
+
     def _make_source(self, mfd, aspect_ratio, rupture_mesh_spacing, edges):
         source_id = name = 'test-source'
         trt = self.TRT

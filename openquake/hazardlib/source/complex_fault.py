@@ -128,6 +128,30 @@ class ComplexFaultSource(SeismicSource):
                     occurrence_rate, temporal_occurrence_model
                 )
 
+    def count_ruptures(self, temporal_occurrence_model):
+        """
+        See :meth:
+        `openquake.hazardlib.source.base.SeismicSource.count_ruptures`.
+        """
+        whole_fault_surface = ComplexFaultSurface.from_fault_data(
+            self.edges, self.rupture_mesh_spacing
+        )
+        whole_fault_mesh = whole_fault_surface.get_mesh()
+        cell_center, cell_length, cell_width, cell_area = (
+            whole_fault_mesh.get_cell_dimensions()
+        )
+        counts = 0
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
+            rupture_area = self.magnitude_scaling_relationship.get_median_area(
+                mag, self.rake
+            )
+            rupture_length = numpy.sqrt(rupture_area
+                                        * self.rupture_aspect_ratio)
+            rupture_slices = _float_ruptures(rupture_area, rupture_length,
+                                             cell_area, cell_length)
+            counts += len(rupture_slices)
+        return counts
+
 
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
     """
