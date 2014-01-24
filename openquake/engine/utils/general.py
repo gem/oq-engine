@@ -24,6 +24,50 @@ Utility functions of general interest.
 import cPickle
 
 
+class _WeightedSequence(object):
+    """
+    A wrapper over a sequence of weighted items with a total weight
+    """
+    def __init__(self):
+        self.seq = []
+        self.weight = 0
+
+    def add(self, item, weight):
+        "Add an item to the sequence and increments the weight"
+        self.seq.append(item)
+        self.weight += weight
+
+    def __cmp__(self, other):
+        """Ensure ordering by reverse weight"""
+        return -cmp(self.weight, other.weight)
+
+
+class ItemCollector(object):
+    """
+    Collects weighted items in sequences with total weight smaller
+    than the max_weight, with the exception of single-item sequences.
+    """
+    def __init__(self, max_weight, callback):
+        self.ws = _WeightedSequence()
+        self.max_weight = max_weight
+        self.callback = callback
+
+    def add(self, item, weight=1):
+        if weight <= 0:  # ignore items with zero weight
+            return
+        if self.ws.weight + weight > self.max_weight:
+            ws = _WeightedSequence()
+            ws.add(item, weight)
+            self.callback(self.ws.seq)
+            self.ws = ws
+        else:
+            self.ws.add(item, weight)
+
+    def close(self):
+        if self.ws.seq:
+            self.callback(self.ws.seq)
+
+
 def singleton(cls):
     """This class decorator facilitates the definition of singletons."""
     instances = {}
