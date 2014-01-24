@@ -49,7 +49,7 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter
+from openquake.engine.utils.general import block_splitter, ItemCollector
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -183,11 +183,10 @@ class BaseHazardCalculator(base.Calculator):
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         tom = PoissonTOM(self.hc.investigation_time)
         for ltpath, rlzs in self.rlzs_per_ltpath.iteritems():
-            sources = self.sources_per_ltpath[ltpath]
             gsims_by_rlz = collections.OrderedDict(
                 (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
                 for rlz in rlzs)
-            for block in self.block_split(sources):
+            for block in self.sources_per_ltpath[ltpath]:
                 yield self.job.id, block, tom, gsims_by_rlz
 
     def _get_realizations(self):
@@ -238,15 +237,20 @@ class BaseHazardCalculator(base.Calculator):
         num_sources = []  # the number of sources per sm_lt_path
         for sm, path in self.smlt.get_sm_paths():
             smpath = tuple(path)
-            self.sources_per_ltpath[smpath] = sources = list(
-                source.parse_source_model_smart(
+            self.sources_per_ltpath[smpath] = source_blocks = []
+            collector = ItemCollector(
+                source.MAX_RUPTURES, source_blocks.append)
+            n = 0
+            for src, weight in source.parse_source_model_smart(
                     os.path.join(self.hc.base_path, sm),
                     self.hc.sites_affected_by,
                     self.smlt.make_apply_uncertainties(path),
                     self.hc.rupture_mesh_spacing,
                     self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization))
-            n = len(sources)
+                    self.hc.area_source_discretization):
+                collector.add(src, weight)
+                n += 1
+            collector.close()
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
             num_sources.append(n)
         return num_sources

@@ -28,11 +28,7 @@ from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine.input.source import split_source
 from openquake.engine.performance import EnginePerformanceMonitor
-
-
-MAX_RUPTURES = 100  # if there are more ruptures, spawn a separate task
 
 
 @tasks.oqtask
@@ -49,7 +45,6 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
     :param gsim_dicts:
         a list of gsim dictionaries, one for each GMPE realization
     """
-    #results = []
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     total_sites = len(hc.site_collection)
     imts = general.im_dict_to_hazardlib(
@@ -64,12 +59,6 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
         if s_sites is None:
             continue
         ruptures = list(source.iter_ruptures(tom))
-        #if len(sources) > 1 and len(ruptures) > MAX_RUPTURES:  # subtasks
-        #    for src in split_source(source, hc.area_source_discretization):
-        #        results.append(
-        #            compute_hazard_curves.delay(
-        #                job_id, [src], tom, gsims_by_rlz))
-        #    continue
         for rupture in ruptures:
             r_sites = rupture.source_typology.\
                 filter_sites_by_distance_to_rupture(
