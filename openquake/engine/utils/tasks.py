@@ -21,9 +21,7 @@
 
 from functools import wraps
 
-from kombu.utils import gen_unique_id
 from celery.task.sets import TaskSet
-from celery.result import EagerResult
 from celery.task import task
 
 from openquake.engine import logs, no_distribute
@@ -31,13 +29,6 @@ from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
-
-
-def eager_result(val):
-    """
-    Convert a value into a celery EagerResult object
-    """
-    return EagerResult(gen_unique_id(), val, 'SUCCESS')
 
 
 def map_reduce(task, task_args, agg, acc):
