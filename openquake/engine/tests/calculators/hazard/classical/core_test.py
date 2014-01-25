@@ -69,9 +69,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_sources(self):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
-        # after splitting the source model contains 23 non-point sources
-        sources = self.calc.source_blocks_per_ltpath[('b1',)]
-        self.assertEqual(23, len(sources))
+        # after splitting/grouping the source model contains 22 blocks
+        blocks = self.calc.source_blocks_per_ltpath[('b1',)]
+        self.assertEqual(22, len(blocks))
 
     @attr('slow')
     def test_initialize_site_model(self):
