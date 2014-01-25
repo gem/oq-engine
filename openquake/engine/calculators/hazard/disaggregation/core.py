@@ -26,7 +26,6 @@ from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
 from openquake.engine.db import models
 from openquake.engine.input import logictree
-from openquake.engine.utils import general as general_utils
 from openquake.engine.utils import tasks as utils_tasks
 from openquake.engine.performance import EnginePerformanceMonitor
 
@@ -230,7 +229,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
             path = tuple(lt_rlz.sm_lt_path)
-            sources = self.sources_per_ltpath[path]
+            sources = sum(self.source_blocks_per_ltpath[path], [])
             for sites in self.block_split(self.hc.site_collection):
                 yield self.job.id, sites, sources, lt_rlz, ltp
 
