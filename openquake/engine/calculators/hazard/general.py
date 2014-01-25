@@ -19,7 +19,6 @@
 """Common code for the hazard calculators."""
 
 import os
-import math
 import random
 import collections
 
@@ -148,6 +147,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
+    # NB: this method will be replaces BlockSplitter.split sooner or later
     def block_split(self, items, max_block_size=MAX_BLOCK_SIZE):
         """
         Split the given items in blocks, depending on the parameter
@@ -233,7 +233,7 @@ class BaseHazardCalculator(base.Calculator):
         sm_paths = list(self.smlt.get_sm_paths())
 
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
-        split = BlockSplitter(nblocks).split_on_max_weight
+        bs = BlockSplitter(nblocks)
 
         # here we are doing a full enumeration of the source model logic tree;
         # this is not bad because for very large source models there are
@@ -249,10 +249,15 @@ class BaseHazardCalculator(base.Calculator):
                 self.hc.rupture_mesh_spacing,
                 self.hc.width_of_mfd_bin,
                 self.hc.area_source_discretization)
-            blocks = split(list(source_weight_pairs))
+            blocks = bs.split_on_max_weight(list(source_weight_pairs))
             self.source_blocks_per_ltpath[smpath] = blocks
             n = sum(len(block) for block in blocks)
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
+            logs.LOG.debug('Splitting in blocks with at maximum %d ruptures',
+                           bs.max_weight)
+            for i, block in enumerate(blocks, 1):
+                logs.LOG.debug('Block %d: %d sources, %d ruptures',
+                               i, len(block), block.weight)
             num_sources.append(n)
         return num_sources
 
