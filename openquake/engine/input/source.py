@@ -512,8 +512,10 @@ def area_to_point_sources(area_src, area_src_disc):
 
 def split_fault_source(src):
     """
+    Generator splitting a fault source into several fault sources,
+    one for each magnitude.
     """
-    i = 0  # splitted source index
+    i = 0  # split source index
     for mag, rate in src.mfd.get_annual_occurrence_rates():
         if rate:  # ignore zero occurency rate
             new_src = copy.copy(src)
@@ -527,6 +529,8 @@ def split_fault_source(src):
 
 def split_source(src, area_source_discretization):
     """
+    Split an area source into point sources and a fault sources into
+    smaller fault sources.
     """
     if isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src, area_source_discretization):
