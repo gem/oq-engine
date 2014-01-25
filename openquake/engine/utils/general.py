@@ -117,6 +117,7 @@ class BlockSplitter(object):
     def __init__(self, num_blocks, max_block_size=None):
         self.num_blocks = num_blocks
         self.max_block_size = max_block_size
+        self.max_weight = None
 
     def split_on_max_weight(self, sequence):
         """
@@ -132,13 +133,13 @@ class BlockSplitter(object):
 
     def _split_on_max_weight(self, sequence):
         total_weight = float(sum(item[1] for item in sequence))
-        max_weight = ceil(total_weight, self.num_blocks)
+        self.max_weight = ceil(total_weight, self.num_blocks)
         ws = WeightedSequence()
         for item, weight in sequence:
             if weight <= 0:  # ignore items with 0 weight
                 continue
             ws_long = self.max_block_size and len(ws) > self.max_block_size
-            if (ws.weight + weight > max_weight or ws_long):
+            if (ws.weight + weight > self.max_weight or ws_long):
                 # would go above the max
                 new_ws = WeightedSequence()
                 new_ws.append((item, weight))

@@ -24,7 +24,7 @@ Test related to code in openquake/utils/general.py
 import unittest
 
 from openquake.engine.utils import general
-from openquake.engine.utils.general import block_splitter
+from openquake.engine.utils.general import block_splitter, BlockSplitter
 
 
 class SingletonTestCase(unittest.TestCase):
@@ -67,8 +67,9 @@ class MemoizerTestCase(unittest.TestCase):
                            {'key1': 'value1', 'key2': 'value2'})
 
         # cached with return values
-        self.assertEqual(1, my_memoized_method([1, 2, 3],
-                           {'key1': 'value1', 'key2': 'value2'}))
+        self.assertEqual(
+            1, my_memoized_method(
+                [1, 2, 3], {'key1': 'value1', 'key2': 'value2'}))
 
         # should be called only one time
         self.assertEqual(self.counter, 1)
@@ -149,3 +150,11 @@ class BlockSplitterTestCase(unittest.TestCase):
         ]
         actual = [x for x in block_splitter(data, 3)]
         self.assertEqual(expected, actual)
+
+    def test_weighted_block_splitter(self):
+        # try to generate 4 blocks
+        split_weight = BlockSplitter(4).split_on_max_weight
+        blocks = split_weight(
+            [('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
+             ('f', 5), ('g', 30), ('h', 17), ('i', 25)])
+        self.assertEqual(repr(blocks), "[<WeightedSequence ['a', 'b'], weight=21>, <WeightedSequence ['c'], weight=100>, <WeightedSequence ['d', 'e', 'f'], weight=40>, <WeightedSequence ['g', 'h'], weight=47>, <WeightedSequence ['i'], weight=25>]")
