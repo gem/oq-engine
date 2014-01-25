@@ -23,24 +23,51 @@ Utility functions of general interest.
 
 import math
 import cPickle
+import collections
 
 
-class _WeightedSequence(object):
+class WeightedSequence(collections.MutableSequence):
     """
     A wrapper over a sequence of weighted items with a total weight
     """
+    @classmethod
+    def chain(cls, ws_list):
+        return sum(ws_list, cls())
+
     def __init__(self):
-        self.seq = []
+        self._seq = []
         self.weight = 0
 
-    def add(self, item, weight):
-        "Add an item to the sequence and increments the weight"
-        self.seq.append(item)
+    def __getitem__(self, sliceobj):
+        return self._seq[sliceobj]
+
+    def __setitem__(self, i, v):
+        self._seq[i] = v
+
+    def __delitem__(self, sliceobj):
+        del self._seq[sliceobj]
+
+    def __len__(self):
+        return len(self._seq)
+
+    def __add__(self, other):
+        new = self.__class__()
+        new._seq.extend(self._seq)
+        new._seq.extend(other._seq)
+        new.weight = self.weight + other.weight
+        return new
+
+    def insert(self, i, (item, weight)):
+        self._seq.insert(i, item)
         self.weight += weight
 
     def __cmp__(self, other):
         """Ensure ordering by reverse weight"""
         return -cmp(self.weight, other.weight)
+
+    def __repr__(self):
+        return '<%s %s, weight=%s>' % (self.__class__.__name__,
+                                       self._seq, self.weight)
 
 
 def singleton(cls):
@@ -106,21 +133,21 @@ class BlockSplitter(object):
     def _split_on_max_weight(self, sequence):
         total_weight = float(sum(item[1] for item in sequence))
         max_weight = ceil(total_weight, self.num_blocks)
-        ws = _WeightedSequence()
+        ws = WeightedSequence()
         for item, weight in sequence:
             if weight <= 0:  # ignore items with 0 weight
                 continue
-            ws_long = self.max_block_size and len(ws.seq) > self.max_block_size
+            ws_long = self.max_block_size and len(ws) > self.max_block_size
             if (ws.weight + weight > max_weight or ws_long):
                 # would go above the max
-                new_ws = _WeightedSequence()
-                new_ws.add(item, weight)
-                yield ws.seq
+                new_ws = WeightedSequence()
+                new_ws.append((item, weight))
+                yield ws
                 ws = new_ws
             else:
-                ws.add(item, weight)
-        if ws.seq:
-            yield ws.seq
+                ws.append((item, weight))
+        if ws:
+            yield ws
 
 
 def block_splitter(data, block_size):
