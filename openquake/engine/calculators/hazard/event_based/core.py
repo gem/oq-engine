@@ -50,6 +50,7 @@ from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import tasks
+from openquake.engine.utils.general import WeightedSequence
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
@@ -260,7 +261,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rnd.seed(hc.random_seed)
         for lt_rlz in self._get_realizations():
             path = tuple(lt_rlz.sm_lt_path)
-            sources = sum(self.source_blocks_per_ltpath[path], [])
+            sources = WeightedSequence.chain(
+                self.source_blocks_per_ltpath[path])
             ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in sources]  # source, seed pairs

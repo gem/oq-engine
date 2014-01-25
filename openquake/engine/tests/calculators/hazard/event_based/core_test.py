@@ -196,7 +196,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 180)
+        self.assertEqual(num_ruptures, 196)
 
         # check that we generated the right number of rows in GmfData
         # 242 = 121 sites * 2 IMTs
@@ -232,11 +232,30 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_ses_db_records(rlz1)
         self.calc.initialize_ses_db_records(rlz2)
 
+        # this is also testing the splitting of fault sources
         expected = [  # source_id, seed
-            ('3', 540589706),
-            ('4', 721420855),
-            ('3', 762290849),
-            ('4', 710721645),
+            ('3-0', 540589706),
+            ('3-1', 721420855),
+            ('3-2', 1007747341),
+            ('3-3', 573154379),
+            ('3-4', 1310571686),
+            ('3-5', 2015354266),
+            ('3-6', 425466075),
+            ('3-7', 41871302),
+            ('3-8', 930268948),
+            ('3-9', 1920723121),
+            ('4', 1760832373),
+            ('3-0', 895150922),
+            ('3-1', 1886047353),
+            ('3-2', 2111769094),
+            ('3-3', 1463337750),
+            ('3-4', 1752507064),
+            ('3-5', 27028211),
+            ('3-6', 670491262),
+            ('3-7', 390011773),
+            ('3-8', 249942775),
+            ('3-9', 1808974579),
+            ('4', 644370012),
         ]
 
         # utility to present the generated arguments in a nicer way
