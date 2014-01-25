@@ -25,6 +25,7 @@ from openquake.engine.calculators.hazard.classical import core
 from openquake.engine.db import models
 from openquake.engine.engine import save_job_stats
 from openquake.engine.tests.utils import helpers
+from openquake.engine.utils.general import WeightedSequence
 
 
 class ClassicalHazardCalculatorTestCase(unittest.TestCase):
@@ -68,9 +69,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_sources(self):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
-        # after filtering the source model contains 17 non-point sources
+        # after splitting the source model contains 23 non-point sources
         sources = self.calc.source_blocks_per_ltpath[('b1',)]
-        self.assertEqual(17, len(sources))
+        self.assertEqual(23, len(sources))
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -111,8 +112,9 @@ store_site_model'
         # the logic tree for this sample calculation only contains a single
         # source model
         path = tuple(ltr.sm_lt_path)
-        sources = self.calc.source_blocks_per_ltpath[path]
-        self.assertEqual(17, len(sources))
+        sources = WeightedSequence.chain(
+            self.calc.source_blocks_per_ltpath[path])
+        self.assertEqual(22, len(sources))
 
     def test_initialize_realizations_montecarlo(self):
         # We need initalize sources first (read logic trees, parse sources,
