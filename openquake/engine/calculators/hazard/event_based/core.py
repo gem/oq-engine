@@ -260,15 +260,15 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rnd.seed(hc.random_seed)
         for lt_rlz in self._get_realizations():
             path = tuple(lt_rlz.sm_lt_path)
-            sources = self.sources_per_ltpath[path]
+            sources = sum(self.source_blocks_per_ltpath[path], [])
             ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in sources]  # source, seed pairs
             for block in self.block_split(ss):
                 yield self.job.id, block, ses_coll
 
-        # now the sources_per_ltpath dictionary can be cleared to save memory
-        self.sources_per_ltpath.clear()
+        # now the source_blocks_per_ltpath dictionary can be cleared
+        self.source_blocks_per_ltpath.clear()
 
     def compute_gmf_arg_gen(self):
         """

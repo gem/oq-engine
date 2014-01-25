@@ -134,11 +134,11 @@ class BaseHazardCalculator(base.Calculator):
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
         # a dictionary (sm_lt_path, source_type) -> sources
-        self.sources_per_ltpath = collections.defaultdict(list)
+        self.source_blocks_per_ltpath = collections.defaultdict(list)
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
-        self.sources_per_ltpath.clear()
+        self.source_blocks_per_ltpath.clear()
 
     @property
     def hc(self):
@@ -158,7 +158,7 @@ class BaseHazardCalculator(base.Calculator):
         """ % MAX_BLOCK_SIZE
         assert len(items) > 0, 'No items in %s' % items
         num_rlzs = len(self._get_realizations())
-        bs = min(ceil(len(items)), ceil(self.concurrent_tasks(), num_rlzs),
+        bs = min(ceil(len(items), ceil(self.concurrent_tasks(), num_rlzs)),
                  max_block_size)
         logs.LOG.warn('Using block size=%d', bs)
         return block_splitter(items, bs)
@@ -186,7 +186,7 @@ class BaseHazardCalculator(base.Calculator):
             gsims_by_rlz = collections.OrderedDict(
                 (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
                 for rlz in rlzs)
-            for block in self.sources_per_ltpath[ltpath]:
+            for block in self.source_blocks_per_ltpath[ltpath]:
                 yield self.job.id, block, tom, gsims_by_rlz
 
     def _get_realizations(self):
@@ -223,7 +223,7 @@ class BaseHazardCalculator(base.Calculator):
         Parse source models and validate source logic trees. It also
         filters the sources far away and apply uncertainties to the
         relevant ones. As a side effect it populates the instance dictionary
-        `.sources_per_ltpath`. Notice that area sources are automatically
+        `.source_blocks_per_ltpath`. Notice that area sources are automatically
         split into point sources.
         """
         logs.LOG.progress("initializing sources")
@@ -250,7 +250,7 @@ class BaseHazardCalculator(base.Calculator):
                 self.hc.width_of_mfd_bin,
                 self.hc.area_source_discretization)
             blocks = split(list(source_weight_pairs))
-            self.sources_per_ltpath[smpath] = blocks
+            self.source_blocks_per_ltpath[smpath] = blocks
             n = sum(len(block) for block in blocks)
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
             num_sources.append(n)
