@@ -427,35 +427,6 @@ class BaseHazardCalculator(base.Calculator):
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
 
-    def initialize_hazard_curve_progress(self, lt_rlz):
-        """
-        As a calculation progresses, workers will periodically update the
-        intermediate results. These results will be stored in
-        `htemp.hazard_curve_progress` until the calculation is completed.
-
-        Before the core calculation begins, we need to initalize these records,
-        one data set per IMT. Each dataset will be stored in the database as a
-        pickled 2D numpy array (with number of rows == calculation points of
-        interest and number of columns == number of IML values for a given
-        IMT).
-
-        We will create 1 `hazard_curve_progress` record per IMT per
-        realization.
-
-        :param lt_rlz:
-            :class:`openquake.engine.db.models.LtRealization` object to
-            associate with these inital hazard curve values.
-        """
-        num_points = len(self.hc.points_to_compute())
-
-        im_data = self.hc.intensity_measure_types_and_levels
-        for imt, imls in im_data.items():
-            hc_prog = models.HazardCurveProgress()
-            hc_prog.lt_realization = lt_rlz
-            hc_prog.imt = imt
-            hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
-            hc_prog.save()
-
     def _get_outputs_for_export(self):
         """
         Util function for getting :class:`openquake.engine.db.models.Output`
