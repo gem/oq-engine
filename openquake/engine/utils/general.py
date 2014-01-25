@@ -28,7 +28,8 @@ import collections
 
 class WeightedSequence(collections.MutableSequence):
     """
-    A wrapper over a sequence of weighted items with a total weight
+    A wrapper over a sequence of weighted items with a total weight attribute.
+    Adding items automatically increases the weight.
     """
     @classmethod
     def chain(cls, ws_list):
@@ -104,34 +105,46 @@ def str2bool(value):
     return value.lower() in ("true", "yes", "t", "1")
 
 
-def ceil(dividend, factor):
+def ceil(a, b):
     """
+    Divide a / b and return the biggest integer close to the quotient.
     """
-    assert factor > 0
-    return int(math.ceil(float(dividend) / factor))
+    assert b > 0, b
+    return int(math.ceil(float(a) / b))
 
 
 class BlockSplitter(object):
     """
+    A splitter object with methods .split (to split regular sequences)
+    and split_on_max_weight (to split sequences of pairs [(item, weight),...])
+    At initialization time you must pass a parameter num_blocks, i.e. the
+    number of blocks that should be generated. If you also pass a
+    max_block_size parameter, the grouping procedure will make sure
+    that the blocks never exceed it, so more blocks could be generated.
     """
     def __init__(self, num_blocks, max_block_size=None):
+        assert num_blocks > 0, num_blocks
+        assert max_block_size is None or max_block_size >= 1, max_block_size
         self.num_blocks = num_blocks
         self.max_block_size = max_block_size
         self.max_weight = None
 
     def split_on_max_weight(self, sequence):
         """
-        :param sequence:
-            a sequence of pairs (item, weight)
+        Try to split a sequence in ``num_blocks`` blocks. Return a list
+        of :class:`openquake.engine.utils.general.WeightedSequence` objects.
         """
         return list(self._split_on_max_weight(sequence))
 
     def split(self, sequence):
         """
+        Split a sequence in ``num_blocks`` blocks. Return a list
+        of :class:`openquake.engine.utils.general.WeightedSequence` objects.
         """
         return self.split_on_max_weight([(item, 1) for item in sequence])
 
     def _split_on_max_weight(self, sequence):
+        # doing the real work here
         total_weight = float(sum(item[1] for item in sequence))
         self.max_weight = ceil(total_weight, self.num_blocks)
         ws = WeightedSequence()
