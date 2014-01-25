@@ -143,7 +143,8 @@ class BlockSplitter(object):
                 # would go above the max
                 new_ws = WeightedSequence()
                 new_ws.append((item, weight))
-                yield ws
+                if ws:
+                    yield ws
                 ws = new_ws
             else:
                 ws.append((item, weight))
