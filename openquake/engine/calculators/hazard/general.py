@@ -223,8 +223,11 @@ class BaseHazardCalculator(base.Calculator):
         Parse source models and validate source logic trees. It also
         filters the sources far away and apply uncertainties to the
         relevant ones. As a side effect it populates the instance dictionary
-        `.source_blocks_per_ltpath`. Notice that area sources are automatically
-        split into point sources.
+        `.source_blocks_per_ltpath`. Notice that sources are automatically
+        split.
+
+        :returns:
+            a list with the number of sources for each source model
         """
         logs.LOG.progress("initializing sources")
         smlt_file = self.hc.inputs['source_model_logic_tree']
