@@ -98,14 +98,14 @@ def compute_ses(job_id, src_seeds, ses_coll):
             rupts = list(src.iter_ruptures(tom))
             for ses in all_ses:
                 numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                for r in rupts:
-                    for i in xrange(r.sample_number_of_occurrences()):
+                for i, r in enumerate(rupts):
+                    for j in xrange(r.sample_number_of_occurrences()):
                         rup = models.SESRupture(
                             ses=ses,
                             rupture=r,
-                            tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
+                            tag='rlz=%02d|ses=%04d|src=%s|i=%04d-%02d' % (
                                 ses_coll.lt_realization.ordinal, ses.ordinal,
-                                src.source_id, i),
+                                src.source_id, i, j),
                             hypocenter=r.hypocenter.wkt2d,
                             magnitude=r.mag,
                         )
@@ -266,6 +266,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in sources]  # source, seed pairs
+            print ss
             for block in self.block_split(ss):
                 yield self.job.id, block, ses_coll
 
