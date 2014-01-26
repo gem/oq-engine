@@ -266,7 +266,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in sources]  # source, seed pairs
-            print ss
             for block in self.block_split(ss):
                 yield self.job.id, block, ses_coll
 
