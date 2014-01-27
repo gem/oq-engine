@@ -432,10 +432,16 @@ class Table(collections.MutableSequence):
         """Return the i-th record"""
         return self._records[i]
 
-    def __setitem__(self, i, record):
+    def __setitem__(self, i, new_record):
         """Set the i-th record"""
-        # XXX: the unique and fk dictionaries must be updated!
-        self._records[i] = record
+        # TODO: the fk dictionaries must be updated!
+        # TODO: there is no unique check here!
+        for name, unique in self._unique_data.iteritems():
+            old_key = getattr(self._records[i], name)
+            new_key = getattr(new_record, name)
+            del unique.dict[old_key]
+            unique.dict[new_key] = new_record
+        self._records[i] = new_record
 
     def __delitem__(self, i):
         """Delete the i-th record"""

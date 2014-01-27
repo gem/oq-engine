@@ -252,7 +252,8 @@ class CostType(Record):
     name = Field(str)
     type = Field(valid.Choice('aggregated', 'per_asset', 'per_area'))
     unit = Field(str)
-    retrofittedType = Field(str)
+    retrofittedType = Field(valid.NoneOr(
+        valid.Choice('aggregated', 'per_asset', 'per_area')))
     retrofittedUnit = Field(str)
 
     def to_node(self):

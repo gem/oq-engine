@@ -31,5 +31,5 @@ class TableTest(unittest.TestCase):
         self.assertEqual(self.t[1], ['severe'])
 
     def test_insert_update(self):
-        self.t[0][0] = 'moderate'
+        self.t[0] = records.FFLimitStateContinuous('moderate')
         self.t.insert(0, records.FFLimitStateContinuous('severe'))
