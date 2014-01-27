@@ -1,4 +1,4 @@
-# input_tool: The Input Tool
+# oq-common: Common libraries for OpenQuake software
 # Copyright (C) 2014 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
@@ -41,7 +41,7 @@ cd = os.path.dirname(os.path.join(__file__))
 setup(
     name='oq-common',
     version=version,
-    description="oq-common",
+    description="Common libraries for OpenQuake software",
     long_description=__doc__,
     url=url,
     packages=find_packages(exclude=[]),
