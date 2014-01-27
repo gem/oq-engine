@@ -65,3 +65,35 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(valid.IMTstr('PGV'), ('PGV', None, None))
         with self.assertRaises(ValueError):
             valid.IMTstr('S(1)')
+
+    def test_choice(self):
+        validator = valid.Choice('aggregated', 'per_asset')
+        self.assertEqual(validator('aggregated'), 'aggregated')
+        self.assertEqual(validator('per_asset'), 'per_asset')
+        with self.assertRaises(ValueError):
+            validator('xxx')
+
+    def test_empty(self):
+        self.assertEqual(valid.not_empty("text"), "text")
+        with self.assertRaises(ValueError):
+            valid.not_empty("")
+
+    def test_boolean(self):
+        self.assertEqual(valid.boolean('0'), False)
+        self.assertEqual(valid.boolean('1'), True)
+        self.assertEqual(valid.boolean('false'), False)
+        self.assertEqual(valid.boolean('true'), True)
+        with self.assertRaises(ValueError):
+            valid.boolean('')
+        with self.assertRaises(ValueError):
+            valid.boolean('xxx')
+        with self.assertRaises(ValueError):
+            valid.boolean('True')
+        with self.assertRaises(ValueError):
+            valid.boolean('False')
+
+    def test_none_or(self):
+        validator = valid.NoneOr(valid.boolean)
+        self.assertEqual(validator(''), None)
+        with self.assertRaises(ValueError):
+            validator('xxx')

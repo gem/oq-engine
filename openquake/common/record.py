@@ -193,6 +193,8 @@ class MetaRecord(abc.ABCMeta):
         if '_ntuple' not in dic:
             dic['_ntuple'] = collections.namedtuple(name, fieldnames)
         dic['_ordinal'] = mcl._counter.next()
+        if '_constraints' not in dic:
+            dic['_constraints'] = []
         return super(MetaRecord, mcl).__new__(mcl, name, bases, dic)
 
     def __init__(cls, name, bases, dic):
@@ -239,6 +241,9 @@ class MetaRecord(abc.ABCMeta):
         return [v.__get__(None, cls) for v in vars(cls).values()
                 if isinstance(v, descriptor_cls)]
 
+    def add_check(cls, constraint):
+        cls._constraints.append(constraint)
+
     def __len__(cls):
         """Returns the number of fields defined in cls"""
         return len(cls.fields)
@@ -260,6 +265,18 @@ class Record(collections.Sequence):
     __metaclass__ = MetaRecord
     convertername = 'Converter'
 
+    @classmethod
+    def get_field_index(cls, field_name):
+        """
+        Return the index associated to the field name. As a special case,
+        if field_name is an integer, return it
+        """
+        if isinstance(field_name, str):
+            i = cls._name2index[field_name]
+        else:
+            i = field_name
+        return i
+
     def init(self):
         """To override for post-initialization operations"""
 
@@ -271,9 +288,9 @@ class Record(collections.Sequence):
         field.
         """
         if i is None:
-            return all(self.is_valid(i) for i in range(len(self)))
-        if isinstance(i, str):
-            i = self._name2index[i]
+            return all(self.is_valid(i) for i in range(len(self))) and all(
+                constraint(self) for constraint in self._constraints)
+        i = self.get_field_index(i)
         try:
             self.fields[i].cast(self[i])
         except ValueError:
@@ -310,8 +327,7 @@ class Record(collections.Sequence):
 
     def __getitem__(self, i):
         """Return the field 'i', where 'i' can be an integer or a field name"""
-        if isinstance(i, str):
-            i = self._name2index[i]
+        i = self.get_field_index(i)
         return self.row[i]
 
     def __setitem__(self, i, value):
@@ -319,8 +335,7 @@ class Record(collections.Sequence):
         Set the column 'i', where 'i' can be an integer or a field name.
         If the value is invalid, raise a ValueError.
         """
-        if isinstance(i, str):
-            i = self._name2index[i]
+        i = self.get_field_index(i)
         self.fields[i].cast(value)
         self.row[i] = value
 
@@ -328,8 +343,7 @@ class Record(collections.Sequence):
         """
         Delete the column 'i', where 'i' can be an integer or a field name
         """
-        if isinstance(i, str):
-            i = self._name2index[i]
+        i = self.get_field_index(i)
         del self.row[i]
 
     def __eq__(self, other):
@@ -418,10 +432,16 @@ class Table(collections.MutableSequence):
         """Return the i-th record"""
         return self._records[i]
 
-    def __setitem__(self, i, record):
+    def __setitem__(self, i, new_record):
         """Set the i-th record"""
-        # XXX: the unique and fk dictionaries must be updated!
-        self._records[i] = record
+        # TODO: the fk dictionaries must be updated!
+        # TODO: there is no unique check here!
+        for name, unique in self._unique_data.iteritems():
+            old_key = getattr(self._records[i], name)
+            new_key = getattr(new_record, name)
+            del unique.dict[old_key]
+            unique.dict[new_key] = new_record
+        self._records[i] = new_record
 
     def __delitem__(self, i):
         """Delete the i-th record"""
