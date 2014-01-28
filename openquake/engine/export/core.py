@@ -41,7 +41,7 @@ def makedirsdeco(fn):
     This is equivalent to `mkdir -p` and :func:`os.makedirs`.
     """
 
-    def wrapped(output, target):
+    def wrapped(output, target, **kwargs):
         """
         If the the ``target`` is a directory path (string), call
         :func:`os.makedirs` to create intermediate directories to
@@ -52,7 +52,7 @@ def makedirsdeco(fn):
         """
         if isinstance(target, basestring):
             makedirs(target)
-        return fn(output, target)
+        return fn(output, target, **kwargs)
 
     # This fixes doc generation problems with decorators
     wrapped.__doc__ = fn.__doc__
