@@ -23,7 +23,7 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture, \
-ParametricProbabilisticRupture, NonParametricProbabilisticRupture
+    ParametricProbabilisticRupture, NonParametricProbabilisticRupture
 from openquake.hazardlib.pmf import PMF
 
 
@@ -33,10 +33,8 @@ def make_rupture(rupture_class, **kwargs):
         'rake': 123.45,
         'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
         'hypocenter': Point(5, 6, 7),
-        'surface': PlanarSurface(10, 11, 12,
-            Point(0, 0, 1), Point(1, 0, 1),
-            Point(1, 0, 2), Point(0, 0, 2)
-        ),
+        'surface': PlanarSurface(10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
+                                 Point(1, 0, 2), Point(0, 0, 2)),
         'source_typology': object()
     }
     default_arguments.update(kwargs)
@@ -54,31 +52,36 @@ class RuptureCreationTestCase(unittest.TestCase):
         self.assertEqual(ae.exception.message, msg)
 
     def test_negative_magnitude(self):
-        self.assert_failed_creation(Rupture, ValueError,
+        self.assert_failed_creation(
+            Rupture, ValueError,
             'magnitude must be positive',
             mag=-1
         )
 
     def test_zero_magnitude(self):
-        self.assert_failed_creation(Rupture, ValueError,
+        self.assert_failed_creation(
+            Rupture, ValueError,
             'magnitude must be positive',
             mag=0
         )
 
     def test_hypocenter_in_the_air(self):
-        self.assert_failed_creation(Rupture, ValueError,
+        self.assert_failed_creation(
+            Rupture, ValueError,
             'rupture hypocenter must have positive depth',
             hypocenter=Point(0, 1, -0.1)
         )
 
     def test_probabilistic_rupture_negative_occurrence_rate(self):
-        self.assert_failed_creation(ParametricProbabilisticRupture, ValueError,
+        self.assert_failed_creation(
+            ParametricProbabilisticRupture, ValueError,
             'occurrence rate must be positive',
             occurrence_rate=-1, temporal_occurrence_model=PoissonTOM(10)
         )
 
     def test_probabilistic_rupture_zero_occurrence_rate(self):
-        self.assert_failed_creation(ParametricProbabilisticRupture, ValueError,
+        self.assert_failed_creation(
+            ParametricProbabilisticRupture, ValueError,
             'occurrence rate must be positive',
             occurrence_rate=0, temporal_occurrence_model=PoissonTOM(10)
         )
@@ -125,6 +128,7 @@ class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
                          [0.7408182, 0.7788008, 0.8187308]])
         )
 
+
 class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def assert_failed_creation(self, rupture_class, exc, msg, **kwargs):
         with self.assertRaises(exc) as ae:
@@ -137,22 +141,28 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
 
     def test_minimum_number_of_ruptures_is_not_zero(self):
         pmf = PMF([(Decimal('0.8'), 1), (Decimal('0.2'), 2)])
-        self.assert_failed_creation(NonParametricProbabilisticRupture,
-            ValueError, 'minimum number of ruptures must be zero', pmf=pmf)
+        self.assert_failed_creation(
+            NonParametricProbabilisticRupture,
+            ValueError, 'minimum number of ruptures must be zero', pmf=pmf
+        )
 
     def test_numbers_of_ruptures_not_in_increasing_order(self):
         pmf = PMF(
             [(Decimal('0.8'), 0), (Decimal('0.1'), 2), (Decimal('0.1'), 1)]
         )
-        self.assert_failed_creation(NonParametricProbabilisticRupture,
+        self.assert_failed_creation(
+            NonParametricProbabilisticRupture,
             ValueError,
-            'numbers of ruptures must be defined in increasing order', pmf=pmf)
+            'numbers of ruptures must be defined in increasing order', pmf=pmf
+        )
 
     def test_numbers_of_ruptures_not_defined_with_unit_step(self):
         pmf = PMF([(Decimal('0.8'), 0), (Decimal('0.2'), 2)])
-        self.assert_failed_creation(NonParametricProbabilisticRupture,
+        self.assert_failed_creation(
+            NonParametricProbabilisticRupture,
             ValueError,
-            'numbers of ruptures must be defined with unit step', pmf=pmf)
+            'numbers of ruptures must be defined with unit step', pmf=pmf
+        )
 
     def test_get_probability_no_exceedance(self):
         pmf = PMF(
