@@ -19,6 +19,7 @@ Functionality for exporting and serializing hazard curve calculation results.
 
 
 import os
+import functools
 
 from collections import namedtuple
 from collections import OrderedDict
@@ -48,9 +49,9 @@ def export(output_id, target, export_type='xml'):
         results were written to, depending on what ``target`` is.
     """
     output = models.Output.objects.get(id=output_id)
-
+    export_fn_name = 'export_%s_%s' % (output.output_type, export_type)
     try:
-        export_fn = EXPORTERS[export_type][output.output_type]
+        export_fn = globals()[export_fn_name]
     except KeyError:
         raise NotImplementedError(
             'No "%(fmt)s" exporter is available for "%(output_type)s"'
@@ -184,7 +185,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
 
 
 @core.makedirsdeco
-def export_hazard_curve_xml(output, target):
+def _export_hazard_curve(output, target, export_type):
     """
     Export the specified hazard curve ``output`` to the ``target``.
 
@@ -193,7 +194,8 @@ def export_hazard_curve_xml(output, target):
         `hazard_curve`.
     :param target:
         The same ``target`` as :func:`export`.
-
+    :param export_type:
+        The export type, 'xml' or 'geojson'
     :returns:
         The same return value as defined by :func:`export`.
     """
@@ -202,10 +204,21 @@ def export_hazard_curve_xml(output, target):
     hcd = _curve_data(hc)
     metadata = _curve_metadata(output, target)
     haz_calc = output.oq_job.hazard_calculation
-    dest = _get_result_export_dest(haz_calc.id, target, hc)
-    writers.HazardCurveXMLWriter(dest, **metadata).serialize(hcd)
+    dest = _get_result_export_dest(
+        haz_calc.id, target, hc, file_ext=export_type)
+    writercls = writers.HazardCurveGeoJSONWriter \
+        if export_type == 'geojson' else writers.HazardCurveXMLWriter
+    writercls(dest, **metadata).serialize(hcd)
 
     return dest
+
+
+export_hazard_curve_xml = functools.partial(
+    _export_hazard_curve, export_type='xml')
+
+
+export_hazard_curve_geojson = functools.partial(
+    _export_hazard_curve, export_type='geojson')
 
 
 @core.makedirsdeco
@@ -559,22 +572,3 @@ def export_uh_spectra_xml(output, target):
     writer.serialize(uhs)
 
     return dest
-
-
-XML_EXPORTERS = {
-    'disagg_matrix': export_disagg_matrix_xml,
-    'gmf': export_gmf_xml,
-    'gmf_scenario': export_gmf_scenario_xml,
-    'hazard_curve': export_hazard_curve_xml,
-    'hazard_curve_multi': export_hazard_curve_multi_xml,
-    'hazard_map': export_hazard_map_xml,
-    'ses': export_ses_xml,
-    'uh_spectra': export_uh_spectra_xml,
-}
-GEOJSON_EXPORTERS = {
-    'hazard_map': export_hazard_map_geojson,
-}
-EXPORTERS = {
-    'xml': XML_EXPORTERS,
-    'geojson': GEOJSON_EXPORTERS,
-}
