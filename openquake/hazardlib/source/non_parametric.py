@@ -67,6 +67,13 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 rup.surface, rup.source_typology, pmf
             )
 
+    def count_ruptures(self):
+        """
+        See :meth:
+        `openquake.hazardlib.source.base.SeismicSource.count_ruptures`.
+        """
+        return len(self.data)
+
     def get_rupture_enclosing_polygon(self, dilation=0):
         """
         Create instance of

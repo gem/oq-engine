@@ -151,6 +151,29 @@ class SimpleFaultSource(ParametricSeismicSource):
                         occurrence_rate, self.temporal_occurrence_model
                     )
 
+    def count_ruptures(self):
+        """
+        See :meth:
+        `openquake.hazardlib.source.base.SeismicSource.count_ruptures`.
+        """
+        whole_fault_surface = SimpleFaultSurface.from_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing
+        )
+        whole_fault_mesh = whole_fault_surface.get_mesh()
+        mesh_rows, mesh_cols = whole_fault_mesh.shape
+        fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
+        fault_width = float((mesh_rows - 1) * self.rupture_mesh_spacing)
+        counts = 0
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
+            rup_cols, rup_rows = self._get_rupture_dimensions(
+                fault_length, fault_width, mag
+            )
+            num_rup_along_length = mesh_cols - rup_cols + 1
+            num_rup_along_width = mesh_rows - rup_rows + 1
+            counts += num_rup_along_length * num_rup_along_width
+        return counts
+
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):
         """
         Calculate rupture dimensions for a given magnitude.
