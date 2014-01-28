@@ -71,7 +71,7 @@ class CampbellBozorgnia2008(GMPE):
 
     #: Required site parameters are Vs30, Vs30 type (measured or inferred),
     #: and depth (km) to the 2.5 km/s shear wave velocity layer (z2pt5)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z2pt5'))
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z2pt5'))
 
     #: Required rupture parameters are magnitude, rake, dip, ztor
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'dip', 'ztor'))

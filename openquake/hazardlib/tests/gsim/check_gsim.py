@@ -90,7 +90,10 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
 
         if debug and errors:
             break
-    return errors, _format_stats(time.time() - started, discrepancies, errors)
+    return (
+        errors, _format_stats(time.time() - started, discrepancies, errors),
+        sctx, rctx, dctx
+    )
 
 
 def _format_stats(time_spent, discrepancies, errors):
