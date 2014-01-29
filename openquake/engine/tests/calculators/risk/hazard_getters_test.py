@@ -24,7 +24,7 @@ import cPickle as pickle
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.correlation import JB2009CorrelationModel
 
 from openquake.engine.db import models
@@ -167,7 +167,7 @@ class GroundMotionValuesCalcGetterTestCase(unittest.TestCase):
         calc = hazard_getters.GroundMotionValuesCalcGetter(
             self.imt, self.sites, self.sites_assets, 0, self.gsims, None)
 
-        r = ProbabilisticRupture(
+        r = ParametricProbabilisticRupture(
             mag=5.5,
             rake=123.45,
             tectonic_region_type=mock.Mock(),
