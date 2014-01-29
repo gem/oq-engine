@@ -32,7 +32,7 @@ from openquake.engine.performance import EnginePerformanceMonitor
 
 
 @tasks.oqtask
-def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
+def compute_hazard_curves(job_id, sources, gsims_by_rlz):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -42,8 +42,6 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
         ID of the currently running job
     :param sources:
         a block of source objects
-    :param tom:
-        a :class:`openquake.hazardlib.tom.PoissonTOM` instance
     :param gsims_by_rlz:
         a dictionary of gsim dictionaries, one for each realization
     """
@@ -60,7 +58,7 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
         ) if hc.maximum_distance else hc.site_collection
         if s_sites is None:
             continue
-        ruptures = list(source.iter_ruptures(tom))
+        ruptures = list(source.iter_ruptures())
         for rupture in ruptures:
             r_sites = rupture.source_typology.\
                 filter_sites_by_distance_to_rupture(
