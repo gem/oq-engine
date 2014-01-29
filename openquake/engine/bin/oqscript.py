@@ -122,6 +122,11 @@ def set_up_arg_parser():
         help='Export the desired output to the specified directory',
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
     hazard_grp.add_argument(
+        '--export-hazard-outputs',
+        '--eho',
+        help='Export all the hazard outputs to the specified directory',
+        nargs=2, metavar=('HAZARD_CALCULATION_ID', 'TARGET_DIR'))
+    hazard_grp.add_argument(
         '--delete-hazard-calculation',
         '--dhc',
         help='Delete a hazard calculation and all associated outputs',
@@ -300,7 +305,12 @@ def list_imported_outputs():
 def export_hazard(haz_output_id, target_dir, export_type):
     export(hazard_export.export, haz_output_id, target_dir, export_type)
 
-
+def export_hazard_outputs(hc_id, target_dir, export_type):
+    for output in models.Output.objects.filter(
+            oq_job__hazard_calculation=hc_id):
+        print 'Exporting %s...' % output
+        export(hazard_export.export, output.id, target_dir, export_type)
+    
 def export_risk(risk_output_id, target_dir, export_type):
     export(risk_export.export, risk_output_id, target_dir, export_type)
 
@@ -419,8 +429,11 @@ def main():
     elif args.export_hazard is not None:
         output_id, target_dir = args.export_hazard
         output_id = int(output_id)
-
         export_hazard(output_id, expanduser(target_dir), args.export_type)
+    elif args.export_hazard_outputs is not None:
+        hc_id, target_dir = args.export_hazard_outputs
+        export_hazard_outputs(int(hc_id), expanduser(target_dir),
+                              args.export_type)
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
