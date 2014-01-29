@@ -29,6 +29,7 @@ from decimal import Decimal
 from mock import Mock
 
 import openquake.hazardlib
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
@@ -36,7 +37,7 @@ from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 from openquake.nrmllib.parsers import SourceModelParser
 
 from openquake.engine.input import logictree
-from openquake.engine.input.source import nrml_to_hazardlib
+from openquake.engine.input.source import NrmlHazardlibConverter
 
 from openquake.engine.tests.utils import helpers
 
@@ -1518,7 +1519,8 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
             openquake.hazardlib.scalerel.PeerMSR(),
             rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
                 5, 6),
-            rupture_mesh_spacing=1.0
+            rupture_mesh_spacing=1.0,
+            temporal_occurrence_model=PoissonTOM(50.)
         )
 
     def test_unknown_source_type(self):
@@ -1575,7 +1577,8 @@ class BranchSetFilterTestCase(unittest.TestCase):
             openquake.hazardlib.scalerel.PeerMSR(),
             rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
                 5, 6),
-            rupture_mesh_spacing=1.0
+            rupture_mesh_spacing=1.0,
+            temporal_occurrence_model=PoissonTOM(50.),
         )
         self.area = openquake.hazardlib.source.AreaSource(
             source_id='area', name='area',
@@ -1595,7 +1598,8 @@ class BranchSetFilterTestCase(unittest.TestCase):
                 [openquake.hazardlib.geo.Point(0, 0),
                  openquake.hazardlib.geo.Point(0, 1),
                  openquake.hazardlib.geo.Point(1, 0)]),
-            area_discretization=10, rupture_mesh_spacing=1.0
+            area_discretization=10, rupture_mesh_spacing=1.0,
+            temporal_occurrence_model=PoissonTOM(50.),
         )
         self.simple_fault = openquake.hazardlib.source.SimpleFaultSource(
             source_id='simple_fault', name='simple fault',
@@ -1609,7 +1613,8 @@ class BranchSetFilterTestCase(unittest.TestCase):
             fault_trace=openquake.hazardlib.geo.Line(
                 [openquake.hazardlib.geo.Point(0, 0),
                  openquake.hazardlib.geo.Point(1, 1)]),
-            dip=45, rake=180
+            dip=45, rake=180,
+            temporal_occurrence_model=PoissonTOM(50.)
         )
         self.complex_fault = openquake.hazardlib.source.ComplexFaultSource(
             source_id='complex_fault', name='complex fault',
@@ -1624,7 +1629,8 @@ class BranchSetFilterTestCase(unittest.TestCase):
                  openquake.hazardlib.geo.Point(1, 1, 1)]),
                 openquake.hazardlib.geo.Line(
                     [openquake.hazardlib.geo.Point(0, 0, 2),
-                     openquake.hazardlib.geo.Point(1, 1, 2)])]
+                     openquake.hazardlib.geo.Point(1, 1, 2)])],
+            temporal_occurrence_model=PoissonTOM(50.),
         )
 
         lons = numpy.array([-1., 1., -1., 1.])
@@ -1636,19 +1642,18 @@ class BranchSetFilterTestCase(unittest.TestCase):
                   zip(lons, lats, depths)]
         self.characteristic_fault = \
             openquake.hazardlib.source.CharacteristicFaultSource(
-            source_id='characteristic_fault',
-            name='characteristic fault',
-            tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
-            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
-                               max_mag=6.5, bin_width=0.1),
-            surface=openquake.hazardlib.geo.PlanarSurface(
-                mesh_spacing=1.0, strike=0.0, dip=90.0,
-                top_left=points[0], top_right=points[1],
-                bottom_right=points[3], bottom_left=points[2]
-            ),
-            rake=0
-        )
-
+                source_id='characteristic_fault',
+                name='characteristic fault',
+                tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
+                mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                                   max_mag=6.5, bin_width=0.1),
+                surface=openquake.hazardlib.geo.PlanarSurface(
+                    mesh_spacing=1.0, strike=0.0, dip=90.0,
+                    top_left=points[0], top_right=points[1],
+                    bottom_right=points[3], bottom_left=points[2]
+                ),
+                rake=0,
+                temporal_occurrence_model=PoissonTOM(50.))
 
     def test_unknown_filter(self):
         bs = logictree.BranchSet(None, {'applyToSources': [1], 'foo': 'bar'})
@@ -1854,15 +1859,12 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
     JOB_CONFIG = None
-    NRML_TO_HAZARDLIB_PARAMS = {
-        'mesh_spacing': 1,
-        'bin_width': 1,
-        'area_src_disc': 10,
-    }
 
     def _do_test(self, path, expected_result, expected_branch_ids):
         cfg = helpers.get_data_path(self.JOB_CONFIG)
         job = helpers.get_hazard_job(cfg)
+
+        nrml_to_hazardlib = NrmlHazardlibConverter(job.hazard_calculation)
         base_path = job.hazard_calculation.base_path
 
         proc = logictree.LogicTreeProcessor.from_hc(
@@ -1885,13 +1887,13 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
         expected_result_path = os.path.join(base_path, expected_result)
         e_nrml_sources = SourceModelParser(expected_result_path).parse()
         e_hazardlib_sources = [
-            nrml_to_hazardlib(source, **self.NRML_TO_HAZARDLIB_PARAMS)
+            nrml_to_hazardlib(source)
             for source in e_nrml_sources]
 
         original_sm_path = os.path.join(base_path, sm_path)
         a_nrml_sources = SourceModelParser(original_sm_path).parse()
         a_hazardlib_sources = [
-            nrml_to_hazardlib(source, **self.NRML_TO_HAZARDLIB_PARAMS)
+            nrml_to_hazardlib(source)
             for source in a_nrml_sources]
         for i, source in enumerate(a_hazardlib_sources):
             modify_source(source)

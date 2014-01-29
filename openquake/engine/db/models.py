@@ -1589,7 +1589,7 @@ class SESRupture(djm.Model):
     ses = djm.ForeignKey('SES')
 
     #: A pickled
-    #: :class:`openquake.hazardlib.source.rupture.ProbabilisticRupture`
+    #: :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
     #: instance
     rupture = fields.PickleField()
 
