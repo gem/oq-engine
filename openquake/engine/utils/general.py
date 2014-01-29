@@ -32,7 +32,8 @@ class WeightedSequence(collections.MutableSequence):
     Adding items automatically increases the weight.
     """
     @classmethod
-    def chain(cls, ws_list):
+    def merge(cls, ws_list):
+        "Merge a set of WeightedSequence objects"
         return sum(ws_list, cls())
 
     def __init__(self):
