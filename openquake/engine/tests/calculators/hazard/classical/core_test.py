@@ -112,7 +112,7 @@ store_site_model'
         # the logic tree for this sample calculation only contains a single
         # source model
         path = tuple(ltr.sm_lt_path)
-        sources = WeightedSequence.chain(
+        sources = WeightedSequence.merge(
             self.calc.source_blocks_per_ltpath[path])
         self.assertEqual(22, len(sources))
 
