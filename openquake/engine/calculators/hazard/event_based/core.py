@@ -261,7 +261,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rnd.seed(hc.random_seed)
         for lt_rlz in self._get_realizations():
             path = tuple(lt_rlz.sm_lt_path)
-            sources = WeightedSequence.chain(
+            sources = WeightedSequence.merge(
                 self.source_blocks_per_ltpath[path])
             ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
