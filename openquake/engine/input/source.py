@@ -15,6 +15,7 @@
 
 import sys
 import math
+import copy
 
 from itertools import izip
 
@@ -26,13 +27,13 @@ from openquake.hazardlib import source
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
-from openquake.nrmllib.hazard import writers as haz_writers
 from shapely import wkt
+
+MAX_RUPTURES = 500  # if there are more ruptures, split the source
+
 
 # Silencing 'Access to protected member' (WRT hazardlib polygons)
 # pylint: disable=W0212
-
-
 def nrml_to_hazardlib(src, mesh_spacing, bin_width, area_src_disc):
     """
     Convert a seismic source or rupture object from the NRML representation to
@@ -509,6 +510,39 @@ def area_to_point_sources(area_src, area_src_disc):
         yield pt
 
 
+def split_fault_source(src):
+    """
+    Generator splitting a fault source into several fault sources,
+    one for each magnitude.
+    """
+    i = 0  # split source index
+    for mag, rate in src.mfd.get_annual_occurrence_rates():
+        if rate:  # ignore zero occurency rate
+            new_src = copy.copy(src)
+            new_src.source_id = '%s-%s' % (src.source_id, i)
+            new_src.mfd = mfd.EvenlyDiscretizedMFD(
+                min_mag=mag, bin_width=src.mfd.bin_width,
+                occurrence_rates=[rate])
+            i += 1
+        yield new_src
+
+
+def split_source(src, area_source_discretization):
+    """
+    Split an area source into point sources and a fault sources into
+    smaller fault sources.
+    """
+    if isinstance(src, source.AreaSource):
+        for s in area_to_point_sources(src, area_source_discretization):
+            yield s
+    elif isinstance(
+            src, (source.SimpleFaultSource, source.ComplexFaultSource)):
+        for s in split_fault_source(src):
+            yield s
+    else:
+        yield src
+
+
 def parse_source_model_smart(fname, is_relevant,
                              apply_uncertainties,
                              rupture_mesh_spacing,
@@ -538,8 +572,9 @@ def parse_source_model_smart(fname, is_relevant,
         apply_uncertainties(src)
         if not is_relevant(src):
             continue
-        if isinstance(src, source.AreaSource):
-            for pt in area_to_point_sources(src, area_source_discretization):
-                yield pt
+        num_ruptures = src.count_ruptures()
+        if num_ruptures > MAX_RUPTURES:
+            for s in split_source(src, area_source_discretization):
+                yield s, s.count_ruptures()
         else:
-            yield src
+            yield src, num_ruptures

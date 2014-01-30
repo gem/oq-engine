@@ -58,7 +58,7 @@ def map_reduce(task, task_args, agg, acc):
     """
     if no_distribute():
         for the_args in task_args:
-            result = task(*the_args)
+            result = task.task_func(*the_args)
             acc = agg(acc, result)
     else:
         taskset = TaskSet(tasks=map(task.subtask, task_args))
