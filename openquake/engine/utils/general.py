@@ -33,7 +33,15 @@ class WeightedSequence(collections.MutableSequence):
     """
     @classmethod
     def merge(cls, ws_list):
-        "Merge a set of WeightedSequence objects"
+        """
+        Merge a set of WeightedSequence objects.
+
+        :param ws_list:
+            a sequence of :class:
+            `openquake.engine.utils.general.WeightedSequence` instances
+        :returns:
+            a `openquake.engine.utils.general.WeightedSequence` instance
+        """
         return sum(ws_list, cls())
 
     def __init__(self):
@@ -41,18 +49,34 @@ class WeightedSequence(collections.MutableSequence):
         self.weight = 0
 
     def __getitem__(self, sliceobj):
+        """
+        Return an item or a slice
+        """
         return self._seq[sliceobj]
 
     def __setitem__(self, i, v):
+        """
+        Modify the sequence
+        """
         self._seq[i] = v
 
     def __delitem__(self, sliceobj):
+        """
+        Remove an item from the sequence
+        """
         del self._seq[sliceobj]
 
     def __len__(self):
+        """
+        The length of the sequence
+        """
         return len(self._seq)
 
     def __add__(self, other):
+        """
+        Add two weighted sequences and return a new WeightedSequence
+        with weight equal to the sum of the weights.
+        """
         new = self.__class__()
         new._seq.extend(self._seq)
         new._seq.extend(other._seq)
@@ -60,14 +84,22 @@ class WeightedSequence(collections.MutableSequence):
         return new
 
     def insert(self, i, (item, weight)):
+        """
+        Insert an item with the given weight in the sequence
+        """
         self._seq.insert(i, item)
         self.weight += weight
 
     def __cmp__(self, other):
-        """Ensure ordering by reverse weight"""
+        """
+        Ensure ordering by reverse weight
+        """
         return -cmp(self.weight, other.weight)
 
     def __repr__(self):
+        """
+        String representation of the sequence, including the weight
+        """
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
 
