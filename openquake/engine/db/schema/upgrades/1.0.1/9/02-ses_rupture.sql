@@ -24,7 +24,8 @@ AS $$
 $$ LANGUAGE plpythonu;
 
 UPDATE hzrdr.ses_rupture SET magnitude=admin.extract_magnitude(rupture) WHERE magnitude IS NULL;
-UPDATE hzrdr.ses_rupture SET hypocenter=ST_SetSRID(admin.extract_hypocenter(rupture)::geometry, 4326);
+UPDATE hzrdr.ses_rupture SET hypocenter=ST_SetSRID(admin.extract_hypocenter(rupture)::geometry, 4326)
+WHERE rupture != E'\\x6e6f7420636f6d7075746564'::bytea;
 ALTER TABLE hzrdr.ses_rupture ALTER magnitude SET NOT NULL;
 ALTER TABLE hzrdr.ses_rupture ALTER hypocenter SET NOT NULL;
 
