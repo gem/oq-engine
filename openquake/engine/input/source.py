@@ -514,6 +514,9 @@ def split_fault_source(src):
     """
     Generator splitting a fault source into several fault sources,
     one for each magnitude.
+
+    :param src:
+        an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
     """
     i = 0  # split source index
     for mag, rate in src.mfd.get_annual_occurrence_rates():
@@ -531,6 +534,11 @@ def split_source(src, area_source_discretization):
     """
     Split an area source into point sources and a fault sources into
     smaller fault sources.
+
+    :param src:
+        an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
+    :param float area_source_discretization:
+        area source discretization
     """
     if isinstance(src, source.AreaSource):
         for s in area_to_point_sources(src, area_source_discretization):
@@ -556,11 +564,16 @@ def parse_source_model_smart(fname, is_relevant,
     2) the filter `is_relevant` is applied second
     3) at the end area sources are splitted into point sources.
 
-    :param str fname: the full pathname of the source model file
-    :param apply_uncertainties: a function modifying the sources
-    :param rupture_mesh_spacing: the rupture mesh spacing
-    :param width_of_mfd_bin: the width of the MFD bin
-    :param area_source_discretization: the area discretization parameter
+    :param str fname:
+        the full pathname of the source model file
+    :param apply_uncertainties:
+        a function modifying the sources
+    :param rupture_mesh_spacing:
+        the rupture mesh spacing
+    :param width_of_mfd_bin:
+        the width of the MFD bin
+    :param area_source_discretization:
+        the area discretization parameter
     """
     for src_nrml in haz_parsers.SourceModelParser(fname).parse():
         src = nrml_to_hazardlib(
