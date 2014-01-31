@@ -141,6 +141,13 @@ def str2bool(value):
 def ceil(a, b):
     """
     Divide a / b and return the biggest integer close to the quotient.
+
+    :param a:
+        a number
+    :param b:
+        a positive number
+    :returns:
+        the biggest integer close to the quotient
     """
     assert b > 0, b
     return int(math.ceil(float(a) / b))
