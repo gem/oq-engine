@@ -176,12 +176,13 @@ class SequenceSplitter(object):
         self.max_block_size = max_block_size
         self.max_weight = None
 
-    def split_on_max_weight(self, sequence):
+    def split_on_max_weight(self, item_weight_sequence):
         """
-        Try to split a sequence in ``num_blocks`` blocks. Return a list
-        of :class:`openquake.engine.utils.general.WeightedSequence` objects.
+        Try to split a sequence of pairs (item, weight) in ``num_blocks``
+        blocks. Return a list of :class:
+        `openquake.engine.utils.general.WeightedSequence` objects.
         """
-        return list(self._split_on_max_weight(sequence))
+        return list(self._split_on_max_weight(item_weight_sequence))
 
     def split(self, sequence):
         """
