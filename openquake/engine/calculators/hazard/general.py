@@ -48,7 +48,7 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter, BlockSplitter, ceil
+from openquake.engine.utils.general import block_splitter, SequenceSplitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -147,7 +147,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
-    # NB: this method will be replaces BlockSplitter.split sooner or later
+    # NB: this method will be replaces SequenceSplitter.split sooner or later
     def block_split(self, items, max_block_size=MAX_BLOCK_SIZE):
         """
         Split the given items in blocks, depending on the parameter
@@ -236,7 +236,7 @@ class BaseHazardCalculator(base.Calculator):
         sm_paths = list(self.smlt.get_sm_paths())
 
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
-        bs = BlockSplitter(nblocks)
+        bs = SequenceSplitter(nblocks)
 
         # here we are doing a full enumeration of the source model logic tree;
         # this is not bad because for very large source models there are

@@ -114,7 +114,7 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-class BlockSplitter(object):
+class SequenceSplitter(object):
     """
     A splitter object with methods .split (to split regular sequences)
     and split_on_max_weight (to split sequences of pairs [(item, weight),...])
