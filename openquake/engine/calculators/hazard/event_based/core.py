@@ -50,7 +50,9 @@ from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import tasks
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.utils.general import WeightedSequence
+from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
+
 
 
 #: Always 1 for the computation of ground motion fields in the event-based
@@ -90,26 +92,32 @@ def compute_ses(job_id, src_seeds, ses_coll):
     tom = PoissonTOM(hc.investigation_time)
     ruptures = []
 
+    mon1 = LightMonitor('generating ruptures', job_id, compute_ses)
+    mon2 = LightMonitor('sampling ruptures', job_id, compute_ses)
+
     # Compute and save stochastic event sets
-    with EnginePerformanceMonitor('computing ses', job_id, compute_ses):
-        for src, seed in src_seeds:
-            rnd.seed(seed)
+    for src, seed in src_seeds:
+        rnd.seed(seed)
+        with mon1:
             rupts = list(src.iter_ruptures(tom))
-            for ses in all_ses:
-                numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                for r in rupts:
-                    for i in xrange(r.sample_number_of_occurrences()):
+        for ses in all_ses:
+            numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
+            for i, r in enumerate(rupts):
+                with mon2:
+                    for j in xrange(r.sample_number_of_occurrences()):
                         rup = models.SESRupture(
                             ses=ses,
                             rupture=r,
-                            tag='rlz=%02d|ses=%04d|src=%s|i=%03d' % (
-                                ses_coll.lt_realization.ordinal, ses.ordinal,
-                                src.source_id, i),
+                            tag='rlz=%02d|ses=%04d|src=%s|i=%04d-%02d' % (
+                                ses_coll.lt_realization.ordinal,
+                                ses.ordinal, src.source_id, i, j),
                             hypocenter=r.hypocenter.wkt2d,
                             magnitude=r.mag,
                         )
                         ruptures.append(rup)
 
+    mon1.flush()
+    mon2.flush()
     if not ruptures:
         return
 
@@ -260,15 +268,16 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         rnd.seed(hc.random_seed)
         for lt_rlz in self._get_realizations():
             path = tuple(lt_rlz.sm_lt_path)
-            sources = self.sources_per_ltpath[path]
+            sources = WeightedSequence.merge(
+                self.source_blocks_per_ltpath[path])
             ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in sources]  # source, seed pairs
             for block in self.block_split(ss):
                 yield self.job.id, block, ses_coll
 
-        # now the sources_per_ltpath dictionary can be cleared to save memory
-        self.sources_per_ltpath.clear()
+        # now the source_blocks_per_ltpath dictionary can be cleared
+        self.source_blocks_per_ltpath.clear()
 
     def compute_gmf_arg_gen(self):
         """
