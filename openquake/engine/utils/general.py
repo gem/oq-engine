@@ -163,6 +163,13 @@ class SequenceSplitter(object):
     that the blocks never exceed it, so more blocks could be generated.
     """
     def __init__(self, num_blocks, max_block_size=None):
+        """
+        :param int num_blocks:
+            the suggested number of blocks to generate
+        :param int max_block_size:
+            if not None, the blocks cannot exceed this value, at the cost of
+            generating more blocks than specified in num_blocks.
+        """
         assert num_blocks > 0, num_blocks
         assert max_block_size is None or max_block_size >= 1, max_block_size
         self.num_blocks = num_blocks
