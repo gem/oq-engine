@@ -19,7 +19,6 @@
 """Common code for the hazard calculators."""
 
 import os
-import math
 import random
 import collections
 
@@ -27,7 +26,7 @@ import numpy
 
 from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
-
+from openquake.hazardlib.tom import PoissonTOM
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
 from openquake.engine.db import models
@@ -49,7 +48,7 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter
+from openquake.engine.utils.general import block_splitter, SequenceSplitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -134,11 +133,11 @@ class BaseHazardCalculator(base.Calculator):
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
         # a dictionary (sm_lt_path, source_type) -> sources
-        self.sources_per_ltpath = collections.defaultdict(list)
+        self.source_blocks_per_ltpath = collections.defaultdict(list)
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
-        self.sources_per_ltpath.clear()
+        self.source_blocks_per_ltpath.clear()
 
     @property
     def hc(self):
@@ -148,6 +147,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
+    # NB: this method will be replaces SequenceSplitter.split sooner or later
     def block_split(self, items, max_block_size=MAX_BLOCK_SIZE):
         """
         Split the given items in blocks, depending on the parameter
@@ -158,8 +158,8 @@ class BaseHazardCalculator(base.Calculator):
         """ % MAX_BLOCK_SIZE
         assert len(items) > 0, 'No items in %s' % items
         num_rlzs = len(self._get_realizations())
-        bs_float = float(len(items)) / self.concurrent_tasks() * num_rlzs
-        bs = min(int(math.ceil(bs_float)), max_block_size)
+        bs = min(ceil(len(items), ceil(self.concurrent_tasks(), num_rlzs)),
+                 max_block_size)
         logs.LOG.warn('Using block size=%d', bs)
         return block_splitter(items, bs)
 
@@ -175,19 +175,19 @@ class BaseHazardCalculator(base.Calculator):
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
 
-        For this default implementation, yielded results are triples of
-        (job_id, realization_id, source_id_list).
+        For this default implementation, yielded results are quartets
+        (job_id, sources, tom, gsims_by_rlz).
 
         Override this in subclasses as necessary.
         """
-        realizations = self._get_realizations()
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-
-        for lt_rlz in realizations:
-            path = tuple(lt_rlz.sm_lt_path)
-            sources = self.sources_per_ltpath[path]
-            for block in self.block_split(sources):
-                yield self.job.id, block, lt_rlz, ltp
+        tom = PoissonTOM(self.hc.investigation_time)
+        for ltpath, rlzs in self.rlzs_per_ltpath.iteritems():
+            gsims_by_rlz = collections.OrderedDict(
+                (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
+                for rlz in rlzs)
+            for block in self.source_blocks_per_ltpath[ltpath]:
+                yield self.job.id, block, tom, gsims_by_rlz
 
     def _get_realizations(self):
         """
@@ -212,36 +212,55 @@ class BaseHazardCalculator(base.Calculator):
             logs.LOG.warn('Could not save job_stats.num_sources: %s', e)
         self.initialize_realizations()
 
+        self.rlzs_per_ltpath = collections.defaultdict(list)
+        for rlz in self._get_realizations():
+            ltpath = tuple(rlz.sm_lt_path)
+            self.rlzs_per_ltpath[ltpath].append(rlz)
+
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
         Parse source models and validate source logic trees. It also
         filters the sources far away and apply uncertainties to the
         relevant ones. As a side effect it populates the instance dictionary
-        `.sources_per_ltpath`. Notice that area sources are automatically
-        split into point sources.
+        `.source_blocks_per_ltpath`. Notice that sources are automatically
+        split.
+
+        :returns:
+            a list with the number of sources for each source model
         """
         logs.LOG.progress("initializing sources")
         smlt_file = self.hc.inputs['source_model_logic_tree']
         self.smlt = logictree.SourceModelLogicTree(
             file(smlt_file).read(), self.hc.base_path, smlt_file)
+        sm_paths = list(self.smlt.get_sm_paths())
+
+        nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
+        bs = SequenceSplitter(nblocks)
+
         # here we are doing a full enumeration of the source model logic tree;
         # this is not bad because for very large source models there are
         # typically very few realizations; moreover, the filtering will remove
         # most of the sources, so the memory occupation is typically low
         num_sources = []  # the number of sources per sm_lt_path
-        for sm, path in self.smlt.get_sm_paths():
+        for sm, path in sm_paths:
             smpath = tuple(path)
-            self.sources_per_ltpath[smpath] = sources = list(
-                source.parse_source_model_smart(
-                    os.path.join(self.hc.base_path, sm),
-                    self.hc.sites_affected_by,
-                    self.smlt.make_apply_uncertainties(path),
-                    self.hc.rupture_mesh_spacing,
-                    self.hc.width_of_mfd_bin,
-                    self.hc.area_source_discretization))
-            n = len(sources)
+            source_weight_pairs = source.parse_source_model_smart(
+                os.path.join(self.hc.base_path, sm),
+                self.hc.sites_affected_by,
+                self.smlt.make_apply_uncertainties(path),
+                self.hc.rupture_mesh_spacing,
+                self.hc.width_of_mfd_bin,
+                self.hc.area_source_discretization)
+            blocks = bs.split_on_max_weight(list(source_weight_pairs))
+            self.source_blocks_per_ltpath[smpath] = blocks
+            n = sum(len(block) for block in blocks)
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
+            logs.LOG.info('Splitting in blocks with at maximum %d ruptures',
+                          bs.max_weight)
+            for i, block in enumerate(blocks, 1):
+                logs.LOG.info('Block %d: %d sources, %d ruptures',
+                              i, len(block), block.weight)
             num_sources.append(n)
         return num_sources
 
@@ -407,35 +426,6 @@ class BaseHazardCalculator(base.Calculator):
             # update the seed for the next realization
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
-
-    def initialize_hazard_curve_progress(self, lt_rlz):
-        """
-        As a calculation progresses, workers will periodically update the
-        intermediate results. These results will be stored in
-        `htemp.hazard_curve_progress` until the calculation is completed.
-
-        Before the core calculation begins, we need to initalize these records,
-        one data set per IMT. Each dataset will be stored in the database as a
-        pickled 2D numpy array (with number of rows == calculation points of
-        interest and number of columns == number of IML values for a given
-        IMT).
-
-        We will create 1 `hazard_curve_progress` record per IMT per
-        realization.
-
-        :param lt_rlz:
-            :class:`openquake.engine.db.models.LtRealization` object to
-            associate with these inital hazard curve values.
-        """
-        num_points = len(self.hc.points_to_compute())
-
-        im_data = self.hc.intensity_measure_types_and_levels
-        for imt, imls in im_data.items():
-            hc_prog = models.HazardCurveProgress()
-            hc_prog.lt_realization = lt_rlz
-            hc_prog.imt = imt
-            hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
-            hc_prog.save()
 
     def _get_outputs_for_export(self):
         """
