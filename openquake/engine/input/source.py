@@ -519,7 +519,7 @@ def split_source(src, area_source_discretization):
             src, (source.SimpleFaultSource, source.ComplexFaultSource)):
         for s in split_fault_source(src):
             yield s
-    else:
+    else:  # characteristic sources are not split since they are small
         yield src
 
 
