@@ -115,7 +115,9 @@ class HazardGetter(object):
     def __call__(self, monitor=None):
         for hazard in self.hazard_outputs:
             h = hazard.output_container
-            yield (hazard.id,) + self.get_assets_data(h, monitor)
+            assets, data = self.get_assets_data(h, monitor)
+            if len(assets) > 0:
+                yield hazard.id, assets, data
 
     def weights(self):
         ws = []
@@ -215,7 +217,9 @@ class GroundMotionValuesGetter(HazardGetter):
         for hazard, seed in zip(self.hazard_outputs, self.seeds):
             h = hazard.output_container
             numpy.random.seed(seed)
-            yield (hazard.id,) + self.get_assets_data(h, monitor)
+            assets, data = self.get_assets_data(h, monitor)
+            if len(assets) > 0:
+                yield hazard.id, assets, data
 
     def assets_gen(self, hazard_output):
         """
