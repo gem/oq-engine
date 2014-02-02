@@ -76,9 +76,8 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        _hid, assets, curves = self.getter().next()
-        self.assertEqual([], curves)
-        self.assertEqual([], assets)
+        with self.assertRaises(StopIteration):
+            self.getter().next()
 
 
 class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
@@ -96,10 +95,8 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        _hid, assets, (gmvs, ruptures) = self.getter().next()
-        self.assertEqual([], gmvs)
-        self.assertEqual([], ruptures)
-        self.assertEqual([], assets)
+        with self.assertRaises(StopIteration):
+            self.getter().next()
 
 
 class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
@@ -119,8 +116,8 @@ class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        _hid, _assets, data = self.getter().next()
-        self.assertEqual([], data[0])  # no assets
+        with self.assertRaises(StopIteration):
+            self.getter().next()
 
 
 class GroundMotionValuesCalcGetterTestCase(unittest.TestCase):
