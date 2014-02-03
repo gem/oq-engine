@@ -28,7 +28,7 @@ from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
 @tasks.oqtask
@@ -52,29 +52,44 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
                              for imt in imts))
                   for rlz in gsims_by_rlz)
+    mon1 = LightMonitor('filtering sources', job_id, compute_hazard_curves)
+    mon2 = LightMonitor('generating ruptures', job_id, compute_hazard_curves)
+    mon3 = LightMonitor('filtering ruptures', job_id, compute_hazard_curves)
+    mon4 = LightMonitor('making contexts', job_id, compute_hazard_curves)
+    mon5 = LightMonitor('computing poes', job_id, compute_hazard_curves)
     for source in sources:
-        s_sites = source.filter_sites_by_distance_to_source(
-            hc.maximum_distance, hc.site_collection
-        ) if hc.maximum_distance else hc.site_collection
-        if s_sites is None:
-            continue
-        ruptures = list(source.iter_ruptures())
-        for rupture in ruptures:
-            r_sites = rupture.source_typology.\
-                filter_sites_by_distance_to_rupture(
-                    rupture, hc.maximum_distance, s_sites
-                ) if hc.maximum_distance else s_sites
-            if r_sites is None:
+        with mon1:
+            s_sites = source.filter_sites_by_distance_to_source(
+                hc.maximum_distance, hc.site_collection
+            ) if hc.maximum_distance else hc.site_collection
+            if s_sites is None:
                 continue
-            prob = rupture.get_probability_one_or_more_occurrences()
+        with mon2:
+            ruptures = list(source.iter_ruptures())
+        for rupture in ruptures:
+            with mon3:
+                r_sites = rupture.source_typology.\
+                    filter_sites_by_distance_to_rupture(
+                        rupture, hc.maximum_distance, s_sites
+                    ) if hc.maximum_distance else s_sites
+                if r_sites is None:
+                    continue
             for rlz, curv in curves.iteritems():
                 gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
-                sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                for imt in imts:
-                    poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                         hc.truncation_level)
-                    curv[imt] *= r_sites.expand(
-                        (1. - prob) ** poes, total_sites, placeholder=1)
+                with mon4:
+                    sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+                with mon5:
+                    for imt in imts:
+                        poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
+                                             hc.truncation_level)
+                        pno = rupture.get_probability_no_exceedance(poes)
+                        curv[imt] *= r_sites.expand(
+                            pno ** poes, total_sites, placeholder=1)
+    mon1.flush()
+    mon2.flush()
+    mon3.flush()
+    mon4.flush()
+    mon5.flush()
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
