@@ -15,10 +15,7 @@
 
 
 import decimal
-import os
 import unittest
-
-from xml.etree import ElementTree
 
 from numpy.testing import assert_allclose
 
@@ -27,6 +24,8 @@ from openquake.hazardlib import mfd
 from openquake.hazardlib import pmf
 from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
+from openquake.hazardlib.tom import PoissonTOM
+
 from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib import models as nrml_models
 
@@ -37,11 +36,6 @@ from openquake.engine.tests.utils import helpers
 
 # Test NRML to use (contains 1 of each source type).
 MIXED_SRC_MODEL = helpers.get_data_path('mixed_source_model.xml')
-
-# These 3 parameters would typically be specified in the job configuration.
-MESH_SPACING = 1  # km
-BIN_WIDTH = 1  # for Truncated GR MFDs
-AREA_SRC_DISC = 1  # area source discretization, in km
 
 
 class NrmlSourceToHazardlibTestCase(unittest.TestCase):
@@ -55,6 +49,13 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
         (cls.area, cls.point, cls.simple, cls.cmplx, cls.char_simple,
          cls.char_complex, cls.char_multi) = list(parser.parse())
+
+        # the parameters here would typically be specified in the job .ini
+        cls.investigation_time = 50.
+        cls.rupture_mesh_spacing = 1  # km
+        cls.width_of_mfd_bin = 1.  # for Truncated GR MFDs
+        cls.area_source_discretization = 1.  # km
+        cls.nrml_to_hazardlib = source_input.NrmlHazardlibConverter(cls)
 
     @property
     def _expected_point(self):
@@ -77,14 +78,15 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             name="point",
             tectonic_region_type="Stable Continental Crust",
             mfd=tgr_mfd,
-            rupture_mesh_spacing=MESH_SPACING,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=scalerel.WC1994(),
             rupture_aspect_ratio=0.5,
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0,
             location=geo.Point(-122.0, 38.0),
             nodal_plane_distribution=npd,
-            hypocenter_distribution=hd
+            hypocenter_distribution=hd,
+            temporal_occurrence_model=PoissonTOM(50.),
         )
         return point
 
@@ -118,14 +120,16 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             name="Quito",
             tectonic_region_type="Active Shallow Crust",
             mfd=incr_mfd,
-            rupture_mesh_spacing=MESH_SPACING,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=scalerel.PeerMSR(),
             rupture_aspect_ratio=1.5,
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0,
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
-            polygon=polygon, area_discretization=AREA_SRC_DISC
+            polygon=polygon,
+            area_discretization=self.area_source_discretization,
+            temporal_occurrence_model=PoissonTOM(50.),
         )
 
         return area
@@ -145,7 +149,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             name="Mount Diablo Thrust",
             tectonic_region_type="Active Shallow Crust",
             mfd=incr_mfd,
-            rupture_mesh_spacing=MESH_SPACING,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=scalerel.WC1994(),
             rupture_aspect_ratio=1.5,
             upper_seismogenic_depth=10.0,
@@ -155,7 +159,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                  geo.Point(-122.03880, 37.87710)]
             ),
             dip=45.0,
-            rake=30.0
+            rake=30.0,
+            temporal_occurrence_model=PoissonTOM(50.)
         )
 
         return simple
@@ -194,11 +199,12 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             name="Cascadia Megathrust",
             tectonic_region_type="Subduction Interface",
             mfd=tgr_mfd,
-            rupture_mesh_spacing=MESH_SPACING,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=scalerel.WC1994(),
             rupture_aspect_ratio=2.0,
             edges=edges,
-            rake=30.0
+            rake=30.0,
+            temporal_occurrence_model=PoissonTOM(50.),
         )
 
         return cmplx
@@ -217,7 +223,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             upper_seismogenic_depth=10.0,
             lower_seismogenic_depth=20.0,
             dip=45.0,
-            mesh_spacing=MESH_SPACING
+            mesh_spacing=self.rupture_mesh_spacing
         )
 
         char = source.CharacteristicFaultSource(
@@ -226,7 +232,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             tectonic_region_type="Volcanic",
             mfd=tgr_mfd,
             surface=surface,
-            rake=30.0
+            rake=30.0,
+            temporal_occurrence_model=PoissonTOM(50.),
         )
         return char
 
@@ -263,7 +270,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             ]),
         ]
         complex_surface = geo.ComplexFaultSurface.from_fault_data(
-            edges, 10
+            edges, self.rupture_mesh_spacing
         )
 
         char = source.CharacteristicFaultSource(
@@ -272,7 +279,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             tectonic_region_type="Volcanic",
             mfd=incr_mfd,
             surface=complex_surface,
-            rake=60.0
+            rake=60.0,
+            temporal_occurrence_model=PoissonTOM(50.0),
         )
         return char
 
@@ -284,7 +292,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
         surfaces = [
             geo.PlanarSurface(
-                mesh_spacing=MESH_SPACING,
+                mesh_spacing=self.rupture_mesh_spacing,
                 strike=0.0,
                 dip=90.0,
                 top_left=geo.Point(-1, 1, 21),
@@ -293,7 +301,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
                 bottom_right=geo.Point(1, -1, 59)
             ),
             geo.PlanarSurface(
-                mesh_spacing=MESH_SPACING,
+                mesh_spacing=self.rupture_mesh_spacing,
                 strike=20.0,
                 dip=45.0,
                 top_left=geo.Point(1, 1, 20),
@@ -310,15 +318,14 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             tectonic_region_type="Volcanic",
             mfd=tgr_mfd,
             surface=multi_surface,
-            rake=90.0
+            rake=90.0,
+            temporal_occurrence_model=PoissonTOM(50.0),
         )
         return char
 
     def test_point_to_hazardlib(self):
         exp = self._expected_point
-        actual = source_input.nrml_to_hazardlib(
-            self.point, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
-        )
+        actual = self.nrml_to_hazardlib(self.point)
 
         eq, msg = helpers.deep_eq(exp, actual)
 
@@ -326,9 +333,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     def test_area_to_hazardlib(self):
         exp = self._expected_area
-        actual = source_input.nrml_to_hazardlib(
-            self.area, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
-        )
+        actual = self.nrml_to_hazardlib(self.area)
 
         eq, msg = helpers.deep_eq(exp, actual)
 
@@ -336,9 +341,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     def test_simple_to_hazardlib(self):
         exp = self._expected_simple
-        actual = source_input.nrml_to_hazardlib(
-            self.simple, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
-        )
+        actual = self.nrml_to_hazardlib(self.simple)
 
         eq, msg = helpers.deep_eq(exp, actual)
 
@@ -346,9 +349,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     def test_complex_to_hazardlib(self):
         exp = self._expected_complex
-        actual = source_input.nrml_to_hazardlib(
-            self.cmplx, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
-        )
+        actual = self.nrml_to_hazardlib(self.cmplx)
 
         eq, msg = helpers.deep_eq(exp, actual)
 
@@ -356,9 +357,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     def test_characteristic_simple(self):
         exp = self._expected_char_simple
-        actual = source_input.nrml_to_hazardlib(
-            self.char_simple, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
-        )
+        actual = self.nrml_to_hazardlib(self.char_simple)
 
         eq, msg = helpers.deep_eq(exp, actual)
 
@@ -366,19 +365,13 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
 
     def test_characteristic_complex(self):
         exp = self._expected_char_complex
-        actual = source_input.nrml_to_hazardlib(
-            self.char_complex, 10, BIN_WIDTH, AREA_SRC_DISC
-        )
-
+        actual = self.nrml_to_hazardlib(self.char_complex)
         eq, msg = helpers.deep_eq(exp, actual)
-
         self.assertTrue(eq, msg)
 
     def test_characteristic_multi(self):
         exp = self._expected_char_multi
-        actual = source_input.nrml_to_hazardlib(
-            self.char_multi, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
-        )
+        actual = self.nrml_to_hazardlib(self.char_multi)
 
         eq, msg = helpers.deep_eq(exp, actual)
 
@@ -416,8 +409,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         )
 
         with self.assertRaises(Exception) as ar:
-            source_input.nrml_to_hazardlib(area_src, MESH_SPACING, BIN_WIDTH,
-                                           AREA_SRC_DISC)
+            self.nrml_to_hazardlib(area_src)
         expected_error = (
             "The following error has occurred with source id='1', "
             "name='Quito': Could not create geometry because of errors while "
@@ -431,6 +423,9 @@ class AreaToPointsTestCase(unittest.TestCase):
     Tests for
     :func:`openquake.engine.input.source.area_to_point_sources`.
     """
+    rupture_mesh_spacing = 1  # km
+    area_source_discretization = 1.  # km
+
     def test_area_with_tgr_mfd(self):
         trunc_mfd = mfd.TruncatedGRMFD(
             a_val=2.1, b_val=4.2, bin_width=0.1, min_mag=6.55, max_mag=8.91
@@ -452,14 +447,16 @@ class AreaToPointsTestCase(unittest.TestCase):
             name="source A",
             tectonic_region_type="Active Shallow Crust",
             mfd=trunc_mfd,
-            rupture_mesh_spacing=MESH_SPACING,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=scalerel.PeerMSR(),
             rupture_aspect_ratio=1.0,
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0,
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
-            polygon=polygon, area_discretization=AREA_SRC_DISC
+            polygon=polygon,
+            area_discretization=self.area_source_discretization,
+            temporal_occurrence_model=PoissonTOM(50.),
         )
         actual = list(source_input.area_to_point_sources(area, 10))
         self.assertEqual(len(actual), 96)  # expected 96 points
@@ -490,14 +487,16 @@ class AreaToPointsTestCase(unittest.TestCase):
             name="source A",
             tectonic_region_type="Active Shallow Crust",
             mfd=incr_mfd,
-            rupture_mesh_spacing=MESH_SPACING,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=scalerel.PeerMSR(),
             rupture_aspect_ratio=1.0,
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0,
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
-            polygon=polygon, area_discretization=AREA_SRC_DISC
+            polygon=polygon,
+            area_discretization=self.area_source_discretization,
+            temporal_occurrence_model=PoissonTOM(50.0),
         )
         actual = list(source_input.area_to_point_sources(area, 10))
         self.assertEqual(len(actual), 96)  # expected 96 points

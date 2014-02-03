@@ -39,7 +39,6 @@ import numpy.random
 from django.db import transaction
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf
-from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.imt import from_string
 
 from openquake.engine import writer
@@ -86,10 +85,8 @@ def compute_ses(job_id, src_seeds, ses_coll):
     :param ses_coll:
         an instance of :class:`openquake.engine.db.models.SESCollection`
     """
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
     rnd = random.Random()
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
-    tom = PoissonTOM(hc.investigation_time)
     ruptures = []
 
     mon1 = LightMonitor('generating ruptures', job_id, compute_ses)
@@ -99,7 +96,8 @@ def compute_ses(job_id, src_seeds, ses_coll):
     for src, seed in src_seeds:
         rnd.seed(seed)
         with mon1:
-            rupts = list(src.iter_ruptures(tom))
+            rupts = list(src.iter_ruptures())
+
         for ses in all_ses:
             numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
             for i, r in enumerate(rupts):
