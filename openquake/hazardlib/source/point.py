@@ -190,7 +190,7 @@ class PointSource(ParametricSeismicSource):
     def count_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.count_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         return (len(self.get_annual_occurrence_rates()) *
                 len(self.nodal_plane_distribution.data) *

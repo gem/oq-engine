@@ -154,7 +154,7 @@ class SimpleFaultSource(ParametricSeismicSource):
     def count_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.count_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
