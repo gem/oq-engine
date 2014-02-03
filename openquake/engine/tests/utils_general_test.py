@@ -24,7 +24,7 @@ Test related to code in openquake/utils/general.py
 import unittest
 
 from openquake.engine.utils import general
-from openquake.engine.utils.general import block_splitter, BlockSplitter
+from openquake.engine.utils.general import block_splitter, SequenceSplitter
 
 
 class SingletonTestCase(unittest.TestCase):
@@ -93,7 +93,7 @@ class MemoizerTestCase(unittest.TestCase):
         self.assertEqual(self.counter, 1)
 
 
-class BlockSplitterTestCase(unittest.TestCase):
+class SequenceSplitterTestCase(unittest.TestCase):
     """Tests for :function:`openquake.engine.utils.general.block_splitter`."""
 
     DATA = range(10)
@@ -153,7 +153,7 @@ class BlockSplitterTestCase(unittest.TestCase):
 
     def test_weighted_block_splitter(self):
         # try to generate 4 blocks
-        split_weight = BlockSplitter(4).split_on_max_weight
+        split_weight = SequenceSplitter(4).split_on_max_weight
         blocks = split_weight(
             [('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
              ('f', 5), ('g', 30), ('h', 17), ('i', 25)])

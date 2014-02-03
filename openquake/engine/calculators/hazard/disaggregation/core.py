@@ -229,7 +229,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         # then distribute tasks for disaggregation histogram computation
         for lt_rlz in realizations:
             path = tuple(lt_rlz.sm_lt_path)
-            sources = general.WeightedSequence.chain(
+            sources = general.WeightedSequence.merge(
                 self.source_blocks_per_ltpath[path])
             for sites in self.block_split(self.hc.site_collection):
                 yield self.job.id, sites, sources, lt_rlz, ltp

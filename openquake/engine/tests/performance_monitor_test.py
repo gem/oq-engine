@@ -1,5 +1,6 @@
 import os
 import mock
+import time
 import unittest
 
 from nose.plugins.attrib import attr
@@ -7,7 +8,7 @@ from nose.plugins.attrib import attr
 import uuid
 from datetime import datetime
 from openquake.engine.performance import \
-    PerformanceMonitor, EnginePerformanceMonitor
+    PerformanceMonitor, EnginePerformanceMonitor, LightMonitor
 from openquake.engine.db.models import Performance
 from openquake.engine import engine
 
@@ -30,6 +31,14 @@ class TestCase(unittest.TestCase):
             for _ in range(1000 * 1000):
                 ls.append(range(50))  # 50 million of integers
         self._check_result(pmon)
+
+    def test_light_monitor(self):
+        mon = LightMonitor('test', 1)
+        with mon:
+            time.sleep(.1)
+        with mon:
+            time.sleep(.1)
+        self.assertGreater(mon.duration, .2)
 
     # Skip the following two tests as they always fail on Mac
     @unittest.skip

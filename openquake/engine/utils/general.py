@@ -32,7 +32,16 @@ class WeightedSequence(collections.MutableSequence):
     Adding items automatically increases the weight.
     """
     @classmethod
-    def chain(cls, ws_list):
+    def merge(cls, ws_list):
+        """
+        Merge a set of WeightedSequence objects.
+
+        :param ws_list:
+            a sequence of :class:
+            `openquake.engine.utils.general.WeightedSequence` instances
+        :returns:
+            a `openquake.engine.utils.general.WeightedSequence` instance
+        """
         return sum(ws_list, cls())
 
     def __init__(self):
@@ -40,18 +49,34 @@ class WeightedSequence(collections.MutableSequence):
         self.weight = 0
 
     def __getitem__(self, sliceobj):
+        """
+        Return an item or a slice
+        """
         return self._seq[sliceobj]
 
     def __setitem__(self, i, v):
+        """
+        Modify the sequence
+        """
         self._seq[i] = v
 
     def __delitem__(self, sliceobj):
+        """
+        Remove an item from the sequence
+        """
         del self._seq[sliceobj]
 
     def __len__(self):
+        """
+        The length of the sequence
+        """
         return len(self._seq)
 
     def __add__(self, other):
+        """
+        Add two weighted sequences and return a new WeightedSequence
+        with weight equal to the sum of the weights.
+        """
         new = self.__class__()
         new._seq.extend(self._seq)
         new._seq.extend(other._seq)
@@ -59,14 +84,22 @@ class WeightedSequence(collections.MutableSequence):
         return new
 
     def insert(self, i, (item, weight)):
+        """
+        Insert an item with the given weight in the sequence
+        """
         self._seq.insert(i, item)
         self.weight += weight
 
     def __cmp__(self, other):
-        """Ensure ordering by reverse weight"""
+        """
+        Ensure ordering by reverse weight
+        """
         return -cmp(self.weight, other.weight)
 
     def __repr__(self):
+        """
+        String representation of the sequence, including the weight
+        """
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
 
@@ -108,12 +141,19 @@ def str2bool(value):
 def ceil(a, b):
     """
     Divide a / b and return the biggest integer close to the quotient.
+
+    :param a:
+        a number
+    :param b:
+        a positive number
+    :returns:
+        the biggest integer close to the quotient
     """
     assert b > 0, b
     return int(math.ceil(float(a) / b))
 
 
-class BlockSplitter(object):
+class SequenceSplitter(object):
     """
     A splitter object with methods .split (to split regular sequences)
     and split_on_max_weight (to split sequences of pairs [(item, weight),...])
@@ -123,18 +163,26 @@ class BlockSplitter(object):
     that the blocks never exceed it, so more blocks could be generated.
     """
     def __init__(self, num_blocks, max_block_size=None):
+        """
+        :param int num_blocks:
+            the suggested number of blocks to generate
+        :param int max_block_size:
+            if not None, the blocks cannot exceed this value, at the cost of
+            generating more blocks than specified in num_blocks.
+        """
         assert num_blocks > 0, num_blocks
         assert max_block_size is None or max_block_size >= 1, max_block_size
         self.num_blocks = num_blocks
         self.max_block_size = max_block_size
         self.max_weight = None
 
-    def split_on_max_weight(self, sequence):
+    def split_on_max_weight(self, item_weight_sequence):
         """
-        Try to split a sequence in ``num_blocks`` blocks. Return a list
-        of :class:`openquake.engine.utils.general.WeightedSequence` objects.
+        Try to split a sequence of pairs (item, weight) in ``num_blocks``
+        blocks. Return a list of :class:
+        `openquake.engine.utils.general.WeightedSequence` objects.
         """
-        return list(self._split_on_max_weight(sequence))
+        return list(self._split_on_max_weight(item_weight_sequence))
 
     def split(self, sequence):
         """
