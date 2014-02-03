@@ -74,6 +74,7 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
                     ) if hc.maximum_distance else s_sites
                 if r_sites is None:
                     continue
+            prob = rupture.get_probability_one_or_more_occurrences()
             for rlz, curv in curves.iteritems():
                 gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
                 with mon4:
@@ -82,9 +83,8 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
                     for imt in imts:
                         poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                              hc.truncation_level)
-                        pno = rupture.get_probability_no_exceedance(poes)
                         curv[imt] *= r_sites.expand(
-                            pno ** poes, total_sites, placeholder=1)
+                            (1 - prob) ** poes, total_sites, placeholder=1)
     mon1.flush()
     mon2.flush()
     mon3.flush()
