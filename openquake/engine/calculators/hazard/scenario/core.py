@@ -134,8 +134,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         attribute self.rupture.
         """
         nrml = RuptureModelParser(self.hc.inputs['rupture_model']).parse()
-        rms = self.job.hazard_calculation.rupture_mesh_spacing
-        self.rupture = source.nrml_to_hazardlib(nrml, rms, None, None)
+        self.rupture = source.NrmlHazardlibConverter(self.hc)(nrml)
 
     def pre_execute(self):
         """

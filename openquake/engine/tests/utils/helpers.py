@@ -36,7 +36,7 @@ import tempfile
 import textwrap
 import time
 
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
@@ -417,7 +417,7 @@ def _deep_eq(a, b, decimal, exclude=None):
         assert len(a) == len(b), (
             "Dicts %(a)s and %(b)s do not have the same length."
             " Actual lengths: %(len_a)s and %(len_b)s") % dict(
-                a=a, b=b, len_a=len(a), len_b=len(b))
+            a=a, b=b, len_a=len(a), len_b=len(b))
 
         for key in a:
             if not key in exclude:
@@ -738,7 +738,7 @@ def create_ses_ruptures(job, ses_collection, num):
             tag='rlz=%d|ses=%d|src=test|i=%d' % (rlz, ses.ordinal, i),
             magnitude=1 + i * 10. / float(num),
             hypocenter=Point(0, 0, 0.1).wkt2d,
-            rupture=ProbabilisticRupture(
+            rupture=ParametricProbabilisticRupture(
                 mag=1 + i * 10. / float(num), rake=0,
                 tectonic_region_type="test region type",
                 hypocenter=Point(0, 0, 0.1),
