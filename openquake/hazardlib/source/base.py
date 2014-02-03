@@ -26,7 +26,7 @@ class BaseSeismicSource(object):
     """
     Base class representing a seismic source, that is a structure generating
     earthquake ruptures.
-    
+
     :param source_id:
         Some (numeric or literal) source identifier. Supposed to be unique
         within the source model.
@@ -43,7 +43,6 @@ class BaseSeismicSource(object):
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
-
 
     @abc.abstractmethod
     def iter_ruptures(self):
@@ -162,8 +161,8 @@ class BaseSeismicSource(object):
 class ParametricSeismicSource(BaseSeismicSource):
     """
     Parametric Seismic Source generates earthquake ruptures from source
-    parameters, and associated probabilities of occurrence are defined through a
-    magnitude frequency distribution and a temporal occurrence model.
+    parameters, and associated probabilities of occurrence are defined through
+    a magnitude frequency distribution and a temporal occurrence model.
 
     :param mfd:
         Magnitude-Frequency distribution for the source.

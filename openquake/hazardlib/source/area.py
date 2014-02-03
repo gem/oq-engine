@@ -135,7 +135,7 @@ class AreaSource(PointSource):
     def count_ruptures(self):
         """
         See
-        :meth:`openquake.hazardlib.source.base.SeismicSource.count_ruptures`
+        :meth:`openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`
         for description of parameters and return value.
         """
         polygon_mesh = self.polygon.discretize(self.area_discretization)

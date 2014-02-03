@@ -130,7 +130,7 @@ class ComplexFaultSource(ParametricSeismicSource):
     def count_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.count_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing
