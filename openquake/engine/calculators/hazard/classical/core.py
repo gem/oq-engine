@@ -84,7 +84,7 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
                                              hc.truncation_level)
                         pno = rupture.get_probability_no_exceedance(poes)
                         curv[imt] *= r_sites.expand(
-                            pno ** poes, total_sites, placeholder=1)
+                            pno, total_sites, placeholder=1)
     mon1.flush()
     mon2.flush()
     mon3.flush()
