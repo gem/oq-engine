@@ -404,24 +404,6 @@ def deep_eq(a, b, decimal=7, exclude=None):
     return True, ''
 
 
-def assert_deep_equal(a, b):
-    """
-    """
-    if isinstance(a, collections.Iterable) and isinstance(
-            b, collections.Iterable):
-        for x, y in zip(a, b):
-            assert_deep_equal(x, y)
-    elif isinstance(a, collections.Iterable) and not isinstance(
-            b, collections.Iterable):
-        raise AssertionError('a is iterable and b is not')
-
-    elif not isinstance(a, collections.Iterable) and isinstance(
-            b, collections.Iterable):
-        raise AssertionError('b is iterable and a is not')
-    else:
-        assert a == b, '%s != %s' % (a, b)
-
-
 def _deep_eq(a, b, decimal, exclude=None):
     """Do the actual deep comparison. If the two items up for comparison are
     not equal, a :exception:`AssertionError` is raised (to
