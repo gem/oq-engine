@@ -54,3 +54,16 @@ class PoissonTOMTestCase(unittest.TestCase):
         mean = sum(tom.sample_number_of_occurrences(rate)
                    for i in xrange(num_samples)) / float(num_samples)
         self.assertAlmostEqual(mean, rate * time_span, delta=1e-3)
+
+    def test_get_probability_no_exceedance(self):
+        time_span = 50.
+        rate = 0.01
+        poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
+        tom = PoissonTOM(time_span)
+        pne = tom.get_probability_no_exceedance(rate, poes)
+        numpy.testing.assert_allclose(
+            pne,
+            numpy.array([[0.6376282, 0.6703200, 0.7046881],
+                         [0.7408182, 0.7788008, 0.8187308]])
+        )
+        

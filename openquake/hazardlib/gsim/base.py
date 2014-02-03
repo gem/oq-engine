@@ -354,8 +354,8 @@ class GroundShakingIntensityModel(object):
         :param rupture:
             Instance of
             :class:`~openquake.hazardlib.source.rupture.Rupture` (or
-            its subclass
-            :class:`~openquake.hazardlib.source.rupture.ProbabilisticRupture`).
+            subclass of
+            :class:`~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`).
 
         :returns:
             Tuple of three items: sites context, rupture context and

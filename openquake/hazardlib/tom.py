@@ -22,7 +22,10 @@ import math
 import numpy
 import scipy.stats
 
+from openquake.hazardlib.slots import with_slots
 
+
+@with_slots
 class PoissonTOM(object):
     """
     Poissonian temporal occurrence model.
@@ -32,6 +35,8 @@ class PoissonTOM(object):
     :raises ValueError:
         If ``time_span`` is not positive.
     """
+    __slots__ = ['time_span']
+
     def __init__(self, time_span):
         if time_span <= 0:
             raise ValueError('time_span must be positive')
@@ -75,3 +80,34 @@ class PoissonTOM(object):
             time span.
         """
         return numpy.random.poisson(occurrence_rate * self.time_span)
+
+    def get_probability_no_exceedance(self, occurrence_rate, poes):
+        """
+        Compute and return, for a number of ground motion levels and sites,
+        the probability that a rupture with annual occurrence rate given by
+        ``occurrence_rate`` and able to cause ground motion values higher than
+        a given level at a site with probability ``poes``, does not cause any
+        exceedance in the time window specified by the ``time_span`` parameter
+        given in the constructor.
+
+        The probability is computed using the following formula ::
+
+            (1 - e ** (-occurrence_rate * time_span)) ** poes
+
+        :param occurrence_rate:
+            The average number of events per year.
+        :param poes:
+            2D numpy array containing conditional probabilities the the a
+            rupture occurrence causes a ground shaking value exceeding a
+            ground motion level at a site. First dimension represent sites,
+            second dimension intensity measure levels. ``poes`` can be obtained
+            calling the :meth:`method
+            <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>`.
+        :return:
+            2D numpy array containing probabilities of no exceedance. First
+            dimension represents sites, second dimensions intensity measure
+            levels.
+        """
+        p = self.get_probability_one_or_more_occurrences(occurrence_rate)
+
+        return (1 - p) ** poes

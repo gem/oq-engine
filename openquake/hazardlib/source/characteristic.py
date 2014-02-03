@@ -19,15 +19,15 @@ Module :mod:`openquake.hazardlib.source.characteristic` defines
 """
 import numpy
 
-from openquake.hazardlib.source.base import SeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import NodalPlane
-from openquake.hazardlib.source.rupture import ProbabilisticRupture
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.slots import with_slots
 
 
 @with_slots
-class CharacteristicFaultSource(SeismicSource):
+class CharacteristicFaultSource(ParametricSeismicSource):
     """
     Characteristic source typology represents seismicity occuring on a generic
     fault surface with seismic events rupturing the entire fault surface
@@ -44,21 +44,21 @@ class CharacteristicFaultSource(SeismicSource):
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
 
-    See also :class:`openquake.hazardlib.source.base.SeismicSource` for
+    See also :class:`openquake.hazardlib.source.base.ParametricSeismicSource` for
     description of other parameters.
 
     Note that a ``CharacteristicFaultSource`` does not need any mesh spacing,
     magnitude scaling relationship, and aspect ratio, therefore the constructor
     set these parameters to ``None``.
     """
-    __slots__ = SeismicSource.__slots__ + (
-        'rupture_mesh_spacing magnitude_scaling_relationship '
-        'rupture_aspect_ratio surface rake').split()
+    __slots__ = ParametricSeismicSource.__slots__ + (
+        'surface rake').split()
 
     def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, surface, rake):
+                 mfd, temporal_occurrence_model, surface, rake):
         super(CharacteristicFaultSource, self).__init__(
-            source_id, name, tectonic_region_type, mfd, None, None, None
+            source_id, name, tectonic_region_type, mfd, None, None, None,
+            temporal_occurrence_model
         )
         NodalPlane.check_rake(rake)
         self.surface = surface
@@ -80,7 +80,7 @@ class CharacteristicFaultSource(SeismicSource):
         ``dilation`` parameter.
 
         See :meth:`superclass method
-        <openquake.hazardlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        <openquake.hazardlib.source.base.BaseSeismicSource.get_rupture_enclosing_polygon>`
         for parameter and return value definition.
         """
         west, east, north, south = self.surface.get_bounding_box()
@@ -91,20 +91,20 @@ class CharacteristicFaultSource(SeismicSource):
 
         return poly.dilate(dilation)
 
-    def iter_ruptures(self, temporal_occurrence_model):
+    def iter_ruptures(self):
         """
         See :meth:
-        `openquake.hazardlib.source.base.SeismicSource.iter_ruptures`.
+        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
 
         For each magnitude value in the given MFD, return an earthquake
         rupture with a surface always equal to the given surface.
         """
         hypocenter = self.surface.get_middle_point()
         for (mag, occurrence_rate) in self.get_annual_occurrence_rates():
-            yield ProbabilisticRupture(
+            yield ParametricProbabilisticRupture(
                 mag, self.rake, self.tectonic_region_type, hypocenter,
                 self.surface, type(self), occurrence_rate,
-                temporal_occurrence_model
+                self.temporal_occurrence_model
             )
 
     def count_ruptures(self):

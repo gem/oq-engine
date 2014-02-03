@@ -23,7 +23,7 @@ from openquake.hazardlib import imt
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.hazard_curve import hazard_curves_poissonian
+from openquake.hazardlib.calc.hazard_curve import hazard_curves
 
 
 class HazardCurvesTestCase(unittest.TestCase):
@@ -32,8 +32,8 @@ class HazardCurvesTestCase(unittest.TestCase):
             self.probability = probability
             self.tectonic_region_type = tectonic_region_type
 
-        def get_probability_one_or_more_occurrences(self):
-            return self.probability
+        def get_probability_no_exceedance(self, poes):
+            return (1 - self.probability) ** numpy.array(poes)
 
     class FakeSource(object):
         def __init__(self, source_id, ruptures, time_span):
@@ -41,13 +41,11 @@ class HazardCurvesTestCase(unittest.TestCase):
             self.time_span = time_span
             self.ruptures = ruptures
 
-        def iter_ruptures(self, tom):
-            assert tom.time_span is self.time_span
-            assert isinstance(tom, PoissonTOM)
+        def iter_ruptures(self):
             return iter(self.ruptures)
 
     class FailSource(FakeSource):
-        def iter_ruptures(self, tom):
+        def iter_ruptures(self):
             raise ValueError('Something bad happened')
 
     class FakeGSIM(object):
@@ -107,9 +105,8 @@ class HazardCurvesTestCase(unittest.TestCase):
         site1_pgd_poe_expected = [0.16146619, 0.1336553]
         site2_pgd_poe_expected = [0.15445961, 0.13437589]
 
-        curves = hazard_curves_poissonian(self.sources, self.sites, self.imts,
-                                          self.time_span, self.gsims,
-                                          self.truncation_level)
+        curves = hazard_curves(self.sources, self.sites, self.imts,
+                               self.gsims, self.truncation_level)
 
         self.assertIsInstance(curves, dict)
         self.assertEqual(set(curves.keys()), set([imt.PGA(), imt.PGD()]))
@@ -142,9 +139,8 @@ class HazardCurvesTestCase(unittest.TestCase):
         sources = iter([self.source1, fail_source])
 
         with self.assertRaises(RuntimeError) as ae:
-            hazard_curves_poissonian(sources, self.sites, self.imts,
-                                     self.time_span, self.gsims,
-                                     self.truncation_level)
+            hazard_curves(sources, self.sites, self.imts, self.gsims,
+                          self.truncation_level)
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
         )
@@ -191,6 +187,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                 magnitude_scaling_relationship=
                 openquake.hazardlib.scalerel.PeerMSR(),
                 rupture_aspect_ratio=2,
+                temporal_occurrence_model=PoissonTOM(1.),
                 rupture_mesh_spacing=1.0,
                 location=Point(10, 10)
             ),
@@ -211,6 +208,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                 magnitude_scaling_relationship=
                 openquake.hazardlib.scalerel.PeerMSR(),
                 rupture_aspect_ratio=2,
+                temporal_occurrence_model=PoissonTOM(1.),
                 rupture_mesh_spacing=1.0,
                 location=Point(10, 11)
             ),
@@ -224,7 +222,6 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
-        time_span = 1.0
         imts = {openquake.hazardlib.imt.PGA(): [0.1, 0.5, 1.3]}
 
         from openquake.hazardlib.calc import filters
@@ -234,8 +231,8 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         rupture_site_filter = self.SitesCounterRuptureFilter(
             filters.rupture_site_distance_filter(30)
         )
-        hazard_curves_poissonian(
-            iter(sources), sitecol, imts, time_span, gsims, truncation_level,
+        hazard_curves(
+            iter(sources), sitecol, imts, gsims, truncation_level,
             source_site_filter=source_site_filter,
             rupture_site_filter=rupture_site_filter
         )

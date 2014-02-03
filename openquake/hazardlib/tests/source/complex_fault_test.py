@@ -49,7 +49,8 @@ class ComplexFaultSourceSimpleGeometryIterRupturesTestCase(
             source.source_id, source.name, source.tectonic_region_type,
             source.mfd, source.rupture_mesh_spacing,
             source.magnitude_scaling_relationship, source.rupture_aspect_ratio,
-            [top_edge, bottom_edge], source.rake
+            source.temporal_occurrence_model, [top_edge, bottom_edge],
+            source.rake
         )
         assert_pickleable(cfs)
         return cfs
@@ -62,13 +63,14 @@ class ComplexFaultSourceIterRupturesTestCase(
         source_id = name = 'test-source'
         trt = self.TRT
         rake = self.RAKE
+        tom = self.TOM
         magnitude_scaling_relationship = PeerMSR()
         rupture_aspect_ratio = aspect_ratio
         edges = [Line([Point(*coords) for coords in edge])
                  for edge in edges]
         cfs = ComplexFaultSource(
             source_id, name, trt, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio,
+            magnitude_scaling_relationship, rupture_aspect_ratio, tom,
             edges, rake
         )
         assert_pickleable(cfs)
@@ -272,7 +274,7 @@ class ComplexFaultSourceRupEnclPolyTestCase(
             sf.source_id, sf.name, sf.tectonic_region_type,
             sf.mfd, sf.rupture_mesh_spacing,
             sf.magnitude_scaling_relationship, sf.rupture_aspect_ratio,
-            edges, sf.rake
+            sf.temporal_occurrence_model, edges, sf.rake
         )
 
 

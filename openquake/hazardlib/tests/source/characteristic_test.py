@@ -48,6 +48,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
             name=self.NAME,
             tectonic_region_type=self.TRT,
             mfd=EvenlyDiscretizedMFD(self.MIN_MAG, self.BIN_WIDTH, self.RATES),
+            temporal_occurrence_model=self.TOM,
             surface=PlanarSurface(self.MESH_SPACING, self.STRIKE, self.DIP,
                                   points[0], points[1], points[3], points[2]),
             rake=self.RAKE
@@ -80,7 +81,7 @@ class CharacteristicFaultSourceIterRuptures(_BaseFaultSourceTestCase):
 
     def test(self):
         source = self._make_source()
-        ruptures = [rup for rup in source.iter_ruptures(self.TOM)]
+        ruptures = [rup for rup in source.iter_ruptures()]
 
         self.assertTrue(len(ruptures) == source.count_ruptures())
 

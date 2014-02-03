@@ -40,7 +40,7 @@ def stochastic_event_set_poissonian(
 
     :param sources:
         An iterator of seismic sources objects (instances of subclasses
-        of :class:`~openquake.hazardlib.source.base.SeismicSource`).
+        of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
     :param time_span:
         An investigation period for Poissonian temporal occurrence model,
         floating point number in years.
