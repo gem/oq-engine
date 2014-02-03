@@ -32,7 +32,7 @@ from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
 @tasks.oqtask
-def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
+def compute_hazard_curves(job_id, sources, gsims_by_rlz):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -42,8 +42,6 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
         ID of the currently running job
     :param sources:
         a block of source objects
-    :param tom:
-        a :class:`openquake.hazardlib.tom.PoissonTOM` instance
     :param gsims_by_rlz:
         a dictionary of gsim dictionaries, one for each realization
     """
@@ -67,7 +65,7 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
             if s_sites is None:
                 continue
         with mon2:
-            ruptures = list(source.iter_ruptures(tom))
+            ruptures = list(source.iter_ruptures())
         for rupture in ruptures:
             with mon3:
                 r_sites = rupture.source_typology.\
@@ -76,7 +74,6 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
                     ) if hc.maximum_distance else s_sites
                 if r_sites is None:
                     continue
-            prob = rupture.get_probability_one_or_more_occurrences()
             for rlz, curv in curves.iteritems():
                 gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
                 with mon4:
@@ -85,8 +82,9 @@ def compute_hazard_curves(job_id, sources, tom, gsims_by_rlz):
                     for imt in imts:
                         poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                              hc.truncation_level)
+                        pno = rupture.get_probability_no_exceedance(poes)
                         curv[imt] *= r_sites.expand(
-                            (1. - prob) ** poes, total_sites, placeholder=1)
+                            pno ** poes, total_sites, placeholder=1)
     mon1.flush()
     mon2.flush()
     mon3.flush()
