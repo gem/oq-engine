@@ -19,6 +19,8 @@
 
 """Utility functions related to splitting work into tasks."""
 
+import sys
+import traceback
 from functools import wraps
 
 from celery.task.sets import TaskSet
@@ -63,6 +65,9 @@ def map_reduce(task, task_args, agg, acc):
     else:
         taskset = TaskSet(tasks=map(task.subtask, task_args))
         for result in taskset.apply_async():
+            # TODO: improve this
+            if isinstance(result, str):
+                raise SystemExit(result)
             acc = agg(acc, result)
     return acc
 
@@ -128,6 +133,10 @@ def oqtask(task_func):
                 calc_id=calculation.id)
             try:
                 return task_func(*args)
+            except:
+                etype, exc, tb = sys.exc_info()
+                tb_str = ''.join(traceback.format_tb(tb))
+                return '%s: %s\n%s' % (etype.__name__, exc, tb_str)
             finally:
                 CacheInserter.flushall()
                 # the task finished, we can remove from the performance
