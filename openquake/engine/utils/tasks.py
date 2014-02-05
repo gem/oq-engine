@@ -65,7 +65,6 @@ def map_reduce(task, task_args, agg, acc):
     else:
         taskset = TaskSet(tasks=map(task.subtask, task_args))
         for result, exctype in taskset.apply_async():
-            # TODO: improve this
             if exctype:
                 raise exctype(result)
             acc = agg(acc, result)
