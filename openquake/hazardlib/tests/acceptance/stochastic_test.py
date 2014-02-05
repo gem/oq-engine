@@ -154,14 +154,14 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # probability of one, 2, 3 rupture occurrences is computed and
         # compared with the expected value
         numpy.random.seed(123)
-        num_sess = 10
+        num_sess = 10000
         sess = [stochastic_event_set([self.np_src]) for i in range(num_sess)]
 
         # loop over ses. For each ses count number of rupture
         # occurrences (for each magnitude)
         n_rups1 = {}
         n_rups2 = {}
-        for ses in sess:
+        for i, ses in enumerate(sess):
             n_rups1[i] = 0
             n_rups2[i] = 0
             for rup in ses:
@@ -172,9 +172,9 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
         # for each ses, count the number of times the rupture occures 0, 1, or
         # 2 times, and then normalize by the total number of ses generated.
-        p_rup1_0occ = 0
-        p_rup1_1occ = 0
-        for n in n_rups1.keys():
+        p_rup1_0occ = 0.
+        p_rup1_1occ = 0.
+        for n in n_rups1.values():
             if n == 0:
                 p_rup1_0occ += 1
             if n == 1:
@@ -182,10 +182,10 @@ class StochasticEventSetTestCase(unittest.TestCase):
         p_rup1_0occ /= num_sess
         p_rup1_1occ /= num_sess
 
-        p_rup2_0occ = 0
-        p_rup2_1occ = 0
-        p_rup2_2occ = 0
-        for n in n_rups1.keys():
+        p_rup2_0occ = 0.
+        p_rup2_1occ = 0.
+        p_rup2_2occ = 0.
+        for n in n_rups2.values():
             if n == 0:
                 p_rup2_0occ += 1
             if n == 1:
@@ -196,8 +196,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
         p_rup2_1occ /= num_sess
         p_rup2_2occ /= num_sess
 
-        self.assertAlmostEqual(p_rup1_0occ, 0.7)
-        self.assertAlmostEqual(p_rup1_1occ, 0.3)
-        self.assertAlmostEqual(p_rup2_0occ, 0.7)
-        self.assertAlmostEqual(p_rup2_1occ, 0.2)
-        self.assertAlmostEqual(p_rup2_2occ, 0.1)
+        self.assertAlmostEqual(p_rup1_0occ, 0.7, places=2)
+        self.assertAlmostEqual(p_rup1_1occ, 0.3, places=2)
+        self.assertAlmostEqual(p_rup2_0occ, 0.7, places=2)
+        self.assertAlmostEqual(p_rup2_1occ, 0.2, places=2)
+        self.assertAlmostEqual(p_rup2_2occ, 0.1, places=2)
