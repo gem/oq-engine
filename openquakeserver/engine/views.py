@@ -9,19 +9,21 @@ import urlparse
 import sys
 import traceback
 
+from xml.etree import ElementTree as etree
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.http import HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+
 from openquake import nrmllib
 from openquake.engine import engine as oq_engine
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
-from xml.etree import ElementTree as etree
 
-from engine import tasks
+from engine import tasks, executor
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -153,10 +155,11 @@ def run_hazard_calc(request):
         raise
 
     hc = job.hazard_calculation
-    tasks.run_calc.apply_async(
-        ('hazard', hc.id, temp_dir),
-        dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
-             dbname=request.POST['database']))
+    executor.submit(
+        tasks.run_calc, 'hazard', hc.id, temp_dir,
+        callback_url=callback_url,
+        foreign_calc_id=foreign_calc_id,
+        dbname=request.POST['database'])
 
     try:
         response_data = _get_haz_calc_info(hc.id)
@@ -385,10 +388,11 @@ def run_risk_calc(request):
             create_detect_job_file("job.ini", "job_risk.ini"))
 
         rc = job.risk_calculation
-        tasks.run_calc.apply_async(
-            ('risk', rc.id, temp_dir),
-            dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
-                 dbname=request.POST['database']))
+        executor.submit(
+            tasks.run_calc, 'risk', rc.id, temp_dir,
+            callback_url=callback_url,
+            foreign_calc_id=foreign_calc_id,
+            dbname=request.POST['database'])
     except Exception:
         etype, exc, tb = sys.exc_info()
         einfo = "".join(traceback.format_tb(tb))

@@ -11,7 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import RequestFactory
 from django.utils import unittest
 
-from engine import views
+from engine import views, executor
 from engine import _test_utils as utils
 
 FakeOutput = namedtuple('FakeOutput', 'id, display_name, output_type')
@@ -531,17 +531,16 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         )
 
         try:
-            # For `apply_async` mock function. See below.
-            aa_call_data = dict(count=0, args=None)
+            executor_call_data = dict(count=0, args=None)
 
             with multi_mock:
                 multi_mock['mkdtemp'].return_value = temp_dir
 
-                def apply_async(*args):
-                    aa_call_data['args'] = args
-                    aa_call_data['count'] += 1
+                def submit(func, *args, **kwargs):
+                    executor_call_data['args'] = (args, kwargs)
+                    executor_call_data['count'] += 1
 
-                multi_mock['run_task'].apply_async = apply_async
+                executor.submit = submit
 
                 fake_job = FakeJob(
                     'pending', FakeUser(1), FakeCalc(666, 'Fake Calc Desc'),
@@ -566,7 +565,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
                      {'foreign_calc_id': None,
                       'dbname': 'platform',
                       'callback_url': None})},
-                aa_call_data
+                executor_call_data
             )
 
         finally:
@@ -620,17 +619,16 @@ class RunRiskCalcTestCase(BaseViewTestCase):
         )
 
         try:
-            # For `apply_async` mock function. See below.
-            aa_call_data = dict(count=0, args=None)
+            executor_call_data = dict(count=0, args=None)
 
             with multi_mock:
                 multi_mock['mkdtemp'].return_value = temp_dir
 
-                def apply_async(*args):
-                    aa_call_data['args'] = args
-                    aa_call_data['count'] += 1
+                def submit(func, *args, **kwargs):
+                    executor_call_data['args'] = (args, kwargs)
+                    executor_call_data['count'] += 1
 
-                multi_mock['run_task'].apply_async = apply_async
+                executor.submit = submit
 
                 fake_job = FakeJob(
                     'pending', FakeUser(1), None,
@@ -658,7 +656,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
                      {'foreign_calc_id': None,
                       'dbname': 'platform',
                       'callback_url': None})},
-                aa_call_data
+                executor_call_data
             )
         finally:
             shutil.rmtree(temp_dir)

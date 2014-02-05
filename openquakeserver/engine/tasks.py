@@ -27,8 +27,6 @@ import psycopg2
 import urllib
 import urllib2
 
-from celery.task import task
-
 from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
 
@@ -42,7 +40,6 @@ DEFAULT_LOG_LEVEL = 'progress'
 logger = logging.getLogger(__name__)
 
 
-@task(ignore_result=True)
 def run_calc(calc_type, calc_id, calc_dir,
              callback_url=None, foreign_calc_id=None,
              dbname="platform"):
@@ -313,8 +310,6 @@ def copy_output(platform_connection, output, foreign_calculation_id):
                 print "Output type %s not supported" % output.output_type
                 return
 
-            # FIXME() in a celery task I can not spawn threads. How
-            # can i build a pipe?
             logger.info("Copying to temporary stream")
             engine_cursor.copy_expert(
                 """COPY (%s) TO STDOUT
