@@ -146,7 +146,7 @@ def run_hazard_calc(request):
             create_detect_job_file("job.ini", "job_haz.ini", "job_hazard.ini"))
     except Exception:
         etype, exc, tb = sys.exc_info()
-	einfo = "".join(traceback.format_tb(tb))
+        einfo = "".join(traceback.format_tb(tb))
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         import pdb; pdb.set_trace()
         raise
@@ -390,7 +390,7 @@ def run_risk_calc(request):
                  dbname=request.POST['database']))
     except Exception:
         etype, exc, tb = sys.exc_info()
-	einfo = "".join(traceback.format_tb(tb))
+        einfo = "".join(traceback.format_tb(tb))
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         raise 
 
