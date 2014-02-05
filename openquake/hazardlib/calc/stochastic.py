@@ -59,7 +59,7 @@ def stochastic_event_set_poissonian(
     if sites is None:  # no filtering
         for source in sources:
             try:
-                for rupture in source.iter_ruptures(tom):
+                for rupture in source.iter_ruptures():
                     for i in xrange(rupture.sample_number_of_occurrences()):
                         yield rupture
             except Exception, err:
@@ -72,7 +72,7 @@ def stochastic_event_set_poissonian(
     for source, r_sites in sources_sites:
         try:
             ruptures_sites = rupture_site_filter(
-                (rupture, r_sites) for rupture in source.iter_ruptures(tom))
+                (rupture, r_sites) for rupture in source.iter_ruptures())
             for rupture, _sites in ruptures_sites:
                 for i in xrange(rupture.sample_number_of_occurrences()):
                     yield rupture
