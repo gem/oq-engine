@@ -14,7 +14,7 @@ MANAGERS = ADMINS
 
 DATABASES = oqe_settings.DATABASES
 
-DATABASE_ROUTERS = [ 'openquake.engine.db.routers.OQRouter', ]
+DATABASE_ROUTERS = ['openquake.engine.db.routers.OQRouter', ]
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -69,10 +69,10 @@ LOGGING = {
             'level': 'ERROR',
             'class': 'django.utils.log.AdminEmailHandler'
         },
-    'console': {
-        'level':'DEBUG',
-        'class':'logging.StreamHandler',
-        'formatter': 'simple'
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
         },
     },
     'loggers': {

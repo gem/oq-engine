@@ -6,6 +6,8 @@ import os
 import shutil
 import tempfile
 import urlparse
+import sys
+import traceback
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
@@ -144,15 +146,17 @@ def run_hazard_calc(request):
         job, temp_dir = _prepare_job(
             request, oq_engine.haz_job_from_file,
             create_detect_job_file("job.ini", "job_haz.ini", "job_hazard.ini"))
-        hc = job.hazard_calculation
-        tasks.run_hazard_calc.apply_async(
-            (hc.id, temp_dir),
-            dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
-                 dbname=request.POST['database']))
-    except Exception as e:
-        tasks.update_calculation(callback_url, status="failed")
-        print e
-        raise e
+    except Exception:
+        etype, exc, tb = sys.exc_info()
+        einfo = "".join(traceback.format_tb(tb))
+        tasks.update_calculation(callback_url, status="failed", einfo=einfo)
+        raise
+
+    hc = job.hazard_calculation
+    tasks.run_hazard_calc.apply_async(
+        (hc.id, temp_dir),
+        dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
+             dbname=request.POST['database']))
 
     try:
         response_data = _get_haz_calc_info(hc.id)
@@ -385,10 +389,11 @@ def run_risk_calc(request):
             (rc.id, temp_dir),
             dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
                  dbname=request.POST['database']))
-    except Exception as e:
-        print e
-        tasks.update_calculation(callback_url, status="failed")
-        raise e
+    except Exception:
+        etype, exc, tb = sys.exc_info()
+        einfo = "".join(traceback.format_tb(tb))
+        tasks.update_calculation(callback_url, status="failed", einfo=einfo)
+        raise
 
     try:
         response_data = _get_risk_calc_info(rc.id)

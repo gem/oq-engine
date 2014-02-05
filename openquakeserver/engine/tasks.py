@@ -41,8 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 def update_calculation_on_fail(task_obj, exc, task_id, args, kwargs, einfo):
-    update_calculation(kwargs['callback_url'], status="failed")
-    print "Error in task %s" % task_id
+    update_calculation(kwargs['callback_url'], status="failed", einfo=einfo)
 
 
 @task(ignore_result=True, on_failure=update_calculation_on_fail)
@@ -213,8 +212,8 @@ DBINTERFACE = {
            icebox_ses(output_layer_id, hypocenter, rupture_tag, magnitude)
            SELECT %s, St_GeomFromText(hypocenter, 4326), tag, magnitude
            FROM temp_icebox_ses"""),
-# TODO: instead of the region_constraint, we should specify the convex
-# hull of the exposure
+    # TODO: instead of the region_constraint, we should specify the convex
+    # hull of the exposure
     'aggregate_loss': DbInterface(
         """SELECT St_AsText(region_constraint), mean, std_dev
            FROM riskr.aggregate_loss al
