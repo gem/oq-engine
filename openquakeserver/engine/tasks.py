@@ -17,6 +17,8 @@
 # License along with this program. If not, see
 # <https://www.gnu.org/licenses/agpl.html>.
 
+import sys
+import traceback
 import logging
 import collections
 import shutil
@@ -40,18 +42,16 @@ DEFAULT_LOG_LEVEL = 'progress'
 logger = logging.getLogger(__name__)
 
 
-def update_calculation_on_fail(task_obj, exc, task_id, args, kwargs, einfo):
-    update_calculation(kwargs['callback_url'], status="failed", einfo=einfo)
-
-
-@task(ignore_result=True, on_failure=update_calculation_on_fail)
-def run_hazard_calc(calc_id, calc_dir,
-                    callback_url=None, foreign_calc_id=None,
-                    dbname="platform"):
+@task(ignore_result=True)
+def run_calc(calc_type, calc_id, calc_dir,
+             callback_url=None, foreign_calc_id=None,
+             dbname="platform"):
     """
-    Run a hazard calculation given the calculation ID. It is assumed that the
+    Run a calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
     and is ready to execute.
+
+    :param calc_type: 'hazard' or 'risk'
     """
     job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
 
@@ -66,40 +66,18 @@ def run_hazard_calc(calc_id, calc_dir,
             status=status,
             description=calculation.description)
 
-    engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'hazard',
-                    progress_handler=progress_handler)
+    try:
+        engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, calc_type,
+                        progress_handler=progress_handler)
+    except:
+        exctype, exc, tb = sys.exc_info()
+        einfo = '%s: %s\n%s' % (exctype.__name__, exc,
+                                ''.join(traceback.format_tb(tb)))
+        update_calculation(callback_url, status="failed", einfo=einfo)
+        return
 
     shutil.rmtree(calc_dir)
 
-    # If requested to, signal job completion and trigger a migration of
-    # results.
-    if not None in (callback_url, foreign_calc_id):
-        _trigger_migration(job, callback_url, foreign_calc_id, dbname)
-
-
-@task(ignore_result=True, on_failure=update_calculation_on_fail)
-def run_risk_calc(calc_id, calc_dir,
-                  callback_url=None, foreign_calc_id=None, dbname="platform"):
-    """
-    Run a risk calculation given the calculation ID. It is assumed that the
-    entire calculation profile is already loaded into the oq-engine database
-    and is ready to execute.
-    """
-    job = oqe_models.OqJob.objects.get(risk_calculation=calc_id)
-    update_calculation(callback_url, status="started", engine_id=calc_id)
-    exports = []
-    # TODO: Log to file somewhere. But where?
-    log_file = None
-
-    def progress_handler(status, calculation):
-        update_calculation(
-            callback_url,
-            status=status,
-            description=calculation.description)
-
-    engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, 'risk',
-                    progress_handler=progress_handler)
-    shutil.rmtree(calc_dir)
     # If requested to, signal job completion and trigger a migration of
     # results.
     if not None in (callback_url, foreign_calc_id):

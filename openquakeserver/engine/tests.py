@@ -516,7 +516,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
             job_from_file='openquake.engine.engine.haz_job_from_file',
-            run_hazard_task='engine.tasks.run_hazard_calc',
+            run_task='engine.tasks.run_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
 
@@ -541,7 +541,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
                     aa_call_data['args'] = args
                     aa_call_data['count'] += 1
 
-                multi_mock['run_hazard_task'].apply_async = apply_async
+                multi_mock['run_task'].apply_async = apply_async
 
                 fake_job = FakeJob(
                     'pending', FakeUser(1), FakeCalc(666, 'Fake Calc Desc'),
@@ -562,7 +562,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             self.assertEqual(
                 {'count': 1,
                  'args': (
-                     (666, temp_dir),
+                     ('hazard', 666, temp_dir),
                      {'foreign_calc_id': None,
                       'dbname': 'platform',
                       'callback_url': None})},
@@ -600,7 +600,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
             job_from_file='openquake.engine.engine.risk_job_from_file',
-            run_risk_task='engine.tasks.run_risk_calc',
+            run_task='engine.tasks.run_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
 
@@ -630,7 +630,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
                     aa_call_data['args'] = args
                     aa_call_data['count'] += 1
 
-                multi_mock['run_risk_task'].apply_async = apply_async
+                multi_mock['run_task'].apply_async = apply_async
 
                 fake_job = FakeJob(
                     'pending', FakeUser(1), None,
@@ -654,7 +654,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             self.assertEqual(
                 {'count': 1,
                  'args': (
-                     (777, temp_dir),
+                     ('risk', 777, temp_dir),
                      {'foreign_calc_id': None,
                       'dbname': 'platform',
                       'callback_url': None})},

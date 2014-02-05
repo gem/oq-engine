@@ -153,8 +153,8 @@ def run_hazard_calc(request):
         raise
 
     hc = job.hazard_calculation
-    tasks.run_hazard_calc.apply_async(
-        (hc.id, temp_dir),
+    tasks.run_calc.apply_async(
+        ('hazard', hc.id, temp_dir),
         dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
              dbname=request.POST['database']))
 
@@ -385,8 +385,8 @@ def run_risk_calc(request):
             create_detect_job_file("job.ini", "job_risk.ini"))
 
         rc = job.risk_calculation
-        tasks.run_risk_calc.apply_async(
-            (rc.id, temp_dir),
+        tasks.run_calc.apply_async(
+            ('risk', rc.id, temp_dir),
             dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
                  dbname=request.POST['database']))
     except Exception:
