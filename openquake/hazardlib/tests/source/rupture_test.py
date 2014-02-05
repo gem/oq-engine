@@ -175,3 +175,23 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
             pne,
             numpy.array([[0.721, 0.744, 0.769], [0.796, 0.825, 0.856]])
         )
+
+    def test_sample_number_of_occurrences(self):
+        pmf = PMF(
+            [(Decimal('0.7'), 0), (Decimal('0.2'), 1), (Decimal('0.1'), 2)]
+        )
+        rup = make_rupture(NonParametricProbabilisticRupture, pmf=pmf)
+        numpy.random.seed(123)
+
+        n_samples = 50000
+        n_occs = numpy.array([
+            rup.sample_number_of_occurrences() for i in range(n_samples)
+        ])
+
+        p_occs_0 = float(len(n_occs[n_occs == 0])) / n_samples
+        p_occs_1 = float(len(n_occs[n_occs == 1])) / n_samples
+        p_occs_2 = float(len(n_occs[n_occs == 2])) / n_samples
+
+        self.assertAlmostEqual(p_occs_0, 0.7, places=2)
+        self.assertAlmostEqual(p_occs_1, 0.2, places=2)
+        self.assertAlmostEqual(p_occs_2, 0.1, places=2)
