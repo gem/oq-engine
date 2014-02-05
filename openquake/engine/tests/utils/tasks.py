@@ -16,22 +16,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """
 Task functions for our unit tests.
 """
 
-
+import sys
+import functools
 from celery.task import task
 
-from openquake.engine.utils import config
 
-from openquake.engine.tests.utils import helpers
-
-
-def test_task(func, *args, **kwargs):
-    kwargs['queue'] = config.get('amqp', 'celery_queue')
-    return task(func, *args, **kwargs)
+def test_task(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs), None
+        except:
+            exctype, exc, _tb = sys.exc_info()
+            return str(exc), exctype
+    return task(wrapper)
 
 
 @test_task
