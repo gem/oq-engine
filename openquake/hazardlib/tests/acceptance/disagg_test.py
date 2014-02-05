@@ -68,8 +68,8 @@ class DisaggTestCase(unittest.TestCase):
         coord_bin_width = 0.2
 
         # compute disaggregation
-        bin_edges, diss_matrix = disagg.disaggregation_poissonian(
-            [src], site, imt, iml, gsims, time_span, truncation_level,
+        bin_edges, diss_matrix = disagg.disaggregation(
+            [src], site, imt, iml, gsims, truncation_level,
             n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width
         )
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges

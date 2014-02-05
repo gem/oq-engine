@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 :mod:`openquake.hazardlib.calc.disagg` contains
-:func:`disaggregation_poissonian` as well as several aggregation functions for
-extracting a specific PMF from the result of :func:`disaggregation_poissonian`.
+:func:`disaggregation` as well as several aggregation functions for
+extracting a specific PMF from the result of :func:`disaggregation`.
 """
 import numpy
 import warnings
@@ -26,11 +26,10 @@ from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.tom import PoissonTOM
 
 
-def disaggregation_poissonian(
-        sources, site, imt, iml, gsims, time_span, truncation_level,
+def disaggregation(
+        sources, site, imt, iml, gsims, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
@@ -38,7 +37,7 @@ def disaggregation_poissonian(
     Compute "Disaggregation" matrix representing conditional probability of an
     intensity mesaure type ``imt`` exceeding, at least once, an intensity
     measure level ``iml`` at a geographical location ``site``, given rupture
-    scenarios (belonging to a Poissonian source model) classified in terms of:
+    scenarios classified in terms of:
 
     - rupture magnitude
     - Joyner-Boore distance from rupture surface to site
@@ -73,8 +72,6 @@ def disaggregation_poissonian(
         Intensity measure level. A float value in units of ``imt``.
     :param gsims:
         Tectonic region type to GSIM objects mapping.
-    :param time_span:
-        Investigation time span, in years.
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
@@ -104,9 +101,7 @@ def disaggregation_poissonian(
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
-    tom = PoissonTOM(time_span)
-
-    bins_data = _collect_bins_data(sources, site, imt, iml, gsims, tom,
+    bins_data = _collect_bins_data(sources, site, imt, iml, gsims,
                                    truncation_level, n_epsilons,
                                    source_site_filter, rupture_site_filter)
     if all([len(x) == 0 for x in bins_data]):
@@ -124,33 +119,7 @@ def disaggregation_poissonian(
     return bin_edges, diss_matrix
 
 
-# DEPRECATED
-def disaggregation(sources, site, imt, iml, gsims, tom,
-                   truncation_level, n_epsilons,
-                   mag_bin_width, dist_bin_width, coord_bin_width,
-                   source_site_filter=filters.source_site_noop_filter,
-                   rupture_site_filter=filters.rupture_site_noop_filter):
-    """
-    An implementation of the now-deprecated disaggregation calculation
-    interface. Please use :func:`disaggregation_poissonian` instead.
-    """
-    warnings.warn(
-        '`openquake.hazardlib.calc.disagg.disaggregation` is deprecated. '
-        'Please use '
-        '`openquake.hazardlib.calc.disagg.disaggregation_poissonian` instead',
-        RuntimeWarning
-    )
-
-    time_span = tom.time_span
-    return disaggregation_poissonian(
-        sources, site, imt, iml, gsims, time_span, truncation_level,
-        n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
-        source_site_filter=filters.source_site_noop_filter,
-        rupture_site_filter=filters.rupture_site_noop_filter
-    )
-
-
-def _collect_bins_data(sources, site, imt, iml, gsims, tom,
+def _collect_bins_data(sources, site, imt, iml, gsims,
                        truncation_level, n_epsilons,
                        source_site_filter, rupture_site_filter):
     """
@@ -166,9 +135,7 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
     lons = []
     lats = []
     tect_reg_types = []
-    probs_one_or_more = []
-    probs_exceed_given_rup = []
-    src_idxs = []
+    probs_no_exceed = []
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
 
@@ -210,17 +177,10 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
                     sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons
                 )
 
-                # compute probability of one or more rupture occurrences
-                probs_one_or_more.append(
-                    rupture.get_probability_one_or_more_occurrences()
+                # collect probability of a rupture causing no exceedances
+                probs_no_exceed.append(
+                    rupture.get_probability_no_exceedance(poes_given_rup_eps)
                 )
-
-                # collect probability of exceedance given the rupture
-                probs_exceed_given_rup.append(poes_given_rup_eps)
-
-                # keep track of the source index, so that the probabilities can
-                # be associated to each source
-                src_idxs.append(src_idx)
         except Exception, err:
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err.message)
@@ -231,17 +191,14 @@ def _collect_bins_data(sources, site, imt, iml, gsims, tom,
     lons = numpy.array(lons, float)
     lats = numpy.array(lats, float)
     tect_reg_types = numpy.array(tect_reg_types, int)
-    probs_one_or_more = numpy.array(probs_one_or_more, float)
-    probs_exceed_given_rup = numpy.array(probs_exceed_given_rup, float)
-    src_idxs = numpy.array(src_idxs, int)
+    probs_no_exceed = numpy.array(probs_no_exceed, float)
 
     trt_bins = [
         trt for (num, trt) in sorted((num, trt)
                                      for (trt, num) in trt_nums.items())
     ]
 
-    return (mags, dists, lons, lats, tect_reg_types, trt_bins,
-            probs_one_or_more, probs_exceed_given_rup, src_idxs)
+    return (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed)
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -254,7 +211,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, tect_reg_types, trt_bins, _, _, _ = bins_data
+    mags, dists, lons, lats, tect_reg_types, trt_bins, _ = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -291,14 +248,12 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_one_or_more,
-     probs_exceed_given_rup, src_idxs) = bins_data
+    (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed) = \
+        bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
              len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
     diss_matrix = numpy.zeros(shape)
-
-    src_indices = numpy.unique(src_idxs)
 
     for i_mag in xrange(len(mag_bins) - 1):
         mag_idx = mags <= mag_bins[i_mag + 1]
@@ -334,8 +289,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
                                         & lat_idx & trt_idx)
 
                             poe = numpy.prod(
-                                (1 - probs_one_or_more[prob_idx]) **
-                                probs_exceed_given_rup[prob_idx, i_eps]
+                                probs_no_exceed[prob_idx, i_eps]
                             )
                             poe = 1 - poe
 
