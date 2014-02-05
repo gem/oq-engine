@@ -41,9 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 def update_calculation_on_fail(task_obj, exc, task_id, args, kwargs, einfo):
-    update_calculation(kwargs['callback_url'], status="failed")
-    print "Error in task %s" % task_id
-
+    update_calculation(kwargs['callback_url'], status="failed", einfo=einfo)
 
 @task(ignore_result=True, on_failure=update_calculation_on_fail)
 def run_hazard_calc(calc_id, calc_dir,
@@ -56,6 +54,8 @@ def run_hazard_calc(calc_id, calc_dir,
     """
     job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
 
+    # TODO: proper logging
+    print "Running hazard calculation with callback_url %s" % callback_url
     update_calculation(callback_url, status="started", engine_id=calc_id)
     exports = []
     # TODO: Log to file somewhere. But where?
@@ -87,6 +87,8 @@ def run_risk_calc(calc_id, calc_dir,
     and is ready to execute.
     """
     job = oqe_models.OqJob.objects.get(risk_calculation=calc_id)
+    # TODO: proper logging
+    print "Running hazard calculation with callback_url %s" % callback_url
     update_calculation(callback_url, status="started", engine_id=calc_id)
     exports = []
     # TODO: Log to file somewhere. But where?
