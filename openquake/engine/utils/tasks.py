@@ -64,10 +64,10 @@ def map_reduce(task, task_args, agg, acc):
             acc = agg(acc, result)
     else:
         taskset = TaskSet(tasks=map(task.subtask, task_args))
-        for result in taskset.apply_async():
+        for result, exctype in taskset.apply_async():
             # TODO: improve this
-            if isinstance(result, str):
-                raise SystemExit(result)
+            if exctype:
+                raise exctype(result)
             acc = agg(acc, result)
     return acc
 
@@ -132,11 +132,11 @@ def oqtask(task_func):
                     calculation, models.HazardCalculation) else'risk',
                 calc_id=calculation.id)
             try:
-                return task_func(*args)
+                return task_func(*args), None
             except:
                 etype, exc, tb = sys.exc_info()
                 tb_str = ''.join(traceback.format_tb(tb))
-                return '%s: %s\n%s' % (etype.__name__, exc, tb_str)
+                return '%s\n%s' % (exc, tb_str), etype
             finally:
                 CacheInserter.flushall()
                 # the task finished, we can remove from the performance
