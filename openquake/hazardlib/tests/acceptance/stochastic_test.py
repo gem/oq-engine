@@ -27,6 +27,9 @@ from openquake.hazardlib.calc.stochastic import stochastic_event_set
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import Site, SiteCollection
 
+from openquake.hazardlib.tests.source.non_parametric_test import \
+    make_non_parametric_source
+
 
 class StochasticEventSetTestCase(unittest.TestCase):
 
@@ -75,6 +78,9 @@ class StochasticEventSetTestCase(unittest.TestCase):
             rupture_mesh_spacing=1.0,
             temporal_occurrence_model=PoissonTOM(self.time_span)
         )
+
+        # non-parametric source
+        self.np_src, _ = make_non_parametric_source()
 
     def _extract_rates(self, ses, time_span, bins):
         """
@@ -136,3 +142,62 @@ class StochasticEventSetTestCase(unittest.TestCase):
         )
 
         numpy.testing.assert_allclose(rates, expect_rates, rtol=0, atol=1e-4)
+
+    def test_ses_generation_from_non_parametric_source(self):
+        # np_src contains two ruptures: rup1 (of magnitude 5) and rup2 (of
+        # magnitude 6)
+        # rup1 has probability of zero occurences of 0.7 and of one
+        # occurrence of 0.3
+        # rup2 has probability of zero occurrence of 0.7, of one occurrence of
+        # 0.2 and of two occurrences of 0.1
+        # the test generate multiple SESs. From the ensamble of SES the
+        # probability of one, 2, 3 rupture occurrences is computed and
+        # compared with the expected value
+        numpy.random.seed(123)
+        num_sess = 10
+        sess = [stochastic_event_set([self.np_src]) for i in range(num_sess)]
+
+        # loop over ses. For each ses count number of rupture
+        # occurrences (for each magnitude)
+        n_rups1 = {}
+        n_rups2 = {}
+        for ses in sess:
+            n_rups1[i] = 0
+            n_rups2[i] = 0
+            for rup in ses:
+                if rup.mag == 5.:
+                    n_rups1[i] += 1
+                if rup.mag == 6.:
+                    n_rups2[i] += 1
+
+        # for each ses, count the number of times the rupture occures 0, 1, or
+        # 2 times, and then normalize by the total number of ses generated.
+        p_rup1_0occ = 0
+        p_rup1_1occ = 0
+        for n in n_rups1.keys():
+            if n == 0:
+                p_rup1_0occ += 1
+            if n == 1:
+                p_rup1_1occ += 1
+        p_rup1_0occ /= num_sess
+        p_rup1_1occ /= num_sess
+
+        p_rup2_0occ = 0
+        p_rup2_1occ = 0
+        p_rup2_2occ = 0
+        for n in n_rups1.keys():
+            if n == 0:
+                p_rup2_0occ += 1
+            if n == 1:
+                p_rup2_1occ += 1
+            if n == 2:
+                p_rup2_2occ += 1
+        p_rup2_0occ /= num_sess
+        p_rup2_1occ /= num_sess
+        p_rup2_2occ /= num_sess
+
+        self.assertAlmostEqual(p_rup1_0occ, 0.7)
+        self.assertAlmostEqual(p_rup1_1occ, 0.3)
+        self.assertAlmostEqual(p_rup2_0occ, 0.7)
+        self.assertAlmostEqual(p_rup2_1occ, 0.2)
+        self.assertAlmostEqual(p_rup2_2occ, 0.1)
