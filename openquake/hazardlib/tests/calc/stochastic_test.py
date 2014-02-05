@@ -16,7 +16,7 @@
 import unittest
 
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.stochastic import stochastic_event_set_poissonian
+from openquake.hazardlib.calc.stochastic import stochastic_event_set
 
 
 class StochasticEventSetTestCase(unittest.TestCase):
@@ -52,9 +52,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
     def test_no_filter(self):
         ses = list(
-            stochastic_event_set_poissonian(
-                [self.source1, self.source2],
-                self.time_span
+            stochastic_event_set(
+                [self.source1, self.source2]
             ))
         self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2, self.r2_1])
 
@@ -65,9 +64,9 @@ class StochasticEventSetTestCase(unittest.TestCase):
                 break
         fake_sites = [1, 2, 3]
         ses = list(
-            stochastic_event_set_poissonian(
+            stochastic_event_set(
                 [self.source1, self.source2],
-                self.time_span, fake_sites, extract_first_source
+                fake_sites, extract_first_source
             ))
         self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2])
 
@@ -76,9 +75,9 @@ class StochasticEventSetTestCase(unittest.TestCase):
                 yield rupture, None
                 break
         ses = list(
-            stochastic_event_set_poissonian(
+            stochastic_event_set(
                 [self.source1, self.source2],
-                self.time_span, fake_sites,
+                fake_sites,
                 extract_first_source,
                 extract_first_rupture
             ))
@@ -87,8 +86,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
         self.source2 = self.FakeSource(2, [self.r2_1])
 
     def test(self):
-        ses = list(stochastic_event_set_poissonian(
-            [self.source1, self.source2], self.time_span))
+        ses = list(stochastic_event_set(
+            [self.source1, self.source2]))
         self.assertEqual(ses, [self.r1_1, self.r1_2, self.r1_2, self.r2_1])
 
     def test_source_errors(self):
@@ -97,8 +96,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # signals the id of the source in question
         fail_source = self.FailSource(2, [self.r2_1])
         with self.assertRaises(RuntimeError) as ae:
-            list(stochastic_event_set_poissonian([self.source1, fail_source],
-                                                 self.time_span))
+            list(stochastic_event_set([self.source1, fail_source]))
 
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'
@@ -112,9 +110,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
         fail_source = self.FailSource(2, [self.r2_1])
         fake_sites = [1, 2, 3]
         with self.assertRaises(RuntimeError) as ae:
-            list(stochastic_event_set_poissonian([self.source1, fail_source],
-                                                 self.time_span,
-                                                 sites=fake_sites))
+            list(stochastic_event_set([self.source1, fail_source],
+                                       sites=fake_sites))
 
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'

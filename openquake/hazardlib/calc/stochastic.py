@@ -15,28 +15,30 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 :mod:`openquake.hazardlib.calc.stochastic` contains
-:func:`stochastic_event_set_poissonian`.
+:func:`stochastic_event_set`.
 """
-from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc import filters
 
 
-def stochastic_event_set_poissonian(
-        sources, time_span,
+def stochastic_event_set(
+        sources,
         sites=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
-    The Poissonian Stochastic Event Set calculator generates a 'Stochastic
-    Event Set' (that is a collection of earthquake ruptures) by randomly
-    sampling a source model whose rupture follow a Poissonian temporal
-    occurrence model. The Stochastic Event Set represent a possible
-    *realization* of the seismicity as described by the source model,
-    in the given time span.
+    Generates a 'Stochastic Event Set' (that is a collection of earthquake
+    ruptures) representing a possible *realization* of the seismicity as
+    described by a source model.
 
-    The calculator assumes
-    :class:`Poissonian <openquake.hazardlib.tom.PoissonTOM>` temporal
-    occurrence model.
+    The calculator loops over sources. For each source, it loops over ruptures.
+    For each rupture, the number of occurrence is randomly sampled by
+    calling
+    :meth:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture.sample_number_of_occurrences`
+
+    .. note::
+        This calculator is using random numbers. In order to reproduce the
+        same results numpy random numbers generator needs to be seeded, see
+        http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
 
     :param sources:
         An iterator of seismic sources objects (instances of subclasses
@@ -55,7 +57,6 @@ def stochastic_event_set_poissonian(
         objects that are contained in an event set. Some ruptures can be
         missing from it, others can appear one or more times in a row.
     """
-    tom = PoissonTOM(time_span)
     if sites is None:  # no filtering
         for source in sources:
             try:

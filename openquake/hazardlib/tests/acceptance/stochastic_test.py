@@ -23,7 +23,7 @@ from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo import Point, NodalPlane
 from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.calc.stochastic import stochastic_event_set_poissonian
+from openquake.hazardlib.calc.stochastic import stochastic_event_set
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import Site, SiteCollection
 
@@ -96,9 +96,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # and normalizing by the total duration of the event set) is
         # approximately equal to the original MFD.
         numpy.random.seed(123)
-        ses = stochastic_event_set_poissonian(
-            [self.area1], time_span=self.time_span
-        )
+        ses = stochastic_event_set([self.area1])
 
         rates = self._extract_rates(ses, time_span=self.time_span,
                                     bins=numpy.arange(5., 6.6, 0.1))
@@ -124,9 +122,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
                 z1pt0=40., z2pt5=2.
             )
         ])
-        ses = stochastic_event_set_poissonian(
+        ses = stochastic_event_set(
             [self.area1, self.area2],
-            time_span=self.time_span,
             sites=sites,
             source_site_filter=filters.source_site_distance_filter(100.)
         )
