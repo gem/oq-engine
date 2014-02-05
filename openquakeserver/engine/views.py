@@ -6,6 +6,8 @@ import os
 import shutil
 import tempfile
 import urlparse
+import sys
+import traceback
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
@@ -148,14 +150,13 @@ def run_hazard_calc(request):
         etype, exc, tb = sys.exc_info()
         einfo = "".join(traceback.format_tb(tb))
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
-        import pdb; pdb.set_trace()
         raise
 
-        hc = job.hazard_calculation
-        tasks.run_hazard_calc.apply_async(
-            (hc.id, temp_dir),
-            dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
-                 dbname=request.POST['database']))
+    hc = job.hazard_calculation
+    tasks.run_hazard_calc.apply_async(
+        (hc.id, temp_dir),
+        dict(callback_url=callback_url, foreign_calc_id=foreign_calc_id,
+             dbname=request.POST['database']))
 
     try:
         response_data = _get_haz_calc_info(hc.id)
@@ -392,7 +393,7 @@ def run_risk_calc(request):
         etype, exc, tb = sys.exc_info()
         einfo = "".join(traceback.format_tb(tb))
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
-        raise 
+        raise
 
     try:
         response_data = _get_risk_calc_info(rc.id)

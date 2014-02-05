@@ -240,7 +240,6 @@ class CalcHazardResultsTestCase(BaseViewTestCase):
 
         self.assertEqual(404, response.status_code)
 
-
     def test_404_calc_not_complete(self):
         with mock.patch('openquake.engine.db.models'
                         '.HazardCalculation.objects.get') as hc_get:
@@ -267,7 +266,7 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
         ]
         with mock.patch('openquake.engine.engine.get_risk_outputs') as gro:
             with mock.patch('openquake.engine.db.models'
-                                        '.RiskCalculation.objects.get') as rc_get:
+                            '.RiskCalculation.objects.get') as rc_get:
                 rc_get.return_value.oqjob.status = 'complete'
 
                 gro.return_value = [
@@ -298,7 +297,6 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
 
         self.assertEqual(404, response.status_code)
 
-
     def test_404_calc_not_complete(self):
         with mock.patch('openquake.engine.db.models'
                         '.RiskCalculation.objects.get') as hc_get:
@@ -306,7 +304,6 @@ class CalcRiskResultsTestCase(BaseViewTestCase):
             response = views.calc_risk_results(self.request, 1)
 
         self.assertEqual(404, response.status_code)
-
 
 
 class GetResultTestCase(BaseViewTestCase):
@@ -332,8 +329,8 @@ class GetResultTestCase(BaseViewTestCase):
                 self.assertEqual(200, response.status_code)
                 self.assertEqual('Fake result file content', response.content)
 
-                # Test the call to the export function, including the handling for
-                # the default export type:
+                # Test the call to the export function, including the handling
+                # for the default export type:
                 self.assertEqual(1, export.call_count)
                 self.assertEqual(37, export.call_args[0][0])
                 self.assertEqual('xml', export.call_args[1]['export_type'])
@@ -528,7 +525,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         # Set up expected test values:
         pathjoin = os.path.join
         jff_exp_call_args = (
-            (pathjoin(temp_dir, fake_job_file.name), 'openquake', 'progress',
+            (pathjoin(temp_dir, fake_job_file.name), 'platform', 'progress',
              []),
             {}
         )
@@ -617,7 +614,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             ((fake_model_2.path, pathjoin(temp_dir, fake_model_2.name)), {}),
         ]
         jff_exp_call_args = (
-            (pathjoin(temp_dir, fake_job_file.name), 'openquake', 'progress',
+            (pathjoin(temp_dir, fake_job_file.name), 'platform', 'progress',
              []),
             {'hazard_calculation_id': 666, 'hazard_output_id': None}
         )

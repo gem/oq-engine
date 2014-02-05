@@ -6,6 +6,7 @@ APPS = (
     'admin',
 )
 
+
 class DefaultRouter(object):
 
     def db_for_read(self, model, **hints):
