@@ -100,6 +100,14 @@ class HazardGetter(object):
         """
         monitor = monitor or DummyMonitor()
         assets, data = self.get_data(hazard_output, monitor)
+        if not assets:
+            logs.LOG.warn(
+                'No hazard site found within the maximum distance of %f km for'
+                ' %d assets of taxonomy %s, IMT=%s: %s', self.max_distance,
+                len(self.assets), self.assets[0].taxonomy, self.imt,
+                ' '.join(a.asset_ref for a in self.assets))
+            return [], []
+
         missing_asset_ids = set(self.asset_dict) - set(a.id for a in assets)
 
         for missing_asset_id in missing_asset_ids:
@@ -115,7 +123,9 @@ class HazardGetter(object):
     def __call__(self, monitor=None):
         for hazard in self.hazard_outputs:
             h = hazard.output_container
-            yield (hazard.id,) + self.get_assets_data(h, monitor)
+            assets, data = self.get_assets_data(h, monitor)
+            if len(assets) > 0:
+                yield hazard.id, assets, data
 
     def weights(self):
         ws = []
@@ -215,7 +225,9 @@ class GroundMotionValuesGetter(HazardGetter):
         for hazard, seed in zip(self.hazard_outputs, self.seeds):
             h = hazard.output_container
             numpy.random.seed(seed)
-            yield (hazard.id,) + self.get_assets_data(h, monitor)
+            assets, data = self.get_assets_data(h, monitor)
+            if len(assets) > 0:
+                yield hazard.id, assets, data
 
     def assets_gen(self, hazard_output):
         """
@@ -245,9 +257,6 @@ GROUP BY site_id ORDER BY site_id;
                 self._assets_mesh.get_convex_hull().wkt)
         cursor.execute(query, args)
         sites_assets = cursor.fetchall()
-        if not sites_assets:
-            logs.LOG.warn('No close site found for %d assets of taxonomy %s',
-                          len(self.assets), self.assets[0].taxonomy)
         for site_id, asset_ids in sites_assets:
             assets = [self.asset_dict[i] for i in asset_ids
                       if i in self.asset_dict]
