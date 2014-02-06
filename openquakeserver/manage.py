@@ -16,5 +16,6 @@ from engine import executor
 if __name__ == "__main__":
     with executor:
         execute_manager(settings)
-        from django.db import connection
-        connection.close()
+        from django.db import connections
+        for connection in connections.all():
+            connection.close()
