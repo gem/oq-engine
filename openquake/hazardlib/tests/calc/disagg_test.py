@@ -48,10 +48,8 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.mag = mag
             self.probability = probability
             self.surface = _BaseDisaggTestCase.FakeSurface(distance, lon, lat)
-        def get_probability_one_occurrence(self):
-            return self.probability
-        def get_probability_one_or_more_occurrences(self):
-            return self.probability
+        def get_probability_no_exceedance(self, poe):
+            return (1 - self.probability) ** poe
 
     class FakeSource(object):
         def __init__(self, source_id, ruptures, tom, tectonic_region_type):
@@ -134,10 +132,10 @@ class _BaseDisaggTestCase(unittest.TestCase):
 
 class CollectBinsDataTestCase(_BaseDisaggTestCase):
     def test_no_filters(self):
-        (mags, dists, lons, lats, trts, trt_bins, probs_one_or_more,
-         probs_exceed_given_rup, src_idxs) = disagg._collect_bins_data(
+        (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
+            disagg._collect_bins_data(
             self.sources, self.site, self.imt, self.iml, self.gsims,
-            self.tom, self.truncation_level, n_epsilons=3,
+            self.truncation_level, n_epsilons=3,
             source_site_filter=filters.source_site_noop_filter,
             rupture_site_filter=filters.rupture_site_noop_filter
         )
@@ -151,7 +149,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         aae(lats, [44, 44, 45, 45, 44, 44, 45, 45, 44, 44, 45, 45, 46])
         aae(trts, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1])
 
-        exp_pegr = [
+        poe = numpy.array([
             [0, 0, 0],
             [0.1, 0.2, 0.1],
             [0, 0, 0.3],
@@ -165,10 +163,13 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
             [0, 0, 0],
             [0, 0.1, 0.04],
             [0.1, 0.5, 0.1],
-        ]
-        aae(probs_exceed_given_rup, exp_pegr)
-        aae(probs_one_or_more, [0.1, 0.2, 0.01, 0.33, 0.4, 0.05, 0.53, 0.066,
-                                0.1, 0.1, 0.1, 0.04, 0.03])
+        ])
+        p_one_more = numpy.array(
+            [0.1, 0.2, 0.01, 0.33, 0.4, 0.05, 0.53, 0.066,
+             0.1, 0.1, 0.1, 0.04, 0.03]
+        ).reshape(13, 1)
+        exp_p_ne = (1 - p_one_more) ** poe
+        aae(probs_no_exceed, exp_p_ne)
         self.assertEqual(trt_bins, ['trt1', 'trt2'])
 
     def test_filters(self):
@@ -183,10 +184,10 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                     continue
                 yield rupture, sites
 
-        (mags, dists, lons, lats, trts, trt_bins, probs_one_or_more,
-         probs_exceed_given_rup, src_idxs) = disagg._collect_bins_data(
+        (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
+            disagg._collect_bins_data(
             self.sources, self.site, self.imt, self.iml, self.gsims,
-            self.tom, self.truncation_level, n_epsilons=3,
+            self.truncation_level, n_epsilons=3,
             source_site_filter=source_site_filter,
             rupture_site_filter=rupture_site_filter
         )
@@ -199,14 +200,17 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
         aae(lons, [21, 22, 21, 22])
         aae(lats, [44, 44, 44, 45])
         aae(trts, [0, 0, 0, 0])
-        exp_pegr = [
+        poe = numpy.array([
             [0, 0, 0],
             [0.3, 0.4, 0.3],
             [0, 0, 0.1],
             [0, 0, 0],
-        ]
-        aae(probs_exceed_given_rup, exp_pegr)
-        aae(probs_one_or_more, [0.4, 0.1, 0.1, 0.1])
+        ])
+        p_one_more = numpy.array(
+            [0.4, 0.1, 0.1, 0.1]
+        ).reshape(4, 1)
+        exp_p_ne = (1 - p_one_more) ** poe
+        aae(probs_no_exceed, exp_p_ne)
         self.assertEqual(trt_bins, ['trt1'])
 
 
@@ -219,14 +223,12 @@ class DefineBinsTestCase(unittest.TestCase):
         trts = [0, 1, 2, 2, 1]
         trt_bins = ['foo', 'bar', 'baz']
 
-        # These 3 are ignored by _define_bins, but they are returned by
+        # This is ignored by _define_bins, but it is returned by
         # _collect_bins_data so we need to maintain that contract
-        probs_one_or_more = None
-        probs_exceed_given_rup = None
-        src_idxs = None
+        probs_no_exceed = None
 
         bins_data = (mags, dists, lons, lats, trts, trt_bins,
-                     probs_one_or_more, probs_exceed_given_rup, src_idxs)
+                     probs_no_exceed)
 
         mag_bins, dist_bins, lon_bins, lat_bins, \
         eps_bins, trt_bins_ = disagg._define_bins(
@@ -256,12 +258,12 @@ class ArangeDataInBinsTestCase(unittest.TestCase):
         trts = numpy.array([0, 0], int)
         trt_bins = ['trt1', 'trt2']
 
-        probs_one_or_more = numpy.array([0.1] * len(mags))
+        probs_one_or_more = numpy.array([0.1] * len(mags)).reshape(2, 1)
         probs_exceed_given_rup = numpy.ones((len(mags), 3)) * 0.1
-        src_idxs = numpy.ones(mags.shape, dtype=int)
+        probs_no_exceed = (1 - probs_one_or_more) ** probs_exceed_given_rup
 
         bins_data = (mags, dists, lons, lats, trts, trt_bins,
-                     probs_one_or_more, probs_exceed_given_rup, src_idxs)
+                     probs_no_exceed)
 
         mag_bins = numpy.array([4, 6, 7], float)
         dist_bins = numpy.array([0, 4, 8], float)
@@ -286,9 +288,9 @@ class ArangeDataInBinsTestCase(unittest.TestCase):
 class DisaggregateTestCase(_BaseDisaggTestCase):
     def test(self):
         self.gsim.truncation_level = self.truncation_level = 1
-        bin_edges, matrix = disagg.disaggregation_poissonian(
+        bin_edges, matrix = disagg.disaggregation(
             self.sources, self.site, self.imt, self.iml, self.gsims,
-            self.time_span, self.truncation_level, n_epsilons=3,
+            self.truncation_level, n_epsilons=3,
             mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4
         )
         mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
@@ -328,9 +330,9 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
         sources = iter([self.source1, fail_source])
 
         with self.assertRaises(RuntimeError) as ae:
-            bin_edges, matrix = disagg.disaggregation_poissonian(
+            bin_edges, matrix = disagg.disaggregation(
                 sources, self.site, self.imt, self.iml, self.gsims,
-                self.time_span, self.truncation_level, n_epsilons=3,
+                self.truncation_level, n_epsilons=3,
                 mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4
             )
         expected_error = (
@@ -356,9 +358,9 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
                 cbd.return_value = fake_bins_data
 
                 self.gsim.truncation_level = self.truncation_level = 1
-                bin_edges, matrix = disagg.disaggregation_poissonian(
+                bin_edges, matrix = disagg.disaggregation(
                     self.sources, self.site, self.imt, self.iml, self.gsims,
-                    self.time_span, self.truncation_level, n_epsilons=3,
+                    self.truncation_level, n_epsilons=3,
                     mag_bin_width=3, dist_bin_width=4, coord_bin_width=2.4,
                 )
 

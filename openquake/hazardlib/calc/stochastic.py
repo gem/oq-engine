@@ -15,35 +15,34 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 :mod:`openquake.hazardlib.calc.stochastic` contains
-:func:`stochastic_event_set_poissonian`.
+:func:`stochastic_event_set`.
 """
-from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc import filters
 
 
-def stochastic_event_set_poissonian(
-        sources, time_span,
+def stochastic_event_set(
+        sources,
         sites=None,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
     """
-    The Poissonian Stochastic Event Set calculator generates a 'Stochastic
-    Event Set' (that is a collection of earthquake ruptures) by randomly
-    sampling a source model whose rupture follow a Poissonian temporal
-    occurrence model. The Stochastic Event Set represent a possible
-    *realization* of the seismicity as described by the source model,
-    in the given time span.
+    Generates a 'Stochastic Event Set' (that is a collection of earthquake
+    ruptures) representing a possible *realization* of the seismicity as
+    described by a source model.
 
-    The calculator assumes
-    :class:`Poissonian <openquake.hazardlib.tom.PoissonTOM>` temporal
-    occurrence model.
+    The calculator loops over sources. For each source, it loops over ruptures.
+    For each rupture, the number of occurrence is randomly sampled by
+    calling
+    :meth:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture.sample_number_of_occurrences`
+
+    .. note::
+        This calculator is using random numbers. In order to reproduce the
+        same results numpy random numbers generator needs to be seeded, see
+        http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
 
     :param sources:
         An iterator of seismic sources objects (instances of subclasses
         of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param time_span:
-        An investigation period for Poissonian temporal occurrence model,
-        floating point number in years.
     :param sites:
         A list of sites to consider (or None)
     :param source_site_filter:
@@ -55,11 +54,10 @@ def stochastic_event_set_poissonian(
         objects that are contained in an event set. Some ruptures can be
         missing from it, others can appear one or more times in a row.
     """
-    tom = PoissonTOM(time_span)
     if sites is None:  # no filtering
         for source in sources:
             try:
-                for rupture in source.iter_ruptures(tom):
+                for rupture in source.iter_ruptures():
                     for i in xrange(rupture.sample_number_of_occurrences()):
                         yield rupture
             except Exception, err:
@@ -72,7 +70,7 @@ def stochastic_event_set_poissonian(
     for source, r_sites in sources_sites:
         try:
             ruptures_sites = rupture_site_filter(
-                (rupture, r_sites) for rupture in source.iter_ruptures(tom))
+                (rupture, r_sites) for rupture in source.iter_ruptures())
             for rupture, _sites in ruptures_sites:
                 for i in xrange(rupture.sample_number_of_occurrences()):
                     yield rupture

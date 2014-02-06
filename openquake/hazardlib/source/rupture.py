@@ -106,6 +106,21 @@ class BaseProbabilisticRupture(Rupture):
             <openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes>`.
         """
 
+    @abc.abstractmethod
+    def sample_number_of_occurrences(self):
+        """
+        Randomly sample number of occurrences from temporal occurrence model
+        probability distribution.
+
+        .. note::
+            This method is using random numbers. In order to reproduce the
+            same results numpy random numbers generator needs to be seeded, see
+            http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
+
+        :returns:
+            int, Number of rupture occurrences
+        """
+
 
 class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
     """
@@ -168,6 +183,22 @@ class NonParametricProbabilisticRupture(BaseProbabilisticRupture):
         prob_no_exceed = numpy.sum(prob_no_exceed, axis=0)
 
         return prob_no_exceed
+
+    def sample_number_of_occurrences(self):
+        """
+        See :meth:`superclass method
+        <.rupture.BaseProbabilisticRupture.sample_number_of_occurrences>`
+        for spec of input and result values.
+
+        Uses 'Inverse Transform Sampling' method.
+        """
+        # compute cdf from pmf
+        cdf = numpy.cumsum([float(p) for p, _ in self.pmf.data])
+
+        rn = numpy.random.random()
+        [n_occ] = numpy.digitize([rn], cdf)
+
+        return n_occ
 
 
 class ParametricProbabilisticRupture(BaseProbabilisticRupture):
