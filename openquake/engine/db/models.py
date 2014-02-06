@@ -805,7 +805,7 @@ class HazardCalculation(djm.Model):
         # NB: the sites MUST be ordered. The issue is that the disaggregation
         # calculator has a for loop of kind
         # for site in sites:
-        #     bin_edge, disagg_matrix = disaggregation_poissonian(site, ...)
+        #     bin_edge, disagg_matrix = disaggregation(site, ...)
         # the generated ruptures are random if the order of the sites
         # is random, even if the seed is fixed; in particular for some
         # ordering no ruptures are generated and the test
