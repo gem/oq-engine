@@ -1,4 +1,3 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 
-executor = ThreadPoolExecutor(max_workers=2)
-
+executor = ProcessPoolExecutor(max_workers=2)
