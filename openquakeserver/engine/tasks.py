@@ -29,6 +29,7 @@ import urllib2
 
 from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
+from django.db import connections
 
 from openquakeserver.dbsettings import PLATFORM_DATABASES as DATABASES
 
@@ -72,6 +73,10 @@ def run_calc(calc_type, calc_id, calc_dir,
                                 ''.join(traceback.format_tb(tb)))
         update_calculation(callback_url, status="failed", einfo=einfo)
         return
+    finally:
+        # close all Django connections
+        for conn in connections.all():
+            conn.close()
 
     shutil.rmtree(calc_dir)
 
@@ -109,10 +114,12 @@ def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
         password=DATABASES[dbname]['PASSWORD'],
         port=DATABASES[dbname]['PORT'])
 
-    for output in job.output_set.all():
-        copy_output(platform_connection, output, foreign_calc_id)
-    update_calculation(callback_url, status="creating layers")
-    platform_connection.close()
+    try:
+        for output in job.output_set.all():
+            copy_output(platform_connection, output, foreign_calc_id)
+            update_calculation(callback_url, status="creating layers")
+    finally:
+        platform_connection.close()
 
 
 def update_calculation(callback_url=None, **query):
