@@ -51,6 +51,10 @@ def run_calc(calc_type, calc_id, calc_dir,
 
     :param calc_type: 'hazard' or 'risk'
     """
+    # close all Django connections to avoid issues with multiprocessing
+    for conn in connections.all():
+        conn.close()
+
     job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
 
     update_calculation(callback_url, status="started", engine_id=calc_id)
