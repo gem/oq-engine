@@ -111,7 +111,6 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
                     'imt': imt,
                     'iml': iml,
                     'gsims': gsims,
-                    'time_span': hc.investigation_time,
                     'truncation_level': hc.truncation_level,
                     'n_epsilons': hc.num_epsilon_bins,
                     'mag_bin_width': hc.mag_bin_width,
@@ -123,7 +122,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
                 with EnginePerformanceMonitor(
                         'computing disaggregation', job_id, compute_disagg):
                     bin_edges, diss_matrix = openquake.hazardlib.calc.\
-                        disagg.disaggregation_poissonian(**calc_kwargs)
+                        disagg.disaggregation(**calc_kwargs)
                     if not bin_edges:  # no ruptures generated
                         continue
 
