@@ -89,10 +89,9 @@ class EventBasedHazardTestCase(unittest.TestCase):
         trt = 'Subduction Interface'
         rupture_ids = range(2)
         ruptures = [FakeRupture(i, trt) for i in rupture_ids]
-        rupture_seeds = rupture_ids
         pga = PGA()
         gmv_dict, rup_dict = core._compute_gmf(
-            params, [pga], {trt: gsim}, site_coll, ruptures, rupture_seeds)
+            params, [pga], {trt: gsim}, site_coll, [(r.rupture, r.id, r.id) for r in ruptures])
         expected_rups = {
             (pga, 0): rupture_ids,
             (pga, 1): rupture_ids,
@@ -196,16 +195,16 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 196)
+        self.assertEqual(num_ruptures, 200)
 
         # check that we generated the right number of rows in GmfData
         # 242 = 121 sites * 2 IMTs
         num_gmf1 = models.GmfData.objects.filter(
-            gmf__lt_realization=rlz1, task_no=0).count()
+            gmf__lt_realization=rlz1).count()
         num_gmf2 = models.GmfData.objects.filter(
-            gmf__lt_realization=rlz2, task_no=0).count()
-        self.assertEqual(num_gmf1, 242)
-        self.assertEqual(num_gmf2, 242)
+            gmf__lt_realization=rlz2).count()
+        self.assertEqual(num_gmf1, 242 * 19)
+        self.assertEqual(num_gmf2, 242 * 17)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
@@ -260,8 +259,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for job_id, ss, rlz in arg_gen:
-                for src, seed in ss:
+            for args in arg_gen:  # args is (job_id, src_seed_pairs, ...)
+                for src, seed in args[1]:
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
 
