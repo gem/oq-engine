@@ -23,8 +23,6 @@ import unittest
 
 from collections import namedtuple
 
-from lxml import etree
-
 from openquake.nrmllib.hazard import writers
 from openquake.nrmllib.hazard import parsers
 
