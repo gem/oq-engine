@@ -170,6 +170,44 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
         return cls(mesh)
 
     @classmethod
+    def get_surface_vertexes(cls, fault_trace,
+                             upper_seismogenic_depth,
+                             lower_seismogenic_depth, dip):
+        """
+        Get surface main vertexes.
+
+        Parameters are the same as for :meth:`from_fault_data`, excluding
+        mesh spacing.
+
+        :returns:
+            Instance of :class:`~openquake.hazardlib.geo.polygon.Polygon`
+            describing the surface projection of the simple fault with
+            specified parameters.
+        """
+        # Similar to :meth:`from_fault_data`, we just don't resample edges
+        dip_tan = math.tan(math.radians(dip))
+        hdist_top = upper_seismogenic_depth / dip_tan
+        hdist_bottom = lower_seismogenic_depth / dip_tan
+
+        strike = fault_trace[0].azimuth(fault_trace[-1])
+        azimuth = (strike + 90.0) % 360
+
+        # Collect coordinates of vertices on the top and bottom edge
+        lons = []
+        lats = []
+        for point in fault_trace.points:
+            top_edge_point = point.point_at(hdist_top, 0, azimuth)
+            bottom_edge_point = point.point_at(hdist_bottom, 0, azimuth)
+            lons.append(top_edge_point.longitude)
+            lats.append(top_edge_point.latitude)
+            lons.append(bottom_edge_point.longitude)
+            lats.append(bottom_edge_point.latitude)
+
+        lons = numpy.array(lons, float)
+        lats = numpy.array(lats, float)
+        return lons, lats
+
+    @classmethod
     def surface_projection_from_fault_data(cls, fault_trace,
                                            upper_seismogenic_depth,
                                            lower_seismogenic_depth, dip):
@@ -184,27 +222,9 @@ class SimpleFaultSurface(BaseQuadrilateralSurface):
             describing the surface projection of the simple fault with
             specified parameters.
         """
-        # similar to :meth:`from_fault_data`, we just don't resample edges
-        dip_tan = math.tan(math.radians(dip))
-        hdist_top = upper_seismogenic_depth / dip_tan
-        hdist_bottom = lower_seismogenic_depth / dip_tan
-
-        strike = fault_trace[0].azimuth(fault_trace[-1])
-        azimuth = (strike + 90.0) % 360
-
-        # collect coordinates of vertices in both top and bottom edges
-        lons = []
-        lats = []
-        for point in fault_trace.points:
-            top_edge_point = point.point_at(hdist_top, 0, azimuth)
-            bottom_edge_point = point.point_at(hdist_bottom, 0, azimuth)
-            lons.append(top_edge_point.longitude)
-            lats.append(top_edge_point.latitude)
-            lons.append(bottom_edge_point.longitude)
-            lats.append(bottom_edge_point.latitude)
-
-        lons = numpy.array(lons, float)
-        lats = numpy.array(lats, float)
+        lons, lats = cls.get_surface_vertexes(fault_trace,
+                                              upper_seismogenic_depth,
+                                              lower_seismogenic_depth, dip)
         return Mesh(lons, lats, depths=None).get_convex_hull()
 
     def get_width(self):
