@@ -54,8 +54,10 @@ class HazardCurvesTestCase(unittest.TestCase):
             self.imts = imts
             self.poes = poes
             self.dists = object()
+
         def make_contexts(self, sites, rupture):
             return (sites, rupture, self.dists)
+
         def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
             assert truncation_level is self.truncation_level
             assert dctx is self.dists
@@ -138,7 +140,7 @@ class HazardCurvesTestCase(unittest.TestCase):
                                       self.source2.time_span)
         sources = iter([self.source1, fail_source])
 
-        with self.assertRaises(RuntimeError) as ae:
+        with self.assertRaises(ValueError) as ae:
             hazard_curves(sources, self.sites, self.imts, self.gsims,
                           self.truncation_level)
         expected_error = (

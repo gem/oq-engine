@@ -18,6 +18,7 @@
 :mod:`openquake.hazardlib.calc.hazard_curve` implements
 :func:`hazard_curves`.
 """
+import sys
 import numpy
 
 from openquake.hazardlib.calc import filters
@@ -103,9 +104,10 @@ def hazard_curves(
                         pno, total_sites, placeholder=1
                     )
         except Exception, err:
+            etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err.message)
-            raise RuntimeError(msg)
+            raise etype, msg, tb
 
     for imt in imts:
         curves[imt] = 1 - curves[imt]
