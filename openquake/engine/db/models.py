@@ -1534,11 +1534,12 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    lt_realization = djm.ForeignKey('LtRealization', null=False)
+    lt_realization_ids = fields.IntArrayField(null=False)
+    ordinal = djm.IntegerField(null=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
-        ordering = ['lt_realization']
+        ordering = ['ordinal']
 
     def __iter__(self):
         """
