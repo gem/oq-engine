@@ -110,7 +110,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                         rup = models.SESRupture(
                             ses=ses,
                             rupture=r,
-                            tag='rlz=%02d|ses=%04d|src=%s|i=%04d-%02d' % (
+                            tag='coll=%02d|ses=%04d|src=%s|i=%04d-%02d' % (
                                 ses_coll.ordinal,
                                 ses.ordinal, src.source_id, i, j),
                             hypocenter=r.hypocenter.wkt2d,

@@ -28,7 +28,8 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard
 from openquake import nrmllib
 
-from openquake.engine.tests.export.core_test import BaseExportTestCase, number_of
+from openquake.engine.tests.export.core_test import \
+    BaseExportTestCase, number_of
 from openquake.engine.tests.utils import helpers
 
 
@@ -69,7 +70,7 @@ class GetResultExportDestTestCase(unittest.TestCase):
         )
         self.FakeSES = namedtuple(
             'SES',
-            'output, lt_realization'
+            'output, ordinal, sm_lt_path, weight'
         )
         self.FakeOutput = namedtuple(
             'Output',
@@ -240,12 +241,11 @@ class GetResultExportDestTestCase(unittest.TestCase):
     def test_ses(self):
         output = self.FakeOutput('ses')
 
-        ses = self.FakeGMF(output, self.ltr_mc)
+        ses = self.FakeSES(output, 1, self.ltr_mc.sm_lt_path, None)
         expected_path = (
-            '%s/calc_8/ses/ses-smltp_B1_B3-gsimltp_B2_B4-ltr_3.xml'
+            '%s/calc_8/ses/ses-smltp_B1_B3-ltr_1.xml'
             % self.target_dir
         )
-
         self.assertEqual(
             expected_path,
             hazard._get_result_export_dest(8, self.target_dir, ses)
@@ -364,26 +364,26 @@ class EventBasedExportTestCase(BaseExportTestCase):
             self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
-            # 2 GMFs, 2 SESs,
+            # 2 GMFs, 1 SESs,
             # ((2 imts * 2 realizations)
             # + ((2 imts + 1 multi) * (1 mean + 3 quantiles))
             # hazard curves,
             # (2 poes * 2 imts * 2 realizations)
             # + (2 poes * 2 imts * (1 mean + 3 quantiles)) hazard maps
-            # Total: 42
-            self.assertEqual(44, len(outputs))
+            # Total: 41
+            self.assertEqual(43, len(outputs))
 
             #######
             # SESs:
             ses_outputs = outputs.filter(output_type='ses')
-            self.assertEqual(2, len(ses_outputs))
+            self.assertEqual(1, len(ses_outputs))
 
             exported_files = []
             for ses_output in ses_outputs:
                 out_file = check_export(ses_output.id, target_dir)
                 exported_files.append(out_file)
 
-            self.assertEqual(2, len(exported_files))
+            self.assertEqual(1, len(exported_files))
 
             for f in exported_files:
                 self._test_exported_file(f)
