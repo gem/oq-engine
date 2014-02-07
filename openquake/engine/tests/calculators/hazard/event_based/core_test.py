@@ -91,7 +91,8 @@ class EventBasedHazardTestCase(unittest.TestCase):
         ruptures = [FakeRupture(i, trt) for i in rupture_ids]
         pga = PGA()
         gmv_dict, rup_dict = core._compute_gmf(
-            params, [pga], {trt: gsim}, site_coll, [(r.rupture, r.id, r.id) for r in ruptures])
+            params, [pga], {trt: gsim}, site_coll,
+            [(r.rupture, r.id, r.id) for r in ruptures])
         expected_rups = {
             (pga, 0): rupture_ids,
             (pga, 1): rupture_ids,
@@ -160,20 +161,20 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         outputs = models.Output.objects.filter(
             oq_job=self.job, output_type='ses')
-        self.assertEqual(2, len(outputs))
+        # there is a single source model realization in this test
+        self.assertEqual(1, len(outputs))
 
-        # With this job configuration, we have 2 logic tree realizations.
+        # With this job configuration, we have 2 logic tree realizations
+        # for the GMPEs
         lt_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
         self.assertEqual(2, len(lt_rlzs))
 
-        for rlz in lt_rlzs:
-            sess = models.SES.objects.filter(
-                ses_collection__lt_realization=rlz)
-            self.assertEqual(hc.ses_per_logic_tree_path, len(sess))
-
-            for ses in sess:
-                # The only metadata in in the SES is investigation time.
-                self.assertEqual(hc.investigation_time, ses.investigation_time)
+        sess = models.SES.objects.filter(
+            ses_collection__lt_realization_ids=[r.id for r in lt_rlzs])
+        self.assertEqual(hc.ses_per_logic_tree_path, len(sess))
+        for ses in sess:
+            # The only metadata in in the SES is investigation time.
+            self.assertEqual(hc.investigation_time, ses.investigation_time)
 
     @attr('slow')
     def test_complete_event_based_calculation_cycle(self):
@@ -195,7 +196,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 200)
+        self.assertEqual(num_ruptures, 107)
 
         # check that we generated the right number of rows in GmfData
         # 242 = 121 sites * 2 IMTs
@@ -203,8 +204,11 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             gmf__lt_realization=rlz1).count()
         num_gmf2 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz2).count()
-        self.assertEqual(num_gmf1, 242 * 19)
-        self.assertEqual(num_gmf2, 242 * 17)
+
+        # with concurrent_tasks=64, this test generates 52 tasks, i.e.
+        # 26 tasks for each realization
+        self.assertEqual(num_gmf1, 242 * 26)
+        self.assertEqual(num_gmf2, 242 * 26)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
@@ -221,15 +225,15 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     def test_task_arg_gen(self):
         hc = self.job.hazard_calculation
 
-        self.calc.initialize_sources()
-        self.calc.initialize_realizations()
+        #self.calc.initialize_sources()
+        #self.calc.initialize_realizations()
+        self.calc.pre_execute()
 
         [rlz1, rlz2] = models.LtRealization.objects.filter(
             hazard_calculation=hc).order_by('id')
 
-        # create the ses collections
-        self.calc.initialize_ses_db_records(rlz1)
-        self.calc.initialize_ses_db_records(rlz2)
+        # create the ses collection
+        self.calc.initialize_ses_db_records(0, [rlz1, rlz2])
 
         # this is also testing the splitting of fault sources
         expected = [  # source_id, seed
@@ -244,17 +248,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             ('3-8', 930268948),
             ('3-9', 1920723121),
             ('4', 1760832373),
-            ('3-0', 895150922),
-            ('3-1', 1886047353),
-            ('3-2', 2111769094),
-            ('3-3', 1463337750),
-            ('3-4', 1752507064),
-            ('3-5', 27028211),
-            ('3-6', 670491262),
-            ('3-7', 390011773),
-            ('3-8', 249942775),
-            ('3-9', 1808974579),
-            ('4', 644370012),
         ]
 
         # utility to present the generated arguments in a nicer way

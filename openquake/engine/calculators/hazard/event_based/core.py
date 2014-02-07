@@ -61,10 +61,8 @@ DEFAULT_GMF_REALIZATIONS = 1
 inserter = writer.CacheInserter(models.GmfData, 1000)
 
 
-# Disabling pylint for 'Too many local variables'
-# pylint: disable=R0914
 @tasks.oqtask
-def compute_ses_and_gmfs(job_id, src_seeds, ses_coll, gsims, task_no):
+def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     """
     Celery task for the stochastic event set calculator.
 
@@ -81,13 +79,14 @@ def compute_ses_and_gmfs(job_id, src_seeds, ses_coll, gsims, task_no):
         ID of the currently running job.
     :param src_seeds:
         List of pairs (source, seed)
-    :param ses_coll:
-        an instance of :class:`openquake.engine.db.models.SESCollection`
-    :params gsims:
+    :params gsims_by_rlz:
         dictionary of GSIM
     :param task_no:
         an ordinal so that GMV can be collected in a reproducible order
     """
+    rlz_ids = [r.id for r in gsims_by_rlz]
+    ses_coll = models.SESCollection.objects.get(lt_realization_ids=rlz_ids)
+
     rnd = random.Random()
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
     ruptures = []
@@ -112,7 +111,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, ses_coll, gsims, task_no):
                             ses=ses,
                             rupture=r,
                             tag='rlz=%02d|ses=%04d|src=%s|i=%04d-%02d' % (
-                                ses_coll.lt_realization.ordinal,
+                                ses_coll.ordinal,
                                 ses.ordinal, src.source_id, i, j),
                             hypocenter=r.hypocenter.wkt2d,
                             magnitude=r.mag,
@@ -143,15 +142,16 @@ def compute_ses_and_gmfs(job_id, src_seeds, ses_coll, gsims, task_no):
 
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_ses_and_gmfs):
-        gmvs_per_site, ruptures_per_site = _compute_gmf(
-            params, imts, gsims, hc.site_collection,
-            zip(ruptures, rupture_ids, rupture_seeds))
+        for gsims in gsims_by_rlz.itervalues():
+            gmvs_per_site, ruptures_per_site = _compute_gmf(
+                params, imts, gsims, hc.site_collection,
+                zip(ruptures, rupture_ids, rupture_seeds))
 
     with EnginePerformanceMonitor('saving gmfs', job_id, compute_ses_and_gmfs):
-        gmf_coll = models.Gmf.objects.get(
-            lt_realization=ses_coll.lt_realization)
-        _save_gmfs(gmf_coll, gmvs_per_site, ruptures_per_site,
-                   hc.site_collection, task_no)
+        for rlz in gsims_by_rlz:
+            gmf_coll = models.Gmf.objects.get(lt_realization=rlz)
+            _save_gmfs(gmf_coll, gmvs_per_site, ruptures_per_site,
+                       hc.site_collection, task_no)
 
 
 def _save_ses_ruptures(ruptures):
@@ -268,26 +268,20 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         (seeds will be used to seed numpy for temporal occurence sampling).
         """
         hc = self.hc
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         rnd = random.Random()
         rnd.seed(hc.random_seed)
         task_no = 0
-        for lt_rlz in self._get_realizations():
-            path = tuple(lt_rlz.sm_lt_path)
-            sources = WeightedSequence.merge(
-                self.source_blocks_per_ltpath[path])
-            gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-            ses_coll = models.SESCollection.objects.get(lt_realization=lt_rlz)
+        for job_id, block, gsims_by_rlz in super(
+                EventBasedHazardCalculator, self).task_arg_gen():
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
-                  for src in sources]  # source, seed pairs
-            for block in self.block_split(ss):
-                yield self.job.id, block, ses_coll, gsims, task_no
-                task_no += 1
+                  for src in block]  # source, seed pairs
+            yield job_id, ss, gsims_by_rlz, task_no
+            task_no += 1
 
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
 
-    def initialize_ses_db_records(self, lt_rlz):
+    def initialize_ses_db_records(self, ordinal, rlzs):
         """
         Create :class:`~openquake.engine.db.models.Output`,
         :class:`~openquake.engine.db.models.SESCollection` and
@@ -299,22 +293,23 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         NOTE: Many tasks can contribute ruptures to the same SES.
         """
+        rlz_ids = [r.id for r in rlzs]
+
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='SES Collection rlz-%s' % lt_rlz.id,
+            display_name='SES Collection rlz-%s' % ','.join(map(str, rlz_ids)),
             output_type='ses')
 
         ses_coll = models.SESCollection.objects.create(
-            output=output, lt_realization=lt_rlz)
+            output=output, lt_realization_ids=rlz_ids, ordinal=ordinal)
 
-        if self.job.hazard_calculation.ground_motion_fields:
-            output = models.Output.objects.create(
-                oq_job=self.job,
-                display_name='GMF rlz-%s' % lt_rlz.id,
-                output_type='gmf')
-
-            models.Gmf.objects.create(
-                output=output, lt_realization=lt_rlz)
+        for rlz in rlzs:
+            if self.job.hazard_calculation.ground_motion_fields:
+                output = models.Output.objects.create(
+                    oq_job=self.job,
+                    display_name='GMF rlz-%s' % rlz.id,
+                    output_type='gmf')
+                models.Gmf.objects.create(output=output, lt_realization=rlz)
 
         all_ses = []
         for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
@@ -335,8 +330,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         `execute` phase.)
         """
         super(EventBasedHazardCalculator, self).pre_execute()
-        for rlz in self._get_realizations():
-            self.initialize_ses_db_records(rlz)
+        for i, rlzs in enumerate(self.rlzs_per_ltpath.itervalues()):
+            self.initialize_ses_db_records(i, rlzs)
 
     def post_process(self):
         """
