@@ -29,7 +29,6 @@ import urllib2
 
 from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
-from django.db import connections
 
 from openquakeserver.dbsettings import PLATFORM_DATABASES as DATABASES
 
@@ -51,10 +50,6 @@ def run_calc(calc_type, calc_id, calc_dir,
 
     :param calc_type: 'hazard' or 'risk'
     """
-    # close all Django connections to avoid issues with multiprocessing
-    for conn in connections.all():
-        conn.close()
-
     job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
 
     update_calculation(callback_url, status="started", engine_id=calc_id)
@@ -77,10 +72,6 @@ def run_calc(calc_type, calc_id, calc_dir,
                                 ''.join(traceback.format_tb(tb)))
         update_calculation(callback_url, status="failed", einfo=einfo)
         return
-    finally:
-        # close all Django connections
-        for conn in connections.all():
-            conn.close()
 
     shutil.rmtree(calc_dir)
 

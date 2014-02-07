@@ -11,11 +11,8 @@ except ImportError:
 
 import settings
 
-from engine import executor
+from openquakeserver.engine import executor
 
 if __name__ == "__main__":
     with executor:
         execute_manager(settings)
-        from django.db import connections
-        for connection in connections.all():
-            connection.close()
