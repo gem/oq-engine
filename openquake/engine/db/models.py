@@ -1548,6 +1548,27 @@ class SESCollection(djm.Model):
         return SES.objects.filter(ses_collection=self.id).order_by('ordinal') \
             .iterator()
 
+    @property
+    def sm_lt_path(self):
+        """
+        The source model logic tree path corresponding to the collection
+        """
+        # all lt_realization_ids correspond to the same sm_lt_path
+        return LtRealization.objects.get(
+            pk=self.lt_realization_ids[0]).sm_lt_path
+
+    @property
+    def weight(self):
+        """
+        The logic tree weight corresponding to the collection
+        """
+        weights = [LtRealization.objects.get(pk=rlz_id).weight
+                   for rlz_id in self.lt_realization_ids]
+        if all(w is None for w in weights):
+            return None
+        else:
+            return sum(weights)
+
 
 class SES(djm.Model):
     """
