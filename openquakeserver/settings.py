@@ -95,3 +95,5 @@ LOGGING = {
 }
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
+
+CONCURRENT_JOBS = 1  # recommended setting for development

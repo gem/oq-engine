@@ -11,7 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import RequestFactory
 from django.utils import unittest
 
-from engine import views
+from engine import views, executor
 from engine import _test_utils as utils
 
 FakeOutput = namedtuple('FakeOutput', 'id, display_name, output_type')
@@ -516,7 +516,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
             job_from_file='openquake.engine.engine.haz_job_from_file',
-            run_hazard_task='engine.tasks.run_hazard_calc',
+            run_task='engine.tasks.run_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
 
@@ -531,17 +531,16 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         )
 
         try:
-            # For `apply_async` mock function. See below.
-            aa_call_data = dict(count=0, args=None)
+            executor_call_data = dict(count=0, args=None)
 
             with multi_mock:
                 multi_mock['mkdtemp'].return_value = temp_dir
 
-                def apply_async(*args):
-                    aa_call_data['args'] = args
-                    aa_call_data['count'] += 1
+                def submit(func, *args, **kwargs):
+                    executor_call_data['args'] = (args, kwargs)
+                    executor_call_data['count'] += 1
 
-                multi_mock['run_hazard_task'].apply_async = apply_async
+                executor.submit = submit
 
                 fake_job = FakeJob(
                     'pending', FakeUser(1), FakeCalc(666, 'Fake Calc Desc'),
@@ -562,11 +561,11 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             self.assertEqual(
                 {'count': 1,
                  'args': (
-                     (666, temp_dir),
+                     ('hazard', 666, temp_dir),
                      {'foreign_calc_id': None,
                       'dbname': 'platform',
                       'callback_url': None})},
-                aa_call_data
+                executor_call_data
             )
 
         finally:
@@ -600,7 +599,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
             job_from_file='openquake.engine.engine.risk_job_from_file',
-            run_risk_task='engine.tasks.run_risk_calc',
+            run_task='engine.tasks.run_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
 
@@ -620,17 +619,16 @@ class RunRiskCalcTestCase(BaseViewTestCase):
         )
 
         try:
-            # For `apply_async` mock function. See below.
-            aa_call_data = dict(count=0, args=None)
+            executor_call_data = dict(count=0, args=None)
 
             with multi_mock:
                 multi_mock['mkdtemp'].return_value = temp_dir
 
-                def apply_async(*args):
-                    aa_call_data['args'] = args
-                    aa_call_data['count'] += 1
+                def submit(func, *args, **kwargs):
+                    executor_call_data['args'] = (args, kwargs)
+                    executor_call_data['count'] += 1
 
-                multi_mock['run_risk_task'].apply_async = apply_async
+                executor.submit = submit
 
                 fake_job = FakeJob(
                     'pending', FakeUser(1), None,
@@ -654,11 +652,11 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             self.assertEqual(
                 {'count': 1,
                  'args': (
-                     (777, temp_dir),
+                     ('risk', 777, temp_dir),
                      {'foreign_calc_id': None,
                       'dbname': 'platform',
                       'callback_url': None})},
-                aa_call_data
+                executor_call_data
             )
         finally:
             shutil.rmtree(temp_dir)
