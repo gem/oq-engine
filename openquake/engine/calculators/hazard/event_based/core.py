@@ -53,7 +53,6 @@ from openquake.engine.utils.general import WeightedSequence
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
-
 #: Always 1 for the computation of ground motion fields in the event-based
 #: hazard calculator.
 DEFAULT_GMF_REALIZATIONS = 1

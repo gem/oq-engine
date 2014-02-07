@@ -1573,46 +1573,23 @@ class SES(djm.Model):
             .iterator()
 
 
-def old_field_property(prop):
-    def wrapped_property(s):
-        if getattr(s, "old_%s" % prop.__name__) is not None:
-            return getattr(s, "old_%s" % prop.__name__)
-        else:
-            return prop(s)
-    return property(wrapped_property)
-
-
 class SESRupture(djm.Model):
     """
     A rupture as part of a Stochastic Event Set.
     """
     ses = djm.ForeignKey('SES')
-
-    #: A pickled
-    #: :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
-    #: instance
-    rupture = fields.PickleField()
-
-    magnitude = djm.FloatField(null=True)
+    magnitude = djm.FloatField(null=False)
     hypocenter = djm.PointField(srid=DEFAULT_SRID)
-
-    # a tag with rlz, ses, src and ordinal info
-    tag = djm.TextField()
-
-    old_strike = djm.FloatField(null=True)
-    old_dip = djm.FloatField(null=True)
-    old_rake = djm.FloatField(null=True)
-    old_tectonic_region_type = djm.TextField(null=True)
-    old_is_from_fault_source = djm.NullBooleanField(null=True)
-    old_is_multi_surface = djm.NullBooleanField(null=True)
-    old_lons = fields.PickleField(null=True)
-    old_lats = fields.PickleField(null=True)
-    old_depths = fields.PickleField(null=True)
-
-    #: A pickled
-    #: :class:`openquake.hazardlib.geo.surface.BaseSurface`
-    #: instance
-    old_surface = fields.PickleField(null=True)
+    tag = djm.TextField(null=False)
+    strike = djm.FloatField(null=False)
+    dip = djm.FloatField(null=False)
+    rake = djm.FloatField(null=False)
+    tectonic_region_type = djm.TextField(null=False)
+    is_from_fault_source = djm.NullBooleanField(null=False)
+    is_multi_surface = djm.NullBooleanField(null=False)
+    lons = fields.PickleField(null=False)
+    lats = fields.PickleField(null=False)
+    depths = fields.PickleField(null=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
@@ -1660,7 +1637,6 @@ class SESRupture(djm.Model):
             return self.lons[3], self.lats[3], self.depths[3]
         return None
 
-    @old_field_property
     def is_from_fault_source(self):
         """
         If True, this rupture was generated from a simple/complex fault
@@ -1677,7 +1653,7 @@ class SESRupture(djm.Model):
         return is_complex_or_simple or (
             is_char and is_complex_or_simple_surface)
 
-    @old_field_property
+    @property
     def is_multi_surface(self):
         typology = self.rupture.source_typology
         is_char = typology is hazardlib_source.CharacteristicFaultSource
@@ -1746,38 +1722,6 @@ class SESRupture(djm.Model):
                     lats[i] = corner.latitude
                     depths[i] = corner.depth
         return lons, lats, depths
-
-    @old_field_property
-    def lons(self):
-        return self.get_geom()[0]
-
-    @old_field_property
-    def lats(self):
-        return self.get_geom()[1]
-
-    @old_field_property
-    def depths(self):
-        return self.get_geom()[2]
-
-    @old_field_property
-    def surface(self):
-        return self.rupture.surface
-
-    @old_field_property
-    def strike(self):
-        return self.rupture.surface.get_strike()
-
-    @old_field_property
-    def dip(self):
-        return self.rupture.surface.get_dip()
-
-    @old_field_property
-    def rake(self):
-        return self.rupture.rake
-
-    @old_field_property
-    def tectonic_region_type(self):
-        return self.rupture.tectonic_region_type
 
 
 class _Point(object):

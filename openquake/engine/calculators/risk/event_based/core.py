@@ -169,7 +169,8 @@ def save_statistical_output(containers, stats, params):
         a :class:`openquake.engine.calculators.risk.writers.OutputDict`
         instance holding the reference to the output container objects
     :param stats:
-        :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`
+        :class:
+        `openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`
         holding the statistical output data
     :param params:
         a :class:`openquake.engine.calculators.risk.base.CalcParams`
