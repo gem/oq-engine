@@ -112,7 +112,7 @@ def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
     try:
         for output in job.output_set.all():
             copy_output(platform_connection, output, foreign_calc_id)
-            update_calculation(callback_url, status="creating layers")
+        update_calculation(callback_url, status="creating layers")
     finally:
         platform_connection.close()
 
