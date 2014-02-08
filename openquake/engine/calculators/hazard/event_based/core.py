@@ -47,9 +47,7 @@ from openquake.engine.calculators.hazard.classical import (
     post_processing as cls_post_proc)
 from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
-from openquake.engine.input import logictree
 from openquake.engine.utils import tasks
-from openquake.engine.utils.general import WeightedSequence
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
@@ -140,15 +138,15 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
 
-    with EnginePerformanceMonitor(
-            'computing gmfs', job_id, compute_ses_and_gmfs):
-        for gsims in gsims_by_rlz.itervalues():
+    for rlz, gsims in gsims_by_rlz.items():
+        with EnginePerformanceMonitor(
+                'computing gmfs', job_id, compute_ses_and_gmfs):
             gmvs_per_site, ruptures_per_site = _compute_gmf(
                 params, imts, gsims, hc.site_collection,
                 zip(ruptures, rupture_ids, rupture_seeds))
 
-    with EnginePerformanceMonitor('saving gmfs', job_id, compute_ses_and_gmfs):
-        for rlz in gsims_by_rlz:
+        with EnginePerformanceMonitor(
+                'saving gmfs', job_id, compute_ses_and_gmfs):
             gmf_coll = models.Gmf.objects.get(lt_realization=rlz)
             _save_gmfs(gmf_coll, gmvs_per_site, ruptures_per_site,
                        hc.site_collection, task_no)
@@ -297,7 +295,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='SES Collection rlz-%s' % ','.join(map(str, rlz_ids)),
+            display_name='SES Collection smlt-%d' % ordinal,
             output_type='ses')
 
         ses_coll = models.SESCollection.objects.create(

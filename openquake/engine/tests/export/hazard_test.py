@@ -364,7 +364,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             self.assertEqual(job.status, 'complete')
 
             outputs = export_core.get_outputs(job.id)
-            # 2 GMFs, 1 SESs,
+            # 2 GMFs, 1 SES,
             # ((2 imts * 2 realizations)
             # + ((2 imts + 1 multi) * (1 mean + 3 quantiles))
             # hazard curves,

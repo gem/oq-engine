@@ -224,9 +224,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
     def test_task_arg_gen(self):
         hc = self.job.hazard_calculation
-
-        #self.calc.initialize_sources()
-        #self.calc.initialize_realizations()
         self.calc.pre_execute()
 
         [rlz1, rlz2] = models.LtRealization.objects.filter(
