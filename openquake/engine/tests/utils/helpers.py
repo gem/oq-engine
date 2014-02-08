@@ -735,7 +735,7 @@ def create_ses_ruptures(job, ses_collection, num):
     return [
         models.SESRupture.objects.create(
             ses=ses,
-            tag='coll=%s|ses=%d|src=test|i=%d' % (
+            tag='smlt=%s|ses=%d|src=test|i=%d' % (
                 ses_collection.ordinal, ses.ordinal, i),
             magnitude=1 + i * 10. / float(num),
             hypocenter=Point(0, 0, 0.1).wkt2d,
