@@ -85,25 +85,42 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     rlz_ids = [r.id for r in gsims_by_rlz]
     ses_coll = models.SESCollection.objects.get(lt_realization_ids=rlz_ids)
 
-    rnd = random.Random()
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
     ruptures = []
     ses_ruptures = []
     rupture_seeds = []
 
-    mon1 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
-    mon2 = LightMonitor('sampling ruptures', job_id, compute_ses_and_gmfs)
+    mon1 = LightMonitor('filtering sites', job_id, compute_ses_and_gmfs)
+    mon2 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
+    mon3 = LightMonitor('sampling ruptures', job_id, compute_ses_and_gmfs)
 
     # Compute and save stochastic event sets
+    rnd = random.Random()
     for src, seed in src_seeds:
         rnd.seed(seed)
+
         with mon1:
-            rupts = list(src.iter_ruptures())
+            s_sites = src.filter_sites_by_distance_to_source(
+                hc.maximum_distance, hc.site_collection
+            ) if hc.maximum_distance else hc.site_collection
+            if s_sites is None:
+                continue
+
+        with mon2:
+            rupts = []
+            for r in src.iter_ruptures():
+                r_sites = r.source_typology.\
+                    filter_sites_by_distance_to_rupture(
+                        r, hc.maximum_distance, s_sites
+                    ) if hc.maximum_distance else s_sites
+                if r_sites is not None:
+                    rupts.append(r)
 
         for ses in all_ses:
             numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
             for i, r in enumerate(rupts):
-                with mon2:
+                with mon3:
                     for j in xrange(r.sample_number_of_occurrences()):
                         rup = models.SESRupture(
                             ses=ses,
@@ -121,13 +138,13 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
     mon1.flush()
     mon2.flush()
+    mon3.flush()
     if not ruptures:
         return
 
     with EnginePerformanceMonitor('saving ses', job_id, compute_ses_and_gmfs):
         rupture_ids = _save_ses_ruptures(ses_ruptures)
 
-    hc = models.HazardCalculation.objects.get(oqjob=job_id)
     if not hc.ground_motion_fields:
         return
 
@@ -204,8 +221,6 @@ def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples):
             'truncation_level': params['truncation_level'],
             'realizations': DEFAULT_GMF_REALIZATIONS,
             'correlation_model': params['correl_model'],
-            'rupture_site_filter': filters.rupture_site_distance_filter(
-                params['maximum_distance']),
         }
         numpy.random.seed(rup_seed)
         gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
