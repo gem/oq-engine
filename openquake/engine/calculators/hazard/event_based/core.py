@@ -156,13 +156,13 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         if not hc.ground_motion_fields:
             continue
 
-        for gsims in gsims_by_rlz.itervalues():
+        for rlz, gsims in gsims_by_rlz.items():
             with mon5:
                 for imt, site_id, gmv, rup_id in _compute_gmf(
                         params, imts, gsims, r_sites,
                         zip(ruptures, rupture_ids, rupture_seeds)):
-                    gmvs_per_site[imt, site_id] = gmv
-                    ruptures_per_site[imt, site_id] = rup_id
+                    gmvs_per_site[rlz, imt, site_id].append(gmv)
+                    ruptures_per_site[rlz, imt, site_id].append(rup_id)
 
     mon1.flush()
     mon2.flush()
@@ -173,11 +173,11 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     if not hc.ground_motion_fields:
         return
 
-    with EnginePerformanceMonitor(
-            'saving gmfs', job_id, compute_ses_and_gmfs):
-        gmf_coll = models.Gmf.objects.get(lt_realization=rlz)
-        _save_gmfs(gmf_coll, gmvs_per_site, ruptures_per_site,
-                   hc.site_collection, task_no)
+    for rlz in gsims_by_rlz:
+        with EnginePerformanceMonitor(
+                'saving gmfs', job_id, compute_ses_and_gmfs):
+            _save_gmfs(gmvs_per_site, ruptures_per_site,
+                       hc.site_collection, task_no)
 
 
 def _save_ses_ruptures(ruptures):
@@ -242,12 +242,9 @@ def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples):
 
 
 @transaction.commit_on_success(using='job_init')
-def _save_gmfs(gmf, gmvs_per_site, ruptures_per_site, sites, task_no):
+def _save_gmfs(gmvs_per_site, ruptures_per_site, sites, task_no):
     """
     Helper method to save computed GMF data to the database.
-
-    :param gmf:
-        The Gmf instance where to save
     :param gmf_per_site:
         The GMFs per rupture
     :param rupture_per_site:
@@ -258,7 +255,8 @@ def _save_gmfs(gmf, gmvs_per_site, ruptures_per_site, sites, task_no):
     :param task_no:
         The ordinal of the task which generated the current GMFs to save
     """
-    for imt, site_id in gmvs_per_site:
+    for rlz, imt, site_id in gmvs_per_site:
+        gmf = models.Gmf.objects.get(lt_realization=rlz)
         imt_name, sa_period, sa_damping = imt
         inserter.add(models.GmfData(
             gmf=gmf,
@@ -267,8 +265,8 @@ def _save_gmfs(gmf, gmvs_per_site, ruptures_per_site, sites, task_no):
             sa_period=sa_period,
             sa_damping=sa_damping,
             site_id=site_id,
-            gmvs=gmvs_per_site[imt, site_id],
-            rupture_ids=ruptures_per_site[imt, site_id]))
+            gmvs=gmvs_per_site[rlz, imt, site_id],
+            rupture_ids=ruptures_per_site[rlz, imt, site_id]))
     inserter.flush()
 
 
