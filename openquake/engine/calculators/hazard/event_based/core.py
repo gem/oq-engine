@@ -87,18 +87,29 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
-    ruptures = []
-    ses_ruptures = []
-    rupture_seeds = []
+    imts = map(from_string, hc.intensity_measure_types)
+    params = dict(
+        correl_model=general.get_correl_model(hc),
+        truncation_level=hc.truncation_level,
+        maximum_distance=hc.maximum_distance)
+
+    gmvs_per_site = collections.defaultdict(list)
+    ruptures_per_site = collections.defaultdict(list)
 
     mon1 = LightMonitor('filtering sites', job_id, compute_ses_and_gmfs)
     mon2 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
     mon3 = LightMonitor('sampling ruptures', job_id, compute_ses_and_gmfs)
+    mon4 = LightMonitor('saving ruptures', job_id, compute_ses_and_gmfs)
+    mon5 = LightMonitor('generating gmfs', job_id, compute_ses_and_gmfs)
 
     # Compute and save stochastic event sets
     rnd = random.Random()
     for src, seed in src_seeds:
         rnd.seed(seed)
+
+        ruptures = []
+        ses_ruptures = []
+        rupture_seeds = []
 
         with mon1:
             s_sites = src.filter_sites_by_distance_to_source(
@@ -136,37 +147,36 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                         ses_ruptures.append(rup)
                         rupture_seeds.append(rup_seed)
 
+        if not ruptures:
+            continue
+
+        for rlz, gsims in gsims_by_rlz.items():
+            with mon4:
+                rupture_ids = _save_ses_ruptures(ses_ruptures)
+
+            if not hc.ground_motion_fields:
+                continue
+
+            with mon5:
+                _compute_gmf(
+                    params, imts, gsims, hc.site_collection,
+                    zip(ruptures, rupture_ids, rupture_seeds),
+                    gmvs_per_site, ruptures_per_site)
+
     mon1.flush()
     mon2.flush()
     mon3.flush()
-    if not ruptures:
-        return
-
-    with EnginePerformanceMonitor('saving ses', job_id, compute_ses_and_gmfs):
-        rupture_ids = _save_ses_ruptures(ses_ruptures)
+    mon4.flush()
+    mon5.flush()
 
     if not hc.ground_motion_fields:
         return
 
-    # compute GMFs
-    imts = map(from_string, hc.intensity_measure_types)
-    params = dict(
-        correl_model=general.get_correl_model(hc),
-        truncation_level=hc.truncation_level,
-        maximum_distance=hc.maximum_distance)
-
-    for rlz, gsims in gsims_by_rlz.items():
-        with EnginePerformanceMonitor(
-                'computing gmfs', job_id, compute_ses_and_gmfs):
-            gmvs_per_site, ruptures_per_site = _compute_gmf(
-                params, imts, gsims, hc.site_collection,
-                zip(ruptures, rupture_ids, rupture_seeds))
-
-        with EnginePerformanceMonitor(
-                'saving gmfs', job_id, compute_ses_and_gmfs):
-            gmf_coll = models.Gmf.objects.get(lt_realization=rlz)
-            _save_gmfs(gmf_coll, gmvs_per_site, ruptures_per_site,
-                       hc.site_collection, task_no)
+    with EnginePerformanceMonitor(
+            'saving gmfs', job_id, compute_ses_and_gmfs):
+        gmf_coll = models.Gmf.objects.get(lt_realization=rlz)
+        _save_gmfs(gmf_coll, gmvs_per_site, ruptures_per_site,
+                   hc.site_collection, task_no)
 
 
 def _save_ses_ruptures(ruptures):
@@ -187,7 +197,8 @@ def _save_ses_ruptures(ruptures):
 
 # NB: I tried to return a single dictionary {site_id: [(gmv, rupt_id),...]}
 # but it takes a lot more memory (MS)
-def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples):
+def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples,
+                 gmvs_per_site, ruptures_per_site):
     """
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for the given IMT. Returns a
@@ -207,10 +218,11 @@ def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples):
     :param rupture_id_seed_triple:
         a list of triples with types
         (:class:`openquake.hazardlib.source.rupture.Rupture`, int, int)
+    :param gmvs_per_site:
+        dictionary of lists
+    :param ruptures_per_site:
+        dictionary of lists
     """
-    gmvs_per_site = collections.defaultdict(list)
-    ruptures_per_site = collections.defaultdict(list)
-
     # Compute and save ground motion fields
     for i, (rupture, rup_id, rup_seed) in enumerate(rupture_id_seed_triples):
         gmf_calc_kwargs = {
@@ -232,7 +244,6 @@ def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples):
                 if gmv:  # nonzero contribution to site
                     gmvs_per_site[imt, site.id].append(gmv)
                     ruptures_per_site[imt, site.id].append(rup_id)
-    return gmvs_per_site, ruptures_per_site
 
 
 @transaction.commit_on_success(using='job_init')
