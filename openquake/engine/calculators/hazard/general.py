@@ -209,14 +209,6 @@ class BaseHazardCalculator(base.Calculator):
             logs.LOG.warn('Could not save job_stats.num_sources: %s', e)
         self.initialize_realizations()
 
-        self.rlzs_per_ltpath = collections.OrderedDict()
-        for rlz in self._get_realizations():
-            ltpath = tuple(rlz.sm_lt_path)
-            if not ltpath in self.rlzs_per_ltpath:
-                self.rlzs_per_ltpath[ltpath] = [rlz]
-            else:
-                self.rlzs_per_ltpath[ltpath].append(rlz)
-
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
@@ -371,6 +363,14 @@ class BaseHazardCalculator(base.Calculator):
         else:
             # full paths enumeration
             self._initialize_realizations_enumeration()
+
+        self.rlzs_per_ltpath = collections.OrderedDict()
+        for rlz in self._get_realizations():
+            ltpath = tuple(rlz.sm_lt_path)
+            if not ltpath in self.rlzs_per_ltpath:
+                self.rlzs_per_ltpath[ltpath] = [rlz]
+            else:
+                self.rlzs_per_ltpath[ltpath].append(rlz)
 
     def _initialize_realizations_enumeration(self):
         """
