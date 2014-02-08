@@ -159,7 +159,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
             with mon5:
                 _compute_gmf(
-                    params, imts, gsims, hc.site_collection,
+                    params, imts, gsims, r_sites,
                     zip(ruptures, rupture_ids, rupture_seeds),
                     gmvs_per_site, ruptures_per_site)
 
