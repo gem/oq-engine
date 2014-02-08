@@ -150,18 +150,19 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         if not ruptures:
             continue
 
-        for rlz, gsims in gsims_by_rlz.items():
-            with mon4:
-                rupture_ids = _save_ses_ruptures(ses_ruptures)
+        with mon4:
+            rupture_ids = _save_ses_ruptures(ses_ruptures)
 
-            if not hc.ground_motion_fields:
-                continue
+        if not hc.ground_motion_fields:
+            continue
 
+        for gsims in gsims_by_rlz.itervalues():
             with mon5:
-                _compute_gmf(
-                    params, imts, gsims, r_sites,
-                    zip(ruptures, rupture_ids, rupture_seeds),
-                    gmvs_per_site, ruptures_per_site)
+                for imt, site_id, gmv, rup_id in _compute_gmf(
+                        params, imts, gsims, r_sites,
+                        zip(ruptures, rupture_ids, rupture_seeds)):
+                    gmvs_per_site[imt, site_id] = gmv
+                    ruptures_per_site[imt, site_id] = rup_id
 
     mon1.flush()
     mon2.flush()
@@ -197,8 +198,7 @@ def _save_ses_ruptures(ruptures):
 
 # NB: I tried to return a single dictionary {site_id: [(gmv, rupt_id),...]}
 # but it takes a lot more memory (MS)
-def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples,
-                 gmvs_per_site, ruptures_per_site):
+def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples):
     """
     Compute a ground motion field value for each rupture, for all the
     points affected by that rupture, for the given IMT. Returns a
@@ -218,10 +218,6 @@ def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples,
     :param rupture_id_seed_triple:
         a list of triples with types
         (:class:`openquake.hazardlib.source.rupture.Rupture`, int, int)
-    :param gmvs_per_site:
-        dictionary of lists
-    :param ruptures_per_site:
-        dictionary of lists
     """
     # Compute and save ground motion fields
     for i, (rupture, rup_id, rup_seed) in enumerate(rupture_id_seed_triples):
@@ -242,8 +238,7 @@ def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples,
             for site, gmv in zip(site_coll, gmf_1_realiz):
                 gmv = float(gmv)  # convert a 1x1 matrix into a float
                 if gmv:  # nonzero contribution to site
-                    gmvs_per_site[imt, site.id].append(gmv)
-                    ruptures_per_site[imt, site.id].append(rup_id)
+                    yield imt, site.id, gmv, rup_id
 
 
 @transaction.commit_on_success(using='job_init')
