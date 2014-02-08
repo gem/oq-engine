@@ -295,7 +295,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='SES Collection smlt-%d' % ordinal,
+            display_name='SES Collection smlt-%d-rlz-%s' % (
+                ordinal, ','.join(map(str, rlz_ids))),
             output_type='ses')
 
         ses_coll = models.SESCollection.objects.create(
