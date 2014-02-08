@@ -127,6 +127,8 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                     ) if hc.maximum_distance else s_sites
                 if r_sites is not None:
                     rupts.append(r)
+            if not rupts:
+                continue
 
         for ses in all_ses:
             numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
@@ -159,7 +161,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         for rlz, gsims in gsims_by_rlz.items():
             with mon5:
                 for imt, site_id, gmv, rup_id in _compute_gmf(
-                        params, imts, gsims, r_sites,
+                        params, imts, gsims, s_sites,
                         zip(ruptures, rupture_ids, rupture_seeds)):
                     gmvs_per_site[rlz, imt, site_id].append(gmv)
                     ruptures_per_site[rlz, imt, site_id].append(rup_id)
