@@ -16,7 +16,6 @@
 import sys
 import math
 import copy
-import time
 
 from itertools import izip
 
@@ -527,17 +526,16 @@ def split_source(src, area_source_discretization):
 def get_num_ruptures_weight(src):
     """
     Compute the weight of a source as the number of ruptures generated
-    by the source multiplied by the time needed to count them.
+    by the source multiplied by a reduction factor of 10 for point sources
 
     :param src:
         an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
     :returns:
         a pair (num_ruptures, weight)
     """
-    t0 = time.time()
     num_ruptures = src.count_ruptures()
-    dt = time.time() - t0
-    return num_ruptures, num_ruptures * dt
+    weight = 0.1 if isinstance(src, source.PointSource) else 1
+    return num_ruptures, num_ruptures * weight
 
 
 def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
