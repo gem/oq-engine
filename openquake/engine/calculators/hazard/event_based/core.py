@@ -32,6 +32,7 @@ For more information on computing ground motion fields, see
 """
 
 import random
+import itertools
 import collections
 
 import numpy.random
@@ -95,12 +96,13 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
     gmvs_per_site = collections.defaultdict(list)
     ruptures_per_site = collections.defaultdict(list)
+    num_sites = len(hc.site_collection)
 
     mon1 = LightMonitor('filtering sites', job_id, compute_ses_and_gmfs)
     mon2 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
     mon3 = LightMonitor('sampling ruptures', job_id, compute_ses_and_gmfs)
-    mon4 = LightMonitor('saving ruptures', job_id, compute_ses_and_gmfs)
-    mon5 = LightMonitor('generating gmfs', job_id, compute_ses_and_gmfs)
+    mon4 = LightMonitor('saving ses', job_id, compute_ses_and_gmfs)
+    mon5 = LightMonitor('computing gmfs', job_id, compute_ses_and_gmfs)
 
     # Compute and save stochastic event sets
     rnd = random.Random()
@@ -158,6 +160,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         if not hc.ground_motion_fields:
             continue
 
+        triples = zip(ruptures, rupture_ids, rupture_seeds)
         for rlz, gsims in gsims_by_rlz.items():
             with mon5:
                 for imt, site_id, gmv, rup_id in _compute_gmf(
@@ -222,7 +225,7 @@ def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples):
         (:class:`openquake.hazardlib.source.rupture.Rupture`, int, int)
     """
     # Compute and save ground motion fields
-    for i, (rupture, rup_id, rup_seed) in enumerate(rupture_id_seed_triples):
+    for rupture, rup_id, rup_seed in enumerate(rupture_id_seed_triples):
         gmf_calc_kwargs = {
             'rupture': rupture,
             'sites': site_coll,
