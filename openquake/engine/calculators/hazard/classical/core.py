@@ -16,6 +16,7 @@
 """
 Core functionality for the classical PSHA hazard calculator.
 """
+import time
 import collections
 
 import numpy
@@ -52,20 +53,28 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
                              for imt in imts))
                   for rlz in gsims_by_rlz)
+
     mon1 = LightMonitor('filtering sources', job_id, compute_hazard_curves)
     mon2 = LightMonitor('generating ruptures', job_id, compute_hazard_curves)
     mon3 = LightMonitor('filtering ruptures', job_id, compute_hazard_curves)
     mon4 = LightMonitor('making contexts', job_id, compute_hazard_curves)
     mon5 = LightMonitor('computing poes', job_id, compute_hazard_curves)
+
+    time_per_rupture = collections.defaultdict(float)
+
     for source in sources:
+        t0 = time.time()
+
         with mon1:
             s_sites = source.filter_sites_by_distance_to_source(
                 hc.maximum_distance, hc.site_collection
             ) if hc.maximum_distance else hc.site_collection
             if s_sites is None:
                 continue
+
         with mon2:
             ruptures = list(source.iter_ruptures())
+
         for rupture in ruptures:
             with mon3:
                 r_sites = rupture.source_typology.\
@@ -74,6 +83,7 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
                     ) if hc.maximum_distance else s_sites
                 if r_sites is None:
                     continue
+
             for rlz, curv in curves.iteritems():
                 gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
                 with mon4:
@@ -85,6 +95,14 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
                         pno = rupture.get_probability_no_exceedance(poes)
                         curv[imt] *= r_sites.expand(
                             pno, total_sites, placeholder=1)
+
+        dt = time.time() - t0
+        time_per_rupture[source.__class__.__name__] += dt / len(ruptures)
+
+    for source_typology in sorted(time_per_rupture):
+        logs.LOG.info('%s: time_per_rupture=%ss', source_typology,
+                      time_per_rupture[source_typology])
+
     mon1.flush()
     mon2.flush()
     mon3.flush()
