@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.stochastic import stochastic_event_set
 
 
@@ -95,7 +94,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # seismic source; in this case, we expect an error to be raised which
         # signals the id of the source in question
         fail_source = self.FailSource(2, [self.r2_1])
-        with self.assertRaises(RuntimeError) as ae:
+        with self.assertRaises(ValueError) as ae:
             list(stochastic_event_set([self.source1, fail_source]))
 
         expected_error = (
@@ -109,9 +108,9 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # signals the id of the source in question
         fail_source = self.FailSource(2, [self.r2_1])
         fake_sites = [1, 2, 3]
-        with self.assertRaises(RuntimeError) as ae:
+        with self.assertRaises(ValueError) as ae:
             list(stochastic_event_set([self.source1, fail_source],
-                                       sites=fake_sites))
+                                      sites=fake_sites))
 
         expected_error = (
             'An error occurred with source id=2. Error: Something bad happened'

@@ -19,8 +19,6 @@ import warnings
 
 import numpy
 
-import openquake.hazardlib
-
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.tom import PoissonTOM
@@ -34,9 +32,11 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.distance = distance
             self.lon = lon
             self.lat = lat
+
         def get_joyner_boore_distance(self, sites):
             assert len(sites) == 1
             return numpy.array([self.distance], float)
+
         def get_closest_points(self, sites):
             assert len(sites) == 1
             return Mesh(numpy.array([self.lon], float),
@@ -48,6 +48,7 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.mag = mag
             self.probability = probability
             self.surface = _BaseDisaggTestCase.FakeSurface(distance, lon, lat)
+
         def get_probability_no_exceedance(self, poe):
             return (1 - self.probability) ** poe
 
@@ -57,6 +58,7 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.ruptures = ruptures
             self.tom = tom
             self.tectonic_region_type = tectonic_region_type
+
         def iter_ruptures(self):
             return iter(self.ruptures)
 
@@ -73,8 +75,10 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.imt = imt
             self.truncation_level = truncation_level
             self.dists = object()
+
         def make_contexts(self, sites, rupture):
             return (sites, rupture, self.dists)
+
         def disaggregate_poe(self, sctx, rctx, dctx, imt, iml,
                              truncation_level, n_epsilons):
             assert truncation_level is self.truncation_level
@@ -114,14 +118,13 @@ class _BaseDisaggTestCase(unittest.TestCase):
             self.tom, 'trt2'
         )
         self.disagreggated_poes = dict(
-            (rupture, poes)
-            for (poes, rupture) in self.ruptures_and_poes1 \
-                                   + self.ruptures_and_poes2
+            (rupture, poes) for (poes, rupture) in self.ruptures_and_poes1
+            + self.ruptures_and_poes2
         )
         self.site = Site(Point(0, 0), 2, False, 4, 5)
 
-        self.iml, self.imt, self.truncation_level = object(), object(), \
-                                                    object()
+        self.iml, self.imt, self.truncation_level = (
+            object(), object(), object())
         gsim = self.FakeGSIM(self.iml, self.imt, self.truncation_level,
                              n_epsilons=3,
                              disaggregated_poes=self.disagreggated_poes)
@@ -134,14 +137,13 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
     def test_no_filters(self):
         (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
             disagg._collect_bins_data(
-            self.sources, self.site, self.imt, self.iml, self.gsims,
-            self.truncation_level, n_epsilons=3,
-            source_site_filter=filters.source_site_noop_filter,
-            rupture_site_filter=filters.rupture_site_noop_filter
-        )
+                self.sources, self.site, self.imt, self.iml, self.gsims,
+                self.truncation_level, n_epsilons=3,
+                source_site_filter=filters.source_site_noop_filter,
+                rupture_site_filter=filters.rupture_site_noop_filter
+                )
 
         aae = numpy.testing.assert_array_equal
-        aaae = numpy.testing.assert_array_almost_equal
 
         aae(mags, [5, 5, 5, 5, 9, 5, 5, 5, 6, 6, 6, 8, 7])
         aae(dists, [3, 11, 12, 13, 14, 11, 11, 10, 12, 12, 11, 5, 5])
@@ -178,6 +180,7 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
                 if source is self.source2:
                     continue
                 yield source, sites
+
         def rupture_site_filter(rupture_sites):
             for rupture, sites in rupture_sites:
                 if rupture.mag < 6:
@@ -186,14 +189,13 @@ class CollectBinsDataTestCase(_BaseDisaggTestCase):
 
         (mags, dists, lons, lats, trts, trt_bins, probs_no_exceed) = \
             disagg._collect_bins_data(
-            self.sources, self.site, self.imt, self.iml, self.gsims,
-            self.truncation_level, n_epsilons=3,
-            source_site_filter=source_site_filter,
-            rupture_site_filter=rupture_site_filter
-        )
+                self.sources, self.site, self.imt, self.iml, self.gsims,
+                self.truncation_level, n_epsilons=3,
+                source_site_filter=source_site_filter,
+                rupture_site_filter=rupture_site_filter
+                )
 
         aae = numpy.testing.assert_array_equal
-        aaae = numpy.testing.assert_array_almost_equal
 
         aae(mags, [9, 6, 6, 6])
         aae(dists, [14, 12, 12, 11])
@@ -230,8 +232,8 @@ class DefineBinsTestCase(unittest.TestCase):
         bins_data = (mags, dists, lons, lats, trts, trt_bins,
                      probs_no_exceed)
 
-        mag_bins, dist_bins, lon_bins, lat_bins, \
-        eps_bins, trt_bins_ = disagg._define_bins(
+        (mag_bins, dist_bins, lon_bins, lat_bins,  eps_bins, trt_bins_
+         ) = disagg._define_bins(
             bins_data, mag_bin_width=1, dist_bin_width=4.2,
             coord_bin_width=1.2, truncation_level=1, n_epsilons=4
         )
@@ -329,7 +331,7 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
                                       self.source2.tectonic_region_type)
         sources = iter([self.source1, fail_source])
 
-        with self.assertRaises(RuntimeError) as ae:
+        with self.assertRaises(ValueError) as ae:
             bin_edges, matrix = disagg.disaggregation(
                 sources, self.site, self.imt, self.iml, self.gsims,
                 self.truncation_level, n_epsilons=3,

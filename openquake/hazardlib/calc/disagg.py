@@ -18,6 +18,7 @@
 :func:`disaggregation` as well as several aggregation functions for
 extracting a specific PMF from the result of :func:`disaggregation`.
 """
+import sys
 import numpy
 import warnings
 
@@ -182,9 +183,10 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
                     rupture.get_probability_no_exceedance(poes_given_rup_eps)
                 )
         except Exception, err:
+            etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err.message)
-            raise RuntimeError(msg)
+            raise etype, msg, tb
 
     mags = numpy.array(mags, float)
     dists = numpy.array(dists, float)

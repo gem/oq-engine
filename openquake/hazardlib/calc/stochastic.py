@@ -17,6 +17,7 @@
 :mod:`openquake.hazardlib.calc.stochastic` contains
 :func:`stochastic_event_set`.
 """
+import sys
 from openquake.hazardlib.calc import filters
 
 
@@ -61,9 +62,10 @@ def stochastic_event_set(
                     for i in xrange(rupture.sample_number_of_occurrences()):
                         yield rupture
             except Exception, err:
+                etype, err, tb = sys.exc_info()
                 msg = 'An error occurred with source id=%s. Error: %s'
                 msg %= (source.source_id, err.message)
-                raise RuntimeError(msg)
+                raise etype, msg, tb
         return
     # else apply filtering
     sources_sites = source_site_filter((source, sites) for source in sources)
@@ -75,6 +77,7 @@ def stochastic_event_set(
                 for i in xrange(rupture.sample_number_of_occurrences()):
                     yield rupture
         except Exception, err:
+            etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
             msg %= (source.source_id, err.message)
-            raise RuntimeError(msg)
+            raise etype, msg, tb
