@@ -60,8 +60,6 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
     mon4 = LightMonitor('making contexts', job_id, compute_hazard_curves)
     mon5 = LightMonitor('computing poes', job_id, compute_hazard_curves)
 
-    time_per_rupture = collections.defaultdict(float)
-
     for source in sources:
         t0 = time.time()
 
@@ -74,6 +72,8 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
 
         with mon2:
             ruptures = list(source.iter_ruptures())
+            if not ruptures:
+                continue
 
         for rupture in ruptures:
             with mon3:
@@ -96,12 +96,9 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
                         curv[imt] *= r_sites.expand(
                             pno, total_sites, placeholder=1)
 
-        dt = time.time() - t0
-        time_per_rupture[source.__class__.__name__] += dt / len(ruptures)
-
-    for source_typology in sorted(time_per_rupture):
-        logs.LOG.info('%s: time_per_rupture=%ss', source_typology,
-                      time_per_rupture[source_typology])
+        logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
+                      job_id, source.source_id, source.__class__.__name__,
+                      len(ruptures), time.time() - t0)
 
     mon1.flush()
     mon2.flush()
