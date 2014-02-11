@@ -4,5 +4,5 @@ from django.conf.urls.defaults import url
 
 urlpatterns = patterns(
     '',
-    url(r'^v1/calc/', include('openquakeserver.engine.v1.calc_urls')),
+    url(r'^v1/calc/', include('openquake.server.v1.calc_urls')),
 )

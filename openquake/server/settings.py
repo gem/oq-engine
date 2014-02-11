@@ -47,9 +47,9 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
 )
 
-ROOT_URLCONF = 'openquakeserver.urls'
+ROOT_URLCONF = 'openquake.server.urls'
 
-INSTALLED_APPS = ('engine',)
+INSTALLED_APPS = ('openquake.server',)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -86,7 +86,7 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
-        'openquakeserver': {
+        'openquake.server': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,

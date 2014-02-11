@@ -11,8 +11,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import RequestFactory
 from django.utils import unittest
 
-from engine import views, executor
-from engine import _test_utils as utils
+from openquake.server import views, executor
+from openquake.server import _test_utils as utils
 
 FakeOutput = namedtuple('FakeOutput', 'id, display_name, output_type')
 
@@ -63,7 +63,7 @@ class CalcHazardTestCase(BaseViewTestCase):
              u'description': u'description e',
              u'id': 3},
         ]
-        with mock.patch('engine.views._get_haz_calcs') as ghc:
+        with mock.patch('openquake.server.views._get_haz_calcs') as ghc:
             ghc.return_value = [
                 (1, 'executing', 'description 1'),
                 (2, 'pre_executing', 'description 2'),
@@ -75,7 +75,7 @@ class CalcHazardTestCase(BaseViewTestCase):
             self.assertEqual(expected_content, json.loads(response.content))
 
     def test_404_no_calcs(self):
-        with mock.patch('engine.views._get_haz_calcs') as ghc:
+        with mock.patch('openquake.server.views._get_haz_calcs') as ghc:
             ghc.return_value = []
             response = views.calc_hazard(self.request)
 
@@ -99,7 +99,7 @@ class CalcRiskTestCase(BaseViewTestCase):
              u'description': u'description e',
              u'id': 3},
         ]
-        with mock.patch('engine.views._get_risk_calcs') as grc:
+        with mock.patch('openquake.server.views._get_risk_calcs') as grc:
             grc.return_value = [
                 (1, 'executing', 'description 1'),
                 (2, 'pre_executing', 'description 2'),
@@ -115,7 +115,7 @@ class CalcRiskTestCase(BaseViewTestCase):
 
 class CalcToResponseDataTestCase(unittest.TestCase):
     """
-    Tests for `engine.views._calc_to_response_data`.
+    Tests for `openquake.server.views._calc_to_response_data`.
     """
 
     def setUp(self):
@@ -516,7 +516,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
             job_from_file='openquake.engine.engine.haz_job_from_file',
-            run_task='engine.tasks.run_calc',
+            run_task='openquake.server.tasks.run_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
 
@@ -599,7 +599,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
             job_from_file='openquake.engine.engine.risk_job_from_file',
-            run_task='engine.tasks.run_calc',
+            run_task='openquake.server.tasks.run_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
 

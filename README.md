@@ -14,4 +14,4 @@ Using Django's manage.py:
 
 Using nosetests:
 
-    $ (export DJANGO_SETTINGS_MODULE="openquakeserver.settings"; nosetests -v --with-coverage --cover-package=openquakeserver)
+    $ (export DJANGO_SETTINGS_MODULE="openquak.eserver.settings"; nosetests -v --with-coverage --cover-package=openquake.server)
