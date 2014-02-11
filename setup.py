@@ -1,4 +1,4 @@
-# oq-common: Common libraries for OpenQuake software
+# oq-commonlib: Common libraries for OpenQuake software
 # Copyright (C) 2014 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
