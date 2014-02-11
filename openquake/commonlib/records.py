@@ -17,8 +17,8 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.nrmllib.node import Node
-from openquake.common.record import Record, Field, Unique, ForeignKey
-from openquake.common import valid
+from openquake.commonlib.record import Record, Field, Unique, ForeignKey
+from openquake.commonlib import valid
 
 
 # vulnerability records (discrete)
