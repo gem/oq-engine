@@ -66,10 +66,15 @@ sig_hand () {
 }
 
 #
+#  dep2var <dep> - converts in a proper way the name of a dependency to a variable name
+#      <dep>    the name of the dependency
+#
+dep2var () {
+    echo "$1" | sed 's/[-.]/_/g;s/\(.*\)/\U\1/g'
+}
+
+#
 #  repo_id_get - retry git repo from local git remote command
-
-
-
 repo_id_get () {
     local repo_name repo_line
 
