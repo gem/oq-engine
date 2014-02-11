@@ -35,11 +35,11 @@ def get_version():
     return version
 version = get_version()
 
-url = "http://github.com/gem/oq-common"
+url = "http://github.com/gem/oq-commonlib"
 cd = os.path.dirname(os.path.join(__file__))
 
 setup(
-    name='oq-common',
+    name='oq-commonlib',
     version=version,
     description="Common libraries for OpenQuake software",
     long_description=__doc__,
