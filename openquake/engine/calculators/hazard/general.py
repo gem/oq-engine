@@ -250,10 +250,10 @@ class BaseHazardCalculator(base.Calculator):
             self.source_blocks_per_ltpath[smpath] = blocks
             n = sum(len(block) for block in blocks)
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
-            logs.LOG.info('Splitting in %d blocks with max_weight=%d',
+            logs.LOG.info('Splitting in %d blocks with max_weight=%s',
                           len(blocks), bs.max_weight)
             for i, block in enumerate(blocks, 1):
-                logs.LOG.info('Block %d: %d sources, weight %d',
+                logs.LOG.info('Block %d: %d sources, weight %s',
                               i, len(block), block.weight)
             num_sources.append(n)
         return num_sources
