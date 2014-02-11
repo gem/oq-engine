@@ -17,7 +17,7 @@
 #  along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-from openquake.common import record, records
+from openquake.commonlib import record, records
 
 class RecordTest(unittest.TestCase):
     def test1(self):
