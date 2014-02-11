@@ -256,7 +256,7 @@ def create_table(recordtype, csvstr):
 class MultipleManagerError(Exception):
     """
     Raised when it is not possible to extract a single manager
-    from an archive of CSV files (i.e. there more than one commonlib
+    from an archive of CSV files (i.e. there more than one common
     prefix).
     """
 
