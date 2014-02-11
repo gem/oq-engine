@@ -26,8 +26,8 @@ from abc import ABCMeta, abstractmethod
 
 from openquake.nrmllib import InvalidFile
 from openquake.nrmllib.node import node_to_nrml, node_from_nrml
-from openquake.common.record import Table
-from openquake.common import record, records, converter
+from openquake.commonlib.record import Table
+from openquake.commonlib import record, records, converter
 
 
 class FileWrapper(object):
@@ -256,7 +256,7 @@ def create_table(recordtype, csvstr):
 class MultipleManagerError(Exception):
     """
     Raised when it is not possible to extract a single manager
-    from an archive of CSV files (i.e. there more than one common
+    from an archive of CSV files (i.e. there more than one commonlib
     prefix).
     """
 

@@ -19,8 +19,8 @@ import os
 import unittest
 import tempfile
 from openquake.nrmllib import InvalidFile
-from openquake.common import record, records
-from openquake.common.csvmanager import (
+from openquake.commonlib import record, records
+from openquake.commonlib.csvmanager import (
     MemArchive, CSVManager, NotInArchive, mkarchive)
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
