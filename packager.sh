@@ -271,6 +271,57 @@ _lxc_name_and_ip_get()
 }
 
 devtest_run () {
+    local deps old_ifs branch_id="$1"
+
+    mkdir _jenkins_deps
+
+    #
+    #  dependencies repos
+    #
+    # in test sources different repositories and branches can be tested
+    # consistently: for each openquake dependency it try to use
+    # the same repository and the same branch OR the gem repository
+    # and the same branch OR the gem repository and the "master" branch
+    #
+    repo_id="$(repo_id_get)"
+    if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
+        repos="git://${repo_id} ${GEM_GIT_REPO}"
+    else
+        repos="${GEM_GIT_REPO}"
+    fi
+    old_ifs="$IFS"
+    IFS=" "
+    for dep in $GEM_GIT_DEPS; do
+        found=0
+        branch="$branch_id"
+        for repo in $repos; do
+            # search of same branch in same repo or in GEM_GIT_REPO repo
+            if git ls-remote --heads $repo/${dep}.git | grep -q "refs/heads/$branch" ; then
+                git clone -b $branch $repo/${dep}.git _jenkins_deps/$dep
+                found=1
+                break
+            fi
+        done
+        # if not found it fallback in master branch of GEM_GIT_REPO repo
+        if [ $found -eq 0 ]; then
+            git clone $repo/${dep}.git _jenkins_deps/$dep
+            branch="master"
+        fi
+        cd _jenkins_deps/$dep
+        commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
+        cd -
+        echo "dependency: $dep"
+        echo "repo:       $repo"
+        echo "branch:     $branch"
+        echo "commit:     $commit"
+        echo
+        var_pfx="$(dep2var "$dep")"
+        echo "${var_pfx}_COMMIT=$commit" >> _jenkins_deps_info
+        echo "${var_pfx}_REPO=$repo"     >> _jenkins_deps_info
+        echo "${var_pfx}_BRANCH=$branch" >> _jenkins_deps_info
+    done
+    IFS="$old_ifs"
+
     sudo echo
     sudo ${GEM_EPHEM_CMD} -o $GEM_EPHEM_NAME -d 2>&1 | tee /tmp/packager.eph.$$.log &
     _lxc_name_and_ip_get /tmp/packager.eph.$$.log
