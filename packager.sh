@@ -7,7 +7,7 @@
 #
 
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+set -x
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-commonlib"
@@ -247,7 +247,7 @@ _lxc_name_and_ip_get()
     if [ $i -eq 40 -o $e -eq 40 ]; then
         return 1
     fi
-    echo "SUCCESSFULY RUNNED $lxc_name ($lxc_ip)"
+    echo "SUCCESSFULLY RUNNED $lxc_name ($lxc_ip)"
 
     return 0
 }
