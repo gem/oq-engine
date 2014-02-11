@@ -11,6 +11,7 @@ set -x
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-commonlib"
+GEM_GIT_DEPS="oq-nrmllib oq-risklib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -150,6 +151,21 @@ _devtest_innervm_run () {
     ssh $lxc_ip "sudo apt-get update"
     ssh $lxc_ip "sudo apt-get upgrade -y"
 
+    old_ifs="$IFS"
+    IFS=" "
+    for dep in $GEM_GIT_DEPS; do
+        # extract dependencies for source dependencies
+        pkgs_list="$(deps_list "deprec" _jenkins_deps/$dep/debian/control)"
+        ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
+
+        # install source dependencies
+        cd _jenkins_deps/$dep
+        git archive --prefix ${dep}/ HEAD | ssh $lxc_ip "tar xv"
+        cd -
+    done
+    IFS="$old_ifs"
+
+    # extract dependencies for this package
     pkgs_list="$(deps_list debian/control)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
