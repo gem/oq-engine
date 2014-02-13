@@ -223,7 +223,7 @@ class SiteCollection(openquake.hazardlib.site.SiteCollection):
             an array of integer identifying the ordinal of the sites
             to select. Sites are ordered by the value of their id field
         :returns:
-            `self` is `indices` is None, otherwise, a `SiteCollection`
+            `self` if `indices` is None, otherwise, a `SiteCollection`
             holding sites at `indices`
         """
         if indices is None:
