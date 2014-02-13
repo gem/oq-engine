@@ -26,7 +26,8 @@ from openquake.hazardlib.calc import filters
 
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                          realizations, correlation_model=None,
-                         rupture_site_filter=filters.rupture_site_noop_filter):
+                         rupture_site_filter=filters.rupture_site_noop_filter,
+                         num_sites=None):
     """
     Given an earthquake rupture, the ground motion field calculator computes
     ground shaking over a set of sites, by randomly sampling a ground shaking
@@ -62,6 +63,8 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     :param rupture_site_filter:
         Optional rupture-site filter function. See
         :mod:`openquake.hazardlib.calc.filters`.
+    :param num_sites:
+        Total number of sites; if `None`, len(sites) is used instead
 
     :returns:
         Dictionary mapping intensity measure type objects (same
@@ -75,7 +78,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         return dict((imt, numpy.zeros((len(sites), realizations)))
                     for imt in imts)
 
-    total_sites = len(sites)
+    total_sites = num_sites or len(sites)
     [(rupture, sites)] = ruptures_sites
 
     sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
