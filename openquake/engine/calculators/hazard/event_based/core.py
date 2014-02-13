@@ -95,7 +95,6 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
     gmvs_per_site = collections.defaultdict(list)
     ruptures_per_site = collections.defaultdict(list)
-    num_sites = len(hc.site_collection)
 
     mon1 = LightMonitor('filtering sites', job_id, compute_ses_and_gmfs)
     mon2 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
@@ -182,6 +181,8 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                 'saving gmfs', job_id, compute_ses_and_gmfs):
             _save_gmfs(gmvs_per_site, ruptures_per_site,
                        hc.site_collection, task_no)
+
+    return sum(len(gmvs) for gmvs in gmvs_per_site.itervalues())
 
 
 def _save_ses_ruptures(ruptures):
@@ -280,6 +281,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     and (optionally) ground motion fields.
     """
     core_calc_task = compute_ses_and_gmfs
+    size = 0
 
     def task_arg_gen(self, _block_size=None):
         """
@@ -301,6 +303,10 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
+
+    def task_completed(self, size):
+        self.size += size
+        print self.size
 
     def initialize_ses_db_records(self, ordinal, rlzs):
         """
