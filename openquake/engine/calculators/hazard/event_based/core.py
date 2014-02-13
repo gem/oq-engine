@@ -115,35 +115,45 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
             if s_sites is None:
                 continue
 
+        # NB: the number of occurrences is very low, << 1, so it is
+        # more efficient to filter only the ruptures that occur
+        # and not to compute the occurrencies of the filtered ruptures
+        # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
+        # for each occurring rupture for each ses in the ses collection
+        ses_num_occ = collections.defaultdict(list)
         with mon2:  # generating ruptures
-            rupts = list(src.iter_ruptures())
+            for rup in src.iter_ruptures():
+                for ses in all_ses:
+                    numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
+                    num_occurrences = rup.sample_number_of_occurrences()
+                    if num_occurrences:
+                        ses_num_occ[rup].append((ses, num_occurrences))
 
-        for i, r in enumerate(rupts):
+        for rup in ses_num_occ:
             with mon3:  # filtering ruptures
-                r_sites = r.source_typology.\
+                r_sites = rup.source_typology.\
                     filter_sites_by_distance_to_rupture(
-                        r, hc.maximum_distance, s_sites
+                        rup, hc.maximum_distance, s_sites
                     ) if hc.maximum_distance else s_sites
                 if r_sites is None:
                     continue
 
-            # generating ruptures and GMFs
-            for ses in all_ses:
-                numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-                for j in xrange(r.sample_number_of_occurrences()):
+            # saving ses and generating gmf
+            for ses, num_occurrences in ses_num_occ[rup]:
+                for occ in range(1, num_occurrences + 1):
                     with mon4:  # saving ruptures
                         rup_id = models.SESRupture.objects.create(
                             ses=ses,
-                            rupture=r,
-                            tag='smlt=%02d|ses=%04d|src=%s|i=%04d-%02d'
+                            rupture=rup,
+                            tag='smlt=%02d|ses=%04d|src=%s|occ=%02d'
                             % (ses_coll.ordinal, ses.ordinal,
-                               src.source_id, i, j),
-                            hypocenter=r.hypocenter.wkt2d,
-                            magnitude=r.mag).id
+                               src.source_id, occ),
+                            hypocenter=rup.hypocenter.wkt2d,
+                            magnitude=rup.mag).id
                     if hc.ground_motion_fields:
                         with mon5:  # computing GMFs
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
-                            collector.calc_gmf(r_sites, r, rup_id, rup_seed)
+                            collector.calc_gmf(r_sites, rup, rup_id, rup_seed)
 
     mon1.flush()
     mon2.flush()
