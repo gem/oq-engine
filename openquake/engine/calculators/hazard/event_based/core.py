@@ -31,17 +31,17 @@ For more information on computing ground motion fields, see
 :mod:`openquake.hazardlib.calc.gmf`.
 """
 
+import time
 import random
 import collections
 
 import numpy.random
 
 from django.db import transaction
-from openquake.hazardlib.calc import filters
 from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.imt import from_string
 
-from openquake.engine import writer
+from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as cls_post_proc)
@@ -49,7 +49,6 @@ from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
-
 
 #: Always 1 for the computation of ground motion fields in the event-based
 #: hazard calculator.
@@ -106,6 +105,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     # Compute and save stochastic event sets
     rnd = random.Random()
     for src, seed in src_seeds:
+        t0 = time.time()
         rnd.seed(seed)
 
         with mon1:  # filtering sources
@@ -154,6 +154,12 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                         with mon5:  # computing GMFs
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             collector.calc_gmf(r_sites, rup, rup_id, rup_seed)
+
+        num_ruptures = sum(occ for ses, occ in ses_num_occ[rup]
+                           for rup in ses_num_occ)
+        logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
+                      job_id, src.source_id, src.__class__.__name__,
+                      num_ruptures, time.time() - t0)
 
     mon1.flush()
     mon2.flush()
