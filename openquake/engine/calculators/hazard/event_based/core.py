@@ -32,7 +32,6 @@ For more information on computing ground motion fields, see
 """
 
 import random
-import itertools
 import collections
 
 import numpy.random
@@ -165,7 +164,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
             with mon5:
                 for imt, site_id, gmv, rup_id in _compute_gmf(
                         params, imts, gsims, hc.site_collection,
-                        zip(ruptures, rupture_ids, rupture_seeds)):
+                        triples):
                     gmvs_per_site[rlz, imt, site_id].append(gmv)
                     ruptures_per_site[rlz, imt, site_id].append(rup_id)
 
@@ -225,7 +224,7 @@ def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples):
         (:class:`openquake.hazardlib.source.rupture.Rupture`, int, int)
     """
     # Compute and save ground motion fields
-    for rupture, rup_id, rup_seed in enumerate(rupture_id_seed_triples):
+    for rupture, rup_id, rup_seed in rupture_id_seed_triples:
         gmf_calc_kwargs = {
             'rupture': rupture,
             'sites': site_coll,
