@@ -82,32 +82,35 @@ class EventBasedHazardTestCase(unittest.TestCase):
         hc.maximum_distance = 200.
 
         gsim = get_available_gsims()['AkkarBommer2010']()
-        site_coll = make_site_coll(-78, 15.5, n=5)
+        num_sites = 5
+        site_coll = make_site_coll(-78, 15.5, num_sites)
         params = dict(truncation_level=3,
                       correl_model=None,
-                      maximum_distance=200)
+                      maximum_distance=200,
+                      num_sites=num_sites)
         trt = 'Subduction Interface'
-        rupture_ids = range(2)
-        ruptures = [FakeRupture(i, trt) for i in rupture_ids]
+        rup_id, rup_seed = 42, 44
+        r = FakeRupture(rup_id, trt)
         pga = PGA()
-        gmv_dict, rup_dict = core._compute_gmf(
-            params, [pga], {trt: gsim}, site_coll,
-            [(r.rupture, r.id, r.id) for r in ruptures])
+        rlz = mock.Mock()
+        coll = core.GmfCollector(
+            [s.id for s in site_coll], params, [pga], {rlz: {trt: gsim}})
+        coll.calc_gmf(site_coll, r.rupture, r.id, rup_seed)
         expected_rups = {
-            (pga, 0): rupture_ids,
-            (pga, 1): rupture_ids,
-            (pga, 2): rupture_ids,
-            (pga, 3): rupture_ids,
-            (pga, 4): rupture_ids,
+            (rlz, pga, 0): [rup_id],
+            (rlz, pga, 1): [rup_id],
+            (rlz, pga, 2): [rup_id],
+            (rlz, pga, 3): [rup_id],
+            (rlz, pga, 4): [rup_id],
         }
         expected_gmvs = {
-            (pga, 0): [0.122149047040728, 0.0813899249039753],
-            (pga, 1): [0.0541662667863476, 0.02136369236082],
-            (pga, 2): [0.0772246502768338, 0.0226182956091826],
-            (pga, 3): [0.166062666449449, 0.0164127269047494],
-            (pga, 4): [0.133588538354143, 0.0529987707352876]
+            (rlz, pga, 0): [0.1027847118266612],
+            (rlz, pga, 1): [0.02726361912605336],
+            (rlz, pga, 2): [0.0862595971325641],
+            (rlz, pga, 3): [0.04727148908077005],
+            (rlz, pga, 4): [0.04750575818347277],
         }
-        numpy.testing.assert_equal(rup_dict, expected_rups)
+        numpy.testing.assert_equal(coll.ruptures_per_site, expected_rups)
         for i, gmvs in expected_gmvs.iteritems():
             numpy.testing.assert_allclose(gmvs, expected_gmvs[i])
 
@@ -196,7 +199,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 107)
+        self.assertEqual(num_ruptures, 92)
 
         # check that we generated the right number of rows in GmfData
         # 242 = 121 sites * 2 IMTs
@@ -205,10 +208,10 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         num_gmf2 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz2).count()
 
-        # with concurrent_tasks=64, this test generates 52 tasks, i.e.
-        # 26 tasks for each realization
-        self.assertEqual(num_gmf1, 242 * 26)
-        self.assertEqual(num_gmf2, 242 * 26)
+        # with concurrent_tasks=64, this test generates 17 tasks, but
+        # only 15 gives nonzero contribution
+        self.assertEqual(num_gmf1, 242 * 15)
+        self.assertEqual(num_gmf2, 242 * 15)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
