@@ -529,6 +529,25 @@ def split_source(src, area_source_discretization):
         yield src
 
 
+def get_num_ruptures_weight(src):
+    """
+    Compute the weight of a source in a heuristic way. Various experiments show
+    that it should be a bit more than linear in the number of ruptures, except
+    for point sources.
+
+    :param src:
+        an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
+    :returns:
+        a pair (num_ruptures, weight)
+    """
+    num_ruptures = src.count_ruptures()
+    if isinstance(src, source.PointSource):
+        weight = num_ruptures
+    else:  # giving more than linear weight to other sources
+        weight = num_ruptures ** 1.5
+    return num_ruptures, weight
+
+
 def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
     """
     Parse a NRML source model and yield hazardlib sources.
@@ -555,9 +574,9 @@ def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
         apply_uncertainties(src)
         if not is_relevant(src):
             continue
-        num_ruptures = src.count_ruptures()
+        num_ruptures, weight = get_num_ruptures_weight(src)
         if num_ruptures > MAX_RUPTURES:
             for s in split_source(src, hc.area_source_discretization):
-                yield s, s.count_ruptures()
+                yield s, get_num_ruptures_weight(s)[1]
         else:
-            yield src, num_ruptures
+            yield src, weight
