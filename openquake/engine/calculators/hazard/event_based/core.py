@@ -98,8 +98,9 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
     mon1 = LightMonitor('filtering sites', job_id, compute_ses_and_gmfs)
     mon2 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
-    mon3 = LightMonitor('saving ses', job_id, compute_ses_and_gmfs)
-    mon4 = LightMonitor('computing gmfs', job_id, compute_ses_and_gmfs)
+    mon3 = LightMonitor('filtering ruptures', job_id, compute_ses_and_gmfs)
+    mon4 = LightMonitor('saving ses', job_id, compute_ses_and_gmfs)
+    mon5 = LightMonitor('computing gmfs', job_id, compute_ses_and_gmfs)
 
     # Compute and save stochastic event sets
     rnd = random.Random()
@@ -114,38 +115,37 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                 continue
 
         with mon2:
-            rupts = []
-            for r in src.iter_ruptures():
+            rupts = list(src.iter_ruptures())
+        for i, r in enumerate(rupts):
+            with mon3:
                 r_sites = r.source_typology.\
                     filter_sites_by_distance_to_rupture(
                         r, hc.maximum_distance, s_sites
                     ) if hc.maximum_distance else s_sites
-                if r_sites is not None:
-                    rupts.append((r, r_sites))
-            if not rupts:
-                continue
-
-        for ses in all_ses:
-            numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-            for i, (r, r_sites) in enumerate(rupts):
+                if r_sites is None:
+                    continue
+            for ses in all_ses:
+                numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
                 for j in xrange(r.sample_number_of_occurrences()):
-                    with mon3:
+                    with mon4:
                         rup_id = models.SESRupture.objects.create(
                             ses=ses,
                             rupture=r,
-                            tag='smlt=%02d|ses=%04d|src=%s|i=%04d-%02d' % (
-                                ses_coll.ordinal, ses.ordinal,
-                                src.source_id, i, j),
+                            tag='smlt=%02d|ses=%04d|src=%s|i=%04d-%02d'
+                            % (ses_coll.ordinal, ses.ordinal,
+                               src.source_id, i, j),
                             hypocenter=r.hypocenter.wkt2d,
                             magnitude=r.mag).id
                     if hc.ground_motion_fields:
-                        with mon4:
+                        with mon5:
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             collector.calc_gmf(r_sites, r, rup_id, rup_seed)
+
     mon1.flush()
     mon2.flush()
     mon3.flush()
     mon4.flush()
+    mon5.flush()
 
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
