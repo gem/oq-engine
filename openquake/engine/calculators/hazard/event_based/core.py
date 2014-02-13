@@ -91,25 +91,20 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     params = dict(
         correl_model=general.get_correl_model(hc),
         truncation_level=hc.truncation_level,
-        maximum_distance=hc.maximum_distance)
+        maximum_distance=hc.maximum_distance,
+        num_sites=len(hc.site_collection))
 
-    gmvs_per_site = collections.defaultdict(list)
-    ruptures_per_site = collections.defaultdict(list)
+    collector = GmfCollector(hc.site_collection, params, imts, gsims_by_rlz)
 
     mon1 = LightMonitor('filtering sites', job_id, compute_ses_and_gmfs)
     mon2 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
-    mon3 = LightMonitor('sampling ruptures', job_id, compute_ses_and_gmfs)
-    mon4 = LightMonitor('saving ses', job_id, compute_ses_and_gmfs)
-    mon5 = LightMonitor('computing gmfs', job_id, compute_ses_and_gmfs)
+    mon3 = LightMonitor('saving ses', job_id, compute_ses_and_gmfs)
+    mon4 = LightMonitor('computing gmfs', job_id, compute_ses_and_gmfs)
 
     # Compute and save stochastic event sets
     rnd = random.Random()
     for src, seed in src_seeds:
         rnd.seed(seed)
-
-        ruptures = []
-        ses_ruptures = []
-        rupture_seeds = []
 
         with mon1:
             s_sites = src.filter_sites_by_distance_to_source(
@@ -126,79 +121,79 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                         r, hc.maximum_distance, s_sites
                     ) if hc.maximum_distance else s_sites
                 if r_sites is not None:
-                    rupts.append(r)
+                    rupts.append((r, r_sites))
             if not rupts:
                 continue
 
         for ses in all_ses:
             numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
-            for i, r in enumerate(rupts):
-                with mon3:
-                    for j in xrange(r.sample_number_of_occurrences()):
-                        rup = models.SESRupture(
+            for i, (r, r_sites) in enumerate(rupts):
+                for j in xrange(r.sample_number_of_occurrences()):
+                    with mon3:
+                        rup_id = models.SESRupture.objects.create(
                             ses=ses,
                             rupture=r,
                             tag='smlt=%02d|ses=%04d|src=%s|i=%04d-%02d' % (
-                                ses_coll.ordinal,
-                                ses.ordinal, src.source_id, i, j),
+                                ses_coll.ordinal, ses.ordinal,
+                                src.source_id, i, j),
                             hypocenter=r.hypocenter.wkt2d,
-                            magnitude=r.mag,
-                        )
-                        rup_seed = rnd.randint(0, models.MAX_SINT_32)
-                        ruptures.append(r)
-                        ses_ruptures.append(rup)
-                        rupture_seeds.append(rup_seed)
-
-        if not ruptures:
-            continue
-
-        with mon4:
-            rupture_ids = _save_ses_ruptures(ses_ruptures)
-
-        if not hc.ground_motion_fields:
-            continue
-
-        triples = zip(ruptures, rupture_ids, rupture_seeds)
-        for rlz, gsims in gsims_by_rlz.items():
-            with mon5:
-                for imt, site_id, gmv, rup_id in _compute_gmf(
-                        params, imts, gsims, hc.site_collection,
-                        triples):
-                    gmvs_per_site[rlz, imt, site_id].append(gmv)
-                    ruptures_per_site[rlz, imt, site_id].append(rup_id)
-
+                            magnitude=r.mag).id
+                    if hc.ground_motion_fields:
+                        with mon4:
+                            rup_seed = rnd.randint(0, models.MAX_SINT_32)
+                            collector.calc_gmf(r_sites, r, rup_id, rup_seed)
     mon1.flush()
     mon2.flush()
     mon3.flush()
     mon4.flush()
-    mon5.flush()
 
-    if not hc.ground_motion_fields:
-        return
-
-    for rlz in gsims_by_rlz:
+    if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
                 'saving gmfs', job_id, compute_ses_and_gmfs):
-            _save_gmfs(gmvs_per_site, ruptures_per_site,
-                       hc.site_collection, task_no)
-
-    return sum(len(gmvs) for gmvs in gmvs_per_site.itervalues())
+            collector.save_gmfs(task_no)
 
 
-def _save_ses_ruptures(ruptures):
-    """
-    Helper function for saving stochastic event set ruptures to the database.
-    :param ruptures:
-        A list of :class:`openquake.engine.db.models.SESRupture` instances.
-    """
-    # TODO: Possible future optimization:
-    # Refactor this to do bulk insertion of ruptures
-    rupture_ids = []
-    with transaction.commit_on_success(using='job_init'):
-        for r in ruptures:
-            r.save()
-            rupture_ids.append(r.id)
-    return rupture_ids
+class GmfCollector(object):
+    def __init__(self, site_collection, params, imts, gsims_by_rlz):
+        self.site_ids = [s.id for s in site_collection]
+        self.params = params
+        self.imts = imts
+        self.gsims_by_rlz = gsims_by_rlz
+        self.gmvs_per_site = collections.defaultdict(list)
+        self.ruptures_per_site = collections.defaultdict(list)
+
+    def calc_gmf(self, r_sites, rupture, rupture_id, rupture_seed):
+        triples = [(rupture, rupture_id, rupture_seed)]
+        for rlz, gsims in self.gsims_by_rlz.items():
+            for imt, idx, gmv, rup_id in _compute_gmf(
+                    self.params, self.imts, gsims, r_sites, triples):
+                if gmv:
+                    site_id = self.site_ids[idx]
+                    self.gmvs_per_site[rlz, imt, site_id].append(gmv)
+                    self.ruptures_per_site[rlz, imt, site_id].append(rup_id)
+
+    @transaction.commit_on_success(using='job_init')
+    def save_gmfs(self, task_no):
+        """
+        Helper method to save computed GMF data to the database.
+
+        :param task_no:
+            The ordinal of the task which generated the current GMFs to save
+        """
+        for rlz, imt, site_id in self.gmvs_per_site:
+            imt_name, sa_period, sa_damping = imt
+            inserter.add(models.GmfData(
+                gmf=models.Gmf.objects.get(lt_realization=rlz),
+                task_no=task_no,
+                imt=imt_name,
+                sa_period=sa_period,
+                sa_damping=sa_damping,
+                site_id=site_id,
+                gmvs=self.gmvs_per_site[rlz, imt, site_id],
+                rupture_ids=self.ruptures_per_site[rlz, imt, site_id]))
+        inserter.flush()
+        self.gmvs_per_site.clear()
+        self.ruptures_per_site.clear()
 
 
 # NB: I tried to return a single dictionary {site_id: [(gmv, rupt_id),...]}
@@ -234,45 +229,16 @@ def _compute_gmf(params, imts, gsims, site_coll, rupture_id_seed_triples):
             'truncation_level': params['truncation_level'],
             'realizations': DEFAULT_GMF_REALIZATIONS,
             'correlation_model': params['correl_model'],
+            'num_sites': params['num_sites'],
         }
         numpy.random.seed(rup_seed)
         gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
         for imt, gmf_1_realiz in gmf_dict.iteritems():
             # since DEFAULT_GMF_REALIZATIONS is 1, gmf_1_realiz is a matrix
             # with n_sites rows and 1 column
-            for site, gmv in zip(site_coll, gmf_1_realiz):
-                gmv = float(gmv)  # convert a 1x1 matrix into a float
-                if gmv:  # nonzero contribution to site
-                    yield imt, site.id, gmv, rup_id
-
-
-@transaction.commit_on_success(using='job_init')
-def _save_gmfs(gmvs_per_site, ruptures_per_site, sites, task_no):
-    """
-    Helper method to save computed GMF data to the database.
-    :param gmf_per_site:
-        The GMFs per rupture
-    :param rupture_per_site:
-        The associated rupture ids
-    :param sites:
-        An :class:`openquake.hazardlib.site.SiteCollection` object,
-        representing the sites of interest for a calculation.
-    :param task_no:
-        The ordinal of the task which generated the current GMFs to save
-    """
-    for rlz, imt, site_id in gmvs_per_site:
-        gmf = models.Gmf.objects.get(lt_realization=rlz)
-        imt_name, sa_period, sa_damping = imt
-        inserter.add(models.GmfData(
-            gmf=gmf,
-            task_no=task_no,
-            imt=imt_name,
-            sa_period=sa_period,
-            sa_damping=sa_damping,
-            site_id=site_id,
-            gmvs=gmvs_per_site[rlz, imt, site_id],
-            rupture_ids=ruptures_per_site[rlz, imt, site_id]))
-    inserter.flush()
+            for idx, gmv in enumerate(gmf_1_realiz):
+                # convert a 1x1 matrix into a float
+                yield imt, idx, float(gmv), rup_id
 
 
 class EventBasedHazardCalculator(general.BaseHazardCalculator):
@@ -281,7 +247,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     and (optionally) ground motion fields.
     """
     core_calc_task = compute_ses_and_gmfs
-    size = 0
 
     def task_arg_gen(self, _block_size=None):
         """
@@ -303,10 +268,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
-
-    def task_completed(self, size):
-        self.size += size
-        print self.size
 
     def initialize_ses_db_records(self, ordinal, rlzs):
         """
