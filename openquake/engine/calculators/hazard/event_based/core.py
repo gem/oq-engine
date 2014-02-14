@@ -155,11 +155,14 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             collector.calc_gmf(r_sites, rup, rup_id, rup_seed)
 
-        num_ruptures = sum(occ for ses, occ in ses_num_occ[rup]
-                           for rup in ses_num_occ)
-        logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
-                      job_id, src.source_id, src.__class__.__name__,
-                      num_ruptures, time.time() - t0)
+        # log calc_time per rupture
+        if ses_num_occ:
+            num_ruptures = sum(occ for ses, occ in ses_num_occ[rup]
+                               for rup in ses_num_occ)
+            logs.LOG.info(
+                'job=%d, src=%s:%s, num_ruptures=%d/%d, calc_time=%fs',
+                job_id, src.source_id, src.__class__.__name__,
+                len(ses_num_occ), num_ruptures, time.time() - t0)
 
     mon1.flush()
     mon2.flush()
