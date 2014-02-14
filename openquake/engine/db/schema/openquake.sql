@@ -388,7 +388,8 @@ ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.ses_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    lt_realization_id INTEGER NOT NULL
+    lt_realization_ids INTEGER[] NOT NULL,
+    ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 -- Stochastic Event Set: A container for 1 or more ruptures associated with a
@@ -958,13 +959,6 @@ ALTER TABLE hzrdr.ses_collection
 ADD CONSTRAINT hzrdr_ses_collection_output_fk
 FOREIGN KEY (output_id)
 REFERENCES uiapi.output(id)
-ON DELETE CASCADE;
-
--- hzrdr.ses_collection to hzrdr.lt_realization FK
-ALTER TABLE hzrdr.ses_collection
-ADD CONSTRAINT hzrdr_ses_collection_lt_realization_fk
-FOREIGN KEY (lt_realization_id)
-REFERENCES hzrdr.lt_realization(id)
 ON DELETE CASCADE;
 
 -- hzrdr.ses to hzrdr.ses_collection FK
