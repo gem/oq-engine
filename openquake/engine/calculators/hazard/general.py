@@ -45,7 +45,8 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter, SequenceSplitter, ceil
+from openquake.engine.utils.general import \
+    block_splitter, SequenceSplitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -208,11 +209,6 @@ class BaseHazardCalculator(base.Calculator):
             logs.LOG.warn('Could not save job_stats.num_sources: %s', e)
         self.initialize_realizations()
 
-        self.rlzs_per_ltpath = collections.defaultdict(list)
-        for rlz in self._get_realizations():
-            ltpath = tuple(rlz.sm_lt_path)
-            self.rlzs_per_ltpath[ltpath].append(rlz)
-
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
@@ -250,10 +246,10 @@ class BaseHazardCalculator(base.Calculator):
             self.source_blocks_per_ltpath[smpath] = blocks
             n = sum(len(block) for block in blocks)
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
-            logs.LOG.info('Splitting in blocks with at maximum %d ruptures',
-                          bs.max_weight)
+            logs.LOG.info('Splitting in %d blocks with max_weight=%s',
+                          len(blocks), bs.max_weight)
             for i, block in enumerate(blocks, 1):
-                logs.LOG.info('Block %d: %d sources, %d ruptures',
+                logs.LOG.info('Block %d: %d sources, weight %s',
                               i, len(block), block.weight)
             num_sources.append(n)
         return num_sources
@@ -367,6 +363,14 @@ class BaseHazardCalculator(base.Calculator):
         else:
             # full paths enumeration
             self._initialize_realizations_enumeration()
+
+        self.rlzs_per_ltpath = collections.OrderedDict()
+        for rlz in self._get_realizations():
+            ltpath = tuple(rlz.sm_lt_path)
+            if not ltpath in self.rlzs_per_ltpath:
+                self.rlzs_per_ltpath[ltpath] = [rlz]
+            else:
+                self.rlzs_per_ltpath[ltpath].append(rlz)
 
     def _initialize_realizations_enumeration(self):
         """

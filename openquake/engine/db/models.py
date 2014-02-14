@@ -223,7 +223,7 @@ class SiteCollection(openquake.hazardlib.site.SiteCollection):
             an array of integer identifying the ordinal of the sites
             to select. Sites are ordered by the value of their id field
         :returns:
-            `self` is `indices` is None, otherwise, a `SiteCollection`
+            `self` if `indices` is None, otherwise, a `SiteCollection`
             holding sites at `indices`
         """
         if indices is None:
@@ -1534,11 +1534,12 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    lt_realization = djm.ForeignKey('LtRealization', null=False)
+    lt_realization_ids = fields.IntArrayField(null=False)
+    ordinal = djm.IntegerField(null=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_collection'
-        ordering = ['lt_realization']
+        ordering = ['ordinal']
 
     def __iter__(self):
         """
@@ -1546,6 +1547,27 @@ class SESCollection(djm.Model):
         """
         return SES.objects.filter(ses_collection=self.id).order_by('ordinal') \
             .iterator()
+
+    @property
+    def sm_lt_path(self):
+        """
+        The source model logic tree path corresponding to the collection
+        """
+        # all lt_realization_ids correspond to the same sm_lt_path
+        return LtRealization.objects.get(
+            pk=self.lt_realization_ids[0]).sm_lt_path
+
+    @property
+    def weight(self):
+        """
+        The logic tree weight corresponding to the collection
+        """
+        weights = [LtRealization.objects.get(pk=rlz_id).weight
+                   for rlz_id in self.lt_realization_ids]
+        if all(w is None for w in weights):
+            return None
+        else:
+            return sum(weights)
 
 
 class SES(djm.Model):
