@@ -104,6 +104,8 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
     # Compute and save stochastic event sets
     rnd = random.Random()
+    num_distinct_ruptures = 0
+
     for src, seed in src_seeds:
         t0 = time.time()
         rnd.seed(seed)
@@ -155,15 +157,16 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             collector.calc_gmf(r_sites, rup, rup_id, rup_seed)
 
-        # log calc_time per rupture
+        # log calc_time per distinct rupture
         if ses_num_occ:
-            num_ruptures = sum(occ for ses, occ in ses_num_occ[rup]
-                               for rup in ses_num_occ)
             logs.LOG.info(
-                'job=%d, src=%s:%s, num_ruptures=%d/%d, calc_time=%fs',
+                'job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
                 job_id, src.source_id, src.__class__.__name__,
-                len(ses_num_occ), num_ruptures, time.time() - t0)
+                len(ses_num_occ), time.time() - t0)
+            num_distinct_ruptures += len(ses_num_occ)
 
+    logs.LOG.info('job=%d, task %d generated %d distinct ruptures',
+                  job_id, task_no, num_distinct_ruptures)
     mon1.flush()
     mon2.flush()
     mon3.flush()
