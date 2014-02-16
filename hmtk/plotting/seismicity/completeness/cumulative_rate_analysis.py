@@ -118,6 +118,11 @@ class SimpleCumulativeRate(BaseCatalogueCompleteness):
                 (completeness_table[iloc, 0] > completeness_table[iloc - 1, 0]):
                     completeness_table[iloc, 0] = \
                         completeness_table[iloc - 1, 0]
+            # Add marker line to indicate completeness point
+            marker_line = np.array([
+                    [0., completeness_table[iloc, 0]],
+                    [cumvals[-1], completeness_table[iloc, 0]]])
+            plt.plot(marker_line[:, 0], marker_line[:, 1], 'r-')
             if saveplot:
                 filename = saveplot + '_' + ('%5.2f' % lower_mag) + ('%5.2f'
                     % upper_mag) + '.' + filetype

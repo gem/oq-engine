@@ -61,7 +61,7 @@ class CsvCatalogueParser(BaseCatalogueParser):
     """CSV Catalogue Parser Class
     """
 
-    def read_file(self):
+    def read_file(self, start_year=None, end_year=None):
         """
         """
         filedata = open(self.input_file, 'rU')
@@ -85,7 +85,15 @@ class CsvCatalogueParser(BaseCatalogueParser):
                         row[key])
                 else:
                     catalogue.data[key].append(row[key])
-        catalogue.update_end_year()
+        if start_year:
+            catalogue.start_year = start_year
+        else:
+            catalogue.update_start_year()
+
+        if end_year:
+            catalogue.end_year = end_year
+        else:
+            catalogue.update_end_year()
         return catalogue
 
     def _header_check(self, input_keys, catalogue_keys):

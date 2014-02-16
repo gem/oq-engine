@@ -86,15 +86,20 @@ class KijkoSmit(SeismicityOccurrence):
                     catalogue.data['year'] >= (ctime[ival] - tolerance),
                     catalogue.data['magnitude'] >= (m_c - tolerance))
                 nyr[ival] = float(catalogue.end_year) - ctime[ival] + 1.
+            elif ival == number_intervals - 1:
+                id1 = np.logical_and(
+                    catalogue.data['year'] < (ctime[ival - 1] - tolerance),
+                    catalogue.data['magnitude'] >= (m_c - tolerance))
+                nyr[ival] = ctime[ival - 1] - ctime[ival]
             else:
                 id1 = np.logical_and(
                     catalogue.data['year'] >= (ctime[ival] - tolerance),
                     catalogue.data['year'] < (ctime[ival - 1] - tolerance))
                 id1 = np.logical_and(id1,
                     catalogue.data['magnitude'] > (m_c - tolerance))
-                nyr[ival] = ctime[ival - 1] - ctime[ival] + 1.
+                nyr[ival] = ctime[ival - 1] - ctime[ival]
             neq[ival] = np.sum(id1)
-            print ival, m_c, ctime, neq, np.where(id1)[0]
+            #print ival, m_c, ctime, neq, np.where(id1)[0]
             # Get a- and b- value for the selected events
             temp_rec_table = recurrence_table(catalogue.data['magnitude'][id1],
                                               dmag,
@@ -105,7 +110,6 @@ class KijkoSmit(SeismicityOccurrence):
                                          temp_rec_table[:, 1],
                                          dmag, m_c)[0]
             ival += 1
-
         total_neq = np.float(np.sum(neq))
         bval = self._harmonic_mean(b_est, neq)
         sigma_b = bval / np.sqrt(total_neq)

@@ -86,6 +86,32 @@ class CsvCatalogueParserTestCase(unittest.TestCase):
         """
         self.assertEqual(self.cat.get_number_events(),8)
 
+    def test_without_specifying_years(self):
+        """
+        Tests that when the catalogue is parsed without specifying the start
+        and end year that the start and end year come from the minimum and
+        maximum in the catalogue
+        """
+        filename = os.path.join(self.BASE_DATA_PATH, 'test_catalogue.csv')
+        parser = CsvCatalogueParser(filename)
+        self.cat = parser.read_file()
+        self.assertEqual(self.cat.start_year, np.min(self.cat.data['year']))
+        self.assertEqual(self.cat.end_year, np.max(self.cat.data['year']))
+
+    def test_specifying_years(self):
+        """
+        Tests that when the catalogue is parsed with the specified start and
+        end years that this are recognised as attributes of the catalogue
+        """
+        filename = os.path.join(self.BASE_DATA_PATH, 'test_catalogue.csv')
+        parser = CsvCatalogueParser(filename)
+        self.cat = parser.read_file(start_year=1000, end_year=1100)
+        self.assertEqual(self.cat.start_year, 1000)
+        self.assertEqual(self.cat.end_year, 1100)
+
+
+
+
 
 class TestCsvCatalogueWriter(unittest.TestCase):
     '''

@@ -59,6 +59,8 @@ import matplotlib.pyplot as plt
 valid_markers = ['*', '+', '1', '2', '3', '4', '8', '<', '>', 'D', 'H', '^',
                  '_', 'd', 'h', 'o', 'p', 's', 'v', 'x', '|']
 
+DEFAULT_SIZE=(8., 6.)
+DEFAULT_OFFSET=(1.3, 1.0)
 
 def create_stepp_plot(model, filename, filetype='png', filedpi=300):
     '''
@@ -74,6 +76,7 @@ def create_stepp_plot(model, filename, filetype='png', filedpi=300):
     :param int filedpi:
         Resolution (dots per inch) of output file
     '''
+    plt.figure(figsize=DEFAULT_SIZE)
     if os.path.exists(filename):
         raise IOError('File already exists!')
 
@@ -102,7 +105,8 @@ def create_stepp_plot(model, filename, filetype='png', filedpi=300):
                    marker=marker_vals[iloc],
                    color=rgb_list[iloc])
 
-    plt.legend(legend_list)
+    plt.legend(legend_list, bbox_to_anchor=DEFAULT_OFFSET)
+    plt.grid(True)
     # Plot expected Poisson rate
     for iloc in range(0, len(model.magnitude_bin) - 1):
         plt.loglog(model.time_values,
@@ -110,6 +114,7 @@ def create_stepp_plot(model, filename, filetype='png', filedpi=300):
                    linestyle='-',
                    marker='None',
                    color=rgb_list[iloc])
+        plt.xlim(model.time_values[0] / 2., 2. * model.time_values[-1])
         xmarker = model.end_year - model.completeness_table[iloc, 0]
         id0 = model.model_line[:, iloc] > 0.
         ymarker = 10.0 ** np.interp(np.log10(xmarker),
