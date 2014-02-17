@@ -176,19 +176,10 @@ class ParseRiskModelsTestCase(unittest.TestCase):
         job.is_running = True
         job.save()
 
-        base_path = ('openquake.engine.calculators.hazard.classical.core'
-                     '.ClassicalHazardCalculator')
-        init_src_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_sources'))
-        init_rlz_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_realizations'))
-        patches = (init_src_patch, init_rlz_patch)
-
-        mocks = [p.start() for p in patches]
-
-        get_calculator_class(
+        calc = get_calculator_class(
             'hazard',
-            job.hazard_calculation.calculation_mode)(job).pre_execute()
+            job.hazard_calculation.calculation_mode)(job)
+        calc.parse_risk_models()
 
         self.assertEqual([(1.0, -1.0), (0.0, 0.0)],
                          [(point.latitude, point.longitude)
@@ -197,10 +188,6 @@ class ParseRiskModelsTestCase(unittest.TestCase):
 
         self.assertEqual(
             3, haz_calc.oqjob.exposuremodel.exposuredata_set.count())
-
-        for i, m in enumerate(mocks):
-            m.stop()
-            patches[i].stop()
 
         return job
 
