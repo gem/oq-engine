@@ -39,27 +39,6 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         calc = core.DisaggHazardCalculator(job)
         return job, calc
 
-    def test_pre_execute(self):
-        base_path = ('openquake.engine.calculators.hazard.disaggregation.core'
-                     '.DisaggHazardCalculator')
-        init_src_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_sources'))
-        init_rlz_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_realizations'))
-        patches = (init_src_patch, init_rlz_patch)
-
-        mocks = [p.start() for p in patches]
-
-        self.calc.pre_execute()
-
-        # make sure the site_collection is loaded:
-        self.assertIsNotNone(self.calc.hc.site_collection)
-
-        for i, m in enumerate(mocks):
-            self.assertEqual(1, m.call_count)
-            m.stop()
-            patches[i].stop()
-
     @attr('slow')
     def test_workflow(self):
         # Test `pre_execute` to ensure that all stats are properly initialized.
