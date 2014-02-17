@@ -1,5 +1,5 @@
 from django.test.simple import DjangoTestSuiteRunner
-from openquakeserver.settings import *
+from openquake.server.settings import *
 
 
 DATABASES = {'default': DATABASES['default']}
@@ -17,4 +17,4 @@ class NoDbTestRunner(DjangoTestSuiteRunner):
         pass
 
 
-TEST_RUNNER = "openquakeserver.test_db_settings.NoDbTestRunner"
+TEST_RUNNER = "openquake.server.test_db_settings.NoDbTestRunner"

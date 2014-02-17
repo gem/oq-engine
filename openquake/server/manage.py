@@ -11,7 +11,7 @@ except ImportError:
 
 import settings
 
-from openquakeserver.engine import executor
+from openquake.server import executor
 
 if __name__ == "__main__":
     with executor:

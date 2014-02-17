@@ -30,7 +30,7 @@ import urllib2
 from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
 
-from openquakeserver.dbsettings import PLATFORM_DATABASES as DATABASES
+from openquake.server.dbsettings import PLATFORM_DATABASES as DATABASES
 
 
 DEFAULT_LOG_LEVEL = 'progress'

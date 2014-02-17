@@ -23,7 +23,7 @@ from openquake.engine.db import models as oqe_models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
 
-from engine import tasks, executor
+from openquake.server import tasks, executor
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -44,7 +44,7 @@ EXPORT_CONTENT_TYPE_MAP = dict(xml='application/xml',
                                geojson='application/json')
 DEFAULT_CONTENT_TYPE = 'text/plain'
 
-LOGGER = logging.getLogger('openquakeserver')
+LOGGER = logging.getLogger('openquake.server')
 
 ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
