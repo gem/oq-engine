@@ -47,4 +47,4 @@
 
 from hmtk.parsers import (catalogue)
 
-__all__ = [catalogue]
+#__all__ = [catalogue]

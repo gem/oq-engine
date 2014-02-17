@@ -127,7 +127,7 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
         mmax = np.copy(obsmax)
         d_t = np.inf
         iterator = 0
-
+        print mmin, mmax, neq, beta
         while d_t > config['tolerance']:
             delta = quadrature(self._ks_intfunc, mmin, mmax,
                                args=(neq, mmax, mmin, beta))[0]

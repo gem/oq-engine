@@ -84,6 +84,7 @@ class Catalogue(object):
         """
         self.data = {}
         self.end_year = None
+        self.start_year = None
 
         self.processes = {'declustering': None,
                           'completeness': None,
@@ -164,6 +165,12 @@ class Catalogue(object):
         """
         self.end_year = np.max(self.data['year'])
 
+    def update_start_year(self):
+        """
+        NOTE: To be called only when the catalogue is loaded (not when
+        it is modified by declustering or completeness-based filtering)
+        """
+        self.start_year = np.min(self.data['year'])
 #    def catalogue_mt_filter(self, mt_table):
 #        if not 'eventID' in keys:
 #            self.data['eventID'] = np.array(range(0, np.shape(data_array)[0]),

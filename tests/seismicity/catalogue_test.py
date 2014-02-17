@@ -183,6 +183,20 @@ class CatalogueTestCase(unittest.TestCase):
         self.assertListEqual(cat1.data['Agency'], ['YYY'])
 
 
+    def test_update_start_end_year(self):
+        """
+        Tests the correct usage of the update start year
+        """
+        cat1 = Catalogue()
+        cat1.data['year'] = np.array([1900, 1950, 2000])
+        # Update start year
+        cat1.update_start_year()
+        self.assertEqual(cat1.start_year, 1900)
+        # Update end-year
+        cat1.update_end_year()
+        self.assertEqual(cat1.end_year, 2000)
+
+
 class TestGetDistributions(unittest.TestCase):
     """
     Class to test the hmtk.seismicity.catalogue.Catalogue methods to
