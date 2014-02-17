@@ -39,7 +39,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
     def _setup_a_new_calculator(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
-        job = helpers.get_hazard_job(cfg, username=getpass.getuser())
+        job = helpers.get_job(cfg, username=getpass.getuser())
         calc = core.ClassicalHazardCalculator(job)
         return job, calc
 
@@ -78,7 +78,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # we need a slightly different config file for this test
         cfg = helpers.get_data_path(
             'simple_fault_demo_hazard/job_with_site_model.ini')
-        self.job = helpers.get_hazard_job(cfg)
+        self.job = helpers.get_job(cfg)
         self.calc = core.ClassicalHazardCalculator(self.job)
 
         self.calc.initialize_site_model()
