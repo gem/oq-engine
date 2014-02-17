@@ -146,7 +146,7 @@ def run_hazard_calc(request):
 
     try:
         job, temp_dir = _prepare_job(
-            request, oq_engine.haz_job_from_file,
+            request, oq_engine.job_from_file,
             create_detect_job_file("job.ini", "job_haz.ini", "job_hazard.ini"))
     except Exception:
         etype, exc, tb = sys.exc_info()
@@ -187,7 +187,7 @@ def _prepare_job(request, job_factory, detect_job_file):
     """
     Creates a temporary directory, move uploaded files there and
     create a new oq-engine job by using the `job_factory` callable
-    (e.g. oq_engine.haz_job_from_file). The job file is selected using
+    (e.g. oq_engine.job_from_file). The job file is selected using
     the `detect_job_file` callable which accepts in input a list
     holding all the filenames ending with .ini
     """
@@ -382,7 +382,7 @@ def run_risk_calc(request):
     try:
         job, temp_dir = _prepare_job(
             request, functools.partial(
-                oq_engine.risk_job_from_file,
+                oq_engine.job_from_file,
                 hazard_output_id=hazard_output_id,
                 hazard_calculation_id=hazard_calculation_id),
             create_detect_job_file("job.ini", "job_risk.ini"))

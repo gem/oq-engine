@@ -515,7 +515,7 @@ class RunHazardCalcTestCase(BaseViewTestCase):
         mocks = dict(
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
-            job_from_file='openquake.engine.engine.haz_job_from_file',
+            job_from_file='openquake.engine.engine.job_from_file',
             run_task='openquake.server.tasks.run_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
@@ -598,7 +598,7 @@ class RunRiskCalcTestCase(BaseViewTestCase):
         mocks = dict(
             mkdtemp='tempfile.mkdtemp',
             move='shutil.move',
-            job_from_file='openquake.engine.engine.risk_job_from_file',
+            job_from_file='openquake.engine.engine.job_from_file',
             run_task='openquake.server.tasks.run_calc',
         )
         multi_mock = utils.MultiMock(**mocks)
