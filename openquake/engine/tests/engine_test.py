@@ -28,8 +28,6 @@ from openquake.engine.db import models
 from django.core import exceptions
 
 from openquake.engine import engine
-from openquake.engine.calculators import base
-
 from openquake.engine.tests.utils import helpers
 
 
@@ -235,7 +233,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
     def test_create_risk_calculation(self):
         # we need an hazard output to create a risk calculation
         hazard_cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
-        hazard_job = helpers.get_hazard_job(hazard_cfg, 'openquake')
+        hazard_job = helpers.get_job(hazard_cfg, 'openquake')
         hc = hazard_job.hazard_calculation
         rlz = models.LtRealization.objects.create(
             hazard_calculation=hazard_job.hazard_calculation,
@@ -296,7 +294,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         cls.risk_cfg = helpers.get_data_path('classical_psha_based_risk/job.ini')
 
     def test_del_haz_calc(self):
-        hazard_job = helpers.get_hazard_job(self.hazard_cfg,
+        hazard_job = helpers.get_job(self.hazard_cfg,
                                             username=getpass.getuser())
         hazard_calc = hazard_job.hazard_calculation
 
@@ -336,7 +334,7 @@ class DeleteHazCalcTestCase(unittest.TestCase):
         # Test the case where we try to delete a hazard calculation which does
         # not belong to current user.
         # In this case, deletion is now allowed and should raise an exception.
-        hazard_job = helpers.get_hazard_job(self.hazard_cfg,
+        hazard_job = helpers.get_job(self.hazard_cfg,
                                             username=helpers.random_string())
         hazard_calc = hazard_job.hazard_calculation
 
@@ -451,7 +449,7 @@ class RunHazardTestCase(unittest.TestCase):
     def setUp(self):
         mocks = {
             'touch': 'openquake.engine.engine.touch_log_file',
-            'job': 'openquake.engine.engine.haz_job_from_file',
+            'job': 'openquake.engine.engine.job_from_file',
             'run': 'openquake.engine.engine.run_calc',
             'complain': 'openquake.engine.engine.complain_and_exit',
             'list': 'openquake.engine.engine.list_hazard_outputs',
@@ -461,27 +459,26 @@ class RunHazardTestCase(unittest.TestCase):
         self.complete_job = FakeJob(FakeCalc(1), None)
         self.complete_job.status = 'complete'
 
-
     def test(self):
         with self.mocks:
             self.mocks['job'].return_value = self.job
             self.mocks['run'].return_value = self.complete_job
 
-            engine.run_hazard('job.ini', 'debug', 'oq.log', ['xml', 'geojson'])
+            engine.run_job('job.ini', 'debug', 'oq.log', ['xml', 'geojson'])
 
             self.assertEqual(1, self.mocks['touch'].call_count)
             self.assertEqual((('oq.log',), {}), self.mocks['touch'].call_args)
 
             self.assertEqual(1, self.mocks['job'].call_count)
             self.assertEqual(
-                (('job.ini', getpass.getuser(), 'debug', ['xml', 'geojson']),
-                 {}),
+                (('job.ini', getpass.getuser(), 'debug', ['xml', 'geojson'],
+                  None, None), {}),
                 self.mocks['job'].call_args
             )
 
             self.assertEqual(1, self.mocks['run'].call_count)
             self.assertEqual(
-                ((self.job, 'debug', 'oq.log', ['xml', 'geojson'], 'hazard'),
+                ((self.job, 'debug', 'oq.log', ['xml', 'geojson'], 'risk'),
                  {}),
                 self.mocks['run'].call_args
             )
@@ -494,7 +491,7 @@ class RunHazardTestCase(unittest.TestCase):
             self.complete_job.status = 'executing'
             self.mocks['run'].return_value = self.complete_job
 
-            engine.run_hazard('job.ini', 'debug', 'oq.log', ['xml', 'geojson'])
+            engine.run_job('job.ini', 'debug', 'oq.log', ['xml', 'geojson'])
 
             self.assertEqual(0, self.mocks['list'].call_count)
             self.assertEqual(1, self.mocks['complain'].call_count)
@@ -504,7 +501,7 @@ class RunHazardTestCase(unittest.TestCase):
             self.mocks['job'].return_value = self.job
             self.mocks['run'].return_value = self.complete_job
 
-            engine.run_hazard('job.ini', 'debug', None, ['xml', 'geojson'])
+            engine.run_job('job.ini', 'debug', None, ['xml', 'geojson'])
 
             self.assertEqual(0, self.mocks['touch'].call_count)
 
@@ -514,7 +511,7 @@ class RunRiskTestCase(RunHazardTestCase):
     def setUp(self):
         mocks = {
             'touch': 'openquake.engine.engine.touch_log_file',
-            'job': 'openquake.engine.engine.risk_job_from_file',
+            'job': 'openquake.engine.engine.job_from_file',
             'run': 'openquake.engine.engine.run_calc',
             'complain': 'openquake.engine.engine.complain_and_exit',
             'list': 'openquake.engine.engine.list_risk_outputs',
@@ -529,8 +526,8 @@ class RunRiskTestCase(RunHazardTestCase):
             self.mocks['job'].return_value = self.job
             self.mocks['run'].return_value = self.complete_job
 
-            engine.run_risk('job.ini', 'debug', 'oq.log', ['xml', 'geojson'],
-                            None, 1)
+            engine.run_job('job.ini', 'debug', 'oq.log', ['xml', 'geojson'],
+                           None, 1)
 
             self.assertEqual(1, self.mocks['touch'].call_count)
             self.assertEqual((('oq.log',), {}), self.mocks['touch'].call_args)
@@ -558,8 +555,8 @@ class RunRiskTestCase(RunHazardTestCase):
             self.complete_job.status = 'executing'
             self.mocks['run'].return_value = self.complete_job
 
-            engine.run_risk('job.ini', 'debug', 'oq.log', ['xml', 'geojson'],
-                            1, None)
+            engine.run_job('job.ini', 'debug', 'oq.log', ['xml', 'geojson'],
+                           1, None)
 
             self.assertEqual(0, self.mocks['list'].call_count)
             self.assertEqual(1, self.mocks['complain'].call_count)
@@ -569,8 +566,8 @@ class RunRiskTestCase(RunHazardTestCase):
             self.mocks['job'].return_value = self.job
             self.mocks['run'].return_value = self.complete_job
 
-            engine.run_risk('job.ini', 'debug', None, ['xml', 'geojson'], 1,
-                            None)
+            engine.run_job('job.ini', 'debug', None, ['xml', 'geojson'], 1,
+                           None)
 
             self.assertEqual(0, self.mocks['touch'].call_count)
 

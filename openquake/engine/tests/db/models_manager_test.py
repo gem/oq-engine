@@ -44,7 +44,7 @@ class TestCaseWithAJob(unittest.TestCase):
     """
     def setUp(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
-        self.job = helpers.get_hazard_job(cfg, username="test_user")
+        self.job = helpers.get_job(cfg, username="test_user")
         for i in range(0, random.randint(1, 10)):
             models.LtRealization(
                 hazard_calculation=self.job.hazard_calculation,

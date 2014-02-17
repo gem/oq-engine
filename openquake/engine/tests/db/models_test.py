@@ -164,7 +164,7 @@ class SESRuptureTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
-        job = helpers.get_hazard_job(cfg)
+        job = helpers.get_job(cfg)
 
         lt_rlz = models.LtRealization.objects.create(
             hazard_calculation=job.hazard_calculation, ordinal=0, seed=0,
@@ -258,7 +258,7 @@ class GmfsPerSesTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cfg = helpers.get_data_path('event_based_hazard/job.ini')
-        job = helpers.get_hazard_job(cfg)
+        job = helpers.get_job(cfg)
         rlz1 = models.LtRealization.objects.create(
             hazard_calculation=job.hazard_calculation,
             ordinal=1, seed=1, weight=None,
@@ -344,7 +344,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
     def test_get_site_collection_with_site_model(self):
         cfg = helpers.get_data_path(
             'simple_fault_demo_hazard/job_with_site_model.ini')
-        job = helpers.get_hazard_job(cfg)
+        job = helpers.get_job(cfg)
         calc = cls_core.ClassicalHazardCalculator(job)
 
         # Bootstrap the `hazard_site` table:
@@ -366,7 +366,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
 
     def test_get_site_collection_with_reference_parameters(self):
         cfg = helpers.get_data_path('scenario_hazard/job.ini')
-        job = helpers.get_hazard_job(cfg, username=getpass.getuser())
+        job = helpers.get_job(cfg, username=getpass.getuser())
         calc = scen_core.ScenarioHazardCalculator(job)
         calc.initialize_site_model()
         site_coll = job.hazard_calculation.site_collection

@@ -605,83 +605,6 @@ def del_risk_calc(rc_id):
                            'Access denied')
 
 
-def run_hazard(cfg_file, log_level, log_file, exports):
-    """
-    Run a hazard calculation using the specified config file and other options.
-
-    :param str cfg_file:
-        Path to calculation config (INI-style) file.
-    :param str log_level:
-        'debug', 'info', 'warn', 'error', or 'critical'
-    :param str log_file:
-        Path to log file.
-    :param list exports:
-        A list of export types requested by the user. Currently only 'xml'
-        is supported.
-    """
-    try:
-        if log_file is not None:
-            touch_log_file(log_file)
-
-        job = haz_job_from_file(
-            cfg_file, getpass.getuser(), log_level, exports
-        )
-
-        # Instantiate the calculator, and run the calculation.
-        t0 = time.time()
-        completed_job = run_calc(
-            job, log_level, log_file, exports, 'hazard'
-        )
-        duration = time.time() - t0
-        if completed_job.status == 'complete':
-            print_results(completed_job.hazard_calculation.id,
-                          duration, list_hazard_outputs)
-        else:
-            complain_and_exit('Calculation %d failed'
-                              % completed_job.hazard_calculation.id,
-                              exit_code=1)
-    except IOError as e:
-        print str(e)
-    except Exception as e:
-        raise
-
-
-@django_db.transaction.commit_on_success
-def haz_job_from_file(cfg_file_path, username, log_level, exports):
-    """
-    Create a full hazard job profile from a job config file.
-
-    :param str cfg_file_path:
-        Path to the job.ini.
-    :param str username:
-        The user who will own this job profile and all results.
-    :param str log_level:
-        Desired log level.
-    :param exports:
-        List of desired export types.
-
-    :returns:
-        :class:`openquake.engine.db.models.OqJob` object
-    :raises:
-        `RuntimeError` if the input job configuration is not valid
-    """
-    # create the job
-    job = prepare_job(user_name=username, log_level=log_level)
-
-    # read calculation params and create the calculation profile
-    params = parse_config(open(cfg_file_path, 'r'))
-    job.hazard_calculation = create_calculation(
-        models.HazardCalculation, params)
-    job.save()
-
-    # validate and raise if there are any problems
-    error_message = validate(job, 'hazard', params, exports)
-    if error_message:
-        raise RuntimeError(error_message)
-
-    return job
-
-
 def list_hazard_outputs(hc_id):
     """
     List the outputs for a given
@@ -741,11 +664,10 @@ def print_outputs_summary(outputs):
                 o.id, o.get_output_type_display(), o.display_name)
 
 
-def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
-             hazard_calculation_id=None):
+def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
+            hazard_calculation_id=None):
     """
-    Run a risk calculation using the specified config file and other options.
-    One of hazard_output_id or hazard_calculation_id must be specified.
+    Run a job using the specified config file and other options.
 
     :param str cfg_file:
         Path to calculation config (INI-style) file.
@@ -761,11 +683,12 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
+    is_hazard = hazard_output_id is None and hazard_calculation_id is None
     try:
         if log_file is not None:
             touch_log_file(log_file)
 
-        job = risk_job_from_file(
+        job = job_from_file(
             cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
             hazard_calculation_id
         )
@@ -776,24 +699,31 @@ def run_risk(cfg_file, log_level, log_file, exports, hazard_output_id=None,
             job, log_level, log_file, exports, 'risk'
         )
         duration = time.time() - t0
-        if completed_job.status == 'complete':
-            print_results(completed_job.risk_calculation.id,
-                          duration, list_risk_outputs)
+        if is_hazard:
+            if completed_job.status == 'complete':
+                print_results(completed_job.hazard_calculation.id,
+                              duration, list_hazard_outputs)
+            else:
+                complain_and_exit('Calculation %s failed'
+                                  % completed_job.hazard_calculation.id,
+                                  exit_code=1)
         else:
-            complain_and_exit('Calculation %s failed'
-                              % completed_job.risk_calculation.id,
-                              exit_code=1)
+            if completed_job.status == 'complete':
+                print_results(completed_job.risk_calculation.id,
+                              duration, list_risk_outputs)
+            else:
+                complain_and_exit('Calculation %s failed'
+                                  % completed_job.risk_calculation.id,
+                                  exit_code=1)
     except IOError as e:
         print str(e)
-    except Exception as e:
-        raise
 
 
 @django_db.transaction.commit_on_success
-def risk_job_from_file(cfg_file_path, username, log_level, exports,
-                       hazard_output_id=None, hazard_calculation_id=None):
+def job_from_file(cfg_file_path, username, log_level, exports,
+                  hazard_output_id=None, hazard_calculation_id=None):
     """
-    Create a full risk job profile from a job config file.
+    Create a full job profile from a job config file.
 
     :param str cfg_file_path:
         Path to the job.ini.
@@ -815,16 +745,23 @@ def risk_job_from_file(cfg_file_path, username, log_level, exports,
     :raises:
         `RuntimeError` if the input job configuration is not valid
     """
-    assert not(hazard_output_id is None and hazard_calculation_id is None), (
-        "Must specify either `hazard_output_id` or `hazard_calculation_id`, "
-        "and not both"
-    )
     # create the job
     job = prepare_job(user_name=username, log_level=log_level)
-
     # read calculation params and create the calculation profile
     params = parse_config(open(cfg_file_path, 'r'))
-    # Add the hazard output id to the risk calculation constructor args
+
+    if hazard_output_id is None and hazard_calculation_id is None:
+        # this is a hazard calculation, not a risk one
+        job.hazard_calculation = create_calculation(
+            models.HazardCalculation, params)
+        job.save()
+        # validate and raise an error if there are any problems
+        error_message = validate(job, 'hazard', params, exports)
+        if error_message:
+            raise RuntimeError(error_message)
+        return job
+
+    # otherwise run a risk calculation
     params.update(dict(hazard_output_id=hazard_output_id,
                        hazard_calculation_id=hazard_calculation_id))
 
