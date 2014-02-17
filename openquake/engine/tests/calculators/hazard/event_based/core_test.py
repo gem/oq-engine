@@ -119,7 +119,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.cfg = helpers.get_data_path('event_based_hazard/job_2.ini')
-        self.job = helpers.get_hazard_job(self.cfg, username=getpass.getuser())
+        self.job = helpers.get_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
         hc_id = self.job.hazard_calculation.id
         models.SiteCollection.cache[hc_id] = make_site_coll(0, 0, n=5)
@@ -182,7 +182,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # and check the outputs
         os.environ['OQ_NO_DISTRIBUTE'] = '1'
         try:
-            job = helpers.run_hazard_job(self.cfg)
+            job = helpers.run_job(self.cfg)
         finally:
             del os.environ['OQ_NO_DISTRIBUTE']
         hc = job.hazard_calculation

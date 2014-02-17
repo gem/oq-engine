@@ -35,7 +35,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
     def _setup_a_new_calculator(self):
         cfg = helpers.get_data_path('disaggregation/job.ini')
-        job = helpers.get_hazard_job(cfg, username=getpass.getuser())
+        job = helpers.get_job(cfg, username=getpass.getuser())
         calc = core.DisaggHazardCalculator(job)
         return job, calc
 
