@@ -240,8 +240,7 @@ def list_inputs(input_type):
     if input_type == "exposure":
         model = models.ExposureModel
     else:
-        engine.complain_and_exit(
-            "Wrong input type. Available input types: exposure")
+        sys.exit("Wrong input type. Available input types: exposure")
 
     inputs = model.objects.all()
 
@@ -423,7 +422,7 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        engine.complain_and_exit(__version__)
+        sys.exit(__version__)
 
     if args.config_file:
         os.environ[config.OQ_CONFIG_FILE_VAR] = \
@@ -470,7 +469,7 @@ def main():
     elif args.run_risk is not None:
         if (args.hazard_output_id is None
                 and args.hazard_calculation_id is None):
-            engine.complain_and_exit(MISSING_HAZARD_MSG)
+            sys.exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
         engine.run_job(expanduser(args.run_risk), args.log_level, log_file,
