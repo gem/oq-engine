@@ -451,8 +451,8 @@ def main():
     elif args.run_hazard is not None:
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        engine.run_hazard(expanduser(args.run_hazard), args.log_level,
-                          log_file, args.exports)
+        engine.run_job(expanduser(args.run_hazard), args.log_level,
+                       log_file, args.exports)
     elif args.delete_hazard_calculation is not None:
         del_haz_calc(args.delete_hazard_calculation, args.yes)
     # risk
@@ -473,9 +473,9 @@ def main():
             engine.complain_and_exit(MISSING_HAZARD_MSG)
         log_file = expanduser(args.log_file) \
             if args.log_file is not None else None
-        engine.run_risk(expanduser(args.run_risk), args.log_level, log_file,
-                        args.exports, hazard_output_id=args.hazard_output_id,
-                        hazard_calculation_id=args.hazard_calculation_id)
+        engine.run_job(expanduser(args.run_risk), args.log_level, log_file,
+                       args.exports, hazard_output_id=args.hazard_output_id,
+                       hazard_calculation_id=args.hazard_calculation_id)
     elif args.delete_risk_calculation is not None:
         del_risk_calc(args.delete_risk_calculation, args.yes)
     # import
