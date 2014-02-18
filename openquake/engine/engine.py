@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,8 +42,6 @@ from openquake.engine.utils import (
     config, monitor, get_calculator_class, general)
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
-from openquake.engine.db.models import JobStats
-from openquake.engine.db.models import OqJob
 from openquake.engine.db.models import Performance
 
 from openquake import hazardlib
@@ -64,18 +62,6 @@ TERMINATE = general.str2bool(
     config.get('celery', 'terminate_workers_on_revoke'))
 
 
-def record_job_stop_time(job):
-    """
-    Call this when a job concludes (successful or not) to record the
-    'stop_time' (using the current UTC time) in the uiapi.job_stats table.
-
-    :param job: the job object
-    """
-    job_stats = JobStats.objects.get(oq_job=job)
-    job_stats.stop_time = datetime.utcnow()
-    job_stats.save(using='job_init')
-
-
 def cleanup_after_job(job, terminate):
     """
     Release the resources used by an openquake job.
@@ -85,7 +71,10 @@ def cleanup_after_job(job, terminate):
     """
     # Using the celery API, terminate and revoke and terminate any running
     # tasks associated with the current job.
-    task_ids = _get_task_ids(job.id)
+    task_ids = Performance.objects.filter(
+        oq_job=job, operation='storing task id', task_id__isnull=False)\
+        .values_list('task_id', flat=True)
+
     if task_ids:
         logs.LOG.warn('Revoking %d tasks', len(task_ids))
     else:  # this is normal when OQ_NO_DISTRIBUTE=1
@@ -93,39 +82,6 @@ def cleanup_after_job(job, terminate):
     for tid in task_ids:
         celery.task.control.revoke(tid, terminate=terminate)
         logs.LOG.debug('Revoked task %s', tid)
-
-
-def _get_task_ids(job_id):
-    """
-    Get all Celery task IDs for a given ``job_id``.
-    """
-    return Performance.objects.filter(
-        oq_job=job_id, operation='storing task id', task_id__isnull=False)\
-        .values_list('task_id', flat=True)
-
-
-def get_job_status(job_id):
-    """
-    Return the status of the job stored in its database record.
-
-    :param job_id: the id of the job
-    :type job_id: int
-    :return: the status of the job
-    :rtype: string
-    """
-
-    return OqJob.objects.get(id=job_id).status
-
-
-def update_job_status(job_id):
-    """
-    Store in the database the status of a job.
-
-    :param int job_id: the id of the job
-    """
-    job = OqJob.objects.get(id=job_id)
-    job.is_running = False
-    job.save()
 
 
 def _update_log_record(self, record):
@@ -197,13 +153,14 @@ def start_logging(calc_id, calc_domain, log_file):
             LogStreamHandler(calc_domain, calc_id))
 
 
-def save_job_stats(job, disk_space=None):
+def save_job_stats(job, disk_space=None, stop_time=None):
     """
     Save the job_stats for the given job. Should be called only after
     the site_collection has been initialized.
     """
     js = models.JobStats.objects.get(oq_job=job)
     js.disk_space = disk_space
+    js.stop_time = stop_time
 
     if job.risk_calculation:
         hc = job.risk_calculation.hazard_calculation
@@ -228,9 +185,12 @@ def job_stats(job):
     try:
         yield
     finally:
+        job.is_running = False
+        job.save()
         curs.execute("select pg_database_size(%s)", (dbname,))
         new_dbsize = curs.fetchall()[0][0]
-        save_job_stats(job, new_dbsize - dbsize)
+        save_job_stats(job, new_dbsize - dbsize, datetime.utcnow())
+        cleanup_after_job(job, terminate=TERMINATE)
 
 
 def prepare_job(user_name="openquake", log_level='progress'):
@@ -391,18 +351,7 @@ def _collect_source_model_paths(smlt):
                     './nrml:logicTreeBranch/nrml:uncertaintyModel',
                     namespaces=nrmllib.PARSE_NS_MAP):
                 src_paths.append(branch.text)
-    return sorted(list(set(src_paths)))
-
-
-def _create_job_stats(job):
-    """
-    Helper function to create job stats, which implicitly records the start
-    time for the job.
-
-    :param job:
-        :class:`openquake.engine.db.models.OqJob` instance.
-    """
-    models.JobStats.objects.create(oq_job=job)
+    return sorted(set(src_paths))
 
 
 # used by bin/openquake
@@ -437,22 +386,13 @@ def run_calc(job, log_level, log_file, exports, job_type,
         calc.register_progress_handler(progress_handler)
 
     # Create job stats, which implicitly records the start time for the job
-    _create_job_stats(job)
+    models.JobStats.objects.create(oq_job=job)
 
     calc_id = job.calculation.id
     calc_domain = 'hazard' if job.hazard_calculation else 'risk'
     start_logging(calc_id, calc_domain, log_file)
-    try:
-        with job_stats(job):
-            _job_exec(job, log_level, exports, job_type, calc)
-    except Exception, ex:
-        logs.LOG.critical("Calculation failed with exception: '%s'", ex)
-        raise
-    finally:
-        job.is_running = False
-        job.save()
-        record_job_stop_time(job)
-        cleanup_after_job(job, terminate=TERMINATE)
+    with job_stats(job):
+        _job_exec(job, log_level, exports, job_type, calc)
     return job
 
 
