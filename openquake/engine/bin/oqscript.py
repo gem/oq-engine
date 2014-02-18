@@ -422,7 +422,8 @@ def main():
     args = arg_parser.parse_args()
 
     if args.version:
-        sys.exit(__version__)
+        print __version__
+        sys.exit(0)
 
     if args.config_file:
         os.environ[config.OQ_CONFIG_FILE_VAR] = \
