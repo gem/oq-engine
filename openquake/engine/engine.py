@@ -553,17 +553,7 @@ def list_hazard_outputs(hc_id):
     :param hc_id:
         ID of a hazard calculation.
     """
-    print_outputs_summary(get_hazard_outputs(hc_id))
-
-
-def get_hazard_outputs(hc_id):
-    """
-    :param hc_id:
-        ID of a hazard calculation.
-    :returns:
-        A sequence of :class:`openquake.engine.db.models.Output` objects
-    """
-    return models.Output.objects.filter(oq_job__hazard_calculation=hc_id)
+    print_outputs_summary(get_outputs('hazard', hc_id))
 
 
 def touch_log_file(log_file):
@@ -572,19 +562,7 @@ def touch_log_file(log_file):
     'append' mode ('a'). If the specified file is not writable, an
     :exc:`IOError` will be raised.
     """
-    try:
-        open(os.path.abspath(log_file), 'a').close()
-    except IOError as e:
-        raise IOError('Error writing to log file %s: %s'
-                      % (log_file, e.strerror))
-
-
-def complain_and_exit(msg, exit_code=0):
-    """
-    Print a ``msg`` and exit the current process with the given ``exit_code``.
-    """
-    print msg
-    sys.exit(exit_code)
+    open(os.path.abspath(log_file), 'a').close()
 
 
 def print_results(calc_id, duration, list_outputs):
@@ -644,17 +622,15 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
                 print_results(completed_job.hazard_calculation.id,
                               duration, list_hazard_outputs)
             else:
-                complain_and_exit('Calculation %s failed'
-                                  % completed_job.hazard_calculation.id,
-                                  exit_code=1)
+                sys.exit('Calculation %s failed' %
+                         completed_job.hazard_calculation.id)
         else:
             if completed_job.status == 'complete':
                 print_results(completed_job.risk_calculation.id,
                               duration, list_risk_outputs)
             else:
-                complain_and_exit('Calculation %s failed'
-                                  % completed_job.risk_calculation.id,
-                                  exit_code=1)
+                sys.exit('Calculation %s failed' %
+                         completed_job.risk_calculation.id)
     except IOError as e:
         print str(e)
 
@@ -724,14 +700,19 @@ def list_risk_outputs(rc_id):
     :param rc_id:
         ID of a risk calculation.
     """
-    print_outputs_summary(get_risk_outputs(rc_id))
+    print_outputs_summary(get_outputs('risk', rc_id))
 
 
-def get_risk_outputs(rc_id):
+def get_outputs(job_type, calc_id):
     """
-    :param rc_id:
-        ID of a risk calculation.
+    :param job_type:
+        'hazard' or 'risk'
+    :param calc_id:
+        ID of a calculation.
     :returns:
         A sequence of :class:`openquake.engine.db.models.Output` objects
     """
-    return models.Output.objects.filter(oq_job__risk_calculation=rc_id)
+    if job_type == 'risk':
+        return models.Output.objects.filter(oq_job__risk_calculation=calc_id)
+    else:
+        return models.Output.objects.filter(oq_job__hazard_calculation=calc_id)
