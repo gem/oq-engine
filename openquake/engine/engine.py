@@ -683,7 +683,7 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
-    is_hazard = hazard_output_id is None and hazard_calculation_id is None
+    hazard = hazard_output_id is None and hazard_calculation_id is None
     try:
         if log_file is not None:
             touch_log_file(log_file)
@@ -696,10 +696,10 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
         # Instantiate the calculator and run the calculation.
         t0 = time.time()
         completed_job = run_calc(
-            job, log_level, log_file, exports, 'risk'
+            job, log_level, log_file, exports, 'hazard' if hazard else 'risk'
         )
         duration = time.time() - t0
-        if is_hazard:
+        if hazard:
             if completed_job.status == 'complete':
                 print_results(completed_job.hazard_calculation.id,
                               duration, list_hazard_outputs)
