@@ -24,7 +24,6 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
 
     @noseattr('qa', 'risk', 'event_based')
     def test(self):
-        self.skipTest("Missing expected data")
         self._run_test()
 
     def expected_output_data(self):
@@ -39,13 +38,14 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
                 sm_path=('b1',), gsim_path=('b2',)))
 
         assets = ["a0", "a1", "a2", "a3"]
-        costs = [u"nonstructural", u"structural", u"contents"]
+        costs = ["nonstructural", "structural", "contents"]
 
         def gen_loss_curves(branches, costs):
             for branch, metadata in branches:
                 for cost in costs:
                     csv_name = "%s_%s" % (branch, cost)
                     data = self._csv(csv_name)
+                    yield csv_name, None
                     for i, asset in enumerate(assets):
                         descriptor = (u'event_loss_curve', metadata, None,
                                       None, False, False, cost, asset)
@@ -63,6 +63,7 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         data = self._csv("aggregates")
 
         aggregate_loss_curves = [
+            ('aggregates', None)] + [
             ((u'agg_loss_curve', branch, None,
               None, True, False, "structural"),
              models.AggregateLossCurveData(
@@ -73,9 +74,8 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         # we check only the first 10 values of the event loss table
         data = self._csv('event_loss_table')[1:, 0:3]
         data = sorted(data, key=lambda v: -v[2])[0:10]
-        #event_loss_table_b1 = [
+        #event_loss_table_b1 = [('event_loss_table', None)] + [
         #    ((u'event_loss', branches["b1"], "structural", i),
         #     models.EventLossData(rupture_id=i, aggregate_loss=j))
         #    for i, _m, j in data]
-        # NB: the event loss table check has been temporarily removed
         return loss_curves + aggregate_loss_curves  # + event_loss_table_b1
