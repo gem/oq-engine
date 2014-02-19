@@ -115,7 +115,7 @@ class HazardMapTaskFuncTestCase(unittest.TestCase):
     def setUpClass(cls):
         cfg = helpers.get_data_path(
             'calculators/hazard/classical/haz_map_test_job2.ini')
-        cls.job = helpers.run_hazard_job(cfg)
+        cls.job = helpers.run_job(cfg)
         models.JobStats.objects.create(oq_job=cls.job)
 
     def _test_maps(self, curve, hm_0_1, hm_0_02, lt_rlz=None):
@@ -244,7 +244,7 @@ class Bug1086719TestCase(unittest.TestCase):
         cfg = helpers.get_data_path(
             'calculators/hazard/classical/haz_map_1rlz_no_stats.ini'
         )
-        job = helpers.run_hazard_job(cfg)
+        job = helpers.run_job(cfg)
         self.assertEqual(job.status, 'complete')
 
 
