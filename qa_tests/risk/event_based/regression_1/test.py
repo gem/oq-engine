@@ -30,7 +30,7 @@ class EventBasedRiskCase1TestCase(risk.BaseRiskQATestCase):
         self._run_test()
 
     def get_hazard_job(self):
-        job = helpers.get_hazard_job(
+        job = helpers.get_job(
             helpers.get_data_path("event_based_hazard/job.ini"))
         helpers.create_gmf_from_csv(job, self._test_path('gmf.csv'))
 

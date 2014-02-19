@@ -39,32 +39,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
     def _setup_a_new_calculator(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
-        job = helpers.get_hazard_job(cfg, username=getpass.getuser())
+        job = helpers.get_job(cfg, username=getpass.getuser())
         calc = core.ClassicalHazardCalculator(job)
         return job, calc
-
-    def test_pre_execute(self):
-        # Most of the pre-execute functionality is implement in other methods.
-        # For this test, just make sure each method gets called.
-        base_path = ('openquake.engine.calculators.hazard.classical.core'
-                     '.ClassicalHazardCalculator')
-        init_src_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_sources'))
-        init_rlz_patch = helpers.patch(
-            '%s.%s' % (base_path, 'initialize_realizations'))
-        patches = (init_src_patch, init_rlz_patch)
-
-        mocks = [p.start() for p in patches]
-
-        self.calc.pre_execute()
-
-        # make sure the site_collection is loaded:
-        self.assertIsNotNone(self.calc.hc.site_collection)
-
-        for i, m in enumerate(mocks):
-            self.assertEqual(1, m.call_count)
-            m.stop()
-            patches[i].stop()
 
     def test_initialize_sources(self):
         self.calc.initialize_site_model()
@@ -78,7 +55,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # we need a slightly different config file for this test
         cfg = helpers.get_data_path(
             'simple_fault_demo_hazard/job_with_site_model.ini')
-        self.job = helpers.get_hazard_job(cfg)
+        self.job = helpers.get_job(cfg)
         self.calc = core.ClassicalHazardCalculator(self.job)
 
         self.calc.initialize_site_model()
