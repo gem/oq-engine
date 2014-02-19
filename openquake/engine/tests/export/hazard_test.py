@@ -266,7 +266,7 @@ class ClassicalExportTestCase(BaseExportTestCase):
             cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
 
             # run the calculation to create something to export
-            helpers.run_hazard_job(cfg)
+            helpers.run_job(cfg)
 
             job = models.OqJob.objects.latest('id')
             self.assertEqual(job.status, 'complete')
@@ -358,7 +358,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             # run the calculation in process to create something to export
             os.environ['OQ_NO_DISTRIBUTE'] = '1'
             try:
-                job = helpers.run_hazard_job(cfg)
+                job = helpers.run_job(cfg)
             finally:
                 del os.environ['OQ_NO_DISTRIBUTE']
             self.assertEqual(job.status, 'complete')
@@ -435,7 +435,7 @@ class ScenarioExportTestCase(BaseExportTestCase):
             # run the calculation in process to create something to export
             os.environ['OQ_NO_DISTRIBUTE'] = '1'
             try:
-                helpers.run_hazard_job(cfg)
+                helpers.run_job(cfg)
             finally:
                 del os.environ['OQ_NO_DISTRIBUTE']
             job = models.OqJob.objects.latest('id')
@@ -473,7 +473,7 @@ class DisaggExportTestCase(BaseExportTestCase):
             # run the calculation in process to create something to export
             os.environ['OQ_NO_DISTRIBUTE'] = '1'
             try:
-                helpers.run_hazard_job(cfg)
+                helpers.run_job(cfg)
             finally:
                 del os.environ['OQ_NO_DISTRIBUTE']
 
