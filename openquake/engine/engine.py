@@ -184,6 +184,9 @@ def job_stats(job):
     dbsize = curs.fetchall()[0][0]
     try:
         yield
+    except:
+        logs.LOG.critical("Calculation failed", exc_info=True)
+        raise
     finally:
         job.is_running = False
         job.save()
