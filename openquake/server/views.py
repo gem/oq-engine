@@ -182,12 +182,10 @@ def calc_info(request, job_type, calc_id):
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
-def _get_calc_info(calc_id, calc_type):
-    """
-    Helper function to get job info and calculation params from the
-    oq-engine DB, as a dictionary.
-    """
-    if calc_type == 'hazard':
+# helper function to get job info and calculation params from the
+# oq-engine DB, as a dictionary
+def _get_calc_info(job_type, calc_id):
+    if job_type == 'hazard':
         job = oqe_models.OqJob.objects\
             .select_related()\
             .get(hazard_calculation=calc_id)
