@@ -199,13 +199,9 @@ class BaseHazardCalculator(base.Calculator):
         self.parse_risk_models()
         self.initialize_site_model()
         num_sources = self.initialize_sources()
-        try:
-            js = models.JobStats.objects.get(oq_job=self.job)
-            js.num_sources = num_sources
-            js.save()
-        except Exception as e:
-            # this is normal in tests where everything is mocked
-            logs.LOG.warn('Could not save job_stats.num_sources: %s', e)
+        js = models.JobStats.objects.get(oq_job=self.job)
+        js.num_sources = num_sources
+        js.save()
         self.initialize_realizations()
 
         self.rlzs_per_ltpath = collections.defaultdict(list)
