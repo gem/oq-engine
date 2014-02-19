@@ -184,7 +184,7 @@ def calc_info(request, job_type, calc_id):
 
 def _get_calc_info(calc_id, calc_type):
     """
-    Helper function to get job info and hazard calculation params from the
+    Helper function to get job info and calculation params from the
     oq-engine DB, as a dictionary.
     """
     if calc_type == 'hazard':
@@ -192,7 +192,7 @@ def _get_calc_info(calc_id, calc_type):
             .select_related()\
             .get(hazard_calculation=calc_id)
         calc = job.hazard_calculation
-    else:
+    else:  # risk
         job = oqe_models.OqJob.objects\
             .select_related()\
             .get(risk_calculation=calc_id)
@@ -207,7 +207,7 @@ def _get_calc_info(calc_id, calc_type):
 @cross_domain_ajax
 def calc(request, job_type):
     """
-    Get a list of risk calculations and report their id, status, description,
+    Get a list of calculations and report their id, status, description,
     and a url where more detailed information can be accessed.
 
     Responses are in JSON.
@@ -236,9 +236,10 @@ def run_calc(request, job_type):
     """
     Run a calculation.
 
-    Similar to :func:`run_hazard_calc`, except that an additional POST param
-    must be included. This param is either the `hazard_calc` or
-    `hazard_result`, the value of which must be the corresponding ID.
+    :param request:
+        a `django.http.HttpRequest` object.
+    :param job_type:
+        string 'hazard' or 'risk'
     """
     callback_url = request.POST.get('callback_url')
     foreign_calc_id = request.POST.get('foreign_calculation_id')
@@ -305,9 +306,8 @@ def _get_calcs(job_type):
 @cross_domain_ajax
 def calc_results(request, job_type, calc_id):
     """
-    Get a summarized list of risk calculation results for a given
-    ``calc_id``. Result is a JSON array of objects containing the following
-    attributes:
+    Get a summarized list of calculation results for a given ``calc_id``.
+    Result is a JSON array of objects containing the following attributes:
 
         * id
         * name
