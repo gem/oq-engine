@@ -104,71 +104,6 @@ def _calc_to_response_data(calc):
     return response_data
 
 
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def calc_hazard(request):
-    """
-    Get a list of risk calculations and report their id, status, description,
-    and a url where more detailed information can be accessed.
-
-    Responses are in JSON.
-    """
-    base_url = _get_base_url(request)
-
-    haz_calc_data = _get_haz_calcs()
-    if not haz_calc_data:
-        return HttpResponseNotFound()
-
-    response_data = []
-    for hc_id, status, desc in haz_calc_data:
-        url = urlparse.urljoin(base_url, 'v1/calc/hazard/%d' % hc_id)
-        response_data.append(
-            dict(id=hc_id, status=status, description=desc, url=url)
-        )
-
-    return HttpResponse(content=json.dumps(response_data),
-                        content_type=JSON)
-
-
-@csrf_exempt
-@cross_domain_ajax
-@require_http_methods(['POST'])
-def run_hazard_calc(request):
-    """
-    Run a calculation.
-
-    Load the calculation profile and enqueue the calculation job. Once
-    in queue, the view will respond with a summary of the calculation,
-    like what is implemented in `/v1/calc/hazard/:calc_id`.
-    """
-    callback_url = request.POST.get('callback_url')
-    foreign_calc_id = request.POST.get('foreign_calculation_id')
-
-    try:
-        job, temp_dir = _prepare_job(
-            request, oq_engine.haz_job_from_file,
-            create_detect_job_file("job.ini", "job_haz.ini", "job_hazard.ini"))
-    except Exception:
-        etype, exc, tb = sys.exc_info()
-        einfo = "".join(traceback.format_tb(tb))
-        tasks.update_calculation(callback_url, status="failed", einfo=einfo)
-        raise
-
-    hc = job.hazard_calculation
-    executor.submit(
-        tasks.run_calc, 'hazard', hc.id, temp_dir,
-        callback_url=callback_url,
-        foreign_calc_id=foreign_calc_id,
-        dbname=request.POST['database'])
-
-    try:
-        response_data = _get_haz_calc_info(hc.id)
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
-
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
-
-
 def create_detect_job_file(*candidates):
     def detect_job_file(files):
         for candidate in candidates:
@@ -187,7 +122,7 @@ def _prepare_job(request, job_factory, detect_job_file):
     """
     Creates a temporary directory, move uploaded files there and
     create a new oq-engine job by using the `job_factory` callable
-    (e.g. oq_engine.haz_job_from_file). The job file is selected using
+    (e.g. oq_engine.job_from_file). The job file is selected using
     the `detect_job_file` callable which accepts in input a list
     holding all the filenames ending with .ini
     """
@@ -231,125 +166,59 @@ def _is_source_model(tempfile):
     return False
 
 
-def _get_haz_calcs():
-    """
-    Helper function for get job+calculation data from the oq-engine database.
-
-    Gets all hazard calculation records available.
-    """
-    return oqe_models.OqJob.objects\
-        .select_related()\
-        .filter(hazard_calculation__isnull=False)\
-        .values_list('hazard_calculation',
-                     'status',
-                     'hazard_calculation__description')
-
-
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc_hazard_info(request, calc_id):
+def calc_info(request, job_type, calc_id):
     """
     Get a JSON blob containing all of parameters for the given calculation
     (specified by ``calc_id``). Also includes the current job status (
     executing, complete, etc.).
     """
     try:
-        response_data = _get_haz_calc_info(calc_id)
+        response_data = _get_calc_info(job_type, calc_id)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
-def _get_haz_calc_info(calc_id):
-    """
-    Helper function to get job info and hazard calculation params from the
-    oq-engine DB, as a dictionary.
-    """
-    job = oqe_models.OqJob.objects\
-        .select_related()\
-        .get(hazard_calculation=calc_id)
+# helper function to get job info and calculation params from the
+# oq-engine DB, as a dictionary
+def _get_calc_info(job_type, calc_id):
+    if job_type == 'hazard':
+        job = oqe_models.OqJob.objects\
+            .select_related()\
+            .get(hazard_calculation=calc_id)
+        calc = job.hazard_calculation
+    else:  # risk
+        job = oqe_models.OqJob.objects\
+            .select_related()\
+            .get(risk_calculation=calc_id)
+        calc = job.risk_calculation
 
-    hc = job.hazard_calculation
-    response_data = _calc_to_response_data(hc)
-
+    response_data = _calc_to_response_data(calc)
     response_data['status'] = job.status
     return response_data
 
 
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def calc_hazard_results(request, calc_id):
-    """
-    Get a summarized list of hazard calculation results for a given
-    ``calc_id``. Result is a JSON array of objects containing the following
-    attributes:
-
-        * id
-        * name
-        * type (hazard_curve, hazard_map, etc.)
-        * url (the exact url where the full result can be accessed)
-    """
-    # If the specified calculation doesn't exist OR is not yet complete,
-    # throw back a 404.
-    try:
-        calc = oqe_models.HazardCalculation.objects.get(id=calc_id)
-        if not calc.oqjob.status == 'complete':
-            return HttpResponseNotFound()
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
-
-    base_url = _get_base_url(request)
-
-    results = oq_engine.get_hazard_outputs(calc_id)
-    if not results:
-        return HttpResponseNotFound()
-
-    response_data = []
-    for result in results:
-        url = urlparse.urljoin(base_url,
-                               'v1/calc/hazard/result/%d' % result.id)
-        datum = dict(
-            id=result.id,
-            name=result.display_name,
-            type=result.output_type,
-            url=url,
-        )
-        response_data.append(datum)
-
-    return HttpResponse(content=json.dumps(response_data))
-
-
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def get_hazard_result(request, result_id):
-    """
-    Download a specific hazard result, by ``result_id``.
-
-    Parameters for the GET request can include an `export_type`, such as 'xml',
-    'geojson', 'csv', etc.
-    """
-    return _get_result(request, result_id, hazard_export.export)
-
-
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc_risk(request):
+def calc(request, job_type):
     """
-    Get a list of risk calculations and report their id, status, description,
+    Get a list of calculations and report their id, status, description,
     and a url where more detailed information can be accessed.
 
     Responses are in JSON.
     """
     base_url = _get_base_url(request)
 
-    risk_calc_data = _get_risk_calcs()
-    if not risk_calc_data:
+    calc_data = _get_calcs(job_type)
+    if not calc_data:
         return HttpResponseNotFound()
 
     response_data = []
-    for hc_id, status, desc in risk_calc_data:
-        url = urlparse.urljoin(base_url, 'v1/calc/risk/%d' % hc_id)
+    for hc_id, status, desc in calc_data:
+        url = urlparse.urljoin(base_url, 'v1/calc/%s/%d' % (job_type, hc_id))
         response_data.append(
             dict(id=hc_id, status=status, description=desc, url=url)
         )
@@ -361,13 +230,14 @@ def calc_risk(request):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def run_risk_calc(request):
+def run_calc(request, job_type):
     """
     Run a calculation.
 
-    Similar to :func:`run_hazard_calc`, except that an additional POST param
-    must be included. This param is either the `hazard_calc` or
-    `hazard_result`, the value of which must be the corresponding ID.
+    :param request:
+        a `django.http.HttpRequest` object.
+    :param job_type:
+        string 'hazard' or 'risk'
     """
     callback_url = request.POST.get('callback_url')
     foreign_calc_id = request.POST.get('foreign_calculation_id')
@@ -382,94 +252,72 @@ def run_risk_calc(request):
     try:
         job, temp_dir = _prepare_job(
             request, functools.partial(
-                oq_engine.risk_job_from_file,
+                oq_engine.job_from_file,
                 hazard_output_id=hazard_output_id,
                 hazard_calculation_id=hazard_calculation_id),
             create_detect_job_file("job.ini", "job_risk.ini"))
 
-        rc = job.risk_calculation
+        calc = job.risk_calculation if job_type == 'risk' \
+            else job.hazard_calculation
         executor.submit(
-            tasks.run_calc, 'risk', rc.id, temp_dir,
+            tasks.run_calc, job_type, calc.id, temp_dir,
             callback_url=callback_url,
             foreign_calc_id=foreign_calc_id,
             dbname=request.POST['database'])
-    except Exception:
+    except:
         etype, exc, tb = sys.exc_info()
         einfo = "".join(traceback.format_tb(tb))
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         raise
 
     try:
-        response_data = _get_risk_calc_info(rc.id)
+        response_data = _get_calc_info(job_type, calc.id)
     except ObjectDoesNotExist:
         return HttpResponseNotFound()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
-def _get_risk_calcs():
+def _get_calcs(job_type):
     """
     Helper function for get job+calculation data from the oq-engine database.
 
-    Gets all risk calculation records available.
+    Gets all calculation records available.
     """
-    return oqe_models.OqJob.objects\
-        .select_related()\
-        .filter(risk_calculation__isnull=False)\
-        .values_list('risk_calculation',
-                     'status',
-                     'risk_calculation__description')
-
-
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def calc_risk_info(request, calc_id):
-    """
-    Get a JSON blob containing all of parameters for the given calculation
-    (specified by ``calc_id``). Also includes the current job status (
-    executing, complete, etc.).
-    """
-    try:
-        response_data = _get_risk_calc_info(calc_id)
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
-
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
-
-
-def _get_risk_calc_info(calc_id):
-    """
-    Helper function to get job info and hazard calculation params from the
-    oq-engine DB, as a dictionary.
-    """
-    job = oqe_models.OqJob.objects\
-        .select_related()\
-        .get(risk_calculation=calc_id)
-
-    rc = job.risk_calculation
-    response_data = _calc_to_response_data(rc)
-
-    response_data['status'] = job.status
-    return response_data
+    if job_type == 'risk':
+        return oqe_models.OqJob.objects\
+            .select_related()\
+            .filter(risk_calculation__isnull=False)\
+            .values_list('risk_calculation',
+                         'status',
+                         'risk_calculation__description')
+    else:
+        return oqe_models.OqJob.objects\
+            .select_related()\
+            .filter(hazard_calculation__isnull=False)\
+            .values_list('hazard_calculation',
+                         'status',
+                         'hazard_calculation__description')
 
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def calc_risk_results(request, calc_id):
+def calc_results(request, job_type, calc_id):
     """
-    Get a summarized list of risk calculation results for a given
-    ``calc_id``. Result is a JSON array of objects containing the following
-    attributes:
+    Get a summarized list of calculation results for a given ``calc_id``.
+    Result is a JSON array of objects containing the following attributes:
 
         * id
         * name
         * type (hazard_curve, hazard_map, etc.)
         * url (the exact url where the full result can be accessed)
     """
+    calc_class = oqe_models.RiskCalculation if job_type == 'risk' \
+        else oqe_models.HazardCalculation
     # If the specified calculation doesn't exist OR is not yet complete,
     # throw back a 404.
     try:
-        calc = oqe_models.RiskCalculation.objects.get(id=calc_id)
+        calc = calc_class.objects.get(id=calc_id)
         if not calc.oqjob.status == 'complete':
             return HttpResponseNotFound()
     except ObjectDoesNotExist:
@@ -477,14 +325,14 @@ def calc_risk_results(request, calc_id):
 
     base_url = _get_base_url(request)
 
-    results = oq_engine.get_risk_outputs(calc_id)
+    results = oq_engine.get_outputs(job_type, calc_id)
     if not results:
         return HttpResponseNotFound()
 
     response_data = []
     for result in results:
         url = urlparse.urljoin(base_url,
-                               'v1/calc/risk/result/%d' % result.id)
+                               'v1/calc/%s/result/%d' % (job_type, result.id))
         datum = dict(
             id=result.id,
             name=result.display_name,
@@ -498,14 +346,16 @@ def calc_risk_results(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def get_risk_result(request, result_id):
+def get_result(request, job_type, result_id):
     """
-    Download a specific hazard result, by ``result_id``.
+    Download a specific result, by ``result_id``.
 
     Parameters for the GET request can include an `export_type`, such as 'xml',
     'geojson', 'csv', etc.
     """
-    return _get_result(request, result_id, risk_export.export)
+    return _get_result(
+        request, result_id,
+        risk_export.export if job_type == 'risk' else hazard_export.export)
 
 
 def _get_result(request, result_id, export_fn):
