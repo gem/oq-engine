@@ -21,7 +21,7 @@ CELERYD = [sys.executable, '-m', 'celery.bin.celeryd', '-l', 'INFO', '--purge',
 if __name__ == "__main__":
     # the django autoreloader sets the variable RUN_MAIN; at the beginning
     # it is None, and only at that moment celery must be run
-    run_celery = os.environ.get("RUN_MAIN") is None
+    run_celery = settings.RUN_CELERY and os.environ.get("RUN_MAIN") is None
     if run_celery:
         cel = subprocess.Popen(CELERYD)
         print 'Starting celery, logging on /tmp/celery.log'
