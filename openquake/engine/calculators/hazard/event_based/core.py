@@ -152,9 +152,9 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                                src.source_id, occ),
                             hypocenter=rup.hypocenter.wkt2d,
                             magnitude=rup.mag).id
+                    rup_seed = rnd.randint(0, models.MAX_SINT_32)
                     if hc.ground_motion_fields:
                         with mon5:  # computing GMFs
-                            rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             gmfcollector.calc_gmf(
                                 r_sites, rup, rup_id, rup_seed)
 
