@@ -360,14 +360,16 @@ def run_calc(job, log_level, log_file, exports, job_type):
     handler = (LogFileHandler(job_type, calc, log_file) if log_file
                else LogStreamHandler(job_type, calc))
     logging.root.addHandler(handler)
-
-    # create job stats, which implicitly records the start time for the job
-    models.JobStats.objects.create(oq_job=job)
-    with job_stats(job):  # run the job
-        logs.set_level(log_level)
-        job.is_running = True
-        job.save()
-        _do_run_calc(job, exports, calculator, job_type)
+    try:
+        # create job stats, which implicitly records the start time for the job
+        models.JobStats.objects.create(oq_job=job)
+        with job_stats(job):  # run the job
+            logs.set_level(log_level)
+            job.is_running = True
+            job.save()
+            _do_run_calc(job, exports, calculator, job_type)
+    finally:
+        logging.root.removeHandler(handler)
     return job
 
 
