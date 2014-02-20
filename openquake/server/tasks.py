@@ -53,7 +53,6 @@ class ProgressHandler(logging.handlers.HTTPHandler):
         self.job = job
 
     def emit(self, record):
-        print 'POSTING TO', self.callback_url
         update_calculation(
             self.callback_url,
             status=self.job.status,
@@ -82,7 +81,7 @@ def run_calc(job_type, calc_id, calc_dir,
     exports = []
     # TODO: Log to file somewhere. But where?
     log_file = None
-    logger.addHandler(ProgressHandler(callback_url, job))
+    #logger.addHandler(ProgressHandler(callback_url, job))
 
     try:
         engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, job_type)
