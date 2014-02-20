@@ -26,7 +26,6 @@ import tempfile
 import psycopg2
 import urllib
 import urllib2
-import urlparse
 
 from openquake.engine import engine
 from openquake.engine.db import models as oqe_models
@@ -41,22 +40,24 @@ DEFAULT_LOG_LEVEL = 'progress'
 logger = logging.getLogger(__name__)
 
 
-class ProgressHandler(logging.handlers.HTTPHandler):
+class ProgressHandler(logging.Handler):
     """
-    A logging HTTPHandler to update the status of the job as seen
+    A logging handler to update the status of the job as seen
     from the platform.
     """
-    def __init__(self, callback_url, job):
-        host = urlparse.urlparse(callback_url).netloc
-        logging.handlers.HTTPHandler.__init__(host, callback_url)
+    def __init__(self, callback_url, calc):
+        logging.Handler.__init__(self)
         self.callback_url = callback_url
-        self.job = job
+        self.calc = calc
 
     def emit(self, record):
+        """
+        Update the status field on icebox_calculation with the percentage
+        """
         update_calculation(
             self.callback_url,
-            status=self.job.status,
-            description=self.job.calculation.description)
+            status=record.getMessage(),
+            description=self.calc.description)
 
 
 def run_calc(job_type, calc_id, calc_dir,
@@ -68,12 +69,18 @@ def run_calc(job_type, calc_id, calc_dir,
     and is ready to execute. This function never fails; errors are trapped
     but not logged since the engine already logs them.
 
-    :param job_type: 'hazard' or 'risk'
-    :param calc_id: the calculation id on the engine
-    :param calc_dir: the directory with the input files
-    :param callback_url: the URL to call at the end of the calculation
-    :param foreign_calc_id: the calculation id on the platform
-    :param dbname: the platform database name
+    :param job_type:
+        'hazard' or 'risk'
+    :param calc_id:
+        the calculation id on the engine
+    :param calc_dir:
+        the directory with the input files
+    :param callback_url:
+        the URL to call at the end of the calculation
+    :param foreign_calc_id:
+        the calculation id on the platform
+    :param dbname:
+        the platform database name
     """
     job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
     update_calculation(callback_url, status="started", engine_id=calc_id)
@@ -81,8 +88,8 @@ def run_calc(job_type, calc_id, calc_dir,
     exports = []
     # TODO: Log to file somewhere. But where?
     log_file = None
-    #logger.addHandler(ProgressHandler(callback_url, job))
-
+    progress_handler = ProgressHandler(callback_url, job.calculation)
+    logging.root.addHandler(progress_handler)
     try:
         engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, job_type)
     except:  # catch the errors before task spawning
@@ -92,6 +99,8 @@ def run_calc(job_type, calc_id, calc_dir,
         einfo += '%s: %s' % (exctype.__name__, exc)
         update_calculation(callback_url, status="failed", einfo=einfo)
         return
+    finally:
+        logging.root.removeHandler(progress_handler)
 
     shutil.rmtree(calc_dir)
 
