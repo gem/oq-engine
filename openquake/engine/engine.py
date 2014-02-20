@@ -144,8 +144,8 @@ def save_job_stats(job, disk_space=None, stop_time=None):
         hc = job.risk_calculation.hazard_calculation
     else:
         hc = job.hazard_calculation
-    if hc:  # can be None if the option --hazard-output-id is used
-        js.num_sites = len(hc.site_collection) if hc.site_collection else None
+    if hc and hc.id in models.SiteCollection.cache:  # sites already imported
+        js.num_sites = len(hc.site_collection)
     js.save()
 
 
@@ -162,9 +162,6 @@ def job_stats(job):
     dbsize = curs.fetchall()[0][0]
     try:
         yield
-    except:
-        logs.LOG.critical("Calculation failed", exc_info=True)
-        raise
     finally:
         job.is_running = False
         job.save()
