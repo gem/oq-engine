@@ -119,17 +119,8 @@ def oqtask(task_func):
 
         with EnginePerformanceMonitor(
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
-
-            with EnginePerformanceMonitor(
-                    'loading calculation object', job_id, tsk, flush=True):
-                calculation = job.calculation
-
             # tasks write on the celery log file
-            logs.init_logs(
-                level=job.log_level,
-                calc_domain='hazard' if isinstance(
-                    calculation, models.HazardCalculation) else'risk',
-                calc_id=calculation.id)
+            logs.set_level(job.log_level)
             try:
                 return task_func(*args), None
             except:
