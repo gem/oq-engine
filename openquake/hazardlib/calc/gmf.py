@@ -34,9 +34,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     of the ground shaking due to an earthquake rupture.
 
     .. note::
-        This calculator is using random numbers. In order to reproduce the
-        same results numpy random numbers generator needs to be seeded, see
-        http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
+
+     This calculator is using random numbers. In order to reproduce the
+     same results numpy random numbers generator needs to be seeded, see
+     http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
 
     :param openquake.hazardlib.source.rupture.Rupture rupture:
         Rupture to calculate ground motion fields radiated from.
@@ -75,7 +76,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         return dict((imt, numpy.zeros((len(sites), realizations)))
                     for imt in imts)
 
-    total_sites = len(sites)
     [(rupture, sites)] = ruptures_sites
 
     sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
@@ -89,7 +89,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
             mean = gsim.to_imt_unit_values(mean)
             mean.shape += (1, )
             mean = mean.repeat(realizations, axis=1)
-            result[imt] = sites.expand(mean, total_sites, placeholder=0)
+            result[imt] = sites.expand(mean, placeholder=0)
         return result
 
     if truncation_level is None:
@@ -140,7 +140,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)
 
-        result[imt] = sites.expand(gmf, total_sites, placeholder=0)
+        result[imt] = sites.expand(gmf, placeholder=0)
 
     return result
 
