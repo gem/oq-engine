@@ -133,14 +133,14 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
     if hazard_calculation_id or hazard_output_id:
         rc = job.risk_calculation
         calc = get_calculator_class('risk', rc.calculation_mode)(job)
-        logs.init_logs(level='ERROR', calc_domain='risk', calc_id=rc.id)
+        logs.set_level('ERROR')
         job = engine._do_run_calc(job, exports, calc, 'risk')
         job.is_running = False
         job.save()
     else:
         hc = job.hazard_calculation
         calc = get_calculator_class('hazard', hc.calculation_mode)(job)
-        logs.init_logs(level='ERROR', calc_domain='hazard', calc_id=hc.id)
+        logs.set_level('ERROR')
         job = engine._do_run_calc(job, exports, calc, 'hazard')
         job.is_running = False
         job.save()
