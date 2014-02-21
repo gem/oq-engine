@@ -71,7 +71,7 @@ class FakeRupture(object):
         self.id = id
 
 
-class EventBasedHazardTestCase(unittest.TestCase):
+class GmfCollectorTestCase(unittest.TestCase):
     """Tests for the routines used by the event-based hazard calculator"""
 
     # test a case with 5 sites and 2 ruptures
@@ -90,12 +90,12 @@ class EventBasedHazardTestCase(unittest.TestCase):
                       num_sites=num_sites)
         trt = 'Subduction Interface'
         rup_id, rup_seed = 42, 44
-        r = FakeRupture(rup_id, trt)
+        rup = FakeRupture(rup_id, trt)
         pga = PGA()
         rlz = mock.Mock()
         coll = core.GmfCollector(
             [s.id for s in site_coll], params, [pga], {rlz: {trt: gsim}})
-        coll.calc_gmf(site_coll, r.rupture, r.id, rup_seed)
+        coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
             (rlz, pga, 0): [rup_id],
             (rlz, pga, 1): [rup_id],
@@ -122,7 +122,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.cfg = helpers.get_data_path('event_based_hazard/job_2.ini')
-        self.job = helpers.get_hazard_job(self.cfg, username=getpass.getuser())
+        self.job = helpers.get_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
         hc_id = self.job.hazard_calculation.id
         models.SiteCollection.cache[hc_id] = make_site_coll(0, 0, n=5)
@@ -185,7 +185,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # and check the outputs
         os.environ['OQ_NO_DISTRIBUTE'] = '1'
         try:
-            job = helpers.run_hazard_job(self.cfg)
+            job = helpers.run_job(self.cfg)
         finally:
             del os.environ['OQ_NO_DISTRIBUTE']
         hc = job.hazard_calculation

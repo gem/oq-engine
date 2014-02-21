@@ -48,7 +48,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
         """
         os.environ["OQ_SITE_CFG_PATH"] = "/a/b/c/d"
         self.assertEqual(
-            ["/a/b/c/d", "%s/openquake.cfg" % os.path.abspath(os.getcwd())],
+            ["/a/b/c/d", "%s/openquake.cfg" % config.OQDIR],
             config.Config()._get_paths())
 
     def test_get_paths_with_local_env_var_set(self):
@@ -68,7 +68,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
         """
         self.assertEqual(
             ["/etc/openquake/openquake.cfg",
-             "%s/openquake.cfg" % os.path.abspath(os.getcwd())],
+             "%s/openquake.cfg" % config.OQDIR],
             config.Config()._get_paths())
 
     def test_load_from_file_with_no_config_files(self):
