@@ -14,7 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import tempfile
-import pprint
 import os
 import sys
 import warnings
