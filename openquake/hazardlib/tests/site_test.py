@@ -151,8 +151,7 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered2.indices, [0, 3])
 
     def test_expand_2d(self):
-        col = SiteCollection(self.SITES)
-        col.indices = numpy.array([1, 3])
+        col = SiteCollection(self.SITES).filter(numpy.array([False, True, False, True]))
         data_condensed = numpy.array([
             [1, 2, 3],
             [5, 6, 7],

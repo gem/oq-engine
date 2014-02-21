@@ -154,8 +154,8 @@ class SiteCollection(object):
 
     def expand(self, data, placeholder):
         """
-        Expand a short array `data` over the site collection, by filling
-        empty places with the placeholder.
+        Expand a short array `data` over a filtered site collection of the same length
+        and return a long array of size `total_sites` filled with the placeholder.
 
         The typical workflow is the following: there is a whole site
         collection, the one that has an information about all the sites.
@@ -190,7 +190,7 @@ class SiteCollection(object):
             distributed in the appropriate places.
         """
         len_data = data.shape[0]
-        assert len_data <= len(self), (len_data, len(self))
+        assert len_data == len(self), (len_data, len(self))
 
         if self.indices is None:
             # nothing to expand: this sites collection was not filtered
