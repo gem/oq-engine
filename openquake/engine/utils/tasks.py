@@ -33,6 +33,22 @@ from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 
+def safely_call(func, args):
+    """
+    Call the given function with the given arguments safely, i.e.
+    by trapping the exceptions. Return a pair (result, exc_type)
+    where exc_type is None if no exceptions occur, otherwise it
+    is the exception class and the result is a string containing
+    error message and traceback.
+    """
+    try:
+        return func(*args), None
+    except:
+        etype, exc, tb = sys.exc_info()
+        tb_str = ''.join(traceback.format_tb(tb))
+        return '%s\n%s' % (exc, tb_str), etype
+
+
 def map_reduce(task, task_args, agg, acc):
     """
     Given a task and an iterable of positional arguments, apply the
@@ -60,7 +76,9 @@ def map_reduce(task, task_args, agg, acc):
     """
     if no_distribute():
         for the_args in task_args:
-            result = task.task_func(*the_args)
+            result, exctype = safely_call(task.task_func, the_args)
+            if exctype:
+                raise exctype(result)
             acc = agg(acc, result)
     else:
         taskset = TaskSet(tasks=map(task.subtask, task_args))
@@ -121,20 +139,16 @@ def oqtask(task_func):
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
             # tasks write on the celery log file
             logs.set_level(job.log_level)
-            try:
-                return task_func(*args), None
-            except:
-                etype, exc, tb = sys.exc_info()
-                tb_str = ''.join(traceback.format_tb(tb))
-                return '%s\n%s' % (exc, tb_str), etype
-            finally:
-                CacheInserter.flushall()
-                # the task finished, we can remove from the performance
-                # table the associated row 'storing task id'
-                models.Performance.objects.filter(
-                    oq_job=job,
-                    operation='storing task id',
-                    task_id=tsk.request.id).delete()
+            # run the task
+            safely_call(task_func, args)
+            # save on the db
+            CacheInserter.flushall()
+            # the task finished, we can remove from the performance
+            # table the associated row 'storing task id'
+            models.Performance.objects.filter(
+                oq_job=job,
+                operation='storing task id',
+                task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, queue=celery_queue)
     tsk.task_func = task_func
