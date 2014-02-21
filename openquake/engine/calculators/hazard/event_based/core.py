@@ -90,8 +90,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     params = dict(
         correl_model=general.get_correl_model(hc),
         truncation_level=hc.truncation_level,
-        maximum_distance=hc.maximum_distance,
-        num_sites=len(hc.site_collection))
+        maximum_distance=hc.maximum_distance)
 
     gmfcollector = GmfCollector(
         [s.id for s in hc.site_collection], params, imts, gsims_by_rlz)
@@ -190,7 +189,7 @@ class GmfCollector(object):
             a list of site ids
         :param params:
             a dictionary of parameters with keys
-            correl_model, truncation_level, maximum_distance, num_sites
+            correl_model, truncation_level, maximum_distance
         :param imts:
             a list of hazardlib intensity measure types
         :param gsims_by_rlz:
@@ -230,7 +229,6 @@ class GmfCollector(object):
                 'truncation_level': self.params['truncation_level'],
                 'realizations': DEFAULT_GMF_REALIZATIONS,
                 'correlation_model': self.params['correl_model'],
-                'num_sites': self.params['num_sites'],
             }
             numpy.random.seed(rupture_seed)
             gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
