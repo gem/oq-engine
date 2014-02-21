@@ -40,6 +40,7 @@ import numpy.random
 from django.db import transaction
 from openquake.hazardlib.calc import gmf
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import source, geo
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
@@ -56,6 +57,93 @@ DEFAULT_GMF_REALIZATIONS = 1
 
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
+
+
+def is_from_fault_source(rupture):
+    """
+    If True, this rupture was generated from a simple/complex fault
+    source. If False, this rupture was generated from a point/area source.
+    """
+    typology = rupture.source_typology
+    is_char = typology is source.CharacteristicFaultSource
+    is_complex_or_simple = typology in (
+        source.ComplexFaultSource,
+        source.SimpleFaultSource)
+    is_complex_or_simple_surface = isinstance(
+        rupture.surface, (geo.ComplexFaultSurface,
+                          geo.SimpleFaultSurface))
+    return is_complex_or_simple or (
+        is_char and is_complex_or_simple_surface)
+
+
+def is_multi_surface(rupture):
+    typology = rupture.source_typology
+    is_char = typology is source.CharacteristicFaultSource
+    is_multi_sur = isinstance(rupture.surface, geo.MultiSurface)
+    return is_char and is_multi_sur
+
+
+def get_geom(rupture, is_from_fault_source, is_multi_surface):
+    """
+    The following fields can be interpreted different ways,
+    depending on the value of `is_from_fault_source`. If
+    `is_from_fault_source` is True, each of these fields should
+    contain a 2D numpy array (all of the same shape). Each triple
+    of (lon, lat, depth) for a given index represents the node of
+    a rectangular mesh. If `is_from_fault_source` is False, each
+    of these fields should contain a sequence (tuple, list, or
+    numpy array, for example) of 4 values. In order, the triples
+    of (lon, lat, depth) represent top left, top right, bottom
+    left, and bottom right corners of the the rupture's planar
+    surface. Update: There is now a third case. If the rupture
+    originated from a characteristic fault source with a
+    multi-planar-surface geometry, `lons`, `lats`, and `depths`
+    will contain one or more sets of 4 points, similar to how
+    planar surface geometry is stored (see above).
+    """
+    if is_from_fault_source:
+        # for simple and complex fault sources,
+        # rupture surface geometry is represented by a mesh
+        surf_mesh = rupture.surface.get_mesh()
+        lons = surf_mesh.lons
+        lats = surf_mesh.lats
+        depths = surf_mesh.depths
+    else:
+        if is_multi_surface:
+            # `list` of
+            # openquake.hazardlib.geo.surface.planar.PlanarSurface
+            # objects:
+            surfaces = rupture.surface.surfaces
+
+            # lons, lats, and depths are arrays with len == 4*N,
+            # where N is the number of surfaces in the
+            # multisurface for each `corner_*`, the ordering is:
+            #   - top left
+            #   - top right
+            #   - bottom left
+            #   - bottom right
+            lons = numpy.concatenate([x.corner_lons for x in surfaces])
+            lats = numpy.concatenate([x.corner_lats for x in surfaces])
+            depths = numpy.concatenate([x.corner_depths for x in surfaces])
+        else:
+            # For area or point source,
+            # rupture geometry is represented by a planar surface,
+            # defined by 3D corner points
+            surface = rupture.surface
+            lons = numpy.zeros((4))
+            lats = numpy.zeros((4))
+            depths = numpy.zeros((4))
+
+            # NOTE: It is important to maintain the order of these
+            # corner points. TODO: check the ordering
+            for i, corner in enumerate((surface.top_left,
+                                        surface.top_right,
+                                        surface.bottom_left,
+                                        surface.bottom_right)):
+                lons[i] = corner.longitude
+                lats[i] = corner.latitude
+                depths[i] = corner.depth
+    return lons, lats, depths
 
 
 @tasks.oqtask
@@ -139,17 +227,31 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                 if r_sites is None:
                     continue
 
+            iffs = is_from_fault_source(rup)
+            ims = is_multi_surface(rup)
+            lons, lats, depths = get_geom(rup, iffs, ims)
+
             # saving ses and generating gmf
             for ses, num_occurrences in ses_num_occ[rup]:
                 for occ in range(1, num_occurrences + 1):
                     with mon4:  # saving ruptures
                         rup_id = models.SESRupture.objects.create(
                             ses=ses,
+                            magnitude=rup.mag,
+                            strike=rup.surface.get_strike(),
+                            dip=rup.surface.get_dip(),
+                            rake=rup.rake,
+                            tectonic_region_type=rup.tectonic_region_type,
+                            is_from_fault_source=iffs,
+                            is_multi_surface=ims,
+                            lons=lons,
+                            lats=lats,
+                            depths=depths,
                             tag='smlt=%02d|ses=%04d|src=%s|occ=%02d'
                             % (ses_coll.ordinal, ses.ordinal,
                                src.source_id, occ),
                             hypocenter=rup.hypocenter.wkt2d,
-                            magnitude=rup.mag).id
+                            ).id
                     rup_seed = rnd.randint(0, models.MAX_SINT_32)
                     if hc.ground_motion_fields:
                         with mon5:  # computing GMFs
