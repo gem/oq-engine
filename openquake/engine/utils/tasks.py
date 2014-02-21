@@ -129,7 +129,7 @@ def oqtask(task_func):
         job = models.OqJob.objects.get(id=job_id)
         if job.is_running is False:
             # the job was killed, it is useless to run the task
-            return
+            return None, None
 
         # it is important to save the task id soon, so that
         # the revoke functionality can work
@@ -139,16 +139,18 @@ def oqtask(task_func):
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
             # tasks write on the celery log file
             logs.set_level(job.log_level)
-            # run the task
-            safely_call(task_func, args)
-            # save on the db
-            CacheInserter.flushall()
-            # the task finished, we can remove from the performance
-            # table the associated row 'storing task id'
-            models.Performance.objects.filter(
-                oq_job=job,
-                operation='storing task id',
-                task_id=tsk.request.id).delete()
+            try:
+                # run the task
+                return safely_call(task_func, args)
+            finally:
+                # save on the db
+                CacheInserter.flushall()
+                # the task finished, we can remove from the performance
+                # table the associated row 'storing task id'
+                models.Performance.objects.filter(
+                    oq_job=job,
+                    operation='storing task id',
+                    task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
     tsk = task(wrapped, queue=celery_queue)
     tsk.task_func = task_func
