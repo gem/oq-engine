@@ -74,7 +74,6 @@ def cleanup_after_job(job, terminate):
     task_ids = Performance.objects.filter(
         oq_job=job, operation='storing task id', task_id__isnull=False)\
         .values_list('task_id', flat=True)
-
     if task_ids:
         logs.LOG.warn('Revoking %d tasks', len(task_ids))
     else:  # this is normal when OQ_NO_DISTRIBUTE=1
@@ -94,7 +93,7 @@ def _update_log_record(self, record):
     if not hasattr(record, 'calc_domain'):
         record.calc_domain = self.calc_domain
     if not hasattr(record, 'calc_id'):
-        record.calc_id = self.calc_id
+        record.calc_id = self.calc.id
     logger_name_prefix = 'oq.%s.%s' % (record.calc_domain, record.calc_id)
     if record.name.startswith(logger_name_prefix):
         record.name = record.name[len(logger_name_prefix):].lstrip('.')
@@ -106,11 +105,11 @@ class LogStreamHandler(logging.StreamHandler):
     """
     Log stream handler
     """
-    def __init__(self, calc_domain, calc_id):
+    def __init__(self, calc_domain, calc):
         super(LogStreamHandler, self).__init__()
         self.setFormatter(logging.Formatter(LOG_FORMAT))
         self.calc_domain = calc_domain
-        self.calc_id = calc_id
+        self.calc = calc
 
     def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
@@ -121,36 +120,16 @@ class LogFileHandler(logging.FileHandler):
     """
     Log file handler
     """
-    def __init__(self, calc_domain, calc_id, log_file):
+    def __init__(self, calc_domain, calc, log_file):
         super(LogFileHandler, self).__init__(log_file)
         self.setFormatter(logging.Formatter(LOG_FORMAT))
         self.calc_domain = calc_domain
-        self.calc_id = calc_id
+        self.calc = calc
         self.log_file = log_file
 
     def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
         super(LogFileHandler, self).emit(record)
-
-
-def start_logging(calc_id, calc_domain, log_file):
-    """
-    Add logging handlers to begin collecting log messages.
-
-    :param int calc_id:
-        Hazard or Risk calculation ID.
-    :param str calc_domain:
-        'hazard' or 'risk'
-    :param str log_file:
-        Log file path location. Can be `None`. If a path is specified, we will
-        create a file handler for logging. Else, we just log to the console.
-    """
-    if log_file is not None:
-        logging.root.addHandler(
-            LogFileHandler(calc_domain, calc_id, log_file))
-    else:
-        logging.root.addHandler(
-            LogStreamHandler(calc_domain, calc_id))
 
 
 def save_job_stats(job, disk_space=None, stop_time=None):
@@ -161,13 +140,12 @@ def save_job_stats(job, disk_space=None, stop_time=None):
     js = models.JobStats.objects.get(oq_job=job)
     js.disk_space = disk_space
     js.stop_time = stop_time
-
     if job.risk_calculation:
         hc = job.risk_calculation.hazard_calculation
     else:
         hc = job.hazard_calculation
-    if hc:  # can be None if the option --hazard-output-id is used
-        js.num_sites = len(hc.site_collection) if hc.site_collection else None
+    if hc and hc.id in models.SiteCollection.cache:  # sites already imported
+        js.num_sites = len(hc.site_collection)
     js.save()
 
 
@@ -184,9 +162,6 @@ def job_stats(job):
     dbsize = curs.fetchall()[0][0]
     try:
         yield
-    except:
-        logs.LOG.critical("Calculation failed", exc_info=True)
-        raise
     finally:
         job.is_running = False
         job.save()
@@ -297,7 +272,6 @@ def _parse_sites_csv(fh):
     coords = []
     for lon, lat in reader:
         coords.append('%s %s' % (lon, lat))
-
     return 'MULTIPOINT(%s)' % ', '.join(coords)
 
 
@@ -358,8 +332,7 @@ def _collect_source_model_paths(smlt):
 
 
 # used by bin/openquake
-def run_calc(job, log_level, log_file, exports, job_type,
-             progress_handler=None):
+def run_calc(job, log_level, log_file, exports, job_type):
     """
     Run a calculation.
 
@@ -378,53 +351,43 @@ def run_calc(job, log_level, log_file, exports, job_type,
         supported.
     :param str job_type:
         'hazard' or 'risk'
-    :param callable progress_handler:
-        a callback getting the progress of the calculation and the calculation
-        object
     """
     calc_mode = getattr(job, '%s_calculation' % job_type).calculation_mode
-    calc = get_calculator_class(job_type, calc_mode)(job)
+    calculator = get_calculator_class(job_type, calc_mode)(job)
+    calc = job.calculation
 
-    if progress_handler is not None:
-        calc.register_progress_handler(progress_handler)
-
-    # Create job stats, which implicitly records the start time for the job
-    models.JobStats.objects.create(oq_job=job)
-
-    calc_id = job.calculation.id
-    calc_domain = 'hazard' if job.hazard_calculation else 'risk'
-    start_logging(calc_id, calc_domain, log_file)
-    with job_stats(job):
-        _job_exec(job, log_level, exports, job_type, calc)
+    # initialize log handlers
+    handler = (LogFileHandler(job_type, calc, log_file) if log_file
+               else LogStreamHandler(job_type, calc))
+    logging.root.addHandler(handler)
+    try:
+        # create job stats, which implicitly records the start time for the job
+        models.JobStats.objects.create(oq_job=job)
+        with job_stats(job):  # run the job
+            logs.set_level(log_level)
+            job.is_running = True
+            job.save()
+            _do_run_calc(job, exports, calculator, job_type)
+    finally:
+        logging.root.removeHandler(handler)
     return job
 
 
-def _job_exec(job, log_level, exports, job_type, calc):
+def _switch_to_job_phase(job, job_type, status):
     """
-    Abstraction of some general job execution procedures.
+    Switch to a particular phase of execution.
 
-    Parameters are the same as :func:`run_calc`.
-    Also ``calc`` is an instance of the calculator class
-    which is passed to :func:`_do_run_calc`.
-    """
-    logs.init_logs(
-        level=log_level, calc_domain=job_type, calc_id=job.calculation.id)
-    # run the job
-    job.is_running = True
-    job.save()
-    _do_run_calc(job, exports, calc, job_type)
-
-
-def _switch_to_job_phase(job, ctype, status):
-    """Switch to a particular phase of execution.
-    :param job: An :class:`~openquake.engine.db.models.OqJob` instance.
-    :param str ctype: calculation type (hazard|risk)
-    :param str status: one of the following: pre_executing, executing,
+    :param job:
+        An :class:`~openquake.engine.db.models.OqJob` instance.
+    :param str job_type:
+        calculation type (hazard|risk)
+    :param str status:
+        one of the following: pre_executing, executing,
         post_executing, post_processing, export, clean_up, complete
     """
     job.status = status
     job.save()
-    logs.LOG.progress("%s (%s)", status, ctype)
+    logs.LOG.progress("%s (%s)", status, job_type)
     if status == "executing" and not openquake.engine.no_distribute():
         # Record the compute nodes that were available at the beginning of the
         # execute phase so we can detect failed nodes later.
@@ -448,19 +411,15 @@ def _do_run_calc(job, exports, calc, job_type):
         The input job object when the calculation completes.
     """
     _switch_to_job_phase(job, job_type, "pre_executing")
-    calc.progress_handler("pre_executing", calc.hc)
     calc.pre_execute()
 
     _switch_to_job_phase(job, job_type, "executing")
-    calc.progress_handler("executing", calc.hc)
     calc.execute()
 
     _switch_to_job_phase(job, job_type, "post_executing")
-    calc.progress_handler("post_executing", calc.hc)
     calc.post_execute()
 
     _switch_to_job_phase(job, job_type, "post_processing")
-    calc.progress_handler("post_processing", calc.hc)
     calc.post_process()
 
     _switch_to_job_phase(job, job_type, "export")
@@ -472,7 +431,6 @@ def _do_run_calc(job, exports, calc, job_type):
     CacheInserter.flushall()  # flush caches into the db
 
     _switch_to_job_phase(job, job_type, "complete")
-    calc.progress_handler("calculation complete", calc.hc)
     logs.LOG.debug("*> complete")
 
     return job
@@ -605,37 +563,33 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
     hazard = hazard_output_id is None and hazard_calculation_id is None
-    try:
-        if log_file is not None:
-            touch_log_file(log_file)
+    if log_file is not None:
+        touch_log_file(log_file)
 
-        job = job_from_file(
-            cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
-            hazard_calculation_id
-        )
+    job = job_from_file(
+        cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
+        hazard_calculation_id)
 
-        # Instantiate the calculator and run the calculation.
-        t0 = time.time()
-        completed_job = run_calc(
-            job, log_level, log_file, exports, 'hazard' if hazard else 'risk'
-        )
-        duration = time.time() - t0
-        if hazard:
-            if completed_job.status == 'complete':
-                print_results(completed_job.hazard_calculation.id,
-                              duration, list_hazard_outputs)
-            else:
-                sys.exit('Calculation %s failed' %
-                         completed_job.hazard_calculation.id)
+    # Instantiate the calculator and run the calculation.
+    t0 = time.time()
+    completed_job = run_calc(
+        job, log_level, log_file, exports, 'hazard' if hazard else 'risk'
+    )
+    duration = time.time() - t0
+    if hazard:
+        if completed_job.status == 'complete':
+            print_results(completed_job.hazard_calculation.id,
+                          duration, list_hazard_outputs)
         else:
-            if completed_job.status == 'complete':
-                print_results(completed_job.risk_calculation.id,
-                              duration, list_risk_outputs)
-            else:
-                sys.exit('Calculation %s failed' %
-                         completed_job.risk_calculation.id)
-    except IOError as e:
-        print str(e)
+            sys.exit('Calculation %s failed' %
+                     completed_job.hazard_calculation.id)
+    else:
+        if completed_job.status == 'complete':
+            print_results(completed_job.risk_calculation.id,
+                          duration, list_risk_outputs)
+        else:
+            sys.exit('Calculation %s failed' %
+                     completed_job.risk_calculation.id)
 
 
 @django_db.transaction.commit_on_success
@@ -674,6 +628,7 @@ def job_from_file(cfg_file_path, username, log_level, exports,
         job.hazard_calculation = create_calculation(
             models.HazardCalculation, params)
         job.save()
+
         # validate and raise an error if there are any problems
         error_message = validate(job, 'hazard', params, exports)
         if error_message:
@@ -688,10 +643,10 @@ def job_from_file(cfg_file_path, username, log_level, exports,
     job.risk_calculation = calculation
     job.save()
 
+    # validate and raise an error if there are any problems
     error_message = validate(job, 'risk', params,  exports)
     if error_message:
         raise RuntimeError(error_message)
-
     return job
 
 

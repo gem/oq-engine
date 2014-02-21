@@ -67,7 +67,7 @@ def _log_progress(msg, *args, **kwargs):
 LOG.progress = _log_progress
 
 
-def init_logs(level, calc_domain, calc_id):
+def set_level(level):
     """
     Initialize logs to write records with level `level` or above.
     """
