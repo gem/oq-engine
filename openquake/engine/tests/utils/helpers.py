@@ -488,7 +488,8 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     ses_coll = ses_coll or models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test SES Collection", "ses"),
-        lt_realization=gmf.lt_realization)
+        lt_realization_ids=[gmf.lt_realization.id],
+        ordinal=0)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
     if points is None:
@@ -528,7 +529,8 @@ def create_gmf_from_csv(job, fname):
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             job, "Test SES Collection", "ses"),
-        lt_realization=gmf.lt_realization)
+        lt_realization_ids=[gmf.lt_realization.id],
+        ordinal=0)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
         locations = gmfreader.next()
@@ -688,12 +690,11 @@ def create_ses_ruptures(job, ses_collection, num):
         investigation_time=job.hazard_calculation.investigation_time,
         ordinal=1)
 
-    rlz = ses_collection.lt_realization.ordinal
-
     return [
         models.SESRupture.objects.create(
             ses=ses,
-            tag='rlz=%d|ses=%d|src=test|i=%d' % (rlz, ses.ordinal, i),
+            tag='smlt=%s|ses=%d|src=test|i=%d' % (
+                ses_collection.ordinal, ses.ordinal, i),
             magnitude=1 + i * 10. / float(num),
             hypocenter=Point(0, 0, 0.1).wkt2d,
             rupture=ParametricProbabilisticRupture(
