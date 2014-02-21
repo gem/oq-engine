@@ -164,9 +164,9 @@ class ClassicalExportTestCase(BaseExportTestCase):
                 'end-to-end-hazard-risk/job_risk_classical.ini'
             )
 
-            haz_job = helpers.run_hazard_job(haz_cfg)
+            haz_job = helpers.run_job(haz_cfg)
             # Run the risk on all outputs produced by the haz calc:
-            risk_job = helpers.run_risk_job(
+            risk_job = helpers.run_job(
                 risk_cfg, hazard_calculation_id=haz_job.hazard_calculation.id
             )
 
@@ -251,9 +251,9 @@ class EventBasedExportTestCase(BaseExportTestCase):
                 'end-to-end-hazard-risk/job_risk_event_based.ini'
             )
 
-            haz_job = helpers.run_hazard_job(haz_cfg)
+            haz_job = helpers.run_job(haz_cfg)
             # Run the risk on all outputs produced by the haz calc:
-            risk_job = helpers.run_risk_job(
+            risk_job = helpers.run_job(
                 risk_cfg, hazard_calculation_id=haz_job.hazard_calculation.id
             )
 
