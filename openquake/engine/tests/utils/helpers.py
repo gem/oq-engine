@@ -20,7 +20,6 @@
 Helper functions for our unit and smoke tests.
 """
 
-
 import collections
 import functools
 import logging
@@ -115,69 +114,38 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
-def run_hazard_job(cfg, exports=None):
+def run_job(cfg, exports=None, hazard_calculation_id=None,
+            hazard_output_id=None):
     """
-    Given the path to job config file, run the job and assert that it was
-    successful. If this assertion passes, return the completed job.
-
-    :param str cfg:
-        Path to a job config file.
-    :param list exports:
-        A list of export format types. Currently only 'xml' is supported.
-    :returns:
-        The completed :class:`~openquake.engine.db.models.OqJob`.
-    """
-    if exports is None:
-        exports = []
-
-    job = get_hazard_job(cfg)
-    job.is_running = True
-    job.save()
-
-    models.JobStats.objects.create(oq_job=job)
-
-    hc = job.hazard_calculation
-    calc = get_calculator_class('hazard', hc.calculation_mode)(job)
-    try:
-        logs.init_logs(
-            level='ERROR', calc_domain='hazard', calc_id=hc.id)
-        engine._do_run_calc(job, exports, calc, 'hazard')
-    finally:
-        job.is_running = False
-        job.calc = calc
-        job.save()
-    return job
-
-
-def run_risk_job(cfg, exports=None, hazard_calculation_id=None,
-                 hazard_output_id=None):
-    """
-    Given the path to a risk job config file and a hazard_calculation_id
+    Given the path to a job config file and a hazard_calculation_id
     or a output, run the job.
     """
     if exports is None:
         exports = []
 
-    # You can't specify both a hazard output and hazard calculation
-    # Pick one
-    assert not (hazard_calculation_id is not None
-                and hazard_output_id is not None)
-
-    job = get_risk_job(cfg, hazard_calculation_id=hazard_calculation_id,
-                       hazard_output_id=hazard_output_id)
+    job = get_job(cfg, hazard_calculation_id=hazard_calculation_id,
+                  hazard_output_id=hazard_output_id)
     job.is_running = True
     job.save()
 
     models.JobStats.objects.create(oq_job=job)
 
-    rc = job.risk_calculation
-    calc = get_calculator_class('risk', rc.calculation_mode)(job)
-    logs.init_logs(level='ERROR', calc_domain='risk', calc_id=rc.id)
-    completed_job = engine._do_run_calc(job, exports, calc, 'risk')
-    job.is_running = False
-    job.save()
+    if hazard_calculation_id or hazard_output_id:
+        rc = job.risk_calculation
+        calc = get_calculator_class('risk', rc.calculation_mode)(job)
+        logs.init_logs(level='ERROR', calc_domain='risk', calc_id=rc.id)
+        job = engine._do_run_calc(job, exports, calc, 'risk')
+        job.is_running = False
+        job.save()
+    else:
+        hc = job.hazard_calculation
+        calc = get_calculator_class('hazard', hc.calculation_mode)(job)
+        logs.init_logs(level='ERROR', calc_domain='hazard', calc_id=hc.id)
+        job = engine._do_run_calc(job, exports, calc, 'hazard')
+        job.is_running = False
+        job.save()
 
-    return completed_job
+    return job
 
 
 def timeit(method):
@@ -468,25 +436,15 @@ def _deep_eq(a, b, decimal, exclude=None):
             assert a == b, "%s != %s" % (a, b)
 
 
-def get_hazard_job(cfg, username="openquake"):
-    """
-    Given a path to a config file, create a
-    :class:`openquake.engine.db.models.OqJob` object for a hazard calculation.
-    """
-    return engine.haz_job_from_file(cfg, username, 'error', [])
-
-
-def get_risk_job(cfg, username="openquake", hazard_calculation_id=None,
-                 hazard_output_id=None):
+def get_job(cfg, username="openquake", hazard_calculation_id=None,
+            hazard_output_id=None):
     """
     Given a path to a config file and a hazard_calculation_id
     (or, alternatively, a hazard_output_id, create a
     :class:`openquake.engine.db.models.OqJob` object for a risk calculation.
     """
-    # You can't specify both a hazard output and hazard calculation
-    # Pick one
-    assert not (hazard_calculation_id is not None
-                and hazard_output_id is not None)
+    if hazard_calculation_id is None and hazard_output_id is None:
+        return engine.job_from_file(cfg, username, 'error', [])
 
     job = engine.prepare_job(username)
     params = engine.parse_config(open(cfg, 'r'))
@@ -642,7 +600,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     :param output_type: gmf, gmf_scenario, or curve
     """
 
-    hazard_job = get_hazard_job(hazard_cfg, username)
+    hazard_job = get_job(hazard_cfg, username)
     hc = hazard_job.hazard_calculation
 
     rlz = models.LtRealization.objects.create(
@@ -769,7 +727,7 @@ class MultiMock(object):
         # mock. The key is basically a shortcut to the mock.
         mocks = {
             'touch': 'openquake.engine.engine.touch_log_file',
-            'job': 'openquake.engine.engine.haz_job_from_file',
+            'job': 'openquake.engine.engine.job_from_file',
         }
         multi_mock = MultiMock(**mocks)
 
@@ -782,7 +740,7 @@ class MultiMock(object):
 
             # call the function under test which will calls the mocked
             # functions
-            engine.run_hazard('job.ini', 'debug', 'oq.log', ['geojson'])
+            engine.run_job('job.ini', 'debug', 'oq.log', ['geojson'])
 
             # To test the mocks, you can simply access each mock from
             # `multi_mock` like a dict:
