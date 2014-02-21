@@ -52,7 +52,7 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
                         asset_value = data[i * 2 + 1, 0]
                         curve = models.LossCurveData(
                             asset_value=asset_value,
-                            loss_ratios=data[i * 2, 2:] / asset_value,
+                            loss_ratios=data[i * 2, 2:],
                             poes=data[i * 2 + 1, 2:])
                         yield descriptor, curve
 
