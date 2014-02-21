@@ -172,7 +172,7 @@ class SESRuptureTestCase(unittest.TestCase):
         output = models.Output.objects.create(
             oq_job=job, display_name='test', output_type='ses')
         ses_coll = models.SESCollection.objects.create(
-            output=output, lt_realization=lt_rlz)
+            output=output, lt_realization_ids=[lt_rlz.id], ordinal=0)
         ses = models.SES.objects.create(
             ses_collection=ses_coll, investigation_time=50.0, ordinal=1)
 
@@ -267,19 +267,17 @@ class GmfsPerSesTestCase(unittest.TestCase):
             hazard_calculation=job.hazard_calculation,
             ordinal=2, seed=1, weight=None,
             sm_lt_path="test_sm", gsim_lt_path="test_gsim_2")
-        ses_coll1 = models.SESCollection.objects.create(
+        ses_coll = models.SESCollection.objects.create(
             output=models.Output.objects.create_output(
                 job, "Test SES Collection 1", "ses"),
-            lt_realization=rlz1)
-        ses_coll2 = models.SESCollection.objects.create(
-            output=models.Output.objects.create_output(
-                job, "Test SES Collection 2", "ses"),
-            lt_realization=rlz2)
-        gmf_data1 = helpers.create_gmf_data_records(job, rlz1, ses_coll1)[0]
+            lt_realization_ids=[rlz1.id, rlz2.id],
+            ordinal=0)
+
+        gmf_data1 = helpers.create_gmf_data_records(job, rlz1, ses_coll)[0]
         points = [(15.3, 38.22), (15.7, 37.22),
                   (15.4, 38.09), (15.56, 38.1), (15.2, 38.2)]
         gmf_data2 = helpers.create_gmf_data_records(
-            job, rlz2, ses_coll2, points)[0]
+            job, rlz2, ses_coll, points)[0]
         cls.gmf_coll1 = gmf_data1.gmf
         cls.ruptures1 = tuple(get_tags(gmf_data1))
         cls.ruptures2 = tuple(get_tags(gmf_data2))

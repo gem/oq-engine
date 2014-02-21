@@ -18,10 +18,7 @@ of a dependence from the configuration parameter concurrent_tasks.
 We use a source model with 398 sources and a single SES.
 Due to the distance filtering only 7 sources are relevant, but some
 of them are area sources generating a lot of point sources.
-We test the independence from the parameter concurrent_tasks, which
-determines the preferred_block_size = ceil(num_sources/concurrent_tasks)
-with 4 concurrent tasks the preferred_block_size is 499.
-with 8 concurrent tasks the preferred_block_size is 250.
+We test the independence from the parameter concurrent_tasks.
 """
 
 import os
@@ -38,25 +35,29 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # then you will see in /tmp a few files which you can diff
     # to see the problem
     expected_tags = [
-        'rlz=00|ses=0001|src=1-1051|i=0002-00',
-        'rlz=00|ses=0001|src=2-126|i=0000-00',
-        'rlz=00|ses=0001|src=3-102|i=0000-00',
-        'rlz=00|ses=0001|src=3-221|i=0001-00',
-        'rlz=00|ses=0001|src=398-1620|i=0000-00',
-        'rlz=00|ses=0001|src=398-32|i=0000-00',
-    ]
+        'smlt=00|ses=0001|src=1-389|occ=01',
+        'smlt=00|ses=0001|src=2-126|occ=01',
+        'smlt=00|ses=0001|src=2-315|occ=01',
+        'smlt=00|ses=0001|src=2-52|occ=01',
+        'smlt=00|ses=0001|src=3-255|occ=01']
 
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=1-1051|i=0002-00
-<X=131.00000, Y= 40.00000, GMV=0.0222831>
-<X=131.00000, Y= 40.10000, GMV=0.0153857>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=2-126|i=0000-00
-<X=131.00000, Y= 40.00000, GMV=0.0001413>
-<X=131.00000, Y= 40.10000, GMV=0.0001709>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=rlz=00|ses=0001|src=3-221|i=0001-00
-<X=131.00000, Y= 40.00000, GMV=0.0000981>
-<X=131.00000, Y= 40.10000, GMV=0.0003698>))'''
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=1-389|occ=01
+<X=131.00000, Y= 40.00000, GMV=0.0019092>
+<X=131.00000, Y= 40.10000, GMV=0.0017119>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-126|occ=01
+<X=131.00000, Y= 40.00000, GMV=0.0001250>
+<X=131.00000, Y= 40.10000, GMV=0.0001781>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-315|occ=01
+<X=131.00000, Y= 40.00000, GMV=0.0015655>
+<X=131.00000, Y= 40.10000, GMV=0.0016485>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-52|occ=01
+<X=131.00000, Y= 40.00000, GMV=0.0002431>
+<X=131.00000, Y= 40.10000, GMV=0.0001554>)
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-255|occ=01
+<X=131.00000, Y= 40.00000, GMV=0.0002826>
+<X=131.00000, Y= 40.10000, GMV=0.0004627>))'''
 
     @attr('qa', 'hazard', 'event_based')
     def test_4(self):
