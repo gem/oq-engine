@@ -158,7 +158,10 @@ def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
 
 
 def loss_curve_almost_equal(curve, expected_curve):
-    if curve.losses[curve.losses > 0].any():
+    if getattr(curve, 'asset_value', None) == 0.0 and getattr(
+            expected_curve, 'asset_value', None) == 0.0:
+        return risk_almost_equal(curve.loss_ratios, expected_curve.loss_ratios)
+    elif curve.losses[curve.losses > 0].any():
         poes = interpolate.interp1d(
             curve.losses, curve.poes,
             bounds_error=False, fill_value=0)(expected_curve.losses)
@@ -2398,6 +2401,12 @@ class AggregateLoss(djm.Model):
         return risk_almost_equal(
             self, data, lambda x: operator.attrgetter('mean', 'std_dev'))
 
+    def to_csv_str(self):
+        """
+        Convert LossCurve into a CSV string
+        """
+        return '\n'.join(data.to_csv_str() for data in self)
+
 
 class LossCurve(djm.Model):
     '''
@@ -2423,6 +2432,12 @@ class LossCurve(djm.Model):
             return iter([self.aggregatelosscurvedata])
         else:
             return iter(self.losscurvedata_set.all())
+
+    def to_csv_str(self):
+        """
+        Convert LossCurve into a CSV string
+        """
+        return '\n'.join(data.to_csv_str() for data in self)
 
     @property
     def output_hash(self):
@@ -2477,6 +2492,15 @@ class LossCurveData(djm.Model):
     def assertAlmostEqual(self, data):
         return loss_curve_almost_equal(self, data)
 
+    def to_csv_str(self):
+        """
+        Convert LossCurveData into a CSV string
+        """
+        ratios = ['', 'Ratios'] + map(str, self.loss_ratios)
+        data = ','.join(ratios) + '\n'
+        data += ','.join(map(str, [self.asset_value, 'PoE'] + list(self.poes)))
+        return data
+
 
 class AggregateLossCurveData(djm.Model):
     '''
@@ -2501,6 +2525,14 @@ class AggregateLossCurveData(djm.Model):
 
     def assertAlmostEqual(self, data):
         return loss_curve_almost_equal(self, data)
+
+    def to_csv_str(self):
+        """
+        Convert LossCurveData into a CSV string
+        """
+        data = ','.join(map(str, ['', 'Losses'] + list(self.losses))) + '\n'
+        data += ','.join(map(str, ['', 'PoE'] + list(self.poes)))
+        return data
 
 
 class EventLoss(djm.Model):
@@ -2551,6 +2583,12 @@ class EventLossData(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"event_loss_data'
+
+    def to_csv_str(self):
+        """
+        Convert EventLossData into a CSV string
+        """
+        return '%s,%s' % (self.rupture.id, self.aggregate_loss)
 
 
 class BCRDistribution(djm.Model):
