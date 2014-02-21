@@ -158,7 +158,10 @@ def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
 
 
 def loss_curve_almost_equal(curve, expected_curve):
-    if curve.losses[curve.losses > 0].any():
+    if getattr(curve, 'asset_value', None) == 0.0 and getattr(
+            expected_curve, 'asset_value', None) == 0.0:
+        return risk_almost_equal(curve.loss_ratios, expected_curve.loss_ratios)
+    elif curve.losses[curve.losses > 0].any():
         poes = interpolate.interp1d(
             curve.losses, curve.poes,
             bounds_error=False, fill_value=0)(expected_curve.losses)
@@ -2527,7 +2530,8 @@ class LossCurveData(djm.Model):
         """
         Convert LossCurveData into a CSV string
         """
-        data = ','.join(map(str, ['', 'Losses'] + list(self.losses))) + '\n'
+        ratios = ['', 'Ratios'] + map(str, self.loss_ratios)
+        data = ','.join(ratios) + '\n'
         data += ','.join(map(str, [self.asset_value, 'PoE'] + list(self.poes)))
         return data
 
