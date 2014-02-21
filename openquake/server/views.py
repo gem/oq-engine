@@ -118,13 +118,14 @@ def create_detect_job_file(*candidates):
     return detect_job_file
 
 
-def _prepare_job(request, job_factory, detect_job_file):
+def _prepare_job(request, hazard_output_id, hazard_calculation_id,
+                 detect_job_file):
     """
     Creates a temporary directory, move uploaded files there and
-    create a new oq-engine job by using the `job_factory` callable
-    (e.g. oq_engine.job_from_file). The job file is selected using
-    the `detect_job_file` callable which accepts in input a list
-    holding all the filenames ending with .ini
+    select the job file by using the `detect_job_file` callable which
+    accepts in input a list holding all the filenames ending with .ini
+
+    :returns: job_file and temp_dir
     """
     temp_dir = tempfile.mkdtemp()
 
@@ -133,9 +134,9 @@ def _prepare_job(request, job_factory, detect_job_file):
     else:
         raw_files = request.FILES.values()
 
-    files = []
     # Move each file to a new temp dir, using the upload file names
-    # (not the temporary ones).
+    # (not the temporary ones)
+    files = []
     for each_file in raw_files:
         new_path = os.path.join(temp_dir, each_file.name)
         shutil.move(each_file.temporary_file_path(), new_path)
@@ -143,8 +144,7 @@ def _prepare_job(request, job_factory, detect_job_file):
 
     job_file = detect_job_file([f for f in files if f.endswith('.ini')])
 
-    return job_factory(
-        job_file, "platform", DEFAULT_LOG_LEVEL, []), temp_dir
+    return job_file, temp_dir
 
 
 def _is_source_model(tempfile):
@@ -242,21 +242,37 @@ def run_calc(request, job_type):
     callback_url = request.POST.get('callback_url')
     foreign_calc_id = request.POST.get('foreign_calculation_id')
 
-    if request.POST.get('hazard_output_id'):
-        hazard_output_id = int(request.POST.get('hazard_output_id'))
-        hazard_calculation_id = None
-    else:
-        hazard_output_id = None
-        hazard_calculation_id = request.POST.get('hazard_calculation_id')
+    hazard_output_id = request.POST.get('hazard_output_id')
+    hazard_calculation_id = request.POST.get('hazard_calculation_id')
 
+    job_file, temp_dir = _prepare_job(
+        request, hazard_output_id, hazard_calculation_id,
+        create_detect_job_file("job.ini", "job_risk.ini"))
+
+    job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
+                           callback_url, foreign_calc_id,
+                           hazard_output_id, hazard_calculation_id)
     try:
-        job, temp_dir = _prepare_job(
-            request, functools.partial(
-                oq_engine.job_from_file,
-                hazard_output_id=hazard_output_id,
-                hazard_calculation_id=hazard_calculation_id),
-            create_detect_job_file("job.ini", "job_risk.ini"))
-    except:  # catch errors in the job_from_file phase
+        response_data = _get_calc_info(job_type, job.calculation.id)
+    except ObjectDoesNotExist:
+        return HttpResponseNotFound()
+
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+
+
+def submit_job(job_file, temp_dir, dbname,
+               callback_url=None, foreign_calc_id=None,
+               hazard_output_id=None, hazard_calculation_id=None,
+               logfile=None):
+    """
+    Create a job object from the given job.ini file in the job directory
+    and submit it to the job queue.
+    """
+    try:
+        job = oq_engine.job_from_file(
+            job_file, "platform", DEFAULT_LOG_LEVEL, [], hazard_output_id,
+            hazard_calculation_id)
+    except:  # catch errors in the job creation phase
         etype, exc, tb = sys.exc_info()
         einfo = "".join(traceback.format_tb(tb))
         einfo += '%s: %s' % (etype.__name__, exc)
@@ -264,17 +280,11 @@ def run_calc(request, job_type):
         raise
 
     calc = job.calculation
-    executor.submit(
+    job_type = 'risk' if job.calculation is job.risk_calculation else 'hazard'
+    future = executor.submit(
         tasks.run_calc, job_type, calc.id, temp_dir,
-        callback_url=callback_url,
-        foreign_calc_id=foreign_calc_id,
-        dbname=request.POST['database'])
-    try:
-        response_data = _get_calc_info(job_type, calc.id)
-    except ObjectDoesNotExist:
-        return HttpResponseNotFound()
-
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+        callback_url, foreign_calc_id, dbname, logfile)
+    return job, future
 
 
 def _get_calcs(job_type):
