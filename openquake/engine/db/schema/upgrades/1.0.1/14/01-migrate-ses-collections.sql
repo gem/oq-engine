@@ -1,3 +1,6 @@
+-- see https://bugs.launchpad.net/oq-engine/+bug/1248237 to understand
+-- what is going on
+
 ALTER TABLE hzrdr.ses_collection ADD COLUMN lt_realization_ids INTEGER[];
 ALTER TABLE hzrdr.ses_collection ADD COLUMN ordinal INTEGER;
 
