@@ -146,7 +146,6 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                     with mon4:  # saving ruptures
                         rup_id = models.SESRupture.objects.create(
                             ses=ses,
-                            rupture=rup,
                             tag='smlt=%02d|ses=%04d|src=%s|occ=%02d'
                             % (ses_coll.ordinal, ses.ordinal,
                                src.source_id, occ),
