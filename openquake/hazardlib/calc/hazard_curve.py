@@ -86,8 +86,6 @@ def hazard_curves(
     """
     curves = dict((imt, numpy.ones([len(sites), len(imts[imt])]))
                   for imt in imts)
-
-    total_sites = len(sites)
     sources_sites = ((source, sites) for source in sources)
     for source, s_sites in source_site_filter(sources_sites):
         try:
@@ -100,9 +98,7 @@ def hazard_curves(
                     poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                          truncation_level)
                     pno = rupture.get_probability_no_exceedance(poes)
-                    curves[imt] *= r_sites.expand(
-                        pno, total_sites, placeholder=1
-                    )
+                    curves[imt] *= r_sites.expand(pno, placeholder=1)
         except Exception, err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
