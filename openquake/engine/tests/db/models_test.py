@@ -189,17 +189,17 @@ class SESRuptureTestCase(unittest.TestCase):
         self.ps_depths = [0.1, 0.2, 0.3, 0.4]
 
         self.fault_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, old_strike=0, old_dip=0, old_rake=0,
-            old_tectonic_region_type='Active Shallow Crust',
-            old_is_from_fault_source=True, old_lons=self.mesh_lons,
-            old_is_multi_surface=False,
-            old_lats=self.mesh_lats, old_depths=self.mesh_depths)
+            ses=ses, magnitude=5, strike=0, dip=0, rake=0,
+            tectonic_region_type='Active Shallow Crust',
+            is_from_fault_source=True, lons=self.mesh_lons,
+            is_multi_surface=False,
+            lats=self.mesh_lats, depths=self.mesh_depths)
         self.source_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, old_strike=0, old_dip=0, old_rake=0,
-            old_tectonic_region_type='Active Shallow Crust',
-            old_is_from_fault_source=False, old_lons=self.ps_lons,
-            old_is_multi_surface=False,
-            old_lats=self.ps_lats, old_depths=self.ps_depths)
+            ses=ses, magnitude=5, strike=0, dip=0, rake=0,
+            tectonic_region_type='Active Shallow Crust',
+            is_from_fault_source=False, lons=self.ps_lons,
+            is_multi_surface=False,
+            lats=self.ps_lats, depths=self.ps_depths)
 
     def test_fault_rupture(self):
         # Test loading a fault rupture from the DB, just to illustrate a use
@@ -233,17 +233,17 @@ class SESRuptureTestCase(unittest.TestCase):
         # If any of the coord attributes are a len != 4,
         # we should get an exception
 
-        source_rupture.old_lons = [1, 2, 3]
+        source_rupture.lons = [1, 2, 3]
         self.assertRaises(ValueError, source_rupture._validate_planar_surface)
-        source_rupture.old_lons = lons
+        source_rupture.lons = lons
 
-        source_rupture.old_lats = [1, 2, 3]
+        source_rupture.lats = [1, 2, 3]
         self.assertRaises(ValueError, source_rupture._validate_planar_surface)
-        source_rupture.old_lats = lats
+        source_rupture.lats = lats
 
-        source_rupture.old_depths = [1, 2, 3]
+        source_rupture.depths = [1, 2, 3]
         self.assertRaises(ValueError, source_rupture._validate_planar_surface)
-        source_rupture.old_depths = depths
+        source_rupture.depths = depths
 
 
 def get_tags(gmf_data):
