@@ -689,25 +689,18 @@ def create_ses_ruptures(job, ses_collection, num):
         ses_collection=ses_collection,
         investigation_time=job.hazard_calculation.investigation_time,
         ordinal=1)
-
-    return [
-        models.SESRupture.objects.create(
-            ses=ses,
-            tag='smlt=%s|ses=%d|src=test|i=%d' % (
-                ses_collection.ordinal, ses.ordinal, i),
-            magnitude=1 + i * 10. / float(num),
-            hypocenter=Point(0, 0, 0.1).wkt2d,
-            rupture=ParametricProbabilisticRupture(
-                mag=1 + i * 10. / float(num), rake=0,
-                tectonic_region_type="test region type",
-                hypocenter=Point(0, 0, 0.1),
-                surface=PlanarSurface(
-                    10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
-                    Point(1, 0, 2), Point(0, 0, 2)),
-                occurrence_rate=1,
-                temporal_occurrence_model=PoissonTOM(10),
-                source_typology=object()))
-        for i in range(num)]
+    rupture = ParametricProbabilisticRupture(
+        mag=1 + 10. / float(num), rake=0,
+        tectonic_region_type="test region type",
+        hypocenter=Point(0, 0, 0.1),
+        surface=PlanarSurface(
+            10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
+            Point(1, 0, 2), Point(0, 0, 2)),
+        occurrence_rate=1,
+        temporal_occurrence_model=PoissonTOM(10),
+        source_typology=object())
+    return [models.SESRupture.create(rupture, ses, 'test', i)
+            for i in range(num)]
 
 
 class MultiMock(object):
