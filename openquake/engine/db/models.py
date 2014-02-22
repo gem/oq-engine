@@ -1684,14 +1684,13 @@ def get_geom(rupture, is_from_fault_source, is_multi_surface):
     return lons, lats, depths
 
 
-class SESRupture(djm.Model):
+class ProbabilisticRupture(djm.Model):
     """
-    A rupture as part of a Stochastic Event Set.
+    A rupture as part of a Stochastic Event Set Collection.
     """
-    ses = djm.ForeignKey('SES')
+    ses_collection = djm.ForeignKey('SESCollection')
     magnitude = djm.FloatField(null=False)
     hypocenter = djm.PointField(srid=DEFAULT_SRID)
-    tag = djm.TextField(null=False)
     strike = djm.FloatField(null=False)
     dip = djm.FloatField(null=False)
     rake = djm.FloatField(null=False)
@@ -1703,28 +1702,23 @@ class SESRupture(djm.Model):
     depths = fields.PickleField(null=False)
 
     class Meta:
-        db_table = 'hzrdr\".\"ses_rupture'
-        ordering = ['tag']
+        db_table = 'hzrdr\".\"probabilistic_rupture'
 
     @classmethod
-    def create(cls, rupture, ses, source_id, occ):
+    def new(cls, rupture, ses_collection):
         """
-        Create a ses_rupture row on the database.
+        Create a ProbabilisticRupture object.
 
         :param rupture:
             a hazardlib rupture
-        :param ses:
-            a Stochastic Event Set object
-        :param source_id:
-            the source generating the rupture
-        :param occ:
-            occurrency number
+        :param ses_collection:
+            a Stochastic Event Set Collection object
         """
         iffs = is_from_fault_source(rupture)
         ims = is_multi_surface(rupture)
         lons, lats, depths = get_geom(rupture, iffs, ims)
-        return cls.objects.create(
-            ses=ses,
+        return cls(
+            ses_collection=ses_collection,
             magnitude=rupture.mag,
             strike=rupture.surface.get_strike(),
             dip=rupture.surface.get_dip(),
@@ -1735,8 +1729,6 @@ class SESRupture(djm.Model):
             lons=lons,
             lats=lats,
             depths=depths,
-            tag='smlt=%02d|ses=%04d|src=%s|occ=%02d'
-            % (ses.ses_collection.ordinal, ses.ordinal, source_id, occ),
             hypocenter=rupture.hypocenter.wkt2d,
             )
 
@@ -1781,6 +1773,26 @@ class SESRupture(djm.Model):
             self._validate_planar_surface()
             return self.lons[3], self.lats[3], self.depths[3]
         return None
+
+
+class SESRupture(djm.Model):
+    """
+    A rupture as part of a Stochastic Event Set.
+    """
+    rupture = djm.ForeignKey('ProbabilisticRupture')
+    ses = djm.ForeignKey('SES')
+    tag = djm.TextField(null=False)
+    seed = djm.IntegerField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"ses_rupture'
+        ordering = ['tag']
+
+    @classmethod
+    def new(cls, prob_rupture, ses, source_id, occ, seed):
+        tag = 'smlt=%02d|ses=%04d|src=%s|occ=%02d' % (
+            ses.ses_collection.ordinal, ses.ordinal, source_id, occ)
+        return cls(rupture=prob_rupture, ses=ses, tag=tag, seed=seed)
 
 
 class _Point(object):

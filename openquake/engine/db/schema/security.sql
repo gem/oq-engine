@@ -84,6 +84,7 @@ GRANT SELECT,INSERT,UPDATE ON hzrdr.lt_realization    TO oq_job_init;
 GRANT SELECT,INSERT        ON hzrdr.ses_collection    TO oq_job_init;
 GRANT SELECT,INSERT        ON hzrdr.ses               TO oq_job_init;
 GRANT SELECT,INSERT        ON hzrdr.ses_rupture       TO oq_job_init;
+GRANT SELECT,INSERT        ON hzrdr.probabilistic_rupture TO oq_job_init;
 
 -- riski schema
 GRANT SELECT,INSERT ON ALL TABLES IN SCHEMA riski   TO oq_job_init;
