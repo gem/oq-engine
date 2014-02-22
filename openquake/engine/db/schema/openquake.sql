@@ -403,13 +403,13 @@ CREATE TABLE hzrdr.ses (
     ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
--- A rupture as part of a Stochastic Event Set.
+-- A rupture as part of a Stochastic Event Set Collection.
 -- Ruptures will have different geometrical definitions, depending on whether
 -- the event was generated from a point/area source or a simple/complex fault
 -- source.
-CREATE TABLE hzrdr.ses_rupture (
+CREATE TABLE hzrdr.probabilistic_rupture (
     id SERIAL PRIMARY KEY,
-    ses_id INTEGER NOT NULL,
+    ses_collection_id INTEGER NOT NULL,
     strike float NOT NULL,
     dip float NOT NULL,
     rake float NOT NULL,
@@ -419,10 +419,18 @@ CREATE TABLE hzrdr.ses_rupture (
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     depths BYTEA NOT NULL,
-    tag VARCHAR NOT NULL,
     magnitude float NOT NULL
 ) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'ses_rupture', 'hypocenter', 4326, 'POINT', 2);
+SELECT AddGeometryColumn('hzrdr', 'probabilistic_rupture', 'hypocenter', 4326, 'POINT', 2);
+
+
+CREATE TABLE hzrdr.ses_rupture (
+    id SERIAL PRIMARY KEY,
+    ses_id INTEGER NOT NULL,  -- FK to ses.id
+    rupture_id INTEGER NOT NULL,  -- FK to probabilistic_rupture.id
+    tag VARCHAR NOT NULL,
+    seed INTEGER NOT NULL
+) TABLESPACE hzrdr_ts;
 
 
 CREATE TABLE hzrdr.gmf (
@@ -968,11 +976,21 @@ FOREIGN KEY (ses_collection_id)
 REFERENCES hzrdr.ses_collection(id)
 ON DELETE CASCADE;
 
+-- hzrdr.probabilistic_rupture to hzrdr.ses_collection FK
+ALTER TABLE hzrdr.probabilistic_rupture
+ADD CONSTRAINT hzrdr_probabilistic_rupture_ses_collection_fk
+FOREIGN KEY (ses_collection_id) REFERENCES hzrdr.ses_collection(id);
+
+-- hzrdr.ses_rupture to hzrdr.probabilistic_rupture FK
+ALTER TABLE hzrdr.ses_rupture
+ADD CONSTRAINT hzrdr_ses_rupture_probabilistic_rupture_fk
+FOREIGN KEY (rupture_id) REFERENCES hzrdr.probabilistic_rupture(id)
+ON DELETE CASCADE;
+
 -- hzrdr.ses_rupture to hzrdr.ses FK
 ALTER TABLE hzrdr.ses_rupture
 ADD CONSTRAINT hzrdr_ses_rupture_ses_fk
-FOREIGN KEY (ses_id)
-REFERENCES hzrdr.ses(id)
+FOREIGN KEY (ses_id) REFERENCES hzrdr.ses(id)
 ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map
