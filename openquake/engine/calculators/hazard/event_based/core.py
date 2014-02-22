@@ -130,6 +130,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                     num_occurrences = rup.sample_number_of_occurrences()
                     if num_occurrences:
                         ses_num_occ[rup].append((ses, num_occurrences))
+                        total_ruptures += num_occurrences
 
         for rup in ses_num_occ:
             with mon3:  # filtering ruptures
@@ -159,7 +160,6 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                 job_id, src.source_id, src.__class__.__name__,
                 len(ses_num_occ), time.time() - t0)
             num_distinct_ruptures += len(ses_num_occ)
-            total_ruptures += sum(v[1] for v in ses_num_occ.itervalues())
 
     logs.LOG.info('job=%d, task %d generated %d/%d distinct ruptures',
                   job_id, task_no, num_distinct_ruptures, total_ruptures)
