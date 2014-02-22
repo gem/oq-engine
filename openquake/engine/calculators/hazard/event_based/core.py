@@ -117,13 +117,10 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
             if s_sites is None:
                 continue
 
-        # NB: the number of occurrences is very low, << 1, so it is
-        # more efficient to filter only the ruptures that occur
-        # and not to compute the occurrencies of the filtered ruptures
         # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
         # for each occurring rupture for each ses in the ses collection
         ses_num_occ = collections.defaultdict(list)
-        with mon2:  # generating ruptures
+        with mon2:  # generating ruptures for the current source
             for rup in src.iter_ruptures():
                 for ses in all_ses:
                     numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
@@ -132,26 +129,39 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                         ses_num_occ[rup].append((ses, num_occurrences))
                         total_ruptures += num_occurrences
 
-        for rup in ses_num_occ:
+        # NB: the number of occurrences is very low, << 1, so it is
+        # more efficient to filter only the ruptures that occur, i.e.
+        # to call sample_number_of_occurrences() *before* the filtering
+        for rup in ses_num_occ.keys():
             with mon3:  # filtering ruptures
                 r_sites = rup.source_typology.\
                     filter_sites_by_distance_to_rupture(
                         rup, hc.maximum_distance, s_sites
                     ) if hc.maximum_distance else s_sites
                 if r_sites is None:
+                    # ignore ruptures which are far away
+                    del ses_num_occ[rup]  # save memory
                     continue
 
-            # saving ses and generating gmf
-            for ses, num_occurrences in ses_num_occ[rup]:
-                for occ in range(1, num_occurrences + 1):
-                    with mon4:  # saving ruptures
-                        rup_id = models.SESRupture.create(
-                            rup, ses, src.source_id, occ).id
-                    rup_seed = rnd.randint(0, models.MAX_SINT_32)
-                    if hc.ground_motion_fields:
-                        with mon5:  # computing GMFs
-                            gmfcollector.calc_gmf(
-                                r_sites, rup, rup_id, rup_seed)
+            prob_rup = models.ProbabilisticRupture.new(rup, ses_coll)
+            prob_rup.save()
+
+            with mon4:  # saving ses_ruptures
+                ses_ruptures = []
+                for ses, num_occurrences in ses_num_occ[rup]:
+                    for occ in range(1, num_occurrences + 1):
+                        rup_seed = rnd.randint(0, models.MAX_SINT_32)
+                        ses_ruptures.append(
+                            models.SESRupture.new(
+                                prob_rup, ses, src.source_id, occ, rup_seed))
+                ses_rupture_ids = writer.CacheInserter.saveall(ses_ruptures)
+
+            with mon5:  # computing GMFs
+                if hc.ground_motion_fields:
+                    for ses_rup, ses_rup_id in zip(
+                            ses_ruptures, ses_rupture_ids):
+                        gmfcollector.calc_gmf(
+                            r_sites, rup, ses_rup_id, ses_rup.seed)
 
         # log calc_time per distinct rupture
         if ses_num_occ:
