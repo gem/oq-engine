@@ -39,6 +39,12 @@ class NrmlHazardlibConverter(object):
     Converter from NRML objects to hazardlib objects
     """
     def __init__(self, hc):
+        """
+        :param hc:
+            a HazardCalculation instance or in general any object with
+            attributes investigation_time, rupture_mesh_spacing,
+            area_source_discretization, width_of_mfd_bin
+        """
         self.hc = hc
         self.default_tom = PoissonTOM(hc.investigation_time) \
             if hc.investigation_time else None  # None for scenario calculator

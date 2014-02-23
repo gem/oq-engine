@@ -93,8 +93,7 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
                         poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                              hc.truncation_level)
                         pno = rupture.get_probability_no_exceedance(poes)
-                        curv[imt] *= r_sites.expand(
-                            pno, total_sites, placeholder=1)
+                        curv[imt] *= r_sites.expand(pno, placeholder=1)
 
         logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
                       job_id, source.source_id, source.__class__.__name__,

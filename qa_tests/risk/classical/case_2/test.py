@@ -57,7 +57,7 @@ class ClassicalRiskCase2TestCase(risk.BaseRiskQATestCase):
         self._run_test()
 
     def get_hazard_job(self):
-        job = helpers.get_hazard_job(
+        job = helpers.get_job(
             helpers.get_data_path("simple_fault_demo_hazard/job.ini"))
 
         hazard_curve = [

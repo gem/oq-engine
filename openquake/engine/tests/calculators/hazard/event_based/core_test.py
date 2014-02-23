@@ -71,7 +71,7 @@ class FakeRupture(object):
         self.id = id
 
 
-class EventBasedHazardTestCase(unittest.TestCase):
+class GmfCollectorTestCase(unittest.TestCase):
     """Tests for the routines used by the event-based hazard calculator"""
 
     # test a case with 5 sites and 2 ruptures
@@ -82,32 +82,35 @@ class EventBasedHazardTestCase(unittest.TestCase):
         hc.maximum_distance = 200.
 
         gsim = get_available_gsims()['AkkarBommer2010']()
-        site_coll = make_site_coll(-78, 15.5, n=5)
+        num_sites = 5
+        site_coll = make_site_coll(-78, 15.5, num_sites)
         params = dict(truncation_level=3,
                       correl_model=None,
-                      maximum_distance=200)
+                      maximum_distance=200,
+                      num_sites=num_sites)
         trt = 'Subduction Interface'
-        rupture_ids = range(2)
-        ruptures = [FakeRupture(i, trt) for i in rupture_ids]
-        rupture_seeds = rupture_ids
+        rup_id, rup_seed = 42, 44
+        rup = FakeRupture(rup_id, trt)
         pga = PGA()
-        gmv_dict, rup_dict = core._compute_gmf(
-            params, [pga], {trt: gsim}, site_coll, ruptures, rupture_seeds)
+        rlz = mock.Mock()
+        coll = core.GmfCollector(
+            [s.id for s in site_coll], params, [pga], {rlz: {trt: gsim}})
+        coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
-            (pga, 0): rupture_ids,
-            (pga, 1): rupture_ids,
-            (pga, 2): rupture_ids,
-            (pga, 3): rupture_ids,
-            (pga, 4): rupture_ids,
+            (rlz, pga, 0): [rup_id],
+            (rlz, pga, 1): [rup_id],
+            (rlz, pga, 2): [rup_id],
+            (rlz, pga, 3): [rup_id],
+            (rlz, pga, 4): [rup_id],
         }
         expected_gmvs = {
-            (pga, 0): [0.122149047040728, 0.0813899249039753],
-            (pga, 1): [0.0541662667863476, 0.02136369236082],
-            (pga, 2): [0.0772246502768338, 0.0226182956091826],
-            (pga, 3): [0.166062666449449, 0.0164127269047494],
-            (pga, 4): [0.133588538354143, 0.0529987707352876]
+            (rlz, pga, 0): [0.1027847118266612],
+            (rlz, pga, 1): [0.02726361912605336],
+            (rlz, pga, 2): [0.0862595971325641],
+            (rlz, pga, 3): [0.04727148908077005],
+            (rlz, pga, 4): [0.04750575818347277],
         }
-        numpy.testing.assert_equal(rup_dict, expected_rups)
+        numpy.testing.assert_equal(coll.ruptures_per_site, expected_rups)
         for i, gmvs in expected_gmvs.iteritems():
             numpy.testing.assert_allclose(gmvs, expected_gmvs[i])
 
@@ -119,7 +122,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.cfg = helpers.get_data_path('event_based_hazard/job_2.ini')
-        self.job = helpers.get_hazard_job(self.cfg, username=getpass.getuser())
+        self.job = helpers.get_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
         hc_id = self.job.hazard_calculation.id
         models.SiteCollection.cache[hc_id] = make_site_coll(0, 0, n=5)
@@ -161,20 +164,20 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         outputs = models.Output.objects.filter(
             oq_job=self.job, output_type='ses')
-        self.assertEqual(2, len(outputs))
+        # there is a single source model realization in this test
+        self.assertEqual(1, len(outputs))
 
-        # With this job configuration, we have 2 logic tree realizations.
+        # With this job configuration, we have 2 logic tree realizations
+        # for the GMPEs
         lt_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
         self.assertEqual(2, len(lt_rlzs))
 
-        for rlz in lt_rlzs:
-            sess = models.SES.objects.filter(
-                ses_collection__lt_realization=rlz)
-            self.assertEqual(hc.ses_per_logic_tree_path, len(sess))
-
-            for ses in sess:
-                # The only metadata in in the SES is investigation time.
-                self.assertEqual(hc.investigation_time, ses.investigation_time)
+        sess = models.SES.objects.filter(
+            ses_collection__lt_realization_ids=[r.id for r in lt_rlzs])
+        self.assertEqual(hc.ses_per_logic_tree_path, len(sess))
+        for ses in sess:
+            # The only metadata in in the SES is investigation time.
+            self.assertEqual(hc.investigation_time, ses.investigation_time)
 
     @attr('slow')
     def test_complete_event_based_calculation_cycle(self):
@@ -182,7 +185,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # and check the outputs
         os.environ['OQ_NO_DISTRIBUTE'] = '1'
         try:
-            job = helpers.run_hazard_job(self.cfg)
+            job = helpers.run_job(self.cfg)
         finally:
             del os.environ['OQ_NO_DISTRIBUTE']
         hc = job.hazard_calculation
@@ -196,16 +199,19 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             ses__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 196)
+        self.assertEqual(num_ruptures, 96)
 
         # check that we generated the right number of rows in GmfData
         # 242 = 121 sites * 2 IMTs
         num_gmf1 = models.GmfData.objects.filter(
-            gmf__lt_realization=rlz1, task_no=0).count()
+            gmf__lt_realization=rlz1).count()
         num_gmf2 = models.GmfData.objects.filter(
-            gmf__lt_realization=rlz2, task_no=0).count()
-        self.assertEqual(num_gmf1, 242)
-        self.assertEqual(num_gmf2, 242)
+            gmf__lt_realization=rlz2).count()
+
+        # with concurrent_tasks=64, this test generates 17 tasks, but
+        # only 15 gives nonzero contribution
+        self.assertEqual(num_gmf1, 242 * 15)
+        self.assertEqual(num_gmf2, 242 * 15)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
@@ -221,16 +227,13 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
     def test_task_arg_gen(self):
         hc = self.job.hazard_calculation
-
-        self.calc.initialize_sources()
-        self.calc.initialize_realizations()
+        self.calc.pre_execute()
 
         [rlz1, rlz2] = models.LtRealization.objects.filter(
             hazard_calculation=hc).order_by('id')
 
-        # create the ses collections
-        self.calc.initialize_ses_db_records(rlz1)
-        self.calc.initialize_ses_db_records(rlz2)
+        # create the ses collection
+        self.calc.initialize_ses_db_records(0, [rlz1, rlz2])
 
         # this is also testing the splitting of fault sources
         expected = [  # source_id, seed
@@ -245,23 +248,12 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             ('3-8', 930268948),
             ('3-9', 1920723121),
             ('4', 1760832373),
-            ('3-0', 895150922),
-            ('3-1', 1886047353),
-            ('3-2', 2111769094),
-            ('3-3', 1463337750),
-            ('3-4', 1752507064),
-            ('3-5', 27028211),
-            ('3-6', 670491262),
-            ('3-7', 390011773),
-            ('3-8', 249942775),
-            ('3-9', 1808974579),
-            ('4', 644370012),
         ]
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for job_id, ss, rlz in arg_gen:
-                for src, seed in ss:
+            for args in arg_gen:  # args is (job_id, src_seed_pairs, ...)
+                for src, seed in args[1]:
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
 

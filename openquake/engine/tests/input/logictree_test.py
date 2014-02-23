@@ -1753,7 +1753,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
 class LogicTreeProcessorTestCase(unittest.TestCase):
     def setUp(self):
         cfg = helpers.get_data_path('classical_job.ini')
-        job = helpers.get_hazard_job(cfg)
+        job = helpers.get_job(cfg)
 
         self.proc = logictree.LogicTreeProcessor.from_hc(
             job.hazard_calculation)
@@ -1814,7 +1814,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
     def setUp(self):
         cfg = helpers.get_data_path('classical_job.ini')
-        job = helpers.get_hazard_job(cfg)
+        job = helpers.get_job(cfg)
         self.uncertainties_applied = []
 
         def apply_uncertainty(branchset, value, source):
@@ -1862,7 +1862,7 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
 
     def _do_test(self, path, expected_result, expected_branch_ids):
         cfg = helpers.get_data_path(self.JOB_CONFIG)
-        job = helpers.get_hazard_job(cfg)
+        job = helpers.get_job(cfg)
 
         nrml_to_hazardlib = NrmlHazardlibConverter(job.hazard_calculation)
         base_path = job.hazard_calculation.base_path
