@@ -419,6 +419,7 @@ CREATE TABLE hzrdr.probabilistic_rupture (
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     depths BYTEA NOT NULL,
+    surface BYTEA NOT NULL,
     magnitude float NOT NULL
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'probabilistic_rupture', 'hypocenter', 4326, 'POINT', 2);
