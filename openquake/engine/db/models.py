@@ -210,43 +210,6 @@ def queryset_iter(queryset, chunk_size):
             offset += chunk_size
 
 
-# FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
-# the issue is the reset of the depts; we need QA tests for that
-class SiteCollection(openquake.hazardlib.site.SiteCollection):
-    cache = {}  # hazard_calculation_id -> site_collection
-
-    def __init__(self, sites):
-        super(SiteCollection, self).__init__(sites)
-        self.sites_dict = dict((s.id, s) for s in sites)
-
-    def subcollection(self, indices):
-        """
-        :param indices:
-            an array of integer identifying the ordinal of the sites
-            to select. Sites are ordered by the value of their id field
-        :returns:
-            `self` if `indices` is None, otherwise, a `SiteCollection`
-            holding sites at `indices`
-        """
-        if indices is None:
-            return self
-        sites = []
-        for i, site in enumerate(self):
-            if i in indices:
-                sites.append(site)
-        return self.__class__(sites)
-
-    def __iter__(self):
-        ids = sorted(self.sites_dict)
-        for site_id in ids:
-            yield self.sites_dict[site_id]
-
-    def get_by_id(self, site_id):
-        return self.sites_dict[site_id]
-
-    def __contains__(self, site):
-        return site.id in self.sites_dict
-
 ## Tables in the 'admin' schema.
 
 
@@ -406,6 +369,8 @@ class CNodeStats(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"cnode_stats'
+
+site_collection_cache = {}
 
 
 class HazardCalculation(djm.Model):
@@ -797,8 +762,8 @@ class HazardCalculation(djm.Model):
         site parameters are used for all sites. The sites are ordered by id,
         to ensure reproducibility in tests.
         """
-        if self.id in SiteCollection.cache:
-            return SiteCollection.cache[self.id]
+        if self.id in site_collection_cache:
+            return site_collection_cache[self.id]
 
         hsites = HazardSite.objects.filter(
             hazard_calculation=self).order_by('id')
@@ -833,7 +798,8 @@ class HazardCalculation(djm.Model):
             sites.append(openquake.hazardlib.site.Site(
                          pt, vs30, measured, z1pt0, z2pt5, hsite.id))
 
-        sc = SiteCollection.cache[self.id] = SiteCollection(sites)
+        sc = site_collection_cache[self.id] = \
+            openquake.hazardlib.site.SiteCollection(sites)
         return sc
 
     def get_imts(self):
