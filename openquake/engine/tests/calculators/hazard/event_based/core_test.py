@@ -24,7 +24,7 @@ from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.source.rupture import Rupture
-from openquake.hazardlib.site import Site
+from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
@@ -53,7 +53,7 @@ def make_site_coll(lon, lat, n):
         site = Site(Point(lon - float(i) / 1000, lat),
                     800., 'measured', 50., 2.5, i)
         sites.append(site)
-    return models.SiteCollection(sites)
+    return SiteCollection(sites)
 
 
 class FakeRupture(object):
@@ -125,7 +125,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.job = helpers.get_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
         hc_id = self.job.hazard_calculation.id
-        models.SiteCollection.cache[hc_id] = make_site_coll(0, 0, n=5)
+        models.site_collection_cache[hc_id] = make_site_coll(0, 0, n=5)
         models.JobStats.objects.create(oq_job=self.job)
 
     @unittest.skip  # temporarily skipped
