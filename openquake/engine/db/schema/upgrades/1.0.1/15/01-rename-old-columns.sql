@@ -9,4 +9,3 @@ ALTER TABLE hzrdr.ses_rupture RENAME COLUMN old_lats TO lats;
 ALTER TABLE hzrdr.ses_rupture RENAME COLUMN old_depths TO depths;
 
 ALTER TABLE hzrdr.ses_rupture DROP COLUMN rupture;
-ALTER TABLE hzrdr.ses_rupture DROP COLUMN surface;
