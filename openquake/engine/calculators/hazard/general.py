@@ -45,7 +45,8 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter, SequenceSplitter, ceil
+from openquake.engine.utils.general import \
+    block_splitter, SequenceSplitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -199,19 +200,10 @@ class BaseHazardCalculator(base.Calculator):
         self.parse_risk_models()
         self.initialize_site_model()
         num_sources = self.initialize_sources()
-        try:
-            js = models.JobStats.objects.get(oq_job=self.job)
-            js.num_sources = num_sources
-            js.save()
-        except Exception as e:
-            # this is normal in tests where everything is mocked
-            logs.LOG.warn('Could not save job_stats.num_sources: %s', e)
+        js = models.JobStats.objects.get(oq_job=self.job)
+        js.num_sources = num_sources
+        js.save()
         self.initialize_realizations()
-
-        self.rlzs_per_ltpath = collections.defaultdict(list)
-        for rlz in self._get_realizations():
-            ltpath = tuple(rlz.sm_lt_path)
-            self.rlzs_per_ltpath[ltpath].append(rlz)
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
@@ -367,6 +359,14 @@ class BaseHazardCalculator(base.Calculator):
         else:
             # full paths enumeration
             self._initialize_realizations_enumeration()
+
+        self.rlzs_per_ltpath = collections.OrderedDict()
+        for rlz in self._get_realizations():
+            ltpath = tuple(rlz.sm_lt_path)
+            if not ltpath in self.rlzs_per_ltpath:
+                self.rlzs_per_ltpath[ltpath] = [rlz]
+            else:
+                self.rlzs_per_ltpath[ltpath].append(rlz)
 
     def _initialize_realizations_enumeration(self):
         """

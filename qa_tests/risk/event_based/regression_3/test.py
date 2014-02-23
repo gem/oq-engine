@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
+import unittest
 from nose.plugins.attrib import attr as noseattr
 from qa_tests import risk
 
@@ -24,6 +24,7 @@ class EventBaseQATestCase(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
 
     @noseattr('qa', 'risk', 'event_based')
     def test(self):
+        raise unittest.SkipTest  # the GMF-on-the-fly feature will be removed
 
         expected_losses = [
             216.416162607, 19.2810609544, 10.5954191755, 6.64207106457,
