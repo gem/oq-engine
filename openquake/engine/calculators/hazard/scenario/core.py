@@ -89,8 +89,7 @@ def save_gmf(gmf_id, gmf_dict, sites, task_no):
     :param dict gmf_dict:
         The GMF results during the calculation
     :param sites:
-        An :class:`openquake.engine.models.SiteCollection`
-        object
+        An :class:`openquake.hazardlib.site.SiteCollection` object
     """
     inserter = writer.CacheInserter(models.GmfData, 100)
     # NB: GmfData may contain large arrays and the cache may become large
