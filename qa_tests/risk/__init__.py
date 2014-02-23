@@ -213,6 +213,9 @@ class CompleteTestCase(object):
                 print "Problems with output %s" % str(data_hash)
                 raise
 
+        # remove the actual directory only if everything goes well
+        shutil.rmtree(actual_path)
+
     def _csv(self, filename, *slicer, **kwargs):
         dtype = kwargs.get('dtype', float)
         path = self._test_path("expected/%s.csv" % filename)
