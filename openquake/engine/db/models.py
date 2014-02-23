@@ -1700,6 +1700,7 @@ class ProbabilisticRupture(djm.Model):
     lons = fields.PickleField(null=False)
     lats = fields.PickleField(null=False)
     depths = fields.PickleField(null=False)
+    surface = fields.PickleField(null=False)
 
     class Meta:
         db_table = 'hzrdr\".\"probabilistic_rupture'
@@ -1729,6 +1730,7 @@ class ProbabilisticRupture(djm.Model):
             lons=lons,
             lats=lats,
             depths=depths,
+            surface=rupture.surface,
             hypocenter=rupture.hypocenter.wkt2d,
             )
 
