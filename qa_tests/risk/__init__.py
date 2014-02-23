@@ -203,10 +203,8 @@ class CompleteTestCase(object):
                 actual_path = self._test_path("actual/%s.csv" % data_hash)
                 actual_file = open(actual_path, 'w')
                 continue
-            if not data_hash in outputs:
-                print >> sys.stderr, \
-                    "The output with hash %s is missing" % str(data_hash)
-                continue
+            assert data_hash in outputs, \
+                "The output with hash %s is missing" % str(data_hash)
             actual_output = outputs[data_hash]
             actual_file.write(actual_output.to_csv_str() + '\n')
             try:
