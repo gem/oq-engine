@@ -1701,6 +1701,7 @@ class SESRupture(djm.Model):
     lons = fields.PickleField(null=False)
     lats = fields.PickleField(null=False)
     depths = fields.PickleField(null=False)
+    surface = fields.PickleField(null=False)
 
     class Meta:
         db_table = 'hzrdr\".\"ses_rupture'
@@ -1735,6 +1736,7 @@ class SESRupture(djm.Model):
             lons=lons,
             lats=lats,
             depths=depths,
+            surface=rupture.surface,
             tag='smlt=%02d|ses=%04d|src=%s|occ=%02d'
             % (ses.ses_collection.ordinal, ses.ordinal, source_id, occ),
             hypocenter=rupture.hypocenter.wkt2d,

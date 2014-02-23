@@ -419,6 +419,7 @@ CREATE TABLE hzrdr.ses_rupture (
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     depths BYTEA NOT NULL,
+    surface BYTEA NOT NULL,
     tag VARCHAR NOT NULL,
     magnitude float NOT NULL
 ) TABLESPACE hzrdr_ts;
