@@ -144,7 +144,7 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
                 filename = '%s-smltp_%s-gsimltp_%s.%s' % (
                     output_type, sm_ltp, gsim_ltp, file_ext
                 )
-    elif output_type in ('gmf', 'ses'):
+    elif output_type == 'gmf':
         # only logic trees, no stats
         ltr = result.lt_realization
         sm_ltp = core.LT_PATH_JOIN_TOKEN.join(ltr.sm_lt_path)
@@ -158,6 +158,18 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
             # End Branch Enumeration
             filename = '%s-smltp_%s-gsimltp_%s.%s' % (
                 output_type, sm_ltp, gsim_ltp, file_ext
+            )
+    elif output_type == 'ses':
+        sm_ltp = core.LT_PATH_JOIN_TOKEN.join(result.sm_lt_path)
+        if result.weight is None:
+            # Monte-Carlo logic tree sampling
+            filename = '%s-smltp_%s-ltr_%s.%s' % (
+                output_type, sm_ltp, result.ordinal, file_ext
+            )
+        else:
+            # End Branch Enumeration
+            filename = '%s-smltp_%s.%s' % (
+                output_type, sm_ltp, file_ext
             )
     elif output_type == 'disagg_matrix':
         # only logic trees, no stats
@@ -349,15 +361,12 @@ def export_ses_xml(output, target):
     """
     ses_coll = models.SESCollection.objects.get(output=output.id)
     haz_calc = output.oq_job.hazard_calculation
-
-    lt_rlz = ses_coll.lt_realization
-    sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
-    gsim_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.gsim_lt_path)
+    sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(ses_coll.sm_lt_path)
 
     dest = _get_result_export_dest(haz_calc.id, target,
                                    output.ses)
 
-    writer = writers.SESXMLWriter(dest, sm_lt_path, gsim_lt_path)
+    writer = writers.SESXMLWriter(dest, sm_lt_path)
     writer.serialize(ses_coll)
 
     return dest
