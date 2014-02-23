@@ -192,10 +192,9 @@ class CompleteTestCase(object):
 
         outputs = dict(outputs)
 
-        actual_file = None
-        actual_path = self._test_path('actual')
-        if not os.path.exists(actual_path):
-            os.mkdir(actual_path)
+        actual_dir = self._test_path('actual')
+        if not os.path.exists(actual_dir):
+            os.mkdir(actual_dir)
 
         for data_hash, expected_output in self.expected_output_data():
             if expected_output is None:
@@ -214,7 +213,7 @@ class CompleteTestCase(object):
                 raise
 
         # remove the actual directory only if everything goes well
-        shutil.rmtree(actual_path)
+        shutil.rmtree(actual_dir)
 
     def _csv(self, filename, *slicer, **kwargs):
         dtype = kwargs.get('dtype', float)
