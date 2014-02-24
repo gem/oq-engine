@@ -1,3 +1,4 @@
+ALTER TABLE hzrdr.ses_rupture RENAME COLUMN old_surface TO surface;
 ALTER TABLE hzrdr.ses_rupture RENAME COLUMN old_rake TO rake;
 ALTER TABLE hzrdr.ses_rupture RENAME COLUMN old_tectonic_region_type TO tectonic_region_type;
 ALTER TABLE hzrdr.ses_rupture RENAME COLUMN old_is_from_fault_source TO is_from_fault_source;
