@@ -24,10 +24,6 @@ from openquake.engine.utils import tasks
 ROUTING_KEY_FMT = 'oq.job.%(job_id)s.tasks'
 
 
-# Default progress handler. It just ignores its arguments
-DEFAULT_PROGRESS_HANDLER = lambda _p, _c: None
-
-
 class Calculator(object):
     """
     Base class for all calculators.
@@ -42,19 +38,6 @@ class Calculator(object):
     def __init__(self, job):
         self.job = job
         self.num_tasks = None
-        self.progress_handler = DEFAULT_PROGRESS_HANDLER
-
-    def register_progress_handler(self, fn):
-        """
-        Register a callback which provides information on the progress
-        of the calculation.
-
-        :param callable fn:
-            a callable accepting two arguments:
-            1) the job status (e.g. "pre-executing", "22%")
-            2) the calculation object
-        """
-        self.progress_handler = fn
 
     def monitor(self, operation):
         """
@@ -131,9 +114,8 @@ class Calculator(object):
         self.tasksdone += 1
         percent = int(float(self.tasksdone) / self.num_tasks * 100)
         if percent > self.percent:
-            logs.LOG.progress('> %s %3d%% complete', self.taskname, percent)
+            logs.LOG.progress('> %s %3d%%', self.taskname, percent)
             self.percent = percent
-            self.progress_handler("%3d%%" % percent, self.hc)
 
     def pre_execute(self):
         """
