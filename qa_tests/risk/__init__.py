@@ -213,7 +213,7 @@ class CompleteTestCase(object):
                 raise
 
         # remove the actual directory only if everything goes well
-        shutil.rmtree(actual_dir)
+        #shutil.rmtree(actual_dir)
 
     def _csv(self, filename, *slicer, **kwargs):
         dtype = kwargs.get('dtype', float)
