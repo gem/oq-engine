@@ -43,7 +43,7 @@ class Site(object):
         Vertical distance from earth surface to the layer where seismic waves
         start to propagate with a speed above 2.5 km/sec, in km.
     :param id:
-        Optional parameter with default None. If given, it should be an
+        Optional parameter with default 0. If given, it should be an
         integer identifying the site univocally.
 
     :raises ValueError:
@@ -55,7 +55,7 @@ class Site(object):
     """
     __slots__ = 'location vs30 vs30measured z1pt0 z2pt5 id'.split()
 
-    def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5, id=None):
+    def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5, id=0):
         if not vs30 > 0:
             raise ValueError('vs30 must be positive')
         if not z1pt0 > 0:
@@ -116,18 +116,20 @@ class SiteCollection(object):
     def __init__(self, sites):
         self.indices = None
         self.total_sites = len(sites)
-        self.vs30 = numpy.zeros(len(sites))
+        self.vs30 = zeros = numpy.zeros(len(sites))
         self.vs30measured = numpy.zeros(len(sites), dtype=bool)
-        self.z1pt0 = self.vs30.copy()
-        self.z2pt5 = self.vs30.copy()
-        lons = self.vs30.copy()
-        lats = self.vs30.copy()
+        self.z1pt0 = zeros.copy()
+        self.z2pt5 = zeros.copy()
+        self.sid = numpy.zeros(len(sites), dtype=int)
+        lons = zeros.copy()
+        lats = zeros.copy()
 
         for i in xrange(len(sites)):
             self.vs30[i] = sites[i].vs30
             self.vs30measured[i] = sites[i].vs30measured
             self.z1pt0[i] = sites[i].z1pt0
             self.z2pt5[i] = sites[i].z2pt5
+            self.sid[i] = sites[i].id
             lons[i] = sites[i].location.longitude
             lats[i] = sites[i].location.latitude
 
@@ -140,7 +142,7 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         for arr in (self.vs30, self.vs30measured, self.z1pt0, self.z2pt5,
-                    self.mesh.lons, self.mesh.lats):
+                    self.sid, self.mesh.lons, self.mesh.lats):
             arr.flags.writeable = False
 
     def __iter__(self):
@@ -150,12 +152,13 @@ class SiteCollection(object):
         """
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i])
+                       self.z1pt0[i], self.z2pt5[i], self.sid[i])
 
     def expand(self, data, placeholder):
         """
-        Expand a short array `data` over a filtered site collection of the same length
-        and return a long array of size `total_sites` filled with the placeholder.
+        Expand a short array `data` over a filtered site collection of the
+        same length and return a long array of size `total_sites` filled
+        with the placeholder.
 
         The typical workflow is the following: there is a whole site
         collection, the one that has an information about all the sites.
@@ -251,6 +254,7 @@ class SiteCollection(object):
         col.vs30measured = self.vs30measured.take(indices)
         col.z1pt0 = self.z1pt0.take(indices)
         col.z2pt5 = self.z2pt5.take(indices)
+        col.sid = self.sid.take(indices)
         col.mesh = Mesh(self.mesh.lons.take(indices),
                         self.mesh.lats.take(indices),
                         depths=None)
@@ -267,7 +271,7 @@ class SiteCollection(object):
             col.indices = indices
         # do the same as in the constructor
         for arr in (col.vs30, col.vs30measured, col.z1pt0, col.z2pt5,
-                    col.mesh.lons, col.mesh.lats):
+                    col.sid, col.mesh.lons, col.mesh.lats):
             arr.flags.writeable = False
         return col
 
