@@ -1587,7 +1587,7 @@ def is_multi_surface(rupture):
     return is_char and is_multi_sur
 
 
-def get_geom(rupture, is_from_fault_source, is_multi_surface):
+def get_geom(surface, is_from_fault_source, is_multi_surface):
     """
     The following fields can be interpreted different ways,
     depending on the value of `is_from_fault_source`. If
@@ -1608,7 +1608,7 @@ def get_geom(rupture, is_from_fault_source, is_multi_surface):
     if is_from_fault_source:
         # for simple and complex fault sources,
         # rupture surface geometry is represented by a mesh
-        surf_mesh = rupture.surface.get_mesh()
+        surf_mesh = surface.get_mesh()
         lons = surf_mesh.lons
         lats = surf_mesh.lats
         depths = surf_mesh.depths
@@ -1617,7 +1617,7 @@ def get_geom(rupture, is_from_fault_source, is_multi_surface):
             # `list` of
             # openquake.hazardlib.geo.surface.planar.PlanarSurface
             # objects:
-            surfaces = rupture.surface.surfaces
+            surfaces = surface.surfaces
 
             # lons, lats, and depths are arrays with len == 4*N,
             # where N is the number of surfaces in the
@@ -1633,7 +1633,6 @@ def get_geom(rupture, is_from_fault_source, is_multi_surface):
             # For area or point source,
             # rupture geometry is represented by a planar surface,
             # defined by 3D corner points
-            surface = rupture.surface
             lons = numpy.zeros((4))
             lats = numpy.zeros((4))
             depths = numpy.zeros((4))
@@ -1658,15 +1657,10 @@ class SESRupture(djm.Model):
     magnitude = djm.FloatField(null=False)
     hypocenter = djm.PointField(srid=DEFAULT_SRID)
     tag = djm.TextField(null=False)
-    strike = djm.FloatField(null=False)
-    dip = djm.FloatField(null=False)
     rake = djm.FloatField(null=False)
     tectonic_region_type = djm.TextField(null=False)
     is_from_fault_source = djm.NullBooleanField(null=False)
     is_multi_surface = djm.NullBooleanField(null=False)
-    lons = fields.PickleField(null=False)
-    lats = fields.PickleField(null=False)
-    depths = fields.PickleField(null=False)
     surface = fields.PickleField(null=False)
 
     class Meta:
@@ -1689,24 +1683,53 @@ class SESRupture(djm.Model):
         """
         iffs = is_from_fault_source(rupture)
         ims = is_multi_surface(rupture)
-        lons, lats, depths = get_geom(rupture, iffs, ims)
+        lons, lats, depths = get_geom(rupture.surface, iffs, ims)
         return cls.objects.create(
             ses=ses,
             magnitude=rupture.mag,
-            strike=rupture.surface.get_strike(),
-            dip=rupture.surface.get_dip(),
             rake=rupture.rake,
             tectonic_region_type=rupture.tectonic_region_type,
             is_from_fault_source=iffs,
             is_multi_surface=ims,
-            lons=lons,
-            lats=lats,
-            depths=depths,
             surface=rupture.surface,
             tag='smlt=%02d|ses=%04d|src=%s|occ=%02d'
             % (ses.ses_collection.ordinal, ses.ordinal, source_id, occ),
             hypocenter=rupture.hypocenter.wkt2d,
             )
+
+    _geom = None
+
+    @property
+    def geom(self):
+        """
+        Extract the triple (lons, lats, depths) from the surface geometry
+        (cached).
+        """
+        if self._geom is not None:
+            return self._geom
+        self._geom = get_geom(self.surface, self.is_from_fault_source,
+                              self.is_multi_surface)
+        return self._geom
+
+    @property
+    def lons(self):
+        return self.geom[0]
+
+    @property
+    def lats(self):
+        return self.geom[1]
+
+    @property
+    def depths(self):
+        return self.geom[2]
+
+    @property
+    def strike(self):
+        return self.surface.get_strike()
+
+    @property
+    def dip(self):
+        return self.surface.get_dip()
 
     def _validate_planar_surface(self):
         """
