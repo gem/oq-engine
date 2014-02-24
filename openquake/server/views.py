@@ -256,20 +256,19 @@ def run_calc(request, job_type):
                 hazard_output_id=hazard_output_id,
                 hazard_calculation_id=hazard_calculation_id),
             create_detect_job_file("job.ini", "job_risk.ini"))
-
-        calc = job.risk_calculation if job_type == 'risk' \
-            else job.hazard_calculation
-        executor.submit(
-            tasks.run_calc, job_type, calc.id, temp_dir,
-            callback_url=callback_url,
-            foreign_calc_id=foreign_calc_id,
-            dbname=request.POST['database'])
-    except:
+    except:  # catch errors in the job_from_file phase
         etype, exc, tb = sys.exc_info()
         einfo = "".join(traceback.format_tb(tb))
+        einfo += '%s: %s' % (etype.__name__, exc)
         tasks.update_calculation(callback_url, status="failed", einfo=einfo)
         raise
 
+    calc = job.calculation
+    executor.submit(
+        tasks.run_calc, job_type, calc.id, temp_dir,
+        callback_url=callback_url,
+        foreign_calc_id=foreign_calc_id,
+        dbname=request.POST['database'])
     try:
         response_data = _get_calc_info(job_type, calc.id)
     except ObjectDoesNotExist:

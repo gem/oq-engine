@@ -18,8 +18,8 @@
 # <https://www.gnu.org/licenses/agpl.html>.
 
 import sys
-import traceback
 import logging
+import traceback
 import collections
 import shutil
 import tempfile
@@ -40,38 +40,67 @@ DEFAULT_LOG_LEVEL = 'progress'
 logger = logging.getLogger(__name__)
 
 
-def run_calc(calc_type, calc_id, calc_dir,
+class ProgressHandler(logging.Handler):
+    """
+    A logging handler to update the status of the job as seen
+    from the platform.
+    """
+    def __init__(self, callback_url, calc):
+        logging.Handler.__init__(self)
+        self.callback_url = callback_url
+        self.calc = calc
+
+    def emit(self, record):
+        """
+        Update the status field on icebox_calculation with the percentage
+        """
+        update_calculation(
+            self.callback_url,
+            status=record.getMessage(),
+            description=self.calc.description)
+
+
+def run_calc(job_type, calc_id, calc_dir,
              callback_url=None, foreign_calc_id=None,
              dbname="platform"):
     """
     Run a calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
-    and is ready to execute.
+    and is ready to execute. This function never fails; errors are trapped
+    but not logged since the engine already logs them.
 
-    :param calc_type: 'hazard' or 'risk'
+    :param job_type:
+        'hazard' or 'risk'
+    :param calc_id:
+        the calculation id on the engine
+    :param calc_dir:
+        the directory with the input files
+    :param callback_url:
+        the URL to call at the end of the calculation
+    :param foreign_calc_id:
+        the calculation id on the platform
+    :param dbname:
+        the platform database name
     """
     job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
-
     update_calculation(callback_url, status="started", engine_id=calc_id)
+
     exports = []
     # TODO: Log to file somewhere. But where?
     log_file = None
-
-    def progress_handler(status, calculation):
-        update_calculation(
-            callback_url,
-            status=status,
-            description=calculation.description)
-
+    progress_handler = ProgressHandler(callback_url, job.calculation)
+    logging.root.addHandler(progress_handler)
     try:
-        engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, calc_type,
-                        progress_handler=progress_handler)
-    except:
+        engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, job_type)
+    except:  # catch the errors before task spawning
+        # do not log the errors, since the engine already does that
         exctype, exc, tb = sys.exc_info()
-        einfo = '%s: %s\n%s' % (exctype.__name__, exc,
-                                ''.join(traceback.format_tb(tb)))
+        einfo = ''.join(traceback.format_tb(tb))
+        einfo += '%s: %s' % (exctype.__name__, exc)
         update_calculation(callback_url, status="failed", einfo=einfo)
         return
+    finally:
+        logging.root.removeHandler(progress_handler)
 
     shutil.rmtree(calc_dir)
 
@@ -122,24 +151,11 @@ def update_calculation(callback_url=None, **query):
     Update a foreign calculation by POSTing `query` data to
     `callback_url`.
     """
-
     if callback_url is None:
         return
-
-    if query:
-        data = urllib.urlencode(query)
-    else:
-        data = ""
-
-    try:
-        # post to an external service, asking it to finalize
-        # calculation results
-        url = urllib2.urlopen(callback_url, data=data)
-    except urllib2.HTTPError as e:
-        # TODO: better logging/signalling of such an error?
-        print e.code, e.reason
-        raise
-    else:
+    try:  # post to an external service
+        url = urllib2.urlopen(callback_url, data=urllib.urlencode(query))
+    finally:
         url.close()
 
 

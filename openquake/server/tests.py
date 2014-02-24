@@ -482,6 +482,9 @@ FakeUser = namedtuple('FakeUser', 'id')
 FakeJob = namedtuple(
     'FakeJob', 'status, owner, hazard_calculation, risk_calculation'
 )
+FakeJob.calculation = property(
+    lambda self: self.risk_calculation or self.hazard_calculation)
+
 FakeCalc = namedtuple('FakeCalc', 'id, description')
 
 
