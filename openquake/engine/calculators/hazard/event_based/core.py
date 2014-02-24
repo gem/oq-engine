@@ -92,8 +92,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
 
-    gmfcollector = GmfCollector(
-        [s.id for s in hc.site_collection], params, imts, gsims_by_rlz)
+    gmfcollector = GmfCollector(params, imts, gsims_by_rlz)
 
     mon1 = LightMonitor('filtering sites', job_id, compute_ses_and_gmfs)
     mon2 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
@@ -183,10 +182,8 @@ class GmfCollector(object):
     """
     A class to compute and save ground motion fields.
     """
-    def __init__(self, site_ids, params, imts, gsims_by_rlz):
+    def __init__(self, params, imts, gsims_by_rlz):
         """
-        :param site_ids:
-            a list of site ids
         :param params:
             a dictionary of parameters with keys
             correl_model, truncation_level, maximum_distance
@@ -195,7 +192,6 @@ class GmfCollector(object):
         :param gsims_by_rlz:
             a dictionary  {rlz -> {tectonic region type -> GSIM instance}}
         """
-        self.site_ids = site_ids
         self.params = params
         self.imts = imts
         self.gsims_by_rlz = gsims_by_rlz
@@ -235,11 +231,10 @@ class GmfCollector(object):
             for imt, gmf_1_realiz in gmf_dict.iteritems():
                 # since DEFAULT_GMF_REALIZATIONS is 1, gmf_1_realiz is a matrix
                 # with n_sites rows and 1 column
-                for idx, gmv in enumerate(gmf_1_realiz):
+                for site_id, gmv in zip(r_sites.sid, gmf_1_realiz):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
-                        site_id = self.site_ids[idx]
                         self.gmvs_per_site[rlz, imt, site_id].append(gmv)
                         self.ruptures_per_site[rlz, imt, site_id].append(
                             rupture_id)
