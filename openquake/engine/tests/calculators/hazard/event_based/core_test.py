@@ -93,8 +93,7 @@ class GmfCollectorTestCase(unittest.TestCase):
         rup = FakeRupture(rup_id, trt)
         pga = PGA()
         rlz = mock.Mock()
-        coll = core.GmfCollector(
-            [s.id for s in site_coll], params, [pga], {rlz: {trt: gsim}})
+        coll = core.GmfCollector(params, [pga], {rlz: {trt: gsim}})
         coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
             (rlz, pga, 0): [rup_id],
