@@ -2459,7 +2459,7 @@ class AggregateLoss(djm.Model):
 
     def to_csv_str(self):
         """
-        Convert LossCurve into a CSV string
+        Convert AggregateLoss into a CSV string
         """
         return '\n'.join(data.to_csv_str() for data in self)
 
@@ -2584,7 +2584,7 @@ class AggregateLossCurveData(djm.Model):
 
     def to_csv_str(self):
         """
-        Convert LossCurveData into a CSV string
+        Convert AggregateLossCurveData into a CSV string
         """
         data = ','.join(map(str, ['', 'Losses'] + list(self.losses))) + '\n'
         data += ','.join(map(str, ['', 'PoE'] + list(self.poes)))
