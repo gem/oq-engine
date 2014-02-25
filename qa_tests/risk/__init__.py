@@ -192,10 +192,9 @@ class CompleteTestCase(object):
 
         outputs = dict(outputs)
 
-        actual_file = None
-        actual_path = self._test_path('actual')
-        if not os.path.exists(actual_path):
-            os.mkdir(actual_path)
+        actual_dir = self._test_path('actual')
+        if not os.path.exists(actual_dir):
+            os.mkdir(actual_dir)
 
         for data_hash, expected_output in self.expected_output_data():
             if expected_output is None:
@@ -203,10 +202,8 @@ class CompleteTestCase(object):
                 actual_path = self._test_path("actual/%s.csv" % data_hash)
                 actual_file = open(actual_path, 'w')
                 continue
-            if not data_hash in outputs:
-                print >> sys.stderr, \
-                    "The output with hash %s is missing" % str(data_hash)
-                continue
+            assert data_hash in outputs, \
+                "The output with hash %s is missing" % str(data_hash)
             actual_output = outputs[data_hash]
             actual_file.write(actual_output.to_csv_str() + '\n')
             try:
@@ -214,6 +211,9 @@ class CompleteTestCase(object):
             except AssertionError:
                 print "Problems with output %s" % str(data_hash)
                 raise
+
+        # remove the actual directory only if everything goes well
+        shutil.rmtree(actual_dir)
 
     def _csv(self, filename, *slicer, **kwargs):
         dtype = kwargs.get('dtype', float)
