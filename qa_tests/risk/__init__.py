@@ -196,6 +196,7 @@ class CompleteTestCase(object):
         if not os.path.exists(actual_dir):
             os.mkdir(actual_dir)
 
+        actual_file = None
         for data_hash, expected_output in self.expected_output_data():
             if expected_output is None:
                 # data_hash is actually a string identifying the data file
@@ -205,7 +206,8 @@ class CompleteTestCase(object):
             assert data_hash in outputs, \
                 "The output with hash %s is missing" % str(data_hash)
             actual_output = outputs[data_hash]
-            actual_file.write(actual_output.to_csv_str() + '\n')
+            if actual_file:
+                actual_file.write(actual_output.to_csv_str() + '\n')
             try:
                 expected_output.assertAlmostEqual(actual_output)
             except AssertionError:
