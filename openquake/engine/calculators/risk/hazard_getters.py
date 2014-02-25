@@ -208,16 +208,6 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
-
-    def __init__(
-            self, hazard, assets, max_distance, imt, seeds=None, ltp=None):
-        super(GroundMotionValuesGetter, self).__init__(
-            hazard, assets, max_distance, imt)
-        assert hazard[0].output_type != "ses" or (
-            seeds is not None and ltp is not None)
-        self.seeds = seeds or [None] * len(hazard)
-        self.logic_tree_processor = ltp
-
     def __call__(self, monitor=None):
         """
         Override base method to seed the rng for each hazard output
