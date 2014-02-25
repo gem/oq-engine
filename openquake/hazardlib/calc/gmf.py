@@ -31,7 +31,9 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     Given an earthquake rupture, the ground motion field calculator computes
     ground shaking over a set of sites, by randomly sampling a ground shaking
     intensity model. A ground motion field represents a possible 'realization'
-    of the ground shaking due to an earthquake rupture.
+    of the ground shaking due to an earthquake rupture. If a non-trivial
+    filtering function is passed, the final result is expanded and filled
+    with zeros in the places corresponding to the filtered out sites.
 
     .. note::
 
