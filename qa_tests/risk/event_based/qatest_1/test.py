@@ -45,7 +45,7 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
                 for cost in costs:
                     csv_name = "%s_%s" % (branch, cost)
                     data = self._csv(csv_name)
-                    yield csv_name, None
+                    yield csv_name, 'csv_name'
                     for i, asset in enumerate(assets):
                         descriptor = (u'event_loss_curve', metadata, None,
                                       None, False, False, cost, asset)
@@ -64,12 +64,12 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
 
         aggregate_loss_curves = [
             ('aggregates', None)] + [
-            ((u'agg_loss_curve', branch, None,
-              None, True, False, "structural"),
-             models.AggregateLossCurveData(
-                 losses=data[i * 2, 2:],
-                 poes=data[i * 2 + 1, 2:]))
-            for i, branch in enumerate(branches.values())]
+                ((u'agg_loss_curve', branch, None,
+                  None, True, False, "structural"),
+                 models.AggregateLossCurveData(
+                     losses=data[i * 2, 2:],
+                     poes=data[i * 2 + 1, 2:]))
+                for i, branch in enumerate(branches.values())]
 
         # we check only the first 10 values of the event loss table
         data = self._csv('event_loss_table')[1:, 0:3]
