@@ -22,22 +22,15 @@ A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
-import itertools
 import collections
 import numpy
-import scipy
 
-import cPickle as pickle
-
-from openquake.hazardlib import geo, const
-from openquake.hazardlib.calc import filters
-from openquake.hazardlib.calc.gmf import ground_motion_field_with_residuals
+from openquake.hazardlib import geo
 from openquake.hazardlib.imt import from_string
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.performance import DummyMonitor, LightMonitor
-from openquake.engine.calculators.hazard import general
+from openquake.engine.performance import DummyMonitor
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
@@ -212,9 +205,8 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         Override base method to seed the rng for each hazard output
         """
-        for hazard, seed in zip(self.hazard_outputs, self.seeds):
+        for hazard in self.hazard_outputs:
             h = hazard.output_container
-            numpy.random.seed(seed)
             assets, data = self.get_assets_data(h, monitor)
             if len(assets) > 0:
                 yield hazard.id, assets, data
