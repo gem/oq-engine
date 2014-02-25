@@ -144,7 +144,7 @@ def save_job_stats(job, disk_space=None, stop_time=None):
         hc = job.risk_calculation.hazard_calculation
     else:
         hc = job.hazard_calculation
-    if hc and hc.id in models.SiteCollection.cache:  # sites already imported
+    if hc and hc.id in models.site_collection_cache:  # sites already imported
         js.num_sites = len(hc.site_collection)
     js.save()
 
