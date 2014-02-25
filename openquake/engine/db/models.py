@@ -2461,7 +2461,8 @@ class AggregateLoss(djm.Model):
         """
         Convert AggregateLoss into a CSV string
         """
-        return '\n'.join(data.to_csv_str() for data in self)
+        return '\n'.join(data.to_csv_str('row-%d' % i)
+                         for i, data in enumerate(self, 1))
 
 
 class LossCurve(djm.Model):
@@ -2493,7 +2494,8 @@ class LossCurve(djm.Model):
         """
         Convert LossCurve into a CSV string
         """
-        return '\n'.join(data.to_csv_str() for data in self)
+        return '\n'.join(data.to_csv_str('row-%d' % i)
+                         for i, data in enumerate(self, 1))
 
     @property
     def output_hash(self):
@@ -2548,11 +2550,11 @@ class LossCurveData(djm.Model):
     def assertAlmostEqual(self, data):
         return loss_curve_almost_equal(self, data)
 
-    def to_csv_str(self):
+    def to_csv_str(self, label):
         """
         Convert LossCurveData into a CSV string
         """
-        ratios = ['', 'Ratios'] + map(str, self.loss_ratios)
+        ratios = [label, 'Ratios'] + map(str, self.loss_ratios)
         data = ','.join(ratios) + '\n'
         data += ','.join(map(str, [self.asset_value, 'PoE'] + list(self.poes)))
         return data
@@ -2582,11 +2584,11 @@ class AggregateLossCurveData(djm.Model):
     def assertAlmostEqual(self, data):
         return loss_curve_almost_equal(self, data)
 
-    def to_csv_str(self):
+    def to_csv_str(self, label):
         """
         Convert AggregateLossCurveData into a CSV string
         """
-        data = ','.join(map(str, ['', 'Losses'] + list(self.losses))) + '\n'
+        data = ','.join(map(str, [label, 'Losses'] + list(self.losses))) + '\n'
         data += ','.join(map(str, ['', 'PoE'] + list(self.poes)))
         return data
 
