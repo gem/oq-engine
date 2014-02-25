@@ -11,10 +11,14 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.test.client import RequestFactory
 from django.utils import unittest
 
-from openquake.server import views, executor
-from openquake.server import _test_utils as utils
+from openquake.engine.utils.tasks import oqtask
+from openquake.server import views, executor, tasks
+from openquake.server._test_utils import MultiMock
 
 FakeOutput = namedtuple('FakeOutput', 'id, display_name, output_type')
+
+DATADIR = os.path.join(os.path.dirname(__file__), 'data')
+TMPDIR = tempfile.gettempdir()
 
 
 class BaseViewTestCase(unittest.TestCase):
@@ -498,6 +502,16 @@ class RunCalcTestCase(BaseViewTestCase):
         self.request.POST['hazard_calculation_id'] = 666
         self.request.META = dict()
         self.request.META['HTTP_HOST'] = 'www.openquake.org'
+        self.executor_call_data = dict(count=0, args=None)
+        self.executor_submit = executor.submit
+
+        def submit(func, *args, **kwargs):
+            self.executor_call_data['args'] = (args, kwargs)
+            self.executor_call_data['count'] += 1
+        executor.submit = submit
+
+    def tearDown(self):
+        executor.submit = self.executor_submit
 
     def test(self):
         # Test job file inputs:
@@ -517,7 +531,7 @@ class RunCalcTestCase(BaseViewTestCase):
             job_from_file='openquake.engine.engine.job_from_file',
             run_task='openquake.server.tasks.run_calc',
         )
-        multi_mock = utils.MultiMock(**mocks)
+        multi_mock = MultiMock(**mocks)
 
         temp_dir = tempfile.mkdtemp()
 
@@ -528,23 +542,12 @@ class RunCalcTestCase(BaseViewTestCase):
             ((fake_model_1.path, pathjoin(temp_dir, fake_model_1.name)), {}),
             ((fake_model_2.path, pathjoin(temp_dir, fake_model_2.name)), {}),
         ]
-        jff_exp_call_args = (
-            (pathjoin(temp_dir, fake_job_file.name), 'platform', 'progress',
-             []),
-            {'hazard_calculation_id': 666, 'hazard_output_id': None}
-        )
+        jff_exp_call_args = ((pathjoin(temp_dir, fake_job_file.name),
+                              'platform', 'progress',  [], None, 666), {})
 
         try:
-            executor_call_data = dict(count=0, args=None)
-
             with multi_mock:
                 multi_mock['mkdtemp'].return_value = temp_dir
-
-                def submit(func, *args, **kwargs):
-                    executor_call_data['args'] = (args, kwargs)
-                    executor_call_data['count'] += 1
-
-                executor.submit = submit
 
                 fake_job = FakeJob(
                     'pending', FakeUser(1), None,
@@ -565,14 +568,98 @@ class RunCalcTestCase(BaseViewTestCase):
             self.assertEqual(jff_exp_call_args,
                              multi_mock['job_from_file'].call_args)
 
-            self.assertEqual(
-                {'count': 1,
-                 'args': (
-                     ('risk', 777, temp_dir),
-                     {'foreign_calc_id': None,
-                      'dbname': 'platform',
-                      'callback_url': None})},
-                executor_call_data
-            )
+            self.assertEqual({
+                'count': 1,
+                'args': (('risk', 777, temp_dir, None, None, 'platform', None),
+                         {})
+                }, self.executor_call_data)
         finally:
             shutil.rmtree(temp_dir)
+
+
+class SubmitJobTestCase(unittest.TestCase):
+    """
+    Test that the notification facility update_calculation works
+    well when submitting a job, including the case of failed jobs.
+    """
+    def setUp(self):
+        self.rmtree = mock.patch('shutil.rmtree')
+        self.nd = mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'})
+        self.uc = mock.patch('openquake.server.tasks.update_calculation')
+        self.rmtree.start()
+        self.nd.start()
+        self.uc.start()
+
+    def tearDown(self):
+        self.rmtree.stop()
+        self.nd.stop()
+        self.uc.stop()
+
+    def run_job(self, job_ini, hazard_calculation_id=None):
+        cfg_file = os.path.join(DATADIR, job_ini)
+        job, future = views.submit_job(
+            cfg_file, DATADIR, 'openquake',
+            hazard_calculation_id=hazard_calculation_id,
+            logfile=os.path.join(TMPDIR, 'server_tests.log'))
+        future.result()  # wait
+        return job
+
+    def test_haz_risk_ok(self):
+        job = self.run_job('job.ini')
+        args, kw = tasks.update_calculation.call_args
+        self.assertEqual(kw, {
+            'status': '**  complete (hazard)',
+            'description': u'Virtual Island Seismic Hazard, ses=5'})
+
+        self.run_job('job_risk.ini', job.hazard_calculation.id)
+        args, kw = tasks.update_calculation.call_args
+        self.assertEqual(kw, {
+            'status': '**  complete (risk)',
+            'description': u'Virtual Island seismic risk'})
+
+    def test_invalid(self):
+        # IOError for non-existing files, RuntimeError for validation errors
+        with self.assertRaises(IOError):
+            self.run_job('job_invalid.ini')
+        args, kw = tasks.update_calculation.call_args
+        self.assertEqual(kw['status'], 'failed')
+        self.assertIn('IOError:', kw['einfo'])
+
+    def test_error_invalid_task(self):
+        # the error here is to use a function instead of an oqtask
+        p = mock.patch(
+            'openquake.engine.calculators.hazard.event_based.core.'
+            'compute_ses_and_gmfs', lambda *args: None)
+        with p:
+            self.run_job('job.ini')
+        args, kw = tasks.update_calculation.call_args
+        self.assertEqual(kw['status'], 'failed')
+        self.assertIn("AttributeError: 'function' object has no attribute "
+                      "'request'", kw['einfo'])
+
+    def test_error_in_celery(self):
+        # the error here is inside the celery task
+        p = mock.patch(
+            'openquake.engine.calculators.hazard.event_based.core.'
+            'EventBasedHazardCalculator.core_calc_task',
+            oqtask(lambda *args: 1 / 0))
+        with p:
+            self.run_job('job.ini')
+        args, kw = tasks.update_calculation.call_args
+        self.assertEqual(kw['status'], 'failed')
+        self.assertIn("ZeroDivisionError", kw['einfo'])
+
+    def test_error_in_pre_execute(self):
+        # the error here is in the pre_execute phase
+        p = mock.patch(
+            'openquake.engine.calculators.hazard.event_based.core.'
+            'EventBasedHazardCalculator.pre_execute', lambda self: 1 / 0)
+        with p:
+            self.run_job('job.ini')
+        args, kw = tasks.update_calculation.call_args
+        self.assertEqual(kw['status'], 'failed')
+        self.assertIn("ZeroDivisionError", kw['einfo'])
+
+    @classmethod
+    def tearDownClass(cls):
+        executor.shutdown()

@@ -62,7 +62,7 @@ class ProgressHandler(logging.Handler):
 
 def run_calc(job_type, calc_id, calc_dir,
              callback_url=None, foreign_calc_id=None,
-             dbname="platform"):
+             dbname="platform", log_file=None):
     """
     Run a calculation given the calculation ID. It is assumed that the
     entire calculation profile is already loaded into the oq-engine database
@@ -82,14 +82,16 @@ def run_calc(job_type, calc_id, calc_dir,
     :param dbname:
         the platform database name
     """
-    job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
+    if job_type == 'hazard':
+        job = oqe_models.OqJob.objects.get(hazard_calculation=calc_id)
+    else:
+        job = oqe_models.OqJob.objects.get(risk_calculation=calc_id)
     update_calculation(callback_url, status="started", engine_id=calc_id)
 
     exports = []
-    # TODO: Log to file somewhere. But where?
-    log_file = None
     progress_handler = ProgressHandler(callback_url, job.calculation)
     logging.root.addHandler(progress_handler)
+
     try:
         engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, job_type)
     except:  # catch the errors before task spawning
