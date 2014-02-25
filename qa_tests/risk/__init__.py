@@ -198,7 +198,7 @@ class CompleteTestCase(object):
 
         actual_file = None
         for data_hash, expected_output in self.expected_output_data():
-            if expected_output == 'csv_name':
+            if expected_output is None:
                 # data_hash is actually a string identifying the data file
                 actual_path = self._test_path("actual/%s.csv" % data_hash)
                 actual_file = open(actual_path, 'w')
