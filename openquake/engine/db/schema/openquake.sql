@@ -410,15 +410,10 @@ CREATE TABLE hzrdr.ses (
 CREATE TABLE hzrdr.probabilistic_rupture (
     id SERIAL PRIMARY KEY,
     ses_collection_id INTEGER NOT NULL,
-    strike float NOT NULL,
-    dip float NOT NULL,
     rake float NOT NULL,
     tectonic_region_type VARCHAR NOT NULL,
     is_from_fault_source BOOLEAN NOT NULL,
     is_multi_surface BOOLEAN NOT NULL,
-    lons BYTEA NOT NULL,
-    lats BYTEA NOT NULL,
-    depths BYTEA NOT NULL,
     surface BYTEA NOT NULL,
     magnitude float NOT NULL
 ) TABLESPACE hzrdr_ts;
