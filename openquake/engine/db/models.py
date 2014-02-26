@@ -1678,9 +1678,9 @@ class ProbabilisticRupture(djm.Model):
         db_table = 'hzrdr\".\"probabilistic_rupture'
 
     @classmethod
-    def new(cls, rupture, ses_collection):
+    def create(cls, rupture, ses_collection):
         """
-        Create a ProbabilisticRupture object.
+        Create a ProbabilisticRupture row on the database.
 
         :param rupture:
             a hazardlib rupture
@@ -1690,7 +1690,7 @@ class ProbabilisticRupture(djm.Model):
         iffs = is_from_fault_source(rupture)
         ims = is_multi_surface(rupture)
         lons, lats, depths = get_geom(rupture.surface, iffs, ims)
-        return cls(
+        return cls.objects.create(
             ses_collection=ses_collection,
             magnitude=rupture.mag,
             rake=rupture.rake,
@@ -1791,9 +1791,23 @@ class SESRupture(djm.Model):
         ordering = ['tag']
 
     @classmethod
-    def create(cls, prob_rupture, ses, source_id, occ, seed):
+    def create(cls, prob_rupture, ses, source_id, occurrencies, seed):
+        """
+        Create a SESRupture row in the database.
+
+        :param prob_rupture:
+            :class:`openquake.engine.db.models.ProbabilisticRupture` instance
+        :param ses:
+            :class:`openquake.engine.db.models.SES` instance
+        :param str source_id:
+            id of the source that generated the rupture
+        :param int occurrencies:
+            the number of occurrencies of the rupture in the given ses
+        :param int seed:
+            a seed that will be used when computing the GMF from the rupture
+        """
         tag = 'smlt=%02d|ses=%04d|src=%s|occ=%02d' % (
-            ses.ses_collection.ordinal, ses.ordinal, source_id, occ)
+            ses.ses_collection.ordinal, ses.ordinal, source_id, occurrencies)
         return cls.objects.create(
             rupture=prob_rupture, ses=ses, tag=tag, seed=seed)
 
