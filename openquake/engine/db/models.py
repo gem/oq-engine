@@ -375,7 +375,7 @@ class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
     '''
-    _site_collection = numpy.array([])
+    _site_collection = ()  # see the corresponding instance variable
 
     @classmethod
     def create(cls, **kw):
