@@ -14,7 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import tempfile
-import pprint
 import os
 import sys
 import warnings
@@ -193,18 +192,31 @@ class CompleteTestCase(object):
 
         outputs = dict(outputs)
 
+        actual_dir = self._test_path('actual')
+        if not os.path.exists(actual_dir):
+            os.mkdir(actual_dir)
+
+        actual_file = None
         for data_hash, expected_output in self.expected_output_data():
-            if not data_hash in outputs:
-                found = filter(lambda o: o[0] == data_hash[0], outputs)
-                raise AssertionError(
-                    "The output with hash %s is missing. Found %s" % (
-                        str(data_hash), pprint.pformat(found)))
+            if expected_output is None:
+                # data_hash is actually a string identifying the data file
+                actual_path = self._test_path("actual/%s.csv" % data_hash)
+                actual_file = open(actual_path, 'w')
+                continue
+            assert data_hash in outputs, \
+                "The output with hash %s is missing" % str(data_hash)
             actual_output = outputs[data_hash]
+            if actual_file:
+                label = data_hash[-1]  # the asset_ref for LossCurveData
+                actual_file.write(actual_output.to_csv_str(label) + '\n')
             try:
                 expected_output.assertAlmostEqual(actual_output)
             except AssertionError:
                 print "Problems with output %s" % str(data_hash)
                 raise
+
+        # remove the actual directory only if everything goes well
+        shutil.rmtree(actual_dir)
 
     def _csv(self, filename, *slicer, **kwargs):
         dtype = kwargs.get('dtype', float)
