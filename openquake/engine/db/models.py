@@ -1698,8 +1698,7 @@ class ProbabilisticRupture(djm.Model):
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
-            hypocenter=rupture.hypocenter.wkt2d,
-            )
+            hypocenter=rupture.hypocenter.wkt2d)
 
     _geom = None
 
@@ -1792,10 +1791,11 @@ class SESRupture(djm.Model):
         ordering = ['tag']
 
     @classmethod
-    def new(cls, prob_rupture, ses, source_id, occ, seed):
+    def create(cls, prob_rupture, ses, source_id, occ, seed):
         tag = 'smlt=%02d|ses=%04d|src=%s|occ=%02d' % (
             ses.ses_collection.ordinal, ses.ordinal, source_id, occ)
-        return cls(rupture=prob_rupture, ses=ses, tag=tag, seed=seed)
+        return cls.objects.create(
+            rupture=prob_rupture, ses=ses, tag=tag, seed=seed)
 
 
 class _Point(object):

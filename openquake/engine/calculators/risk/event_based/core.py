@@ -240,7 +240,7 @@ def disaggregate(outputs, rupture_ids, params):
     """
     def disaggregate_site(site, loss_ratios):
         for fraction, rupture_id in zip(loss_ratios, rupture_ids):
-            rupture = models.SESRupture.objects.get(pk=rupture_id)
+            rupture = models.SESRupture.objects.get(pk=rupture_id).rupture
             s = rupture.surface
             m = mesh.Mesh(numpy.array([site.x]), numpy.array([site.y]), None)
 
