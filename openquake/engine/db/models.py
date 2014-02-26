@@ -2552,7 +2552,10 @@ class LossCurveData(djm.Model):
 
     def to_csv_str(self, label):
         """
-        Convert LossCurveData into a CSV string
+        Convert LossCurveData into a CSV string.
+
+        :param str label:
+            an identifier for the curve (for instance the asset_ref)
         """
         ratios = [label, 'Ratios'] + map(str, self.loss_ratios)
         data = ','.join(ratios) + '\n'
@@ -2586,7 +2589,10 @@ class AggregateLossCurveData(djm.Model):
 
     def to_csv_str(self, label):
         """
-        Convert AggregateLossCurveData into a CSV string
+        Convert AggregateLossCurveData into a CSV string.
+
+        :param str label:
+            an identifier for the curve (for instance the asset_ref)
         """
         data = ','.join(map(str, [label, 'Losses'] + list(self.losses))) + '\n'
         data += ','.join(map(str, ['', 'PoE'] + list(self.poes)))
