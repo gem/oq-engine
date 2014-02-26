@@ -2592,7 +2592,7 @@ class AggregateLossCurveData(djm.Model):
         Convert AggregateLossCurveData into a CSV string.
 
         :param str label:
-            an identifier for the curve (for instance the asset_ref)
+            an identifier for the curve (for instance the cost type)
         """
         data = ','.join(map(str, [label, 'Losses'] + list(self.losses))) + '\n'
         data += ','.join(map(str, ['', 'PoE'] + list(self.poes)))
