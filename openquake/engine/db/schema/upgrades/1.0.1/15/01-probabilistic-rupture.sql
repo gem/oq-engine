@@ -12,7 +12,7 @@ ALTER TABLE hzrdr.probabilistic_rupture
 ADD CONSTRAINT hzrdr_probabilistic_rupture_ses_collection_fk
 FOREIGN KEY (ses_collection_id) REFERENCES hzrdr.ses_collection(id);
 
-GRANT SELECT,INSERT ON hzrdr.probabilistic_rupture TO oq_job_init;
+GRANT SELECT, INSERT ON hzrdr.probabilistic_rupture TO oq_job_init;
 
 CREATE TABLE hzrdr.ses_rupture (
     id SERIAL PRIMARY KEY,
@@ -23,6 +23,7 @@ CREATE TABLE hzrdr.ses_rupture (
 ) TABLESPACE hzrdr_ts;
 
 ALTER TABLE hzrdr.ses_rupture OWNER TO oq_admin;
+GRANT SELECT, INSERT ON hzrdr.ses_rupture TO oq_job_init;
 
 ALTER TABLE hzrdr.ses_rupture
 ADD CONSTRAINT hzrdr_ses_rupture_probabilistic_rupture_fk
