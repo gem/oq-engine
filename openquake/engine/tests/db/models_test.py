@@ -164,7 +164,7 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(lats, mesh.lats)
 
 
-class SESRuptureTestCase(unittest.TestCase):
+class ProbabilisticRuptureTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
@@ -178,8 +178,6 @@ class SESRuptureTestCase(unittest.TestCase):
             oq_job=job, display_name='test', output_type='ses')
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_realization_ids=[lt_rlz.id], ordinal=0)
-        ses = models.SES.objects.create(
-            ses_collection=ses_coll, investigation_time=50.0, ordinal=1)
 
         self.mesh_lons = numpy.array(
             [0.1 * x for x in range(16)]).reshape((4, 4))
@@ -196,12 +194,12 @@ class SESRuptureTestCase(unittest.TestCase):
             Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
             Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90))
 
-        self.fault_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, rake=0, surface=sfs,
+        self.fault_rupture = models.ProbabilisticRupture.objects.create(
+            ses_collection=ses_coll, magnitude=5, rake=0, surface=sfs,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=True, is_multi_surface=False)
-        self.source_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, rake=0, surface=ps,
+        self.source_rupture = models.ProbabilisticRupture.objects.create(
+            ses_collection=ses_coll, magnitude=5, rake=0, surface=ps,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=False, is_multi_surface=False)
 
@@ -210,14 +208,15 @@ class SESRuptureTestCase(unittest.TestCase):
         # case.
         # Also, we should that planar surface corner points are not valid and
         # are more or less disregarded for this type of rupture.
-        fault_rupture = models.SESRupture.objects.get(id=self.fault_rupture.id)
+        fault_rupture = models.ProbabilisticRupture.objects.get(
+            id=self.fault_rupture.id)
         self.assertIs(None, fault_rupture.top_left_corner)
         self.assertIs(None, fault_rupture.top_right_corner)
         self.assertIs(None, fault_rupture.bottom_right_corner)
         self.assertIs(None, fault_rupture.bottom_left_corner)
 
     def test_source_rupture(self):
-        source_rupture = models.SESRupture.objects.get(
+        source_rupture = models.ProbabilisticRupture.objects.get(
             id=self.source_rupture.id)
         self.assertEqual((3.9, 2.2, 10.), source_rupture.top_left_corner)
         self.assertEqual((4.90402718, 3.19634248, 10.0),
