@@ -207,7 +207,8 @@ class CompleteTestCase(object):
                 "The output with hash %s is missing" % str(data_hash)
             actual_output = outputs[data_hash]
             if actual_file:
-                actual_file.write(actual_output.to_csv_str() + '\n')
+                label = data_hash[-1]  # the asset_ref for LossCurveData
+                actual_file.write(actual_output.to_csv_str(label) + '\n')
             try:
                 expected_output.assertAlmostEqual(actual_output)
             except AssertionError:
