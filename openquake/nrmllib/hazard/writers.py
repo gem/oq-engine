@@ -400,14 +400,16 @@ class EventBasedGMFXMLWriter(object):
             node.node_to_nrml(gmf_container, dest)
 
 
-def rupture_to_element(rupture, parent=None):
+def rupture_to_element(rupture, tag, parent=None):
     """
     Convert a rupture object into an Element object.
 
     :param rupture:
-        must have attributes tag, magnitude, strike, dip, rake,
+        must have attributes magnitude, strike, dip, rake,
         tectonic_region_type, is_from_fault_source, is_multi_surface,
         lons, lats, depths
+    :param tag:
+        a string identifying the rupture
     :param parent:
         if None a new element is created, otherwise a sub element is
         attached to the parent.
@@ -417,7 +419,7 @@ def rupture_to_element(rupture, parent=None):
     else:
         rup_elem = etree.SubElement(parent, 'rupture')
 
-    rup_elem.set('id', str(rupture.tag))
+    rup_elem.set('id', tag)
     rup_elem.set('magnitude', str(rupture.magnitude))
     rup_elem.set('strike', str(rupture.strike))
     rup_elem.set('dip', str(rupture.dip))
@@ -590,7 +592,7 @@ class SESXMLWriter(object):
                 ses_elem.set('id', str(ses.ordinal or 1))
                 ses_elem.set('investigationTime', str(ses.investigation_time))
                 for rupture in ses:
-                    rupture_to_element(rupture, ses_elem)
+                    rupture_to_element(rupture.rupture, rupture.tag, ses_elem)
 
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,

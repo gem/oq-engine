@@ -69,18 +69,16 @@ class Gmf(object):
 
 class SES(object):
 
-    def __init__(self, ordinal, investigation_time, ruptures):
+    def __init__(self, ordinal, investigation_time, sesruptures):
         self.ordinal = ordinal
         self.investigation_time = investigation_time
-        self.ruptures = ruptures
+        self.sesruptures = sesruptures
 
     def __iter__(self):
-        return iter(self.ruptures)
+        return iter(self.sesruptures)
 
 
-class SESRupture(object):
-
-    tag = "TAG"
+class ProbabilisticRupture(object):
 
     def __init__(self, rupture_id,
                  magnitude, strike, dip, rake, tectonic_region_type,
@@ -103,6 +101,14 @@ class SESRupture(object):
         self.top_right_corner = top_right_corner
         self.bottom_right_corner = bottom_right_corner
         self.bottom_left_corner = bottom_left_corner
+
+
+class SESRupture(object):
+
+    def __init__(self, rupture, ses, tag="TAG"):
+        self.rupture = rupture
+        self.ses = ses
+        self.tag = tag
 
 
 class HazardCurveWriterTestCase(unittest.TestCase):
@@ -287,14 +293,14 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
                                u'type': u'Point'},
                  u'properties': {u'poEs': [0.1, 0.2, 0.3]},
                  u'type': u'Feature'},
-               {u'geometry': {u'coordinates': [38.1, -20.2],
-                              u'type': u'Point'},
-                u'properties': {u'poEs': [0.4, 0.5, 0.6]},
-                u'type': u'Feature'},
-               {u'geometry': {u'coordinates': [38.2, -20.3],
-                              u'type': u'Point'},
-                u'properties': {u'poEs': [0.7, 0.8, 0.8]},
-                u'type': u'Feature'}],
+                {u'geometry': {u'coordinates': [38.1, -20.2],
+                               u'type': u'Point'},
+                 u'properties': {u'poEs': [0.4, 0.5, 0.6]},
+                 u'type': u'Feature'},
+                {u'geometry': {u'coordinates': [38.2, -20.3],
+                               u'type': u'Point'},
+                 u'properties': {u'poEs': [0.7, 0.8, 0.8]},
+                 u'type': u'Feature'}],
             u'oqmetadata': {u'IMT': u'SA',
                             u'gsimTreePath': u'b1_b4_b5',
                             u'investigationTime': u'50.0',
@@ -366,14 +372,14 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
                                u'type': u'Point'},
                  u'properties': {u'poEs': [0.1, 0.2, 0.3]},
                  u'type': u'Feature'},
-               {u'geometry': {u'coordinates': [38.1, -20.2],
-                              u'type': u'Point'},
-                u'properties': {u'poEs': [0.4, 0.5, 0.6]},
-                u'type': u'Feature'},
-               {u'geometry': {u'coordinates': [38.2, -20.3],
-                              u'type': u'Point'},
-                u'properties': {u'poEs': [0.7, 0.8, 0.8]},
-                u'type': u'Feature'}],
+                {u'geometry': {u'coordinates': [38.1, -20.2],
+                               u'type': u'Point'},
+                 u'properties': {u'poEs': [0.4, 0.5, 0.6]},
+                 u'type': u'Feature'},
+                {u'geometry': {u'coordinates': [38.2, -20.3],
+                               u'type': u'Point'},
+                 u'properties': {u'poEs': [0.7, 0.8, 0.8]},
+                 u'type': u'Feature'}],
             u'oqmetadata': {u'IMT': u'SA',
                             u'investigationTime': u'50.0',
                             u'IMLs': [0.005, 0.007, 0.0098],
@@ -585,63 +591,66 @@ class EventBasedGMFXMLWriterTestCase(unittest.TestCase):
 class SESXMLWriterTestCase(unittest.TestCase):
 
     def test_serialize(self):
-        ruptures1 = [
-            SESRupture(1,
-                       5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust',
-                       False, False,
-                       top_left_corner=(1.1, 1.01, 10.0),
-                       top_right_corner=(2.1, 2.01, 20.0),
-                       bottom_right_corner=(3.1, 3.01, 30.0),
-                       bottom_left_corner=(4.1, 4.01, 40.0)),
-            SESRupture(2,
-                       6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
-                       True, False,
-                       lons=[[5.1, 6.1],
-                             [7.1, 8.1],
-                             ],
-                       lats=[[5.01, 6.01],
-                             [7.01, 8.01],
-                             ],
-                       depths=[[10.5, 10.6],
-                               [10.7, 10.8],
-                               ]),
-        ]
-        ses1 = SES(1, 50.0, ruptures1)
+        pr1 = ProbabilisticRupture(
+            1,
+            5.5, 1.0, 40.0, 10.0, 'Active Shallow Crust',
+            False, False,
+            top_left_corner=(1.1, 1.01, 10.0),
+            top_right_corner=(2.1, 2.01, 20.0),
+            bottom_right_corner=(3.1, 3.01, 30.0),
+            bottom_left_corner=(4.1, 4.01, 40.0))
 
-        ruptures2 = [
-            SESRupture(
-                3,
-                5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust',
-                False, False,
-                top_left_corner=(1.1, 1.01, 10.0),
-                top_right_corner=(2.1, 2.01, 20.0),
-                bottom_left_corner=(4.1, 4.01, 40.0),
-                bottom_right_corner=(3.1, 3.01, 30.0)),
-            SESRupture(
-                4,
-                6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust',
-                True, False,
-                lons=[
-                    [5.2, 6.2],
-                    [7.2, 8.2],
+        pr2 = ProbabilisticRupture(
+            2,
+            6.5, 0.0, 41.0, 0.0, 'Active Shallow Crust',
+            True, False,
+            lons=[[5.1, 6.1],
+                  [7.1, 8.1],
+                  ],
+            lats=[[5.01, 6.01],
+                  [7.01, 8.01],
+                  ],
+            depths=[[10.5, 10.6],
+                    [10.7, 10.8],
+                    ])
+        ses1 = SES(1, 50.0, [SESRupture(pr1, 1), SESRupture(pr2, 1)])
+
+        pr3 = ProbabilisticRupture(
+            3,
+            5.4, 2.0, 42.0, 12.0, 'Stable Shallow Crust',
+            False, False,
+            top_left_corner=(1.1, 1.01, 10.0),
+            top_right_corner=(2.1, 2.01, 20.0),
+            bottom_left_corner=(4.1, 4.01, 40.0),
+            bottom_right_corner=(3.1, 3.01, 30.0))
+
+        pr4 = ProbabilisticRupture(
+            4,
+            6.4, 3.0, 43.0, 13.0, 'Stable Shallow Crust',
+            True, False,
+            lons=[
+                [5.2, 6.2],
+                [7.2, 8.2],
                 ],
-                lats=[
-                    [5.02, 6.02],
-                    [7.02, 8.02],
+            lats=[
+                [5.02, 6.02],
+                [7.02, 8.02],
                 ],
-                depths=[
-                    [10.1, 10.2],
-                    [10.3, 10.4],
-                ]),
-            SESRupture(
-                5,
-                7.4, 4.0, 44.0, 14.0, 'Stable Shallow Crust',
-                False, True,
-                lons = [-1.0, 1.0, -1.0, 1.0, 0.0, 1.1, 0.9, 2.0],
-                lats = [1.0, 1.0, -1.0, -1.0, 1.1, 2.0, 0.0, 0.9],
-                depths = [21.0, 21.0, 59.0, 59.0, 20.0, 20.0, 80.0, 80.0])
-        ]
-        ses2 = SES(2, 40.0, ruptures2)
+            depths=[
+                [10.1, 10.2],
+                [10.3, 10.4],
+                ])
+
+        pr5 = ProbabilisticRupture(
+            5,
+            7.4, 4.0, 44.0, 14.0, 'Stable Shallow Crust',
+            False, True,
+            lons=[-1.0, 1.0, -1.0, 1.0, 0.0, 1.1, 0.9, 2.0],
+            lats=[1.0, 1.0, -1.0, -1.0, 1.1, 2.0, 0.0, 0.9],
+            depths=[21.0, 21.0, 59.0, 59.0, 20.0, 20.0, 80.0, 80.0])
+
+        ses2 = SES(2, 40.0, [SESRupture(pr3, 1), SESRupture(pr4, 1),
+                             SESRupture(pr5, 1)])
 
         sm_lt_path = 'b8_b9_b10'
 
