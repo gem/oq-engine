@@ -142,8 +142,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                     del ses_num_occ[rup]  # save memory
                     continue
 
-            prob_rup = models.ProbabilisticRupture.new(rup, ses_coll)
-            prob_rup.save()
+            prob_rup = models.ProbabilisticRupture.create(rup, ses_coll)
 
             ses_ruptures = []
             with mon4:  # saving ses_ruptures
