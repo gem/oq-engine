@@ -377,6 +377,10 @@ _pkgtest_innervm_run () {
     done
     IFS="$old_ifs"
 
+    # add custom packages
+    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
+
     ssh $lxc_ip "sudo apt-get update"
 
     # packaging related tests (install, remove, purge, install, reinstall)
