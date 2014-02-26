@@ -22,22 +22,15 @@ A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
 
-import itertools
 import collections
 import numpy
-import scipy
 
-import cPickle as pickle
-
-from openquake.hazardlib import geo, const
-from openquake.hazardlib.calc import filters
-from openquake.hazardlib.calc.gmf import ground_motion_field_with_residuals
+from openquake.hazardlib import geo
 from openquake.hazardlib.imt import from_string
 
 from openquake.engine import logs
 from openquake.engine.db import models
-from openquake.engine.performance import DummyMonitor, LightMonitor
-from openquake.engine.calculators.hazard import general
+from openquake.engine.performance import DummyMonitor
 
 #: Scaling constant do adapt to the postgis functions (that work with
 #: meters)
@@ -208,23 +201,12 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
-
-    def __init__(
-            self, hazard, assets, max_distance, imt, seeds=None, ltp=None):
-        super(GroundMotionValuesGetter, self).__init__(
-            hazard, assets, max_distance, imt)
-        assert hazard[0].output_type != "ses" or (
-            seeds is not None and ltp is not None)
-        self.seeds = seeds or [None] * len(hazard)
-        self.logic_tree_processor = ltp
-
     def __call__(self, monitor=None):
         """
         Override base method to seed the rng for each hazard output
         """
-        for hazard, seed in zip(self.hazard_outputs, self.seeds):
+        for hazard in self.hazard_outputs:
             h = hazard.output_container
-            numpy.random.seed(seed)
             assets, data = self.get_assets_data(h, monitor)
             if len(assets) > 0:
                 yield hazard.id, assets, data
