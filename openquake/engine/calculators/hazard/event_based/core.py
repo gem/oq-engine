@@ -104,6 +104,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     # Compute and save stochastic event sets
     rnd = random.Random()
     num_distinct_ruptures = 0
+    total_ruptures = 0
 
     for src, seed in src_seeds:
         t0 = time.time()
@@ -129,6 +130,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                     num_occurrences = rup.sample_number_of_occurrences()
                     if num_occurrences:
                         ses_num_occ[rup].append((ses, num_occurrences))
+                        total_ruptures += num_occurrences
 
         for rup in ses_num_occ:
             with mon3:  # filtering ruptures
@@ -143,14 +145,8 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
             for ses, num_occurrences in ses_num_occ[rup]:
                 for occ in range(1, num_occurrences + 1):
                     with mon4:  # saving ruptures
-                        rup_id = models.SESRupture.objects.create(
-                            ses=ses,
-                            rupture=rup,
-                            tag='smlt=%02d|ses=%04d|src=%s|occ=%02d'
-                            % (ses_coll.ordinal, ses.ordinal,
-                               src.source_id, occ),
-                            hypocenter=rup.hypocenter.wkt2d,
-                            magnitude=rup.mag).id
+                        rup_id = models.SESRupture.create(
+                            rup, ses, src.source_id, occ).id
                     rup_seed = rnd.randint(0, models.MAX_SINT_32)
                     if hc.ground_motion_fields:
                         with mon5:  # computing GMFs
@@ -165,8 +161,8 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                 len(ses_num_occ), time.time() - t0)
             num_distinct_ruptures += len(ses_num_occ)
 
-    logs.LOG.info('job=%d, task %d generated %d distinct ruptures',
-                  job_id, task_no, num_distinct_ruptures)
+    logs.LOG.info('job=%d, task %d generated %d/%d distinct ruptures',
+                  job_id, task_no, num_distinct_ruptures, total_ruptures)
     mon1.flush()
     mon2.flush()
     mon3.flush()

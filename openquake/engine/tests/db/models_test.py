@@ -22,6 +22,11 @@ import numpy
 
 from nose.plugins.attrib import attr
 
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.surface.planar import PlanarSurface
+from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
+
 from openquake.engine.calculators.hazard.classical import core as cls_core
 from openquake.engine.calculators.hazard.scenario import core as scen_core
 from openquake.engine.db import models
@@ -183,23 +188,22 @@ class SESRuptureTestCase(unittest.TestCase):
         self.mesh_depths = numpy.array(
             [0.3 * x for x in range(16)]).reshape((4, 4))
 
-        # planar surface coords
-        self.ps_lons = [1, 3, 5, 7]
-        self.ps_lats = [2, 4, 6, 8]
-        self.ps_depths = [0.1, 0.2, 0.3, 0.4]
+        sfs = SimpleFaultSurface(
+            Mesh(self.mesh_lons, self.mesh_lats, self.mesh_depths))
+
+        ps = PlanarSurface(
+            10, 20, 30,
+            Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
+            Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90))
 
         self.fault_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, old_strike=0, old_dip=0, old_rake=0,
-            old_tectonic_region_type='Active Shallow Crust',
-            old_is_from_fault_source=True, old_lons=self.mesh_lons,
-            old_is_multi_surface=False,
-            old_lats=self.mesh_lats, old_depths=self.mesh_depths)
+            ses=ses, magnitude=5, rake=0, surface=sfs,
+            tectonic_region_type='Active Shallow Crust',
+            is_from_fault_source=True, is_multi_surface=False)
         self.source_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, old_strike=0, old_dip=0, old_rake=0,
-            old_tectonic_region_type='Active Shallow Crust',
-            old_is_from_fault_source=False, old_lons=self.ps_lons,
-            old_is_multi_surface=False,
-            old_lats=self.ps_lats, old_depths=self.ps_depths)
+            ses=ses, magnitude=5, rake=0, surface=ps,
+            tectonic_region_type='Active Shallow Crust',
+            is_from_fault_source=False, is_multi_surface=False)
 
     def test_fault_rupture(self):
         # Test loading a fault rupture from the DB, just to illustrate a use
@@ -215,35 +219,12 @@ class SESRuptureTestCase(unittest.TestCase):
     def test_source_rupture(self):
         source_rupture = models.SESRupture.objects.get(
             id=self.source_rupture.id)
-        self.assertEqual((1, 2, 0.1), source_rupture.top_left_corner)
-        self.assertEqual((3, 4, 0.2), source_rupture.top_right_corner)
-        self.assertEqual((5, 6, 0.3), source_rupture.bottom_left_corner)
-        self.assertEqual((7, 8, 0.4), source_rupture.bottom_right_corner)
-
-    def test__validate_planar_surface(self):
-        source_rupture = models.SESRupture.objects.get(
-            id=self.source_rupture.id)
-        lons = source_rupture.lons
-        lats = source_rupture.lats
-        depths = source_rupture.depths
-
-        # Should initially be valid
-        source_rupture._validate_planar_surface()
-
-        # If any of the coord attributes are a len != 4,
-        # we should get an exception
-
-        source_rupture.old_lons = [1, 2, 3]
-        self.assertRaises(ValueError, source_rupture._validate_planar_surface)
-        source_rupture.old_lons = lons
-
-        source_rupture.old_lats = [1, 2, 3]
-        self.assertRaises(ValueError, source_rupture._validate_planar_surface)
-        source_rupture.old_lats = lats
-
-        source_rupture.old_depths = [1, 2, 3]
-        self.assertRaises(ValueError, source_rupture._validate_planar_surface)
-        source_rupture.old_depths = depths
+        self.assertEqual((3.9, 2.2, 10.), source_rupture.top_left_corner)
+        self.assertEqual((4.90402718, 3.19634248, 10.0),
+                         source_rupture.top_right_corner)
+        self.assertEqual((4.89746275, 1.20365263, 90.0),
+                         source_rupture.bottom_left_corner)
+        self.assertEqual((5.9, 2.2, 90.0), source_rupture.bottom_right_corner)
 
 
 def get_tags(gmf_data):
