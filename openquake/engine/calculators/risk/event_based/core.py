@@ -169,7 +169,8 @@ def save_statistical_output(containers, stats, params):
         a :class:`openquake.engine.calculators.risk.writers.OutputDict`
         instance holding the reference to the output container objects
     :param stats:
-        :class:`openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`
+        :class:
+        `openquake.risklib.workflows.ProbabilisticEventBased.StatisticalOutput`
         holding the statistical output data
     :param params:
         a :class:`openquake.engine.calculators.risk.base.CalcParams`
@@ -302,18 +303,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.rnd = random.Random()
         self.rnd.seed(self.rc.master_seed)
 
-        # seed the rng to generate different seeds per-each output
-        # (i.e. each hazard realization). This allows different tasks
-        # to generate the same random numbers given an output. These
-        # seeds will be used when computing ground motion values on
-        # the fly in order to provide the right correlation between
-        # random numbers generated across tasks
-
-        rnd = random.Random()
-        rnd.seed(self.rc.master_seed)
-        self.hazard_seeds = [rnd.randint(0, models.MAX_SINT_32)
-                             for _ in self.rc.hazard_outputs()]
-
     def task_completed(self, event_loss_tables):
         """
         Updates the event loss table
@@ -404,15 +393,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # assume all assets have the same taxonomy
         taxonomy = assets[0].taxonomy
         risk_model = self.risk_models[taxonomy][loss_type]
-
         time_span, tses = self.hazard_times()
-
-        # If we are computing ground motion values on the fly we need
-        # logic trees
-        if self.rc.hazard_outputs()[0].output_type == "ses":
-            ltp = logictree.LogicTreeProcessor.from_hc(self.rc)
-        else:
-            ltp = None
 
         return workflows.CalculationUnit(
             loss_type,
@@ -428,9 +409,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
-                risk_model.imt,
-                self.hazard_seeds,
-                ltp))
+                risk_model.imt))
 
     def hazard_times(self):
         """
