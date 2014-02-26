@@ -41,7 +41,7 @@ from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo
-import openquake.hazardlib.site
+from openquake.hazardlib.site import Site, SiteCollection
 
 from openquake.engine.db import fields
 from openquake.engine import writer
@@ -370,13 +370,13 @@ class CNodeStats(djm.Model):
     class Meta:
         db_table = 'uiapi\".\"cnode_stats'
 
-site_collection_cache = {}
-
 
 class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
     '''
+    _site_collection = ()  # see the corresponding instance variable
+
     @classmethod
     def create(cls, **kw):
         _prep_geometry(kw)
@@ -762,8 +762,8 @@ class HazardCalculation(djm.Model):
         site parameters are used for all sites. The sites are ordered by id,
         to ensure reproducibility in tests.
         """
-        if self.id in site_collection_cache:
-            return site_collection_cache[self.id]
+        if len(self._site_collection):
+            return self._site_collection
 
         hsites = HazardSite.objects.filter(
             hazard_calculation=self).order_by('id')
@@ -781,8 +781,7 @@ class HazardCalculation(djm.Model):
         sites = []
         site_model_inp = self.site_model
         for hsite in hsites:
-            pt = openquake.hazardlib.geo.point.Point(
-                hsite.location.x, hsite.location.y)
+            pt = geo.point.Point(hsite.location.x, hsite.location.y)
             if site_model_inp:
                 smd = self.get_closest_site_model_data(pt)
                 measured = smd.vs30_type == 'measured'
@@ -795,11 +794,9 @@ class HazardCalculation(djm.Model):
                 z1pt0 = self.reference_depth_to_1pt0km_per_sec
                 z2pt5 = self.reference_depth_to_2pt5km_per_sec
 
-            sites.append(openquake.hazardlib.site.Site(
-                         pt, vs30, measured, z1pt0, z2pt5, hsite.id))
+            sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
 
-        sc = site_collection_cache[self.id] = \
-            openquake.hazardlib.site.SiteCollection(sites)
+        sc = self._site_collection = SiteCollection(sites)
         return sc
 
     def get_imts(self):
@@ -1567,6 +1564,9 @@ def is_from_fault_source(rupture):
     """
     If True, this rupture was generated from a simple/complex fault
     source. If False, this rupture was generated from a point/area source.
+
+    :param rupture: an instance of :class:
+    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
     """
     typology = rupture.source_typology
     is_char = typology is source.CharacteristicFaultSource
@@ -1581,6 +1581,12 @@ def is_from_fault_source(rupture):
 
 
 def is_multi_surface(rupture):
+    """
+    :param rupture: an instance of :class:
+    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+
+    :returns: a boolean
+    """
     typology = rupture.source_typology
     is_char = typology is source.CharacteristicFaultSource
     is_multi_sur = isinstance(rupture.surface, geo.MultiSurface)
@@ -1604,6 +1610,12 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
     multi-planar-surface geometry, `lons`, `lats`, and `depths`
     will contain one or more sets of 4 points, similar to how
     planar surface geometry is stored (see above).
+
+    :param rupture: an instance of :class:
+    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+
+    :param is_from_fault_source: a boolean
+    :param is_multi_surface: a boolean
     """
     if is_from_fault_source:
         # for simple and complex fault sources,

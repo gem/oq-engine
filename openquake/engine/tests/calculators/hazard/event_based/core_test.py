@@ -124,8 +124,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.cfg = helpers.get_data_path('event_based_hazard/job_2.ini')
         self.job = helpers.get_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
-        hc_id = self.job.hazard_calculation.id
-        models.site_collection_cache[hc_id] = make_site_coll(0, 0, n=5)
+        hc = self.job.hazard_calculation
+        hc._site_collection = make_site_coll(0, 0, n=5)
         models.JobStats.objects.create(oq_job=self.job)
 
     @unittest.skip  # temporarily skipped
