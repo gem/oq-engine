@@ -27,7 +27,7 @@ from openquake.engine.calculators.hazard.classical.core import \
 from openquake.engine.db import models
 from openquake.engine.input import logictree
 from openquake.engine.utils import tasks, general
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 import sys
 import warnings
@@ -40,7 +40,7 @@ from openquake.hazardlib.site import SiteCollection
 
 
 def disaggregation(
-        sources, site, imt, iml, gsims, truncation_level,
+        monitor, sources, site, imt, iml, gsims, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
@@ -112,25 +112,27 @@ def disaggregation(
         of the result tuple. The matrix can be used directly by pmf-extractor
         functions.
     """
-    bins_data = _collect_bins_data(sources, site, imt, iml, gsims,
-                                   truncation_level, n_epsilons,
-                                   source_site_filter, rupture_site_filter)
-    if all([len(x) == 0 for x in bins_data]):
-        # No ruptures have contributed to the hazard level at this site.
-        warnings.warn(
-            'No ruptures have contributed to the hazard at site %s'
-            % site,
-            RuntimeWarning
-        )
-        return None, None
-
-    bin_edges = _define_bins(bins_data, mag_bin_width, dist_bin_width,
-                             coord_bin_width, truncation_level, n_epsilons)
-    diss_matrix = _arrange_data_in_bins(bins_data, bin_edges)
+    with monitor.copy('collect bins') as mon:
+        bins_data = _collect_bins_data(mon, sources, site, imt, iml, gsims,
+                                       truncation_level, n_epsilons,
+                                       source_site_filter, rupture_site_filter)
+        if all([len(x) == 0 for x in bins_data]):
+            # No ruptures have contributed to the hazard level at this site.
+            warnings.warn(
+                'No ruptures have contributed to the hazard at site %s'
+                % site,
+                RuntimeWarning
+            )
+            return None, None
+    with monitor.copy('define bins'):
+        bin_edges = _define_bins(bins_data, mag_bin_width, dist_bin_width,
+                                 coord_bin_width, truncation_level, n_epsilons)
+    with monitor.copy('arrange data'):
+        diss_matrix = _arrange_data_in_bins(bins_data, bin_edges)
     return bin_edges, diss_matrix
 
 
-def _collect_bins_data(sources, site, imt, iml, gsims,
+def _collect_bins_data(mon, sources, site, imt, iml, gsims,
                        truncation_level, n_epsilons,
                        source_site_filter, rupture_site_filter):
     """
@@ -152,7 +154,10 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
 
     _next_trt_num = 0
     trt_nums = {}
-
+    mon0 = LightMonitor(mon.operation, mon.job_id, mon.task)
+    mon1 = mon0.copy('calc distances')
+    mon2 = mon0.copy('makectxt')
+    mon3 = mon0.copy('disaggregate_poe')
     sources_sites = ((source, sitecol) for source in sources)
     # here we ignore filtered site collection because either it is the same
     # as the original one (with one site), or the source/rupture is filtered
@@ -173,9 +178,12 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
             for rupture, r_sites in rupture_site_filter(ruptures_sites):
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
-                [jb_dist] = rupture.surface.get_joyner_boore_distance(sitemesh)
-                dists.append(jb_dist)
-                [closest_point] = rupture.surface.get_closest_points(sitemesh)
+                with mon1:
+                    [jb_dist] = rupture.surface.get_joyner_boore_distance(
+                        sitemesh)
+                    dists.append(jb_dist)
+                    [closest_point] = rupture.surface.get_closest_points(
+                        sitemesh)
                 lons.append(closest_point.longitude)
                 lats.append(closest_point.latitude)
                 tect_reg_types.append(tect_reg)
@@ -183,10 +191,12 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
                 # compute conditional probability of exceeding iml given
                 # the current rupture, and different epsilon level, that is
                 # ``P(IMT >= iml | rup, epsilon_bin)`` for each of epsilon bins
-                sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
-                [poes_given_rup_eps] = gsim.disaggregate_poe(
-                    sctx, rctx, dctx, imt, iml, truncation_level, n_epsilons
-                )
+                with mon2:
+                    sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
+                with mon3:
+                    [poes_given_rup_eps] = gsim.disaggregate_poe(
+                        sctx, rctx, dctx, imt, iml, truncation_level,
+                        n_epsilons)
 
                 # collect probability of a rupture causing no exceedances
                 probs_no_exceed.append(
@@ -209,7 +219,9 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
         trt for (num, trt) in sorted((num, trt)
                                      for (trt, num) in trt_nums.items())
     ]
-
+    mon1.flush()
+    mon2.flush()
+    mon3.flush()
     return (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed)
 
 
@@ -310,182 +322,6 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     return diss_matrix
 
 
-def mag_pmf(matrix):
-    """
-    Fold full disaggregation matrix to magnitude PMF.
-
-    :returns:
-        1d array, a histogram representing magnitude PMF.
-    """
-    nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    mag_pmf = numpy.zeros(nmags)
-    for i in xrange(nmags):
-        mag_pmf[i] = numpy.prod(
-            [1 - matrix[i][j][k][l][m][n]
-             for j in xrange(ndists)
-             for k in xrange(nlons)
-             for l in xrange(nlats)
-             for m in xrange(neps)
-             for n in xrange(ntrts)]
-        )
-    return 1 - mag_pmf
-
-
-def dist_pmf(matrix):
-    """
-    Fold full disaggregation matrix to distance PMF.
-
-    :returns:
-        1d array, a histogram representing distance PMF.
-    """
-    nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    dist_pmf = numpy.zeros(ndists)
-    for j in xrange(ndists):
-        dist_pmf[j] = numpy.prod(
-            [1 - matrix[i][j][k][l][m][n]
-             for i in xrange(nmags)
-             for k in xrange(nlons)
-             for l in xrange(nlats)
-             for m in xrange(neps)
-             for n in xrange(ntrts)]
-        )
-    return 1 - dist_pmf
-
-
-def trt_pmf(matrix):
-    """
-    Fold full disaggregation matrix to tectonic region type PMF.
-
-    :returns:
-        1d array, a histogram representing tectonic region type PMF.
-    """
-    nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    trt_pmf = numpy.zeros(ntrts)
-    for n in xrange(ntrts):
-        trt_pmf[n] = numpy.prod(
-            [1 - matrix[i][j][k][l][m][n]
-             for i in xrange(nmags)
-             for j in xrange(ndists)
-             for k in xrange(nlons)
-             for l in xrange(nlats)
-             for m in xrange(neps)]
-        )
-    return 1 - trt_pmf
-
-
-def mag_dist_pmf(matrix):
-    """
-    Fold full disaggregation matrix to magnitude / distance PMF.
-
-    :returns:
-        2d array. First dimension represents magnitude histogram bins,
-        second one -- distance histogram bins.
-    """
-    nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    mag_dist_pmf = numpy.zeros((nmags, ndists))
-    for i in xrange(nmags):
-        for j in xrange(ndists):
-            mag_dist_pmf[i][j] = numpy.prod(
-                [1 - matrix[i][j][k][l][m][n]
-                 for k in xrange(nlons)
-                 for l in xrange(nlats)
-                 for m in xrange(neps)
-                 for n in xrange(ntrts)]
-            )
-    return 1 - mag_dist_pmf
-
-
-def mag_dist_eps_pmf(matrix):
-    """
-    Fold full disaggregation matrix to magnitude / distance / epsilon PMF.
-
-    :returns:
-        3d array. First dimension represents magnitude histogram bins,
-        second one -- distance histogram bins, third one -- epsilon
-        histogram bins.
-    """
-    nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    mag_dist_eps_pmf = numpy.zeros((nmags, ndists, neps))
-    for i in xrange(nmags):
-        for j in xrange(ndists):
-            for m in xrange(neps):
-                mag_dist_eps_pmf[i][j][m] = numpy.prod(
-                    [1 - matrix[i][j][k][l][m][n]
-                     for k in xrange(nlons)
-                     for l in xrange(nlats)
-                     for n in xrange(ntrts)]
-                )
-    return 1 - mag_dist_eps_pmf
-
-
-def lon_lat_pmf(matrix):
-    """
-    Fold full disaggregation matrix to longitude / latitude PMF.
-
-    :returns:
-        2d array. First dimension represents longitude histogram bins,
-        second one -- latitude histogram bins.
-    """
-    nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    lon_lat_pmf = numpy.zeros((nlons, nlats))
-    for k in xrange(nlons):
-        for l in xrange(nlats):
-            lon_lat_pmf[k][l] = numpy.prod(
-                [1 - matrix[i][j][k][l][m][n]
-                 for i in xrange(nmags)
-                 for j in xrange(ndists)
-                 for m in xrange(neps)
-                 for n in xrange(ntrts)]
-            )
-    return 1 - lon_lat_pmf
-
-
-def mag_lon_lat_pmf(matrix):
-    """
-    Fold full disaggregation matrix to magnitude / longitude / latitude PMF.
-
-    :returns:
-        3d array. First dimension represents magnitude histogram bins,
-        second one -- longitude histogram bins, third one -- latitude
-        histogram bins.
-    """
-    nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    mag_lon_lat_pmf = numpy.zeros((nmags, nlons, nlats))
-    for i in xrange(nmags):
-        for k in xrange(nlons):
-            for l in xrange(nlats):
-                mag_lon_lat_pmf[i][k][l] = numpy.prod(
-                    [1 - matrix[i][j][k][l][m][n]
-                     for j in xrange(ndists)
-                     for m in xrange(neps)
-                     for n in xrange(ntrts)]
-                )
-    return 1 - mag_lon_lat_pmf
-
-
-def lon_lat_trt_pmf(matrix):
-    """
-    Fold full disaggregation matrix to longitude / latitude / tectonic region
-    type PMF.
-
-    :returns:
-        3d array. Dimension represent longitude, latitude and tectonic region
-        type histogram bins respectively.
-    """
-    nmags, ndists, nlons, nlats, neps, ntrts = matrix.shape
-    lon_lat_trt_pmf = numpy.zeros((nlons, nlats, ntrts))
-    for k in xrange(nlons):
-        for l in xrange(nlats):
-            for n in xrange(ntrts):
-                lon_lat_trt_pmf[k][l][n] = numpy.prod(
-                    [1 - matrix[i][j][k][l][m][n]
-                     for i in xrange(nmags)
-                     for j in xrange(ndists)
-                     for m in xrange(neps)]
-                )
-    return 1 - lon_lat_trt_pmf
-
-
 @tasks.oqtask
 def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
     """
@@ -524,9 +360,8 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
     # pylint: disable=R0914
     assert sites, sites
     assert sources, sources
-    logs.LOG.debug(
-        '> computing disaggregation for %(np)s sites for realization %(rlz)s'
-        % dict(np=len(sites), rlz=lt_rlz.id))
+
+    mon = EnginePerformanceMonitor('disagg', job_id, compute_disagg)
 
     job = models.OqJob.objects.get(id=job_id)
     hc = job.hazard_calculation
@@ -574,11 +409,11 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
                     'coord_bin_width': hc.coordinate_bin_width,
                     'source_site_filter': src_site_filter,
                     'rupture_site_filter': rup_site_filter,
+                    'monitor': mon,
                 }
                 with EnginePerformanceMonitor(
                         'computing disaggregation', job_id, compute_disagg):
-                    bin_edges, diss_matrix = openquake.hazardlib.calc.\
-                        disaggregation(**calc_kwargs)
+                    bin_edges, diss_matrix = disaggregation(**calc_kwargs)
                     if not bin_edges:  # no ruptures generated
                         continue
 
@@ -589,8 +424,6 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
                         hc.investigation_time, hc_im_type, iml, poe, sa_period,
                         sa_damping
                     )
-
-    logs.LOG.debug('< done computing disaggregation')
 
 
 _DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s-%(wkt)s'
