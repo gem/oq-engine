@@ -385,7 +385,7 @@ def _deep_eq(a, b, decimal, exclude=None):
         assert len(a) == len(b), (
             "Dicts %(a)s and %(b)s do not have the same length."
             " Actual lengths: %(len_a)s and %(len_b)s") % dict(
-            a=a, b=b, len_a=len(a), len_b=len(b))
+                a=a, b=b, len_a=len(a), len_b=len(b))
 
         for key in a:
             if not key in exclude:
@@ -699,7 +699,10 @@ def create_ses_ruptures(job, ses_collection, num):
         occurrence_rate=1,
         temporal_occurrence_model=PoissonTOM(10),
         source_typology=object())
-    return [models.SESRupture.create(rupture, ses, 'test', i)
+    seed = 42
+    pr = models.ProbabilisticRupture.new(rupture, ses_collection)
+    pr.save()
+    return [models.SESRupture.create(pr, ses, 'test', i, seed + i)
             for i in range(num)]
 
 
