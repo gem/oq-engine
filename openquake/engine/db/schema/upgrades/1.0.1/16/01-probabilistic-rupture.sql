@@ -1,5 +1,6 @@
 DROP INDEX hzrdr.hzrdr_ses_rupture_tag_idx;
 DROP INDEX hzrdr.hzrdr_ses_rupture_ses_id_idx;
+
 ALTER TABLE riskr.event_loss_data
 DROP CONSTRAINT riskr_event_loss_data_sesrupture_fk;
 
@@ -10,7 +11,7 @@ ADD COLUMN ses_collection_id INTEGER;
 
 ALTER TABLE hzrdr.probabilistic_rupture
 ADD CONSTRAINT hzrdr_probabilistic_rupture_ses_collection_fk
-FOREIGN KEY (ses_collection_id) REFERENCES hzrdr.ses_collection(id);
+FOREIGN KEY (ses_collection_id) REFERENCES hzrdr.ses_collection(id) ON DELETE CASCADE;
 
 GRANT SELECT, INSERT ON hzrdr.probabilistic_rupture TO oq_job_init;
 
