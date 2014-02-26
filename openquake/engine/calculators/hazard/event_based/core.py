@@ -146,22 +146,22 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
             prob_rup = models.ProbabilisticRupture.new(rup, ses_coll)
             prob_rup.save()
 
+            ses_ruptures = []
             with mon4:  # saving ses_ruptures
-                ses_ruptures = []
-                for ses, num_occurrences in ses_num_occ[rup]:
-                    for occ in range(1, num_occurrences + 1):
-                        rup_seed = rnd.randint(0, models.MAX_SINT_32)
-                        ses_ruptures.append(
-                            models.SESRupture.new(
-                                prob_rup, ses, src.source_id, occ, rup_seed))
-                ses_rupture_ids = writer.CacheInserter.saveall(ses_ruptures)
+                # using a django transaction make the saving faster
+                with transaction.commit_on_success(using='job_init'):
+                    for ses, num_occurrences in ses_num_occ[rup]:
+                        for occ in range(1, num_occurrences + 1):
+                            rup_seed = rnd.randint(0, models.MAX_SINT_32)
+                            ses_rup = models.SESRupture.create(
+                                prob_rup, ses, src.source_id, occ, rup_seed)
+                            ses_ruptures.append(ses_rup)
 
             with mon5:  # computing GMFs
                 if hc.ground_motion_fields:
-                    for ses_rup, ses_rup_id in zip(
-                            ses_ruptures, ses_rupture_ids):
+                    for ses_rup in ses_ruptures:
                         gmfcollector.calc_gmf(
-                            r_sites, rup, ses_rup_id, ses_rup.seed)
+                            r_sites, rup, ses_rup.id, ses_rup.seed)
 
         # log calc_time per distinct rupture
         if ses_num_occ:
