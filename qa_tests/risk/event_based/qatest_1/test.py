@@ -64,12 +64,12 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
 
         aggregate_loss_curves = [
             ('aggregates', None)] + [
-            ((u'agg_loss_curve', branch, None,
-              None, True, False, "structural"),
-             models.AggregateLossCurveData(
-                 losses=data[i * 2, 2:],
-                 poes=data[i * 2 + 1, 2:]))
-            for i, branch in enumerate(branches.values())]
+                ((u'agg_loss_curve', branch, None,
+                  None, True, False, "structural"),
+                 models.AggregateLossCurveData(
+                     losses=data[i * 2, 2:],
+                     poes=data[i * 2 + 1, 2:]))
+                for i, branch in enumerate(branches.values())]
 
         # we check only the first 10 values of the event loss table
         data = self._csv('event_loss_table')[1:, 0:3]
