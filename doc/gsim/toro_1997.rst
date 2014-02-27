@@ -1,0 +1,8 @@
+================
+Toro et al. 1997
+================
+
+.. module:: openquake.hazardlib.gsim.toro_1997
+
+.. autoclass:: ToroEtAl1997NSHMP
+    :members:
