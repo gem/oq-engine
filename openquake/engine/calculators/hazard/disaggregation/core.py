@@ -124,11 +124,22 @@ def disaggregation(
                 RuntimeWarning
             )
             return None, None
+
+    mags = numpy.array(bins_data[0], float)
+    dists = numpy.array(bins_data[1], float)
+    lons = numpy.array(bins_data[2], float)
+    lats = numpy.array(bins_data[3], float)
+    tect_reg_types = numpy.array(bins_data[4], int)
+    trt_bins = [trt for (num, trt) in sorted(
+                (num, trt) for (trt, num) in bins_data[5].items())]
+    probs_no_exceed = numpy.array(bins_data[6], float)
+    bdata = (mags, dists, lons, lats, tect_reg_types, trt_bins,
+             probs_no_exceed)
     with monitor.copy('define bins'):
-        bin_edges = _define_bins(bins_data, mag_bin_width, dist_bin_width,
+        bin_edges = _define_bins(bdata, mag_bin_width, dist_bin_width,
                                  coord_bin_width, truncation_level, n_epsilons)
     with monitor.copy('arrange data'):
-        diss_matrix = _arrange_data_in_bins(bins_data, bin_edges)
+        diss_matrix = _arrange_data_in_bins(bdata, bin_edges)
     return bin_edges, diss_matrix
 
 
@@ -208,21 +219,10 @@ def _collect_bins_data(mon, sources, site, imt, iml, gsims,
             msg %= (source.source_id, err.message)
             raise etype, msg, tb
 
-    mags = numpy.array(mags, float)
-    dists = numpy.array(dists, float)
-    lons = numpy.array(lons, float)
-    lats = numpy.array(lats, float)
-    tect_reg_types = numpy.array(tect_reg_types, int)
-    probs_no_exceed = numpy.array(probs_no_exceed, float)
-
-    trt_bins = [
-        trt for (num, trt) in sorted((num, trt)
-                                     for (trt, num) in trt_nums.items())
-    ]
     mon1.flush()
     mon2.flush()
     mon3.flush()
-    return (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed)
+    return mags, dists, lons, lats, tect_reg_types, trt_nums, probs_no_exceed
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -314,7 +314,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
 
                             poe = numpy.prod(
                                 probs_no_exceed[prob_idx, i_eps]
-                            )
+                                )
                             poe = 1 - poe
 
                             diss_matrix[diss_idx] = poe
