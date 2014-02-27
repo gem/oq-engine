@@ -1,8 +1,6 @@
 DROP INDEX hzrdr.hzrdr_ses_rupture_tag_idx;
 DROP INDEX hzrdr.hzrdr_ses_rupture_ses_id_idx;
 
-DROP SEQUENCE hzrdr.ses_rupture_id_seq CASCADE;
-
 ALTER TABLE riskr.event_loss_data
 DROP CONSTRAINT riskr_event_loss_data_sesrupture_fk;
 
@@ -27,7 +25,7 @@ CREATE TABLE hzrdr.ses_rupture (
 
 ALTER TABLE hzrdr.ses_rupture OWNER TO oq_admin;
 GRANT SELECT, INSERT ON hzrdr.ses_rupture TO oq_job_init;
-GRANT USAGE ON hzrdr.ses_rupture_id_seq TO oq_job_init;
+GRANT USAGE ON hzrdr.ses_rupture_id_seq1 TO oq_job_init;
 
 ALTER TABLE hzrdr.ses_rupture
 ADD CONSTRAINT hzrdr_ses_rupture_probabilistic_rupture_fk
