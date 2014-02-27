@@ -142,12 +142,12 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                     del ses_num_occ[rup]  # save memory
                     continue
 
-            prob_rup = models.ProbabilisticRupture.create(rup, ses_coll)
-
             ses_ruptures = []
             with mon4:  # saving ses_ruptures
                 # using a django transaction make the saving faster
                 with transaction.commit_on_success(using='job_init'):
+                    prob_rup = models.ProbabilisticRupture.create(
+                        rup, ses_coll)
                     for ses, num_occurrences in ses_num_occ[rup]:
                         for occ in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
