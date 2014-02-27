@@ -40,7 +40,7 @@ from openquake.hazardlib.site import SiteCollection
 
 
 def disaggregation(
-        monitor, sources, site, imt, iml, gsims, truncation_level,
+        monitor, trt_num, sources, site, imt, iml, gsims, truncation_level,
         n_epsilons, mag_bin_width, dist_bin_width, coord_bin_width,
         source_site_filter=filters.source_site_noop_filter,
         rupture_site_filter=filters.rupture_site_noop_filter):
@@ -113,9 +113,10 @@ def disaggregation(
         functions.
     """
     with monitor.copy('collect bins') as mon:
-        bins_data = _collect_bins_data(mon, sources, site, imt, iml, gsims,
-                                       truncation_level, n_epsilons,
-                                       source_site_filter, rupture_site_filter)
+        bins_data = _collect_bins_data(
+            mon, trt_num, sources, site, imt, iml, gsims,
+            truncation_level, n_epsilons,
+            source_site_filter, rupture_site_filter)
         if all([len(x) == 0 for x in bins_data]):
             # No ruptures have contributed to the hazard level at this site.
             warnings.warn(
@@ -143,7 +144,7 @@ def disaggregation(
     return bin_edges, diss_matrix
 
 
-def _collect_bins_data(mon, sources, site, imt, iml, gsims,
+def _collect_bins_data(mon, trt_num, sources, site, imt, iml, gsims,
                        truncation_level, n_epsilons,
                        source_site_filter, rupture_site_filter):
     """
@@ -162,9 +163,6 @@ def _collect_bins_data(mon, sources, site, imt, iml, gsims,
     probs_no_exceed = []
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
-
-    _next_trt_num = 0
-    trt_nums = {}
     mon0 = LightMonitor(mon.operation, mon.job_id, mon.task)
     mon1 = mon0.copy('calc distances')
     mon2 = mon0.copy('makectxt')
@@ -176,13 +174,8 @@ def _collect_bins_data(mon, sources, site, imt, iml, gsims,
     for src_idx, (source, s_sites) in \
             enumerate(source_site_filter(sources_sites)):
         try:
-            tect_reg = source.tectonic_region_type
-            gsim = gsims[tect_reg]
-
-            if not tect_reg in trt_nums:
-                trt_nums[tect_reg] = _next_trt_num
-                _next_trt_num += 1
-            tect_reg = trt_nums[tect_reg]
+            gsim = gsims[source.tectonic_region_type]
+            tect_reg = trt_num[source.tectonic_region_type]
 
             ruptures_sites = ((rupture, s_sites)
                               for rupture in source.iter_ruptures())
@@ -222,7 +215,7 @@ def _collect_bins_data(mon, sources, site, imt, iml, gsims,
     mon1.flush()
     mon2.flush()
     mon3.flush()
-    return mags, dists, lons, lats, tect_reg_types, trt_nums, probs_no_exceed
+    return mags, dists, lons, lats, tect_reg_types, trt_num, probs_no_exceed
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -323,7 +316,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
 
 
 @tasks.oqtask
-def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
+def compute_disagg(job_id, sites, sources, lt_rlz, ltp, trt_num):
     """
     Calculate disaggregation histograms and saving the results to the database.
 
@@ -397,6 +390,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
             for poe in hc.poes_disagg:
                 iml = numpy.interp(poe, curve.poes[::-1], imls)
                 calc_kwargs = {
+                    'trt_num': trt_num,
                     'sources': sources,
                     'site': site,
                     'imt': imt,
@@ -510,6 +504,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         Generate task args for the second phase of disaggregation calculations.
         This phase is concerned with computing the disaggregation histograms.
         """
+        trt_num = dict((trt, i) for i, trt in enumerate(
+                       self.tectonic_region_types))
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc)
 
@@ -520,7 +516,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             sources = general.WeightedSequence.merge(
                 self.source_blocks_per_ltpath[path])
             for sites in self.block_split(self.hc.site_collection):
-                yield self.job.id, sites, sources, lt_rlz, ltp
+                yield self.job.id, sites, sources, lt_rlz, ltp, trt_num
 
     def post_execute(self):
         """
