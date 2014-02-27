@@ -37,7 +37,7 @@ from openquake.engine.utils import tasks, general
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
-def _collect_bins_data(mon, sources, site, imt, iml, gsims,
+def _collect_bins_data(mon, trt_num, sources, site, imt, iml, gsims,
                        truncation_level, n_epsilons,
                        source_site_filter, rupture_site_filter):
     """
@@ -56,9 +56,6 @@ def _collect_bins_data(mon, sources, site, imt, iml, gsims,
     probs_no_exceed = []
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
-
-    _next_trt_num = 0
-    trt_nums = {}
     mon0 = LightMonitor(mon.operation, mon.job_id, mon.task)
     mon1 = mon0.copy('calc distances')
     mon2 = mon0.copy('makectxt')
@@ -70,13 +67,8 @@ def _collect_bins_data(mon, sources, site, imt, iml, gsims,
     for src_idx, (source, s_sites) in \
             enumerate(source_site_filter(sources_sites)):
         try:
-            tect_reg = source.tectonic_region_type
-            gsim = gsims[tect_reg]
-
-            if not tect_reg in trt_nums:
-                trt_nums[tect_reg] = _next_trt_num
-                _next_trt_num += 1
-            tect_reg = trt_nums[tect_reg]
+            gsim = gsims[source.tectonic_region_type]
+            tect_reg = trt_num[source.tectonic_region_type]
 
             ruptures_sites = ((rupture, s_sites)
                               for rupture in source.iter_ruptures())
@@ -116,7 +108,7 @@ def _collect_bins_data(mon, sources, site, imt, iml, gsims,
     mon1.flush()
     mon2.flush()
     mon3.flush()
-    return mags, dists, lons, lats, tect_reg_types, trt_nums, probs_no_exceed
+    return mags, dists, lons, lats, tect_reg_types, trt_num, probs_no_exceed
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -217,7 +209,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
 
 
 @tasks.oqtask
-def compute_disagg(job_id, sites, sources, rlz, ltp):
+def compute_disagg(job_id, sites, sources, rlz, ltp, trt_num):
     """
     Calculate disaggregation histograms and saving the results to the database.
 
@@ -288,11 +280,11 @@ def compute_disagg(job_id, sites, sources, rlz, ltp):
             iml = numpy.interp(poe, curve.poes[::-1], imls)
             with EnginePerformanceMonitor(
                     'collecting bins', job_id, compute_disagg):
-                result[rlz, site, poe, iml, im_type, sa_period, sa_damping] = \
-                    _collect_bins_data(
-                        mon, sources, site, imt, iml, gsims,
-                        hc.truncation_level, hc.num_epsilon_binss,
-                        src_site_filter, rup_site_filter),
+                result[rlz.id, site, poe, iml, im_type, sa_period, sa_damping
+                       ] = _collect_bins_data(
+                    mon, trt_num, sources, site, imt, iml, gsims,
+                    hc.truncation_level, hc.num_epsilon_bins,
+                    src_site_filter, rup_site_filter),
     return result
 
 
@@ -369,18 +361,17 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, rlz,
 
 @tasks.oqtask
 def arrange_and_save_disagg_matrix(
-        job_id, bins, rlz, site, poe, iml,
-        im_type, sa_period, sa_damping):
+        job_id, bins, rlz_id, site, poe, iml, im_type, sa_period, sa_damping):
     """
     """
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
+    rlz = models.LtRealization.objects.get(id=rlz_id)
     mags = numpy.array(bins[0], float)
     dists = numpy.array(bins[1], float)
     lons = numpy.array(bins[2], float)
     lats = numpy.array(bins[3], float)
     tect_reg_types = numpy.array(bins[4], int)
-    trt_bins = [trt for (num, trt) in sorted(
-                (num, trt) for (trt, num) in bins[5].items())]
+    trt_bins = bins[5]
     probs_no_exceed = numpy.array(bins[6], float)
     bdata = (mags, dists, lons, lats, tect_reg_types, trt_bins,
              probs_no_exceed)
@@ -419,6 +410,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         Generate task args for the second phase of disaggregation calculations.
         This phase is concerned with computing the disaggregation histograms.
         """
+        trt_num = dict((trt, i) for i, trt in enumerate(
+                       self.tectonic_region_types))
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc)
 
@@ -429,7 +422,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             sources = general.WeightedSequence.merge(
                 self.source_blocks_per_ltpath[path])
             for site in self.hc.site_collection:
-                yield self.job.id, [site], sources, rlz, ltp
+                yield self.job.id, [site], sources, rlz, ltp, trt_num
 
     def post_execute(self):
         """
@@ -438,27 +431,34 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         super(DisaggHazardCalculator, self).post_execute()
 
         self.result = {}  # dictionary {key: bins} where key is the tuple
-        # rlz, site, poe, iml, im_type, sa_period, sa_damping
+        # rlz_id, site, poe, iml, im_type, sa_period, sa_damping
         self.parallelize(
-            compute_disagg, self.disagg_task_arg_gen(), self.arrange_data)
+            compute_disagg, self.disagg_task_arg_gen(), self.collect_result)
 
         arglist = [(self.job.id, bins) + key
                    for key, bins in self.result.iteritems()]
         self.parallelize(
             arrange_and_save_disagg_matrix, arglist, self.log_percent)
 
-    def arrange_data(self, result):
+    def collect_result(self, result):
         """
+        Collect the results coming from compute_disagg in self.results,
+        a dictionary with key (rlz_id, site, poe, iml, im_type, sa_period,
+        sa_damping) and values (mag_bins, dist_bins, lon_bins, lat_bins,
+        eps_bins, trt_bins).
+
         """
-        for rlz, site, poe, iml, im_type, sa_period, sa_damping in result:
+        for rlz_id, site, poe, iml, im_type, sa_period, sa_damping in result:
+            # mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
             try:
                 bins = self.result[
-                    rlz, site, poe, iml, im_type, sa_period, sa_damping]
+                    rlz_id, site, poe, iml, im_type, sa_period, sa_damping]
             except KeyError:
                 bins = self.result[
-                    rlz, site, poe, iml, im_type, sa_period, sa_damping] = (
-                    [], [], [], [], [], {}, [])
-            bins_data = result[rlz, poe, iml, im_type, sa_period, sa_damping]
+                    rlz_id, site, poe, iml, im_type, sa_period, sa_damping] = (
+                    [], [], [], [], [], [])
+            bins_data = result[
+                rlz_id, site, poe, iml, im_type, sa_period, sa_damping]
             for acc, ls in zip(bins, bins_data):
                 acc.extend(ls)
         self.log_percent()
