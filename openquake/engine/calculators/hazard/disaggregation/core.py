@@ -121,7 +121,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, tect_reg_types, trt_bins, _ = bins_data
+    mags, dists, lons, lats, tect_reg_types, _ = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -150,7 +150,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
 
-    return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
+    return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
 
 
 def _arrange_data_in_bins(bins_data, bin_edges):
@@ -158,8 +158,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed) = \
-        bins_data
+    (mags, dists, lons, lats, tect_reg_types, probs_no_exceed) = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
              len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
@@ -361,7 +360,8 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, rlz,
 
 @tasks.oqtask
 def arrange_and_save_disagg_matrix(
-        job_id, bins, rlz_id, site, poe, iml, im_type, sa_period, sa_damping):
+        job_id, trt_bins, bins, rlz_id, site, poe, iml,
+        im_type, sa_period, sa_damping):
     """
     """
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
@@ -371,10 +371,8 @@ def arrange_and_save_disagg_matrix(
     lons = numpy.array(bins[2], float)
     lats = numpy.array(bins[3], float)
     tect_reg_types = numpy.array(bins[4], int)
-    trt_bins = bins[5]
-    probs_no_exceed = numpy.array(bins[6], float)
-    bdata = (mags, dists, lons, lats, tect_reg_types, trt_bins,
-             probs_no_exceed)
+    probs_no_exceed = numpy.array(bins[5], float)
+    bdata = (mags, dists, lons, lats, tect_reg_types, probs_no_exceed)
     with EnginePerformanceMonitor(job_id, 'define bins',
                                   arrange_and_save_disagg_matrix):
         bin_edges = _define_bins(
@@ -383,7 +381,7 @@ def arrange_and_save_disagg_matrix(
             hc.distance_bin_width,
             hc.coordinate_bin_width,
             hc.truncation_level,
-            hc.num_epsilon_bins)
+            hc.num_epsilon_bins) + (trt_bins, )
     with EnginePerformanceMonitor(job_id, 'arrange data',
                                   arrange_and_save_disagg_matrix):
         diss_matrix = _arrange_data_in_bins(bdata, bin_edges)
@@ -412,6 +410,9 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         """
         trt_num = dict((trt, i) for i, trt in enumerate(
                        self.tectonic_region_types))
+        self.trt_bins = [trt for (num, trt) in sorted(
+                         (num, trt) for (trt, num) in trt_num.items())]
+
         realizations = models.LtRealization.objects.filter(
             hazard_calculation=self.hc)
 
@@ -434,8 +435,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         # rlz_id, site, poe, iml, im_type, sa_period, sa_damping
         self.parallelize(
             compute_disagg, self.disagg_task_arg_gen(), self.collect_result)
-
-        arglist = [(self.job.id, bins) + key
+        arglist = [(self.job.id, self.trt_bins, bins) + key
                    for key, bins in self.result.iteritems()]
         self.parallelize(
             arrange_and_save_disagg_matrix, arglist, self.log_percent)
