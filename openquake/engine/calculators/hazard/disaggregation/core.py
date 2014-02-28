@@ -134,11 +134,11 @@ def disaggregation(
     trt_bins = [trt for (num, trt) in sorted(
                 (num, trt) for (trt, num) in bins_data[5].items())]
     probs_no_exceed = numpy.array(bins_data[6], float)
-    bdata = (mags, dists, lons, lats, tect_reg_types, trt_bins,
-             probs_no_exceed)
+    bdata = (mags, dists, lons, lats, tect_reg_types, probs_no_exceed)
     with monitor.copy('define bins'):
         bin_edges = _define_bins(bdata, mag_bin_width, dist_bin_width,
-                                 coord_bin_width, truncation_level, n_epsilons)
+                                 coord_bin_width, truncation_level, n_epsilons
+                                 ) + (trt_bins,)
     with monitor.copy('arrange data'):
         diss_matrix = _arrange_data_in_bins(bdata, bin_edges)
     return bin_edges, diss_matrix
@@ -228,7 +228,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, tect_reg_types, trt_bins, _ = bins_data
+    mags, dists, lons, lats, tect_reg_types, _ = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -257,7 +257,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
 
-    return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
+    return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
 
 
 def _arrange_data_in_bins(bins_data, bin_edges):
@@ -265,8 +265,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed) = \
-        bins_data
+    (mags, dists, lons, lats, tect_reg_types, probs_no_exceed) = bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
              len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
