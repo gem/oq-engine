@@ -289,7 +289,8 @@ _devtest_innervm_run () {
         sleep 5
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
-                 cd oq-engine ;
+                 cd oq-engine
+                 nosetests -v --with-xunit --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests.py
                  nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
