@@ -424,6 +424,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         self.parallelize(
             arrange_and_save_disagg_matrix, arglist, self.log_percent)
 
+    @EnginePerformanceMonitor.monitor
     def collect_result(self, result):
         """
         Collect the results coming from compute_disagg in self.results,
