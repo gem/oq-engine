@@ -25,6 +25,7 @@ CREATE TABLE hzrdr.ses_rupture (
 
 ALTER TABLE hzrdr.ses_rupture OWNER TO oq_admin;
 GRANT SELECT, INSERT ON hzrdr.ses_rupture TO oq_job_init;
+GRANT USAGE ON hzrdr.ses_rupture_id_seq1 TO oq_job_init;
 
 ALTER TABLE hzrdr.ses_rupture
 ADD CONSTRAINT hzrdr_ses_rupture_probabilistic_rupture_fk
@@ -40,10 +41,12 @@ FROM hzrdr.ses AS s WHERE ses_id = s.id;
 ALTER TABLE hzrdr.probabilistic_rupture
 ALTER COLUMN ses_collection_id SET NOT NULL;
 
+ALTER TABLE hzrdr.probabilistic_rupture DROP COLUMN tag;
 ALTER TABLE hzrdr.probabilistic_rupture DROP COLUMN ses_id;
 
 CREATE INDEX hzrdr_ses_rupture_tag_idx ON hzrdr.ses_rupture (tag);
 CREATE INDEX hzrdr_ses_rupture_ses_idx ON hzrdr.ses_rupture (ses_id);
+
 ALTER TABLE riskr.event_loss_data
 ADD CONSTRAINT riskr_event_loss_data_sesrupture_fk
 FOREIGN KEY (rupture_id) REFERENCES hzrdr.ses_rupture(id) ON DELETE CASCADE;
