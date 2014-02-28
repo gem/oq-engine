@@ -47,6 +47,8 @@ def _collect_bins_data(mon, trt_num, sources, site, imt, iml, gsims,
     This method processes the source model (generates ruptures) and collects
     all needed parameters to arrays. It also defines tectonic region type
     bins sequence.
+
+    :returns: mags, dists, lons, lats, tect_reg_types, probs_no_exceed
     """
     mags = []
     dists = []
@@ -108,7 +110,7 @@ def _collect_bins_data(mon, trt_num, sources, site, imt, iml, gsims,
     mon1.flush()
     mon2.flush()
     mon3.flush()
-    return mags, dists, lons, lats, tect_reg_types, trt_num, probs_no_exceed
+    return mags, dists, lons, lats, tect_reg_types, probs_no_exceed
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -121,7 +123,7 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
     """
-    mags, dists, lons, lats, tect_reg_types, _ = bins_data
+    mags, dists, lons, lats, tect_reg_types, _no_exceed = bins_data
 
     mag_bins = mag_bin_width * numpy.arange(
         int(numpy.floor(mags.min() / mag_bin_width)),
@@ -276,29 +278,29 @@ def compute_disagg(job_id, sites, sources, rlz, ltp, trt_num):
             continue
 
         for poe in hc.poes_disagg:
-            iml = numpy.interp(poe, curve.poes[::-1], imls)
             with EnginePerformanceMonitor(
                     'collecting bins', job_id, compute_disagg):
+                iml = numpy.interp(poe, curve.poes[::-1], imls)
                 result[rlz.id, site, poe, iml, im_type, sa_period, sa_damping
                        ] = _collect_bins_data(
                     mon, trt_num, sources, site, imt, iml, gsims,
                     hc.truncation_level, hc.num_epsilon_bins,
-                    src_site_filter, rup_site_filter),
+                    src_site_filter, rup_site_filter)
     return result
 
 
 _DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s-%(wkt)s'
 
 
-def _save_disagg_matrix(job, site, bin_edges, diss_matrix, rlz,
+def _save_disagg_matrix(job_id, site, bin_edges, diss_matrix, rlz,
                         investigation_time, imt, iml, poe, sa_period,
                         sa_damping):
     """
     Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
     :class:`~openquake.engine.db.models.DisaggResult`).
 
-    :param job:
-        :class:`openquake.engine.db.models.OqJob` representing the current job.
+    :param job_id:
+        id of the current job.
     :param site:
         :class:`openquake.hazardlib.site.Site`, containing the location
         geometry for these results.
@@ -333,6 +335,7 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, rlz,
                           wkt=site.location.wkt2d)
     disp_name %= disp_name_args
 
+    job = models.OqJob.objects.get(id=job_id)
     output = models.Output.objects.create_output(
         job, disp_name, 'disagg_matrix'
     )
@@ -373,7 +376,7 @@ def arrange_and_save_disagg_matrix(
     tect_reg_types = numpy.array(bins[4], int)
     probs_no_exceed = numpy.array(bins[5], float)
     bdata = (mags, dists, lons, lats, tect_reg_types, probs_no_exceed)
-    with EnginePerformanceMonitor(job_id, 'define bins',
+    with EnginePerformanceMonitor('define bins', job_id,
                                   arrange_and_save_disagg_matrix):
         bin_edges = _define_bins(
             bdata,
@@ -382,11 +385,11 @@ def arrange_and_save_disagg_matrix(
             hc.coordinate_bin_width,
             hc.truncation_level,
             hc.num_epsilon_bins) + (trt_bins, )
-    with EnginePerformanceMonitor(job_id, 'arrange data',
+    with EnginePerformanceMonitor('arrange data', job_id,
                                   arrange_and_save_disagg_matrix):
         diss_matrix = _arrange_data_in_bins(bdata, bin_edges)
 
-    with EnginePerformanceMonitor(job_id, 'saving disaggregation',
+    with EnginePerformanceMonitor('saving disaggregation', job_id,
                                   arrange_and_save_disagg_matrix):
         _save_disagg_matrix(
             job_id, site, bin_edges, diss_matrix, rlz,
@@ -449,7 +452,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
         """
         for rlz_id, site, poe, iml, im_type, sa_period, sa_damping in result:
-            # mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins
+            # mag_bins, dist_bins, lon_bins, lat_bins, tect_reg_types, eps_bins
             try:
                 bins = self.result[
                     rlz_id, site, poe, iml, im_type, sa_period, sa_damping]
