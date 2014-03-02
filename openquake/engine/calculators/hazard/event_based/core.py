@@ -163,14 +163,17 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
         # log calc_time per distinct rupture
         if ses_num_occ:
+            num_occ = sum(num for rup in ses_num_occ
+                          for ses, num in ses_num_occ[rup])
             logs.LOG.info(
-                'job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
-                job_id, src.source_id, src.__class__.__name__,
-                len(ses_num_occ), time.time() - t0)
+                'job=%d, src=%s:%s, num_ruptures=%d, num_sites=%d, '
+                'calc_time=%fs', job_id, src.source_id, src.__class__.__name__,
+                num_occ, len(s_sites), time.time() - t0)
             num_distinct_ruptures += len(ses_num_occ)
 
-    logs.LOG.info('job=%d, task %d generated %d/%d distinct ruptures',
-                  job_id, task_no, num_distinct_ruptures, total_ruptures)
+    if num_distinct_ruptures:
+        logs.LOG.info('job=%d, task %d generated %d/%d ruptures',
+                      job_id, task_no, num_distinct_ruptures, total_ruptures)
     mon1.flush()
     mon2.flush()
     mon3.flush()
