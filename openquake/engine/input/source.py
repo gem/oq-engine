@@ -544,7 +544,7 @@ def get_num_ruptures_weight(src):
     if isinstance(src, source.PointSource):
         weight = num_ruptures
     elif isinstance(src, source.CharacteristicFaultSource):
-        weight = num_ruptures * 100
+        weight = num_ruptures * 50
     else:  # giving more than linear weight to other sources
         weight = num_ruptures ** 1.5
     return num_ruptures, weight
