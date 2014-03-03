@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`FrankelEtAl1996NSHMP`.
+Module exports :class:`FrankelEtAl1996NSHMP2008`.
 """
 from __future__ import division
 
@@ -26,14 +26,19 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class FrankelEtAl1996NSHMP(GMPE):
+class FrankelEtAl1996NSHMP2008(GMPE):
     """
     Implements GMPE developed by Arthur Frankel et al. and documented in
     "National Seismic-Hazard Maps: Documentation June 1996" (USGS - Open File
     Report 96-532) available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/1996/documentation/ofr96-532.pdf
-    as utilized by the National Seismic Hazard Mapping Project (NSHMP) for the
-    2008 US hazard model.
+
+    The GMPE is used by the National Seismic Hazard Mapping Project (NSHMP) for
+    the 2008 central and eastern US hazard model.
+
+    This class replicates the algorithm as implemented in
+    ``subroutine getFEA`` in the ``hazgridXnga2.f`` Fortran code available
+    at: http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
 
     The GMPE is defined by a set of lookup tables (see Appendix A) defined
     from minimum magnitude Mw=4.4 to maximum magnitude Mw=8.2, and from
@@ -88,7 +93,8 @@ class FrankelEtAl1996NSHMP(GMPE):
         for spec of input and result values.
 
         :raises ValueError:
-            if imt is SA for an unsupported period.
+            if imt is instance of :class:`openquake.hazardlib.imt.SA` with
+            unsupported period.
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                    for stddev_type in stddev_types)

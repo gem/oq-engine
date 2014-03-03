@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.frankel_1996 import FrankelEtAl1996NSHMP
+from openquake.hazardlib.gsim.frankel_1996 import FrankelEtAl1996NSHMP2008
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.const import StdDev
@@ -28,7 +28,7 @@ import numpy
 
 
 class FrankelEtAl1996NSHMPTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = FrankelEtAl1996NSHMP
+    GSIM_CLASS = FrankelEtAl1996NSHMP2008
 
     def test_mean(self):
         self.check('FRANKEL1996/FRANKEL96_MEAN.csv',
