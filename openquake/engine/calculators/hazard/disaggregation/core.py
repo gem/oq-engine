@@ -21,7 +21,6 @@ Disaggregation calculator core functionality
 import sys
 import numpy
 
-import openquake.hazardlib
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -36,9 +35,8 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
-def _collect_bins_data(mon, trt_num, sources, site, imt, iml, gsims,
-                       truncation_level, n_epsilons,
-                       source_site_filter, rupture_site_filter):
+def _collect_bins_data(mon, trt_num, source_rupture_sites, site, imt, iml,
+                       gsims, truncation_level, n_epsilons):
     """
     Extract values of magnitude, distance, closest point, tectonic region
     types and PoE distribution.
@@ -57,49 +55,39 @@ def _collect_bins_data(mon, trt_num, sources, site, imt, iml, gsims,
     probs_no_exceed = []
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
-    mon0 = LightMonitor(mon.operation, mon.job_id, mon.task)
-    mon1 = mon0.copy('calc distances')
-    mon2 = mon0.copy('makectxt')
-    mon3 = mon0.copy('disaggregate_poe')
-    sources_sites = ((source, sitecol) for source in sources)
-    # here we ignore filtered site collection because either it is the same
-    # as the original one (with one site), or the source/rupture is filtered
-    # out and doesn't show up in the filter's output
-    for src_idx, (source, s_sites) in \
-            enumerate(source_site_filter(sources_sites)):
+    mon1 = mon.copy('calc distances')
+    mon2 = mon.copy('makectxt')
+    mon3 = mon.copy('disaggregate_poe')
+    for source, rupture, r_sites in source_rupture_sites:
         try:
             gsim = gsims[source.tectonic_region_type]
             tect_reg = trt_num[source.tectonic_region_type]
+            # extract rupture parameters of interest
+            mags.append(rupture.mag)
+            with mon1:
+                [jb_dist] = rupture.surface.get_joyner_boore_distance(
+                    sitemesh)
+                dists.append(jb_dist)
+                [closest_point] = rupture.surface.get_closest_points(
+                    sitemesh)
+            lons.append(closest_point.longitude)
+            lats.append(closest_point.latitude)
+            tect_reg_types.append(tect_reg)
 
-            ruptures_sites = ((rupture, s_sites)
-                              for rupture in source.iter_ruptures())
-            for rupture, r_sites in rupture_site_filter(ruptures_sites):
-                # extract rupture parameters of interest
-                mags.append(rupture.mag)
-                with mon1:
-                    [jb_dist] = rupture.surface.get_joyner_boore_distance(
-                        sitemesh)
-                    dists.append(jb_dist)
-                    [closest_point] = rupture.surface.get_closest_points(
-                        sitemesh)
-                lons.append(closest_point.longitude)
-                lats.append(closest_point.latitude)
-                tect_reg_types.append(tect_reg)
+            # compute conditional probability of exceeding iml given
+            # the current rupture, and different epsilon level, that is
+            # ``P(IMT >= iml | rup, epsilon_bin)`` for each of epsilon bins
+            with mon2:
+                sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
+            with mon3:
+                [poes_given_rup_eps] = gsim.disaggregate_poe(
+                    sctx, rctx, dctx, imt, iml, truncation_level,
+                    n_epsilons)
 
-                # compute conditional probability of exceeding iml given
-                # the current rupture, and different epsilon level, that is
-                # ``P(IMT >= iml | rup, epsilon_bin)`` for each of epsilon bins
-                with mon2:
-                    sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
-                with mon3:
-                    [poes_given_rup_eps] = gsim.disaggregate_poe(
-                        sctx, rctx, dctx, imt, iml, truncation_level,
-                        n_epsilons)
-
-                # collect probability of a rupture causing no exceedances
-                probs_no_exceed.append(
-                    rupture.get_probability_no_exceedance(poes_given_rup_eps)
-                )
+            # collect probability of a rupture causing no exceedances
+            probs_no_exceed.append(
+                rupture.get_probability_no_exceedance(poes_given_rup_eps)
+            )
         except Exception, err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
@@ -229,12 +217,9 @@ def collect_bins(job_id, sources, gsims_by_rlz, site, trt_num):
     :param trt_num:
         a dictionary Tectonic Region Type -> incremental number
     """
-    mon = EnginePerformanceMonitor('disagg', job_id, collect_bins)
-
+    mon = LightMonitor('disagg', job_id, collect_bins)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
-    f = openquake.hazardlib.calc.filters
-    src_site_filter = f.source_site_distance_filter(hc.maximum_distance)
-    rup_site_filter = f.rupture_site_distance_filter(hc.maximum_distance)
+    source_rupture_sites = list(hc.gen_ruptures(sources, mon))
 
     result = {}
     for rlz, gsims in gsims_by_rlz.items():
@@ -262,9 +247,8 @@ def collect_bins(job_id, sources, gsims_by_rlz, site, trt_num):
                 iml = numpy.interp(poe, curve.poes[::-1], imls)
                 result[rlz.id, site.id, poe, iml,
                        im_type, sa_period, sa_damping] = _collect_bins_data(
-                    mon, trt_num, sources, site, imt, iml, gsims,
-                    hc.truncation_level, hc.num_epsilon_bins,
-                    src_site_filter, rup_site_filter)
+                    mon, trt_num, source_rupture_sites, site,
+                    imt, iml, gsims, hc.truncation_level, hc.num_epsilon_bins)
     return result
 
 
