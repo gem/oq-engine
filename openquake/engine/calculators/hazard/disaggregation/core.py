@@ -209,40 +209,27 @@ def _arrange_data_in_bins(bins_data, bin_edges):
 
 
 @tasks.oqtask
-def compute_disagg(job_id, sources, gsims_by_rlz, site, trt_num):
+def collect_bins(job_id, sources, gsims_by_rlz, site, trt_num):
     """
-    Calculate disaggregation histograms and saving the results to the database.
-
     Here is the basic calculation workflow:
 
-    1. Get all sources
-    2. Get IMTs
-    3. Get the hazard curve for each point, IMT, and realization
-    4. For each `poes_disagg`, interpolate the IML for each curve.
-    5. Get GSIMs, TOM (Temporal Occurence Model), and truncation level.
-    6. Get histogram bin edges.
-    7. Prepare calculation args.
-    8. Call the hazardlib calculator
-       (see :func:`openquake.hazardlib.calc.disagg.disaggregation`
-       for more info).
+    1. Get the hazard curve for each point, IMT, and realization
+    2. For each `poes_disagg`, interpolate the IML for each curve.
+    3. Collect bins data into a result dictionary
+
+    (rlz_id, site, poe, iml, im_type, sa_period, sa_damping) ->
+    (mags, dists, lons, lats, tect_reg_types, probs_no_exceed)
 
     :param int job_id:
         ID of the currently running :class:`openquake.engine.db.models.OqJob`
-    :param list sites:
-        `list` of :class:`openquake.hazardlib.site.Site` objects, which
-        indicate the locations (and associated soil parameters) for which we
-        need to compute disaggregation histograms.
     :param list sources:
         `list` of hazardlib source objects
-    :param rlz:
-        instance of :class:`openquake.engine.db.models.LtRealization` for which
-        we want to compute disaggregation histograms. This realization will
-        determine which hazard curve results to use as a basis for the
-        calculation.
-    :param ltp:
-        a :class:`openquake.engine.input.LogicTreeProcessor` instance
+    :param gsims_by_rlz:
+        XXX
+    :param trt_num:
+        a dictionary Tectonic Region Type -> incremental number
     """
-    mon = EnginePerformanceMonitor('disagg', job_id, compute_disagg)
+    mon = EnginePerformanceMonitor('disagg', job_id, collect_bins)
 
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
     f = openquake.hazardlib.calc.filters
@@ -291,9 +278,9 @@ def _save_disagg_matrix(job_id, site_id, bin_edges, diss_matrix, rlz,
     Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
     :class:`~openquake.engine.db.models.DisaggResult`).
 
-    :param job_id:
+    :param int job_id:
         id of the current job.
-    :param site_id:
+    :param int site_id:
         id of the current site
     :param bin_edges, diss_matrix
         The outputs of :func:
@@ -318,6 +305,7 @@ def _save_disagg_matrix(job_id, site_id, bin_edges, diss_matrix, rlz,
     job = models.OqJob.objects.get(id=job_id)
 
     site_wkt = models.HazardSite.objects.get(pk=site_id).location.wkt
+
     disp_name = _DISAGG_RES_NAME_FMT
     disp_imt = imt
     if disp_imt == 'SA':
@@ -355,6 +343,11 @@ def arrange_and_save_disagg_matrix(
         job_id, trt_bins, bins, rlz_id, site_id, poe, iml,
         im_type, sa_period, sa_damping):
     """
+    Arrange the data in the bins into a disaggregation matrix
+    and save it.
+
+    :param trt_bins: a list of names of Tectonic Region Types
+
     """
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
     rlz = models.LtRealization.objects.get(id=rlz_id)
@@ -418,7 +411,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         self.result = {}  # dictionary {key: bins} where key is the tuple
         # rlz_id, site, poe, iml, im_type, sa_period, sa_damping
         self.parallelize(
-            compute_disagg, self.disagg_task_arg_gen(), self.collect_result)
+            collect_bins, self.disagg_task_arg_gen(), self.collect_result)
         arglist = [(self.job.id, self.trt_bins, bins) + key
                    for key, bins in self.result.iteritems()]
         self.parallelize(
@@ -427,7 +420,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
     @EnginePerformanceMonitor.monitor
     def collect_result(self, result):
         """
-        Collect the results coming from compute_disagg in self.results,
+        Collect the results coming from collect_bins into self.results,
         a dictionary with key (rlz_id, site, poe, iml, im_type, sa_period,
         sa_damping) and values (mag_bins, dist_bins, lon_bins, lat_bins,
         eps_bins, trt_bins).
