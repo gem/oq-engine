@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`Campbell2003`, :class:`Campbell2003SHARE`
+Module exports :class:`Campbell2003`, :class:`Campbell2003SHARE`,
+:class:`Campbell2003NSHMP2008`
 """
 from __future__ import division
 
@@ -238,3 +239,102 @@ def _compute_faulting_style_term(Frss, pR, Fnss, pN, rake):
         return np.power(Frss, - pR) * np.power(Fnss, 1 - pN)
     else:
         return np.power(Frss, - pR) * np.power(Fnss, - pN)
+
+
+class Campbell2003NSHMP2008(Campbell2003):
+    """
+    Implement GMPE developed by Ken Campbell and described in
+    "Development of semi-empirical attenuation relationships for the CEUS",
+    U.S. Geological Survey, Award 01HQGR0011, final report.
+
+    Document available at:
+    http://earthquake.usgs.gov/research/external/reports/01HQGR0011.pdf
+
+    This GMPE is used by the National Seismic Hazard Mapping Project (NSHMP)
+    for the 2008 central and eastern US hazard model.
+
+    This class replicates the algorithm as implemented in
+    ``subroutine getCampCEUS`` in the ``hazgridXnga2.f`` Fortran code available
+    at: http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
+
+    The equation assumes rupture magnitude to be in Mblg scale (given that MFDs
+    for central and eastern US are given in this scale). Mblg is converted to
+    Mw using Atkinson and Boore 1987 conversion equation
+
+    Coefficients are given for the B/C (firm rock) conditions.
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+                   for stddev_type in stddev_types)
+
+        C = self.COEFFS[imt]
+        mag = self._mblg2mw(rup.mag)
+
+        mean = self._compute_mean(C, mag, dists.rrup)
+        mean = self._clip_mean(mean, imt)
+
+        stddevs = self._get_stddevs(C, stddev_types, mag, dists.rrup.size)
+
+        return mean, stddevs
+
+    def _compute_mean(self, C, mag, rrup):
+        """
+        Compute mean value (Equation 30 in USGS report)
+        """
+        mean = np.zeros_like(rrup)
+
+        mean += C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2
+
+        idx = rrup > 70.
+        mean[idx] += C['c7'] * (np.log(rrup[idx]) - np.log(70.))
+
+        idx = rrup > 130.
+        mean[idx] += C['c8'] * (np.log(rrup[idx]) - np.log(130.))
+
+        R = np.sqrt(
+            rrup ** 2 + (C['c5'] * np.exp(C['c6'] * mag)) ** 2
+        )
+        mean += C['c4'] * np.log(R) + (C['c9'] + C['c10'] * mag) * rrup
+
+        return mean
+
+    def _mblg2mw(self, mag):
+        """
+        Convert magnitude value from Mblg to Mw using Atkinson and Boore 1987
+        conversion equation.
+        """
+        mag = 2.715 - 0.277 * mag + 0.127 * mag * mag
+
+        return mag
+
+    def _clip_mean(self, mean, imt):
+
+        """
+        Clip mean value. Maximum allowed values are 1.5 g for PGA and 3 g for
+        SA with periods in (0.02, 0.55) s.
+        """
+        if imt == PGA():
+            return np.minimum(0.405, mean)
+        elif isinstance(imt, SA) and (0.02 < imt.period < 0.55):
+            return np.minimum(1.099, mean)
+        else:
+            return mean
+
+    #: Coefficient tables extracted from ``subroutine getCampCEUS`` in
+    #: ``hazgridXnga2.f``
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    IMT    c1       c2       c3        c4      c5      c6      c7       c8       c9        c10        c11      c12      c13
+    pga    0.4492   0.633   -0.0427   -1.591   0.683   0.416   1.140   -0.873   -0.00428   0.000483   1.030   -0.0860   0.414
+    0.1    0.4064   0.613   -0.0353   -1.369   0.484   0.467   1.096   -1.284   -0.00454   0.00046    1.059   -0.0838   0.460
+    0.2    0.1325   0.617   -0.0586   -1.32    0.399   0.493   1.25    -0.928   -0.0046    0.000337   1.077   -0.0838   0.478
+    0.3   -0.1483   0.609   -0.0786   -1.28    0.349   0.502   1.241   -0.753   -0.00414   0.000263   1.081   -0.0838   0.482
+    0.5   -0.1333   0.534   -0.1379   -1.216   0.318   0.503   1.116   -0.606   -0.00341   0.000194   1.098   -0.0824   0.508
+    1.0   -0.3177   0.451   -0.2090   -1.158   0.299   0.503   1.067   -0.482   -0.00255   0.000141   1.110   -0.0793   0.543
+    2.0   -1.2483   0.459   -0.2552   -1.124   0.310   0.499   1.015   -0.417   -0.00187   0.000103   1.093   -0.0758   0.551
+    """)
