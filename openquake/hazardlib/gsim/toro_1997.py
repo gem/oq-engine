@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`ToroEtAl1997NSHMP`.
+Module exports :class:`ToroEtAl1997NSHMP2008`.
 """
 from __future__ import division
 
@@ -25,7 +25,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class ToroEtAl1997NSHMP(GMPE):
+class ToroEtAl1997NSHMP2008(GMPE):
     """
     Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Sneider
     and published in "Model of Strong Ground Motions from Earthquakes in

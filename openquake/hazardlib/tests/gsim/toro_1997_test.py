@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.toro_1997 import ToroEtAl1997NSHMP
+from openquake.hazardlib.gsim.toro_1997 import ToroEtAl1997NSHMP2008
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -21,7 +21,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class ToroEtAl1997NSHMPTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ToroEtAl1997NSHMP
+    GSIM_CLASS = ToroEtAl1997NSHMP2008
 
     def test_mean(self):
         self.check('TORO97NSHMP/T097NSHMP_MEAN.csv',
