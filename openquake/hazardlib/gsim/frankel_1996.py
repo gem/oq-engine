@@ -19,7 +19,7 @@ Module exports :class:`FrankelEtAl1996NSHMP2008`.
 from __future__ import division
 
 import numpy as np
-from scipy.interpolate import interp2d, RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
