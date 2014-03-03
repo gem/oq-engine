@@ -17,6 +17,8 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 import time
+import operator
+import itertools
 import collections
 
 import numpy
@@ -54,36 +56,35 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
                              for imt in imts))
                   for rlz in gsims_by_rlz)
 
-    mon1 = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
-    mon2 = LightMonitor('making contexts', job_id, compute_hazard_curves)
-    mon3 = LightMonitor('computing poes', job_id, compute_hazard_curves)
+    mon = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
+    mon1 = LightMonitor('making contexts', job_id, compute_hazard_curves)
+    mon2 = LightMonitor('computing poes', job_id, compute_hazard_curves)
 
-    prev_source = None
-    num_ruptures = 0
-    for source, rupture, r_sites in hc.gen_ruptures(sources, mon1):
+    for source, rows in itertools.groupby(
+            hc.gen_ruptures(sources, mon), key=operator.itemgetter(0)):
+        # a row is a triple (source, rupture, rupture_sites)
         t0 = time.time()
-        for rlz, curv in curves.iteritems():
-            gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
-            with mon2:
-                sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-            with mon3:
-                for imt in imts:
-                    poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                         hc.truncation_level)
-                    pno = rupture.get_probability_no_exceedance(poes)
-                    curv[imt] *= r_sites.expand(pno, placeholder=1)
+        num_ruptures = 0
+        for _source, rupture, r_sites in rows:
+            num_ruptures += 1
+            for rlz, curv in curves.iteritems():
+                gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
+                with mon1:
+                    sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+                with mon2:
+                    for imt in imts:
+                        poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
+                                             hc.truncation_level)
+                        pno = rupture.get_probability_no_exceedance(poes)
+                        curv[imt] *= r_sites.expand(pno, placeholder=1)
 
-        if source is not prev_source:
-            logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
-                          job_id, source.source_id, source.__class__.__name__,
-                          num_ruptures, time.time() - t0)
-        else:
-            num_ruptures = 0
-        prev_source = source
+        logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
+                      job_id, source.source_id, source.__class__.__name__,
+                      num_ruptures, time.time() - t0)
 
     mon1.flush()
     mon2.flush()
-    mon3.flush()
+
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
