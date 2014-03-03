@@ -54,56 +54,36 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
                              for imt in imts))
                   for rlz in gsims_by_rlz)
 
-    mon1 = LightMonitor('filtering sources', job_id, compute_hazard_curves)
-    mon2 = LightMonitor('generating ruptures', job_id, compute_hazard_curves)
-    mon3 = LightMonitor('filtering ruptures', job_id, compute_hazard_curves)
-    mon4 = LightMonitor('making contexts', job_id, compute_hazard_curves)
-    mon5 = LightMonitor('computing poes', job_id, compute_hazard_curves)
+    mon1 = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
+    mon2 = LightMonitor('making contexts', job_id, compute_hazard_curves)
+    mon3 = LightMonitor('computing poes', job_id, compute_hazard_curves)
 
-    for source in sources:
+    prev_source = None
+    num_ruptures = 0
+    for source, rupture, r_sites in hc.gen_ruptures(sources, mon1):
         t0 = time.time()
-
-        with mon1:
-            s_sites = source.filter_sites_by_distance_to_source(
-                hc.maximum_distance, hc.site_collection
-            ) if hc.maximum_distance else hc.site_collection
-            if s_sites is None:
-                continue
-
-        with mon2:
-            ruptures = list(source.iter_ruptures())
-            if not ruptures:
-                continue
-
-        for rupture in ruptures:
+        for rlz, curv in curves.iteritems():
+            gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
+            with mon2:
+                sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
             with mon3:
-                r_sites = rupture.source_typology.\
-                    filter_sites_by_distance_to_rupture(
-                        rupture, hc.maximum_distance, s_sites
-                    ) if hc.maximum_distance else s_sites
-                if r_sites is None:
-                    continue
+                for imt in imts:
+                    poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
+                                         hc.truncation_level)
+                    pno = rupture.get_probability_no_exceedance(poes)
+                    curv[imt] *= r_sites.expand(pno, placeholder=1)
 
-            for rlz, curv in curves.iteritems():
-                gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
-                with mon4:
-                    sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                with mon5:
-                    for imt in imts:
-                        poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                             hc.truncation_level)
-                        pno = rupture.get_probability_no_exceedance(poes)
-                        curv[imt] *= r_sites.expand(pno, placeholder=1)
-
-        logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
-                      job_id, source.source_id, source.__class__.__name__,
-                      len(ruptures), time.time() - t0)
+        if source is not prev_source:
+            logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
+                          job_id, source.source_id, source.__class__.__name__,
+                          num_ruptures, time.time() - t0)
+        else:
+            num_ruptures = 0
+        prev_source = source
 
     mon1.flush()
     mon2.flush()
     mon3.flush()
-    mon4.flush()
-    mon5.flush()
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
