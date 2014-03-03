@@ -56,7 +56,7 @@ def _collect_bins_data(mon, trt_num, source_rupture_sites, site, imt, iml,
     sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
     mon1 = mon.copy('calc distances')
-    mon2 = mon.copy('makectxt')
+    mon2 = mon.copy('making contexts')
     mon3 = mon.copy('disaggregate_poe')
     for source, rupture, r_sites in source_rupture_sites:
         try:
@@ -238,9 +238,9 @@ def collect_bins(job_id, sources, gsims_by_rlz, site, trt_num):
             # If the hazard curve is all zeros, don't even do the
             # disagg calculation.
             if all(x == 0.0 for x in curve.poes):
-                logs.LOG.debug(
+                logs.LOG.warn(
                     '* hazard curve contained all 0 probability values; '
-                    'skipping')
+                    'skipping rlz=%d, IMT=%s', rlz.id, im_type)
                 continue
 
             for poe in hc.poes_disagg:
@@ -342,15 +342,16 @@ def arrange_and_save_disagg_matrix(
     tect_reg_types = numpy.array(bins[4], int)
     probs_no_exceed = numpy.array(bins[5], float)
     bdata = (mags, dists, lons, lats, tect_reg_types, probs_no_exceed)
-    with EnginePerformanceMonitor('define bins', job_id,
-                                  arrange_and_save_disagg_matrix):
-        bin_edges = _define_bins(
-            bdata,
-            hc.mag_bin_width,
-            hc.distance_bin_width,
-            hc.coordinate_bin_width,
-            hc.truncation_level,
-            hc.num_epsilon_bins) + (trt_bins, )
+    bin_edges = _define_bins(
+        bdata,
+        hc.mag_bin_width,
+        hc.distance_bin_width,
+        hc.coordinate_bin_width,
+        hc.truncation_level,
+        hc.num_epsilon_bins) + (trt_bins, )
+    if not bin_edges:  # no bins populated
+        return
+
     with EnginePerformanceMonitor('arrange data', job_id,
                                   arrange_and_save_disagg_matrix):
         diss_matrix = _arrange_data_in_bins(bdata, bin_edges)
@@ -377,14 +378,11 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         Generate task args for the second phase of disaggregation calculations.
         This phase is concerned with computing the disaggregation histograms.
         """
-        trt_num = dict((trt, i) for i, trt in enumerate(
-                       self.tectonic_region_types))
-        self.trt_bins = [trt for (num, trt) in sorted(
-                         (num, trt) for (trt, num) in trt_num.items())]
-
+        self.trt_num = dict((trt, i) for i, trt in enumerate(
+                            self.tectonic_region_types))
         for job_id, sources, gsims_by_rlz in self.task_arg_gen():
             for site in self.hc.site_collection:
-                yield self.job.id, sources, gsims_by_rlz, site, trt_num
+                yield self.job.id, sources, gsims_by_rlz, site, self.trt_num
 
     def post_execute(self):
         """
@@ -396,7 +394,10 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         # rlz_id, site, poe, iml, im_type, sa_period, sa_damping
         self.parallelize(
             collect_bins, self.disagg_task_arg_gen(), self.collect_result)
-        arglist = [(self.job.id, self.trt_bins, bins) + key
+
+        trt_bins = [trt for (num, trt) in sorted(
+                    (num, trt) for (trt, num) in self.trt_num.items())]
+        arglist = [(self.job.id, trt_bins, bins) + key
                    for key, bins in self.result.iteritems()]
         self.parallelize(
             arrange_and_save_disagg_matrix, arglist, self.log_percent)
