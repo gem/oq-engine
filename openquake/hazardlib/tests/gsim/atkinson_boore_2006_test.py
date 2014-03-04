@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     AtkinsonBoore2006,
-    AtkinsonBoore2006NSHMP2008bar140
+    AtkinsonBoore2006NSHMP2008bar140,
+    AtkinsonBoore2006NSHMP2008bar200
 )
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
@@ -70,6 +71,20 @@ class AtkinsonBoore2006NSHMP2008bar140TestCase(BaseGSIMTestCase):
         self.check('AB06/AB06NSHMP140bar_MEAN.csv',
                     max_discrep_percentage=2.1)
 
+    def test_std_total(self):
+        self.check('AB06/AB06NSHMP140bar_STD_TOTAL.csv',
+                    max_discrep_percentage=0.1)
+
+class AtkinsonBoore2006NSHMP2008bar200TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2006NSHMP2008bar200
+
+    # Test data generated from subroutine getAB06 in hazgridXnga2.f
+
+    def test_mean(self):
+        self.check('AB06/AB06NSHMP200bar_MEAN.csv',
+                    max_discrep_percentage=2.1)
+
+    # change in stress drop does not affect standard deviation
     def test_std_total(self):
         self.check('AB06/AB06NSHMP140bar_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)

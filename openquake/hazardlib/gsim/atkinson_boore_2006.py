@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`AtkinsonBoore2006`,
-:class:`AtkinsonBoore2006NSHMP2008bar140`.
+:class:`AtkinsonBoore2006NSHMP2008bar140`,
+:class:`AtkinsonBoore2006NSHMP2008bar200`.
 """
 from __future__ import division
 
@@ -87,36 +88,36 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure type.
-        C_HR = self.COEFFS_HARD_ROCK[imt]
-        C_BC = self.COEFFS_BC[imt]
-        C_SR = self.COEFFS_SOIL_RESPONSE[imt]
+        mean = self._get_mean(sites.vs30, rup.mag, dists.rrup, imt, scale_fac=0)
+        stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
 
-        # clip distances to avoid singularity at 0
-        rrup = self._clip_distances(dists)
+        return mean, stddevs
 
-        # compute factors required for mean value calculation
+    def _get_mean(self, vs30, mag, rrup, imt, scale_fac):
+        """
+        Compute and return mean
+        """
+        C_HR, C_BC, C_SR, SC = self._extract_coeffs(imt)
+
+        rrup = self._clip_distances(rrup)
+
         f0 = self._compute_f0_factor(rrup)
         f1 = self._compute_f1_factor(rrup)
         f2 = self._compute_f2_factor(rrup)
 
-        # compute pga for BC boundary (required for soil amplification
-        # calculation on non-hard-rock sites)
-        pga_bc = np.zeros_like(sites.vs30)
-        self._compute_mean(self.COEFFS_BC[PGA()], f0, f1, f2, rup.mag,
-                           rrup, sites, sites.vs30 < 2000.0, pga_bc)
-        pga_bc = (10 ** pga_bc) * 1e-2 / g
+        pga_bc = self._get_pga_bc(
+            f0, f1, f2, SC, mag, rrup, vs30, scale_fac
+        )
 
         # compute mean values for hard-rock sites (vs30 >= 2000),
         # and non-hard-rock sites (vs30 < 2000) and add soil amplification
         # term
-        mean = np.zeros_like(sites.vs30)
-        self._compute_mean(C_HR, f0, f1, f2, rup.mag, rrup, sites,
-                           sites.vs30 >= 2000.0, mean)
-        self._compute_mean(C_BC, f0, f1, f2, rup.mag, rrup, sites,
-                           sites.vs30 < 2000.0, mean)
-        self._compute_soil_amplification(C_SR, sites, pga_bc, mean)
+        mean = np.zeros_like(vs30)
+        self._compute_mean(C_HR, f0, f1, f2, SC, mag, rrup,
+                           vs30 >= 2000.0, mean, scale_fac)
+        self._compute_mean(C_BC, f0, f1, f2, SC, mag, rrup,
+                           vs30 < 2000.0, mean, scale_fac)
+        self._compute_soil_amplification(C_SR, vs30, pga_bc, mean)
 
         # convert from base 10 to base e
         if imt == PGV():
@@ -125,18 +126,38 @@ class AtkinsonBoore2006(BooreAtkinson2008):
             # convert from cm/s**2 to g
             mean = np.log((10 ** mean) * 1e-2 / g)
 
-        stddevs = self._get_stddevs(stddev_types, num_sites=len(sites.vs30))
+        return mean
 
-        return mean, stddevs
+    def _get_pga_bc(self, f0, f1, f2, SC, mag, rrup, vs30, scale_fac):
+        """
+        Compute and return PGA on BC boundary
+        """
+        pga_bc = np.zeros_like(vs30)
+        self._compute_mean(self.COEFFS_BC[PGA()], f0, f1, f2, SC, mag,
+                           rrup, vs30 < 2000.0, pga_bc, scale_fac)
 
-    def _clip_distances(self, dists):
+        return (10 ** pga_bc) * 1e-2 / g
+
+    def _extract_coeffs(self, imt):
+        """
+        Extract dictionaries of coefficients specific to required
+        intensity measure type.
+        """
+        C_HR = self.COEFFS_HARD_ROCK[imt]
+        C_BC = self.COEFFS_BC[imt]
+        C_SR = self.COEFFS_SOIL_RESPONSE[imt]
+        SC = self.STRESS_COEFFS[imt]
+
+        return C_HR, C_BC, C_SR, SC
+
+    def _clip_distances(self, rrup):
         """
         Return array of distances with values clipped to 1. See end of
         paragraph 'Methodology and Model Parameters', p. 2182. The equations
         have a singularity for distance = 0, so that's why distances are
         clipped to 1.
         """
-        rrup = dists.rrup
+        rrup = rrup.copy()
         rrup[rrup < 1] = 1
 
         return rrup
@@ -172,7 +193,19 @@ class AtkinsonBoore2006(BooreAtkinson2008):
 
         return f2
 
-    def _compute_mean(self, C, f0, f1, f2, mag, rrup, _sites, idxs, mean):
+    def _compute_stress_drop_adjustment(self, SC, mag, scale_fac):
+        """
+        Compute equation (6) p. 2200
+        """
+        return scale_fac * np.minimum(
+            SC['delta'] + 0.05,
+            0.05 + SC['delta'] * (
+                np.maximum(mag - SC['M1'], 0) / (SC['Mh'] - SC['M1'])
+            )
+        )
+
+    def _compute_mean(self, C, f0, f1, f2, SC, mag, rrup, idxs, mean,
+                      scale_fac):
         """
         Compute mean value (for a set of indexes) without site amplification
         terms. This is equation (5), p. 2191, without S term.
@@ -183,20 +216,21 @@ class AtkinsonBoore2006(BooreAtkinson2008):
                       (C['c4'] + C['c5'] * mag) * f1[idxs] +
                       (C['c6'] + C['c7'] * mag) * f2[idxs] +
                       (C['c8'] + C['c9'] * mag) * f0[idxs] +
-                      C['c10'] * rrup[idxs])
+                      C['c10'] * rrup[idxs] +
+                      self._compute_stress_drop_adjustment(SC, mag, scale_fac))
 
-    def _compute_soil_amplification(self, C, sites, pga_bc, mean):
+    def _compute_soil_amplification(self, C, vs30, pga_bc, mean):
         """
         Compute soil amplification, that is S term in equation (5), p. 2191,
         and add to mean values for non hard rock sites.
         """
         # convert from base e (as defined in BA2008) to base 10 (as used in
         # AB2006)
-        sal = np.log10(np.exp(self._get_site_amplification_linear(sites, C)))
+        sal = np.log10(np.exp(self._get_site_amplification_linear(vs30, C)))
         sanl = np.log10(np.exp(
-            self._get_site_amplification_non_linear(sites, pga_bc, C)))
+            self._get_site_amplification_non_linear(vs30, pga_bc, C)))
 
-        idxs = sites.vs30 < 2000.0
+        idxs = vs30 < 2000.0
         mean[idxs] = mean[idxs] + sal[idxs] + sanl[idxs]
 
     def _get_stddevs(self, stddev_types, num_sites):
@@ -292,6 +326,35 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         'Vref': 760.0
     }
 
+    STRESS_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    IMT    delta  M1    Mh
+    pga    0.15   0.50  5.50
+    0.025  0.15   0.00  5.00
+    0.031  0.15   0.00  5.00
+    0.04   0.15   0.00  5.00
+    0.05   0.15   0.00  5.00
+    0.063  0.15   0.17  5.17
+    0.079  0.15   0.34  5.34
+    0.1    0.15   0.50  5.50
+    0.126  0.15   1.15  5.67
+    0.158  0.15   1.85  5.84
+    0.199  0.15   2.50  6.00
+    0.251  0.15   2.90  6.12
+    0.315  0.15   3.30  6.25
+    0.397  0.15   3.65  6.37
+    0.5    0.15   4.00  6.50
+    0.629  0.15   4.17  6.70
+    0.794  0.15   4.34  6.95
+    1.00   0.15   4.50  7.20
+    1.25   0.15   4.67  7.45
+    1.587  0.15   4.84  7.70
+    2.0    0.15   5.00  8.00
+    2.5    0.15   5.25  8.12
+    3.125  0.15   5.50  8.25
+    4.0    0.15   5.75  8.37
+    5.0    0.15   6.00  8.50
+    pgv    0.11   2.00  5.50
+    """)
 
 class AtkinsonBoore2006NSHMP2008bar140(AtkinsonBoore2006):
     """
@@ -320,15 +383,27 @@ class AtkinsonBoore2006NSHMP2008bar140(AtkinsonBoore2006):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        # create new rupture context to avoid changing original rupture
-        # context object, and convert magnitude from Mblg to Mw using Atkinson
-        # and Boore 1987 equation
-        rctx = RuptureContext()
-        rctx.mag = 2.715 - 0.277 * rup.mag + 0.127 * rup.mag * rup.mag
+        mag = self._convert_magnitude(rup.mag)
 
-        mean, stddevs = super(AtkinsonBoore2006NSHMP2008bar140, self). \
-            get_mean_and_stddevs(sites, rctx, dists, imt, stddev_types)
+        mean = self._get_mean(sites.vs30, mag, dists.rrup, imt, scale_fac=0)
+        stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
 
+        mean = self._clip_mean(imt, mean)
+
+        return mean, stddevs
+
+    def _convert_magnitude(self, mag):
+        """
+        Convert magnitude value from Mblg to Mw using Atkinson and Boore 1987
+        equation
+        """
+        return 2.715 - 0.277 * mag + 0.127 * mag * mag
+
+    def _clip_mean(self, imt, mean):
+        """
+        Clip mean value for PGA at 1.5 g and for short periods (0.02 < T < 0.5)
+        at 3.0 g
+        """
         # clip mean value for PGA at 1.5 g
         if imt == PGA():
             mean = np.minimum(0.405, mean)
@@ -336,6 +411,29 @@ class AtkinsonBoore2006NSHMP2008bar140(AtkinsonBoore2006):
         # clip mean value for short periods (0.02 < T < 0.5) at 3.0 g
         if isinstance(imt, SA) and (0.02 < imt.period < 0.5):
             mean = np.minimum(1.099, mean)
+
+        return mean
+
+class AtkinsonBoore2006NSHMP2008bar200(AtkinsonBoore2006NSHMP2008bar140):
+    """
+    Same as :class:`AtkinsonBoore2006NSHMP2008bar140` but with adjustment for
+    200 bar stress drop
+    """
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        mag = self._convert_magnitude(rup.mag)
+
+        # stress dropt scaling factor defined in subroutine getAB06
+        mean = self._get_mean(
+            sites.vs30, mag, dists.rrup, imt, scale_fac=0.5146
+        )
+        stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
+
+        mean = self._clip_mean(imt, mean)
 
         return mean, stddevs
 
