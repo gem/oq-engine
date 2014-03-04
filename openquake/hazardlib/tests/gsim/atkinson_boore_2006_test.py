@@ -13,7 +13,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
+from openquake.hazardlib.gsim.atkinson_boore_2006 import (
+    AtkinsonBoore2006,
+    AtkinsonBoore2006NSHMP2008bar140
+)
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
 from openquake.hazardlib.imt import PGA
@@ -56,3 +59,17 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
             sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_array_equal(mean_0, mean_01)
         numpy.testing.assert_array_equal(stds_0, stds_01)
+
+
+class AtkinsonBoore2006NSHMP2008bar140TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2006NSHMP2008bar140
+
+    # Test data generated from subroutine getAB06 in hazgridXnga2.f
+
+    def test_mean(self):
+        self.check('AB06/AB06NSHMP140bar_MEAN.csv',
+                    max_discrep_percentage=2.1)
+
+    def test_std_total(self):
+        self.check('AB06/AB06NSHMP140bar_STD_TOTAL.csv',
+                    max_discrep_percentage=0.1)

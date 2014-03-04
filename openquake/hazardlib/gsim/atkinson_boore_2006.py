@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AtkinsonBoore2006`.
+Module exports :class:`AtkinsonBoore2006`,
+:class:`AtkinsonBoore2006NSHMP2008bar140`.
 """
 from __future__ import division
 
@@ -23,7 +24,7 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import CoeffsTable, RuptureContext
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -290,3 +291,51 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         'v2': 300.0,
         'Vref': 760.0
     }
+
+
+class AtkinsonBoore2006NSHMP2008bar140(AtkinsonBoore2006):
+    """
+    Implements GMPE developed by Gail M. Atkinson and David M. Boore and
+    published as "Earthquake Ground-Motion Prediction Equations for Eastern
+    North America" (2006, Bulletin of the Seismological Society of America,
+    Volume 96, No. 6, pages 2181-2205) as utilized by the National Seismic
+    Hazard Mapping Project (NSHMP) for the 2008 central and eastern US model.
+
+    The class replicates the algorithm as coded in ``subroutine getAB06``
+    in ``hazgridXnga2.f`` Fortran code available at:
+    http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
+
+    The class implement the equation for static stress drop equal to 140 bar.
+
+    The equation assumes rupture magnitude to be in Mblg scale (given that
+    MFDs for central and eastern US are given in this scale). Therefore Mblg
+    is converted to Mw by using Atkinson and Boore 1987 conversion equation.
+
+    Mean value is clipped at 1.5 g for PGA and 3.0 g for SA with periods in
+    range (0.02, 0.5) s.
+    """
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # create new rupture context to avoid changing original rupture
+        # context object, and convert magnitude from Mblg to Mw using Atkinson
+        # and Boore 1987 equation
+        rctx = RuptureContext()
+        rctx.mag = 2.715 - 0.277 * rup.mag + 0.127 * rup.mag * rup.mag
+
+        mean, stddevs = super(AtkinsonBoore2006NSHMP2008bar140, self). \
+            get_mean_and_stddevs(sites, rctx, dists, imt, stddev_types)
+
+        # clip mean value for PGA at 1.5 g
+        if imt == PGA():
+            mean = np.minimum(0.405, mean)
+
+        # clip mean value for short periods (0.02 < T < 0.5) at 3.0 g
+        if isinstance(imt, SA) and (0.02 < imt.period < 0.5):
+            mean = np.minimum(1.099, mean)
+
+        return mean, stddevs
+
