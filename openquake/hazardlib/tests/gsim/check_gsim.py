@@ -326,7 +326,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    errors, stats = check_gsim(
+    errors, stats, _, _, _ = check_gsim(
         gsim_cls=args.gsim, datafile=args.datafile,
         max_discrep_percentage=args.max_discrep_percentage,
         debug=args.debug
