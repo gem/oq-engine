@@ -1,0 +1,583 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <exposureModel id="ep" category="buildings">
+    <description>Exposure model for CITY C</description>
+    <conversions>
+      <costTypes>
+        <costType name="structural" unit="EUR" type="aggregated"/>
+      </costTypes>
+    </conversions>
+    <assets>
+      <asset id="a1" taxonomy="MS-SLSB-1">
+        <location lon="-78.167775" lat="15.592965"/>
+        <costs>
+          <cost type="structural" value="43889.78977"/>
+        </costs>
+      </asset>
+      <asset id="a2" taxonomy="MS-FLSB-2">
+        <location lon="-78.167809" lat="15.593067"/>
+        <costs>
+          <cost type="structural" value="61276.22663"/>
+        </costs>
+      </asset>
+      <asset id="a3" taxonomy="MS-SLSB-1">
+        <location lon="-78.167845" lat="15.593165"/>
+        <costs>
+          <cost type="structural" value="36939.74031"/>
+        </costs>
+      </asset>
+      <asset id="a4" taxonomy="MS-SLSB-1">
+        <location lon="-78.167733" lat="15.592819"/>
+        <costs>
+          <cost type="structural" value="86825.67485"/>
+        </costs>
+      </asset>
+      <asset id="a5" taxonomy="MS-FLSB-2">
+        <location lon="-78.16787" lat="15.593317"/>
+        <costs>
+          <cost type="structural" value="114772.9901"/>
+        </costs>
+      </asset>
+      <asset id="a6" taxonomy="MC-RLSB-2">
+        <location lon="-78.168002" lat="15.593287"/>
+        <costs>
+          <cost type="structural" value="124522.486"/>
+        </costs>
+      </asset>
+      <asset id="a7" taxonomy="MS-SLSB-1">
+        <location lon="-78.168117" lat="15.59329"/>
+        <costs>
+          <cost type="structural" value="32911.55171"/>
+        </costs>
+      </asset>
+      <asset id="a8" taxonomy="MS-SLSB-1">
+        <location lon="-78.168208" lat="15.593259"/>
+        <costs>
+          <cost type="structural" value="42519.28895"/>
+        </costs>
+      </asset>
+      <asset id="a9" taxonomy="MS-FLSB-2">
+        <location lon="-78.168313" lat="15.59324"/>
+        <costs>
+          <cost type="structural" value="79031.8682"/>
+        </costs>
+      </asset>
+      <asset id="a10" taxonomy="MS-FLSB-2">
+        <location lon="-78.168421" lat="15.593159"/>
+        <costs>
+          <cost type="structural" value="141552.1735"/>
+        </costs>
+      </asset>
+      <asset id="a11" taxonomy="MS-FLSB-2">
+        <location lon="-78.168079" lat="15.593067"/>
+        <costs>
+          <cost type="structural" value="87196.17465"/>
+        </costs>
+      </asset>
+      <asset id="a12" taxonomy="MS-FLSB-2">
+        <location lon="-78.168339" lat="15.592992"/>
+        <costs>
+          <cost type="structural" value="92029.63872"/>
+        </costs>
+      </asset>
+      <asset id="a13" taxonomy="MS-FLSB-2">
+        <location lon="-78.167925" lat="15.592739"/>
+        <costs>
+          <cost type="structural" value="71610.87471"/>
+        </costs>
+      </asset>
+      <asset id="a14" taxonomy="MS-FLSB-2">
+        <location lon="-78.168079" lat="15.59268"/>
+        <costs>
+          <cost type="structural" value="81585.95945"/>
+        </costs>
+      </asset>
+      <asset id="a15" taxonomy="MC-RLSB-2">
+        <location lon="-78.168221" lat="15.592625"/>
+        <costs>
+          <cost type="structural" value="67671.95181"/>
+        </costs>
+      </asset>
+      <asset id="a16" taxonomy="MC-RLSB-2">
+        <location lon="-78.168018" lat="15.592849"/>
+        <costs>
+          <cost type="structural" value="70349.47712"/>
+        </costs>
+      </asset>
+      <asset id="a17" taxonomy="MS-FLSB-2">
+        <location lon="-78.168268" lat="15.592847"/>
+        <costs>
+          <cost type="structural" value="136096.8496"/>
+        </costs>
+      </asset>
+      <asset id="a18" taxonomy="MC-RLSB-2">
+        <location lon="-78.166493" lat="15.593558"/>
+        <costs>
+          <cost type="structural" value="79001.43349"/>
+        </costs>
+      </asset>
+      <asset id="a19" taxonomy="MS-SLSB-1">
+        <location lon="-78.166505" lat="15.593648"/>
+        <costs>
+          <cost type="structural" value="45099.96216"/>
+        </costs>
+      </asset>
+      <asset id="a20" taxonomy="MC-RLSB-2">
+        <location lon="-78.166559" lat="15.593719"/>
+        <costs>
+          <cost type="structural" value="107331.2944"/>
+        </costs>
+      </asset>
+      <asset id="a21" taxonomy="MS-FLSB-2">
+        <location lon="-78.166608" lat="15.593812"/>
+        <costs>
+          <cost type="structural" value="123721.5092"/>
+        </costs>
+      </asset>
+      <asset id="a22" taxonomy="MS-FLSB-2">
+        <location lon="-78.166536" lat="15.594064"/>
+        <costs>
+          <cost type="structural" value="39894.62095"/>
+        </costs>
+      </asset>
+      <asset id="a23" taxonomy="MC-RLSB-2">
+        <location lon="-78.166683" lat="15.594017"/>
+        <costs>
+          <cost type="structural" value="85428.30836"/>
+        </costs>
+      </asset>
+      <asset id="a24" taxonomy="MS-FLSB-2">
+        <location lon="-78.167466" lat="15.593142"/>
+        <costs>
+          <cost type="structural" value="74777.35262"/>
+        </costs>
+      </asset>
+      <asset id="a25" taxonomy="MS-SLSB-1">
+        <location lon="-78.165974" lat="15.594081"/>
+        <costs>
+          <cost type="structural" value="20678.62322"/>
+        </costs>
+      </asset>
+      <asset id="a26" taxonomy="MS-FLSB-2">
+        <location lon="-78.166125" lat="15.594165"/>
+        <costs>
+          <cost type="structural" value="83829.28028"/>
+        </costs>
+      </asset>
+      <asset id="a27" taxonomy="MS-FLSB-2">
+        <location lon="-78.166325" lat="15.594146"/>
+        <costs>
+          <cost type="structural" value="134244.5955"/>
+        </costs>
+      </asset>
+      <asset id="a28" taxonomy="MS-SLSB-1">
+        <location lon="-78.165838" lat="15.593787"/>
+        <costs>
+          <cost type="structural" value="42031.09945"/>
+        </costs>
+      </asset>
+      <asset id="a29" taxonomy="MS-SLSB-1">
+        <location lon="-78.165974" lat="15.593742"/>
+        <costs>
+          <cost type="structural" value="41347.43357"/>
+        </costs>
+      </asset>
+      <asset id="a30" taxonomy="MS-SLSB-1">
+        <location lon="-78.166099" lat="15.593646"/>
+        <costs>
+          <cost type="structural" value="50011.9097"/>
+        </costs>
+      </asset>
+      <asset id="a31" taxonomy="MS-FLSB-2">
+        <location lon="-78.166237" lat="15.593592"/>
+        <costs>
+          <cost type="structural" value="73830.79984"/>
+        </costs>
+      </asset>
+      <asset id="a32" taxonomy="MS-SLSB-1">
+        <location lon="-78.166337" lat="15.593532"/>
+        <costs>
+          <cost type="structural" value="41788.53752"/>
+        </costs>
+      </asset>
+      <asset id="a33" taxonomy="MS-FLSB-2">
+        <location lon="-78.165666" lat="15.593851"/>
+        <costs>
+          <cost type="structural" value="103843.4516"/>
+        </costs>
+      </asset>
+      <asset id="a34" taxonomy="MC-RLSB-2">
+        <location lon="-78.165709" lat="15.593955"/>
+        <costs>
+          <cost type="structural" value="86352.93577"/>
+        </costs>
+      </asset>
+      <asset id="a35" taxonomy="MS-SLSB-1">
+        <location lon="-78.1658" lat="15.594051"/>
+        <costs>
+          <cost type="structural" value="58569.44768"/>
+        </costs>
+      </asset>
+      <asset id="a36" taxonomy="MS-SLSB-1">
+        <location lon="-78.165917" lat="15.594243"/>
+        <costs>
+          <cost type="structural" value="45533.79043"/>
+        </costs>
+      </asset>
+      <asset id="a37" taxonomy="MS-SLSB-1">
+        <location lon="-78.165998" lat="15.594344"/>
+        <costs>
+          <cost type="structural" value="50247.03198"/>
+        </costs>
+      </asset>
+      <asset id="a38" taxonomy="MS-FLSB-2">
+        <location lon="-78.166639" lat="15.593371"/>
+        <costs>
+          <cost type="structural" value="83599.59212"/>
+        </costs>
+      </asset>
+      <asset id="a39" taxonomy="MS-FLSB-2">
+        <location lon="-78.166805" lat="15.593289"/>
+        <costs>
+          <cost type="structural" value="106787.1086"/>
+        </costs>
+      </asset>
+      <asset id="a40" taxonomy="MS-FLSB-2">
+        <location lon="-78.166965" lat="15.593219"/>
+        <costs>
+          <cost type="structural" value="119198.0325"/>
+        </costs>
+      </asset>
+      <asset id="a41" taxonomy="MS-FLSB-2">
+        <location lon="-78.167151" lat="15.593152"/>
+        <costs>
+          <cost type="structural" value="108436.3712"/>
+        </costs>
+      </asset>
+      <asset id="a42" taxonomy="MS-FLSB-2">
+        <location lon="-78.167324" lat="15.593188"/>
+        <costs>
+          <cost type="structural" value="50684.23453"/>
+        </costs>
+      </asset>
+      <asset id="a43" taxonomy="MS-FLSB-2">
+        <location lon="-78.165453" lat="15.594186"/>
+        <costs>
+          <cost type="structural" value="108179.4098"/>
+        </costs>
+      </asset>
+      <asset id="a44" taxonomy="MS-SLSB-1">
+        <location lon="-78.165228" lat="15.594277"/>
+        <costs>
+          <cost type="structural" value="38433.17422"/>
+        </costs>
+      </asset>
+      <asset id="a45" taxonomy="MC-RLSB-2">
+        <location lon="-78.16528" lat="15.594394"/>
+        <costs>
+          <cost type="structural" value="78189.85921"/>
+        </costs>
+      </asset>
+      <asset id="a46" taxonomy="MS-FLSB-2">
+        <location lon="-78.165301" lat="15.594514"/>
+        <costs>
+          <cost type="structural" value="96630.8694"/>
+        </costs>
+      </asset>
+      <asset id="a47" taxonomy="MS-FLSB-2">
+        <location lon="-78.165528" lat="15.594281"/>
+        <costs>
+          <cost type="structural" value="110771.5808"/>
+        </costs>
+      </asset>
+      <asset id="a48" taxonomy="MS-FLSB-2">
+        <location lon="-78.165556" lat="15.594425"/>
+        <costs>
+          <cost type="structural" value="133305.2958"/>
+        </costs>
+      </asset>
+      <asset id="a49" taxonomy="MS-FLSB-2">
+        <location lon="-78.163661" lat="15.593082"/>
+        <costs>
+          <cost type="structural" value="78695.73442"/>
+        </costs>
+      </asset>
+      <asset id="a50" taxonomy="MC-RLSB-2">
+        <location lon="-78.16375" lat="15.593055"/>
+        <costs>
+          <cost type="structural" value="79798.21582"/>
+        </costs>
+      </asset>
+      <asset id="a51" taxonomy="MS-FLSB-2">
+        <location lon="-78.163856" lat="15.593023"/>
+        <costs>
+          <cost type="structural" value="71345.94662"/>
+        </costs>
+      </asset>
+      <asset id="a52" taxonomy="MS-FLSB-2">
+        <location lon="-78.16402" lat="15.592973"/>
+        <costs>
+          <cost type="structural" value="72719.97911"/>
+        </costs>
+      </asset>
+      <asset id="a53" taxonomy="MS-SLSB-1">
+        <location lon="-78.163671" lat="15.592897"/>
+        <costs>
+          <cost type="structural" value="31092.45757"/>
+        </costs>
+      </asset>
+      <asset id="a54" taxonomy="MS-FLSB-2">
+        <location lon="-78.163788" lat="15.592867"/>
+        <costs>
+          <cost type="structural" value="64915.82199"/>
+        </costs>
+      </asset>
+      <asset id="a55" taxonomy="MS-FLSB-2">
+        <location lon="-78.163935" lat="15.592809"/>
+        <costs>
+          <cost type="structural" value="129357.2279"/>
+        </costs>
+      </asset>
+      <asset id="a56" taxonomy="MS-FLSB-2">
+        <location lon="-78.164178" lat="15.593384"/>
+        <costs>
+          <cost type="structural" value="88374.729"/>
+        </costs>
+      </asset>
+      <asset id="a57" taxonomy="MS-FLSB-2">
+        <location lon="-78.16408" lat="15.593201"/>
+        <costs>
+          <cost type="structural" value="159243.0365"/>
+        </costs>
+      </asset>
+      <asset id="a58" taxonomy="MS-FLSB-2">
+        <location lon="-78.164064" lat="15.593459"/>
+        <costs>
+          <cost type="structural" value="76591.38642"/>
+        </costs>
+      </asset>
+      <asset id="a59" taxonomy="MC-RLSB-2">
+        <location lon="-78.163932" lat="15.593279"/>
+        <costs>
+          <cost type="structural" value="146954.6321"/>
+        </costs>
+      </asset>
+      <asset id="a60" taxonomy="MS-FLSB-2">
+        <location lon="-78.166861" lat="15.593528"/>
+        <costs>
+          <cost type="structural" value="80378.47739"/>
+        </costs>
+      </asset>
+      <asset id="a61" taxonomy="MC-RLSB-2">
+        <location lon="-78.166892" lat="15.593723"/>
+        <costs>
+          <cost type="structural" value="162945.0252"/>
+        </costs>
+      </asset>
+      <asset id="a62" taxonomy="MS-FLSB-2">
+        <location lon="-78.167009" lat="15.593584"/>
+        <costs>
+          <cost type="structural" value="132139.8347"/>
+        </costs>
+      </asset>
+      <asset id="a63" taxonomy="MS-SLSB-1">
+        <location lon="-78.167117" lat="15.593539"/>
+        <costs>
+          <cost type="structural" value="47211.91126"/>
+        </costs>
+      </asset>
+      <asset id="a64" taxonomy="MS-FLSB-2">
+        <location lon="-78.167216" lat="15.593451"/>
+        <costs>
+          <cost type="structural" value="87850.289"/>
+        </costs>
+      </asset>
+      <asset id="a65" taxonomy="MC-RLSB-2">
+        <location lon="-78.167346" lat="15.593409"/>
+        <costs>
+          <cost type="structural" value="94254.84207"/>
+        </costs>
+      </asset>
+      <asset id="a66" taxonomy="MS-SLSB-1">
+        <location lon="-78.167546" lat="15.593483"/>
+        <costs>
+          <cost type="structural" value="28139.13184"/>
+        </costs>
+      </asset>
+      <asset id="a67" taxonomy="W-SLFB-1">
+        <location lon="-78.163886" lat="15.600401"/>
+        <costs>
+          <cost type="structural" value="21394.41695"/>
+        </costs>
+      </asset>
+      <asset id="a68" taxonomy="W-SLFB-1">
+        <location lon="-78.163732" lat="15.600315"/>
+        <costs>
+          <cost type="structural" value="19593.33147"/>
+        </costs>
+      </asset>
+      <asset id="a69" taxonomy="MR-RCSB-2">
+        <location lon="-78.163643" lat="15.600894"/>
+        <costs>
+          <cost type="structural" value="67027.74588"/>
+        </costs>
+      </asset>
+      <asset id="a70" taxonomy="W-SLFB-1">
+        <location lon="-78.163541" lat="15.600238"/>
+        <costs>
+          <cost type="structural" value="11109.63136"/>
+        </costs>
+      </asset>
+      <asset id="a71" taxonomy="MC-RLSB-2">
+        <location lon="-78.164008" lat="15.593938"/>
+        <costs>
+          <cost type="structural" value="74864.48232"/>
+        </costs>
+      </asset>
+      <asset id="a72" taxonomy="MC-RLSB-2">
+        <location lon="-78.163807" lat="15.593895"/>
+        <costs>
+          <cost type="structural" value="173255.0936"/>
+        </costs>
+      </asset>
+      <asset id="a73" taxonomy="MS-SLSB-1">
+        <location lon="-78.163972" lat="15.593757"/>
+        <costs>
+          <cost type="structural" value="55339.51367"/>
+        </costs>
+      </asset>
+      <asset id="a74" taxonomy="MC-RLSB-2">
+        <location lon="-78.163763" lat="15.594023"/>
+        <costs>
+          <cost type="structural" value="106027.68"/>
+        </costs>
+      </asset>
+      <asset id="a75" taxonomy="MC-RLSB-2">
+        <location lon="-78.163843" lat="15.594141"/>
+        <costs>
+          <cost type="structural" value="58243.09759"/>
+        </costs>
+      </asset>
+      <asset id="a76" taxonomy="MS-SLSB-1">
+        <location lon="-78.164411" lat="15.593966"/>
+        <costs>
+          <cost type="structural" value="111849.2432"/>
+        </costs>
+      </asset>
+      <asset id="a77" taxonomy="MS-SLSB-1">
+        <location lon="-78.164282" lat="15.594036"/>
+        <costs>
+          <cost type="structural" value="61647.08746"/>
+        </costs>
+      </asset>
+      <asset id="a78" taxonomy="MS-FLSB-2">
+        <location lon="-78.164166" lat="15.594065"/>
+        <costs>
+          <cost type="structural" value="108155.2335"/>
+        </costs>
+      </asset>
+      <asset id="a79" taxonomy="MS-FLSB-2">
+        <location lon="-78.164042" lat="15.594103"/>
+        <costs>
+          <cost type="structural" value="93541.24658"/>
+        </costs>
+      </asset>
+      <asset id="a80" taxonomy="MC-RLSB-2">
+        <location lon="-78.163215" lat="15.594176"/>
+        <costs>
+          <cost type="structural" value="86126.09104"/>
+        </costs>
+      </asset>
+      <asset id="a81" taxonomy="MS-FLSB-2">
+        <location lon="-78.16337" lat="15.594154"/>
+        <costs>
+          <cost type="structural" value="160113.722"/>
+        </costs>
+      </asset>
+      <asset id="a82" taxonomy="MS-SLSB-1">
+        <location lon="-78.163346" lat="15.594028"/>
+        <costs>
+          <cost type="structural" value="43907.52422"/>
+        </costs>
+      </asset>
+      <asset id="a83" taxonomy="MC-RLSB-2">
+        <location lon="-78.163313" lat="15.593944"/>
+        <costs>
+          <cost type="structural" value="90526.2881"/>
+        </costs>
+      </asset>
+      <asset id="a84" taxonomy="MC-RLSB-2">
+        <location lon="-78.163298" lat="15.593833"/>
+        <costs>
+          <cost type="structural" value="125997.5899"/>
+        </costs>
+      </asset>
+      <asset id="a85" taxonomy="MS-FLSB-2">
+        <location lon="-78.163079" lat="15.594188"/>
+        <costs>
+          <cost type="structural" value="123174.7647"/>
+        </costs>
+      </asset>
+      <asset id="a86" taxonomy="MC-RLSB-2">
+        <location lon="-78.16364" lat="15.593523"/>
+        <costs>
+          <cost type="structural" value="64330.80784"/>
+        </costs>
+      </asset>
+      <asset id="a87" taxonomy="MR-RCSB-2">
+        <location lon="-78.163454" lat="15.600556"/>
+        <costs>
+          <cost type="structural" value="91031.25942"/>
+        </costs>
+      </asset>
+      <asset id="a88" taxonomy="W-FLFB-2">
+        <location lon="-78.163322" lat="15.600489"/>
+        <costs>
+          <cost type="structural" value="50430.81437"/>
+        </costs>
+      </asset>
+      <asset id="a89" taxonomy="MR-RCSB-2">
+        <location lon="-78.163163" lat="15.600446"/>
+        <costs>
+          <cost type="structural" value="37873.6353"/>
+        </costs>
+      </asset>
+      <asset id="a90" taxonomy="MC-RLSB-2">
+        <location lon="-78.164949" lat="15.594546"/>
+        <costs>
+          <cost type="structural" value="40445.97115"/>
+        </costs>
+      </asset>
+      <asset id="a91" taxonomy="MS-SLSB-1">
+        <location lon="-78.165105" lat="15.594443"/>
+        <costs>
+          <cost type="structural" value="27361.63871"/>
+        </costs>
+      </asset>
+      <asset id="a92" taxonomy="MC-RLSB-2">
+        <location lon="-78.165173" lat="15.594105"/>
+        <costs>
+          <cost type="structural" value="79493.73449"/>
+        </costs>
+      </asset>
+      <asset id="a93" taxonomy="MS-SLSB-1">
+        <location lon="-78.165419" lat="15.594027"/>
+        <costs>
+          <cost type="structural" value="52647.72027"/>
+        </costs>
+      </asset>
+      <asset id="a94" taxonomy="MS-FLSB-2">
+        <location lon="-78.165062" lat="15.594319"/>
+        <costs>
+          <cost type="structural" value="71680.83776"/>
+        </costs>
+      </asset>
+      <asset id="a95" taxonomy="MS-FLSB-2">
+        <location lon="-78.165062" lat="15.594168"/>
+        <costs>
+          <cost type="structural" value="64367.17498"/>
+        </costs>
+      </asset>
+    </assets>
+  </exposureModel>
+</nrml>
