@@ -25,6 +25,9 @@ import numpy as np
 from scipy.constants import g
 
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.gsim.utils import (
+    mblg_to_mw_atkinson_boore_87, clip_mean
+)
 from openquake.hazardlib.gsim.base import CoeffsTable, RuptureContext
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -383,38 +386,17 @@ class AtkinsonBoore2006NSHMP2008bar140(AtkinsonBoore2006):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mag = self._convert_magnitude(rup.mag)
+        mag = mblg_to_mw_atkinson_boore_87(rup.mag)
 
         mean = self._get_mean(sites.vs30, mag, dists.rrup, imt, scale_fac=0)
         stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
 
-        mean = self._clip_mean(imt, mean)
+        mean = clip_mean(imt, mean)
 
         return mean, stddevs
 
-    def _convert_magnitude(self, mag):
-        """
-        Convert magnitude value from Mblg to Mw using Atkinson and Boore 1987
-        equation
-        """
-        return 2.715 - 0.277 * mag + 0.127 * mag * mag
 
-    def _clip_mean(self, imt, mean):
-        """
-        Clip mean value for PGA at 1.5 g and for short periods (0.02 < T < 0.5)
-        at 3.0 g
-        """
-        # clip mean value for PGA at 1.5 g
-        if imt == PGA():
-            mean = np.minimum(0.405, mean)
-
-        # clip mean value for short periods (0.02 < T < 0.5) at 3.0 g
-        if isinstance(imt, SA) and (0.02 < imt.period < 0.5):
-            mean = np.minimum(1.099, mean)
-
-        return mean
-
-class AtkinsonBoore2006NSHMP2008bar200(AtkinsonBoore2006NSHMP2008bar140):
+class AtkinsonBoore2006NSHMP2008bar200(AtkinsonBoore2006):
     """
     Same as :class:`AtkinsonBoore2006NSHMP2008bar140` but with adjustment for
     200 bar stress drop
@@ -425,7 +407,7 @@ class AtkinsonBoore2006NSHMP2008bar200(AtkinsonBoore2006NSHMP2008bar140):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mag = self._convert_magnitude(rup.mag)
+        mag = mblg_to_mw_atkinson_boore_87(rup.mag)
 
         # stress dropt scaling factor defined in subroutine getAB06
         mean = self._get_mean(
@@ -433,7 +415,7 @@ class AtkinsonBoore2006NSHMP2008bar200(AtkinsonBoore2006NSHMP2008bar140):
         )
         stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
 
-        mean = self._clip_mean(imt, mean)
+        mean = clip_mean(imt, mean)
 
         return mean, stddevs
 

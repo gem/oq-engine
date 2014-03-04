@@ -21,6 +21,9 @@ from __future__ import division
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
+from openquake.hazardlib.gsim.utils import (
+    mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean
+)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -96,13 +99,7 @@ class ToroEtAl1997NSHMP2008(GMPE):
         mean = self._compute_mean(C, rup.mag, dists.rjb)
         stddevs = self._compute_stddevs(C, dists.rjb.size, stddev_types)
 
-        # clip mean value for PGA at 1.5 g
-        if imt == PGA():
-            mean = np.minimum(0.405, mean)
-
-        # clip mean value for short periods (0.02 < T < 0.55) at 3.0 g
-        if isinstance(imt, SA) and (0.02 < imt.period < 0.55):
-            mean = np.minimum(1.099, mean)
+        mean = clip_mean(imt, mean)
 
         return mean, stddevs
 
@@ -135,8 +132,8 @@ class ToroEtAl1997NSHMP2008(GMPE):
 
         Implement equations as in lines 1653 - 1658 in hazgridXnga2.f
         """
-        mw_j96 = Mblg2MwJohnston96(mag)
-        mw_ab87 = Mblg2MwAtkinsonBoore87(mag)
+        mw_j96 = mblg_to_mw_johnston_96(mag)
+        mw_ab87 = mblg_to_mw_atkinson_boore_87(mag)
 
         t1 = np.exp(-1.25 + 0.227 * mw_j96)
         t2 = np.exp(-1.25 + 0.227 * mw_ab87)
@@ -165,23 +162,3 @@ class ToroEtAl1997NSHMP2008(GMPE):
     1.0    0.173   2.05   -0.34    0.90  0.59    0.0019   6.8  0.799
     2.0   -0.788   2.52   -0.47    0.93  0.6     0.0012   7.0  0.799
     """)
-
-
-def Mblg2MwJohnston96(mag):
-    """
-    Convert magnitude value from Mblg to Mw using Johnston 1996 conversion
-    equation.
-
-    Implements equation as in line 1654 in hazgridXnga2.f
-    """
-    return 1.14 + 0.24 * mag + 0.0933 * mag * mag
-
-
-def Mblg2MwAtkinsonBoore87(mag):
-    """
-    Convert magnitude value from Mblg to Mw using Atkinson and Boore 1987
-    conversion equation.
-
-    Implements equation as in line 1656 in hazgridXnga2.f
-    """
-    return 2.715 - 0.277 * mag + 0.127 * mag * mag
