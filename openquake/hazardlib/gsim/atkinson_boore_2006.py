@@ -378,7 +378,7 @@ class AtkinsonBoore2006NSHMP2008bar140(AtkinsonBoore2006):
     is converted to Mw by using Atkinson and Boore 1987 conversion equation.
 
     Mean value is clipped at 1.5 g for PGA and 3.0 g for SA with periods in
-    range (0.02, 0.5) s.
+    range (0.02, 0.55) s.
     """
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -409,7 +409,7 @@ class AtkinsonBoore2006NSHMP2008bar200(AtkinsonBoore2006):
         """
         mag = mblg_to_mw_atkinson_boore_87(rup.mag)
 
-        # stress dropt scaling factor defined in subroutine getAB06
+        # stress drop scaling factor defined in subroutine getAB06
         mean = self._get_mean(
             sites.vs30, mag, dists.rrup, imt, scale_fac=0.5146
         )
