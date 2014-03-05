@@ -488,7 +488,7 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     ses_coll = ses_coll or models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test SES Collection", "ses"),
-        lt_realization_ids=[gmf.lt_realization.id],
+        lt_model=gmf.lt_realization.lt_model,
         ordinal=0)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
@@ -529,7 +529,7 @@ def create_gmf_from_csv(job, fname):
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             job, "Test SES Collection", "ses"),
-        lt_realization_ids=[gmf.lt_realization.id],
+        lt_model=gmf.lt_realization.lt_model,
         ordinal=0)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
@@ -603,10 +603,13 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     hazard_job = get_job(hazard_cfg, username)
     hc = hazard_job.hazard_calculation
 
-    rlz = models.LtRealization.objects.create(
+    lt_model = models.LtSourceModel.objects.create(
         hazard_calculation=hazard_job.hazard_calculation,
-        ordinal=1, seed=1, weight=None,
-        sm_lt_path="test_sm", gsim_lt_path="test_gsim")
+        ordinal=1, sm_lt_path="test_sm")
+
+    rlz = models.LtRealization.objects.create(
+        lt_model=lt_model, ordinal=1, seed=1, weight=None,
+        gsim_lt_path="test_gsim")
 
     if output_type == "curve":
         models.HazardCurve.objects.create(
