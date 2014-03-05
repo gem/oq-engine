@@ -15,7 +15,6 @@
 
 import StringIO
 import getpass
-import mock
 import os
 import shutil
 import subprocess
