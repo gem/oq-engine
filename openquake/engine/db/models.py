@@ -835,7 +835,7 @@ class HazardCalculation(djm.Model):
             # We can get the number of logic tree realizations by counting
             # initialized lt_realization records.
             n_lt_realizations = LtRealization.objects.filter(
-                hazard_calculation=self).count()
+                lt_model__hazard_calculation=self).count()
 
         investigation_time = (self.investigation_time
                               * self.ses_per_logic_tree_path
@@ -1499,7 +1499,7 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    lt_realization_ids = fields.IntArrayField(null=False)
+    lt_model = djm.OneToOneField('LtSourceModel', related_name='lt_model')
     ordinal = djm.IntegerField(null=False)
 
     class Meta:
@@ -1518,9 +1518,7 @@ class SESCollection(djm.Model):
         """
         The source model logic tree path corresponding to the collection
         """
-        # all lt_realization_ids correspond to the same sm_lt_path
-        return LtRealization.objects.get(
-            pk=self.lt_realization_ids[0]).sm_lt_path
+        return tuple(self.lt_model.sm_lt_path)
 
 
 class SES(djm.Model):
@@ -2126,24 +2124,44 @@ class UHSData(djm.Model):
         db_table = 'hzrdr\".\"uhs_data'
 
 
+class LtSourceModel(djm.Model):
+    """
+    Identify a logic tree source model.
+    """
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    ordinal = djm.IntegerField()
+    sm_lt_path = fields.CharArrayField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"lt_source_model'
+
+    def __iter__(self):
+        """
+        Yield the realizations corresponding to the given model
+        """
+        return iter(LtRealization.objects.filter(lt_model=self))
+
+
 class LtRealization(djm.Model):
     """
     Identify a logic tree branch.
     """
 
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    lt_model = djm.ForeignKey('LtSourceModel')
     ordinal = djm.IntegerField()
     seed = djm.IntegerField()
     weight = djm.DecimalField(decimal_places=100, max_digits=101)
-    sm_lt_path = fields.CharArrayField()
     gsim_lt_path = fields.CharArrayField()
+
+    @property
+    def sm_lt_path(self):
+        return self.lt_model.sm_lt_path
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
 
 
 ## Tables in the 'riskr' schema.
-
 
 class LossFraction(djm.Model):
     """
