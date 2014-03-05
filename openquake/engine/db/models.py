@@ -1522,18 +1522,6 @@ class SESCollection(djm.Model):
         return LtRealization.objects.get(
             pk=self.lt_realization_ids[0]).sm_lt_path
 
-    @property
-    def weight(self):
-        """
-        The logic tree weight corresponding to the collection
-        """
-        weights = [LtRealization.objects.get(pk=rlz_id).weight
-                   for rlz_id in self.lt_realization_ids]
-        if all(w is None for w in weights):
-            return None
-        else:
-            return sum(weights)
-
 
 class SES(djm.Model):
     """
