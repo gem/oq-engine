@@ -232,7 +232,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         hazard_cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         hazard_job = helpers.get_job(hazard_cfg, 'openquake')
         hc = hazard_job.hazard_calculation
-        lt_model = models.LtRealization.objects.create(
+        lt_model = models.LtSourceModel.objects.create(
             hazard_calculation=hazard_job.hazard_calculation,
             ordinal=1, seed=1, weight=None,
             sm_lt_path="test_sm", gsim_lt_path="test_gsim")
