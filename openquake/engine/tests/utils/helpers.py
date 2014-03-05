@@ -469,8 +469,9 @@ def create_gmf(hazard_job, rlz=None):
     hc = hazard_job.hazard_calculation
 
     rlz = rlz or models.LtRealization.objects.create(
-        hazard_calculation=hc, ordinal=0, seed=1, weight=None,
-        sm_lt_path="test_sm", gsim_lt_path="test_gsim")
+        lt_model=models.LtSourceModel.objects.create(
+            hazard_calculation=hc, ordinal=0, sm_lt_path="test_sm"),
+        ordinal=0, seed=1, weight=None, gsim_lt_path="test_gsim")
 
     gmf = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
