@@ -28,7 +28,7 @@ from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87, clip_mean
 )
-from openquake.hazardlib.gsim.base import CoeffsTable, RuptureContext
+from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
