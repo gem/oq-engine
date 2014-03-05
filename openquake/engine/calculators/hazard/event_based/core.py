@@ -81,8 +81,9 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     :param task_no:
         an ordinal so that GMV can be collected in a reproducible order
     """
-    rlz_ids = [r.id for r in gsims_by_rlz]
-    ses_coll = models.SESCollection.objects.get(lt_realization_ids=rlz_ids)
+    # NB: all realizations in gsims_by_rlz correspond to the same source model
+    lt_model = gsims_by_rlz.keys()[0].lt_model
+    ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
@@ -301,7 +302,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
 
-    def initialize_ses_db_records(self, ordinal, rlzs):
+    def initialize_ses_db_records(self, lt_model):
         """
         Create :class:`~openquake.engine.db.models.Output`,
         :class:`~openquake.engine.db.models.SESCollection` and
@@ -313,18 +314,15 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         NOTE: Many tasks can contribute ruptures to the same SES.
         """
-        rlz_ids = [r.id for r in rlzs]
-
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='SES Collection smlt-%d-rlz-%s' % (
-                ordinal, ','.join(map(str, rlz_ids))),
+            display_name='SES Collection smlt-%d' % lt_model.ordinal,
             output_type='ses')
 
         ses_coll = models.SESCollection.objects.create(
-            output=output, lt_realization_ids=rlz_ids, ordinal=ordinal)
+            output=output, lt_model=lt_model, ordinal=lt_model.ordinal)
 
-        for rlz in rlzs:
+        for rlz in lt_model:
             if self.job.hazard_calculation.ground_motion_fields:
                 output = models.Output.objects.create(
                     oq_job=self.job,
@@ -351,8 +349,9 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         `execute` phase.)
         """
         super(EventBasedHazardCalculator, self).pre_execute()
-        for i, rlzs in enumerate(self.rlzs_per_ltpath.itervalues()):
-            self.initialize_ses_db_records(i, rlzs)
+        for lt_model in models.LtSourceModel.objects.filter(
+                hazard_calculation=self.hc):
+            self.initialize_ses_db_records(lt_model)
 
     def post_process(self):
         """
