@@ -22,6 +22,9 @@ import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
+from openquake.hazardlib.gsim.utils import (
+    mblg_to_mw_atkinson_boore_87, clip_mean
+)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -107,7 +110,7 @@ class FrankelEtAl1996NSHMP2008(GMPE):
             )
 
         mean = self._compute_mean(imt, rup.mag, dists.rhypo)
-        mean = self._clip_mean(mean, imt)
+        mean = clip_mean(imt, mean)
 
         stddevs = self._compute_stddevs(imt, dists.rhypo.shape, stddev_types)
 
@@ -122,7 +125,7 @@ class FrankelEtAl1996NSHMP2008(GMPE):
         using Atkinson and Boore 1987 conversion equation. Mean value is
         finally converted from base 10 to base e.
         """
-        mag = 2.715 - 0.277 * mag + 0.127 * mag * mag
+        mag = mblg_to_mw_atkinson_boore_87(mag)
 
         # to avoid run time warning in case rhypo is zero set minimum distance
         # to 10, which is anyhow the minimum distance allowed by the tables
@@ -138,18 +141,6 @@ class FrankelEtAl1996NSHMP2008(GMPE):
 
         # convert mean from base 10 to base e
         return mean * np.log(10)
-
-    def _clip_mean(self, mean, imt):
-        """
-        Clip mean value. Maximum allowed values are 1.5 g for PGA and 3 g for
-        SA with periods < 1 s.
-        """
-        if imt == PGA():
-            return np.minimum(0.405, mean)
-        elif isinstance(imt, SA) and imt.period < 1:
-            return np.minimum(1.099, mean)
-        else:
-            return mean
 
     def _compute_stddevs(self, imt, num_sites, stddev_types):
         """

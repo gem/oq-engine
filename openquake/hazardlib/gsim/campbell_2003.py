@@ -22,6 +22,9 @@ from __future__ import division
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
+from openquake.hazardlib.gsim.utils import (
+    mblg_to_mw_atkinson_boore_87, clip_mean
+)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -274,10 +277,10 @@ class Campbell2003NSHMP2008(Campbell2003):
                    for stddev_type in stddev_types)
 
         C = self.COEFFS[imt]
-        mag = self._mblg2mw(rup.mag)
+        mag = mblg_to_mw_atkinson_boore_87(rup.mag)
 
         mean = self._compute_mean(C, mag, dists.rrup)
-        mean = self._clip_mean(mean, imt)
+        mean = clip_mean(imt, mean)
 
         stddevs = self._get_stddevs(C, stddev_types, mag, dists.rrup.size)
 
@@ -303,28 +306,6 @@ class Campbell2003NSHMP2008(Campbell2003):
         mean += C['c4'] * np.log(R) + (C['c9'] + C['c10'] * mag) * rrup
 
         return mean
-
-    def _mblg2mw(self, mag):
-        """
-        Convert magnitude value from Mblg to Mw using Atkinson and Boore 1987
-        conversion equation.
-        """
-        mag = 2.715 - 0.277 * mag + 0.127 * mag * mag
-
-        return mag
-
-    def _clip_mean(self, mean, imt):
-
-        """
-        Clip mean value. Maximum allowed values are 1.5 g for PGA and 3 g for
-        SA with periods in (0.02, 0.55) s.
-        """
-        if imt == PGA():
-            return np.minimum(0.405, mean)
-        elif isinstance(imt, SA) and (0.02 < imt.period < 0.55):
-            return np.minimum(1.099, mean)
-        else:
-            return mean
 
     #: Coefficient tables extracted from ``subroutine getCampCEUS`` in
     #: ``hazgridXnga2.f``

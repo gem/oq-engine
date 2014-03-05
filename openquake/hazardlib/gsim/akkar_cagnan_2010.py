@@ -99,14 +99,14 @@ class AkkarCagnan2010(BooreAtkinson2008):
         # (but avoiding recomputing mean on rock for PGA)
         if imt == PGA():
             mean = (np.log(pga4nl) +
-                    self._get_site_amplification_linear(sites, C_SR) +
-                    self._get_site_amplification_non_linear(sites, pga4nl,
+                    self._get_site_amplification_linear(sites.vs30, C_SR) +
+                    self._get_site_amplification_non_linear(sites.vs30, pga4nl,
                                                             C_SR))
         else:
             C = self.COEFFS_AC10[imt]
             mean = (self._compute_mean(C, rup.mag, dists.rjb, rup.rake) +
-                    self._get_site_amplification_linear(sites, C_SR) +
-                    self._get_site_amplification_non_linear(sites, pga4nl,
+                    self._get_site_amplification_linear(sites.vs30, C_SR) +
+                    self._get_site_amplification_non_linear(sites.vs30, pga4nl,
                                                             C_SR))
 
         # convert from cm/s**2 to g for SA (PGA is already computed in g)
