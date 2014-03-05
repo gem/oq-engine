@@ -1499,7 +1499,7 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    lt_model = djm.OneToOneField('LtSourceModel', related_name='lt_model')
+    lt_model = djm.OneToOneField('LtSourceModel', related_name='ses_collection')
     ordinal = djm.IntegerField(null=False)
 
     class Meta:
