@@ -70,7 +70,7 @@ class GetResultExportDestTestCase(unittest.TestCase):
         )
         self.FakeSES = namedtuple(
             'SES',
-            'output, ordinal, sm_lt_path, weight'
+            'output, ordinal, sm_lt_path'
         )
         self.FakeOutput = namedtuple(
             'Output',
@@ -241,9 +241,9 @@ class GetResultExportDestTestCase(unittest.TestCase):
     def test_ses(self):
         output = self.FakeOutput('ses')
 
-        ses = self.FakeSES(output, 1, self.ltr_mc.sm_lt_path, None)
+        ses = self.FakeSES(output, 1, self.ltr_mc.sm_lt_path)
         expected_path = (
-            '%s/calc_8/ses/ses-smltp_B1_B3-ltr_1.xml'
+            '%s/calc_8/ses/ses-smltp_B1_B3.xml'
             % self.target_dir
         )
         self.assertEqual(
