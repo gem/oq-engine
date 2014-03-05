@@ -234,8 +234,7 @@ class CreateRiskCalculationTestCase(unittest.TestCase):
         hc = hazard_job.hazard_calculation
         lt_model = models.LtSourceModel.objects.create(
             hazard_calculation=hazard_job.hazard_calculation,
-            ordinal=1, seed=1, weight=None,
-            sm_lt_path="test_sm", gsim_lt_path="test_gsim")
+            ordinal=1, sm_lt_path="test_sm")
         rlz = models.LtRealization.objects.create(
             lt_model=lt_model, ordinal=1, seed=1, weight=None,
             gsim_lt_path="test_gsim")
