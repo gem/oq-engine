@@ -1,4 +1,4 @@
-import functools
+import zipfile
 import StringIO
 import json
 import logging
@@ -128,22 +128,23 @@ def _prepare_job(request, hazard_output_id, hazard_calculation_id,
     :returns: job_file and temp_dir
     """
     temp_dir = tempfile.mkdtemp()
-
-    if len(request.FILES.getlist('job_config')) > 1:
-        raw_files = request.FILES.getlist('job_config')
-    else:
-        raw_files = request.FILES.values()
-
-    # Move each file to a new temp dir, using the upload file names
-    # (not the temporary ones)
     files = []
-    for each_file in raw_files:
-        new_path = os.path.join(temp_dir, each_file.name)
-        shutil.move(each_file.temporary_file_path(), new_path)
-        files.append(new_path)
 
+    try:
+        archive = zipfile.ZipFile(request.FILES['archive'])
+    except KeyError:
+        # move each file to a new temp dir, using the upload file names,
+        # not the temporary ones
+        for each_file in request.FILES.values():
+            new_path = os.path.join(temp_dir, each_file.name)
+            shutil.move(each_file.temporary_file_path(), new_path)
+            files.append(new_path)
+    else:  # extract the files from the archive into temp_dir
+        archive.extractall(temp_dir)
+        archive.close()
+        for fname in os.listdir(temp_dir):
+            files.append(os.path.join(temp_dir, fname))
     job_file = detect_job_file([f for f in files if f.endswith('.ini')])
-
     return job_file, temp_dir
 
 
