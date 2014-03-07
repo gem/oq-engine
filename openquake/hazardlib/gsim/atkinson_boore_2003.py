@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AtkinsonBoore2003SInter`, class:`AtkinsonBoore2003SSlab`
+Module exports :class:`AtkinsonBoore2003SInter`,
+:class:`AtkinsonBoore2003SSlab`, :class:`AtkinsonBoore2003SSlabNSHMP2008`,
+:class:`AtkinsonBoore2003SSlabCascadiaNSHMP2008`
 """
 from __future__ import division
 
@@ -168,9 +170,9 @@ class AtkinsonBoore2003SInter(GMPE):
         page 1706).
         """
         Sc, Sd, Se = self._compute_site_class_dummy_variables(vs30)
-        sl =  self._compute_soil_linear_factor(pga_rock, imt)
+        sl = self._compute_soil_linear_factor(pga_rock, imt)
 
-        return  C['c5'] * sl * Sc + C['c6'] * sl * Sd + C['c7'] * sl * Se
+        return C['c5'] * sl * Sc + C['c6'] * sl * Sd + C['c7'] * sl * Se
 
     def _compute_site_class_dummy_variables(self, vs30):
         """
@@ -316,31 +318,28 @@ class AtkinsonBoore2003SSlab(AtkinsonBoore2003SInter):
     """)
 
 
-class AtkinsonBoore2003SSlabCascadiaNSHMP2008(AtkinsonBoore2003SSlab):
+class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
     """
-    Implements GMPE developed by G. M  Atkinson and D. Boore and published in
-    "Empirical Ground-Motion Relations for Subduction-Zone Earthquakes and
-    Their Application to Cascadia and Other Regions" (Bulletin of the
-    Seismological Society of America, Volume 93, Number 4, pages 1703-1929,
-    2003) as utilized by the National Seismic Hazard Mapping Project (NSHMP)
-    for the 2008 US hazard model.
+    Extend :class:`AtkinsonBoore2003SSlab` and introduces site amplification
+    for B/C site condition as defined by the National Seismic Hazard Mapping
+    Project (NSHMP) for the 2008 US hazard model.
 
-    The class implements the equation for 'Subduction IntraSlab' and uses
-    coefficients for the Cascadia region.
+    Site amplification for B/C is triggered when vs30 > 760 and it is
+    computed as site amplification for C soil scaled by a factor equal to 0.5
 
-    The class add also a custom site amplification for the B/C site conditions
-    (triggered if vs30 > 760 m/s) and computed as site amplification for C
-    soil scaled by a factor equal to 0.5
+    The class replicates the equation as coded in ``subroutine getABsub``
+    in ``hazgridXnga2.f`` Fortran code available at:
+    http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
     """
     def _compute_soil_amplification(self, C, vs30, pga_rock, imt):
         """
         Compute soil amplification (5th, 6th, and 7th terms in equation 1,
-        page 1706) and adding the B/C site condition as implemented by NSHMP.
+        page 1706) and add the B/C site condition as implemented by NSHMP.
         """
         Sbc, Sc, Sd, Se = self._compute_site_class_dummy_variables(vs30)
-        sl =  self._compute_soil_linear_factor(pga_rock, imt)
+        sl = self._compute_soil_linear_factor(pga_rock, imt)
 
-        return  (
+        return (
             C['c5'] * sl * Sbc * 0.5 +
             C['c5'] * sl * Sc +
             C['c6'] * sl * Sd +
@@ -349,7 +348,8 @@ class AtkinsonBoore2003SSlabCascadiaNSHMP2008(AtkinsonBoore2003SSlab):
 
     def _compute_site_class_dummy_variables(self, vs30):
         """
-        Extend :meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
+        Extend
+        :meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
         and includes dummy variable for B/C site conditions (vs30 > 760.)
         """
         Sbc = np.zeros_like(vs30)
@@ -364,6 +364,16 @@ class AtkinsonBoore2003SSlabCascadiaNSHMP2008(AtkinsonBoore2003SSlab):
 
         return Sbc, Sc, Sd, Se
 
+
+class AtkinsonBoore2003SSlabCascadiaNSHMP2008(AtkinsonBoore2003SSlabNSHMP2008):
+    """
+    Extend :class:`AtkinsonBoore2003SSlabNSHMP2008` but uses coefficients for
+    Cascadia region
+
+    The class replicates the equation as coded in ``subroutine getABsub``
+    in ``hazgridXnga2.f`` Fortran code available at:
+    http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
+    """
     COEFFS_SSLAB = CoeffsTable(sa_damping=5, table="""\
     IMT      c1      c2         c3         c4         c5          c6         c7         sigma      s1        s2
     pga     -0.25    0.69090    0.01130    -0.00202    0.19000    0.24000    0.29000    0.27000    0.23000    0.14000
