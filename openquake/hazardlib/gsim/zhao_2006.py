@@ -239,6 +239,9 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
+    #: Required rupture parameters are magnitude and focal depth.
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -318,6 +321,9 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     #: Supported tectonic region type is subduction interface, this means
     #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
+    #: Required rupture parameters are magnitude and focal depth.
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
