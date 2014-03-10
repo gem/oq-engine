@@ -406,7 +406,8 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp, trt_num):
                 }
                 with EnginePerformanceMonitor(
                         'computing disaggregation', job_id, compute_disagg):
-                    bin_edges, diss_matrix = disaggregation(**calc_kwargs)
+                    bin_edges, diss_matrix = disaggregation(
+                        **calc_kwargs)
                     if not bin_edges:  # no ruptures generated
                         continue
 
