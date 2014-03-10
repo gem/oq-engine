@@ -139,7 +139,6 @@ class TavakoliPezeshk2005(GMPE):
               (C['c8'] + C['c12'] * mag) * r)
         return f3
 
-    # TODO change this
     #: Coefficient table is constructed from an excel spreadsheet available
     #: on Pezeshk's website http://www.ce.memphis.edu/pezeshk
     COEFFS = CoeffsTable(sa_damping=5, table="""\
