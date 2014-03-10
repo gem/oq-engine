@@ -283,7 +283,7 @@ def submit_job(job_file, temp_dir, dbname,
     calc = job.calculation
     job_type = 'risk' if job.calculation is job.risk_calculation else 'hazard'
     future = executor.submit(
-        tasks.run_calc, job_type, calc.id, temp_dir,
+        tasks.safely_call, tasks.run_calc, job_type, calc.id, temp_dir,
         callback_url, foreign_calc_id, dbname, logfile)
     return job, future
 

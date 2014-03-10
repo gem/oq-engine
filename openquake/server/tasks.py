@@ -60,6 +60,17 @@ class ProgressHandler(logging.Handler):
             description=self.calc.description)
 
 
+def safely_call(func, *args):
+    """
+    Call the given procedure with the given arguments safely, i.e.
+    by trapping the exceptions and logging them.
+    """
+    try:
+        func(*args)
+    except:
+        logger.error(exc_info=True)
+
+
 def run_calc(job_type, calc_id, calc_dir,
              callback_url=None, foreign_calc_id=None,
              dbname="platform", log_file=None):
@@ -100,7 +111,6 @@ def run_calc(job_type, calc_id, calc_dir,
         einfo = ''.join(traceback.format_tb(tb))
         einfo += '%s: %s' % (exctype.__name__, exc)
         update_calculation(callback_url, status="failed", einfo=einfo)
-        return
     finally:
         logging.root.removeHandler(progress_handler)
 
@@ -127,6 +137,17 @@ def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
         a key to extract database connection settings from settings.DATABASES
         in order to get a cursor from the platform database
     """
+    if not dbname in DATABASES:
+        logger.error('Unknow key %s in PLATFORM_DATABASES; '
+                     'you forgot to set local_settings.py' % dbname)
+        return
+    host = DATABASES[dbname]['HOST']
+    if host == 'localhost':
+        msg = ('Using localhost as database host; probably '
+               'you forgot to override PLATFORM_DATABASES in '
+               'local_settings.py ')
+        logger.error(msg)
+        return
 
     update_calculation(
         callback_url,
@@ -134,7 +155,7 @@ def _trigger_migration(job, callback_url, foreign_calc_id, dbname="platform"):
         status="transfering outputs")
 
     platform_connection = psycopg2.connect(
-        host=DATABASES[dbname]['HOST'],
+        host=host,
         database=DATABASES[dbname]['NAME'],
         user=DATABASES[dbname]['USER'],
         password=DATABASES[dbname]['PASSWORD'],
