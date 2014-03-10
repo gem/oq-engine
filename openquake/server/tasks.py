@@ -67,8 +67,8 @@ def safely_call(func, *args):
     """
     try:
         func(*args)
-    except:
-        logger.error(exc_info=True)
+    except Exception as e:
+        logger.error(str(e), exc_info=True)
 
 
 def run_calc(job_type, calc_id, calc_dir,
@@ -102,7 +102,6 @@ def run_calc(job_type, calc_id, calc_dir,
     exports = []
     progress_handler = ProgressHandler(callback_url, job.calculation)
     logging.root.addHandler(progress_handler)
-
     try:
         engine.run_calc(job, DEFAULT_LOG_LEVEL, log_file, exports, job_type)
     except:  # catch the errors before task spawning
