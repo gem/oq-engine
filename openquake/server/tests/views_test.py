@@ -570,7 +570,8 @@ class RunCalcTestCase(BaseViewTestCase):
 
             self.assertEqual({
                 'count': 1,
-                'args': (('risk', 777, temp_dir, None, None, 'platform', None),
+                'args': ((multi_mock['run_task'],
+                          'risk', 777, temp_dir, None, None, 'platform', None),
                          {})
                 }, self.executor_call_data)
         finally:
