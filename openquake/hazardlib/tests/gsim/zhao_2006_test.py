@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc,
                                                 ZhaoEtAl2006SInter,
-                                                ZhaoEtAl2006SSlab)
+                                                ZhaoEtAl2006SSlab,
+                                                ZhaoEtAl2006SInterNSHMP2008)
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
 from openquake.hazardlib.imt import PGA
@@ -126,3 +127,16 @@ class ZhaoEtAl2006SSlabTestCase(BaseGSIMTestCase):
             sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_array_equal(mean_0, mean_01)
         numpy.testing.assert_array_equal(stds_0, stds_01)
+
+
+class ZhaoEtAl2006SInterNSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ZhaoEtAl2006SInterNSHMP2008
+
+    def test_mean(self):
+        self.check('ZHAO06/Z06SInterNSHMP_MEAN.csv',
+                   max_discrep_percentage=0.52)
+
+    def test_std_total(self):
+        self.check('ZHAO06/Z06SInterNSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
