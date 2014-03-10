@@ -30,6 +30,6 @@ class DisaggHazardCase1TestCase(_utils.BaseQATestCase):
         hc = job.hazard_calculation
         export_dir = os.path.join(hc.export_dir, 'calc_%d' % hc.id)
         dc = filecmp.dircmp(export_dir, expected)
-        dc.report_full_close()
+        dc.report_full_closure()
         # this is exporting several files in /tmp/disagg_case_2
         # as listed in job.ini
