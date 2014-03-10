@@ -539,7 +539,7 @@ class RunCalcTestCase(BaseViewTestCase):
         mocks = dict(
             mkdtemp='tempfile.mkdtemp',
             job_from_file='openquake.engine.engine.job_from_file',
-            run_task='openquake.server.tasks.run_calc',
+            run_calc='openquake.server.tasks.run_calc',
         )
         multi_mock = MultiMock(**mocks)
 
@@ -570,7 +570,7 @@ class RunCalcTestCase(BaseViewTestCase):
 
             self.assertEqual({
                 'count': 1,
-                'args': ((multi_mock['run_task'],
+                'args': ((multi_mock['run_calc'],
                           'risk', 777, temp_dir, None, None, 'platform', None),
                          {})
                 }, self.executor_call_data)
