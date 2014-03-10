@@ -10,6 +10,9 @@ Atkinson and Boore 2003
 .. autoclass:: AtkinsonBoore2003SSlab
     :members:
 
+.. autoclass:: AtkinsonBoore2003SInterNSHMP2008
+    :members:
+
 .. autoclass:: AtkinsonBoore2003SSlabNSHMP2008
     :members:
 

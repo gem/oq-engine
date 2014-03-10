@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`AtkinsonBoore2003SInter`,
-:class:`AtkinsonBoore2003SSlab`, :class:`AtkinsonBoore2003SSlabNSHMP2008`,
+:class:`AtkinsonBoore2003SSlab`, :class:`AtkinsonBoore2003SInterNSHMP2008`,
+:class:`AtkinsonBoore2003SSlabNSHMP2008`,
 :class:`AtkinsonBoore2003SSlabCascadiaNSHMP2008`
 """
 from __future__ import division
@@ -318,19 +319,36 @@ class AtkinsonBoore2003SSlab(AtkinsonBoore2003SInter):
     """)
 
 
-class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
+class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
     """
-    Extend :class:`AtkinsonBoore2003SSlab` and introduces site amplification
-    for B/C site condition as defined by the National Seismic Hazard Mapping
-    Project (NSHMP) for the 2008 US hazard model.
+    Extend :class:`AtkinsonBoore2003SInter` and introduces site amplification
+    for B/C site condition and fixed rupture hypocentral depth (20 km) as
+    defined by the National Seismic Hazard Mapping Project (NSHMP) for the
+    2008 US hazard model
 
     Site amplification for B/C is triggered when vs30 > 760 and it is
     computed as site amplification for C soil scaled by a factor equal to 0.5
 
-    The class replicates the equation as coded in ``subroutine getABsub``
-    in ``hazgridXnga2.f`` Fortran code available at:
+    The class implements the equation as coded in ``subroutine getABsub``
+    in ``hazSUBXnga.f`` Fortran code available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
     """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+
+        Call super class method with hypocentral depth fixed at 20 km
+        """
+        # fix hypocentral depth to 20 km
+        rup.hypo_depth = 20.
+        mean, stddevs = super(AtkinsonBoore2003SInterNSHMP2008, self). \
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        return mean, stddevs
+
     def _compute_soil_amplification(self, C, vs30, pga_rock, imt):
         """
         Compute soil amplification (5th, 6th, and 7th terms in equation 1,
@@ -363,6 +381,44 @@ class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
         Se[vs30 < 180] = 1
 
         return Sbc, Sc, Sd, Se
+
+
+class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
+    """
+    Extend :class:`AtkinsonBoore2003SSlab` and introduces site amplification
+    for B/C site condition as defined by the National Seismic Hazard Mapping
+    Project (NSHMP) for the 2008 US hazard model.
+
+    Site amplification for B/C is triggered when vs30 > 760 and it is
+    computed as site amplification for C soil scaled by a factor equal to 0.5
+
+    The class replicates the equation as coded in ``subroutine getABsub``
+    in ``hazgridXnga2.f`` Fortran code available at:
+    http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
+    """
+    def _compute_soil_amplification(self, C, vs30, pga_rock, imt):
+        """
+        Compute soil amplification (5th, 6th, and 7th terms in equation 1,
+        page 1706) and add the B/C site condition as implemented by NSHMP.
+
+        Call
+        :meth:`AtkinsonBoore2003SInterNSHMP2008._compute_soil_amplification`
+        """
+        return AtkinsonBoore2003SInterNSHMP2008()._compute_soil_amplification(
+            C, vs30, pga_rock, imt
+        )
+
+    def _compute_site_class_dummy_variables(self, vs30):
+        """
+        Extend
+        :meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
+        and includes dummy variable for B/C site conditions (vs30 > 760.)
+
+        Call
+        meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
+        """
+        return AtkinsonBoore2003SInterNSHMP2008(). \
+            _compute_site_class_dummy_variables(vs30)
 
 
 class AtkinsonBoore2003SSlabCascadiaNSHMP2008(AtkinsonBoore2003SSlabNSHMP2008):
