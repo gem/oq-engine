@@ -109,7 +109,7 @@ class FrankelEtAl1996NSHMP2008(GMPE):
                 'unsupported periods.'
             )
 
-        mean = self._compute_mean(imt, rup.mag, dists.rhypo)
+        mean = self._compute_mean(imt, rup.mag, dists.rhypo.copy())
         mean = clip_mean(imt, mean)
 
         stddevs = self._compute_stddevs(imt, dists.rhypo.shape, stddev_types)

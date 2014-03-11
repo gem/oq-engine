@@ -79,7 +79,7 @@ class AtkinsonBoore1995GSCBest(GMPE):
         # clip rhypo at 10 (this is the minimum distance used in
         # deriving the equation), see page 22, this avoids singularity
         # in mean value equation
-        rhypo = dists.rhypo
+        rhypo = dists.rhypo.copy()
         rhypo[rhypo < 10] = 10
 
         # functional form as explained in 'Youngs_fit_to_AB95lookup.doc'
