@@ -256,7 +256,6 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
 
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
-
     return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
 
 
@@ -350,11 +349,7 @@ def compute_disagg(job_id, sites, sources, lt_rlz, ltp, trt_num):
     """
     # Silencing 'Too many local variables'
     # pylint: disable=R0914
-    assert sites, sites
-    assert sources, sources
-
     mon = EnginePerformanceMonitor('disagg', job_id, compute_disagg)
-
     job = models.OqJob.objects.get(id=job_id)
     hc = job.hazard_calculation
     gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
@@ -515,8 +510,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             path = tuple(lt_rlz.sm_lt_path)
             sources = general.WeightedSequence.merge(
                 self.source_blocks_per_ltpath[path])
-            for sites in self.block_split(self.hc.site_collection):
-                yield self.job.id, sites, sources, lt_rlz, ltp, trt_num
+            for site in self.hc.site_collection:
+                yield self.job.id, [site], sources, lt_rlz, ltp, trt_num
 
     def post_execute(self):
         """
