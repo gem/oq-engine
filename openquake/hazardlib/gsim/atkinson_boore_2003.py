@@ -24,6 +24,7 @@ from __future__ import division
 import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
+import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -342,10 +343,13 @@ class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
 
         Call super class method with hypocentral depth fixed at 20 km
         """
-        # fix hypocentral depth to 20 km
-        rup.hypo_depth = 20.
+        # fix hypocentral depth to 20 km. Create new rupture context to avoid
+        # changing the original one
+        new_rup = copy.deepcopy(rup)
+        new_rup.hypo_depth = 20.
+
         mean, stddevs = super(AtkinsonBoore2003SInterNSHMP2008, self). \
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+            get_mean_and_stddevs(sites, new_rup, dists, imt, stddev_types)
 
         return mean, stddevs
 
