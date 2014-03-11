@@ -17,10 +17,11 @@
 """
 Disaggregation calculator core functionality
 """
-
 import sys
+from collections import OrderedDict
 import numpy
 
+from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -28,11 +29,20 @@ from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.site import SiteCollection
 
 from openquake.engine import logs
-from openquake.engine.calculators.hazard.classical.core import \
-    ClassicalHazardCalculator
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
+from openquake.engine.calculators.hazard.classical.core import \
+    ClassicalHazardCalculator
+
+
+def pmf_dict(matrix):
+    """
+    Return an OrderedDict of matrices with the key in the dictionary
+    `openquake.hazardlib.calc.disagg.pmf_map` .
+    """
+    return OrderedDict((key, pmf_fn(matrix))
+                       for key, pmf_fn in disagg.pmf_map.iteritems())
 
 
 def _collect_bins_data(mon, trt_num, source_rupture_sites, site, imt, iml,
@@ -138,7 +148,6 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
 
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
-
     return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
 
 
@@ -318,7 +327,7 @@ def _save_disagg_matrix(job_id, site_id, bin_edges, diss_matrix, rlz,
         eps_bin_edges=eps,
         trts=trts,
         location=site_wkt,
-        matrix=diss_matrix,
+        matrix=pmf_dict(diss_matrix),
     )
 
 
