@@ -228,7 +228,8 @@ def collect_bins(job_id, sources, gsims_by_rlz, site, trt_num):
     """
     mon = LightMonitor('disagg', job_id, collect_bins)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
-    source_rupture_sites = list(hc.gen_ruptures(sources, mon))
+    sitecol = SiteCollection([site])
+    source_rupture_sites = list(hc.gen_ruptures(sources, mon, sitecol))
 
     result = {}
     for rlz, gsims in gsims_by_rlz.items():
