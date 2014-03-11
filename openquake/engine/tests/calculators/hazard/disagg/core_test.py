@@ -61,9 +61,8 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
         base_path = 'openquake.engine.calculators.hazard.disaggregation.core'
 
-        disagg_calc_func = (
-            'openquake.hazardlib.calc.disagg.disaggregation'
-        )
+        disagg_calc_func = base_path + '.disaggregation'
+
         with mock.patch(disagg_calc_func) as disagg_mock:
             disagg_mock.return_value = (None, None)
             with mock.patch('%s.%s' % (base_path, '_save_disagg_matrix')
