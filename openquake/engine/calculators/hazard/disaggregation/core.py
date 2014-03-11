@@ -17,6 +17,10 @@
 """
 Disaggregation calculator core functionality
 """
+import sys
+import warnings
+from collections import OrderedDict
+
 import numpy
 
 import openquake.hazardlib
@@ -29,14 +33,20 @@ from openquake.engine.input import logictree
 from openquake.engine.utils import tasks, general
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
-import sys
-import warnings
-
-from openquake.hazardlib.calc import filters
+from openquake.hazardlib.calc import filters, disagg
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.site import SiteCollection
+
+
+def pmf_dict(matrix):
+    """
+    Return an OrderedDict of matrices with the key in the dictionary
+    `openquake.hazardlib.calc.disagg.pmf_map` .
+    """
+    return OrderedDict((key, pmf_fn(matrix))
+                       for key, pmf_fn in disagg.pmf_map.iteritems())
 
 
 def disaggregation(
@@ -482,7 +492,7 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
         eps_bin_edges=eps,
         trts=trts,
         location=site.location.wkt2d,
-        matrix=diss_matrix,
+        matrix=pmf_dict(diss_matrix),
     )
 
 
