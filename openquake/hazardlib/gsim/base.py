@@ -545,7 +545,30 @@ class IPE(GroundShakingIntensityModel):
         return numpy.array(values, dtype=float)
 
 
-class SitesContext(object):
+class BaseContext(object):
+    """
+    Base class for context object.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    def __eq__(self, other):
+        """
+        Return True if ``other`` has same attributes with same values.
+        """
+        if isinstance(other, self.__class__):
+            if self.__slots__ == other.__slots__:
+                self_other = [
+                    numpy.all(
+                        getattr(self, s, None) == getattr(other, s, None)
+                    )
+                    for s in self.__slots__
+                ]
+                return numpy.all(self_other)
+
+        return False
+
+
+class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
 
@@ -560,7 +583,7 @@ class SitesContext(object):
     __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5')
 
 
-class DistancesContext(object):
+class DistancesContext(BaseContext):
     """
     Distances context for ground shaking intensity models.
 
@@ -575,7 +598,7 @@ class DistancesContext(object):
     __slots__ = ('rrup', 'rx', 'rjb', 'rhypo', 'repi')
 
 
-class RuptureContext(object):
+class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
 
