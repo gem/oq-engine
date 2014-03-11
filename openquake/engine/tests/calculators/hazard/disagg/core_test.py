@@ -57,38 +57,19 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         finally:
             del os.environ['OQ_NO_DISTRIBUTE']
 
-        diss1, diss2, diss3, diss4 = list(self.calc.disagg_task_arg_gen())
+        diss = list(self.calc.disagg_task_arg_gen())
+        self.assertEqual(22, len(diss))  # 22 tasks are generated
 
         base_path = 'openquake.engine.calculators.hazard.disaggregation.core'
 
-        disagg_calc_func = base_path + '.disaggregation'
+        disagg_calc_func = base_path + '._collect_bins_data'
 
         with mock.patch(disagg_calc_func) as disagg_mock:
-            disagg_mock.return_value = (None, None)
             with mock.patch('%s.%s' % (base_path, '_save_disagg_matrix')
                             ) as save_mock:
                 # Some of these tasks will not compute anything, since the
                 # hazard  curves for these few are all 0.0s.
-
-                # Here's what we expect:
-                # diss1: compute
-                # diss2: skip
-                # diss3: compute
-                # diss4: skip
-
-                core.compute_disagg.task_func(*diss1)
-                # 2 poes * 2 imts * 1 site = 4
-                self.assertEqual(4, disagg_mock.call_count)
-                self.assertEqual(0, save_mock.call_count)  # no rupt generated
-
-                core.compute_disagg.task_func(*diss2)
-                self.assertEqual(4, disagg_mock.call_count)
-                self.assertEqual(0, save_mock.call_count)  # no rupt generated
-
-                core.compute_disagg.task_func(*diss3)
-                self.assertEqual(8, disagg_mock.call_count)
-                self.assertEqual(0, save_mock.call_count)  # no rupt generated
-
-                core.compute_disagg.task_func(*diss4)
+                core.collect_bins.task_func(*diss[0])
+                # 2 poes * 2 imts * 2 sites = 8
                 self.assertEqual(8, disagg_mock.call_count)
                 self.assertEqual(0, save_mock.call_count)  # no rupt generated

@@ -206,7 +206,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
 
 
 @tasks.oqtask
-def collect_bins(job_id, sources, gsims_by_rlz, site, trt_num):
+def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
     """
     Here is the basic calculation workflow:
 
@@ -228,37 +228,40 @@ def collect_bins(job_id, sources, gsims_by_rlz, site, trt_num):
     """
     mon = LightMonitor('disagg', job_id, collect_bins)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
-    sitecol = SiteCollection([site])
-    source_rupture_sites = list(hc.gen_ruptures(sources, mon, sitecol))
-
     result = {}
-    for rlz, gsims in gsims_by_rlz.items():
-        for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
-            im_type, sa_period, sa_damping = imt = from_string(imt)
-            imls = numpy.array(imls[::-1])
 
-            # get curve for this point/IMT/realization
-            [curve] = models.HazardCurveData.objects.filter(
-                location=site.location.wkt2d,
-                hazard_curve__lt_realization=rlz,
-                hazard_curve__imt=im_type,
-                hazard_curve__sa_period=sa_period,
-                hazard_curve__sa_damping=sa_damping)
+    for site in hc.site_collection:
+        source_rupture_sites = list(
+            hc.gen_ruptures(sources, mon, SiteCollection([site])))
+        for rlz, gsims in gsims_by_rlz.items():
+            for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
+                im_type, sa_period, sa_damping = imt = from_string(imt)
+                imls = numpy.array(imls[::-1])
 
-            # If the hazard curve is all zeros, don't even do the
-            # disagg calculation.
-            if all(x == 0.0 for x in curve.poes):
-                logs.LOG.warn(
-                    '* hazard curve contained all 0 probability values; '
-                    'skipping rlz=%d, IMT=%s', rlz.id, im_type)
-                continue
+                # get curve for this point/IMT/realization
+                [curve] = models.HazardCurveData.objects.filter(
+                    location=site.location.wkt2d,
+                    hazard_curve__lt_realization=rlz,
+                    hazard_curve__imt=im_type,
+                    hazard_curve__sa_period=sa_period,
+                    hazard_curve__sa_damping=sa_damping)
 
-            for poe in hc.poes_disagg:
-                iml = numpy.interp(poe, curve.poes[::-1], imls)
-                result[rlz.id, site.id, poe, iml,
-                       im_type, sa_period, sa_damping] = _collect_bins_data(
-                    mon, trt_num, source_rupture_sites, site,
-                    imt, iml, gsims, hc.truncation_level, hc.num_epsilon_bins)
+                # If the hazard curve is all zeros, don't even do the
+                # disagg calculation.
+                if all(x == 0.0 for x in curve.poes):
+                    logs.LOG.warn(
+                        '* hazard curve contained all 0 probability values; '
+                        'skipping rlz=%d, IMT=%s', rlz.id, im_type)
+                    continue
+
+                for poe in hc.poes_disagg:
+                    iml = numpy.interp(poe, curve.poes[::-1], imls)
+                    result[rlz.id, site.id, poe, iml,
+                           im_type, sa_period, sa_damping] = \
+                        _collect_bins_data(
+                            mon, trt_num, source_rupture_sites, site,
+                            imt, iml, gsims, hc.truncation_level,
+                            hc.num_epsilon_bins)
     return result
 
 
@@ -391,8 +394,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         self.trt_num = dict((trt, i) for i, trt in enumerate(
                             self.tectonic_region_types))
         for job_id, sources, gsims_by_rlz in self.task_arg_gen():
-            for site in self.hc.site_collection:
-                yield self.job.id, sources, gsims_by_rlz, site, self.trt_num
+            yield self.job.id, sources, gsims_by_rlz, self.trt_num
 
     def post_execute(self):
         """
