@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves sourceModelTreePath="b1" gsimTreePath="b1" IMT="SA" investigationTime="50.0" saPeriod="0.025" saDamping="5.0">
+    <IMLs>0.005 0.007 0.0098 0.0137 0.0192 0.0269 0.0376 0.0527 0.0738 0.103 0.145 0.203 0.284 0.397 0.556 0.778 1.09 1.52 2.13</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>10.1 40.1</gml:pos>
+      </gml:Point>
+      <poEs>0.99999998816 0.999999949755 0.999999622264 0.999995607005 0.999935948059 0.999143810967 0.991999361829 0.953650834315 0.840733587898 0.64829007786 0.426055576035 0.246194872539 0.126729149509 0.0580582386987 0.0230856756355 0.00775530015196 0.00205507486616 0.00039644769998 4.78769215243e-05</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>10.1 44.9</gml:pos>
+      </gml:Point>
+      <poEs>0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>
