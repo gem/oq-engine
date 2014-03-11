@@ -16,11 +16,13 @@
 """
 Module exports :class:`YoungsEtAl1997SInter`, :class:`YoungsEtAl1997SSlab`,
 :class:`YoungsEtAl1997GSCSSlabBest`, :class:`YoungsEtAl1997GSCSSlabUpperLimit`,
-:class:`YoungsEtAl1997GSCSSlabLowerLimit`.
+:class:`YoungsEtAl1997GSCSSlabLowerLimit`,
+:class:`YoungsEtAl1997SInterNSHMP2008`.
 """
 from __future__ import division
 
 import numpy as np
+import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -188,6 +190,35 @@ class YoungsEtAl1997SInter(GMPE):
               'A5_soil': 0.617,
               'A6_soil': 0.00648,
               'A7_soil': 0.3643}
+
+
+class YoungsEtAl1997SInterNSHMP2008(YoungsEtAl1997SInter):
+    """
+    Extends :class:`YoungsEtAl1997SInter` and fix rupture hypocenter depth
+    at 20 km as defined by the National Seismic Hazard Mapping Project (NSHMP)
+    for the 2008 US model.
+
+    The class implement the equation as coded in ``subroutine getGeom`` in
+    ``hazSUBXnga.f`` Fortran code available at:
+    http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
+    """
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+
+        Call superclass method by passing new rupture context object with
+        hypocentral depth set to 20 km
+        """
+        # create new context to avoid changing the original one
+        new_rup = copy.deepcopy(rup)
+        new_rup.hypo_depth = 20.
+
+        mean, stddevs = super(YoungsEtAl1997SInterNSHMP2008, self). \
+            get_mean_and_stddevs(sites, new_rup, dists, imt, stddev_types)
+
+        return mean, stddevs
 
 
 class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):

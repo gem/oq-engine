@@ -18,3 +18,6 @@ Youngs et al. 1997
 
 .. autoclass:: YoungsEtAl1997GSCSSlabLowerLimit
     :members:
+
+.. autoclass:: YoungsEtAl1997SInterNSHMP2008
+    :members:

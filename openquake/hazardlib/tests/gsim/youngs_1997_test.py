@@ -18,7 +18,8 @@ from openquake.hazardlib.gsim.youngs_1997 import (
     YoungsEtAl1997SSlab,
     YoungsEtAl1997GSCSSlabBest,
     YoungsEtAl1997GSCSSlabUpperLimit,
-    YoungsEtAl1997GSCSSlabLowerLimit
+    YoungsEtAl1997GSCSSlabLowerLimit,
+    YoungsEtAl1997SInterNSHMP2008
 )
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
@@ -86,4 +87,16 @@ class YoungsEtAl1997GSCSSlabLowerLimitTestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('YOUNGS97/Y97SSlab_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
+
+class YoungsEtAl1997SInterNSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = YoungsEtAl1997SInterNSHMP2008
+
+    def test_mean(self):
+        self.check('YOUNGS97/Y97SInterNSHMP2008_MEAN.csv',
+                   max_discrep_percentage=2.5)
+
+    def test_std_total(self):
+        self.check('YOUNGS97/Y97SInterNSHMP2008_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
