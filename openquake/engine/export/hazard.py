@@ -22,7 +22,6 @@ import os
 import functools
 
 from collections import namedtuple
-from collections import OrderedDict
 
 from openquake.hazardlib.calc import disagg
 from openquake.nrmllib.hazard import writers
@@ -501,17 +500,6 @@ def export_disagg_matrix_xml(output, target):
     dest = _get_result_export_dest(haz_calc.id, target,
                                    output.disagg_matrix)
 
-    pmf_map = OrderedDict([
-        (('Mag', ), disagg.mag_pmf),
-        (('Dist', ), disagg.dist_pmf),
-        (('TRT', ), disagg.trt_pmf),
-        (('Mag', 'Dist'), disagg.mag_dist_pmf),
-        (('Mag', 'Dist', 'Eps'), disagg.mag_dist_eps_pmf),
-        (('Lon', 'Lat'), disagg.lon_lat_pmf),
-        (('Mag', 'Lon', 'Lat'), disagg.mag_lon_lat_pmf),
-        (('Lon', 'Lat', 'TRT'), disagg.lon_lat_trt_pmf),
-    ])
-
     writer_kwargs = dict(
         investigation_time=disagg_result.investigation_time,
         imt=disagg_result.imt,
@@ -531,9 +519,9 @@ def export_disagg_matrix_xml(output, target):
 
     writer = writers.DisaggXMLWriter(dest, **writer_kwargs)
 
-    data = (_DisaggMatrix(pmf_fn(disagg_result.matrix), dim_labels,
+    data = (_DisaggMatrix(disagg_result.matrix[dim_labels], dim_labels,
                           disagg_result.poe, disagg_result.iml)
-            for dim_labels, pmf_fn in pmf_map.iteritems())
+            for dim_labels in disagg.pmf_map)
 
     writer.serialize(data)
 
