@@ -14,17 +14,22 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest
+import filecmp
+
 from nose.plugins.attrib import attr
 from qa_tests import _utils
 
 
-# run the disaggregation, export the files on a temporary
-# directory and then compare with the directory expected_output
 class DisaggHazardCase1TestCase(_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'disagg')
     def test(self):
-        raise unittest.SkipTest
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-        job = self.run_hazard(cfg)
+        expected = os.path.join(os.path.dirname(__file__), 'expected_output')
+        job = self.run_hazard(cfg, exports=['xml'])
+        hc = job.hazard_calculation
+        export_dir = os.path.join(hc.export_dir, 'calc_%d' % hc.id)
+        dc = filecmp.dircmp(export_dir, expected)
+        dc.report_full_closure()
+        # this is exporting several files in /tmp/disagg_case_2
+        # as listed in job.ini
