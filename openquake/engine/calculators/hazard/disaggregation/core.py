@@ -417,9 +417,11 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
     See :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
     details about the nature of this type of calculation.
     """
-    def post_execute(self):
+
+    @EnginePerformanceMonitor.monitor
+    def full_disaggregation(self):
         """
-        Start the disaggregation phase after hazard curve finalization.
+        Run the disaggregation phase after hazard curve finalization.
         """
         super(DisaggHazardCalculator, self).post_execute()
 
@@ -427,11 +429,6 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                        self.tectonic_region_types))
         arglist = [(self.job.id, sources, gsims_by_rlz, trt_num)
                    for job_id, sources, gsims_by_rlz in self.task_arg_gen()]
-
-        self.result = {}
-        # dictionary {key: bins} where key is the tuple
-        # rlz_id, site, poe, iml, im_type, sa_period, sa_damping
-
         self.parallelize(collect_bins, arglist, self.collect_result)
 
         trt_names = [trt for (num, trt) in sorted(
@@ -440,6 +437,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                    for key, bins in self.result.iteritems()]
         self.parallelize(
             arrange_and_save_disagg_matrix, arglist, self.log_percent)
+
+    post_execute = full_disaggregation
 
     @EnginePerformanceMonitor.monitor
     def collect_result(self, result):
