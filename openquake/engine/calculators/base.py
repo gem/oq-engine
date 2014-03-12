@@ -29,15 +29,17 @@ def log_percent_gen(taskname, todo):
     Generator factory. Each time the generator object is called
     log a message if the percentage is bigger than the last one.
     """
-    done = 0
+    done = 1
     prev_percent = 0
-    while True:
+    while done < todo:
         percent = int(float(done) / todo * 100)
         if percent > prev_percent:
             logs.LOG.progress('%s %3d%%', taskname, percent)
             prev_percent = percent
-        done += 1
         yield done
+        done += 1
+    logs.LOG.progress('%s 100%%', taskname)
+    yield done
 
 
 class Calculator(object):
