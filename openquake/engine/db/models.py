@@ -27,6 +27,7 @@ Model representations of the OpenQuake DB tables.
 
 import collections
 import operator
+import itertools
 from datetime import datetime
 
 
@@ -895,6 +896,20 @@ class HazardCalculation(djm.Model):
         mon1.flush()
         mon2.flush()
         mon3.flush()
+
+    def gen_ruptures_for_site(self, site, sources, monitor):
+        """
+        Yield source, <ruptures close to site>
+
+        :param site: a Site object
+        :param sources: a sequence of sources
+        :param monitor: a Monitor object
+        """
+        source_rupture_sites = self.gen_ruptures(
+            sources, monitor, SiteCollection([site]))
+        for src, rows in itertools.groupby(
+                source_rupture_sites, key=operator.itemgetter(0)):
+            yield src, [row[1] for row in rows]
 
 
 class RiskCalculation(djm.Model):
