@@ -94,13 +94,13 @@ class BooreAtkinson2008(GMPE):
         if imt == PGA():
             # avoid recomputing PGA on rock, just add site terms
             mean = np.log(pga4nl) + \
-                self._get_site_amplification_linear(sites, C_SR) + \
-                self._get_site_amplification_non_linear(sites, pga4nl, C_SR)
+                self._get_site_amplification_linear(sites.vs30, C_SR) + \
+                self._get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
         else:
             mean = self._compute_magnitude_scaling(rup, C) + \
                 self._compute_distance_scaling(rup, dists, C) + \
-                self._get_site_amplification_linear(sites, C_SR) + \
-                self._get_site_amplification_non_linear(sites, pga4nl, C_SR)
+                self._get_site_amplification_linear(sites.vs30, C_SR) + \
+                self._get_site_amplification_non_linear(sites.vs30, pga4nl, C_SR)
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
@@ -169,12 +169,12 @@ class BooreAtkinson2008(GMPE):
 
         return U, SS, NS, RS
 
-    def _get_site_amplification_linear(self, sites, C):
+    def _get_site_amplification_linear(self, vs30, C):
         """
         Compute site amplification linear term,
         equation (7), pag 107.
         """
-        return C['blin'] * np.log(sites.vs30 / 760.0)
+        return C['blin'] * np.log(vs30 / 760.0)
 
     def _get_pga_on_rock(self, rup, dists, _C):
         """
@@ -197,18 +197,18 @@ class BooreAtkinson2008(GMPE):
 
         return pga4nl
 
-    def _get_site_amplification_non_linear(self, sites, pga4nl, C):
+    def _get_site_amplification_non_linear(self, vs30, pga4nl, C):
         """
         Compute site amplification non-linear term,
         equations (8a) to (13d), pag 108-109.
         """
         # non linear slope
-        bnl = self._compute_non_linear_slope(sites, C)
+        bnl = self._compute_non_linear_slope(vs30, C)
 
         # compute the actual non-linear term
         return self._compute_non_linear_term(pga4nl, bnl)
 
-    def _compute_non_linear_slope(self, sites, C):
+    def _compute_non_linear_slope(self, vs30, C):
         """
         Compute non-linear slope factor,
         equations (13a) to (13d), pag 108-109.
@@ -218,20 +218,20 @@ class BooreAtkinson2008(GMPE):
         Vref = 760.0
 
         # equation (13d), values are zero for vs30 >= Vref = 760.0
-        bnl = np.zeros(len(sites.vs30))
+        bnl = np.zeros(vs30.shape)
 
         # equation (13a)
-        idx = sites.vs30 <= V1
+        idx = vs30 <= V1
         bnl[idx] = C['b1']
 
         # equation (13b)
-        idx = np.where((sites.vs30 > V1) & (sites.vs30 <= V2))
+        idx = np.where((vs30 > V1) & (vs30 <= V2))
         bnl[idx] = (C['b1'] - C['b2']) * \
-            np.log(sites.vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
+            np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
 
         # equation (13c)
-        idx = np.where((sites.vs30 > V2) & (sites.vs30 < Vref))
-        bnl[idx] = C['b2'] * np.log(sites.vs30[idx] / Vref) / np.log(V2 / Vref)
+        idx = np.where((vs30 > V2) & (vs30 < Vref))
+        bnl[idx] = C['b2'] * np.log(vs30[idx] / Vref) / np.log(V2 / Vref)
 
         return bnl
 

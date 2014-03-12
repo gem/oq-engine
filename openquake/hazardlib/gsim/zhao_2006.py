@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`ZhaoEtAl2006Asc`, class:`ZhaoEtAl2006SInter`, and
-class:`ZhaoEtAl2006SSlab`.
+Module exports :class:`ZhaoEtAl2006Asc`, :class:`ZhaoEtAl2006SInter`,
+:class:`ZhaoEtAl2006SSlab`, and :class:`ZhaoEtAl2006SInterNSHMP2008`.
 """
 from __future__ import division
 
@@ -239,6 +239,9 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
     #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
+    #: Required rupture parameters are magnitude and focal depth.
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -319,6 +322,9 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
     #: that factors FR, SS and SSL are assumed 0 in equation 1, p. 901.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
+    #: Required rupture parameters are magnitude and focal depth.
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -392,4 +398,58 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
         3.00   1.037 -0.263   0.0322 -0.0261   0.0496  0.274
         4.00   0.561 -0.169   0.0083 -0.0065   0.0150  0.281
         5.00   0.225 -0.120  -0.0117  0.0246  -0.0268  0.296
+        """)
+
+
+class ZhaoEtAl2006SInterNSHMP2008(ZhaoEtAl2006SInter):
+    """
+    Extend :class:`ZhaoEtAl2006SInter` and fix hypocentral depth at 20 km
+    as defined the by National Seismic Hazard Mapping Project for the 2008 US
+    hazard model.
+
+    The calculation of the total standard deviation is done considering the
+    inter-event standard deviation as defined in table 5, page 903 of Zhao's
+    paper.
+
+    The class implement the equation as coded in ``subroutine zhao`` in
+    ``hazSUBXnga.f`` Fotran code available at:
+    http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
+    """
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+
+        Call super class method with hypocentral depth fixed at 20 km
+        """
+        rup.hypo_depth = 20.
+        mean, stddevs = super(ZhaoEtAl2006SInterNSHMP2008, self). \
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        return mean, stddevs
+
+    COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
+        IMT    SI     QI      WI      tauI
+        pga    0.000  0.0     0.0     0.3976
+        0.05   0.000  0.0     0.0     0.4437
+        0.10   0.000  0.0     0.0     0.4903
+        0.15   0.000 -0.0138  0.0286  0.4603
+        0.20   0.000 -0.0256  0.0352  0.4233
+        0.25   0.000 -0.0348  0.0403  0.3908
+        0.30   0.000 -0.0423  0.0445  0.3790
+        0.40  -0.041 -0.0541  0.0511  0.3897
+        0.50  -0.053 -0.0632  0.0562  0.3890
+        0.60  -0.103 -0.0707  0.0604  0.4014
+        0.70  -0.146 -0.0771  0.0639  0.4079
+        0.80  -0.164 -0.0825  0.0670  0.4183
+        0.90  -0.206 -0.0874  0.0697  0.4106
+        1.00  -0.239 -0.0917  0.0721  0.4101
+        1.25  -0.256 -0.1009  0.0772  0.4021
+        1.50  -0.306 -0.1083  0.0814  0.4076
+        2.00  -0.321 -0.1202  0.0880  0.4138
+        2.50  -0.337 -0.1293  0.0931  0.4108
+        3.00  -0.331 -0.1368  0.0972  0.3961
+        4.00  -0.390 -0.1486  0.1038  0.3821
+        5.00  -0.498 -0.1578  0.1090  0.3766
         """)

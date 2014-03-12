@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`AtkinsonBoore2003SInter`, class:`AtkinsonBoore2003SSlab`
+Module exports :class:`AtkinsonBoore2003SInter`,
+:class:`AtkinsonBoore2003SSlab`, :class:`AtkinsonBoore2003SInterNSHMP2008`,
+:class:`AtkinsonBoore2003SSlabNSHMP2008`,
+:class:`AtkinsonBoore2003SSlabCascadiaNSHMP2008`
 """
 from __future__ import division
 
@@ -101,15 +104,11 @@ class AtkinsonBoore2003SInter(GMPE):
         G = 10 ** (1.2 - 0.18 * mag)
         pga_rock = self._compute_mean(self.COEFFS_SINTER[PGA()], G, mag,
                                       rup.hypo_depth, dists.rrup, sites.vs30,
-                                      np.zeros_like(sites.vs30),
-                                      np.zeros_like(sites.vs30),
-                                      np.zeros_like(sites.vs30),
-                                      np.zeros_like(sites.vs30))
+                                      # by passing pga_rock > 500 the soil
+                                      # amplification is 0
+                                      np.zeros_like(sites.vs30) + 600,
+                                      PGA())
         pga_rock = 10 ** (pga_rock)
-
-        # compute soil amplification factors
-        Sc, Sd, Se = self._compute_site_class_dummy_variables(sites.vs30)
-        sl = self._compute_soil_linear_factor(pga_rock, imt)
 
         # periods 0.4 s (2.5 Hz) and 0.2 s (5 Hz) need a special case because
         # of the erratum. SA for 0.4s and 0.2s is computed and a weighted sum
@@ -118,9 +117,9 @@ class AtkinsonBoore2003SInter(GMPE):
             C04 = self.COEFFS_SINTER[SA(period=0.4, damping=5.0)]
             C02 = self.COEFFS_SINTER[SA(period=0.2, damping=5.0)]
             mean04 = self._compute_mean(C04, G, mag, rup.hypo_depth,
-                                        dists.rrup, sites.vs30, Sc, Sd, Se, sl)
+                                        dists.rrup, sites.vs30, pga_rock, imt)
             mean02 = self._compute_mean(C02, G, mag, rup.hypo_depth,
-                                        dists.rrup, sites.vs30, Sc, Sd, Se, sl)
+                                        dists.rrup, sites.vs30, pga_rock, imt)
 
             if imt.period == 0.2:
                 mean = 0.333 * mean02 + 0.667 * mean04
@@ -128,7 +127,7 @@ class AtkinsonBoore2003SInter(GMPE):
                 mean = 0.333 * mean04 + 0.667 * mean02
         else:
             mean = self._compute_mean(C, G, mag, rup.hypo_depth, dists.rrup,
-                                      sites.vs30, Sc, Sd, Se, sl)
+                                      sites.vs30, pga_rock, imt)
 
         # convert from log10 to ln and units from cm/s**2 to g
         mean = np.log((10 ** mean) * 1e-2 / g)
@@ -140,7 +139,7 @@ class AtkinsonBoore2003SInter(GMPE):
 
         return mean, stddevs
 
-    def _compute_mean(self, C, g, mag, hypo_depth, rrup, vs30, Sc, Sd, Se, sl):
+    def _compute_mean(self, C, g, mag, hypo_depth, rrup, vs30, pga_rock, imt):
         """
         Compute mean according to equation 1, page 1706.
         """
@@ -148,6 +147,9 @@ class AtkinsonBoore2003SInter(GMPE):
             hypo_depth = 100
         delta = 0.00724 * 10 ** (0.507 * mag)
         R = np.sqrt(rrup ** 2 + delta ** 2)
+
+        s_amp = self._compute_soil_amplification(C, vs30, pga_rock, imt)
+
         mean = (
             # 1st term
             C['c1'] + C['c2'] * mag +
@@ -157,15 +159,21 @@ class AtkinsonBoore2003SInter(GMPE):
             C['c4'] * R -
             # 4th term
             g * np.log10(R) +
-            # 5th term
-            C['c5'] * sl * Sc +
-            # 6th term
-            C['c6'] * sl * Sd +
-            # 7th term
-            C['c7'] * sl * Se
+            # 5th, 6th and 7th terms
+            s_amp
         )
 
         return mean
+
+    def _compute_soil_amplification(self, C, vs30, pga_rock, imt):
+        """
+        Compute soil amplification (5th, 6th, and 7th terms in equation 1,
+        page 1706).
+        """
+        Sc, Sd, Se = self._compute_site_class_dummy_variables(vs30)
+        sl = self._compute_soil_linear_factor(pga_rock, imt)
+
+        return C['c5'] * sl * Sc + C['c6'] * sl * Sd + C['c7'] * sl * Se
 
     def _compute_site_class_dummy_variables(self, vs30):
         """
@@ -278,18 +286,16 @@ class AtkinsonBoore2003SSlab(AtkinsonBoore2003SInter):
         G = 10 ** (0.301 - 0.01 * mag)
         pga_rock = self._compute_mean(self.COEFFS_SSLAB[PGA()], G, mag,
                                       rup.hypo_depth, dists.rrup, sites.vs30,
-                                      np.zeros_like(sites.vs30),
-                                      np.zeros_like(sites.vs30),
-                                      np.zeros_like(sites.vs30),
-                                      np.zeros_like(sites.vs30))
+                                      # by passing pga_rock > 500 the soil
+                                      # amplification is 0
+                                      np.zeros_like(sites.vs30) + 600,
+                                      PGA())
         pga_rock = 10 ** (pga_rock)
 
         # compute actual mean and convert from log10 to ln and units from
         # cm/s**2 to g
-        Sc, Sd, Se = self._compute_site_class_dummy_variables(sites.vs30)
-        sl = self._compute_soil_linear_factor(pga_rock, imt)
         mean = self._compute_mean(C, G, mag, rup.hypo_depth, dists.rrup,
-                                  sites.vs30, Sc, Sd, Se, sl)
+                                  sites.vs30, pga_rock, imt)
         mean = np.log((10 ** mean) * 1e-2 / g)
 
         if isinstance(imt, SA) and imt.period == 4.0:
@@ -310,4 +316,128 @@ class AtkinsonBoore2003SSlab(AtkinsonBoore2003SInter):
     2.0000  -2.39234    0.99640    0.00364    -0.00118    0.10000    0.25000    0.40000    0.30000    0.28000    0.11000
     3.0000  -3.70012    1.11690    0.00615    -0.00045    0.10000    0.25000    0.36000    0.30000    0.29000    0.08000
     4.0000  -3.70012    1.11690    0.00615    -0.00045    0.10000    0.25000    0.36000    0.30000    0.29000    0.08000
+    """)
+
+
+class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
+    """
+    Extend :class:`AtkinsonBoore2003SInter` and introduces site amplification
+    for B/C site condition and fixed rupture hypocentral depth (20 km) as
+    defined by the National Seismic Hazard Mapping Project (NSHMP) for the
+    2008 US hazard model
+
+    Site amplification for B/C is triggered when vs30 > 760 and it is
+    computed as site amplification for C soil scaled by a factor equal to 0.5
+
+    The class implements the equation as coded in ``subroutine getABsub``
+    in ``hazSUBXnga.f`` Fortran code available at:
+    http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+
+        Call super class method with hypocentral depth fixed at 20 km
+        """
+        # fix hypocentral depth to 20 km
+        rup.hypo_depth = 20.
+        mean, stddevs = super(AtkinsonBoore2003SInterNSHMP2008, self). \
+            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+
+        return mean, stddevs
+
+    def _compute_soil_amplification(self, C, vs30, pga_rock, imt):
+        """
+        Compute soil amplification (5th, 6th, and 7th terms in equation 1,
+        page 1706) and add the B/C site condition as implemented by NSHMP.
+        """
+        Sbc, Sc, Sd, Se = self._compute_site_class_dummy_variables(vs30)
+        sl = self._compute_soil_linear_factor(pga_rock, imt)
+
+        return (
+            C['c5'] * sl * Sbc * 0.5 +
+            C['c5'] * sl * Sc +
+            C['c6'] * sl * Sd +
+            C['c7'] * sl * Se
+        )
+
+    def _compute_site_class_dummy_variables(self, vs30):
+        """
+        Extend
+        :meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
+        and includes dummy variable for B/C site conditions (vs30 > 760.)
+        """
+        Sbc = np.zeros_like(vs30)
+        Sc = np.zeros_like(vs30)
+        Sd = np.zeros_like(vs30)
+        Se = np.zeros_like(vs30)
+
+        Sbc[vs30 > 760.] = 1
+        Sc[(vs30 > 360) & (vs30 <= 760)] = 1
+        Sd[(vs30 >= 180) & (vs30 <= 360)] = 1
+        Se[vs30 < 180] = 1
+
+        return Sbc, Sc, Sd, Se
+
+
+class AtkinsonBoore2003SSlabNSHMP2008(AtkinsonBoore2003SSlab):
+    """
+    Extend :class:`AtkinsonBoore2003SSlab` and introduces site amplification
+    for B/C site condition as defined by the National Seismic Hazard Mapping
+    Project (NSHMP) for the 2008 US hazard model.
+
+    Site amplification for B/C is triggered when vs30 > 760 and it is
+    computed as site amplification for C soil scaled by a factor equal to 0.5
+
+    The class replicates the equation as coded in ``subroutine getABsub``
+    in ``hazgridXnga2.f`` Fortran code available at:
+    http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
+    """
+    def _compute_soil_amplification(self, C, vs30, pga_rock, imt):
+        """
+        Compute soil amplification (5th, 6th, and 7th terms in equation 1,
+        page 1706) and add the B/C site condition as implemented by NSHMP.
+
+        Call
+        :meth:`AtkinsonBoore2003SInterNSHMP2008._compute_soil_amplification`
+        """
+        return AtkinsonBoore2003SInterNSHMP2008()._compute_soil_amplification(
+            C, vs30, pga_rock, imt
+        )
+
+    def _compute_site_class_dummy_variables(self, vs30):
+        """
+        Extend
+        :meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
+        and includes dummy variable for B/C site conditions (vs30 > 760.)
+
+        Call
+        meth:`AtkinsonBoore2003SInter._compute_site_class_dummy_variables`
+        """
+        return AtkinsonBoore2003SInterNSHMP2008(). \
+            _compute_site_class_dummy_variables(vs30)
+
+
+class AtkinsonBoore2003SSlabCascadiaNSHMP2008(AtkinsonBoore2003SSlabNSHMP2008):
+    """
+    Extend :class:`AtkinsonBoore2003SSlabNSHMP2008` but uses coefficients for
+    Cascadia region
+
+    The class replicates the equation as coded in ``subroutine getABsub``
+    in ``hazgridXnga2.f`` Fortran code available at:
+    http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
+    """
+    COEFFS_SSLAB = CoeffsTable(sa_damping=5, table="""\
+    IMT      c1      c2         c3         c4         c5          c6         c7         sigma      s1        s2
+    pga     -0.25    0.69090    0.01130    -0.00202    0.19000    0.24000    0.29000    0.27000    0.23000    0.14000
+    0.0400   0.23    0.63273    0.01275    -0.00234    0.15000    0.20000    0.20000    0.25000    0.24000    0.07000
+    0.1000   0.16    0.66675    0.01080    -0.00219    0.15000    0.23000    0.20000    0.28000    0.27000    0.07000
+    0.2000   0.40    0.69186    0.00572    -0.00192    0.15000    0.27000    0.25000    0.28000    0.26000    0.10000
+    0.4000  -0.01    0.77270    0.00173    -0.00178    0.13000    0.37000    0.38000    0.28000    0.26000    0.10000
+    1.0000  -0.98    0.87890    0.00130    -0.00173    0.10000    0.30000    0.55000    0.29000    0.27000    0.11000
+    2.0000  -2.25    0.99640    0.00364    -0.00118    0.10000    0.25000    0.40000    0.30000    0.28000    0.11000
+    3.0000  -3.64    1.11690    0.00615    -0.00045    0.10000    0.25000    0.36000    0.30000    0.29000    0.08000
     """)

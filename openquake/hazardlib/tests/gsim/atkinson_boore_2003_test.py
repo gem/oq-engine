@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.atkinson_boore_2003 import (
-    AtkinsonBoore2003SInter,  AtkinsonBoore2003SSlab
+    AtkinsonBoore2003SInter,  AtkinsonBoore2003SSlab,
+    AtkinsonBoore2003SInterNSHMP2008, AtkinsonBoore2003SSlabNSHMP2008,
+    AtkinsonBoore2003SSlabCascadiaNSHMP2008
 )
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
@@ -22,6 +24,7 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 import numpy
 
 # Test data generated from OpenSHA implementation
+
 
 class AtkinsonBoore2003SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore2003SInter
@@ -42,6 +45,7 @@ class AtkinsonBoore2003SInterTestCase(BaseGSIMTestCase):
         self.check('AB03/AB03SInter_STD_INTER.csv',
                     max_discrep_percentage=0.1)
 
+
 class AtkinsonBoore2003SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore2003SSlab
 
@@ -59,4 +63,43 @@ class AtkinsonBoore2003SSlabTestCase(BaseGSIMTestCase):
 
     def test_std_inter(self):
         self.check('AB03/AB03SSlab_STD_INTER.csv',
+                    max_discrep_percentage=0.1)
+
+
+class AtkinsonBoore2003SInterNSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2003SInterNSHMP2008
+    # test data generated from subrutine 'getABsub' in 'hazSUBXnga.f'
+
+    def test_mean(self):
+        self.check('AB03/AB03SInterGlobalNSHMP_MEAN.csv',
+                    max_discrep_percentage=0.5)
+
+    def test_std_total(self):
+        self.check('AB03/AB03SInterGlobalNSHMP_STD_TOTAL.csv',
+                    max_discrep_percentage=0.1)
+
+
+class AtkinsonBoore2003SSlabNSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2003SSlabNSHMP2008
+    # test data generated from subrutine 'getABsub' in 'hazgridXnga2.f'
+
+    def test_mean(self):
+        self.check('AB03/AB03SSlabGlobalNSHMP_MEAN.csv',
+                    max_discrep_percentage=0.3)
+
+    def test_std_total(self):
+        self.check('AB03/AB03SSlabGlobalNSHMP_STD_TOTAL.csv',
+                    max_discrep_percentage=0.1)
+
+
+class AtkinsonBoore2003SSlabCascadiaNSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2003SSlabCascadiaNSHMP2008
+    # test data generated from subrutine 'getABsub' in 'hazgridXnga2.f'
+
+    def test_mean(self):
+        self.check('AB03/AB03SSlabCascadiaNSHMP_MEAN.csv',
+                    max_discrep_percentage=0.2)
+
+    def test_std_total(self):
+        self.check('AB03/AB03SSlabCascadiaNSHMP_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)
