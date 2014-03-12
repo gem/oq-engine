@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -48,7 +48,7 @@ def pmf_dict(matrix):
                        for key, pmf_fn in disagg.pmf_map.iteritems())
 
 
-def _collect_bins_data(mon, trt_num, source_rupture_sites, sitecol,
+def _collect_bins_data(mon, trt_num, source_ruptures, sitecol,
                        imt, iml, gsims, truncation_level, n_epsilons):
     """
     Extract values of magnitude, distance, closest point, tectonic region
@@ -71,36 +71,37 @@ def _collect_bins_data(mon, trt_num, source_rupture_sites, sitecol,
     mon2 = mon.copy('making contexts')
     mon3 = mon.copy('disaggregate_poe')
 
-    for source, rupture, r_sites in source_rupture_sites:
+    for source, ruptures in source_ruptures:
         try:
             gsim = gsims[source.tectonic_region_type]
             tect_reg = trt_num[source.tectonic_region_type]
-            # extract rupture parameters of interest
-            mags.append(rupture.mag)
-            with mon1:
-                [jb_dist] = rupture.surface.get_joyner_boore_distance(
-                    sitemesh)
-                dists.append(jb_dist)
-                [closest_point] = rupture.surface.get_closest_points(
-                    sitemesh)
-            lons.append(closest_point.longitude)
-            lats.append(closest_point.latitude)
-            tect_reg_types.append(tect_reg)
+            for rupture in ruptures:
+                # extract rupture parameters of interest
+                mags.append(rupture.mag)
+                with mon1:
+                    [jb_dist] = rupture.surface.get_joyner_boore_distance(
+                        sitemesh)
+                    dists.append(jb_dist)
+                    [closest_point] = rupture.surface.get_closest_points(
+                        sitemesh)
+                lons.append(closest_point.longitude)
+                lats.append(closest_point.latitude)
+                tect_reg_types.append(tect_reg)
 
-            # compute conditional probability of exceeding iml given
-            # the current rupture, and different epsilon level, that is
-            # ``P(IMT >= iml | rup, epsilon_bin)`` for each of epsilon bins
-            with mon2:
-                sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
-            with mon3:
-                [poes_given_rup_eps] = gsim.disaggregate_poe(
-                    sctx, rctx, dctx, imt, iml, truncation_level,
-                    n_epsilons)
+                # compute conditional probability of exceeding iml given
+                # the current rupture, and different epsilon level, that is
+                # ``P(IMT >= iml | rup, epsilon_bin)`` for each of epsilon bins
+                with mon2:
+                    sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
+                with mon3:
+                    [poes_given_rup_eps] = gsim.disaggregate_poe(
+                        sctx, rctx, dctx, imt, iml, truncation_level,
+                        n_epsilons)
 
-            # collect probability of a rupture causing no exceedances
-            probs_no_exceed.append(
-                rupture.get_probability_no_exceedance(poes_given_rup_eps)
-            )
+                # collect probability of a rupture causing no exceedances
+                probs_no_exceed.append(
+                    rupture.get_probability_no_exceedance(poes_given_rup_eps)
+                )
         except Exception, err:
             etype, err, tb = sys.exc_info()
             msg = 'An error occurred with source id=%s. Error: %s'
@@ -306,7 +307,7 @@ def get_iml(rlz, site, poe, imls, imt):
 
 
 @tasks.oqtask
-def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
+def collect_bins(job_id, sources, gsims_by_rlz, trt_num, site):
     """
     Here is the basic calculation workflow:
 
@@ -327,32 +328,31 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
     """
     mon = LightMonitor('disagg', job_id, collect_bins)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
+
+    # generate source, rupture, sites once per site
+    source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
+    if not source_ruptures:
+        return {}
+
+    logs.LOG.info('Considering %d ruptures close to %s',
+                  sum(len(rupts) for src, rupts in source_ruptures), site)
+
     result = {}
-
-    for site in hc.site_collection:
-        sitecol = SiteCollection([site])
-
-        # generate source, rupture, sites once per site
-        source_rupture_sites = list(hc.gen_ruptures(sources, mon, sitecol))
-        if not source_rupture_sites:
-            continue
-        logs.LOG.info('Considering %d ruptures close to %s',
-                      len(source_rupture_sites), site)
-
-        # compute the iml from each curve and call _collect_bins_data
-        for imt_str, imls in hc.intensity_measure_types_and_levels.iteritems():
-            imt = from_string(imt_str)
-            for rlz, gsims in gsims_by_rlz.items():
-                for poe in hc.poes_disagg:
-                    iml = get_iml(rlz, site, poe, imls, imt)
-                    if iml is None:
-                        logs.LOG.warn(
-                            '* hazard curve contained all 0 probability values'
-                            '; skipping rlz=%d, IMT=%s', rlz.id, imt)
-                        continue
-                    result[rlz.id, site.id, poe, iml, imt[0], imt[1], imt[2]
-                           ] = _collect_bins_data(
-                        mon, trt_num, source_rupture_sites, sitecol,
+    sitecol = SiteCollection([site])
+    # compute the iml from each curve and call _collect_bins_data
+    for imt_str, imls in hc.intensity_measure_types_and_levels.iteritems():
+        imt = from_string(imt_str)
+        for rlz, gsims in gsims_by_rlz.items():
+            for poe in hc.poes_disagg:
+                iml = get_iml(rlz, site, poe, imls, imt)
+                if iml is None:
+                    logs.LOG.warn(
+                        '* hazard curve contained all 0 probability values'
+                        '; skipping rlz=%d, IMT=%s', rlz.id, imt)
+                    continue
+                result[rlz.id, poe, iml, imt[0], imt[1], imt[2]] = \
+                    _collect_bins_data(
+                        mon, trt_num, source_ruptures, sitecol,
                         imt, iml, gsims, hc.truncation_level,
                         hc.num_epsilon_bins)
     return result
@@ -360,7 +360,7 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
 
 @tasks.oqtask
 def arrange_and_save_disagg_matrix(
-        job_id, trt_names, bins, rlz_id, site_id, poe, iml,
+        job_id, trt_names, bins, site_id, rlz_id, poe, iml,
         im_type, sa_period, sa_damping):
     """
     Arrange the data in the bins into a disaggregation matrix
@@ -422,30 +422,35 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
     See :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
     details about the nature of this type of calculation.
     """
-
-    @EnginePerformanceMonitor.monitor
     def full_disaggregation(self):
         """
         Run the disaggregation phase after hazard curve finalization.
         """
         super(DisaggHazardCalculator, self).post_execute()
 
-        trt_num = dict((trt, i) for i, trt in enumerate(
-                       self.tectonic_region_types))
-        arglist = [(self.job.id, sources, gsims_by_rlz, trt_num)
-                   for job_id, sources, gsims_by_rlz in self.task_arg_gen()]
-        self.parallelize(collect_bins, arglist, self.collect_result)
+        # we are working sequentially on sites to save memory
+        for site in self.hc.site_collection:
+            trt_num = dict((trt, i) for i, trt in enumerate(
+                           self.tectonic_region_types))
+            arglist = [(self.job.id, srcs, gsims_by_rlz, trt_num, site)
+                       for job_id, srcs, gsims_by_rlz in self.task_arg_gen()]
 
-        trt_names = [trt for (num, trt) in sorted(
-                     (num, trt) for (trt, num) in trt_num.items())]
-        arglist = [(self.job.id, trt_names, bins) + key
-                   for key, bins in self.result.iteritems()]
-        self.parallelize(
-            arrange_and_save_disagg_matrix, arglist, self.log_percent)
+            self.result = {}
+            with self.monitor('collect results'):
+                self.parallelize(collect_bins, arglist, self.collect_result)
+            if not self.result:  # no contributions for this site
+                continue
+
+            trt_names = [trt for (num, trt) in sorted(
+                         (num, trt) for (trt, num) in trt_num.items())]
+            arglist = [(self.job.id, trt_names, bins, site.id) + key
+                       for key, bins in self.result.iteritems()]
+            self.result.clear()  # save memory
+            self.parallelize(
+                arrange_and_save_disagg_matrix, arglist, self.log_percent)
 
     post_execute = full_disaggregation
 
-    @EnginePerformanceMonitor.monitor
     def collect_result(self, result):
         """
         Collect the results coming from collect_bins into self.results,
@@ -453,17 +458,16 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         sa_damping) and values (mag_bins, dist_bins, lon_bins, lat_bins,
         trt_bins, eps_bins).
         """
-        for rlz_id, site_id, poe, iml, imtype, sa_period, sa_damping in result:
+        for rlz_id, poe, iml, imtype, sa_period, sa_damping in result:
             # mag_bins, dist_bins, lon_bins, lat_bins, trt_bins, eps_bins
             try:
                 bins = self.result[
-                    rlz_id, site_id, poe, iml, imtype, sa_period, sa_damping]
+                    rlz_id, poe, iml, imtype, sa_period, sa_damping]
             except KeyError:
                 bins = self.result[
-                    rlz_id, site_id, poe, iml, imtype, sa_period, sa_damping
+                    rlz_id, poe, iml, imtype, sa_period, sa_damping
                     ] = ([], [], [], [], [], [])
-            bins_data = result[
-                rlz_id, site_id, poe, iml, imtype, sa_period, sa_damping]
+            bins_data = result[rlz_id, poe, iml, imtype, sa_period, sa_damping]
             for acc, ls in zip(bins, bins_data):
                 acc.extend(ls)
         self.log_percent()
