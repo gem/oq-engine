@@ -312,8 +312,13 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
 
     for site in hc.site_collection:
         sitecol = SiteCollection([site])
+
         # generate source, rupture, sites once per site
         source_rupture_sites = list(hc.gen_ruptures(sources, mon, sitecol))
+        if not source_rupture_sites:
+            continue
+        logs.LOG.info('Considering %d ruptures close to %s',
+                      len(source_rupture_sites), site)
 
         # compute the iml from each curve and call _collect_bins_data
         for rlz, gsims in gsims_by_rlz.items():
@@ -412,30 +417,25 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
     See :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
     details about the nature of this type of calculation.
     """
-
-    def disagg_task_arg_gen(self):
-        """
-        Generate task args for the second phase of disaggregation calculations.
-        This phase is concerned with computing the disaggregation histograms.
-        """
-        self.trt_num = dict((trt, i) for i, trt in enumerate(
-                            self.tectonic_region_types))
-        for job_id, sources, gsims_by_rlz in self.task_arg_gen():
-            yield self.job.id, sources, gsims_by_rlz, self.trt_num
-
     def post_execute(self):
         """
         Start the disaggregation phase after hazard curve finalization.
         """
         super(DisaggHazardCalculator, self).post_execute()
 
-        self.result = {}  # dictionary {key: bins} where key is the tuple
+        trt_num = dict((trt, i) for i, trt in enumerate(
+                       self.tectonic_region_types))
+        arglist = [(self.job.id, sources, gsims_by_rlz, trt_num)
+                   for job_id, sources, gsims_by_rlz in self.task_arg_gen()]
+
+        self.result = {}
+        # dictionary {key: bins} where key is the tuple
         # rlz_id, site, poe, iml, im_type, sa_period, sa_damping
-        self.parallelize(
-            collect_bins, self.disagg_task_arg_gen(), self.collect_result)
+
+        self.parallelize(collect_bins, arglist, self.collect_result)
 
         trt_names = [trt for (num, trt) in sorted(
-                     (num, trt) for (trt, num) in self.trt_num.items())]
+                     (num, trt) for (trt, num) in trt_num.items())]
         arglist = [(self.job.id, trt_names, bins) + key
                    for key, bins in self.result.iteritems()]
         self.parallelize(
