@@ -135,10 +135,13 @@ class BaseHazardCalculator(base.Calculator):
         self.source_blocks_per_ltpath = collections.defaultdict(list)
         # full set of tectonic region types in all models
         self.tectonic_region_types = set()
+        # used in the disaggregation calculator
+        self.result = {}
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
         self.source_blocks_per_ltpath.clear()
+        self.result.clear()
 
     @property
     def hc(self):
