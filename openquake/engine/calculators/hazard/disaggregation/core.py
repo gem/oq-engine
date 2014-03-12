@@ -48,7 +48,7 @@ def pmf_dict(matrix):
                        for key, pmf_fn in disagg.pmf_map.iteritems())
 
 
-def _collect_bins_data(mon, trt_num, source_rupture_sites, site, imt, iml,
+def _collect_bins_data(mon, trt_num, source_rupture_sites, sitecol, imt, iml,
                        gsims, truncation_level, n_epsilons):
     """
     Extract values of magnitude, distance, closest point, tectonic region
@@ -66,7 +66,6 @@ def _collect_bins_data(mon, trt_num, source_rupture_sites, site, imt, iml,
     lats = []
     tect_reg_types = []
     probs_no_exceed = []
-    sitecol = SiteCollection([site])
     sitemesh = sitecol.mesh
     mon1 = mon.copy('calc distances')
     mon2 = mon.copy('making contexts')
@@ -160,9 +159,9 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
     (mags, dists, lons, lats, tect_reg_types, probs_no_exceed) = bins_data
-    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
+    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_names = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
-             len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
+             len(lat_bins) - 1, len(eps_bins) - 1, len(trt_names))
     todo = numpy.prod(shape)
     log_percent = log_percent_gen('arrange data', todo)
     diss_matrix = numpy.zeros(shape)
@@ -193,7 +192,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
 
                     for i_eps in xrange(len(eps_bins) - 1):
 
-                        for i_trt in xrange(len(trt_bins)):
+                        for i_trt in xrange(len(trt_names)):
                             trt_idx = tect_reg_types == i_trt
 
                             diss_idx = (i_mag, i_dist, i_lon,
@@ -209,7 +208,6 @@ def _arrange_data_in_bins(bins_data, bin_edges):
                             diss_matrix[diss_idx] = poe
 
                             log_percent.next()
-
     return diss_matrix
 
 
@@ -238,9 +236,9 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
     result = {}
 
     for site in hc.site_collection:
+        sitecol = SiteCollection([site])
         # generate source, rupture, sites once per site
-        source_rupture_sites = list(
-            hc.gen_ruptures(sources, mon, SiteCollection([site])))
+        source_rupture_sites = list(hc.gen_ruptures(sources, mon, sitecol))
 
         # compute the iml from each curve and call _collect_bins_data
         for rlz, gsims in gsims_by_rlz.items():
@@ -269,7 +267,7 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
                     result[rlz.id, site.id, poe, iml,
                            im_type, sa_period, sa_damping] = \
                         _collect_bins_data(
-                            mon, trt_num, source_rupture_sites, site,
+                            mon, trt_num, source_rupture_sites, sitecol,
                             imt, iml, gsims, hc.truncation_level,
                             hc.num_epsilon_bins)
     return result
@@ -348,7 +346,7 @@ def _save_disagg_matrix(job_id, site_id, bin_edges, diss_matrix, rlz,
 
 @tasks.oqtask
 def arrange_and_save_disagg_matrix(
-        job_id, trt_bins, bins, rlz_id, site_id, poe, iml,
+        job_id, trt_names, bins, rlz_id, site_id, poe, iml,
         im_type, sa_period, sa_damping):
     """
     Arrange the data in the bins into a disaggregation matrix
@@ -356,7 +354,7 @@ def arrange_and_save_disagg_matrix(
 
     :param int job_id:
         ID of the currently running :class:`openquake.engine.db.models.OqJob`
-    :param trt_bins:
+    :param trt_names:
         a list of names of Tectonic Region Types
     :param bins:
         a 6-uple of lists (mag_bins, dist_bins, lon_bins, lat_bins,
@@ -387,7 +385,7 @@ def arrange_and_save_disagg_matrix(
         hc.distance_bin_width,
         hc.coordinate_bin_width,
         hc.truncation_level,
-        hc.num_epsilon_bins) + (trt_bins, )
+        hc.num_epsilon_bins) + (trt_names, )
 
     with EnginePerformanceMonitor('arrange data', job_id,
                                   arrange_and_save_disagg_matrix):
@@ -397,8 +395,7 @@ def arrange_and_save_disagg_matrix(
                                   arrange_and_save_disagg_matrix):
         _save_disagg_matrix(
             job_id, site_id, bin_edges, diss_matrix, rlz,
-            hc.investigation_time, im_type, iml, poe, sa_period,
-            sa_damping)
+            hc.investigation_time, im_type, iml, poe, sa_period, sa_damping)
 
 
 class DisaggHazardCalculator(ClassicalHazardCalculator):
@@ -431,9 +428,9 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         self.parallelize(
             collect_bins, self.disagg_task_arg_gen(), self.collect_result)
 
-        trt_bins = [trt for (num, trt) in sorted(
-                    (num, trt) for (trt, num) in self.trt_num.items())]
-        arglist = [(self.job.id, trt_bins, bins) + key
+        trt_names = [trt for (num, trt) in sorted(
+                     (num, trt) for (trt, num) in self.trt_num.items())]
+        arglist = [(self.job.id, trt_names, bins) + key
                    for key, bins in self.result.iteritems()]
         self.parallelize(
             arrange_and_save_disagg_matrix, arglist, self.log_percent)
@@ -444,7 +441,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         Collect the results coming from collect_bins into self.results,
         a dictionary with key (rlz_id, site, poe, iml, im_type, sa_period,
         sa_damping) and values (mag_bins, dist_bins, lon_bins, lat_bins,
-        trt_bins, eps_bins).
+        eps_bins, trt_bins).
         """
         for rlz_id, site_id, poe, iml, imtype, sa_period, sa_damping in result:
             # mag_bins, dist_bins, lon_bins, lat_bins, tect_reg_types, eps_bins
