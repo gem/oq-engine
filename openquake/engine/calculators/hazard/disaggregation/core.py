@@ -34,12 +34,15 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
+from openquake.engine.calculators.base import log_percent_gen
 
 
 def pmf_dict(matrix):
     """
     Return an OrderedDict of matrices with the key in the dictionary
-    `openquake.hazardlib.calc.disagg.pmf_map` .
+    `openquake.hazardlib.calc.disagg.pmf_map`.
+
+    :param matrix: an :class:`openquake.engine.db.models.
     """
     return OrderedDict((key, pmf_fn(matrix))
                        for key, pmf_fn in disagg.pmf_map.iteritems())
@@ -160,7 +163,11 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
              len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
+    todo = numpy.prod(shape)
+    log_percent = log_percent_gen('arrange data', todo)
     diss_matrix = numpy.zeros(shape)
+    logs.LOG.info('Populating disaggregation matrix of size %d, %s',
+                  todo, shape)
 
     for i_mag in xrange(len(mag_bins) - 1):
         mag_idx = mags <= mag_bins[i_mag + 1]
@@ -195,12 +202,13 @@ def _arrange_data_in_bins(bins_data, bin_edges):
                             prob_idx = (mag_idx & dist_idx & lon_idx
                                         & lat_idx & trt_idx)
 
-                            poe = numpy.prod(
+                            poe = 1 - numpy.prod(
                                 probs_no_exceed[prob_idx, i_eps]
                                 )
-                            poe = 1 - poe
 
                             diss_matrix[diss_idx] = poe
+
+                            log_percent.next()
 
     return diss_matrix
 
@@ -212,18 +220,17 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
 
     1. Get the hazard curve for each point, IMT, and realization
     2. For each `poes_disagg`, interpolate the IML for each curve.
-    3. Collect bins data into a result dictionary
-
-    (rlz_id, site, poe, iml, im_type, sa_period, sa_damping) ->
-    (mags, dists, lons, lats, tect_reg_types, probs_no_exceed)
+    3. Collect bins data into a result dictionary of the form
+       (rlz_id, site, poe, iml, im_type, sa_period, sa_damping) ->
+       (mags, dists, lons, lats, tect_reg_types, probs_no_exceed)
 
     :param int job_id:
         ID of the currently running :class:`openquake.engine.db.models.OqJob`
     :param list sources:
-        `list` of hazardlib source objects
-    :param gsims_by_rlz:
-        XXX
-    :param trt_num:
+        list of hazardlib source objects
+    :param dict gsims_by_rlz:
+        a dictionary of gsim dictionaries, one for each realization
+    :param dict trt_num:
         a dictionary Tectonic Region Type -> incremental number
     """
     mon = LightMonitor('disagg', job_id, collect_bins)
@@ -231,8 +238,11 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
     result = {}
 
     for site in hc.site_collection:
+        # generate source, rupture, sites once per site
         source_rupture_sites = list(
             hc.gen_ruptures(sources, mon, SiteCollection([site])))
+
+        # compute the iml from each curve and call _collect_bins_data
         for rlz, gsims in gsims_by_rlz.items():
             for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
                 im_type, sa_period, sa_damping = imt = from_string(imt)
@@ -279,9 +289,10 @@ def _save_disagg_matrix(job_id, site_id, bin_edges, diss_matrix, rlz,
         id of the current job.
     :param int site_id:
         id of the current site
-    :param bin_edges, diss_matrix
-        The outputs of :func:
-        `openquake.hazardlib.calc.disagg.disaggregation`.
+    :param bin_edges:
+        The 6-uple mag, dist, lon, lat, eps, trts
+    :param diss_matrix:
+        The diseggregation matrix as a 6-dimensional numpy array
     :param rlz:
         :class:`openquake.engine.db.models.LtRealization` to which these
         results belong.
@@ -343,8 +354,23 @@ def arrange_and_save_disagg_matrix(
     Arrange the data in the bins into a disaggregation matrix
     and save it.
 
-    :param trt_bins: a list of names of Tectonic Region Types
-
+    :param int job_id:
+        ID of the currently running :class:`openquake.engine.db.models.OqJob`
+    :param trt_bins:
+        a list of names of Tectonic Region Types
+    :param bins:
+        a 6-uple of lists (mag_bins, dist_bins, lon_bins, lat_bins,
+        trt_bins, eps_bins)
+    :param int rlz_id:
+        ID of the current realization
+    :param int site_id:
+        ID of the current site
+    :param poe:
+        One of the PoE in disagg_poes in the job.ini file
+    :param iml:
+        The IML corresponding to that PoE
+    :param im_type, sa_period, sa_damping:
+         The Intensity Measure Type of the result
     """
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
     rlz = models.LtRealization.objects.get(id=rlz_id)
@@ -362,8 +388,6 @@ def arrange_and_save_disagg_matrix(
         hc.coordinate_bin_width,
         hc.truncation_level,
         hc.num_epsilon_bins) + (trt_bins, )
-    if not bin_edges:  # no bins populated
-        return
 
     with EnginePerformanceMonitor('arrange data', job_id,
                                   arrange_and_save_disagg_matrix):
@@ -420,8 +444,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         Collect the results coming from collect_bins into self.results,
         a dictionary with key (rlz_id, site, poe, iml, im_type, sa_period,
         sa_damping) and values (mag_bins, dist_bins, lon_bins, lat_bins,
-        eps_bins, trt_bins).
-
+        trt_bins, eps_bins).
         """
         for rlz_id, site_id, poe, iml, imtype, sa_period, sa_damping in result:
             # mag_bins, dist_bins, lon_bins, lat_bins, tect_reg_types, eps_bins
