@@ -62,11 +62,11 @@ class TavakoliPezeshk2005(GMPE):
 
     #: Required rupture parameters is magnitude
     #: See equation 18 page page 2291
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag'))
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
 
     #: Required distance measure is Rrup.
     #: See equation 18 page page 2291
-    REQUIRES_DISTANCES = set(('rrup'))
+    REQUIRES_DISTANCES = set(('rrup',))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -111,7 +111,7 @@ class TavakoliPezeshk2005(GMPE):
         Compute magnitude scaling term as defined in equation 19, page 2291
         (Tavakoli and Pezeshk, 2005)
         """
-        return C['c1'] + C['c2'] * mag + (C['c3'] * mag) ** 2.5
+        return C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
 
     def _compute_geometrical_spreading_term(self, C, rrup):
         """
@@ -168,6 +168,10 @@ class TavakoliPezeshk2005USGS2008(TavakoliPezeshk2005):
     Implements the USGS version of the Tavakoli and Pezeshk (2005).
     """
 
+    #: Required distance measure is Rrup. Rjb is needed for the USGS 
+    #: implementation. See equation 18 page page 2291
+    REQUIRES_DISTANCES = set(('rrup', 'rjb'))
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -178,9 +182,11 @@ class TavakoliPezeshk2005USGS2008(TavakoliPezeshk2005):
         C = self.COEFFS[imt]
 
         # Clipping dtor as described in hazgridXnga2.f line 5602
-        rrup = (np.power(rup.rjb, 2.) + np.power(np.max(dists.rrup, 2.), 2))**.5
+        print dir(dists), dists.rjb
+        rrup = (np.power(dists.rjb, 2.) + 
+                np.power(np.max(dists.rrup, 2.), 2))**.5
 
-        # Convert magnitude from Mblg to Mw 
+        # Convert magnitude from Mblg to Mw
         mag = mblg_to_mw_atkinson_boore_87(rup.mag)
 
         # computing the magnitude term. Equation 19, page 2291
@@ -208,10 +214,9 @@ class TavakoliPezeshk2005USGS2008(TavakoliPezeshk2005):
         """
         if vs30 > 1500.0:
             f1 = C['c1h'] + C['c2'] * mag + (C['c3'] * mag) ** 2.5
-        else: 
+        else:
             f1 = C['c1'] + C['c2'] * mag + (C['c3'] * mag) ** 2.5
         return f1
-
 
     #: Coefficient table is constructed from an excel spreadsheet available
     #: on Pezeshk's website http://www.ce.memphis.edu/pezeshk
