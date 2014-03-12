@@ -48,28 +48,20 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
         self.assertEqual(2, job_stats.num_sites)
 
-        # To test the disagg function, we first need to compute the hazard
-        # curves:
         os.environ['OQ_NO_DISTRIBUTE'] = '1'
         try:
+            # to test the disagg function, we first need to compute the hazard
+            # curves
             self.calc.execute()
-            self.calc.save_hazard_curves()
-        finally:
-            del os.environ['OQ_NO_DISTRIBUTE']
-
-        diss = list(self.calc.disagg_task_arg_gen())
-        self.assertEqual(22, len(diss))  # 22 tasks are generated
-
-        base_path = 'openquake.engine.calculators.hazard.disaggregation.core'
-
-        disagg_calc_func = base_path + '._collect_bins_data'
-
-        with mock.patch(disagg_calc_func) as disagg_mock:
+            # TODO: mock more
+            base_path = \
+                'openquake.engine.calculators.hazard.disaggregation.core'
             with mock.patch('%s.%s' % (base_path, '_save_disagg_matrix')
                             ) as save_mock:
                 # Some of these tasks will not compute anything, since the
                 # hazard  curves for these few are all 0.0s.
-                core.collect_bins.task_func(*diss[0])
                 # 2 poes * 2 imts * 2 sites = 8
-                self.assertEqual(8, disagg_mock.call_count)
-                self.assertEqual(0, save_mock.call_count)  # no rupt generated
+                self.calc.post_execute()
+                self.assertEqual(8, save_mock.call_count)
+        finally:
+            del os.environ['OQ_NO_DISTRIBUTE']
