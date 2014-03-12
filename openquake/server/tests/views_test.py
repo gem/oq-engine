@@ -1,3 +1,4 @@
+import zipfile
 import json
 import mock
 import os
@@ -19,6 +20,10 @@ FakeOutput = namedtuple('FakeOutput', 'id, display_name, output_type')
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
 TMPDIR = tempfile.gettempdir()
+
+
+def write(archive, fname):
+    archive.write(os.path.join(DATADIR, fname), fname)
 
 
 class BaseViewTestCase(unittest.TestCase):
@@ -514,35 +519,34 @@ class RunCalcTestCase(BaseViewTestCase):
         executor.submit = self.executor_submit
 
     def test(self):
-        # Test job file inputs:
-        fake_job_file = FakeTempUploadedFile('/foo/bar/tmpHfJv16tmp.upload',
-                                             'job.ini')
-        fake_model_1 = FakeTempUploadedFile('/foo/bar/tmpHmcdv2tmp.upload',
-                                            'vulnerability.xml')
-        fake_model_2 = FakeTempUploadedFile('/foo/bar/tmpI66zIGtmp.upload',
-                                            'exposure.xml')
+        # prepare an archive with the test files
+        if os.path.exists('archive.zip'):
+            os.remove('archive.zip')
+        archive = zipfile.ZipFile('archive.zip', 'w')
+        write(archive, 'job.ini')
+        write(archive, 'exposure_model.xml')
+        write(archive, 'source_model.xml')
+        write(archive, 'source_model_logic_tree.xml')
+        write(archive, 'gsim_logic_tree.xml')
+        write(archive, 'vulnerability_model.xml')
+        archive.close()
+
+        archive_file = open('archive.zip')
         self.request.FILES = MultiValueDict({
-            'job_config': [fake_job_file, fake_model_1, fake_model_2]})
+            'archive': [archive_file]})
 
         # Set up the mocks:
         mocks = dict(
             mkdtemp='tempfile.mkdtemp',
-            move='shutil.move',
             job_from_file='openquake.engine.engine.job_from_file',
-            run_task='openquake.server.tasks.run_calc',
+            run_calc='openquake.server.tasks.run_calc',
         )
         multi_mock = MultiMock(**mocks)
 
         temp_dir = tempfile.mkdtemp()
 
-        # Set up expected test values:
-        pathjoin = os.path.join
-        move_exp_call_args = [
-            ((fake_job_file.path, pathjoin(temp_dir, fake_job_file.name)), {}),
-            ((fake_model_1.path, pathjoin(temp_dir, fake_model_1.name)), {}),
-            ((fake_model_2.path, pathjoin(temp_dir, fake_model_2.name)), {}),
-        ]
-        jff_exp_call_args = ((pathjoin(temp_dir, fake_job_file.name),
+        # Set up expected test values for job_from_file:
+        jff_exp_call_args = ((os.path.join(temp_dir, 'job.ini'),
                               'platform', 'progress',  [], None, 666), {})
 
         try:
@@ -560,20 +564,18 @@ class RunCalcTestCase(BaseViewTestCase):
 
             self.assertEqual(1, multi_mock['mkdtemp'].call_count)
 
-            self.assertEqual(3, multi_mock['move'].call_count)
-            self.assertEqual(move_exp_call_args,
-                             multi_mock['move'].call_args_list)
-
             self.assertEqual(1, multi_mock['job_from_file'].call_count)
             self.assertEqual(jff_exp_call_args,
                              multi_mock['job_from_file'].call_args)
 
             self.assertEqual({
                 'count': 1,
-                'args': (('risk', 777, temp_dir, None, None, 'platform', None),
+                'args': ((multi_mock['run_calc'],
+                          'risk', 777, temp_dir, None, None, 'platform', None),
                          {})
                 }, self.executor_call_data)
         finally:
+            archive_file.close()
             shutil.rmtree(temp_dir)
 
 
