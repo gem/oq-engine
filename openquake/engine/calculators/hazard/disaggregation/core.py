@@ -121,6 +121,8 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     finds edges of histograms, taking into account maximum and minimum values
     of magnitude, distance and coordinates as well as requested sizes/numbers
     of bins.
+
+    :returns: mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
     """
     mags, dists, lons, lats, tect_reg_types, _no_exceed = bins_data
 
@@ -153,16 +155,16 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
     return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
 
 
-def _arrange_data_in_bins(bins_data, bin_edges):
+def _arrange_data_in_bins(bins_data, bin_edges, num_trt):
     """
     Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
     from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
     """
-    (mags, dists, lons, lats, tect_reg_types, probs_no_exceed) = bins_data
-    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_names = bin_edges
+    mags, dists, lons, lats, tect_reg_types, probs_no_exceed = bins_data
+    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
     shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
-             len(lat_bins) - 1, len(eps_bins) - 1, len(trt_names))
-    todo = numpy.prod(shape)
+             len(lat_bins) - 1, len(eps_bins) - 1, num_trt)
+    todo = numpy.prod(shape)  # number of matrix elements to compute
     log_percent = log_percent_gen('arrange data', todo)
     diss_matrix = numpy.zeros(shape)
     logs.LOG.info('Populating disaggregation matrix of size %d, %s',
@@ -192,7 +194,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
 
                     for i_eps in xrange(len(eps_bins) - 1):
 
-                        for i_trt in xrange(len(trt_names)):
+                        for i_trt in xrange(num_trt):
                             trt_idx = tect_reg_types == i_trt
 
                             diss_idx = (i_mag, i_dist, i_lon,
@@ -209,6 +211,79 @@ def _arrange_data_in_bins(bins_data, bin_edges):
 
                             log_percent.next()
     return diss_matrix
+
+
+_DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s-%(wkt)s'
+
+
+def _save_disagg_matrix(job_id, site_id, bin_edges, trt_names, diss_matrix,
+                        rlz, investigation_time, imt, iml, poe, sa_period,
+                        sa_damping):
+    """
+    Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
+    :class:`~openquake.engine.db.models.DisaggResult`).
+
+    :param int job_id:
+        id of the current job.
+    :param int site_id:
+        id of the current site
+    :param bin_edges:
+        The 5-uple mag, dist, lon, lat, eps
+    :param trt_names:
+        The list of Tectonic Region Types
+    :param diss_matrix:
+        The diseggregation matrix as a 6-dimensional numpy array
+    :param rlz:
+        :class:`openquake.engine.db.models.LtRealization` to which these
+        results belong.
+    :param float investigation_time:
+        Investigation time (years) for the calculation.
+    :param imt:
+        Intensity measure type (PGA, SA, etc.)
+    :param float iml:
+        Intensity measure level interpolated (using ``poe``) from the hazard
+        curve at the ``site``.
+    :param float poe:
+        Disaggregation probability of exceedance value for this result.
+    :param float sa_period:
+        Spectral Acceleration period; only relevant when ``imt`` is 'SA'.
+    :param float sa_damping:
+        Spectral Acceleration damping; only relevant when ``imt`` is 'SA'.
+    """
+    job = models.OqJob.objects.get(id=job_id)
+
+    site_wkt = models.HazardSite.objects.get(pk=site_id).location.wkt
+
+    disp_name = _DISAGG_RES_NAME_FMT
+    disp_imt = imt
+    if disp_imt == 'SA':
+        disp_imt = 'SA(%s)' % sa_period
+    disp_name_args = dict(poe=poe, rlz=rlz.id, imt=disp_imt,
+                          wkt=site_wkt)
+    disp_name %= disp_name_args
+
+    output = models.Output.objects.create_output(
+        job, disp_name, 'disagg_matrix')
+
+    mag, dist, lon, lat, eps = bin_edges
+    models.DisaggResult.objects.create(
+        output=output,
+        lt_realization=rlz,
+        investigation_time=investigation_time,
+        imt=imt,
+        sa_period=sa_period,
+        sa_damping=sa_damping,
+        iml=iml,
+        poe=poe,
+        mag_bin_edges=mag,
+        dist_bin_edges=dist,
+        lon_bin_edges=lon,
+        lat_bin_edges=lat,
+        eps_bin_edges=eps,
+        trts=trt_names,
+        location=site_wkt,
+        matrix=pmf_dict(diss_matrix),
+    )
 
 
 @tasks.oqtask
@@ -273,77 +348,6 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
     return result
 
 
-_DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s-%(wkt)s'
-
-
-def _save_disagg_matrix(job_id, site_id, bin_edges, diss_matrix, rlz,
-                        investigation_time, imt, iml, poe, sa_period,
-                        sa_damping):
-    """
-    Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
-    :class:`~openquake.engine.db.models.DisaggResult`).
-
-    :param int job_id:
-        id of the current job.
-    :param int site_id:
-        id of the current site
-    :param bin_edges:
-        The 6-uple mag, dist, lon, lat, eps, trts
-    :param diss_matrix:
-        The diseggregation matrix as a 6-dimensional numpy array
-    :param rlz:
-        :class:`openquake.engine.db.models.LtRealization` to which these
-        results belong.
-    :param float investigation_time:
-        Investigation time (years) for the calculation.
-    :param imt:
-        Intensity measure type (PGA, SA, etc.)
-    :param float iml:
-        Intensity measure level interpolated (using ``poe``) from the hazard
-        curve at the ``site``.
-    :param float poe:
-        Disaggregation probability of exceedance value for this result.
-    :param float sa_period:
-        Spectral Acceleration period; only relevant when ``imt`` is 'SA'.
-    :param float sa_damping:
-        Spectral Acceleration damping; only relevant when ``imt`` is 'SA'.
-    """
-    job = models.OqJob.objects.get(id=job_id)
-
-    site_wkt = models.HazardSite.objects.get(pk=site_id).location.wkt
-
-    disp_name = _DISAGG_RES_NAME_FMT
-    disp_imt = imt
-    if disp_imt == 'SA':
-        disp_imt = 'SA(%s)' % sa_period
-    disp_name_args = dict(poe=poe, rlz=rlz.id, imt=disp_imt,
-                          wkt=site_wkt)
-    disp_name %= disp_name_args
-
-    output = models.Output.objects.create_output(
-        job, disp_name, 'disagg_matrix')
-
-    mag, dist, lon, lat, eps, trts = bin_edges
-    models.DisaggResult.objects.create(
-        output=output,
-        lt_realization=rlz,
-        investigation_time=investigation_time,
-        imt=imt,
-        sa_period=sa_period,
-        sa_damping=sa_damping,
-        iml=iml,
-        poe=poe,
-        mag_bin_edges=mag,
-        dist_bin_edges=dist,
-        lon_bin_edges=lon,
-        lat_bin_edges=lat,
-        eps_bin_edges=eps,
-        trts=trts,
-        location=site_wkt,
-        matrix=pmf_dict(diss_matrix),
-    )
-
-
 @tasks.oqtask
 def arrange_and_save_disagg_matrix(
         job_id, trt_names, bins, rlz_id, site_id, poe, iml,
@@ -378,23 +382,25 @@ def arrange_and_save_disagg_matrix(
     lats = numpy.array(bins[3], float)
     tect_reg_types = numpy.array(bins[4], int)
     probs_no_exceed = numpy.array(bins[5], float)
-    bdata = (mags, dists, lons, lats, tect_reg_types, probs_no_exceed)
+    bdata = mags, dists, lons, lats, tect_reg_types, probs_no_exceed
+
+    # define bins
     bin_edges = _define_bins(
         bdata,
         hc.mag_bin_width,
         hc.distance_bin_width,
         hc.coordinate_bin_width,
         hc.truncation_level,
-        hc.num_epsilon_bins) + (trt_names, )
+        hc.num_epsilon_bins)
 
     with EnginePerformanceMonitor('arrange data', job_id,
                                   arrange_and_save_disagg_matrix):
-        diss_matrix = _arrange_data_in_bins(bdata, bin_edges)
+        diss_matrix = _arrange_data_in_bins(bdata, bin_edges, len(trt_names))
 
     with EnginePerformanceMonitor('saving disaggregation', job_id,
                                   arrange_and_save_disagg_matrix):
         _save_disagg_matrix(
-            job_id, site_id, bin_edges, diss_matrix, rlz,
+            job_id, site_id, bin_edges, trt_names, diss_matrix, rlz,
             hc.investigation_time, im_type, iml, poe, sa_period, sa_damping)
 
 
@@ -441,10 +447,10 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         Collect the results coming from collect_bins into self.results,
         a dictionary with key (rlz_id, site, poe, iml, im_type, sa_period,
         sa_damping) and values (mag_bins, dist_bins, lon_bins, lat_bins,
-        eps_bins, trt_bins).
+        trt_bins, eps_bins).
         """
         for rlz_id, site_id, poe, iml, imtype, sa_period, sa_damping in result:
-            # mag_bins, dist_bins, lon_bins, lat_bins, tect_reg_types, eps_bins
+            # mag_bins, dist_bins, lon_bins, lat_bins, trt_bins, eps_bins
             try:
                 bins = self.result[
                     rlz_id, site_id, poe, iml, imtype, sa_period, sa_damping]
