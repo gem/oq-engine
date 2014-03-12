@@ -23,6 +23,9 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.gsim.utils import (
+    mblg_to_mw_atkinson_boore_87, clip_mean
+)
 
 
 class TavakoliPezeshk2005(GMPE):
@@ -156,5 +159,76 @@ pga    1.139E+00  6.228E-01  -4.834E-02  -1.807E+00  -6.516E-01  4.465E-01  -2.9
 1.50  -2.296E+00  7.941E-01  -8.842E-02  -1.453E+00  -8.860E-01  4.122E-01   8.299E-03  -3.272E-03   2.506E-03  1.706E+00  -7.688E-01  2.329E-04  1.656E-04  1.268E+00  -9.990E-02  5.509E-01
 2.00  -2.704E+00  8.053E-01  -9.294E-02  -1.444E+00  -9.235E-01  4.077E-01   2.062E-02  -2.143E-03   2.301E-03  1.426E+00  -7.551E-01  2.138E-04  3.908E-04  1.264E+00  -9.780E-02  5.617E-01
 3.00  -2.421E+00  8.008E-01  -1.077E-01  -1.648E+00  -8.976E-01  4.368E-01   1.675E-02  -2.033E-03   3.576E-03  1.934E+00  -8.183E-01  1.158E-04  3.983E-04  1.257E+00  -9.520E-02  5.729E-01
-4.00  -3.685E+00  8.166E-01  -1.177E-01  -1.463E+00  -8.448E-01  4.249E-01   1.135E-02  -1.719E-03  -3.345E-03  1.689E+00  -7.374E-01  1.100E-04  3.592E-04  1.254E+00  -9.260E-02  5.893E-01    
+4.00  -3.685E+00  8.166E-01  -1.177E-01  -1.463E+00  -8.448E-01  4.249E-01   1.135E-02  -1.719E-03  -3.345E-03  1.689E+00  -7.374E-01  1.100E-04  3.592E-04  1.254E+00  -9.260E-02  5.893E-01
+""")
+
+
+class TavakoliPezeshk2005USGS2008(TavakoliPezeshk2005):
+    """
+    Implements the USGS version of the Tavakoli and Pezeshk (2005).
+    """
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients
+        C = self.COEFFS[imt]
+
+        # Clipping dtor as described in hazgridXnga2.f line 5602
+        rrup = (np.power(rup.rjb, 2.) + np.power(np.max(dists.rrup, 2.), 2))**.5
+
+        # Convert magnitude from Mblg to Mw 
+        mag = mblg_to_mw_atkinson_boore_87(rup.mag)
+
+        # computing the magnitude term. Equation 19, page 2291
+        f1 = self._compute_magnitude_scaling_term(C, rup.mag)
+
+        # computing the geometrical spreading term. Equation 20, page 2291
+        f2 = self._compute_geometrical_spreading_term(C, rrup)
+
+        # computing the anelastic attenuation term. Equation 21, page 2291
+        f3 = self._compute_anelastic_attenuation_term(C, rrup, mag)
+
+        # computing the mean ln(IMT) using equation 18 at page 2290
+        mean = f1 + f2 + f3
+
+        # computing the total standard deviation
+        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(dists.rrup),
+                                    mag=mag)
+
+        return mean, stddevs
+
+    def _compute_magnitude_scaling_term(self, C, mag, vs30):
+        """
+        Compute magnitude scaling term as defined in equation 19, page 2291
+        (Tavakoli and Pezeshk, 2005)
+        """
+        if vs30 > 1500.0:
+            f1 = C['c1h'] + C['c2'] * mag + (C['c3'] * mag) ** 2.5
+        else: 
+            f1 = C['c1'] + C['c2'] * mag + (C['c3'] * mag) ** 2.5
+        return f1
+
+
+    #: Coefficient table is constructed from an excel spreadsheet available
+    #: on Pezeshk's website http://www.ce.memphis.edu/pezeshk
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+IMT       clamp   c1h       c1         c2        c3         c4         c5         c6        c7         c8         c9         c10       c11        c12       c13       c14       c15        c16
+pga       3       1.14E+00   1.56E+00  6.23E-01  -4.83E-02  -1.81E+00  -6.52E-01  4.46E-01  -2.93E-05  -4.05E-03   9.46E-03  1.41E+00  -9.61E-01  4.32E-04  1.33E-04  1.21E+00  -1.11E-01  4.09E-01
+5.00E-02  3       1.82E+00   2.24E+00  5.33E-01  -4.75E-02  -1.63E+00  -5.67E-01  4.54E-01   7.77E-03  -4.91E-03  -3.14E-03  9.80E-01  -9.39E-01  5.12E-04  9.30E-04  1.22E+00  -1.08E-01  4.41E-01
+8.00E-02  3       6.83E-01   1.10E+00  7.43E-01  -2.93E-02  -1.71E+00  -7.56E-01  4.60E-01  -9.68E-04  -4.94E-03  -5.50E-03  1.13E+00  -9.16E-01  4.82E-04  7.33E-04  1.22E+00  -1.08E-01  4.49E-01
+1.00E-01  6       8.69E-01   1.4229    6.07E-01  -4.74E-02  -1.52E+00  -7.04E-01  4.49E-01  -6.19E-03  -4.70E-03  -4.24E-03  1.04E+00  -9.13E-01  4.11E-04  3.58E-04  1.23E+00  -1.08E-01  4.56E-01
+1.50E-01  6       2.38E+00   2.87E+00  5.01E-01  -6.42E-02  -1.73E+00  -9.76E-01  4.14E-01   6.60E-03  -4.80E-03   3.93E-03  1.51E+00  -8.65E-01  3.64E-04  6.84E-04  1.24E+00  -1.08E-01  4.64E-01
+2.00E-01  6      -5.48E-01   1.70E-02  8.57E-01  -2.62E-02  -1.68E+00  -8.61E-01  4.33E-01   2.79E-03  -3.65E-03  -2.02E-03  1.64E+00  -9.25E-01  1.61E-04  6.43E-04  1.24E+00  -1.08E-01  4.69E-01
+3.00E-01  6      -5.13E-01   0.491     6.67E-01  -4.43E-02  -1.42E+00  -4.70E-01  4.68E-01   1.08E-02  -5.41E-03   6.44E-03  1.52E+00  -9.15E-01  4.32E-04  2.87E-04  1.26E+00  -1.09E-01  4.79E-01
+5.00E-01  6       2.40E-01   6.97E-01  6.11E-01  -7.89E-02  -1.55E+00  -8.44E-01  4.14E-01   7.89E-03  -3.65E-03  -2.65E-04  1.59E+00  -8.59E-01  2.77E-04  1.46E-04  1.28E+00  -1.07E-01  5.05E-01
+7.50E-01  0      -6.79E-01  -3.23E-01  6.66E-01  -8.30E-02  -1.48E+00  -7.34E-01  4.35E-01   9.53E-03  -3.37E-03  -1.19E-03  1.55E+00  -7.84E-01  2.45E-04  5.47E-04  1.28E+00  -1.05E-01  5.22E-01
+1.00E+00  0      -1.55E+00  -1.26E+00  7.64E-01  -8.59E-02  -1.49E+00  -9.41E-01  4.24E-01  -5.84E-03  -2.09E-03   3.30E-03  1.52E+00  -7.57E-01  1.17E-04  7.59E-04  1.28E+00  -1.03E-01  5.37E-01
+1.50E+00  0      -2.30E+00  -1.94E+00  7.94E-01  -8.84E-02  -1.45E+00  -8.86E-01  4.12E-01   8.30E-03  -3.27E-03   2.51E-03  1.71E+00  -7.69E-01  2.33E-04  1.66E-04  1.27E+00  -9.99E-02  5.51E-01
+2.00E+00  0      -2.70E+00  -2.5177    8.05E-01  -9.29E-02  -1.44E+00  -9.23E-01  4.08E-01   2.06E-02  -2.14E-03   2.30E-03  1.43E+00  -7.55E-01  2.14E-04  3.91E-04  1.26E+00  -9.78E-02  5.62E-01
+3.00E+00  0      -2.42E+00  -2.28      8.01E-01  -1.08E-01  -1.65E+00  -8.98E-01  4.37E-01   1.67E-02  -2.03E-03   3.58E-03  1.93E+00  -8.18E-01  1.16E-04  3.98E-04  1.26E+00  -9.52E-02  5.73E-01
+4.00E+00  0      -3.69E+00  -2.28      8.17E-01  -1.18E-01  -1.46E+00  -8.45E-01  4.25E-01   1.13E-02  -1.72E-03  -3.34E-03  1.69E+00  -7.37E-01  1.10E-04  3.59E-04  1.25E+00  -9.26E-02  5.89E-01
 """)

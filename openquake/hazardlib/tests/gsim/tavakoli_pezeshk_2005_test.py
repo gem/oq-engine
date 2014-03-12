@@ -22,9 +22,9 @@ class TavakoliPezeshk2005TestCase(BaseGSIMTestCase):
     GSIM_CLASS = TavakoliPezeshk2005
 
     def test_mean_normal(self):
-        self.check('NGA/BA08/BA08_MEDIAN_NM.csv',
-                    max_discrep_percentage=0.6)
-                    
-    def test_std_total(self):
-        self.check('NGA/BA08/BA08_SIGTM_SS.csv',
-                    max_discrep_percentage=0.1)
+        self.check('TP05/TP05usgs_MEAN.csv',
+                   max_discrep_percentage=0.6)
+
+#    def test_std_total(self):
+#        self.check('NGA/BA08/BA08_SIGTM_SS.csv',
+#                    max_discrep_percentage=0.1)
