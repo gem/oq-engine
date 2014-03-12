@@ -48,8 +48,8 @@ def pmf_dict(matrix):
                        for key, pmf_fn in disagg.pmf_map.iteritems())
 
 
-def _collect_bins_data(mon, trt_num, source_rupture_sites, sitecol, imt, iml,
-                       gsims, truncation_level, n_epsilons):
+def _collect_bins_data(mon, trt_num, source_rupture_sites, sitecol,
+                       imt, iml, gsims, truncation_level, n_epsilons):
     """
     Extract values of magnitude, distance, closest point, tectonic region
     types and PoE distribution.
@@ -70,6 +70,7 @@ def _collect_bins_data(mon, trt_num, source_rupture_sites, sitecol, imt, iml,
     mon1 = mon.copy('calc distances')
     mon2 = mon.copy('making contexts')
     mon3 = mon.copy('disaggregate_poe')
+
     for source, rupture, r_sites in source_rupture_sites:
         try:
             gsim = gsims[source.tectonic_region_type]
@@ -286,6 +287,24 @@ def _save_disagg_matrix(job_id, site_id, bin_edges, trt_names, diss_matrix,
     )
 
 
+def get_iml(rlz, site, poe, imls, imt):
+    """
+    Given rlz, site, poe, imls and imt retrieve the
+    corresponding hazard curve from the database
+    and compute the iml. Return None for zero-valued curves.
+    """
+    imls = numpy.array(imls[::-1])
+    [curve] = models.HazardCurveData.objects.filter(
+        location=site.location.wkt2d,
+        hazard_curve__lt_realization=rlz,
+        hazard_curve__imt=imt[0],
+        hazard_curve__sa_period=imt[1],
+        hazard_curve__sa_damping=imt[2])
+    if all(x == 0.0 for x in curve.poes):
+        return
+    return numpy.interp(poe, curve.poes[::-1], imls)
+
+
 @tasks.oqtask
 def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
     """
@@ -321,35 +340,21 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num):
                       len(source_rupture_sites), site)
 
         # compute the iml from each curve and call _collect_bins_data
-        for rlz, gsims in gsims_by_rlz.items():
-            for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
-                im_type, sa_period, sa_damping = imt = from_string(imt)
-                imls = numpy.array(imls[::-1])
-
-                # get curve for this point/IMT/realization
-                [curve] = models.HazardCurveData.objects.filter(
-                    location=site.location.wkt2d,
-                    hazard_curve__lt_realization=rlz,
-                    hazard_curve__imt=im_type,
-                    hazard_curve__sa_period=sa_period,
-                    hazard_curve__sa_damping=sa_damping)
-
-                # If the hazard curve is all zeros, don't even do the
-                # disagg calculation.
-                if all(x == 0.0 for x in curve.poes):
-                    logs.LOG.warn(
-                        '* hazard curve contained all 0 probability values; '
-                        'skipping rlz=%d, IMT=%s', rlz.id, im_type)
-                    continue
-
+        for imt_str, imls in hc.intensity_measure_types_and_levels.iteritems():
+            imt = from_string(imt_str)
+            for rlz, gsims in gsims_by_rlz.items():
                 for poe in hc.poes_disagg:
-                    iml = numpy.interp(poe, curve.poes[::-1], imls)
-                    result[rlz.id, site.id, poe, iml,
-                           im_type, sa_period, sa_damping] = \
-                        _collect_bins_data(
-                            mon, trt_num, source_rupture_sites, sitecol,
-                            imt, iml, gsims, hc.truncation_level,
-                            hc.num_epsilon_bins)
+                    iml = get_iml(rlz, site, poe, imls, imt)
+                    if iml is None:
+                        logs.LOG.warn(
+                            '* hazard curve contained all 0 probability values'
+                            '; skipping rlz=%d, IMT=%s', rlz.id, imt)
+                        continue
+                    result[rlz.id, site.id, poe, iml, imt[0], imt[1], imt[2]
+                           ] = _collect_bins_data(
+                        mon, trt_num, source_rupture_sites, sitecol,
+                        imt, iml, gsims, hc.truncation_level,
+                        hc.num_epsilon_bins)
     return result
 
 
