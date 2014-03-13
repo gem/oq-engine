@@ -4,5 +4,5 @@ Toro et al. 1997
 
 .. module:: openquake.hazardlib.gsim.toro_1997
 
-.. autoclass:: ToroEtAl1997NSHMP2008
+.. autoclass:: ToroEtAl1997MblgNSHMP2008
     :members:
