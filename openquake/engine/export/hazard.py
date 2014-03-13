@@ -160,16 +160,9 @@ def _get_result_export_dest(calc_id, target, result, file_ext='xml'):
             )
     elif output_type == 'ses':
         sm_ltp = core.LT_PATH_JOIN_TOKEN.join(result.sm_lt_path)
-        if result.weight is None:
-            # Monte-Carlo logic tree sampling
-            filename = '%s-smltp_%s-ltr_%s.%s' % (
-                output_type, sm_ltp, result.ordinal, file_ext
-            )
-        else:
-            # End Branch Enumeration
-            filename = '%s-smltp_%s.%s' % (
-                output_type, sm_ltp, file_ext
-            )
+        filename = '%s-smltp_%s.%s' % (
+            output_type, sm_ltp, file_ext
+        )
     elif output_type == 'disagg_matrix':
         # only logic trees, no stats
 
