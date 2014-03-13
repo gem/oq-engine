@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`Campbell2003`, :class:`Campbell2003SHARE`,
-:class:`Campbell2003NSHMP2008`
+:class:`Campbell2003MblgAB1987NSHMP2008`
 """
 from __future__ import division
 
@@ -244,7 +244,7 @@ def _compute_faulting_style_term(Frss, pR, Fnss, pN, rake):
         return np.power(Frss, - pR) * np.power(Fnss, - pN)
 
 
-class Campbell2003NSHMP2008(Campbell2003):
+class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
     """
     Implement GMPE developed by Ken Campbell and described in
     "Development of semi-empirical attenuation relationships for the CEUS",
