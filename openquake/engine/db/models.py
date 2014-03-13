@@ -836,7 +836,7 @@ class HazardCalculation(djm.Model):
             # We can get the number of logic tree realizations by counting
             # initialized lt_realization records.
             n_lt_realizations = LtRealization.objects.filter(
-                hazard_calculation=self).count()
+                lt_model__hazard_calculation=self).count()
 
         investigation_time = (self.investigation_time
                               * self.ses_per_logic_tree_path
@@ -1552,7 +1552,7 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    lt_realization_ids = fields.IntArrayField(null=False)
+    lt_model = djm.OneToOneField('LtSourceModel', related_name='ses_collection')
     ordinal = djm.IntegerField(null=False)
 
     class Meta:
@@ -1571,21 +1571,7 @@ class SESCollection(djm.Model):
         """
         The source model logic tree path corresponding to the collection
         """
-        # all lt_realization_ids correspond to the same sm_lt_path
-        return LtRealization.objects.get(
-            pk=self.lt_realization_ids[0]).sm_lt_path
-
-    @property
-    def weight(self):
-        """
-        The logic tree weight corresponding to the collection
-        """
-        weights = [LtRealization.objects.get(pk=rlz_id).weight
-                   for rlz_id in self.lt_realization_ids]
-        if all(w is None for w in weights):
-            return None
-        else:
-            return sum(weights)
+        return tuple(self.lt_model.sm_lt_path)
 
 
 class SES(djm.Model):
@@ -1714,14 +1700,13 @@ def get_geom(surface, is_from_fault_source, is_multi_surface):
     return lons, lats, depths
 
 
-class SESRupture(djm.Model):
+class ProbabilisticRupture(djm.Model):
     """
-    A rupture as part of a Stochastic Event Set.
+    A rupture as part of a Stochastic Event Set Collection.
     """
-    ses = djm.ForeignKey('SES')
+    ses_collection = djm.ForeignKey('SESCollection')
     magnitude = djm.FloatField(null=False)
     hypocenter = djm.PointField(srid=DEFAULT_SRID)
-    tag = djm.TextField(null=False)
     rake = djm.FloatField(null=False)
     tectonic_region_type = djm.TextField(null=False)
     is_from_fault_source = djm.NullBooleanField(null=False)
@@ -1729,38 +1714,30 @@ class SESRupture(djm.Model):
     surface = fields.PickleField(null=False)
 
     class Meta:
-        db_table = 'hzrdr\".\"ses_rupture'
-        ordering = ['tag']
+        db_table = 'hzrdr\".\"probabilistic_rupture'
 
     @classmethod
-    def create(cls, rupture, ses, source_id, occ):
+    def create(cls, rupture, ses_collection):
         """
-        Create a ses_rupture row on the database.
+        Create a ProbabilisticRupture row on the database.
 
         :param rupture:
             a hazardlib rupture
-        :param ses:
-            a Stochastic Event Set object
-        :param source_id:
-            the source generating the rupture
-        :param occ:
-            occurrency number
+        :param ses_collection:
+            a Stochastic Event Set Collection object
         """
         iffs = is_from_fault_source(rupture)
         ims = is_multi_surface(rupture)
         lons, lats, depths = get_geom(rupture.surface, iffs, ims)
         return cls.objects.create(
-            ses=ses,
+            ses_collection=ses_collection,
             magnitude=rupture.mag,
             rake=rupture.rake,
             tectonic_region_type=rupture.tectonic_region_type,
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
-            tag='smlt=%02d|ses=%04d|src=%s|occ=%02d'
-            % (ses.ses_collection.ordinal, ses.ordinal, source_id, occ),
-            hypocenter=rupture.hypocenter.wkt2d,
-            )
+            hypocenter=rupture.hypocenter.wkt2d)
 
     _geom = None
 
@@ -1837,6 +1814,41 @@ class SESRupture(djm.Model):
             self._validate_planar_surface()
             return self.lons[3], self.lats[3], self.depths[3]
         return None
+
+
+class SESRupture(djm.Model):
+    """
+    A rupture as part of a Stochastic Event Set.
+    """
+    rupture = djm.ForeignKey('ProbabilisticRupture')
+    ses = djm.ForeignKey('SES')
+    tag = djm.TextField(null=False)
+    seed = djm.IntegerField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"ses_rupture'
+        ordering = ['tag']
+
+    @classmethod
+    def create(cls, prob_rupture, ses, source_id, occurrencies, seed):
+        """
+        Create a SESRupture row in the database.
+
+        :param prob_rupture:
+            :class:`openquake.engine.db.models.ProbabilisticRupture` instance
+        :param ses:
+            :class:`openquake.engine.db.models.SES` instance
+        :param str source_id:
+            id of the source that generated the rupture
+        :param int occurrencies:
+            the number of occurrencies of the rupture in the given ses
+        :param int seed:
+            a seed that will be used when computing the GMF from the rupture
+        """
+        tag = 'smlt=%02d|ses=%04d|src=%s|occ=%02d' % (
+            ses.ses_collection.ordinal, ses.ordinal, source_id, occurrencies)
+        return cls.objects.create(
+            rupture=prob_rupture, ses=ses, tag=tag, seed=seed)
 
 
 class _Point(object):
@@ -2165,24 +2177,44 @@ class UHSData(djm.Model):
         db_table = 'hzrdr\".\"uhs_data'
 
 
+class LtSourceModel(djm.Model):
+    """
+    Identify a logic tree source model.
+    """
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    ordinal = djm.IntegerField()
+    sm_lt_path = fields.CharArrayField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"lt_source_model'
+
+    def __iter__(self):
+        """
+        Yield the realizations corresponding to the given model
+        """
+        return iter(LtRealization.objects.filter(lt_model=self))
+
+
 class LtRealization(djm.Model):
     """
     Identify a logic tree branch.
     """
 
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    lt_model = djm.ForeignKey('LtSourceModel')
     ordinal = djm.IntegerField()
     seed = djm.IntegerField()
     weight = djm.DecimalField(decimal_places=100, max_digits=101)
-    sm_lt_path = fields.CharArrayField()
     gsim_lt_path = fields.CharArrayField()
+
+    @property
+    def sm_lt_path(self):
+        return self.lt_model.sm_lt_path
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
 
 
 ## Tables in the 'riskr' schema.
-
 
 class LossFraction(djm.Model):
     """
