@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`FrankelEtAl1996NSHMP2008`.
+Module exports :class:`FrankelEtAl1996MblgAB1987NSHMP2008`.
 """
 from __future__ import division
 
@@ -29,7 +29,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class FrankelEtAl1996NSHMP2008(GMPE):
+class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
     """
     Implements GMPE developed by Arthur Frankel et al. and documented in
     "National Seismic-Hazard Maps: Documentation June 1996" (USGS - Open File
