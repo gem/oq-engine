@@ -181,15 +181,21 @@ class BaseHazardCalculator(base.Calculator):
 
         Override this in subclasses as necessary.
         """
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        for lt_model in models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc):
-            gsims_by_rlz = collections.OrderedDict(
-                (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
-                for rlz in lt_model)
+        for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
             ltpath = tuple(lt_model.sm_lt_path)
             for block in self.source_blocks_per_ltpath[ltpath]:
                 yield self.job.id, block, gsims_by_rlz
+
+    def gen_gsims_by_rlz(self):
+        """
+        Yield pairs (lt_model, gsims_by_rlz) for that lt_model
+        """
+        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
+        for lt_model in models.LtSourceModel.objects.filter(
+                hazard_calculation=self.hc):
+            yield lt_model, collections.OrderedDict(
+                (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
+                for rlz in lt_model)
 
     def _get_realizations(self):
         """
