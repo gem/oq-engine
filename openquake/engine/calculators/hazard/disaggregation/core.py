@@ -18,7 +18,7 @@
 Disaggregation calculator core functionality
 """
 import sys
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict, namedtuple
 import numpy
 
 from openquake.hazardlib.calc import disagg
@@ -35,6 +35,27 @@ from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
 from openquake.engine.calculators.base import log_percent_gen
+
+
+# a pair (vals, iml) where vals is a list of arrays of poes
+# with num_epsilon_bins elements each
+ProbNoExceed = namedtuple('ProbNoExceed', 'vals iml')
+
+
+def merge_prob_no_exceed(prob_no_exceed_list):
+    """
+    Merge a list containing ProbNoExceed objects with the same .iml
+    attribute. Raise an error if the list is empty. Return a
+    ProbNoExceed object with the merged list and the given iml.
+    """
+    assert prob_no_exceed_list
+    prob_no_exceed = prob_no_exceed_list[0]
+    iml = prob_no_exceed.iml
+    vals = []
+    for el in prob_no_exceed_list:
+        assert el.iml == iml
+        vals.extend(el.vals)
+    return ProbNoExceed(vals, iml)
 
 
 def pmf_dict(matrix):
@@ -89,7 +110,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
                 lats.append(closest_point.latitude)
                 trts.append(tect_reg)
 
-                pne_dict = defaultdict(list)
+                pne_dict = {}
                 # a dictionary rlz.id, poe, iml, imt_str -> prob_no_exceed
                 for rlz, gsims in gsims_by_rlz.items():
                     gsim = gsims[source.tectonic_region_type]
@@ -113,20 +134,19 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
 
                         for poe in poes:
                             iml = numpy.interp(poe, curve.poes[::-1], imls)
-                            # compute conditional probability of exceeding iml given
-                            # the current rupture, and different epsilon level, that is
-                            # ``P(IMT >= iml | rup, epsilon_bin)`` for each of the epsilon bins
-                            probs_no_exceed = pne_dict[
-                                rlz.id, poe, iml, imt_str]
+                            # compute probability of exceeding iml given
+                            # the current rupture and epsilon level, that is
+                            # ``P(IMT >= iml | rup, epsilon_bin)``
+                            # for each of the epsilon bins
                             with mon3:
                                 [poes_given_rup_eps] = gsim.disaggregate_poe(
                                     sctx, rctx, dctx, imt, iml,
                                     truncation_level, n_epsilons)
+                            pne = rupture.get_probability_no_exceedance(
+                                poes_given_rup_eps)
+                            pne_dict[rlz.id, poe, imt_str] = \
+                                ProbNoExceed([pne], iml)
 
-                            probs_no_exceed.append(
-                                rupture.get_probability_no_exceedance(
-                                    poes_given_rup_eps)
-                            )
                 pnes.append(pne_dict)
         except Exception as err:
             etype, err, tb = sys.exc_info()
@@ -344,7 +364,7 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num, site):
 
 @tasks.oqtask
 def arrange_and_save_disagg_matrix(
-        job_id, trt_names, bins, site_id, rlz_id, poe, iml, imt_str):
+        job_id, trt_names, bins, site_id, iml, rlz_id, poe, imt_str):
     """
     Arrange the data in the bins into a disaggregation matrix
     and save it.
@@ -360,10 +380,10 @@ def arrange_and_save_disagg_matrix(
         ID of the current realization
     :param int site_id:
         ID of the current site
+    :param str iml:
+        The IML corresponding to that PoE
     :param poe:
         One of the PoE in disagg_poes in the job.ini file
-    :param iml:
-        The IML corresponding to that PoE
     :param imt_str:
          The Intensity Measure Type of the result
     """
@@ -388,6 +408,29 @@ def arrange_and_save_disagg_matrix(
         _save_disagg_matrix(
             job_id, site_id, bin_edges, trt_names, diss_matrix, rlz,
             hc.investigation_time, imt_str, iml, poe)
+
+
+def collect(result, key):
+    mags, dists, lons, lats, trts, pnes = [], [], [], [], [], []
+    for mag, dist, lon, lat, trt, pne in zip(*result):
+        if key in pne:
+            mags.append(mag)
+            dists.append(dist)
+            lons.append(lon)
+            lats.append(lat)
+            trts.append(trt)
+            pnes.append(pne[key])
+    if not pnes:
+        return
+    probs = merge_prob_no_exceed(pnes)
+    return probs.iml, (
+        numpy.array(mags, float),
+        numpy.array(dists, float),
+        numpy.array(lons, float),
+        numpy.array(lats, float),
+        numpy.array(trts, int),
+        numpy.array(probs.vals, float),
+        )
 
 
 class DisaggHazardCalculator(ClassicalHazardCalculator):
@@ -419,22 +462,19 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
             trt_names = [trt for (num, trt) in sorted(
                          (num, trt) for (trt, num) in trt_num.items())]
-
-            mags = numpy.array(self.result[0], float)
-            dists = numpy.array(self.result[1], float)
-            lons = numpy.array(self.result[2], float)
-            lats = numpy.array(self.result[3], float)
-            trts = numpy.array(self.result[4], int)
-            pnes = self.result[5]
-            keys = pnes[0].keys()
             alist = []
-            for key in keys:
-                # key = rlz_id, poe, iml, imt
-                probs = numpy.array([pne[key][0] for pne in pnes], float)
-                bins = (mags, dists, lons, lats, trts, probs)
-                args = (self.job.id, trt_names, bins, site.id) + key
-                alist.append(args)
-                
+            for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
+                for poe in self.hc.poes_disagg:
+                    for imt in self.hc.intensity_measure_types_and_levels:
+                        for rlz in gsims_by_rlz:
+                            key = rlz.id, poe, imt
+                            try:
+                                iml, bins = collect(self.result, key)
+                            except TypeError:
+                                continue
+                            alist.append(
+                                (self.job.id, trt_names, bins, site.id, iml)
+                                + key)
             self.parallelize(
                 arrange_and_save_disagg_matrix, alist, self.log_percent)
 
