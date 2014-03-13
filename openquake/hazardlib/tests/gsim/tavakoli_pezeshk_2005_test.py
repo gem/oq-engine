@@ -14,13 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.tavakoli_pezeshk_2005 import \
-    TavakoliPezeshk2005USGS2008
+    TavakoliPezeshk2005NSHMP2008
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class TavakoliPezeshk2005USGS2008TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = TavakoliPezeshk2005USGS2008
+class TavakoliPezeshk2005NSHMP20088TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = TavakoliPezeshk2005NSHMP2008
 
     def test_mean_normal(self):
         self.check('TP05/TP05usgs_MEAN.csv',

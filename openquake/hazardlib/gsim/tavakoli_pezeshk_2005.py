@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`TavakoliPezeshk2005`,
-:class:`TavakoliPezeshk2005USGS2008`
+:class:`TavakoliPezeshk2005NSHMP2008`
 """
 from __future__ import division
 
@@ -161,7 +161,7 @@ pga    1.139E+00  6.228E-01  -4.834E-02  -1.807E+00  -6.516E-01  4.465E-01  -2.9
 """)
 
 
-class TavakoliPezeshk2005USGS2008(TavakoliPezeshk2005):
+class TavakoliPezeshk2005NSHMP2008(TavakoliPezeshk2005):
     """
     Implements the USGS version of the Tavakoli and Pezeshk (2005).
     """
