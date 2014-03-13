@@ -111,7 +111,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
                 trts.append(tect_reg)
 
                 pne_dict = {}
-                # a dictionary rlz.id, poe, iml, imt_str -> prob_no_exceed
+                # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
                 for rlz, gsims in gsims_by_rlz.items():
                     gsim = gsims[source.tectonic_region_type]
                     with mon2:
@@ -157,7 +157,8 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
     mon1.flush()
     mon2.flush()
     mon3.flush()
-    return mags, dists, lons, lats, trts, pnes
+    lt_model_id = gsims_by_rlz.keys()[0].lt_model.id
+    return (mags, dists, lons, lats, trts, pnes), lt_model_id
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -350,7 +351,8 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num, site):
     # generate source, rupture, sites once per site
     source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
     if not source_ruptures:
-        return [], [], [], [], [], []
+        lt_model_id = gsims_by_rlz.keys()[0].lt_model.id
+        return ([], [], [], [], [], []), lt_model_id
 
     logs.LOG.info('Considering %d ruptures close to %s',
                   sum(len(rupts) for src, rupts in source_ruptures), site)
@@ -410,29 +412,6 @@ def arrange_and_save_disagg_matrix(
             hc.investigation_time, imt_str, iml, poe)
 
 
-def collect(result, key):
-    mags, dists, lons, lats, trts, pnes = [], [], [], [], [], []
-    for mag, dist, lon, lat, trt, pne in zip(*result):
-        if key in pne:
-            mags.append(mag)
-            dists.append(dist)
-            lons.append(lon)
-            lats.append(lat)
-            trts.append(trt)
-            pnes.append(pne[key])
-    if not pnes:
-        return
-    probs = merge_prob_no_exceed(pnes)
-    return probs.iml, (
-        numpy.array(mags, float),
-        numpy.array(dists, float),
-        numpy.array(lons, float),
-        numpy.array(lats, float),
-        numpy.array(trts, int),
-        numpy.array(probs.vals, float),
-        )
-
-
 class DisaggHazardCalculator(ClassicalHazardCalculator):
     """
     A calculator which performs disaggregation calculations in a distributed /
@@ -441,12 +420,15 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
     See :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
     details about the nature of this type of calculation.
     """
+
+    @EnginePerformanceMonitor.monitor
     def full_disaggregation(self):
         """
         Run the disaggregation phase after hazard curve finalization.
         """
         super(DisaggHazardCalculator, self).post_execute()
-
+        lt_model_ids = [l.id for l in models.LtSourceModel.objects.filter(
+                        hazard_calculation=self.hc)]
         # we are working sequentially on sites to save memory
         for site in self.hc.site_collection:
             trt_num = dict((trt, i) for i, trt in enumerate(
@@ -454,39 +436,50 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             arglist = [(self.job.id, srcs, gsims_by_rlz, trt_num, site)
                        for job_id, srcs, gsims_by_rlz in self.task_arg_gen()]
 
-            self.result = [], [], [], [], [], []
+            self.result = dict(
+                (lt_model_id, ([], [], [], [], [], []))
+                for lt_model_id in lt_model_ids)
+
             with self.monitor('collect results'):
                 self.parallelize(collect_bins, arglist, self.collect_result)
-            if not self.result[5]:  # no contributions for this site
-                continue
 
+            # now arranging the bins
             trt_names = [trt for (num, trt) in sorted(
                          (num, trt) for (trt, num) in trt_num.items())]
             alist = []
             for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
+                bins = self.result[lt_model.id]
+                if not bins[0]:  # no contributions for this site
+                    continue
+                newbins = [
+                    numpy.array(bins[0], float),
+                    numpy.array(bins[1], float),
+                    numpy.array(bins[2], float),
+                    numpy.array(bins[3], float),
+                    numpy.array(bins[4], int),
+                    None]
                 for poe in self.hc.poes_disagg:
                     for imt in self.hc.intensity_measure_types_and_levels:
                         for rlz in gsims_by_rlz:
                             key = rlz.id, poe, imt
-                            try:
-                                iml, bins = collect(self.result, key)
-                            except TypeError:
-                                continue
+                            probs = merge_prob_no_exceed(
+                                [b[key] for b in bins[5]])
+                            newbins[5] = numpy.array(probs.vals, float)
                             alist.append(
-                                (self.job.id, trt_names, bins, site.id, iml)
-                                + key)
+                                (self.job.id, trt_names, newbins, site.id,
+                                 probs.iml) + key)
             self.parallelize(
                 arrange_and_save_disagg_matrix, alist, self.log_percent)
 
     post_execute = full_disaggregation
 
-    def collect_result(self, result):
+    def collect_result(self, result_lt_model_id):
         """
         Collect the results coming from collect_bins into self.results,
-        a dictionary with key (rlz_id, site, poe, iml, im_type, sa_period,
-        sa_damping) and values (mag_bins, dist_bins, lon_bins, lat_bins,
-        trt_bins, eps_bins).
+        a dictionary with key (rlz_id, site, poe, imt) and values
+        (mag_bins, dist_bins, lon_bins, lat_bins, trt_bins, eps_bins).
         """
-        for resbins, bins in zip(self.result, result):
+        result, lt_model_id = result_lt_model_id
+        for resbins, bins in zip(self.result[lt_model_id], result):
             resbins.extend(bins)
         self.log_percent()
