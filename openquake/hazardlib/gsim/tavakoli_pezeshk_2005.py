@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`TavakoliPezeshk2005`.
+Module exports :class:`TavakoliPezeshk2005`,
+:class:`TavakoliPezeshk2005USGS2008`
 """
 from __future__ import division
 
@@ -45,13 +46,10 @@ class TavakoliPezeshk2005(GMPE):
         SA
     ])
 
-    #: Supported intensity measure component is orientation-independent
-    #: measure :attr:`~openquake.hazardlib.const.IMC.GMRotI50`, see paragraph
-    #: 'Response Variables', page 100 and table 8, pag 121.
-    # TODO
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
+    #: Supported intensity measure horizontal.
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
-    #: Supported standard deviation types is total, see equation 23, pag 2291.
+    #: Supported standard deviation type is total, see equation 23, pag 2291.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
     ])
@@ -78,7 +76,7 @@ class TavakoliPezeshk2005(GMPE):
         C = self.COEFFS[imt]
 
         # computing the magnitude term. Equation 19, page 2291
-        f1 = self._compute_magnitude_scaling_term(C, rup.mag)
+        f1 = self._compute_magnitude_scaling_term(C, rup.mag, sites.vs30)
 
         # computing the geometrical spreading term. Equation 20, page 2291
         f2 = self._compute_geometrical_spreading_term(C, dists.rrup)
@@ -124,8 +122,8 @@ class TavakoliPezeshk2005(GMPE):
         idx3 = np.nonzero(rrup > 130.)
 
         f2[idx1] = (C['c9'] * np.log(rrup[idx1] + 4.5))
-        f2[idx2] = (C['c10'] * np.log(rrup[idx3]/70.) +
-                    C['c9'] * np.log(rrup[idx3] + 4.5))
+        f2[idx2] = (C['c10'] * np.log(rrup[idx2]/70.) +
+                    C['c9'] * np.log(rrup[idx2] + 4.5))
         f2[idx3] = (C['c11'] * np.log(rrup[idx3]/130.) +
                     C['c10'] * np.log(rrup[idx3]/70.) +
                     C['c9'] * np.log(rrup[idx3] + 4.5))
@@ -137,7 +135,7 @@ class TavakoliPezeshk2005(GMPE):
         page 2291 (Tavakoli and Pezeshk, 2005)
         """
         r = (rrup**2. + (C['c5'] * np.exp(C['c6'] * mag +
-                                          C['c7'] * (8.5 - mag)**2.))**2.)**.5
+                                          C['c7'] * (8.5 - mag)**2.5))**2.)**.5
         f3 = ((C['c4'] + C['c13'] * mag) * np.log(r) +
               (C['c8'] + C['c12'] * mag) * r)
         return f3
@@ -168,6 +166,15 @@ class TavakoliPezeshk2005USGS2008(TavakoliPezeshk2005):
     Implements the USGS version of the Tavakoli and Pezeshk (2005).
     """
 
+    #: In the USGS implementation of this GMPE the VS30 is used to discriminate
+    #: between hard rock and BC soil - se line 5623 of hazgridXnga2.f
+    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+
+    #: Required rupture parameters is magnitude
+    #: See equation 18 page page 2291. We add the ztor parameter since this 
+    #: is used in hazgridXnga2.f to adjust the rrup (see lines 5602 and 5638)
+    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'ztor'))
+
     #: Required distance measure is Rrup. Rjb is needed for the USGS 
     #: implementation. See equation 18 page page 2291
     REQUIRES_DISTANCES = set(('rrup', 'rjb'))
@@ -182,24 +189,25 @@ class TavakoliPezeshk2005USGS2008(TavakoliPezeshk2005):
         C = self.COEFFS[imt]
 
         # Clipping dtor as described in hazgridXnga2.f line 5602
-        print dir(dists), dists.rjb
+        aa = np.maximum(rup.ztor, 2.)
         rrup = (np.power(dists.rjb, 2.) + 
-                np.power(np.max(dists.rrup, 2.), 2))**.5
+                np.power(aa, 2.))**.5
 
         # Convert magnitude from Mblg to Mw
         mag = mblg_to_mw_atkinson_boore_87(rup.mag)
 
         # computing the magnitude term. Equation 19, page 2291
-        f1 = self._compute_magnitude_scaling_term(C, rup.mag)
+        f1 = self._compute_magnitude_scaling_term(C, mag, sites.vs30)
 
         # computing the geometrical spreading term. Equation 20, page 2291
-        f2 = self._compute_geometrical_spreading_term(C, rrup)
+        f2 = self._compute_geometrical_spreading_term(C, rrup, )
 
         # computing the anelastic attenuation term. Equation 21, page 2291
         f3 = self._compute_anelastic_attenuation_term(C, rrup, mag)
 
         # computing the mean ln(IMT) using equation 18 at page 2290
         mean = f1 + f2 + f3
+        mean = clip_mean(imt, mean)
 
         # computing the total standard deviation
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(dists.rrup),
@@ -212,14 +220,16 @@ class TavakoliPezeshk2005USGS2008(TavakoliPezeshk2005):
         Compute magnitude scaling term as defined in equation 19, page 2291
         (Tavakoli and Pezeshk, 2005)
         """
-        if vs30 > 1500.0:
-            f1 = C['c1h'] + C['c2'] * mag + (C['c3'] * mag) ** 2.5
-        else:
-            f1 = C['c1'] + C['c2'] * mag + (C['c3'] * mag) ** 2.5
+        f1 = np.ones_like(vs30) 
+        f1 *= C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
+
+        idx = np.nonzero(vs30 > 1500.0)
+        f1[idx] = C['c1h'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
+
         return f1
 
-    #: Coefficient table is constructed from an excel spreadsheet available
-    #: on Pezeshk's website http://www.ce.memphis.edu/pezeshk
+    #: Coefficient table is constructed using the values included in  
+    #: hazgridXnga2.f 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT       clamp   c1h       c1         c2        c3         c4         c5         c6        c7         c8         c9         c10       c11        c12       c13       c14       c15        c16
 pga       3       1.14E+00   1.56E+00  6.23E-01  -4.83E-02  -1.81E+00  -6.52E-01  4.46E-01  -2.93E-05  -4.05E-03   9.46E-03  1.41E+00  -9.61E-01  4.32E-04  1.33E-04  1.21E+00  -1.11E-01  4.09E-01

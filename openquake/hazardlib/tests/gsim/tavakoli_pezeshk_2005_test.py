@@ -24,8 +24,8 @@ class TavakoliPezeshk2005USGS2008TestCase(BaseGSIMTestCase):
 
     def test_mean_normal(self):
         self.check('TP05/TP05usgs_MEAN.csv',
-                   max_discrep_percentage=0.6)
+                   max_discrep_percentage=1.1)
 
-#    def test_std_total(self):
-#        self.check('NGA/BA08/BA08_SIGTM_SS.csv',
-#                    max_discrep_percentage=0.1)
+    def test_std_total(self):
+        self.check('TP05/TP05usgs_STD_TOT.csv',
+                   max_discrep_percentage=0.5)
