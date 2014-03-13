@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.frankel_1996 import (
-    FrankelEtAl1996MblgAB1987NSHMP2008
+    FrankelEtAl1996MblgAB1987NSHMP2008,
+    FrankelEtAl1996MblgJ1996NSHMP2008,
+    FrankelEtAl1996MwNSHMP2008
 )
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
@@ -90,3 +92,26 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
 
         self.assertAlmostEqual(mean_mw9_d1500, mean_mw8pt2_d1000)
 
+
+class FrankelEtAl1996MblgJ1996NSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = FrankelEtAl1996MblgJ1996NSHMP2008
+
+    def test_mean(self):
+        self.check('FRANKEL1996/FRANKEL96MblgJ1996_MEAN.csv',
+                   max_discrep_percentage=2.0)
+
+    def test_std_total(self):
+        self.check('FRANKEL1996/FRANKEL96MblgJ1996_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
+
+class FrankelEtAl1996MwNSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = FrankelEtAl1996MwNSHMP2008
+
+    def test_mean(self):
+        self.check('FRANKEL1996/FRANKEL96Mw_MEAN.csv',
+                   max_discrep_percentage=1.8)
+
+    def test_std_total(self):
+        self.check('FRANKEL1996/FRANKEL96Mw_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
