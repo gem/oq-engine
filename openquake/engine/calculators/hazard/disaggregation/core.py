@@ -138,8 +138,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
     mon2.flush()
     mon3.flush()
 
-    lt_model_id = gsims_by_rlz.keys()[0].lt_model.id
-    return (mags, dists, lons, lats, trts, pnes), lt_model_id
+    return mags, dists, lons, lats, trts, pnes
 
 
 def _define_bins(bins_data, mag_bin_width, dist_bin_width,
@@ -307,7 +306,7 @@ def _save_disagg_matrix(job_id, site_id, bin_edges, trt_names, diss_matrix,
 
 
 @tasks.oqtask
-def collect_bins(job_id, sources, gsims_by_rlz, trt_num, site, curves):
+def collect_bins(job_id, sources, gsims_by_rlz, trt_num, curves_by_site):
     """
     Here is the basic calculation workflow:
 
@@ -325,29 +324,29 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num, site, curves):
         a dictionary of gsim dictionaries, one for each realization
     :param dict trt_num:
         a dictionary Tectonic Region Type -> incremental number
-    :param site:
-        the current site
-    :param curves:
+    :param curves_by_site:
         a dictionary with the hazard curves for the given site, for
         all realizations and IMTs
     """
     mon = LightMonitor('disagg', job_id, collect_bins)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
+    lt_model_id = gsims_by_rlz.keys()[0].lt_model.id
 
-    # generate source, rupture, sites once per site
-    source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
-    if not source_ruptures:
-        lt_model_id = gsims_by_rlz.keys()[0].lt_model.id
-        return ([], [], [], [], [], []), lt_model_id
+    dic = {}
+    for site in hc.site_collection:
+        # generate source, rupture, sites once per site
+        source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
+        if not source_ruptures:
+            continue
+        logs.LOG.info('Considering %d ruptures close to %s',
+                      sum(len(rupts) for src, rupts in source_ruptures), site)
 
-    logs.LOG.info('Considering %d ruptures close to %s',
-                  sum(len(rupts) for src, rupts in source_ruptures), site)
-
-    return _collect_bins_data(
-        mon, trt_num, source_ruptures, site, curves,
-        gsims_by_rlz, hc.intensity_measure_types_and_levels,
-        hc.poes_disagg, hc.truncation_level,
-        hc.num_epsilon_bins)
+        dic[site.id, lt_model_id] = _collect_bins_data(
+            mon, trt_num, source_ruptures, site, curves_by_site[site.id],
+            gsims_by_rlz, hc.intensity_measure_types_and_levels,
+            hc.poes_disagg, hc.truncation_level,
+            hc.num_epsilon_bins)
+    return dic
 
 
 @tasks.oqtask
@@ -465,43 +464,40 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         super(DisaggHazardCalculator, self).post_execute()
         lt_model_ids = [l.id for l in models.LtSourceModel.objects.filter(
                         hazard_calculation=self.hc)]
-        # we are working sequentially on sites to save memory
+
+        curves_by_site = {}
         for site in self.hc.site_collection:
-            curves = self.get_curves(site)
+            curves_by_site[site.id] = curves = self.get_curves(site)
             if not curves:
                 logs.LOG.warn('* only zero-valued hazard curves found '
                               'for site %s, skipping disaggregation', site)
                 continue
 
-            trt_num = dict((trt, i) for i, trt in enumerate(
-                           self.tectonic_region_types))
+        trt_num = dict((trt, i) for i, trt in enumerate(
+                       self.tectonic_region_types))
 
-            arglist = [(self.job.id, srcs, gsims_by_rlz, trt_num, site, curves)
-                       for job_id, srcs, gsims_by_rlz in self.task_arg_gen()]
+        arglist = [(self.job.id, srcs, gsims_by_rlz, trt_num,
+                    curves_by_site)
+                   for job_id, srcs, gsims_by_rlz in self.task_arg_gen()]
 
-            # the memory goes in the population of the dictionary below
-            with self.monitor('collect results'):
-                self.result = dict(
-                    (lt_model_id, ([], [], [], [], [], []))
-                    for lt_model_id in lt_model_ids)
-                self.parallelize(collect_bins, arglist, self.collect_result)
-                del arglist
+        # the memory goes in the population of the dictionary below
+        with self.monitor('collect results'):
+            self.result = dict(
+                ((site.id, lt_model_id), ([], [], [], [], [], []))
+                for lt_model_id in lt_model_ids
+                for site in self.hc.site_collection)
+            self.parallelize(collect_bins, arglist, self.collect_result)
+            del arglist
 
-            with self.monitor('building arguments for arrange_and_save'):
-                trt_names = [trt for (num, trt) in sorted(
-                             (num, trt) for (trt, num) in trt_num.items())]
-                alist = []
+        with self.monitor('building arguments for arrange_and_save'):
+            trt_names = [trt for (num, trt) in sorted(
+                         (num, trt) for (trt, num) in trt_num.items())]
+            alist = []
+            for site in self.hc.site_collection:
                 for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
-                    bins = self.result[lt_model.id]
+                    bins = self.result[site.id, lt_model.id]
                     if not bins[0]:  # no contributions for this site
                         continue
-                    #newbins = [
-                    #    numpy.array(bins[0], float),
-                    #    numpy.array(bins[1], float),
-                    #    numpy.array(bins[2], float),
-                    #    numpy.array(bins[3], float),
-                    #    numpy.array(bins[4], int),
-                    #    None]
                     for poe in self.hc.poes_disagg:
                         for imt in self.hc.intensity_measure_types_and_levels:
                             for rlz in gsims_by_rlz:
@@ -513,20 +509,20 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                                 alist.append(
                                     (self.job.id, trt_names, newbins, site.id,
                                      iml) + key)
-            self.parallelize(
-                arrange_and_save_disagg_matrix, alist, self.log_percent)
-            del alist
-            self.result.clear()
+        self.parallelize(
+            arrange_and_save_disagg_matrix, alist, self.log_percent)
+        del alist
+        self.result.clear()
 
     post_execute = full_disaggregation
 
-    def collect_result(self, result_lt_model_id):
+    def collect_result(self, result):
         """
         Collect the results coming from collect_bins into self.results,
         a dictionary with key (rlz_id, site, poe, imt) and values
         (mag_bins, dist_bins, lon_bins, lat_bins, trt_bins, eps_bins).
         """
-        result, lt_model_id = result_lt_model_id
-        for resbins, bins in zip(self.result[lt_model_id], result):
-            resbins.extend(bins)
+        for key, val in result.iteritems():
+            for resbins, bins in zip(self.result[key], val):
+                resbins.extend(bins)
         self.log_percent()
