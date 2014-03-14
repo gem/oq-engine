@@ -401,6 +401,29 @@ def arrange_and_save_disagg_matrix(
             hc.investigation_time, imt_str, iml, poe)
 
 
+def collect(result, key):
+    mags, dists, lons, lats, trts, pnes = [], [], [], [], [], []
+    for mag, dist, lon, lat, trt, pne in zip(*result):
+        if key in pne:
+            mags.append(mag)
+            dists.append(dist)
+            lons.append(lon)
+            lats.append(lat)
+            trts.append(trt)
+            pnes.append(pne[key])
+    if not pnes:
+        raise KeyError(key)
+    probs = merge_prob_no_exceed(pnes)
+    return probs.iml, (
+        numpy.array(mags, float),
+        numpy.array(dists, float),
+        numpy.array(lons, float),
+        numpy.array(lats, float),
+        numpy.array(trts, int),
+        numpy.array(probs.vals, float),
+        )
+
+
 class DisaggHazardCalculator(ClassicalHazardCalculator):
     """
     A calculator which performs disaggregation calculations in a distributed /
@@ -472,23 +495,24 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                     bins = self.result[lt_model.id]
                     if not bins[0]:  # no contributions for this site
                         continue
-                    newbins = [
-                        numpy.array(bins[0], float),
-                        numpy.array(bins[1], float),
-                        numpy.array(bins[2], float),
-                        numpy.array(bins[3], float),
-                        numpy.array(bins[4], int),
-                        None]
+                    #newbins = [
+                    #    numpy.array(bins[0], float),
+                    #    numpy.array(bins[1], float),
+                    #    numpy.array(bins[2], float),
+                    #    numpy.array(bins[3], float),
+                    #    numpy.array(bins[4], int),
+                    #    None]
                     for poe in self.hc.poes_disagg:
                         for imt in self.hc.intensity_measure_types_and_levels:
                             for rlz in gsims_by_rlz:
                                 key = rlz.id, poe, imt
-                                probs = merge_prob_no_exceed(
-                                    [b[key] for b in bins[5]])
-                                newbins[5] = numpy.array(probs.vals, float)
+                                try:
+                                    iml, newbins = collect(bins, key)
+                                except KeyError:
+                                    continue
                                 alist.append(
                                     (self.job.id, trt_names, newbins, site.id,
-                                     probs.iml) + key)
+                                     iml) + key)
             self.parallelize(
                 arrange_and_save_disagg_matrix, alist, self.log_percent)
             del alist
