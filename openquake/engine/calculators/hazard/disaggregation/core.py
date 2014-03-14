@@ -338,8 +338,9 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num, curves_by_site):
         source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
         if not source_ruptures:
             continue
-        logs.LOG.info('Considering %d ruptures close to %s',
-                      sum(len(rupts) for src, rupts in source_ruptures), site)
+        logs.LOG.info('Collecting bins from %d ruptures close to %s',
+                      sum(len(rupts) for src, rupts in source_ruptures),
+                      site.location)
 
         dic[site.id, lt_model_id] = _collect_bins_data(
             mon, trt_num, source_ruptures, site, curves_by_site[site.id],
@@ -398,29 +399,6 @@ def arrange_and_save_disagg_matrix(
         _save_disagg_matrix(
             job_id, site_id, bin_edges, trt_names, diss_matrix, rlz,
             hc.investigation_time, imt_str, iml, poe)
-
-
-def collect(result, key):
-    mags, dists, lons, lats, trts, pnes = [], [], [], [], [], []
-    for mag, dist, lon, lat, trt, pne in zip(*result):
-        if key in pne:
-            mags.append(mag)
-            dists.append(dist)
-            lons.append(lon)
-            lats.append(lat)
-            trts.append(trt)
-            pnes.append(pne[key])
-    if not pnes:
-        raise KeyError(key)
-    probs = merge_prob_no_exceed(pnes)
-    return probs.iml, (
-        numpy.array(mags, float),
-        numpy.array(dists, float),
-        numpy.array(lons, float),
-        numpy.array(lats, float),
-        numpy.array(trts, int),
-        numpy.array(probs.vals, float),
-        )
 
 
 class DisaggHazardCalculator(ClassicalHazardCalculator):
@@ -502,17 +480,23 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                         for imt in self.hc.intensity_measure_types_and_levels:
                             for rlz in gsims_by_rlz:
                                 key = rlz.id, poe, imt
-                                try:
-                                    iml, newbins = collect(bins, key)
-                                except KeyError:
-                                    continue
+                                probs = merge_prob_no_exceed(
+                                    [pne[key] for pne in bins[5]])
+                                iml, newbins = probs.iml, (
+                                    numpy.array(bins[0], float),
+                                    numpy.array(bins[1], float),
+                                    numpy.array(bins[2], float),
+                                    numpy.array(bins[3], float),
+                                    numpy.array(bins[4], int),
+                                    numpy.array(probs.vals, float),
+                                    )
                                 alist.append(
                                     (self.job.id, trt_names, newbins, site.id,
                                      iml) + key)
+        self.result.clear()
         self.parallelize(
             arrange_and_save_disagg_matrix, alist, self.log_percent)
         del alist
-        self.result.clear()
 
     post_execute = full_disaggregation
 
