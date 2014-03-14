@@ -461,7 +461,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         # the memory goes in the population of the dictionary below
         with self.monitor('collect results'):
             self.result = dict(
-                ((site.id, lt_model_id), ([], [], [], [], [], []))
+                ((site.id, lt_model_id), [[], [], [], [], [], []])
                 for lt_model_id in lt_model_ids
                 for site in self.hc.site_collection)
             self.parallelize(collect_bins, arglist, self.collect_result)
@@ -476,20 +476,21 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                     bins = self.result[site.id, lt_model.id]
                     if not bins[0]:  # no contributions for this site
                         continue
+                    bins[0] = numpy.array(bins[0], float)
+                    bins[1] = numpy.array(bins[1], float)
+                    bins[2] = numpy.array(bins[2], float)
+                    bins[3] = numpy.array(bins[3], float)
+                    bins[4] = numpy.array(bins[4], int)
                     for poe in self.hc.poes_disagg:
                         for imt in self.hc.intensity_measure_types_and_levels:
                             for rlz in gsims_by_rlz:
                                 key = rlz.id, poe, imt
                                 probs = merge_prob_no_exceed(
                                     [pne[key] for pne in bins[5]])
-                                iml, newbins = probs.iml, (
-                                    numpy.array(bins[0], float),
-                                    numpy.array(bins[1], float),
-                                    numpy.array(bins[2], float),
-                                    numpy.array(bins[3], float),
-                                    numpy.array(bins[4], int),
-                                    numpy.array(probs.vals, float),
-                                    )
+                                iml, newbins = probs.iml, [
+                                    bins[0], bins[1], bins[2], bins[3],
+                                    bins[4], numpy.array(probs.vals, float)
+                                    ]
                                 alist.append(
                                     (self.job.id, trt_names, newbins, site.id,
                                      iml) + key)
