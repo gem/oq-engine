@@ -1,6 +1,6 @@
-=======================
+=========================
 Tavakoli and Pezeshk 2005
-=======================
+=========================
 
 .. module:: openquake.hazardlib.gsim.tavakoli_pezeshk_2005
 
