@@ -101,7 +101,8 @@ class TavakoliPezeshk2005(GMPE):
         stddevs = []
         sigma = (C['c14'] + C['c15'] * mag) if mag < 7.2 else C['c16']
         vals = sigma * np.ones((num_sites))
-        stddevs.append(vals)
+        for _ in stddev_types:
+            stddevs.append(vals)
         return stddevs
 
     def _compute_magnitude_scaling_term(self, C, mag):
