@@ -69,19 +69,10 @@ def pmf_dict(matrix):
                        for key, pmf_fn in disagg.pmf_map.iteritems())
 
 
-def _collect_bins_data(mon, trt_num, source_ruptures, site,
+# returns mags, dists, lons, lats, tect_reg_types, probs_no_exceed
+def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
                        gsims_by_rlz, imtls, poes, truncation_level,
                        n_epsilons):
-    """
-    Extract values of magnitude, distance, closest point, tectonic region
-    types and PoE distribution.
-
-    This method processes the source model (generates ruptures) and collects
-    all needed parameters to arrays. It also defines tectonic region type
-    bins sequence.
-
-    :returns: mags, dists, lons, lats, tect_reg_types, probs_no_exceed
-    """
     sitecol = SiteCollection([site])
     mags = []
     dists = []
@@ -93,7 +84,6 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
     mon1 = mon.copy('calc distances')
     mon2 = mon.copy('making contexts')
     mon3 = mon.copy('disaggregate_poe')
-    mon4 = mon.copy('reading curves')
 
     for source, ruptures in source_ruptures:
         try:
@@ -120,20 +110,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        with mon4:  # reading curve_poes from the db
-                            [curve] = models.HazardCurveData.objects.filter(
-                                location=site.location.wkt2d,
-                                hazard_curve__lt_realization=rlz,
-                                hazard_curve__imt=imt[0],
-                                hazard_curve__sa_period=imt[1],
-                                hazard_curve__sa_damping=imt[2])
-                            if all(x == 0.0 for x in curve.poes):
-                                logs.LOG.warn(
-                                    '* hazard curve contained all zero '
-                                    'probabilities; skipping rlz=%d, IMT=%s',
-                                    rlz.id, imt_str)
-                                continue
-                            curve_poes = curve.poes[::-1]
+                        curve_poes = curves[rlz.id, imt_str].poes[::-1]
 
                         for poe in poes:
                             iml = numpy.interp(poe, curve_poes, imls)
@@ -160,7 +137,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
     mon1.flush()
     mon2.flush()
     mon3.flush()
-    mon4.flush()
+
     lt_model_id = gsims_by_rlz.keys()[0].lt_model.id
     return (mags, dists, lons, lats, trts, pnes), lt_model_id
 
@@ -330,7 +307,7 @@ def _save_disagg_matrix(job_id, site_id, bin_edges, trt_names, diss_matrix,
 
 
 @tasks.oqtask
-def collect_bins(job_id, sources, gsims_by_rlz, trt_num, site):
+def collect_bins(job_id, sources, gsims_by_rlz, trt_num, site, curves):
     """
     Here is the basic calculation workflow:
 
@@ -348,6 +325,11 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num, site):
         a dictionary of gsim dictionaries, one for each realization
     :param dict trt_num:
         a dictionary Tectonic Region Type -> incremental number
+    :param site:
+        the current site
+    :param curves:
+        a dictionary with the hazard curves for the given site, for
+        all realizations and IMTs
     """
     mon = LightMonitor('disagg', job_id, collect_bins)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
@@ -362,7 +344,7 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num, site):
                   sum(len(rupts) for src, rupts in source_ruptures), site)
 
     return _collect_bins_data(
-        mon, trt_num, source_ruptures, site,
+        mon, trt_num, source_ruptures, site, curves,
         gsims_by_rlz, hc.intensity_measure_types_and_levels,
         hc.poes_disagg, hc.truncation_level,
         hc.num_epsilon_bins)
@@ -427,6 +409,30 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
     See :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
     details about the nature of this type of calculation.
     """
+    def get_curves(self, site):
+        """
+        Get all the relevant hazard curves for the given site.
+        Returns a dictionary {(rlz_id, imt) -> curve}.
+        """
+        dic = {}
+        wkt = site.location.wkt2d
+        for rlz in self._get_realizations():
+            for imt_str in self.hc.intensity_measure_types_and_levels:
+                imt = from_string(imt_str)
+                [curve] = models.HazardCurveData.objects.filter(
+                    location=wkt,
+                    hazard_curve__lt_realization=rlz,
+                    hazard_curve__imt=imt[0],
+                    hazard_curve__sa_period=imt[1],
+                    hazard_curve__sa_damping=imt[2])
+                if all(x == 0.0 for x in curve.poes):
+                    logs.LOG.warn(
+                        '* hazard curve %d contains all zero '
+                        'probabilities; skipping SRID=4326;%s, rlz=%d, IMT=%s',
+                        curve.id, wkt, rlz.id, imt_str)
+                    continue
+                dic[rlz.id, imt_str] = curve
+        return dic
 
     @EnginePerformanceMonitor.monitor
     def full_disaggregation(self):
@@ -438,10 +444,16 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                         hazard_calculation=self.hc)]
         # we are working sequentially on sites to save memory
         for site in self.hc.site_collection:
+            curves = self.get_curves(site)
+            if not curves:
+                logs.LOG.warn('* only zero-valued hazard curves found '
+                              'for site %s, skipping disaggregation', site)
+                continue
+
             trt_num = dict((trt, i) for i, trt in enumerate(
                            self.tectonic_region_types))
 
-            arglist = [(self.job.id, srcs, gsims_by_rlz, trt_num, site)
+            arglist = [(self.job.id, srcs, gsims_by_rlz, trt_num, site, curves)
                        for job_id, srcs, gsims_by_rlz in self.task_arg_gen()]
 
             # the memory goes in the population of the dictionary below
