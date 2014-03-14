@@ -164,6 +164,7 @@ aac = lambda a, b: numpy.testing.assert_allclose(a, b, atol=1e-5)
 class DisaggHazardTestCase(BaseQATestCase):
     fnames = []  # to be overridden
     working_dir = os.path.dirname(__file__)
+    imts = []
 
     @attr('qa', 'hazard', 'disagg')
     def test(self):
@@ -179,7 +180,7 @@ class DisaggHazardTestCase(BaseQATestCase):
 
         # compare the disagg files
         for fname in self.fnames:
-            for imt in ('PGA', 'SA-0.025'):
+            for imt in self.imts:
                 exp = os.path.join(expected, 'disagg_matrix', imt, fname)
                 got = os.path.join(export_dir, 'disagg_matrix', imt, fname)
                 self.assert_disagg_xml_almost_equal(exp, got)
