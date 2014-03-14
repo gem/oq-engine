@@ -13,20 +13,22 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.silva_2002 import SilvaEtAl2002NSHMP2008
+from openquake.hazardlib.gsim.silva_2002 import (
+    SilvaEtAl2002MblgAB1987NSHMP2008
+)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from subroutine 'getSilva' in hazgridXnga2.f
 
 
-class SilvaEtAl2002NSHMP2008TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = SilvaEtAl2002NSHMP2008
+class SilvaEtAl2002MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = SilvaEtAl2002MblgAB1987NSHMP2008
 
     def test_mean(self):
-        self.check('SILVA02/SILVA02NSHMP_MEAN.csv',
+        self.check('SILVA02/SILVA02MblgAB1987NSHMP_MEAN.csv',
                    max_discrep_percentage=0.4)
 
     def test_std_total(self):
-        self.check('SILVA02/SILVA02NSHMP_STD_TOTAL.csv',
+        self.check('SILVA02/SILVA02MblgAB1987NSHMP_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)

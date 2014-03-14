@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`SilvaEtAl2002NSHMP2008`.
+Module exports :class:`SilvaEtAl2002MblgAB1987NSHMP2008`.
 """
 from __future__ import division
 
@@ -28,7 +28,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class SilvaEtAl2002NSHMP2008(GMPE):
+class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
     """
     Implements GMPE developed by Walter Silva, Nick Gregor and Robert Darragh
     and documented in "Development of regional hard rock attenuation relations
