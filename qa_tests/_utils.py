@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,9 +16,15 @@
 import csv
 import numpy
 import unittest
+import os
+import shutil
+import filecmp
+
+from nose.plugins.attrib import attr
 
 import openquake.engine
 import openquake.nrmllib
+from openquake.nrmllib import PARSE_NS_MAP
 from openquake.engine.db import models
 
 from lxml import etree
@@ -151,3 +157,87 @@ def compare_hazard_curve_with_csv(
     # tmp = os.path.join('/tmp', os.path.basename(csv_name))
     # print 'saving', tmp
     # print >> open(tmp, 'w'), '\n'.join(' '.join(map(str, r)) for r in data)
+
+aac = lambda a, b: numpy.testing.assert_allclose(a, b, atol=1e-5)
+
+
+class DisaggHazardTestCase(BaseQATestCase):
+    fnames = []  # to be overridden
+    working_dir = os.path.dirname(__file__)
+
+    @attr('qa', 'hazard', 'disagg')
+    def test(self):
+        cfg = os.path.join(self.working_dir, 'job.ini')
+        expected = os.path.join(self.working_dir, 'expected_output')
+        job = self.run_hazard(cfg, exports=['xml'])
+        hc = job.hazard_calculation
+        export_dir = os.path.join(hc.export_dir, 'calc_%d' % hc.id)
+
+        # compare the directories and print a report
+        dc = filecmp.dircmp(expected, export_dir)
+        dc.report_full_closure()
+
+        # compare the disagg files
+        for fname in self.fnames:
+            for imt in ('PGA', 'SA-0.025'):
+                exp = os.path.join(expected, 'disagg_matrix', imt, fname)
+                got = os.path.join(export_dir, 'disagg_matrix', imt, fname)
+                self.assert_disagg_xml_almost_equal(exp, got)
+
+        # remove the export_dir if the test passes
+        shutil.rmtree(export_dir)
+
+    def assert_disagg_xml_almost_equal(self, expected, actual):
+        """
+        A special helper function to test that values in the ``expected`` and
+        ``actual`` XML are almost equal to a certain precision.
+
+        :param expected, actual:
+            Paths to XML files, or file-like objects containing the XML
+            contents.
+        """
+        exp_tree = etree.parse(expected)
+        act_tree = etree.parse(actual)
+
+        # First, compare the <disaggMatrices> container element, check attrs,
+        # etc.
+        [exp_dms] = exp_tree.xpath(
+            '//nrml:disaggMatrices', namespaces=PARSE_NS_MAP
+        )
+        [act_dms] = act_tree.xpath(
+            '//nrml:disaggMatrices', namespaces=PARSE_NS_MAP
+        )
+        self.assertEqual(exp_dms.attrib, act_dms.attrib)
+
+        # Then, loop over each <disaggMatrix>, check attrs, then loop over each
+        # <prob> and compare indices and values.
+        exp_dm = exp_tree.xpath(
+            '//nrml:disaggMatrix', namespaces=PARSE_NS_MAP
+        )
+        act_dm = act_tree.xpath(
+            '//nrml:disaggMatrix', namespaces=PARSE_NS_MAP
+        )
+        self.assertEqual(len(exp_dm), len(act_dm))
+
+        for i, matrix in enumerate(exp_dm):
+            act_matrix = act_dm[i]
+
+            self.assertEqual(matrix.attrib['type'], act_matrix.attrib['type'])
+            self.assertEqual(matrix.attrib['dims'], act_matrix.attrib['dims'])
+            self.assertEqual(matrix.attrib['poE'], act_matrix.attrib['poE'])
+            aac(float(act_matrix.attrib['iml']), float(matrix.attrib['iml']))
+
+            # compare probabilities
+            exp_probs = matrix.xpath('./nrml:prob', namespaces=PARSE_NS_MAP)
+            act_probs = act_matrix.xpath(
+                './nrml:prob', namespaces=PARSE_NS_MAP
+            )
+            self.assertEqual(len(exp_probs), len(act_probs))
+
+            for j, prob in enumerate(exp_probs):
+                act_prob = act_probs[j]
+
+                self.assertEqual(prob.attrib['index'],
+                                 act_prob.attrib['index'])
+                aac(float(act_prob.attrib['value']),
+                    float(prob.attrib['value']))

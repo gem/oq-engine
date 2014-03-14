@@ -13,23 +13,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import filecmp
-
-from nose.plugins.attrib import attr
+import os.path
 from qa_tests import _utils
 
 
-class DisaggHazardCase1TestCase(_utils.BaseQATestCase):
+class DisaggHazardCase2TestCase(_utils.DisaggHazardTestCase):
 
-    @attr('qa', 'hazard', 'disagg')
-    def test(self):
-        cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
-        expected = os.path.join(os.path.dirname(__file__), 'expected_output')
-        job = self.run_hazard(cfg, exports=['xml'])
-        hc = job.hazard_calculation
-        export_dir = os.path.join(hc.export_dir, 'calc_%d' % hc.id)
-        dc = filecmp.dircmp(export_dir, expected)
-        dc.report_full_closure()
-        # this is exporting several files in /tmp/disagg_case_2
-        # as listed in job.ini
+    working_dir = os.path.dirname(__file__)
+    fnames = [
+        'disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_0.xml',
+        'disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_1.xml',
+        'disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_0.xml',
+        'disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_1.xml',
+    ]
