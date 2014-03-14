@@ -1,4 +1,4 @@
-# Copyright (c) 2014, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,11 +18,17 @@ from qa_tests import _utils
 
 
 class DisaggHazardCase2TestCase(_utils.DisaggHazardTestCase):
-
     working_dir = os.path.dirname(__file__)
-    fnames = [
-        'disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_0.xml',
-        'disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_1.xml',
-        'disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_0.xml',
-        'disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_1.xml',
-    ]
+    imts = ['PGA']
+    fnames = '''\
+disagg_matrix(0.02)-lon_0.0-lat_0.0-smltp_source_model_1-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.02)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.02)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.02)-lon_-3.0-lat_-3.0-smltp_source_model_1-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.02)-lon_-3.0-lat_-3.0-smltp_source_model_1-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_1-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_1-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.1)-lon_-3.0-lat_-3.0-smltp_source_model_1-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.1)-lon_-3.0-lat_-3.0-smltp_source_model_1-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml'''.split()
