@@ -39,6 +39,7 @@ Built-in GSIMs
     si_midorikawa_1999
     somerville_2001
     somerville_2009
+    tavakoli_pezeshk_2005
     toro_1997
     toro_2002
     youngs_1997
