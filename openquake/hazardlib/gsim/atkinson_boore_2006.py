@@ -16,7 +16,11 @@
 """
 Module exports :class:`AtkinsonBoore2006`,
 :class:`AtkinsonBoore2006MblgAB1987bar140NSHMP2008`,
-:class:`AtkinsonBoore2006MblgAB1987bar200NSHMP2008`.
+:class:`AtkinsonBoore2006MblgJ1996bar140NSHMP2008`,
+:class:`AtkinsonBoore2006Mwbar140NSHMP2008`,
+:class:`AtkinsonBoore2006MblgAB1987bar200NSHMP2008`,
+:class:`AtkinsonBoore2006MblgJ1996bar200NSHMP2008`,
+:class:`AtkinsonBoore2006Mwbar200NSHMP2008`.
 """
 from __future__ import division
 
@@ -26,7 +30,9 @@ from scipy.constants import g
 
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.utils import (
-    mblg_to_mw_atkinson_boore_87, clip_mean
+    mblg_to_mw_atkinson_boore_87,
+    mblg_to_mw_johnston_96,
+    clip_mean
 )
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
@@ -386,7 +392,7 @@ class AtkinsonBoore2006MblgAB1987bar140NSHMP2008(AtkinsonBoore2006):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mag = mblg_to_mw_atkinson_boore_87(rup.mag)
+        mag = self._convert_magnitude(rup.mag)
 
         mean = self._get_mean(sites.vs30, mag, dists.rrup, imt, scale_fac=0)
         stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
@@ -394,6 +400,39 @@ class AtkinsonBoore2006MblgAB1987bar140NSHMP2008(AtkinsonBoore2006):
         mean = clip_mean(imt, mean)
 
         return mean, stddevs
+
+    def _convert_magnitude(self, mag):
+        """
+        Convert magnitude from Mblg to Mw using Atkinson and Boore 1987
+        equation
+        """
+        return mblg_to_mw_atkinson_boore_87(mag)
+
+
+class AtkinsonBoore2006MblgJ1996bar140NSHMP2008(
+        AtkinsonBoore2006MblgAB1987bar140NSHMP2008):
+    """
+    Extend :class:`AtkinsonBoore2006MblgAB1987bar140NSHMP2008` but uses
+    Johnston 1996 equation to convert from Mblg to Mw
+    """
+    def _convert_magnitude(self, mag):
+        """
+        Convert magnitude from Mblg to Mw using Johnston 1996 equation
+        """
+        return mblg_to_mw_johnston_96(mag)
+
+
+class AtkinsonBoore2006Mwbar140NSHMP2008(
+        AtkinsonBoore2006MblgAB1987bar140NSHMP2008):
+    """
+    Extend :class:`AtkinsonBoore2006MblgAB1987bar140NSHMP2008` but assumes
+    magnitude to be in Mw scale and thefore no conversion is applied
+    """
+    def _convert_magnitude(self, mag):
+        """
+        Return magnitude value unchanged
+        """
+        return mag
 
 
 class AtkinsonBoore2006MblgAB1987bar200NSHMP2008(AtkinsonBoore2006):
@@ -407,7 +446,7 @@ class AtkinsonBoore2006MblgAB1987bar200NSHMP2008(AtkinsonBoore2006):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mag = mblg_to_mw_atkinson_boore_87(rup.mag)
+        mag = self._convert_magnitude(rup.mag)
 
         # stress drop scaling factor defined in subroutine getAB06
         mean = self._get_mean(
@@ -419,3 +458,35 @@ class AtkinsonBoore2006MblgAB1987bar200NSHMP2008(AtkinsonBoore2006):
 
         return mean, stddevs
 
+    def _convert_magnitude(self, mag):
+        """
+        Convert magnitude from Mblg to Mw using Atkinson and Boore 1987
+        equation
+        """
+        return mblg_to_mw_atkinson_boore_87(mag)
+
+
+class AtkinsonBoore2006MblgJ1996bar200NSHMP2008(
+        AtkinsonBoore2006MblgAB1987bar200NSHMP2008):
+    """
+    Extend :class:`AtkinsonBoore2006MblgAB1987bar200NSHMP2008` but uses
+    Johnston 1996 equation to convert from Mblg to Mw
+    """
+    def _convert_magnitude(self, mag):
+        """
+        Convert magnitude from Mblg to Mw using Johnston 1996 equation
+        """
+        return mblg_to_mw_johnston_96(mag)
+
+
+class AtkinsonBoore2006Mwbar200NSHMP2008(
+        AtkinsonBoore2006MblgAB1987bar200NSHMP2008):
+    """
+    Extend :class:`AtkinsonBoore2006MblgAB1987bar200NSHMP2008` but assumes
+    magnitude to be in Mw scale therefore no conversion is applied
+    """
+    def _convert_magnitude(self, mag):
+        """
+        Return magnitude value unchanged
+        """
+        return mag

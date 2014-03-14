@@ -391,6 +391,6 @@ class FrankelEtAl1996MwNSHMP2008(FrankelEtAl1996MblgAB1987NSHMP2008):
     """
     def _convert_magnitude(self, mag):
         """
-        Convert magnitude from Mblg to Mw using Johnston 1996 equation
+        Return magnitude value unchanged
         """
         return mag
