@@ -21,6 +21,7 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 import sys
 import numpy
 import warnings
+import collections
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -474,3 +475,17 @@ def lon_lat_trt_pmf(matrix):
                      for m in xrange(neps)]
                 )
     return 1 - lon_lat_trt_pmf
+
+
+# this dictionary is useful to extract a fixed set of
+# submatrices from the full disaggregation matrix
+pmf_map = collections.OrderedDict([
+    (('Mag', ), mag_pmf),
+    (('Dist', ), dist_pmf),
+    (('TRT', ), trt_pmf),
+    (('Mag', 'Dist'), mag_dist_pmf),
+    (('Mag', 'Dist', 'Eps'), mag_dist_eps_pmf),
+    (('Lon', 'Lat'), lon_lat_pmf),
+    (('Mag', 'Lon', 'Lat'), mag_lon_lat_pmf),
+    (('Lon', 'Lat', 'TRT'), lon_lat_trt_pmf),
+])
