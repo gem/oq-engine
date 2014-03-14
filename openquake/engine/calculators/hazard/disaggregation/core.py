@@ -160,6 +160,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
     mon1.flush()
     mon2.flush()
     mon3.flush()
+    mon4.flush()
     lt_model_id = gsims_by_rlz.keys()[0].lt_model.id
     return (mags, dists, lons, lats, trts, pnes), lt_model_id
 
