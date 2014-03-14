@@ -93,6 +93,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
     mon1 = mon.copy('calc distances')
     mon2 = mon.copy('making contexts')
     mon3 = mon.copy('disaggregate_poe')
+    mon4 = mon.copy('reading curves')
 
     for source, ruptures in source_ruptures:
         try:
@@ -119,21 +120,23 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site,
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        [curve] = models.HazardCurveData.objects.filter(
-                            location=site.location.wkt2d,
-                            hazard_curve__lt_realization=rlz,
-                            hazard_curve__imt=imt[0],
-                            hazard_curve__sa_period=imt[1],
-                            hazard_curve__sa_damping=imt[2])
-                        if all(x == 0.0 for x in curve.poes):
-                            logs.LOG.warn(
-                                '* hazard curve contained all 0 probability '
-                                'values; skipping rlz=%d, IMT=%s',
-                                rlz.id, imt_str)
-                            continue
+                        with mon4:  # reading curve_poes from the db
+                            [curve] = models.HazardCurveData.objects.filter(
+                                location=site.location.wkt2d,
+                                hazard_curve__lt_realization=rlz,
+                                hazard_curve__imt=imt[0],
+                                hazard_curve__sa_period=imt[1],
+                                hazard_curve__sa_damping=imt[2])
+                            if all(x == 0.0 for x in curve.poes):
+                                logs.LOG.warn(
+                                    '* hazard curve contained all zero '
+                                    'probabilities; skipping rlz=%d, IMT=%s',
+                                    rlz.id, imt_str)
+                                continue
+                            curve_poes = curve.poes[::-1]
 
                         for poe in poes:
-                            iml = numpy.interp(poe, curve.poes[::-1], imls)
+                            iml = numpy.interp(poe, curve_poes, imls)
                             # compute probability of exceeding iml given
                             # the current rupture and epsilon level, that is
                             # ``P(IMT >= iml | rup, epsilon_bin)``
@@ -401,6 +404,9 @@ def arrange_and_save_disagg_matrix(
         hc.truncation_level,
         hc.num_epsilon_bins)
 
+    for binidx, bintype in enumerate(('mag', 'dist', 'lon', 'lat', 'eps')):
+        logs.LOG.info('%s bin: %s', bintype, bin_edges[binidx])
+
     with EnginePerformanceMonitor('arrange data', job_id,
                                   arrange_and_save_disagg_matrix):
         diss_matrix = _arrange_data_in_bins(bins, bin_edges, len(trt_names))
@@ -433,43 +439,47 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         for site in self.hc.site_collection:
             trt_num = dict((trt, i) for i, trt in enumerate(
                            self.tectonic_region_types))
+
             arglist = [(self.job.id, srcs, gsims_by_rlz, trt_num, site)
                        for job_id, srcs, gsims_by_rlz in self.task_arg_gen()]
 
-            self.result = dict(
-                (lt_model_id, ([], [], [], [], [], []))
-                for lt_model_id in lt_model_ids)
-
+            # the memory goes in the population of the dictionary below
             with self.monitor('collect results'):
+                self.result = dict(
+                    (lt_model_id, ([], [], [], [], [], []))
+                    for lt_model_id in lt_model_ids)
                 self.parallelize(collect_bins, arglist, self.collect_result)
+                del arglist
 
-            # now arranging the bins
-            trt_names = [trt for (num, trt) in sorted(
-                         (num, trt) for (trt, num) in trt_num.items())]
-            alist = []
-            for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
-                bins = self.result[lt_model.id]
-                if not bins[0]:  # no contributions for this site
-                    continue
-                newbins = [
-                    numpy.array(bins[0], float),
-                    numpy.array(bins[1], float),
-                    numpy.array(bins[2], float),
-                    numpy.array(bins[3], float),
-                    numpy.array(bins[4], int),
-                    None]
-                for poe in self.hc.poes_disagg:
-                    for imt in self.hc.intensity_measure_types_and_levels:
-                        for rlz in gsims_by_rlz:
-                            key = rlz.id, poe, imt
-                            probs = merge_prob_no_exceed(
-                                [b[key] for b in bins[5]])
-                            newbins[5] = numpy.array(probs.vals, float)
-                            alist.append(
-                                (self.job.id, trt_names, newbins, site.id,
-                                 probs.iml) + key)
+            with self.monitor('building arguments for arrange_and_save'):
+                trt_names = [trt for (num, trt) in sorted(
+                             (num, trt) for (trt, num) in trt_num.items())]
+                alist = []
+                for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
+                    bins = self.result[lt_model.id]
+                    if not bins[0]:  # no contributions for this site
+                        continue
+                    newbins = [
+                        numpy.array(bins[0], float),
+                        numpy.array(bins[1], float),
+                        numpy.array(bins[2], float),
+                        numpy.array(bins[3], float),
+                        numpy.array(bins[4], int),
+                        None]
+                    for poe in self.hc.poes_disagg:
+                        for imt in self.hc.intensity_measure_types_and_levels:
+                            for rlz in gsims_by_rlz:
+                                key = rlz.id, poe, imt
+                                probs = merge_prob_no_exceed(
+                                    [b[key] for b in bins[5]])
+                                newbins[5] = numpy.array(probs.vals, float)
+                                alist.append(
+                                    (self.job.id, trt_names, newbins, site.id,
+                                     probs.iml) + key)
             self.parallelize(
                 arrange_and_save_disagg_matrix, alist, self.log_percent)
+            del alist
+            self.result.clear()
 
     post_execute = full_disaggregation
 
