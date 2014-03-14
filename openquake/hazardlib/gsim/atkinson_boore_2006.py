@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module exports :class:`AtkinsonBoore2006`,
-:class:`AtkinsonBoore2006NSHMP2008bar140`,
-:class:`AtkinsonBoore2006NSHMP2008bar200`.
+:class:`AtkinsonBoore2006MblgAB1987bar140NSHMP2008`,
+:class:`AtkinsonBoore2006MblgAB1987bar200NSHMP2008`.
 """
 from __future__ import division
 
@@ -359,7 +359,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     pgv    0.11   2.00  5.50
     """)
 
-class AtkinsonBoore2006NSHMP2008bar140(AtkinsonBoore2006):
+class AtkinsonBoore2006MblgAB1987bar140NSHMP2008(AtkinsonBoore2006):
     """
     Implements GMPE developed by Gail M. Atkinson and David M. Boore and
     published as "Earthquake Ground-Motion Prediction Equations for Eastern
@@ -396,10 +396,10 @@ class AtkinsonBoore2006NSHMP2008bar140(AtkinsonBoore2006):
         return mean, stddevs
 
 
-class AtkinsonBoore2006NSHMP2008bar200(AtkinsonBoore2006):
+class AtkinsonBoore2006MblgAB1987bar200NSHMP2008(AtkinsonBoore2006):
     """
-    Same as :class:`AtkinsonBoore2006NSHMP2008bar140` but with adjustment for
-    200 bar stress drop
+    Same as :class:`AtkinsonBoore2006MblgAB1987bar140NSHMP2008` but with
+    adjustment for 200 bar stress drop
     """
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

@@ -7,8 +7,8 @@ Atkinson and Boore 2006
 .. autoclass:: AtkinsonBoore2006
     :members:
 
-.. autoclass:: AtkinsonBoore2006NSHMP2008bar140
+.. autoclass:: AtkinsonBoore2006MblgAB1987bar140NSHMP2008
     :members:
 
-.. autoclass:: AtkinsonBoore2006NSHMP2008bar200
+.. autoclass:: AtkinsonBoore2006MblgAB1987bar200NSHMP2008
     :members:
