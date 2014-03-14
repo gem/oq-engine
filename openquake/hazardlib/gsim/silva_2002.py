@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`SilvaEtAl2002MblgAB1987NSHMP2008`.
+Module exports :class:`SilvaEtAl2002MblgAB1987NSHMP2008`,
+:class:`SilvaEtAl2002MblgJ1996NSHMP2008`,
+:class:`SilvaEtAl2002MwNSHMP2008`.
 """
 from __future__ import division
 
@@ -22,7 +24,9 @@ import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import (
-    mblg_to_mw_atkinson_boore_87, clip_mean
+    mblg_to_mw_atkinson_boore_87,
+    mblg_to_mw_johnston_96,
+    clip_mean
 )
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -86,7 +90,7 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
                    for stddev_type in stddev_types)
 
         C = self.COEFFS[imt]
-        mag = mblg_to_mw_atkinson_boore_87(rup.mag)
+        mag = self._convert_magnitude(rup.mag)
 
         mean = (
             C['c1'] + C['c2'] * mag + C['c10'] * (mag - 6) ** 2 +
@@ -97,6 +101,13 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
         stddevs = self._compute_stddevs(C, dists.rjb.size, stddev_types)
 
         return mean, stddevs
+
+    def _convert_magnitude(self, mag):
+        """
+        Convert magnitude from Mblg to Mw using Atkinson and Boore 1987
+        equation
+        """
+        return mblg_to_mw_atkinson_boore_87(mag)
 
     def _compute_stddevs(self, C, num_sites, stddev_types):
         """
@@ -121,3 +132,27 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
     2.0  -7.23821  1.41946  2.7   -2.26433  0.14984  -0.33999  1.0142
     5.0  -13.39    2.03488  2.5   -1.91969  0.12052  -0.35463  1.2253
     """)
+
+
+class SilvaEtAl2002MblgJ1996NSHMP2008(SilvaEtAl2002MblgAB1987NSHMP2008):
+    """
+    Extend :class:`SilvaEtAl2002MblgAB1987NSHMP2008` but uses Johnston
+    1996 equation for converting Mblg to Mw.
+    """
+    def _convert_magnitude(self, mag):
+        """
+        Convert magnitude from Mblg to Mw using Johnston 1996 equation
+        """
+        return mblg_to_mw_johnston_96(mag)
+
+
+class SilvaEtAl2002MwNSHMP2008(SilvaEtAl2002MblgAB1987NSHMP2008):
+    """
+    Extend :class:`SilvaEtAl2002MblgAB1987NSHMP2008` but assumes magnitude
+    to be in Mw scale, therefore no conversion is applied
+    """
+    def _convert_magnitude(self, mag):
+        """
+        Return magnitude value unchanged
+        """
+        return mag
