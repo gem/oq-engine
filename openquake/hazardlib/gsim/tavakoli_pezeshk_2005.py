@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012 GEM Foundation
+# Copyright (C) 2014 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -171,11 +171,11 @@ class TavakoliPezeshk2005NSHMP2008(TavakoliPezeshk2005):
     REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
     #: Required rupture parameters is magnitude
-    #: See equation 18 page page 2291. We add the ztor parameter since this 
+    #: See equation 18 page page 2291. We add the ztor parameter since this
     #: is used in hazgridXnga2.f to adjust the rrup (see lines 5602 and 5638)
     REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'ztor'))
 
-    #: Required distance measure is Rrup. Rjb is needed for the USGS 
+    #: Required distance measure is Rrup. Rjb is needed for the USGS
     #: implementation. See equation 18 page page 2291
     REQUIRES_DISTANCES = set(('rrup', 'rjb'))
 
@@ -190,7 +190,7 @@ class TavakoliPezeshk2005NSHMP2008(TavakoliPezeshk2005):
 
         # Clipping dtor as described in hazgridXnga2.f line 5602
         aa = np.maximum(rup.ztor, 2.)
-        rrup = (np.power(dists.rjb, 2.) + 
+        rrup = (np.power(dists.rjb, 2.) +
                 np.power(aa, 2.))**.5
 
         # Convert magnitude from Mblg to Mw
@@ -220,7 +220,7 @@ class TavakoliPezeshk2005NSHMP2008(TavakoliPezeshk2005):
         Compute magnitude scaling term as defined in equation 19, page 2291
         (Tavakoli and Pezeshk, 2005)
         """
-        f1 = np.ones_like(vs30) 
+        f1 = np.ones_like(vs30)
         f1 *= C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
 
         idx = np.nonzero(vs30 > 1500.0)
@@ -228,8 +228,8 @@ class TavakoliPezeshk2005NSHMP2008(TavakoliPezeshk2005):
 
         return f1
 
-    #: Coefficient table is constructed using the values included in  
-    #: hazgridXnga2.f 
+    #: Coefficient table is constructed using the values included in
+    #: hazgridXnga2.f
     COEFFS = CoeffsTable(sa_damping=5, table="""\
 IMT       clamp   c1h       c1         c2        c3         c4         c5         c6        c7         c8         c9         c10       c11        c12       c13       c14       c15        c16
 pga       3       1.14E+00   1.56E+00  6.23E-01  -4.83E-02  -1.81E+00  -6.52E-01  4.46E-01  -2.93E-05  -4.05E-03   9.46E-03  1.41E+00  -9.61E-01  4.32E-04  1.33E-04  1.21E+00  -1.11E-01  4.09E-01
