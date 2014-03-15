@@ -65,8 +65,7 @@ class Calculator(object):
 
         :param str operation: the operation to monitor
         """
-        return EnginePerformanceMonitor(
-            operation, self.job.id, tracing=True, flush=True)
+        return EnginePerformanceMonitor(operation, self.job.id, flush=True)
 
     def task_arg_gen(self):
         """

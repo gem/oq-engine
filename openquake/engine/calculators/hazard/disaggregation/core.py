@@ -18,7 +18,9 @@
 Disaggregation calculator core functionality
 """
 import sys
+import cPickle
 from collections import OrderedDict, namedtuple
+
 import numpy
 
 from openquake.hazardlib.calc import disagg
@@ -347,7 +349,7 @@ def collect_bins(job_id, sources, gsims_by_rlz, trt_num, curves_by_site):
             gsims_by_rlz, hc.intensity_measure_types_and_levels,
             hc.poes_disagg, hc.truncation_level,
             hc.num_epsilon_bins)
-    return dic
+    return cPickle.dumps(dic, cPickle.HIGHEST_PROTOCOL)
 
 
 @tasks.oqtask
@@ -501,12 +503,15 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
     post_execute = full_disaggregation
 
-    def collect_result(self, result):
+    def collect_result(self, result_pik):
         """
         Collect the results coming from collect_bins into self.results,
         a dictionary with key (rlz_id, site, poe, imt) and values
         (mag_bins, dist_bins, lon_bins, lat_bins, trt_bins, eps_bins).
         """
+        with self.monitor('unpickling'):
+            logs.LOG.debug('Unpickling %d K', len(result_pik) / 1024)
+            result = cPickle.loads(result_pik)
         for key, val in result.iteritems():
             for resbins, bins in zip(self.result[key], val):
                 resbins.extend(bins)
