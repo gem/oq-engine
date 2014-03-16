@@ -43,7 +43,7 @@ class Site(object):
         Vertical distance from earth surface to the layer where seismic waves
         start to propagate with a speed above 2.5 km/sec, in km.
     :param id:
-        Optional parameter with default None. If given, it should be an
+        Optional parameter with default 0. If given, it should be an
         integer identifying the site univocally.
 
     :raises ValueError:
@@ -55,7 +55,7 @@ class Site(object):
     """
     __slots__ = 'location vs30 vs30measured z1pt0 z2pt5 id'.split()
 
-    def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5, id=None):
+    def __init__(self, location, vs30, vs30measured, z1pt0, z2pt5, id=0):
         if not vs30 > 0:
             raise ValueError('vs30 must be positive')
         if not z1pt0 > 0:
@@ -80,8 +80,8 @@ Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
         return (
             "<Location=%s, Vs30=%.4f, Vs30Measured=%r, Depth1.0km=%.4f, "
             "Depth2.5km=%.4f>") % (
-                self.location, self.vs30, self.vs30measured, self.z1pt0,
-                self.z2pt5)
+            self.location, self.vs30, self.vs30measured, self.z1pt0,
+            self.z2pt5)
 
     def __repr__(self):
         """
@@ -115,18 +115,21 @@ class SiteCollection(object):
     """
     def __init__(self, sites):
         self.indices = None
-        self.vs30 = numpy.zeros(len(sites))
+        self.total_sites = len(sites)
+        self.vs30 = zeros = numpy.zeros(len(sites))
         self.vs30measured = numpy.zeros(len(sites), dtype=bool)
-        self.z1pt0 = self.vs30.copy()
-        self.z2pt5 = self.vs30.copy()
-        lons = self.vs30.copy()
-        lats = self.vs30.copy()
+        self.z1pt0 = zeros.copy()
+        self.z2pt5 = zeros.copy()
+        self.sid = numpy.zeros(len(sites), dtype=int)
+        lons = zeros.copy()
+        lats = zeros.copy()
 
         for i in xrange(len(sites)):
             self.vs30[i] = sites[i].vs30
             self.vs30measured[i] = sites[i].vs30measured
             self.z1pt0[i] = sites[i].z1pt0
             self.z2pt5[i] = sites[i].z2pt5
+            self.sid[i] = sites[i].id
             lons[i] = sites[i].location.longitude
             lats[i] = sites[i].location.latitude
 
@@ -139,7 +142,7 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         for arr in (self.vs30, self.vs30measured, self.z1pt0, self.z2pt5,
-                    self.mesh.lons, self.mesh.lats):
+                    self.sid, self.mesh.lons, self.mesh.lats):
             arr.flags.writeable = False
 
     def __iter__(self):
@@ -149,13 +152,13 @@ class SiteCollection(object):
         """
         for i, location in enumerate(self.mesh):
             yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i])
+                       self.z1pt0[i], self.z2pt5[i], self.sid[i])
 
-    def expand(self, data, total_sites, placeholder):
+    def expand(self, data, placeholder):
         """
-        Expand an array that was created for a filtered site collection
-        with respect to indices of the sites that were :meth:`filtered
-        <filter>`.
+        Expand a short array `data` over a filtered site collection of the
+        same length and return a long array of size `total_sites` filled
+        with the placeholder.
 
         The typical workflow is the following: there is a whole site
         collection, the one that has an information about all the sites.
@@ -182,9 +185,6 @@ class SiteCollection(object):
         :param data:
             1d or 2d numpy array with first dimension representing values
             computed for site from this collection.
-        :param total_sites:
-            Integer number representing a total number of sites in
-            a collection this one was created from.
         :param placeholder:
             A scalar value to be put in result array for those sites that
             were filtered out and no real calculation was performed for them.
@@ -192,20 +192,20 @@ class SiteCollection(object):
             Array of length ``total_sites`` with values from ``data``
             distributed in the appropriate places.
         """
-        num_sites_computed = data.shape[0]
-        assert num_sites_computed == len(self)
+        len_data = data.shape[0]
+        assert len_data == len(self), (len_data, len(self))
 
         if self.indices is None:
-            assert total_sites == num_sites_computed
             # nothing to expand: this sites collection was not filtered
             return data
 
-        assert num_sites_computed < total_sites
-        assert self.indices[-1] < total_sites
+        assert len_data <= self.total_sites
+        assert self.indices[-1] < self.total_sites, (
+            self.indices[-1], self.total_sites)
 
         if data.ndim == 1:
             # single-dimensional array
-            result = numpy.empty(total_sites)
+            result = numpy.empty(self.total_sites)
             result.fill(placeholder)
             result.put(self.indices, data)
             return result
@@ -213,7 +213,7 @@ class SiteCollection(object):
         assert data.ndim == 2
         # two-dimensional array
         num_values = data.shape[1]
-        result = numpy.empty((total_sites, num_values))
+        result = numpy.empty((self.total_sites, num_values))
         result.fill(placeholder)
         for i in xrange(num_values):
             result[:, i].put(self.indices, data[:, i])
@@ -244,7 +244,8 @@ class SiteCollection(object):
         if not mask.any():
             # no sites pass the filter, return None
             return None
-        col = object.__new__(SiteCollection)
+        col = object.__new__(self.__class__)
+        col.total_sites = self.total_sites  # preserve the number of sites
         # extract indices of Trues from the mask
         [indices] = mask.nonzero()
         # take only needed values from this collection
@@ -253,6 +254,7 @@ class SiteCollection(object):
         col.vs30measured = self.vs30measured.take(indices)
         col.z1pt0 = self.z1pt0.take(indices)
         col.z2pt5 = self.z2pt5.take(indices)
+        col.sid = self.sid.take(indices)
         col.mesh = Mesh(self.mesh.lons.take(indices),
                         self.mesh.lats.take(indices),
                         depths=None)
@@ -269,7 +271,7 @@ class SiteCollection(object):
             col.indices = indices
         # do the same as in the constructor
         for arr in (col.vs30, col.vs30measured, col.z1pt0, col.z2pt5,
-                    col.mesh.lons, col.mesh.lats):
+                    col.sid, col.mesh.lons, col.mesh.lats):
             arr.flags.writeable = False
         return col
 

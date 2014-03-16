@@ -30,12 +30,18 @@ Built-in GSIMs
     chiou_youngs_2008
     douglas_2013_stochastic
     faccioli_2010
+    frankel_1996
+    geomatrix_1993
     lin_lee_2008
     lin_2009
     pezeshk_2011
     sadigh_1997
+    silva_2002
     si_midorikawa_1999
+    somerville_2001
     somerville_2009
+    tavakoli_pezeshk_2005
+    toro_1997
     toro_2002
     youngs_1997
     zhao_2006

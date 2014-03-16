@@ -9,3 +9,6 @@ Campbell 2003
 
 .. autoclass:: Campbell2003SHARE
     :members:
+
+.. autoclass:: Campbell2003NSHMP2008
+    :members:

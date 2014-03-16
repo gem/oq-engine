@@ -151,25 +151,17 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered2.indices, [0, 3])
 
     def test_expand_2d(self):
-        col = SiteCollection(self.SITES)
-        col.indices = numpy.array([1, 3, 5, 6])
+        col = SiteCollection(self.SITES).filter(numpy.array([False, True, False, True]))
         data_condensed = numpy.array([
             [1, 2, 3],
             [5, 6, 7],
-            [10, 11, 12],
-            [15, 16, 17]
         ])
-        data_expanded = col.expand(data_condensed, total_sites=8,
-                                   placeholder=-1)
+        data_expanded = col.expand(data_condensed, placeholder=-1)
         data_expanded_expected = numpy.array([
             [-1, -1, -1],
             [1, 2, 3],
             [-1, -1, -1],
             [5, 6, 7],
-            [-1, -1, -1],
-            [10, 11, 12],
-            [15, 16, 17],
-            [-1, -1, -1]
         ])
         numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
 
@@ -177,16 +169,14 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         col = SiteCollection(self.SITES)
         col = col.filter(numpy.array([1, 0, 1, 1]))
         data_condensed = numpy.array([5, 6, 7])
-        data_expanded = col.expand(data_condensed, total_sites=4,
-                                   placeholder=100)
+        data_expanded = col.expand(data_condensed, placeholder=100)
         data_expanded_expected = numpy.array([5, 100, 6, 7])
         numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
 
     def test_expand_no_filtering(self):
         col = SiteCollection(self.SITES)
         data_condensed = numpy.array([3, 2, 1, 0])
-        data_expanded = col.expand(data_condensed, total_sites=4,
-                                   placeholder=100)
+        data_expanded = col.expand(data_condensed, placeholder=100)
         data_expanded_expected = data_condensed
         numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
 
