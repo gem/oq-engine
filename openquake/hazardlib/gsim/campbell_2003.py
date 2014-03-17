@@ -264,7 +264,7 @@ class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
     ``subroutine getCampCEUS`` in the ``hazgridXnga2.f`` Fortran code available
     at: http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
 
-    The equation assumes rupture magnitude to be in Mblg scale (given that MFDs
+    The class assumes rupture magnitude to be in Mblg scale (given that MFDs
     for central and eastern US are given in this scale). Mblg is converted to
     Mw using Atkinson and Boore 1987 conversion equation
 

@@ -43,7 +43,7 @@ class ToroEtAl1997MblgNSHMP2008(GMPE):
     Fortran code available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
 
-    The equation assumes rupture magnitude to be in Mblg scale (given that
+    The class assumes rupture magnitude to be in Mblg scale (given that
     MFDs for central and eastern US are given in this scale).
     The equation implements also the finite-fault correction as given in
     "Modification of the Toro et al. 1997 Attenuation Equations for Large

@@ -196,7 +196,7 @@ class TavakoliPezeshk2005MblgAB1987NSHMP2008(TavakoliPezeshk2005):
     ``hazgridXnga2.f`` Fortran code available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
 
-    The equation assumes rupture magnitude to be in Mblg scale. Therefore Mblg
+    The class assumes rupture magnitude to be in Mblg scale. Therefore Mblg
     is converted to Mw using the Atkinson & Boore 1987 conversion equation.
 
     Coefficients are given for the B/C site conditions.

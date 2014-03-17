@@ -43,7 +43,7 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
     in the ``hazgridXnga2.f`` Fortran code available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
 
-    The equation assumes rupture magnitude to be in Mblg scale (given that
+    The class assumes rupture magnitude to be in Mblg scale (given that
     MFDs for central and eastern US are given in this scale). Therefore Mblg is
     converted to Mw using the Atkinson & Boore 1987 conversion equation.
 

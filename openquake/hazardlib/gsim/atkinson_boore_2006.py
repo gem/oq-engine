@@ -379,7 +379,7 @@ class AtkinsonBoore2006MblgAB1987bar140NSHMP2008(AtkinsonBoore2006):
 
     The class implement the equation for static stress drop equal to 140 bar.
 
-    The equation assumes rupture magnitude to be in Mblg scale (given that
+    The class assumes rupture magnitude to be in Mblg scale (given that
     MFDs for central and eastern US are given in this scale). Therefore Mblg
     is converted to Mw by using Atkinson and Boore 1987 conversion equation.
 

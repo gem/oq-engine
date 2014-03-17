@@ -56,10 +56,12 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
     0.2, 0.3, 0.5, 1.0, 2.0. The GMPE does not allow for interpolation on
     unsupported periods.
 
-    The equation assumes rupture magnitude to be in Mblg scale (given that
+    The class assumes rupture magnitude to be in Mblg scale (given that
     MFDs for central and eastern US are given in this scale). However lookup
     tables are defined for Mw. Therefore Mblg is converted to Mw by using
     Atkinson and Boore 1987 conversion equation.
+
+    Coefficients are given for the B/C site conditions.
     """
 
     #: Supported tectonic region type is stable continental crust,
