@@ -14,7 +14,43 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`DouglasEtAl2013`.
+Module exports 
+:class:`DouglasEtAl2013StochasticSD001Q200K005`
+:class:`DouglasEtAl2013StochasticSD001Q200K020`
+:class:`DouglasEtAl2013StochasticSD001Q200K040`
+:class:`DouglasEtAl2013StochasticSD001Q200K060`
+:class:`DouglasEtAl2013StochasticSD001Q600K005`
+:class:`DouglasEtAl2013StochasticSD001Q600K020`
+:class:`DouglasEtAl2013StochasticSD001Q600K040`
+:class:`DouglasEtAl2013StochasticSD001Q600K060`
+:class:`DouglasEtAl2013StochasticSD001Q1800K005`
+:class:`DouglasEtAl2013StochasticSD001Q1800K020`
+:class:`DouglasEtAl2013StochasticSD001Q1800K040`
+:class:`DouglasEtAl2013StochasticSD001Q1800K060`
+:class:`DouglasEtAl2013StochasticSD010Q200K005`
+:class:`DouglasEtAl2013StochasticSD010Q200K020`
+:class:`DouglasEtAl2013StochasticSD010Q200K040`
+:class:`DouglasEtAl2013StochasticSD010Q200K060`
+:class:`DouglasEtAl2013StochasticSD010Q600K005`
+:class:`DouglasEtAl2013StochasticSD010Q600K020`
+:class:`DouglasEtAl2013StochasticSD010Q600K040`
+:class:`DouglasEtAl2013StochasticSD010Q600K060`
+:class:`DouglasEtAl2013StochasticSD010Q1800K005`
+:class:`DouglasEtAl2013StochasticSD010Q1800K020`
+:class:`DouglasEtAl2013StochasticSD010Q1800K040`
+:class:`DouglasEtAl2013StochasticSD010Q1800K060`
+:class:`DouglasEtAl2013StochasticSD100Q200K005`
+:class:`DouglasEtAl2013StochasticSD100Q200K020`
+:class:`DouglasEtAl2013StochasticSD100Q200K040`
+:class:`DouglasEtAl2013StochasticSD100Q200K060`
+:class:`DouglasEtAl2013StochasticSD100Q600K005`
+:class:`DouglasEtAl2013StochasticSD100Q600K020`
+:class:`DouglasEtAl2013StochasticSD100Q600K040`
+:class:`DouglasEtAl2013StochasticSD100Q600K060`
+:class:`DouglasEtAl2013StochasticSD100Q1800K005`
+:class:`DouglasEtAl2013StochasticSD100Q1800K020`
+:class:`DouglasEtAl2013StochasticSD100Q1800K040`
+:class:`DouglasEtAl2013StochasticSD100Q1800K060`
 """
 from __future__ import division
 
@@ -167,8 +203,6 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
                 stddevs.append(inter + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
                 stddevs.append(intra + np.zeros(num_sites))
-            else:
-                pass
         return stddevs
 
     # IMT > 0.5 seconds removed from the present implementation

@@ -19,7 +19,7 @@ Implements the set of tests for the Douglas et al (2013) stochastic GMPE
 Test data are generated from the Fortran implementation provided by
 J. Douglas (February, 2014)
 """
-import openquake.hazardlib.gsim.douglas_2013_stochastic as dst
+import openquake.hazardlib.gsim.douglas_stochastic_2013 as dst
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 

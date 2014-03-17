@@ -2,7 +2,7 @@
 Douglas et al., 2013
 ============================
 
-.. module:: openquake.hazardlib.gsim.douglas_2013_stochastic
+.. module:: openquake.hazardlib.gsim.douglas_stochastic_2013
 
 .. autoclass:: DouglasEtAl2013StochasticSD001Q200K005
     :members:
