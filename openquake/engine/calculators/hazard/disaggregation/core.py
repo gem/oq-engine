@@ -181,6 +181,11 @@ def _define_bins(bins_data, mag_bin_width, dist_bin_width,
         int(numpy.ceil(north / coord_bin_width) + 1)
     )
 
+    logs.LOG.info('mags range: %s~%s', mags.min(), mags.max())
+    logs.LOG.info('dist range: %s~%s', dists.min(), dists.max())
+    logs.LOG.info('lons range: %s~%s', west, east)
+    logs.LOG.info('lats range: %s~%s', south, north)
+
     eps_bins = numpy.linspace(-truncation_level, truncation_level,
                               n_epsilons + 1)
     return mag_bins, dist_bins, lon_bins, lat_bins, eps_bins
@@ -442,8 +447,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         Run the disaggregation phase after hazard curve finalization.
         """
         super(DisaggHazardCalculator, self).post_execute()
-        lt_model_ids = [l.id for l in models.LtSourceModel.objects.filter(
-                        hazard_calculation=self.hc)]
+        lt_model_ids = []
 
         curves_by_site = {}
         for site in self.hc.site_collection:
@@ -453,12 +457,14 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                               'for site %s, skipping disaggregation', site)
                 continue
 
-        trt_num = dict((trt, i) for i, trt in enumerate(
-                       self.tectonic_region_types))
-
-        arglist = [(self.job.id, srcs, gsims_by_rlz, trt_num,
-                    curves_by_site)
-                   for job_id, srcs, gsims_by_rlz in self.task_arg_gen()]
+        arglist = []
+        for job_id, srcs, gsims_by_rlz in self.task_arg_gen():
+            lt_model = gsims_by_rlz.keys()[0].lt_model
+            lt_model_ids.append(lt_model.id)
+            trt_num = dict((trt, i) for i, trt in enumerate(
+                           lt_model.tectonic_region_types))
+            arglist.append((self.job.id, srcs, gsims_by_rlz, trt_num,
+                            curves_by_site))
 
         # the memory goes in the population of the dictionary below
         with self.monitor('collect results'):
@@ -470,11 +476,10 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             del arglist
 
         with self.monitor('building arguments for arrange_and_save'):
-            trt_names = [trt for (num, trt) in sorted(
-                         (num, trt) for (trt, num) in trt_num.items())]
             alist = []
             for site in self.hc.site_collection:
                 for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
+                    trt_names = lt_model.tectonic_region_types
                     bins = self.result[site.id, lt_model.id]
                     if not bins[0]:  # no contributions for this site
                         continue
@@ -509,8 +514,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         a dictionary with key (rlz_id, site, poe, imt) and values
         (mag_bins, dist_bins, lon_bins, lat_bins, trt_bins, eps_bins).
         """
-        with self.monitor('unpickling'):
-            logs.LOG.debug('Unpickling %d K', len(result_pik) / 1024)
+        with self.monitor('unpickling bins'):
+            logs.LOG.debug('Unpickling %dK', len(result_pik) / 1024)
             result = cPickle.loads(result_pik)
         for key, val in result.iteritems():
             for resbins, bins in zip(self.result[key], val):
