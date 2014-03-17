@@ -533,6 +533,16 @@ CREATE TABLE hzrdr.lt_source_model (
    sm_lt_path VARCHAR[] NOT NULL
 ) TABLESPACE hzrdr_ts;
 
+-- logic tree source model infos
+CREATE TABLE hzrdr.lt_model_info (
+   id SERIAL PRIMARY KEY,
+   lt_model_id INTEGER NOT NULL, -- fk to lt_source_model
+   tectonic_region_type TEXT NOT NULL,
+   num_sources INTEGER NOT NULL,
+   min_mag FLOAT NOT NULL,
+   max_mag FLOAT NOT NULL
+) TABLESPACE hzrdr_ts;
+
 -- keep track of logic tree realization progress for a given calculation
 CREATE TABLE hzrdr.lt_realization (
     id SERIAL PRIMARY KEY,
@@ -962,6 +972,13 @@ ALTER TABLE hzrdr.lt_source_model
 ADD CONSTRAINT hzrdr_lt_model_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
+ON DELETE CASCADE;
+
+-- hzrdr.lt_model_info -> hzrdr.lt_source_model FK
+ALTER TABLE hzrdr.lt_model_info
+ADD CONSTRAINT hzrdr_lt_model_info_lt_source_model_fk
+FOREIGN KEY (lt_model_id)
+REFERENCES hzrdr.lt_source_model(id)
 ON DELETE CASCADE;
 
 -- hzrdr.lt_realization -> hzrdr.lt_source_model FK
