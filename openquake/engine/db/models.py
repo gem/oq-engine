@@ -2186,6 +2186,24 @@ class LtSourceModel(djm.Model):
     ordinal = djm.IntegerField()
     sm_lt_path = fields.CharArrayField()
 
+    @property
+    def num_sources(self):
+        """
+        Return the number of sources in the model.
+        """
+        return sum(info.num_sources for info in
+                   LtModelInfo.objects.filter(lt_model=self))
+
+    @property
+    def tectonic_region_types(self):
+        """
+        Return the tectonic region types in the model,
+        ordered by number of sources.
+        """
+        return LtModelInfo.objects.filter(
+            lt_model=self).values_list(
+            'tectonic_region_type', flat=True)
+
     class Meta:
         db_table = 'hzrdr\".\"lt_source_model'
 
@@ -2194,6 +2212,21 @@ class LtSourceModel(djm.Model):
         Yield the realizations corresponding to the given model
         """
         return iter(LtRealization.objects.filter(lt_model=self))
+
+
+class LtModelInfo(djm.Model):
+    """
+    Information about a source model content
+    """
+    lt_model = djm.ForeignKey('LtSourceModel')
+    tectonic_region_type = djm.TextField(null=False)
+    num_sources = djm.IntegerField(null=False)
+    min_mag = djm.FloatField(null=False)
+    max_mag = djm.FloatField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"lt_model_info'
+        ordering = ['tectonic_region_type', 'num_sources']
 
 
 class LtRealization(djm.Model):

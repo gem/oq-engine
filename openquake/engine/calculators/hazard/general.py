@@ -62,6 +62,38 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
+class TrtInfo(object):
+    """
+    A collection of three dictionaries num_sources, min_mag, max_mag
+    keyed by the tectonic region type.
+    """
+    def __init__(self):
+        self.trt = set()
+        self.num_sources = collections.defaultdict(int)
+        self.min_mag = collections.defaultdict(float)
+        self.max_mag = collections.defaultdict(float)
+
+    def update(self, src):
+        """
+        Update the dictionaries num_sources, min_mag, max_mag
+        according to the given source.
+        """
+        trt = src.tectonic_region_type
+        min_mag, max_mag = src.mfd.get_min_max_mag()
+        self.num_sources[trt] += 1
+        if min_mag < self.min_mag[trt]:
+            self.min_mag[trt] = min_mag
+        if max_mag > self.max_mag[trt]:
+            self.max_mag[trt] = max_mag
+
+    def sorted_trts(self):
+        """
+        Return the tectonic region types sorted per number of sources.
+        """
+        return [trt for (num, trt) in sorted(
+                (num, trt) for (trt, num) in self.num_sources.items())]
+
+
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -133,8 +165,6 @@ class BaseHazardCalculator(base.Calculator):
         # see below two dictionaries populated in initialize_sources
         # a dictionary (sm_lt_path, source_type) -> sources
         self.source_blocks_per_ltpath = collections.defaultdict(list)
-        # full set of tectonic region types in all models
-        self.tectonic_region_types = set()
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
@@ -210,9 +240,9 @@ class BaseHazardCalculator(base.Calculator):
         """
         self.parse_risk_models()
         self.initialize_site_model()
-        num_sources = self.initialize_sources()
+        lt_models = self.initialize_sources()
         js = models.JobStats.objects.get(oq_job=self.job)
-        js.num_sources = num_sources
+        js.num_sources = [model.num_sources for model in lt_models]
         js.save()
         self.initialize_realizations()
 
@@ -241,18 +271,21 @@ class BaseHazardCalculator(base.Calculator):
         # this is not bad because for very large source models there are
         # typically very few realizations; moreover, the filtering will remove
         # most of the sources, so the memory occupation is typically low
-        num_sources = []  # the number of sources per sm_lt_path
-        for sm, path in sm_paths:
+        lt_models = []
+        for i, (sm, path) in enumerate(sm_paths):
             smpath = tuple(path)
-            source_weight_pairs = source.parse_source_model_smart(
+            source_weight_list = list(source.parse_source_model_smart(
                 os.path.join(self.hc.base_path, sm),
                 self.hc.sites_affected_by,
                 self.smlt.make_apply_uncertainties(path),
-                self.hc)
-            swp = list(source_weight_pairs)
-            for src, weight in swp:
-                self.tectonic_region_types.add(src.tectonic_region_type)
-            blocks = bs.split_on_max_weight(swp)
+                self.hc))
+            lt_model = models.LtSourceModel.objects.create(
+                hazard_calculation=self.hc, ordinal=i, sm_lt_path=smpath)
+            lt_models.append(lt_model)
+            trtinfo = TrtInfo()
+            for src, weight in source_weight_list:
+                trtinfo.update(src)
+            blocks = bs.split_on_max_weight(source_weight_list)
             self.source_blocks_per_ltpath[smpath] = blocks
             n = sum(len(block) for block in blocks)
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
@@ -261,8 +294,16 @@ class BaseHazardCalculator(base.Calculator):
             for i, block in enumerate(blocks, 1):
                 logs.LOG.info('Block %d: %d sources, weight %s',
                               i, len(block), block.weight)
-            num_sources.append(n)
-        return num_sources
+
+            # save LtModelInfo objects for each tectonic region type
+            for trt in trtinfo.sorted_trts():
+                models.LtModelInfo.objects.create(
+                    lt_model=lt_model,
+                    tectonic_region_type=trt,
+                    num_sources=trtinfo.num_sources[trt],
+                    min_mag=trtinfo.min_mag[trt],
+                    max_mag=trtinfo.max_mag[trt])
+        return lt_models
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -376,9 +417,10 @@ class BaseHazardCalculator(base.Calculator):
             self._initialize_realizations_enumeration(rlzs_per_ltpath)
 
         ordinal = 0
-        for i, (ltpath, path_infos) in enumerate(rlzs_per_ltpath.iteritems()):
-            lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.hc, ordinal=i, sm_lt_path=ltpath)
+        lt_models = models.LtSourceModel.objects.filter(
+            hazard_calculation=self.hc)
+        for lt_model, (ltpath, path_infos) in zip(
+                lt_models, rlzs_per_ltpath.iteritems()):
             for seed, weight, sm_lt_path, gsim_lt_path in path_infos:
                 models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=gsim_lt_path,
