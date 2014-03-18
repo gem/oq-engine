@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`ToroEtAl1997NSHMP2008`.
+Module exports :class:`ToroEtAl1997MblgNSHMP2008`,
+:class:`ToroEtAl1997MwNSHMP2008`
 """
 from __future__ import division
 
@@ -28,7 +29,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class ToroEtAl1997NSHMP2008(GMPE):
+class ToroEtAl1997MblgNSHMP2008(GMPE):
     """
     Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Sneider
     and published in "Model of Strong Ground Motions from Earthquakes in
@@ -42,7 +43,7 @@ class ToroEtAl1997NSHMP2008(GMPE):
     Fortran code available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
 
-    The equation assumes rupture magnitude to be in Mblg scale (given that
+    The class assumes rupture magnitude to be in Mblg scale (given that
     MFDs for central and eastern US are given in this scale).
     The equation implements also the finite-fault correction as given in
     "Modification of the Toro et al. 1997 Attenuation Equations for Large
@@ -161,4 +162,32 @@ class ToroEtAl1997NSHMP2008(GMPE):
     0.5    1.109   1.785  -0.2795  0.93  0.6354  0.002732 7.05 0.7506
     1.0    0.173   2.05   -0.34    0.90  0.59    0.0019   6.8  0.799
     2.0   -0.788   2.52   -0.47    0.93  0.6     0.0012   7.0  0.799
+    """)
+
+
+class ToroEtAl1997MwNSHMP2008(ToroEtAl1997MblgNSHMP2008):
+    """
+    Extend :class:`ToroEtAl1997MblgNSHMP2008` but assumes magnitude to be in
+    Mw scale.
+
+    Coefficients are Mw-specific and no magnitude conversion is considered to
+    take into account finite-fault correction.
+    """
+    def _compute_finite_fault_correction(self, mag):
+        """
+        Compute finite fault correction term.
+        """
+        return np.exp(-1.25 + 0.227 * mag)
+
+    #: Coefficient table obtained from coefficient arrays (tc1, tc2, tc3, tc4,
+    #: tc5, tc6, th) defined in subroutine getToro in hazgridXnga2.f
+    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    IMT    c1      c2      c3      c4      c5      c6       c7     sigma
+    pga    2.619   0.81    0.0     1.27    1.16    0.0021   9.3    0.7506
+    0.1    2.92    0.81    0.0     1.1     1.02    0.004    8.3    0.7506
+    0.2    2.295   0.84    0.0     0.98    0.66    0.0042   7.5    0.7506
+    0.3    1.8823  0.964  -0.059   0.951   0.601   0.00367  7.26   0.7506
+    0.5    1.2887  1.14   -0.1244  0.9227  0.5429  0.00306  7.027  0.7506
+    1.0    0.383   1.42   -0.2     0.90    0.49    0.0023   6.8    0.799
+    2.0   -0.558   1.86   -0.31    0.92    0.46    0.0017   6.9    0.799
     """)

@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`FrankelEtAl1996NSHMP2008`.
+Module exports :class:`FrankelEtAl1996MblgAB1987NSHMP2008`,
+:class:`FrankelEtAl1996MblgJ1996NSHMP2008`,
+:class:`FrankelEtAl1996MwNSHMP2008`.
 """
 from __future__ import division
 
@@ -23,13 +25,15 @@ from scipy.interpolate import RectBivariateSpline
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import (
-    mblg_to_mw_atkinson_boore_87, clip_mean
+    mblg_to_mw_atkinson_boore_87,
+    mblg_to_mw_johnston_96,
+    clip_mean
 )
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-class FrankelEtAl1996NSHMP2008(GMPE):
+class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
     """
     Implements GMPE developed by Arthur Frankel et al. and documented in
     "National Seismic-Hazard Maps: Documentation June 1996" (USGS - Open File
@@ -52,10 +56,12 @@ class FrankelEtAl1996NSHMP2008(GMPE):
     0.2, 0.3, 0.5, 1.0, 2.0. The GMPE does not allow for interpolation on
     unsupported periods.
 
-    The equation assumes rupture magnitude to be in Mblg scale (given that
+    The class assumes rupture magnitude to be in Mblg scale (given that
     MFDs for central and eastern US are given in this scale). However lookup
     tables are defined for Mw. Therefore Mblg is converted to Mw by using
     Atkinson and Boore 1987 conversion equation.
+
+    Coefficients are given for the B/C site conditions.
     """
 
     #: Supported tectonic region type is stable continental crust,
@@ -125,7 +131,7 @@ class FrankelEtAl1996NSHMP2008(GMPE):
         using Atkinson and Boore 1987 conversion equation. Mean value is
         finally converted from base 10 to base e.
         """
-        mag = mblg_to_mw_atkinson_boore_87(mag)
+        mag = self._convert_magnitude(mag)
 
         # to avoid run time warning in case rhypo is zero set minimum distance
         # to 10, which is anyhow the minimum distance allowed by the tables
@@ -141,6 +147,13 @@ class FrankelEtAl1996NSHMP2008(GMPE):
 
         # convert mean from base 10 to base e
         return mean * np.log(10)
+
+    def _convert_magnitude(self, mag):
+        """
+        Convert magnitude from Mblg to Mw using Atkinson and Boore 1987
+        equation
+        """
+        return mblg_to_mw_atkinson_boore_87(mag)
 
     def _compute_stddevs(self, imt, num_sites, stddev_types):
         """
@@ -359,3 +372,27 @@ class FrankelEtAl1996NSHMP2008(GMPE):
     1.0    0.347
     2.0    0.347
     """)
+
+
+class FrankelEtAl1996MblgJ1996NSHMP2008(FrankelEtAl1996MblgAB1987NSHMP2008):
+    """
+    Extend :class:`FrankelEtAl1996MblgAB1987NSHMP2008` but uses Johnston
+    1996 equation for converting from Mblg to Mw.
+    """
+    def _convert_magnitude(self, mag):
+        """
+        Convert magnitude from Mblg to Mw using Johnston 1996 equation
+        """
+        return mblg_to_mw_johnston_96(mag)
+
+
+class FrankelEtAl1996MwNSHMP2008(FrankelEtAl1996MblgAB1987NSHMP2008):
+    """
+    Extend :class:`FrankelEtAl1996MblgAB1987NSHMP2008` but assumes magnitude
+    to be in Mw scale and therefore no conversion is applied.
+    """
+    def _convert_magnitude(self, mag):
+        """
+        Return magnitude value unchanged
+        """
+        return mag

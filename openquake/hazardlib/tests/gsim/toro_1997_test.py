@@ -13,20 +13,34 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from openquake.hazardlib.gsim.toro_1997 import ToroEtAl1997NSHMP2008
+from openquake.hazardlib.gsim.toro_1997 import (
+    ToroEtAl1997MblgNSHMP2008,
+    ToroEtAl1997MwNSHMP2008
+)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data generated from subroutine 'getToro' in hazgridXnga2.f
 
 
-class ToroEtAl1997NSHMPTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ToroEtAl1997NSHMP2008
+class ToroEtAl1997MblgNSHMPTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ToroEtAl1997MblgNSHMP2008
 
     def test_mean(self):
-        self.check('TORO97NSHMP/T097NSHMP_MEAN.csv',
+        self.check('TORO97NSHMP/T097MblgNSHMP_MEAN.csv',
                    max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check('TORO97NSHMP/T097NSHMP_STD_TOTAL.csv',
+        self.check('TORO97NSHMP/T097MblgNSHMP_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
+class ToroEtAl1997NSHMPTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ToroEtAl1997MwNSHMP2008
+
+    def test_mean(self):
+        self.check('TORO97NSHMP/T097MwNSHMP_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check('TORO97NSHMP/T097MwNSHMP_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
