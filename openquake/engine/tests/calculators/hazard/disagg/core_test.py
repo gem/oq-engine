@@ -56,7 +56,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
             # TODO: mock more
             base_path = \
                 'openquake.engine.calculators.hazard.disaggregation.core'
-            with mock.patch('%s.%s' % (base_path, '_save_disagg_matrix')
+            with mock.patch('%s.%s' % (base_path, 'save_disagg_matrix')
                             ) as save_mock:
                 # Some of these tasks will not compute anything, since the
                 # hazard  curves for these few are all 0.0s.
