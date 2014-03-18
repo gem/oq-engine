@@ -138,12 +138,12 @@ class TruncatedGRMFD(BaseMFD):
         num_bins = int(round((max_mag - min_mag) / self.bin_width)) + 1
         return min_mag, num_bins
 
-    def get_min_mag(self):
+    def get_min_max_mag(self):
         """
-        See :meth:`_get_min_mag_and_num_bins`.
+        Return the minum magnitude
         """
         min_mag, num_bins = self._get_min_mag_and_num_bins()
-        return min_mag
+        return min_mag, min_mag + self.bin_width * (num_bins - 1)
 
     def get_annual_occurrence_rates(self):
         """
@@ -153,8 +153,8 @@ class TruncatedGRMFD(BaseMFD):
         values appear equal after rounding.
 
         :returns:
-            See
-            :meth:`openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`.
+            See :meth:`openquake.hazardlib.mfd.base.
+            BaseMFD.get_annual_occurrence_rates`.
         """
         mag, num_bins = self._get_min_mag_and_num_bins()
         rates = []
