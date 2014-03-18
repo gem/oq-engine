@@ -51,7 +51,7 @@ class AtkinsonBoore1995GSCLowerLimitTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
 
-class AtkinsonBoore1995GSCLowerLimitTestCase(BaseGSIMTestCase):
+class AtkinsonBoore1995GSCUpperLimitTestCase(BaseGSIMTestCase):
     GSIM_CLASS = AtkinsonBoore1995GSCUpperLimit
 
 
