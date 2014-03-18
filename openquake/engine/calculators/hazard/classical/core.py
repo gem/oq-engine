@@ -24,6 +24,7 @@ import collections
 import numpy
 
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
@@ -34,8 +35,13 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
+def get_min_max_dists_lons_lats(dists, lons, lats):
+    west, east, north, south = get_spherical_bounding_box(lons, lats)
+    return [min(dists), max(dists)], [west, east], [south, north]
+
+
 @tasks.oqtask
-def compute_hazard_curves(job_id, sources, gsims_by_rlz):
+def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -50,6 +56,7 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     total_sites = len(hc.site_collection)
+    sitemesh = hc.site_collection.mesh
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
@@ -60,6 +67,8 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
     mon1 = LightMonitor('making contexts', job_id, compute_hazard_curves)
     mon2 = LightMonitor('computing poes', job_id, compute_hazard_curves)
 
+    dists, lons, lats = [], [], []
+
     for source, rows in itertools.groupby(
             hc.gen_ruptures(sources, mon), key=operator.itemgetter(0)):
         # a row is a triple (source, rupture, rupture_sites)
@@ -67,6 +76,13 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
         num_ruptures = 0
         for _source, rupture, r_sites in rows:
             num_ruptures += 1
+            if hc.poes_disagg:  # doing disaggregation
+                jb_dists = rupture.surface.get_joyner_boore_distance(sitemesh)
+                dists.append(jb_dists)
+                closest_points = rupture.surface.get_closest_points(sitemesh)
+                lons.append(numpy.array([p.longitude for p in closest_points]))
+                lats.append(numpy.array([p.latitude for p in closest_points]))
+
             for rlz, curv in curves.iteritems():
                 gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
                 with mon1:
@@ -88,10 +104,18 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    dic = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
-                      for imt in sorted(imts)])
-               for rlz, curv in curves.iteritems())
-    return dic
+    curve_dict = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
+                             for imt in sorted(imts)])
+                      for rlz, curv in curves.iteritems())
+    bin_dict = {}
+    if hc.poes_disagg:  # for disaggregation
+        for i, site in enumerate(hc.site_collection):
+            dist = map(operator.itemgetter(i), dists)
+            lon = map(operator.itemgetter(i), lons)
+            lat = map(operator.itemgetter(i), lats)
+            bin_dict[lt_model.id, site.id] = get_min_max_dists_lons_lats(
+                dist, lon, lat)
+    return curve_dict, bin_dict
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -129,9 +153,15 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             (rlz, [numpy.zeros((n_sites, len(self.imtls[imt])))
                    for imt in sorted(self.imtls)])
             for rlz in realizations)
+        lt_models = models.LtSourceModel.objects.filter(
+            hazard_calculation=self.hc)
+        self.bin_dict = dict(((lt_model.id, site.id), ([], [], []))
+                             # dists, lons, lats
+                             for site in self.hc.site_collection
+                             for lt_model in lt_models)
 
     @EnginePerformanceMonitor.monitor
-    def task_completed(self, result):
+    def task_completed(self, (result, bin_dict)):
         """
         This is used to incrementally update hazard curve results by combining
         an initial value with some new results. (Each set of new results is
@@ -150,6 +180,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 # j is the IMT index
                 self.curves_by_rlz[rlz][j] = 1. - (
                     1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
+        for key, lists in bin_dict.iteritems():
+            for ls1, ls2 in zip(self.bin_dict[key], lists):
+                ls1.extend(ls2)
         self.log_percent()
 
     # this could be parallelized in the future, however in all the cases
