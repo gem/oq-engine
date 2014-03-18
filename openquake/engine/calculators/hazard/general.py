@@ -70,8 +70,8 @@ class TrtInfo(object):
     def __init__(self):
         self.trt = set()
         self.num_sources = collections.defaultdict(int)
-        self.min_mag = collections.defaultdict(float)
-        self.max_mag = collections.defaultdict(float)
+        self.min_mag = {}
+        self.max_mag = {}
 
     def update(self, src):
         """
@@ -81,9 +81,11 @@ class TrtInfo(object):
         trt = src.tectonic_region_type
         min_mag, max_mag = src.mfd.get_min_max_mag()
         self.num_sources[trt] += 1
-        if min_mag < self.min_mag[trt]:
+        prev_min_mag = self.min_mag.get(trt)
+        if prev_min_mag is None or min_mag < prev_min_mag:
             self.min_mag[trt] = min_mag
-        if max_mag > self.max_mag[trt]:
+        prev_max_mag = self.max_mag.get(trt)
+        if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag[trt] = max_mag
 
     def sorted_trts(self):
@@ -165,10 +167,12 @@ class BaseHazardCalculator(base.Calculator):
         # see below two dictionaries populated in initialize_sources
         # a dictionary (sm_lt_path, source_type) -> sources
         self.source_blocks_per_ltpath = collections.defaultdict(list)
+        self.bin_dict = {}
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
         self.source_blocks_per_ltpath.clear()
+        self.bin_dict.clear()
 
     @property
     def hc(self):
@@ -211,10 +215,12 @@ class BaseHazardCalculator(base.Calculator):
 
         Override this in subclasses as necessary.
         """
+        task_no = 0
         for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
             ltpath = tuple(lt_model.sm_lt_path)
             for block in self.source_blocks_per_ltpath[ltpath]:
-                yield self.job.id, block, gsims_by_rlz
+                yield self.job.id, block, lt_model, gsims_by_rlz, task_no
+                task_no += 1
 
     def gen_gsims_by_rlz(self):
         """
