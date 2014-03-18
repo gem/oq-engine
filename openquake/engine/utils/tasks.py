@@ -21,7 +21,6 @@
 
 import sys
 import traceback
-from functools import wraps
 
 from celery.task.sets import TaskSet
 from celery.task import task
@@ -117,8 +116,6 @@ def oqtask(task_func):
     actually still running. If it is not running, the task doesn't get
     executed, so we don't do useless computation.
     """
-
-    @wraps(task_func)
     def wrapped(*args):
         """
         Initialize logs, make sure the job is still running, and run the task
@@ -142,7 +139,7 @@ def oqtask(task_func):
             logs.set_level(job.log_level)
             try:
                 # run the task
-                return safely_call(task_func, args)
+                return task_func(*args)
             finally:
                 # save on the db
                 CacheInserter.flushall()
@@ -153,6 +150,6 @@ def oqtask(task_func):
                     operation='storing task id',
                     task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
-    tsk = task(wrapped, queue=celery_queue)
+    tsk = task(lambda *args: safely_call(wrapped, args), queue=celery_queue)
     tsk.task_func = task_func
     return tsk
