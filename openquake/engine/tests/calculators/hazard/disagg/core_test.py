@@ -53,15 +53,15 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
             # to test the disagg function, we first need to compute the hazard
             # curves
             self.calc.execute()
-            # TODO: mock more
-            base_path = \
-                'openquake.engine.calculators.hazard.disaggregation.core'
-            with mock.patch('%s.%s' % (base_path, 'save_disagg_matrix')
-                            ) as save_mock:
+            with mock.patch(
+                    'openquake.engine.calculators.hazard.disaggregation.'
+                    'core.save_disagg_matrix') as save:
+                save.__name__ = 'save_disagg_matrix'
+                save.task_func = save
                 # Some of these tasks will not compute anything, since the
                 # hazard  curves for these few are all 0.0s.
                 # 2 poes * 2 imts * 2 sites = 8
                 self.calc.post_execute()
-                self.assertEqual(8, save_mock.call_count)
+                self.assertEqual(8, save.call_count)
         finally:
             del os.environ['OQ_NO_DISTRIBUTE']
