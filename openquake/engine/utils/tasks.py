@@ -45,7 +45,7 @@ def safely_call(func, args):
     except:
         etype, exc, tb = sys.exc_info()
         tb_str = ''.join(traceback.format_tb(tb))
-        return '%s\n%s' % (exc, tb_str), etype
+        return '\n%s%s: %s' % (tb_str, etype.__name__, exc), etype
 
 
 def map_reduce(task, task_args, agg, acc):
