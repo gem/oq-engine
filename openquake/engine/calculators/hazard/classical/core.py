@@ -113,8 +113,11 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
             dist = map(operator.itemgetter(i), dists)
             lon = map(operator.itemgetter(i), lons)
             lat = map(operator.itemgetter(i), lats)
-            bin_dict[lt_model.id, site.id] = get_min_max_dists_lons_lats(
-                dist, lon, lat)
+            mm1, mm2, mm3 = get_min_max_dists_lons_lats(dist, lon, lat)
+            if mm1[1] < hc.maximum_distance:
+                # max_dist < maximum_distance:
+                # considering only sites close to all ruptures
+                bin_dict[lt_model.id, site.id] = (mm1, mm2, mm3)
     return curve_dict, bin_dict
 
 
