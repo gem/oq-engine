@@ -419,6 +419,17 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                     self.task_arg_gen():
                 lt_model_ids.append(lt_model.id)
 
+                dists, lons, lats = self.bin_dict[lt_model.id, site.id]
+                if not dists:
+                    logs.LOG.info(
+                        'location %s was too far, skipping disaggregation',
+                        site.location)
+                    continue
+
+                dist_bins, lon_bins, lat_bins = dist_lon_lat_bins(
+                    dists, lons, lats, hc.distance_bin_width,
+                    hc.coordinate_bin_width)
+
                 trt_num = dict((trt, i) for i, trt in enumerate(
                                lt_model.tectonic_region_types))
                 infos = list(models.LtModelInfo.objects.filter(
@@ -429,15 +440,6 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 mag_bins = mag_bin_width * numpy.arange(
                     int(numpy.floor(min_mag / mag_bin_width)),
                     int(numpy.ceil(max_mag / mag_bin_width) + 1))
-
-                dists, lons, lats = self.bin_dict[lt_model.id, site.id]
-                dist_bins, lon_bins, lat_bins = dist_lon_lat_bins(
-                    dists, lons, lats, hc.distance_bin_width,
-                    hc.coordinate_bin_width)
-
-                #logs.LOG.info('dist bins: %s', dist_bins)
-                #logs.LOG.info('lon bins: %s', lon_bins)
-                #logs.LOG.info('lat bins: %s', lat_bins)
 
                 bin_edges[lt_model.id, site.id] = bins = (
                     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
