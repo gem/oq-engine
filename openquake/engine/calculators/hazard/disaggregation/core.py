@@ -423,6 +423,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                                lt_model.tectonic_region_types))
                 infos = list(models.LtModelInfo.objects.filter(
                              lt_model=lt_model))
+
                 max_mag = max(i.max_mag for i in infos)
                 min_mag = min(i.min_mag for i in infos)
                 mag_bins = mag_bin_width * numpy.arange(
