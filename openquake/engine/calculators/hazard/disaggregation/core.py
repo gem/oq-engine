@@ -353,9 +353,11 @@ def collect_bins(job_id, sources, lt_model, gsims_by_rlz,
                     bins[0], bins[1], bins[2], bins[3],
                     bins[4], numpy.array(probs.vals, float)
                     ]
-                dic[site.id, rlz.id, poe, imt, iml, trt_names] =\
-                    pmf_dict(_arrange_data_in_bins(
-                        newbins, bin_edges, len(trt_names)))
+                with EnginePerformanceMonitor(
+                        'arrange data', job_id, collect_bins):
+                    dic[site.id, rlz.id, poe, imt, iml, trt_names] =\
+                        pmf_dict(_arrange_data_in_bins(
+                            newbins, bin_edges, len(trt_names)))
 
     return cPickle.dumps(dic, cPickle.HIGHEST_PROTOCOL)
 
