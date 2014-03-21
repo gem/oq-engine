@@ -145,6 +145,7 @@ def _export_common(output, loss_type):
                     loss_type),
                 loss_type=loss_type)
 
+
 @core.makedirsdeco
 def export_agg_loss_curve_xml(output, target):
     """
@@ -229,11 +230,11 @@ def export_loss_fraction_xml(output, target):
     poe = output.loss_fraction.poe
     variable = output.loss_fraction.variable
     loss_category = risk_calculation.exposure_model.category
-
     writers.LossFractionsWriter(
-        dest, variable, args['unit'],
+        dest, variable, args['unit'], args['loss_type'],
         loss_category, hazard_metadata, poe).serialize(
-            output.loss_fraction.total_fractions(), output.loss_fraction)
+        output.loss_fraction.total_fractions(),
+        output.loss_fraction)
     return dest
 
 
