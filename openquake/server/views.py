@@ -6,8 +6,6 @@ import os
 import shutil
 import tempfile
 import urlparse
-import sys
-import traceback
 
 from xml.etree import ElementTree as etree
 
@@ -22,7 +20,7 @@ from openquake.engine import engine as oq_engine
 from openquake.engine.db import models as oqe_models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
-
+from openquake.engine.utils.tasks import safely_call
 from openquake.server import tasks, executor
 
 METHOD_NOT_ALLOWED = 405
@@ -246,10 +244,14 @@ def run_calc(request, job_type):
     hazard_output_id = request.POST.get('hazard_output_id')
     hazard_calculation_id = request.POST.get('hazard_calculation_id')
 
-    job_file, temp_dir = _prepare_job(
-        request, hazard_output_id, hazard_calculation_id,
-        create_detect_job_file("job.ini", "job_risk.ini"))
-
+    einfo, exctype = safely_call(
+        _prepare_job, (request, hazard_output_id, hazard_calculation_id,
+                       create_detect_job_file("job.ini", "job_risk.ini")))
+    if exctype:
+        tasks.update_calculation(callback_url, status="failed", einfo=einfo)
+        raise exctype(einfo)
+    else:
+        job_file, temp_dir = einfo
     job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
                            callback_url, foreign_calc_id,
                            hazard_output_id, hazard_calculation_id)
@@ -269,16 +271,12 @@ def submit_job(job_file, temp_dir, dbname,
     Create a job object from the given job.ini file in the job directory
     and submit it to the job queue.
     """
-    try:
-        job = oq_engine.job_from_file(
-            job_file, "platform", DEFAULT_LOG_LEVEL, [], hazard_output_id,
-            hazard_calculation_id)
-    except:  # catch errors in the job creation phase
-        etype, exc, tb = sys.exc_info()
-        einfo = "".join(traceback.format_tb(tb))
-        einfo += '%s: %s' % (etype.__name__, exc)
-        tasks.update_calculation(callback_url, status="failed", einfo=einfo)
-        raise
+    job, exctype = safely_call(
+        oq_engine.job_from_file, (job_file, "platform", DEFAULT_LOG_LEVEL, [],
+                                  hazard_output_id, hazard_calculation_id))
+    if exctype:
+        tasks.update_calculation(callback_url, status="failed", einfo=job)
+        raise exctype(job)
 
     calc = job.calculation
     job_type = 'risk' if job.calculation is job.risk_calculation else 'hazard'

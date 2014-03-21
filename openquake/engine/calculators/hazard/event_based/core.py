@@ -95,11 +95,16 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
     gmfcollector = GmfCollector(params, imts, gsims_by_rlz)
 
-    mon1 = LightMonitor('filtering sites', job_id, compute_ses_and_gmfs)
-    mon2 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
-    mon3 = LightMonitor('filtering ruptures', job_id, compute_ses_and_gmfs)
-    mon4 = LightMonitor('saving ses', job_id, compute_ses_and_gmfs)
-    mon5 = LightMonitor('computing gmfs', job_id, compute_ses_and_gmfs)
+    filter_sites_mon = LightMonitor(
+        'filtering sites', job_id, compute_ses_and_gmfs)
+    generate_ruptures_mon = LightMonitor(
+        'generating ruptures', job_id, compute_ses_and_gmfs)
+    filter_ruptures_mon = LightMonitor(
+        'filtering ruptures', job_id, compute_ses_and_gmfs)
+    save_ruptures_mon = LightMonitor(
+        'saving ses', job_id, compute_ses_and_gmfs)
+    compute_gmfs_mon = LightMonitor(
+        'computing gmfs', job_id, compute_ses_and_gmfs)
 
     # Compute and save stochastic event sets
     rnd = random.Random()
@@ -110,7 +115,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         t0 = time.time()
         rnd.seed(seed)
 
-        with mon1:  # filtering sources
+        with filter_sites_mon:  # filtering sources
             s_sites = src.filter_sites_by_distance_to_source(
                 hc.maximum_distance, hc.site_collection
             ) if hc.maximum_distance else hc.site_collection
@@ -120,7 +125,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
         # for each occurring rupture for each ses in the ses collection
         ses_num_occ = collections.defaultdict(list)
-        with mon2:  # generating ruptures for the current source
+        with generate_ruptures_mon:  # generating ruptures for the current source
             for rup in src.iter_ruptures():
                 for ses in all_ses:
                     numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
@@ -133,7 +138,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_number_of_occurrences() *before* the filtering
         for rup in ses_num_occ.keys():
-            with mon3:  # filtering ruptures
+            with filter_ruptures_mon:  # filtering ruptures
                 r_sites = rup.source_typology.\
                     filter_sites_by_distance_to_rupture(
                         rup, hc.maximum_distance, s_sites
@@ -144,7 +149,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                     continue
 
             ses_ruptures = []
-            with mon4:  # saving ses_ruptures
+            with save_ruptures_mon:  # saving ses_ruptures
                 # using a django transaction make the saving faster
                 with transaction.commit_on_success(using='job_init'):
                     prob_rup = models.ProbabilisticRupture.create(
@@ -156,7 +161,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                                 prob_rup, ses, src.source_id, occ, rup_seed)
                             ses_ruptures.append(ses_rup)
 
-            with mon5:  # computing GMFs
+            with compute_gmfs_mon:  # computing GMFs
                 if hc.ground_motion_fields:
                     for ses_rup in ses_ruptures:
                         gmfcollector.calc_gmf(
@@ -177,11 +182,11 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     if num_distinct_ruptures:
         logs.LOG.info('job=%d, task %d generated %d/%d ruptures',
                       job_id, task_no, num_distinct_ruptures, total_ruptures)
-    mon1.flush()
-    mon2.flush()
-    mon3.flush()
-    mon4.flush()
-    mon5.flush()
+    filter_sites_mon.flush()
+    generate_ruptures_mon.flush()
+    filter_ruptures_mon.flush()
+    save_ruptures_mon.flush()
+    compute_gmfs_mon.flush()
 
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
