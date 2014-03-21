@@ -1,4 +1,4 @@
-# Copyright (c) 2012-2013, GEM Foundation.
+# Copyright (c) 2012-2014, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -424,8 +424,7 @@ def rupture_to_element(rupture, tag, parent=None):
     rup_elem.set('strike', str(rupture.strike))
     rup_elem.set('dip', str(rupture.dip))
     rup_elem.set('rake', str(rupture.rake))
-    rup_elem.set(
-        'tectonicRegion', str(rupture.tectonic_region_type))
+    rup_elem.set('tectonicRegion', str(rupture.tectonic_region_type))
 
     if rupture.is_from_fault_source:
         # rupture is from a simple or complex fault source
@@ -454,16 +453,21 @@ def rupture_to_element(rupture, tag, parent=None):
     else:
         # rupture is from a multi surface fault source
         if rupture.is_multi_surface:
+            # the arrays lons, lats and depths contain 4*N elements,
+            # where N is the number of planar surfaces contained in the
+            # multisurface; each planar surface if characterised by 4
+            # vertices top_left, top_right, bottom_left, bottom_right
             assert len(rupture.lons) % 4 == 0
-            assert len(rupture.lons) == len(rupture.lats) == len(
-                rupture.depths)
+            assert len(rupture.lons) == len(rupture.lats) == len(rupture.depths)
 
             for offset in xrange(len(rupture.lons) / 4):
+                # looping on the coordinates of the sub surfaces, one
+                # planar surface at the time
                 start = offset * 4
                 end = offset * 4 + 4
-                lons = rupture.lons[start:end]
-                lats = rupture.lats[start:end]
-                depths = rupture.depths[start:end]
+                lons = rupture.lons[start:end]  # 4 lons of the current surface
+                lats = rupture.lats[start:end]  # 4 lats of the current surface
+                depths = rupture.depths[start:end]  # 4 depths
 
                 ps_elem = etree.SubElement(
                     rup_elem, 'planarSurface')
