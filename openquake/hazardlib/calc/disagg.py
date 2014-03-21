@@ -269,7 +269,8 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     lats_idx = numpy.digitize(lats, lat_bins, right=True) - 1
 
     for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in \
-        enumerate(zip(mags_idx, dists_idx, lons_idx, lats_idx, tect_reg_types)):
+        enumerate(
+            zip(mags_idx, dists_idx, lons_idx, lats_idx, tect_reg_types)):
 
         diss_matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= \
             probs_no_exceed[i, :]
