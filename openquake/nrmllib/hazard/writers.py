@@ -1,4 +1,4 @@
-# Copyright (c) 2012-2013, GEM Foundation.
+# Copyright (c) 2012-2014, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -400,6 +400,116 @@ class EventBasedGMFXMLWriter(object):
             node.node_to_nrml(gmf_container, dest)
 
 
+def rupture_to_element(rupture, tag, parent=None):
+    """
+    Convert a rupture object into an Element object.
+
+    :param rupture:
+        must have attributes magnitude, strike, dip, rake,
+        tectonic_region_type, is_from_fault_source, is_multi_surface,
+        lons, lats, depths
+    :param tag:
+        a string identifying the rupture
+    :param parent:
+        if None a new element is created, otherwise a sub element is
+        attached to the parent.
+    """
+    if parent is None:
+        rup_elem = etree.Element('rupture')
+    else:
+        rup_elem = etree.SubElement(parent, 'rupture')
+
+    rup_elem.set('id', tag)
+    rup_elem.set('magnitude', str(rupture.magnitude))
+    rup_elem.set('strike', str(rupture.strike))
+    rup_elem.set('dip', str(rupture.dip))
+    rup_elem.set('rake', str(rupture.rake))
+    rup_elem.set('tectonicRegion', str(rupture.tectonic_region_type))
+
+    if rupture.is_from_fault_source:
+        # rupture is from a simple or complex fault source
+        # the rupture geometry is represented by a mesh of 3D
+        # points
+        mesh_elem = etree.SubElement(rup_elem, 'mesh')
+
+        # we assume the mesh components (lons, lats, depths)
+        # are of uniform shape
+        for i, row in enumerate(rupture.lons):
+            for j, col in enumerate(row):
+                node_elem = etree.SubElement(mesh_elem, 'node')
+                node_elem.set('row', str(i))
+                node_elem.set('col', str(j))
+                node_elem.set('lon', str(rupture.lons[i][j]))
+                node_elem.set('lat', str(rupture.lats[i][j]))
+                node_elem.set(
+                    'depth', str(rupture.depths[i][j]))
+        try:
+            # if we never entered the loop above, it's possible
+            # that i and j will be undefined
+            mesh_elem.set('rows', str(i + 1))
+            mesh_elem.set('cols', str(j + 1))
+        except NameError:
+            raise ValueError('Invalid rupture mesh')
+    else:
+        # rupture is from a multi surface fault source
+        if rupture.is_multi_surface:
+            # the arrays lons, lats and depths contain 4*N elements,
+            # where N is the number of planar surfaces contained in the
+            # multisurface; each planar surface if characterised by 4
+            # vertices top_left, top_right, bottom_left, bottom_right
+            assert len(rupture.lons) % 4 == 0
+            assert len(rupture.lons) == len(rupture.lats) == len(rupture.depths)
+
+            for offset in xrange(len(rupture.lons) / 4):
+                # looping on the coordinates of the sub surfaces, one
+                # planar surface at the time
+                start = offset * 4
+                end = offset * 4 + 4
+                lons = rupture.lons[start:end]  # 4 lons of the current surface
+                lats = rupture.lats[start:end]  # 4 lats of the current surface
+                depths = rupture.depths[start:end]  # 4 depths
+
+                ps_elem = etree.SubElement(
+                    rup_elem, 'planarSurface')
+
+                top_left, top_right, bottom_left, bottom_right = \
+                    izip(lons, lats, depths)
+
+                for el_name, corner in (
+                        ('topLeft', top_left),
+                        ('topRight', top_right),
+                        ('bottomLeft', bottom_left),
+                        ('bottomRight', bottom_right)):
+
+                    corner_elem = etree.SubElement(ps_elem, el_name)
+                    corner_elem.set('lon', str(corner[0]))
+                    corner_elem.set('lat', str(corner[1]))
+                    corner_elem.set('depth', str(corner[2]))
+
+        else:
+            # rupture is from a point or area source
+            # the rupture geometry is represented by four 3D
+            # corner points
+            ps_elem = etree.SubElement(rup_elem, 'planarSurface')
+
+            # create the corner point elements, in the order of:
+            # * top left
+            # * top right
+            # * bottom left
+            # * bottom right
+            for el_name, corner in (
+                    ('topLeft', rupture.top_left_corner),
+                    ('topRight', rupture.top_right_corner),
+                    ('bottomLeft', rupture.bottom_left_corner),
+                    ('bottomRight', rupture.bottom_right_corner)):
+
+                corner_elem = etree.SubElement(ps_elem, el_name)
+                corner_elem.set('lon', str(corner[0]))
+                corner_elem.set('lat', str(corner[1]))
+                corner_elem.set('depth', str(corner[2]))
+    return rup_elem
+
+
 class SESXMLWriter(object):
     """
     :param dest:
@@ -485,123 +595,12 @@ class SESXMLWriter(object):
                     ses_container, 'stochasticEventSet')
                 ses_elem.set('id', str(ses.ordinal or 1))
                 ses_elem.set('investigationTime', str(ses.investigation_time))
-
                 for rupture in ses:
-                    rup_elem = etree.SubElement(ses_elem, 'rupture')
-                    rup_elem.set('id', str(rupture.tag))
-                    rup_elem.set('magnitude', str(rupture.magnitude))
-                    rup_elem.set('strike', str(rupture.strike))
-                    rup_elem.set('dip', str(rupture.dip))
-                    rup_elem.set('rake', str(rupture.rake))
-                    rup_elem.set(
-                        'tectonicRegion', str(rupture.tectonic_region_type))
-
-                    if rupture.is_from_fault_source:
-                        # rupture is from a simple or complex fault source
-                        # the rupture geometry is represented by a mesh of 3D
-                        # points
-                        self._create_rupture_mesh(rupture, rup_elem)
-                    else:
-                        if rupture.is_multi_surface:
-                            self._create_multi_planar_surface(rupture,
-                                                              rup_elem)
-                        else:
-                            # rupture is from a point or area source
-                            # the rupture geometry is represented by four 3D
-                            # corner points
-                            self._create_planar_surface(rupture, rup_elem)
+                    rupture_to_element(rupture.rupture, rupture.tag, ses_elem)
 
             fh.write(etree.tostring(
                 root, pretty_print=True, xml_declaration=True,
                 encoding='UTF-8'))
-
-    @staticmethod
-    def _create_rupture_mesh(rupture, rup_elem):
-        """
-        :param rupture:
-            See documentation for :meth:`serialize` for more info.
-        :param rup_elem:
-            A `rupture` :class:`lxml.etree._Element`.
-        """
-        mesh_elem = etree.SubElement(rup_elem, 'mesh')
-
-        # we assume the mesh components (lons, lats, depths)
-        # are of uniform shape
-        for i, row in enumerate(rupture.lons):
-            for j, col in enumerate(row):
-                node_elem = etree.SubElement(mesh_elem, 'node')
-                node_elem.set('row', str(i))
-                node_elem.set('col', str(j))
-                node_elem.set('lon', str(rupture.lons[i][j]))
-                node_elem.set('lat', str(rupture.lats[i][j]))
-                node_elem.set(
-                    'depth', str(rupture.depths[i][j]))
-
-        try:
-            # if we never entered the loop above, it's possible
-            # that i and j will be undefined
-            mesh_elem.set('rows', str(i + 1))
-            mesh_elem.set('cols', str(j + 1))
-        except NameError:
-            raise ValueError('Invalid rupture mesh')
-
-    @staticmethod
-    def _create_planar_surface(rupture, rup_elem):
-        """
-        :param rupture:
-            See documentation for :meth:`serialize` for more info.
-        :param rup_elem:
-            A `rupture` :class:`lxml.etree._Element`.
-        """
-        ps_elem = etree.SubElement(
-            rup_elem, 'planarSurface')
-
-        # create the corner point elements, in the order of:
-        # * top left
-        # * top right
-        # * bottom left
-        # * bottom right
-        for el_name, corner in (
-                ('topLeft', rupture.top_left_corner),
-                ('topRight', rupture.top_right_corner),
-                ('bottomLeft', rupture.bottom_left_corner),
-                ('bottomRight', rupture.bottom_right_corner)):
-
-            corner_elem = etree.SubElement(ps_elem, el_name)
-            corner_elem.set('lon', str(corner[0]))
-            corner_elem.set('lat', str(corner[1]))
-            corner_elem.set('depth', str(corner[2]))
-
-    @staticmethod
-    def _create_multi_planar_surface(rupture, rup_elem):
-        """
-        """
-        assert len(rupture.lons) % 4 == 0
-        assert len(rupture.lons) == len(rupture.lats) == len(rupture.depths)
-
-        for offset in xrange(len(rupture.lons) / 4):
-            start = offset * 4
-            end = offset * 4 + 4
-            lons = rupture.lons[start:end]
-            lats = rupture.lats[start:end]
-            depths = rupture.depths[start:end]
-
-            ps_elem = etree.SubElement(
-                rup_elem, 'planarSurface')
-
-            top_left, top_right, bottom_left, bottom_right = \
-                izip(lons, lats, depths)
-
-            for el_name, corner in (
-                    ('topLeft', top_left),
-                    ('topRight', top_right),
-                    ('bottomLeft', bottom_left),
-                    ('bottomRight', bottom_right)):
-
-                corner_elem = etree.SubElement(ps_elem, el_name)
-                corner_elem.set('lon', str(corner[0]))
-                corner_elem.set('lat', str(corner[1]))
-                corner_elem.set('depth', str(corner[2]))
 
 
 class HazardMapWriter(object):
