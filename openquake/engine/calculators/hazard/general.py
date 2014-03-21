@@ -179,10 +179,12 @@ class BaseHazardCalculator(base.Calculator):
         Override this in subclasses as necessary.
         """
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        for ltpath, rlzs in self.rlzs_per_ltpath.iteritems():
+        for lt_model in models.LtSourceModel.objects.filter(
+                hazard_calculation=self.hc):
             gsims_by_rlz = collections.OrderedDict(
                 (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
-                for rlz in rlzs)
+                for rlz in lt_model)
+            ltpath = tuple(lt_model.sm_lt_path)
             for block in self.source_blocks_per_ltpath[ltpath]:
                 yield self.job.id, block, gsims_by_rlz
 
@@ -191,7 +193,7 @@ class BaseHazardCalculator(base.Calculator):
         Get all of the logic tree realizations for this calculation.
         """
         return models.LtRealization.objects\
-            .filter(hazard_calculation=self.hc).order_by('id')
+            .filter(lt_model__hazard_calculation=self.hc).order_by('id')
 
     def pre_execute(self):
         """
@@ -353,39 +355,41 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
+        rlzs_per_ltpath = collections.OrderedDict()
         if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
             # random sampling of paths
-            self._initialize_realizations_montecarlo()
+            self._initialize_realizations_montecarlo(rlzs_per_ltpath)
         else:
             # full paths enumeration
-            self._initialize_realizations_enumeration()
+            self._initialize_realizations_enumeration(rlzs_per_ltpath)
 
-        self.rlzs_per_ltpath = collections.OrderedDict()
-        for rlz in self._get_realizations():
-            ltpath = tuple(rlz.sm_lt_path)
-            if not ltpath in self.rlzs_per_ltpath:
-                self.rlzs_per_ltpath[ltpath] = [rlz]
-            else:
-                self.rlzs_per_ltpath[ltpath].append(rlz)
+        ordinal = 0
+        for i, (ltpath, path_infos) in enumerate(rlzs_per_ltpath.iteritems()):
+            lt_model = models.LtSourceModel.objects.create(
+                hazard_calculation=self.hc, ordinal=i, sm_lt_path=ltpath)
+            for seed, weight, sm_lt_path, gsim_lt_path in path_infos:
+                models.LtRealization.objects.create(
+                    lt_model=lt_model, gsim_lt_path=gsim_lt_path,
+                    seed=seed, weight=weight, ordinal=ordinal)
+                ordinal += 1
 
-    def _initialize_realizations_enumeration(self):
+    def _initialize_realizations_enumeration(self, rlzs_per_ltpath):
         """
         Perform full paths enumeration of logic trees and populate
         lt_realization table.
         """
         hc = self.job.hazard_calculation
         ltp = logictree.LogicTreeProcessor.from_hc(hc)
+        seed = None
         for i, path_info in enumerate(ltp.enumerate_paths()):
-            source_model_filename, weight, sm_lt_path, gsim_lt_path = path_info
-            models.LtRealization.objects.create(
-                hazard_calculation=hc,
-                ordinal=i,
-                seed=None,
-                weight=weight,
-                sm_lt_path=sm_lt_path,
-                gsim_lt_path=gsim_lt_path)
+            data = (seed, ) + path_info[1:]
+            ltpath = tuple(path_info[2])  # source model logic tree path
+            if not ltpath in rlzs_per_ltpath:
+                rlzs_per_ltpath[ltpath] = [data]
+            else:
+                rlzs_per_ltpath[ltpath].append(data)
 
-    def _initialize_realizations_montecarlo(self):
+    def _initialize_realizations_montecarlo(self, rlzs_per_ltpath):
         """
         Perform random sampling of both logic trees and populate lt_realization
         table.
@@ -409,13 +413,13 @@ class BaseHazardCalculator(base.Calculator):
             gsim_lt_path = ltp.sample_gmpe_logictree(
                 rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
 
-            models.LtRealization.objects.create(
-                hazard_calculation=self.hc,
-                ordinal=i,
-                seed=seed,
-                weight=None,
-                sm_lt_path=sm_lt_path,
-                gsim_lt_path=gsim_lt_path)
+            # Populate rlzs_per_ltpath
+            data = seed, None, sm_lt_path, gsim_lt_path
+            ltpath = tuple(sm_lt_path)
+            if not ltpath in rlzs_per_ltpath:
+                rlzs_per_ltpath[ltpath] = [data]
+            else:
+                rlzs_per_ltpath[ltpath].append(data)
 
             # update the seed for the next realization
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
@@ -453,7 +457,7 @@ class BaseHazardCalculator(base.Calculator):
         Post-processing results will be stored directly into the database.
         """
         num_rlzs = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc).count()
+            lt_model__hazard_calculation=self.hc).count()
 
         num_site_blocks_per_incr = int(CURVE_CACHE_SIZE) / int(num_rlzs)
         if num_site_blocks_per_incr == 0:
