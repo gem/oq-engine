@@ -443,7 +443,7 @@ class BaseHazardCalculator(base.Calculator):
         seed = None
         for i, path_info in enumerate(ltp.enumerate_paths()):
             data = (seed, ) + path_info[1:]
-            ltpath = tuple(path_info[2])  # sm_lt_path
+            ltpath = tuple(path_info[2])  # source model logic tree path
             if not ltpath in rlzs_per_ltpath:
                 rlzs_per_ltpath[ltpath] = [data]
             else:
