@@ -22,6 +22,7 @@ import sys
 import numpy
 import warnings
 import collections
+from itertools import izip
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
@@ -270,7 +271,7 @@ def _arrange_data_in_bins(bins_data, bin_edges):
 
     for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in \
         enumerate(
-            zip(mags_idx, dists_idx, lons_idx, lats_idx, tect_reg_types)):
+            izip(mags_idx, dists_idx, lons_idx, lats_idx, tect_reg_types)):
 
         diss_matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= \
             probs_no_exceed[i, :]
