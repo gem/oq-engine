@@ -101,14 +101,15 @@ store_site_model'
 
         # No realizations yet:
         ltrs = models.LtRealization.objects.filter(
-            hazard_calculation=self.job.hazard_calculation.id)
+            lt_model__hazard_calculation=self.job.hazard_calculation.id)
         self.assertEqual(0, len(ltrs))
 
         self.calc.initialize_realizations()
 
         # We expect 2 logic tree realizations
         ltr1, ltr2 = models.LtRealization.objects.filter(
-            hazard_calculation=self.job.hazard_calculation.id).order_by("id")
+            lt_model__hazard_calculation=self.job.hazard_calculation.id
+        ).order_by("id")
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr1.ordinal)
@@ -132,7 +133,7 @@ store_site_model'
         self.calc.initialize_realizations()
 
         [ltr] = models.LtRealization.objects.filter(
-            hazard_calculation=self.job.hazard_calculation.id)
+            lt_model__hazard_calculation=self.job.hazard_calculation.id)
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr.ordinal)
@@ -167,7 +168,7 @@ store_site_model'
         self.calc.post_execute()
 
         lt_rlzs = models.LtRealization.objects.filter(
-            hazard_calculation=self.job.hazard_calculation.id)
+            lt_model__hazard_calculation=self.job.hazard_calculation.id)
 
         self.assertEqual(2, len(lt_rlzs))
 

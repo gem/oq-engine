@@ -164,22 +164,22 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(lats, mesh.lats)
 
 
-class SESRuptureTestCase(unittest.TestCase):
+class ProbabilisticRuptureTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         job = helpers.get_job(cfg)
 
+        lt_model = models.LtSourceModel.objects.create(
+            hazard_calculation=job.hazard_calculation, ordinal=0,
+            sm_lt_path='foo')
         lt_rlz = models.LtRealization.objects.create(
-            hazard_calculation=job.hazard_calculation, ordinal=0, seed=0,
-            sm_lt_path='foo', gsim_lt_path='bar')
+            lt_model=lt_model, ordinal=0, seed=0, gsim_lt_path='bar')
         output = models.Output.objects.create(
             oq_job=job, display_name='test', output_type='ses')
         ses_coll = models.SESCollection.objects.create(
-            output=output, lt_realization_ids=[lt_rlz.id], ordinal=0)
-        ses = models.SES.objects.create(
-            ses_collection=ses_coll, investigation_time=50.0, ordinal=1)
+            output=output, lt_model=lt_rlz.lt_model, ordinal=0)
 
         self.mesh_lons = numpy.array(
             [0.1 * x for x in range(16)]).reshape((4, 4))
@@ -196,12 +196,12 @@ class SESRuptureTestCase(unittest.TestCase):
             Point(3.9, 2.2, 10), Point(4.90402718, 3.19634248, 10),
             Point(5.9, 2.2, 90), Point(4.89746275, 1.20365263, 90))
 
-        self.fault_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, rake=0, surface=sfs,
+        self.fault_rupture = models.ProbabilisticRupture.objects.create(
+            ses_collection=ses_coll, magnitude=5, rake=0, surface=sfs,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=True, is_multi_surface=False)
-        self.source_rupture = models.SESRupture.objects.create(
-            ses=ses, magnitude=5, rake=0, surface=ps,
+        self.source_rupture = models.ProbabilisticRupture.objects.create(
+            ses_collection=ses_coll, magnitude=5, rake=0, surface=ps,
             tectonic_region_type='Active Shallow Crust',
             is_from_fault_source=False, is_multi_surface=False)
 
@@ -210,14 +210,15 @@ class SESRuptureTestCase(unittest.TestCase):
         # case.
         # Also, we should that planar surface corner points are not valid and
         # are more or less disregarded for this type of rupture.
-        fault_rupture = models.SESRupture.objects.get(id=self.fault_rupture.id)
+        fault_rupture = models.ProbabilisticRupture.objects.get(
+            id=self.fault_rupture.id)
         self.assertIs(None, fault_rupture.top_left_corner)
         self.assertIs(None, fault_rupture.top_right_corner)
         self.assertIs(None, fault_rupture.bottom_right_corner)
         self.assertIs(None, fault_rupture.bottom_left_corner)
 
     def test_source_rupture(self):
-        source_rupture = models.SESRupture.objects.get(
+        source_rupture = models.ProbabilisticRupture.objects.get(
             id=self.source_rupture.id)
         self.assertEqual((3.9, 2.2, 10.), source_rupture.top_left_corner)
         self.assertEqual((4.90402718, 3.19634248, 10.0),
@@ -240,19 +241,19 @@ class GmfsPerSesTestCase(unittest.TestCase):
     def setUpClass(cls):
         cfg = helpers.get_data_path('event_based_hazard/job.ini')
         job = helpers.get_job(cfg)
+        lt_model = models.LtSourceModel.objects.create(
+            hazard_calculation=job.hazard_calculation,
+            ordinal=1, sm_lt_path="test_sm")
         rlz1 = models.LtRealization.objects.create(
-            hazard_calculation=job.hazard_calculation,
-            ordinal=1, seed=1, weight=None,
-            sm_lt_path="test_sm", gsim_lt_path="test_gsim")
+            lt_model=lt_model, ordinal=1, seed=1, weight=None,
+            gsim_lt_path="test_gsim")
         rlz2 = models.LtRealization.objects.create(
-            hazard_calculation=job.hazard_calculation,
-            ordinal=2, seed=1, weight=None,
-            sm_lt_path="test_sm", gsim_lt_path="test_gsim_2")
+            lt_model=lt_model, ordinal=2, seed=1, weight=None,
+            gsim_lt_path="test_gsim_2")
         ses_coll = models.SESCollection.objects.create(
             output=models.Output.objects.create_output(
                 job, "Test SES Collection 1", "ses"),
-            lt_realization_ids=[rlz1.id, rlz2.id],
-            ordinal=0)
+            lt_model=lt_model, ordinal=0)
 
         gmf_data1 = helpers.create_gmf_data_records(job, rlz1, ses_coll)[0]
         points = [(15.3, 38.22), (15.7, 37.22),
