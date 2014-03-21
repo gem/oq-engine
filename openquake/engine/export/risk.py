@@ -344,7 +344,7 @@ def export_event_loss_csv(output, target):
                 event_loss__output=output).select_related().order_by(
                 '-aggregate_loss'):
             writer.writerow([event_loss.rupture.tag,
-                             "%.07f" % event_loss.rupture.magnitude,
+                             "%.07f" % event_loss.rupture.rupture.magnitude,
                              "%.07f" % event_loss.aggregate_loss])
     return dest
 

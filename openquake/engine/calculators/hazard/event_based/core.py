@@ -81,8 +81,9 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
     :param task_no:
         an ordinal so that GMV can be collected in a reproducible order
     """
-    rlz_ids = [r.id for r in gsims_by_rlz]
-    ses_coll = models.SESCollection.objects.get(lt_realization_ids=rlz_ids)
+    # NB: all realizations in gsims_by_rlz correspond to the same source model
+    lt_model = gsims_by_rlz.keys()[0].lt_model
+    ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
@@ -92,14 +93,18 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
 
-    gmfcollector = GmfCollector(
-        [s.id for s in hc.site_collection], params, imts, gsims_by_rlz)
+    gmfcollector = GmfCollector(params, imts, gsims_by_rlz)
 
-    mon1 = LightMonitor('filtering sites', job_id, compute_ses_and_gmfs)
-    mon2 = LightMonitor('generating ruptures', job_id, compute_ses_and_gmfs)
-    mon3 = LightMonitor('filtering ruptures', job_id, compute_ses_and_gmfs)
-    mon4 = LightMonitor('saving ses', job_id, compute_ses_and_gmfs)
-    mon5 = LightMonitor('computing gmfs', job_id, compute_ses_and_gmfs)
+    filter_sites_mon = LightMonitor(
+        'filtering sites', job_id, compute_ses_and_gmfs)
+    generate_ruptures_mon = LightMonitor(
+        'generating ruptures', job_id, compute_ses_and_gmfs)
+    filter_ruptures_mon = LightMonitor(
+        'filtering ruptures', job_id, compute_ses_and_gmfs)
+    save_ruptures_mon = LightMonitor(
+        'saving ses', job_id, compute_ses_and_gmfs)
+    compute_gmfs_mon = LightMonitor(
+        'computing gmfs', job_id, compute_ses_and_gmfs)
 
     # Compute and save stochastic event sets
     rnd = random.Random()
@@ -110,20 +115,17 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         t0 = time.time()
         rnd.seed(seed)
 
-        with mon1:  # filtering sources
+        with filter_sites_mon:  # filtering sources
             s_sites = src.filter_sites_by_distance_to_source(
                 hc.maximum_distance, hc.site_collection
             ) if hc.maximum_distance else hc.site_collection
             if s_sites is None:
                 continue
 
-        # NB: the number of occurrences is very low, << 1, so it is
-        # more efficient to filter only the ruptures that occur
-        # and not to compute the occurrencies of the filtered ruptures
         # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
         # for each occurring rupture for each ses in the ses collection
         ses_num_occ = collections.defaultdict(list)
-        with mon2:  # generating ruptures
+        with generate_ruptures_mon:  # generating ruptures for the current source
             for rup in src.iter_ruptures():
                 for ses in all_ses:
                     numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
@@ -132,42 +134,59 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                         ses_num_occ[rup].append((ses, num_occurrences))
                         total_ruptures += num_occurrences
 
-        for rup in ses_num_occ:
-            with mon3:  # filtering ruptures
+        # NB: the number of occurrences is very low, << 1, so it is
+        # more efficient to filter only the ruptures that occur, i.e.
+        # to call sample_number_of_occurrences() *before* the filtering
+        for rup in ses_num_occ.keys():
+            with filter_ruptures_mon:  # filtering ruptures
                 r_sites = rup.source_typology.\
                     filter_sites_by_distance_to_rupture(
                         rup, hc.maximum_distance, s_sites
                     ) if hc.maximum_distance else s_sites
                 if r_sites is None:
+                    # ignore ruptures which are far away
+                    del ses_num_occ[rup]  # save memory
                     continue
 
-            # saving ses and generating gmf
-            for ses, num_occurrences in ses_num_occ[rup]:
-                for occ in range(1, num_occurrences + 1):
-                    with mon4:  # saving ruptures
-                        rup_id = models.SESRupture.create(
-                            rup, ses, src.source_id, occ).id
-                    rup_seed = rnd.randint(0, models.MAX_SINT_32)
-                    if hc.ground_motion_fields:
-                        with mon5:  # computing GMFs
-                            gmfcollector.calc_gmf(
-                                r_sites, rup, rup_id, rup_seed)
+            ses_ruptures = []
+            with save_ruptures_mon:  # saving ses_ruptures
+                # using a django transaction make the saving faster
+                with transaction.commit_on_success(using='job_init'):
+                    prob_rup = models.ProbabilisticRupture.create(
+                        rup, ses_coll)
+                    for ses, num_occurrences in ses_num_occ[rup]:
+                        for occ in range(1, num_occurrences + 1):
+                            rup_seed = rnd.randint(0, models.MAX_SINT_32)
+                            ses_rup = models.SESRupture.create(
+                                prob_rup, ses, src.source_id, occ, rup_seed)
+                            ses_ruptures.append(ses_rup)
+
+            with compute_gmfs_mon:  # computing GMFs
+                if hc.ground_motion_fields:
+                    for ses_rup in ses_ruptures:
+                        gmfcollector.calc_gmf(
+                            r_sites, rup, ses_rup.id, ses_rup.seed)
 
         # log calc_time per distinct rupture
         if ses_num_occ:
+            num_ruptures = len(ses_num_occ)
+            tot_ruptures = sum(num for rup in ses_num_occ
+                               for ses, num in ses_num_occ[rup])
             logs.LOG.info(
-                'job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
-                job_id, src.source_id, src.__class__.__name__,
-                len(ses_num_occ), time.time() - t0)
-            num_distinct_ruptures += len(ses_num_occ)
+                'job=%d, src=%s:%s, num_ruptures=%d, tot_ruptures=%d, '
+                'num_sites=%d, calc_time=%fs', job_id, src.source_id,
+                src.__class__.__name__, num_ruptures, tot_ruptures,
+                len(s_sites), time.time() - t0)
+            num_distinct_ruptures += num_ruptures
 
-    logs.LOG.info('job=%d, task %d generated %d/%d distinct ruptures',
-                  job_id, task_no, num_distinct_ruptures, total_ruptures)
-    mon1.flush()
-    mon2.flush()
-    mon3.flush()
-    mon4.flush()
-    mon5.flush()
+    if num_distinct_ruptures:
+        logs.LOG.info('job=%d, task %d generated %d/%d ruptures',
+                      job_id, task_no, num_distinct_ruptures, total_ruptures)
+    filter_sites_mon.flush()
+    generate_ruptures_mon.flush()
+    filter_ruptures_mon.flush()
+    save_ruptures_mon.flush()
+    compute_gmfs_mon.flush()
 
     if hc.ground_motion_fields:
         with EnginePerformanceMonitor(
@@ -179,10 +198,8 @@ class GmfCollector(object):
     """
     A class to compute and save ground motion fields.
     """
-    def __init__(self, site_ids, params, imts, gsims_by_rlz):
+    def __init__(self, params, imts, gsims_by_rlz):
         """
-        :param site_ids:
-            a list of site ids
         :param params:
             a dictionary of parameters with keys
             correl_model, truncation_level, maximum_distance
@@ -191,7 +208,6 @@ class GmfCollector(object):
         :param gsims_by_rlz:
             a dictionary  {rlz -> {tectonic region type -> GSIM instance}}
         """
-        self.site_ids = site_ids
         self.params = params
         self.imts = imts
         self.gsims_by_rlz = gsims_by_rlz
@@ -231,11 +247,10 @@ class GmfCollector(object):
             for imt, gmf_1_realiz in gmf_dict.iteritems():
                 # since DEFAULT_GMF_REALIZATIONS is 1, gmf_1_realiz is a matrix
                 # with n_sites rows and 1 column
-                for idx, gmv in enumerate(gmf_1_realiz):
+                for site_id, gmv in zip(r_sites.sid, gmf_1_realiz):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
-                        site_id = self.site_ids[idx]
                         self.gmvs_per_site[rlz, imt, site_id].append(gmv)
                         self.ruptures_per_site[rlz, imt, site_id].append(
                             rupture_id)
@@ -292,7 +307,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
 
-    def initialize_ses_db_records(self, ordinal, rlzs):
+    def initialize_ses_db_records(self, lt_model):
         """
         Create :class:`~openquake.engine.db.models.Output`,
         :class:`~openquake.engine.db.models.SESCollection` and
@@ -304,18 +319,15 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         NOTE: Many tasks can contribute ruptures to the same SES.
         """
-        rlz_ids = [r.id for r in rlzs]
-
         output = models.Output.objects.create(
             oq_job=self.job,
-            display_name='SES Collection smlt-%d-rlz-%s' % (
-                ordinal, ','.join(map(str, rlz_ids))),
+            display_name='SES Collection smlt-%d' % lt_model.ordinal,
             output_type='ses')
 
         ses_coll = models.SESCollection.objects.create(
-            output=output, lt_realization_ids=rlz_ids, ordinal=ordinal)
+            output=output, lt_model=lt_model, ordinal=lt_model.ordinal)
 
-        for rlz in rlzs:
+        for rlz in lt_model:
             if self.job.hazard_calculation.ground_motion_fields:
                 output = models.Output.objects.create(
                     oq_job=self.job,
@@ -342,8 +354,9 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         `execute` phase.)
         """
         super(EventBasedHazardCalculator, self).pre_execute()
-        for i, rlzs in enumerate(self.rlzs_per_ltpath.itervalues()):
-            self.initialize_ses_db_records(i, rlzs)
+        for lt_model in models.LtSourceModel.objects.filter(
+                hazard_calculation=self.hc):
+            self.initialize_ses_db_records(lt_model)
 
     def post_process(self):
         """

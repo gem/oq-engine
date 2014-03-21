@@ -388,7 +388,7 @@ ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.ses_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    lt_realization_ids INTEGER[] NOT NULL,
+    lt_model_id INTEGER NOT NULL,
     ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
@@ -403,22 +403,30 @@ CREATE TABLE hzrdr.ses (
     ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
--- A rupture as part of a Stochastic Event Set.
+-- A rupture as part of a Stochastic Event Set Collection.
 -- Ruptures will have different geometrical definitions, depending on whether
 -- the event was generated from a point/area source or a simple/complex fault
 -- source.
-CREATE TABLE hzrdr.ses_rupture (
+CREATE TABLE hzrdr.probabilistic_rupture (
     id SERIAL PRIMARY KEY,
-    ses_id INTEGER NOT NULL,
+    ses_collection_id INTEGER NOT NULL,
     rake float NOT NULL,
     tectonic_region_type VARCHAR NOT NULL,
     is_from_fault_source BOOLEAN NOT NULL,
     is_multi_surface BOOLEAN NOT NULL,
     surface BYTEA NOT NULL,
-    tag VARCHAR NOT NULL,
     magnitude float NOT NULL
 ) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'ses_rupture', 'hypocenter', 4326, 'POINT', 2);
+SELECT AddGeometryColumn('hzrdr', 'probabilistic_rupture', 'hypocenter', 4326, 'POINT', 2);
+
+
+CREATE TABLE hzrdr.ses_rupture (
+    id SERIAL PRIMARY KEY,
+    ses_id INTEGER NOT NULL,  -- FK to ses.id
+    rupture_id INTEGER NOT NULL,  -- FK to probabilistic_rupture.id
+    tag VARCHAR NOT NULL,
+    seed INTEGER NOT NULL
+) TABLESPACE hzrdr_ts;
 
 
 CREATE TABLE hzrdr.gmf (
@@ -516,11 +524,19 @@ CREATE TABLE hzrdr.uhs_data (
 SELECT AddGeometryColumn('hzrdr', 'uhs_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.uhs_data ALTER COLUMN location SET NOT NULL;
 
+-- logic tree source models
+CREATE TABLE hzrdr.lt_source_model (
+   id SERIAL PRIMARY KEY,
+   hazard_calculation_id INTEGER NOT NULL,
+   ordinal INTEGER NOT NULL,
+    -- A list of the logic tree branchIDs
+   sm_lt_path VARCHAR[] NOT NULL
+) TABLESPACE hzrdr_ts;
 
 -- keep track of logic tree realization progress for a given calculation
 CREATE TABLE hzrdr.lt_realization (
     id SERIAL PRIMARY KEY,
-    hazard_calculation_id INTEGER NOT NULL,
+    lt_model_id INTEGER NOT NULL, -- fk hzrdr.lt_mode.id
     ordinal INTEGER NOT NULL,
     -- random seed number, used only for monte-carlo sampling of logic trees
     seed INTEGER,
@@ -528,9 +544,7 @@ CREATE TABLE hzrdr.lt_realization (
     weight NUMERIC CONSTRAINT seed_weight_xor
         CHECK ((seed IS NULL AND weight IS NOT NULL)
                OR (seed IS NOT NULL AND weight IS NULL)),
-    -- A list of the logic tree branchIDs which indicate the path taken through the tree
-    sm_lt_path VARCHAR[] NOT NULL,
-    -- A list of the logic tree branchIDs which indicate the path taken through the tree
+    -- A list of the logic tree branchIDs
     gsim_lt_path VARCHAR[] NOT NULL
 ) TABLESPACE hzrdr_ts;
 
@@ -943,11 +957,17 @@ ALTER TABLE hzrdr.uhs_data
 ADD CONSTRAINT hzrdr_uhs_data_uhs_fk
 FOREIGN KEY (uhs_id) REFERENCES hzrdr.uhs(id) ON DELETE CASCADE;
 
--- hzrdr.lt_realization -> uiapi.hazard_calculation FK
-ALTER TABLE hzrdr.lt_realization
-ADD CONSTRAINT hzrdr_lt_realization_hazard_calculation_fk
+-- hzrdr.lt_source_model -> uiapi.hazard_calculation FK
+ALTER TABLE hzrdr.lt_source_model
+ADD CONSTRAINT hzrdr_lt_model_hazard_calculation_fk
 FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
+ON DELETE CASCADE;
+
+-- hzrdr.lt_realization -> hzrdr.lt_source_model FK
+ALTER TABLE hzrdr.lt_realization
+ADD CONSTRAINT hzrdr_lt_realization_lt_model_fk
+FOREIGN KEY (lt_model_id) REFERENCES hzrdr.lt_source_model(id)
 ON DELETE CASCADE;
 
 -- hzrdr.ses_collection to uiapi.output FK
@@ -964,11 +984,21 @@ FOREIGN KEY (ses_collection_id)
 REFERENCES hzrdr.ses_collection(id)
 ON DELETE CASCADE;
 
+-- hzrdr.probabilistic_rupture to hzrdr.ses_collection FK
+ALTER TABLE hzrdr.probabilistic_rupture
+ADD CONSTRAINT hzrdr_probabilistic_rupture_ses_collection_fk
+FOREIGN KEY (ses_collection_id) REFERENCES hzrdr.ses_collection(id);
+
+-- hzrdr.ses_rupture to hzrdr.probabilistic_rupture FK
+ALTER TABLE hzrdr.ses_rupture
+ADD CONSTRAINT hzrdr_ses_rupture_probabilistic_rupture_fk
+FOREIGN KEY (rupture_id) REFERENCES hzrdr.probabilistic_rupture(id)
+ON DELETE CASCADE;
+
 -- hzrdr.ses_rupture to hzrdr.ses FK
 ALTER TABLE hzrdr.ses_rupture
 ADD CONSTRAINT hzrdr_ses_rupture_ses_fk
-FOREIGN KEY (ses_id)
-REFERENCES hzrdr.ses(id)
+FOREIGN KEY (ses_id) REFERENCES hzrdr.ses(id)
 ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map
