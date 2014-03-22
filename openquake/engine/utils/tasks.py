@@ -20,6 +20,7 @@
 """Utility functions related to splitting work into tasks."""
 
 import sys
+import cPickle
 import traceback
 
 from celery.task.sets import TaskSet
@@ -85,7 +86,7 @@ def map_reduce(task, task_args, agg, acc):
             result, exctype = result_dict['result']
             if exctype:
                 raise exctype(result)
-            acc = agg(acc, result)
+            acc = agg(acc, cPickle.loads(result))
     return acc
 
 
@@ -139,7 +140,8 @@ def oqtask(task_func):
             logs.set_level(job.log_level)
             try:
                 # run the task
-                return task_func(*args)
+                res = task_func(*args)
+                return cPickle.dumps(res, cPickle.HIGHEST_PROTOCOL)
             finally:
                 # save on the db
                 CacheInserter.flushall()
