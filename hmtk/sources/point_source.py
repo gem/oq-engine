@@ -290,3 +290,17 @@ class mtkPointSource(object):
             conv.render_mfd(self.mfd),
             conv.render_npd(self.nodal_plane_dist, use_defaults),
             conv.render_hdd(self.hypo_depth_dist, use_defaults))
+
+    def create_oqhazardlib_source(self, use_defaults=False):
+        """
+        Converts the point source model into an instance of the :class:
+        openquake.hazardlib.source
+
+        :param bool use_defaults:
+            If set to true, will use put in default values for magitude
+            scaling relation, rupture aspect ratio, nodal plane distribution
+            or hypocentral depth distribution where missing. If set to False
+            then value errors will be raised when information is missing.
+        """
+
+

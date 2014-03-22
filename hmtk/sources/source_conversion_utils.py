@@ -52,6 +52,11 @@ from openquake.nrmllib import models
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib import mfd
+from openquake.hazardlib.scalerel import get_available_scalerel
+from openquake.hazardlib.scalerel.base import BaseMSR
+from openquake.hazardlib.scalerel.wc1994 import WC1994
+
+SCALE_RELS = get_available_scalerel()
 
 
 class MFDConverter(object):
@@ -76,6 +81,14 @@ class MFDConverter(object):
             :class: openquake.nrmllib.models
 
         '''
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def to_hazardlib(self, mag_freq_dist):
+        """
+        Converts the input MFD from the openquake.nrmllib.models format
+        to openquake.hazardlib format
+        """
         raise NotImplementedError
 
 
@@ -104,6 +117,20 @@ class ConvertTruncGR(MFDConverter):
                              min_mag=mag_freq_dist.min_mag,
                              max_mag=mag_freq_dist.max_mag)
 
+    def to_hazardlib(self, mag_freq_dist):
+        """
+
+        """
+        assert isinstance(mag_freq_dist, models.TGRMFD)
+        return mfd.truncated_gr.TruncatedGRMFD(
+            a_val = mag_freq_dist.a_val,
+            b_val = mag_freq_dist.b_val,
+            min_mag = mag_freq_dist.min_mag,
+            max_mag = mag_freq_dist.max_mag,
+            bin_width=0.1)
+
+
+
 
 class ConvertIncremental(MFDConverter):
     '''
@@ -130,6 +157,16 @@ class ConvertIncremental(MFDConverter):
             bin_width=mag_freq_dist.bin_width,
             occur_rates=mag_freq_dist.occurrence_rates)
 
+    def to_hazardlib(self, mag_freq_dist):
+        """
+
+        """
+        assert isinstance(mag_freq_dist, models.IncrementalMFD):
+        return mfd.evenly_discretized.EvenlyDiscretizedMFD(
+            min_mag=mag_freq_dist.min_mag,
+            bin_width=mag_freq_dist.bin_width,
+            occurrence_rates=mag_freq_dist.occur_rates)
+
 
 MFD_MAP = {'TruncatedGRMFD': ConvertTruncGR(),
            'EvenlyDiscretizedMFD': ConvertIncremental()}
@@ -153,6 +190,14 @@ def render_mfd(mag_freq_dist):
                          mfd_name)
     return MFD_MAP[mfd_name].convert(mag_freq_dist)
 
+
+def mfd_to_hazardlib(mag_freq_dist):
+    """
+
+    """
+    if isinstance(mag_freq_dist, BaseMFD):
+        return mag_freq_dist
+    elif isinstance(mag_freq_dist, models.
 
 def render_aspect_ratio(aspect_ratio, use_default=False):
     '''
@@ -204,6 +249,25 @@ def render_mag_scale_rel(mag_scale_rel, use_default=False):
         else:
             raise ValueError('Magnitude Scaling Relation Not Defined!')
 
+def mag_scale_rel_to_hazardlib(mag_scale_rel, use_default=False):
+    """
+
+    """
+    if isinstance(mag_scale_rel, BaseMSR):
+        return mag_scale_rel
+    elif isinstance(mag_scale_rel, str):
+        if not mag_scale_rel in SCALE_RELS.keys():
+            raise ValueError('Magnitude scaling relation %s not supported!'
+                             % mag_scale_rel)
+        else:
+            return SCALE_RELS[mag_scale_rel]
+    else:
+        if use_default:
+            # Returns the Wells and Coppersmith string
+            return WC1994()
+        else:
+            raise ValueError('Magnitude Scaling Relation Not Defined!')
+
 
 def render_npd(nodal_plane_dist, use_default=False):
     '''
@@ -252,6 +316,25 @@ def render_npd(nodal_plane_dist, use_default=False):
         else:
             raise ValueError('Nodal Plane distribution not defined')
 
+def npd_to_pmf(nodal_plane_dist, use_default=False):
+    """
+    Returns the nodal plane distribution as an instance of the PMF class
+    """
+    if isinstance(nodal_plane_dist, PMF):
+        # Aready in PMF format - return
+        return nodal_plane_dist
+    elif isinstance(nodal_plane_dist, list):
+        npd_list = []
+        for npd in nodal_plane_dist:
+            assert isinstance(npd, models.NodalPlane):
+            npd_list.append((npd.probability,
+                             NodalPlane(npd.strike, npd.dip, npd.rake)))
+        return PMF(npd_list)
+    else:
+        if use_default:
+            return PMF([(1.0, NodalPlane(0.0, 90.0, 0.0))])
+        else:
+            raise ValueError('Nodal Plane distribution not defined')
 
 def render_hdd(hypo_depth_dist, use_default=False):
     '''
@@ -283,6 +366,28 @@ def render_hdd(hypo_depth_dist, use_default=False):
         else:
             raise ValueError('Hypocentral depth distribution not defined!')
 
+def hdd_to_pmf(hypo_depth_dist, use_default=False):
+    """
+    Returns the hypocentral depth distribtuion as an instance of the :class:
+    openquake.hazardlib.pmf. 
+    """
+    if isinstance(hypo_depth_dist, PMF):
+        # Is already instance of PMF
+        return hypo_depth_dist
+    elif isinstance(hypo_depth_dist, list):
+        # Convert from :class: openquake.nrmllib.models.HypocentralDepth
+        hdd_list = []
+        for hdd in hypo_depth_dist:
+            assert isinstance(hdd, models.HypocentralDepth)
+            hdd_list.append((hdd.probability, hdd.depth))
+        return PMF(hdd_list)
+    else:
+        if use_default:
+            # Default value of 10 km accepted
+            return PMF([(1.0, 10.0)])
+        else:
+            # Out of options - raise error!
+            raise ValueError('Hypocentral depth distribution not defined!')
 
 def simple_trace_to_wkt_linestring(trace):
     '''
