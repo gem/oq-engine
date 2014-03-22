@@ -308,14 +308,12 @@ class HMTKBaseMap(object):
             Data for plotting
         :param str shape:
             Marker style
-        :param bool logplot:
-            Scales the data logarithmically if True
         :param float alpha:
             Sets the transparency of the marker (0 for transparent, 1 opaque)
-        :param float vmin:
-            Minimum data value of the colour scale
-        :param float vmax:
-            Maximum data value of the colour scale
+        :param int size:
+            Marker size
+        :param norm:
+            Normalisation as instance of :class: matplotlib.colors.Normalize
         """
         if not norm:
             norm = Normalize(vmin=np.min(data), vmax=np.max(data))
@@ -333,20 +331,19 @@ class HMTKBaseMap(object):
             plt.show()
 
     def add_size_scaled_points(self, longitude, latitude, data, shape='o',
-            logplot=False, alpha=1.0, colour='b', smin=2.0, sscale=2.0, 
+            logplot=False, alpha=1.0, colour='b', smin=2.0, sscale=2.0,
             overlay=False):
         """
         Plots a set of points with size scaled according to the data
+        :param bool logplot:
+            Choose to scale according to the logarithm (base 10) of the data
+        :param float smin:
+            Minimum scale size
+        :param float sscale:
+            Scaling factor
         """
         if logplot:
             data = np.log10(data.copy())
-        #if not vmin:
-        #    vmin = np.min(data)
-        #if not vmax:
-        #    vmax = np.max(data)
-        #data = (data - vmin) / (vmax - vmin)
-        #data[data > 1.0] = 1.0
-        #data[data < 0.0] = 0.0
 
         x, y, = self.m(longitude, latitude)
         self.m.scatter(x, y,
