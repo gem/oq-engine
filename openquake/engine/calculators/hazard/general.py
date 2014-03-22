@@ -20,6 +20,7 @@
 
 import os
 import random
+import cPickle
 import collections
 
 from openquake.hazardlib import correlation
@@ -179,6 +180,10 @@ class BaseHazardCalculator(base.Calculator):
         Override this in subclasses as necessary.
         """
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
+        site_coll_pik = cPickle.dumps(
+            self.hc.site_collection, cPickle.HIGHEST_PROTOCOL)
+        logs.LOG.info('Pickled site collection: %d elements, %d K',
+                      len(self.hc.site_collection), len(site_coll_pik) / 1024)
         for lt_model in models.LtSourceModel.objects.filter(
                 hazard_calculation=self.hc):
             gsims_by_rlz = collections.OrderedDict(
@@ -186,7 +191,7 @@ class BaseHazardCalculator(base.Calculator):
                 for rlz in lt_model)
             ltpath = tuple(lt_model.sm_lt_path)
             for block in self.source_blocks_per_ltpath[ltpath]:
-                yield self.job.id, block, gsims_by_rlz
+                yield self.job.id, site_coll_pik, block, gsims_by_rlz
 
     def _get_realizations(self):
         """
