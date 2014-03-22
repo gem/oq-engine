@@ -20,6 +20,7 @@
 """Utility functions related to splitting work into tasks."""
 
 import sys
+import cPickle
 import traceback
 
 from celery.task.sets import TaskSet
@@ -29,7 +30,8 @@ from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.performance import EnginePerformanceMonitor, \
+    LightMonitor
 
 
 def safely_call(func, args):
@@ -80,12 +82,21 @@ def map_reduce(task, task_args, agg, acc):
                 raise exctype(result)
             acc = agg(acc, result)
     else:
+        unpik = 0
+        job_id = task_args[0][0]
+        taskname = task.__name__
+        mon = LightMonitor('unpickling %s' % taskname, job_id, task)
         taskset = TaskSet(tasks=map(task.subtask, task_args))
         for task_id, result_dict in taskset.apply_async().iter_native():
             result, exctype = result_dict['result']
             if exctype:
                 raise exctype(result)
-            acc = agg(acc, result)
+            unpik += len(result)
+            with mon:
+                res = cPickle.loads(result)
+            acc = agg(acc, res)
+        mon.flush()
+        logs.LOG.info('Unpickled %d K', unpik / 1024)
     return acc
 
 
@@ -139,7 +150,8 @@ def oqtask(task_func):
             logs.set_level(job.log_level)
             try:
                 # run the task
-                return task_func(*args)
+                res = task_func(*args)
+                return cPickle.dumps(res, cPickle.HIGHEST_PROTOCOL)
             finally:
                 # save on the db
                 CacheInserter.flushall()
