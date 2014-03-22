@@ -17,6 +17,7 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 import time
+import cPickle
 import collections
 
 import numpy
@@ -33,7 +34,7 @@ from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
 @tasks.oqtask
-def compute_hazard_curves(job_id, sources, gsims_by_rlz):
+def compute_hazard_curves(job_id, site_coll_pik, sources, gsims_by_rlz):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -47,7 +48,8 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
         a dictionary of gsim dictionaries, one for each realization
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    total_sites = len(hc.site_collection)
+    site_coll = cPickle.loads(site_coll_pik)
+    total_sites = len(site_coll)
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
@@ -65,8 +67,8 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
 
         with mon1:
             s_sites = source.filter_sites_by_distance_to_source(
-                hc.maximum_distance, hc.site_collection
-            ) if hc.maximum_distance else hc.site_collection
+                hc.maximum_distance, site_coll
+            ) if hc.maximum_distance else site_coll
             if s_sites is None:
                 continue
 
