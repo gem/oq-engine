@@ -22,6 +22,7 @@ Task functions for our unit tests.
 
 import sys
 import functools
+import cPickle
 from celery.task import task
 
 
@@ -29,7 +30,8 @@ def test_task(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
-            return func(*args, **kwargs), None
+            res = func(*args, **kwargs)
+            return cPickle.dumps(res, cPickle.HIGHEST_PROTOCOL), None
         except:
             exctype, exc, _tb = sys.exc_info()
             return str(exc), exctype
