@@ -54,6 +54,7 @@ function for plotting the spatial distribution of events
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
+from matplotlib.colors import LogNorm, Normalize
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
@@ -73,6 +74,8 @@ DEFAULT_SYMBOLOGY = [(-np.inf, 1., 'k.'), # M < 1
                      (9., np.inf,'ro')] # 9 < M < 10
 
 LEGEND_OFFSET=(1.3, 1.0)
+PORTRAIT_ASPECT = (6, 8)
+LANDSCAPE_ASPECT = (8, 6)
 
 def _fault_polygon_from_mesh(source):
     """
@@ -92,7 +95,7 @@ class HMTKBaseMap(object):
     Class to plot the spatial distribution of events based in the Catalogue
     imported from hmtk.
     '''
-    def __init__(self, config, title, saveplot=False, filetype='png', dpi=300):
+    def __init__(self, config, title, dpi=300):
         """
         :param dict config:
             Configuration parameters of the algorithm, containing the
@@ -109,8 +112,6 @@ class HMTKBaseMap(object):
         """
         self.config = config
         self.title = title
-        self.saveplot = saveplot
-        self.filetype = filetype
         self.dpi = dpi
         self.fig = None
         self.m = None
@@ -136,14 +137,16 @@ class HMTKBaseMap(object):
         lat0 = lowcrnrlat + ((uppcrnrlat - lowcrnrlat) / 2)
         lon0 = lowcrnrlon + ((uppcrnrlon - lowcrnrlon) / 2)
         if (uppcrnrlat - lowcrnrlat) >= (uppcrnrlon - lowcrnrlon):
-            fig_aspect = (10, 14)
+            fig_aspect = PORTRAIT_ASPECT
         else:
-            fig_aspect = (14, 10)
-        self.fig = plt.figure(num=None, 
+            fig_aspect = LANDSCAPE_ASPECT
+        self.fig = plt.figure(num=None,
                               figsize=fig_aspect,
                               dpi=self.dpi,
                               facecolor='w',
                               edgecolor='k')
+        if self.title:
+            plt.title(self.title, fontsize=16)
         parallels = np.arange(0., 90., 2.)
         meridians = np.arange(0., 360., 2.)
 
@@ -160,7 +163,15 @@ class HMTKBaseMap(object):
         self.m.drawparallels(parallels, labels=[1, 0, 0, 0], fontsize=12)
         self.m.drawmeridians(meridians, labels=[0, 0, 0, 1], fontsize=12)
         self.m.fillcontinents(color='wheat')
-        
+
+    def savemap(self, filename, filetype='png', papertype=None):
+        """
+        Save the figure
+        """
+        self.fig.savefig(filename,
+                         dpi=self.dpi,
+                         format=filetype,
+                         papertype=papertype)
 
     def add_catalogue(self, catalogue, overlay=False):
         '''
@@ -281,5 +292,68 @@ class HMTKBaseMap(object):
                 self._plot_simple_fault(source, area_border, border_width)
             else:
                 pass
+        if not overlay:
+            plt.show()
+
+    def add_colour_scaled_points(self, longitude, latitude, data, shape='s',
+            alpha=1.0, size=20, norm=None, overlay=False):
+        """
+        Overlays a set of points on a map with a fixed size but colour scaled
+        according to the data
+        :param np.ndarray longitude:
+            Longitude
+        :param np.ndarray latitude:
+            Latitude
+        :param np.ndarray data:
+            Data for plotting
+        :param str shape:
+            Marker style
+        :param bool logplot:
+            Scales the data logarithmically if True
+        :param float alpha:
+            Sets the transparency of the marker (0 for transparent, 1 opaque)
+        :param float vmin:
+            Minimum data value of the colour scale
+        :param float vmax:
+            Maximum data value of the colour scale
+        """
+        if not norm:
+            norm = Normalize(vmin=np.min(data), vmax=np.max(data))
+        x, y, = self.m(longitude, latitude)
+        self.m.scatter(x, y,
+                       marker=shape,
+                       s=size,
+                       c=data,
+                       norm=norm,
+                       alpha=alpha,
+                       linewidths=0.0,
+                       zorder=4)
+        self.m.colorbar()
+        if not overlay:
+            plt.show()
+
+    def add_size_scaled_points(self, longitude, latitude, data, shape='o',
+            logplot=False, alpha=1.0, colour='b', smin=2.0, sscale=2.0, 
+            overlay=False):
+        """
+        Plots a set of points with size scaled according to the data
+        """
+        if logplot:
+            data = np.log10(data.copy())
+        #if not vmin:
+        #    vmin = np.min(data)
+        #if not vmax:
+        #    vmax = np.max(data)
+        #data = (data - vmin) / (vmax - vmin)
+        #data[data > 1.0] = 1.0
+        #data[data < 0.0] = 0.0
+
+        x, y, = self.m(longitude, latitude)
+        self.m.scatter(x, y,
+                       marker=shape,
+                       s=(smin + data ** sscale),
+                       c=colour,
+                       alpha=alpha,
+                       zorder=4)
         if not overlay:
             plt.show()
