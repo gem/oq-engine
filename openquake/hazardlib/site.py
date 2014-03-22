@@ -94,6 +94,23 @@ Vs30=760.0000, Vs30Measured=True, Depth1.0km=100.0000, Depth2.5km=5.0000>'
         return self.__str__()
 
 
+def arrayprop(name, dtype):
+    """
+    A property retrieving the attribute name and returning an array
+    of copies of it (if the attribute is a scalar) or just it, if
+    it is already a numpy array. It is intended to be attached to
+    the SiteCollection class.
+    """
+    def getarray(self):
+        value = getattr(self, name)
+        if isinstance(value, numpy.ndarray):
+            return value
+        else:
+            n = self.total_sites if self.indices is None else len(self.indices)
+            return numpy.array([value] * n, dtype)
+    return property(getarray)
+
+        
 class SiteCollection(object):
     """
     A collection of :class:`sites <Site>`.
@@ -113,22 +130,51 @@ class SiteCollection(object):
     :param sites:
         A list of instances of :class:`Site` class.
     """
+    
+    vs30 = arrayprop('_vs30', float)
+    vs30measured = arrayprop('_vs30measured', bool)
+    z1pt0 = arrayprop('_z1pt0', float)
+    z2pt5 = arrayprop('_z2pt5', float)
+
+    @classmethod
+    def from_points(cls, points, site_ids, sitemodel):
+        """
+        Build the site collection from a sequence of points and site ids
+        and an object containing the parameters reference_vs30_value,
+        reference_vs30_type, reference_depth_to_1pt0km_per_sec,
+        reference_depth_to_2pt5km_per_sec.
+        The points must have attributes .x and .y corresponding to longitude
+        and latitude respectively (this is the case for Django libgeos points).
+        """
+        self = cls.__new__(cls)
+        self.indices = None
+        self.total_sites = len(points)
+        self.sid = numpy.array(site_ids)
+        self._vs30 = sitemodel.reference_vs30_value
+        self._vs30measured = sitemodel.reference_vs30_type == 'measured'
+        self._z1pt0 = sitemodel.reference_depth_to_1pt0km_per_sec
+        self._z2pt5 = sitemodel.reference_depth_to_2pt5km_per_sec
+        lons = numpy.array([p.x for p in points])
+        lats = numpy.array([p.y for p in points])
+        self.mesh = Mesh(lons, lats, depths=None)
+        return self
+
     def __init__(self, sites):
         self.indices = None
         self.total_sites = len(sites)
-        self.vs30 = zeros = numpy.zeros(len(sites))
-        self.vs30measured = numpy.zeros(len(sites), dtype=bool)
-        self.z1pt0 = zeros.copy()
-        self.z2pt5 = zeros.copy()
+        self._vs30 = zeros = numpy.zeros(len(sites))
+        self._vs30measured = numpy.zeros(len(sites), dtype=bool)
+        self._z1pt0 = zeros.copy()
+        self._z2pt5 = zeros.copy()
         self.sid = numpy.zeros(len(sites), dtype=int)
         lons = zeros.copy()
         lats = zeros.copy()
 
         for i in xrange(len(sites)):
-            self.vs30[i] = sites[i].vs30
-            self.vs30measured[i] = sites[i].vs30measured
-            self.z1pt0[i] = sites[i].z1pt0
-            self.z2pt5[i] = sites[i].z2pt5
+            self._vs30[i] = sites[i].vs30
+            self._vs30measured[i] = sites[i].vs30measured
+            self._z1pt0[i] = sites[i].z1pt0
+            self._z2pt5[i] = sites[i].z2pt5
             self.sid[i] = sites[i].id
             lons[i] = sites[i].location.longitude
             lats[i] = sites[i].location.latitude
@@ -150,9 +196,14 @@ class SiteCollection(object):
         Iterate through all :class:`sites <Site>` in the collection, yielding
         one at a time.
         """
-        for i, location in enumerate(self.mesh):
-            yield Site(location, self.vs30[i], self.vs30measured[i],
-                       self.z1pt0[i], self.z2pt5[i], self.sid[i])
+        if isinstance(self.vs30, float):  # from points
+            for i, location in enumerate(self.mesh):
+                yield Site(location, self.vs30, self.vs30measured,
+                           self.z1pt0, self.z2pt5, self.sid[i])
+        else:  # from sites
+            for i, location in enumerate(self.mesh):
+                yield Site(location, self.vs30[i], self.vs30measured[i],
+                           self.z1pt0[i], self.z2pt5[i], self.sid[i])
 
     def expand(self, data, placeholder):
         """
@@ -250,29 +301,22 @@ class SiteCollection(object):
         [indices] = mask.nonzero()
         # take only needed values from this collection
         # to a new one
-        col.vs30 = self.vs30.take(indices)
-        col.vs30measured = self.vs30measured.take(indices)
-        col.z1pt0 = self.z1pt0.take(indices)
-        col.z2pt5 = self.z2pt5.take(indices)
+        if isinstance(self.vs30, float):  # from site model
+            col._vs30 = self.vs30
+            col._vs30measured = self.vs30measured
+            col._z1pt0 = self.z1pt0
+            col._z2pt5 = self.z2pt5
+        else:  # from sites
+            col._vs30 = self.vs30.take(indices)
+            col._vs30measured = self.vs30measured.take(indices)
+            col._z1pt0 = self.z1pt0.take(indices)
+            col._z2pt5 = self.z2pt5.take(indices)
         col.sid = self.sid.take(indices)
         col.mesh = Mesh(self.mesh.lons.take(indices),
                         self.mesh.lats.take(indices),
                         depths=None)
-        if self.indices is not None:
-            # if this collection was already a subset of some other
-            # collection (a result of :meth:`filter` itself) than mask's
-            # indices represent values in a filtered collection, but
-            # we need to keep track of original indices in the whole
-            # (unfiltered) collection. here we save original indices
-            # of sites in this double- (or more times) filtered
-            # collection
-            col.indices = self.indices.take(indices)
-        else:
-            col.indices = indices
-        # do the same as in the constructor
-        for arr in (col.vs30, col.vs30measured, col.z1pt0, col.z2pt5,
-                    col.sid, col.mesh.lons, col.mesh.lats):
-            arr.flags.writeable = False
+        col.indices = indices if self.indices is None \
+                      else self.indices.take(indices)
         return col
 
     def __len__(self):

@@ -22,6 +22,20 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
 
 
+class FakePoint(object):
+    def __init__(self, lon, lat):
+        self.x = lon
+        self.y = lat
+
+
+class SiteModelParam(object):
+    def __init__(self):
+        self.reference_vs30_value = 1.2
+        self.reference_vs30_type = 'measured'
+        self.reference_depth_to_1pt0km_per_sec = 3.4
+        self.reference_depth_to_2pt5km_per_sec = 5.6
+
+
 class SiteTestCase(unittest.TestCase):
     def _assert_creation(self, error=None, **kwargs):
         default_kwargs = {
@@ -62,7 +76,7 @@ class SiteTestCase(unittest.TestCase):
 
 
 class SiteCollectionCreationTestCase(unittest.TestCase):
-    def test(self):
+    def test_from_sites(self):
         s1 = Site(location=Point(10, 20, 30),
                   vs30=1.2, vs30measured=True,
                   z1pt0=3.4, z2pt5=5.6)
@@ -87,6 +101,26 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
 
         self.assertEqual(len(cll), 2)
 
+
+    def test_from_points(self):
+        p1 = FakePoint(10, 20)
+        p2 = FakePoint(-1.2, -3.4)
+        cll = SiteCollection.from_points([p1, p2], [1, 2], SiteModelParam())
+        self.assertTrue(cll.vs30 == [1.2, 1.2])
+        self.assertTrue(cll.vs30measured == True)
+        self.assertTrue(cll.z1pt0 == [3.4, 3.4])
+        self.assertTrue(cll.z2pt5 == [5.6, 5.6])
+        self.assertTrue((cll.mesh.lons == [10, -1.2]).all())
+        self.assertTrue((cll.mesh.lats == [20, -3.4]).all())
+        self.assertIs(cll.mesh.depths, None)
+        for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
+            self.assertIsInstance(arr, numpy.ndarray)
+            self.assertEqual(arr.dtype, float)
+        self.assertIsInstance(cll.vs30measured, numpy.ndarray)
+        self.assertEqual(cll.vs30measured.flags.writeable, False)
+        self.assertEqual(cll.vs30measured.dtype, bool)
+
+        self.assertEqual(len(cll), 2)
 
 class SiteCollectionFilterTestCase(unittest.TestCase):
     SITES = [
