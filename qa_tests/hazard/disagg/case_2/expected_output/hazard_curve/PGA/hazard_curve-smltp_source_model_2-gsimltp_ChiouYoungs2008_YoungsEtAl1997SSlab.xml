@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <hazardCurves sourceModelTreePath="source_model_2" gsimTreePath="ChiouYoungs2008_YoungsEtAl1997SSlab" IMT="PGA" investigationTime="1.0">
+    <IMLs>0.005 0.007 0.0098 0.0137 0.0192 0.0269 0.0376 0.0527 0.0738 0.103 0.145 0.203 0.284 0.397 0.556 0.778 1.09 1.52 2.13</IMLs>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>0.0 0.0</gml:pos>
+      </gml:Point>
+      <poEs>0.0871604172554 0.0826268124589 0.0762220821345 0.0682943855123 0.0593875694282 0.0503200429763 0.0417713650065 0.0339840716003 0.0271426143293 0.0211844467549 0.0157696787413 0.0110810524215 0.00712478818355 0.00406387759242 0.00197600905099 0.000792912296377 0.00024845142994 5.69640230235e-05 6.15226426381e-06</poEs>
+    </hazardCurve>
+    <hazardCurve>
+      <gml:Point>
+        <gml:pos>-3.0 -3.0</gml:pos>
+      </gml:Point>
+      <poEs>0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0</poEs>
+    </hazardCurve>
+  </hazardCurves>
+</nrml>

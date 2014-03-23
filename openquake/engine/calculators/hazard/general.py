@@ -130,8 +130,11 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
+        # see below two dictionaries populated in initialize_sources
         # a dictionary (sm_lt_path, source_type) -> sources
         self.source_blocks_per_ltpath = collections.defaultdict(list)
+        # full set of tectonic region types in all models
+        self.tectonic_region_types = set()
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
@@ -240,7 +243,10 @@ class BaseHazardCalculator(base.Calculator):
                 self.hc.sites_affected_by,
                 self.smlt.make_apply_uncertainties(path),
                 self.hc)
-            blocks = bs.split_on_max_weight(list(source_weight_pairs))
+            swp = list(source_weight_pairs)
+            for src, weight in swp:
+                self.tectonic_region_types.add(src.tectonic_region_type)
+            blocks = bs.split_on_max_weight(swp)
             self.source_blocks_per_ltpath[smpath] = blocks
             n = sum(len(block) for block in blocks)
             logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
