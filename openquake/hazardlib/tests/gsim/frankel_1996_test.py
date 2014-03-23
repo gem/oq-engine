@@ -92,6 +92,24 @@ class FrankelEtAl1996MblgAB1987NSHMP2008TestCase(BaseGSIMTestCase):
 
         self.assertAlmostEqual(mean_mw9_d1500, mean_mw8pt2_d1000)
 
+    def test_dist_not_in_increasing_order(self):
+        sctx = SitesContext()
+        rctx = RuptureContext()
+        dctx = DistancesContext()
+
+        rctx.mag = 5.
+        dctx.rhypo = numpy.array([150, 100])
+        mean_150_100, _ = self.GSIM_CLASS().get_mean_and_stddevs(
+            sctx, rctx, dctx, SA(0.1, 5), [StdDev.TOTAL]
+        )
+
+        dctx.rhypo = numpy.array([100, 150])
+        mean_100_150, _ = self.GSIM_CLASS().get_mean_and_stddevs(
+            sctx, rctx, dctx, SA(0.1, 5), [StdDev.TOTAL]
+        )
+        self.assertAlmostEqual(mean_150_100[1], mean_100_150[0])
+        self.assertAlmostEqual(mean_150_100[0], mean_100_150[1])
+
 
 class FrankelEtAl1996MblgJ1996NSHMP2008TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FrankelEtAl1996MblgJ1996NSHMP2008
