@@ -19,9 +19,7 @@ Disaggregation calculator core functionality
 """
 
 import sys
-import cPickle
 from collections import OrderedDict, namedtuple, defaultdict
-
 import numpy
 
 from openquake.hazardlib.calc import disagg
@@ -46,7 +44,19 @@ ProbNoExceed = namedtuple('ProbNoExceed', 'vals iml')
 
 def dist_lon_lat_bins(dists, lons, lats, dist_bin_width, coord_bin_width):
     """
-    Define bin edges for disaggregation histograms.
+    Define bin edges for disaggregation histograms, from the bin data
+    collected from the ruptures.
+
+    :param dists:
+        array of distances from the ruptures
+    :param lons:
+        array of longitudes from the ruptures
+    :param lats:
+        array of latitudes from the ruptures
+    :param dist_bin_width:
+        distance_bin_width from job.ini
+    :param coord_bin_width:
+        coordinate_bin_width from job.ini
     """
     dist_bins = dist_bin_width * numpy.arange(
         int(numpy.floor(min(dists) / dist_bin_width)),
@@ -73,7 +83,7 @@ def dist_lon_lat_bins(dists, lons, lats, dist_bin_width, coord_bin_width):
 
 def merge_prob_no_exceed(prob_no_exceed_list):
     """
-    Merge a list containing ProbNoExceed objects with the same .iml
+    Merge a list containing ProbNoExceed objects all with the same .iml
     attribute. Raise an error if the list is empty. Return a
     ProbNoExceed object with the merged list and the given iml.
     """
@@ -110,9 +120,9 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
     trts = []
     pnes = []
     sitemesh = sitecol.mesh
-    mon1 = mon.copy('calc distances')
-    mon2 = mon.copy('making contexts')
-    mon3 = mon.copy('disaggregate_poe')
+    calc_dist = mon.copy('calc distances')
+    make_ctxt = mon.copy('making contexts')
+    disagg_poe = mon.copy('disaggregate_poe')
 
     for source, ruptures in source_ruptures:
         try:
@@ -120,7 +130,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
             for rupture in ruptures:
                 # extract rupture parameters of interest
                 mags.append(rupture.mag)
-                with mon1:
+                with calc_dist:
                     [jb_dist] = rupture.surface.get_joyner_boore_distance(
                         sitemesh)
                     dists.append(jb_dist)
@@ -134,7 +144,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
                 for rlz, gsims in gsims_by_rlz.items():
                     gsim = gsims[source.tectonic_region_type]
-                    with mon2:
+                    with make_ctxt:
                         sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
@@ -147,7 +157,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
                             # the current rupture and epsilon level, that is
                             # ``P(IMT >= iml | rup, epsilon_bin)``
                             # for each of the epsilon bins
-                            with mon3:
+                            with disagg_poe:
                                 [poes_given_rup_eps] = gsim.disaggregate_poe(
                                     sctx, rctx, dctx, imt, iml,
                                     truncation_level, n_epsilons)
@@ -163,9 +173,9 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
             msg %= (source.source_id, err.message)
             raise etype, msg, tb
 
-    mon1.flush()
-    mon2.flush()
-    mon3.flush()
+    calc_dist.flush()
+    make_ctxt.flush()
+    disagg_poe.flush()
 
     return [mags, dists, lons, lats, trts, pnes]
 
@@ -236,7 +246,7 @@ def save_disagg_matrix(job_id, site_id, bin_edges, trt_names, pmf_dict,
 
 
 @tasks.oqtask
-def collect_bins(job_id, sources, lt_model, gsims_by_rlz,
+def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
                  trt_num, site, curves, bin_edges):
     """
     Here is the basic calculation workflow:
@@ -261,26 +271,29 @@ def collect_bins(job_id, sources, lt_model, gsims_by_rlz,
         a dictionary with the hazard curves for the given site, for
         all realizations and IMTs
     """
-    mon = LightMonitor('disagg', job_id, collect_bins)
+    mon = LightMonitor('disagg', job_id, compute_disagg)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
     trt_names = tuple(lt_model.tectonic_region_types)
+    result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> pmf
 
     # generate source, rupture, sites once per site
     source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
     if not source_ruptures:
-        return
+        return result
     logs.LOG.info('Collecting bins from %d ruptures close to %s',
                   sum(len(rupts) for src, rupts in source_ruptures),
                   site.location)
 
-    bins = _collect_bins_data(
-        mon, trt_num, source_ruptures, site, curves,
-        gsims_by_rlz, hc.intensity_measure_types_and_levels,
-        hc.poes_disagg, hc.truncation_level,
-        hc.num_epsilon_bins)
+    with EnginePerformanceMonitor(
+            'collecting bins', job_id, compute_disagg):
+        bins = _collect_bins_data(
+            mon, trt_num, source_ruptures, site, curves,
+            gsims_by_rlz, hc.intensity_measure_types_and_levels,
+            hc.poes_disagg, hc.truncation_level,
+            hc.num_epsilon_bins)
 
     if not bins[0]:  # no contributions for this site
-        return
+        return result
 
     bins[0] = numpy.array(bins[0], float)
     bins[1] = numpy.array(bins[1], float)
@@ -288,7 +301,6 @@ def collect_bins(job_id, sources, lt_model, gsims_by_rlz,
     bins[3] = numpy.array(bins[3], float)
     bins[4] = numpy.array(bins[4], int)
 
-    dic = {}
     for poe in hc.poes_disagg:
         for imt in hc.intensity_measure_types_and_levels:
             for rlz in gsims_by_rlz:
@@ -300,12 +312,12 @@ def collect_bins(job_id, sources, lt_model, gsims_by_rlz,
                     bins[4], None, numpy.array(probs.vals, float)
                     ]
                 with EnginePerformanceMonitor(
-                        'arrange data', job_id, collect_bins):
-                    dic[site.id, rlz.id, poe, imt, iml, trt_names] =\
+                        'arranging bins', job_id, compute_disagg):
+                    result[site.id, rlz.id, poe, imt, iml, trt_names] =\
                         pmf_dict(disagg._arrange_data_in_bins(
                             newbins, bin_edges + (trt_names,)))
 
-    return cPickle.dumps(dic, cPickle.HIGHEST_PROTOCOL)
+    return result
 
 
 class DisaggHazardCalculator(ClassicalHazardCalculator):
@@ -353,7 +365,6 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         eps_bins = numpy.linspace(-tl, tl, self.hc.num_epsilon_bins + 1)
 
         lt_model_ids = []
-
         arglist = []
         bin_edges = {}
         for site in self.hc.site_collection:
@@ -398,7 +409,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         # the memory goes in the population of the dictionary below
         with self.monitor('compute disagg matrices'):
             self.result = defaultdict(lambda: defaultdict(float))
-            self.parallelize(collect_bins, arglist, self.collect_result)
+            self.parallelize(compute_disagg, arglist, self.collect_result)
 
         with self.monitor('save disagg matrices'):
             alist = []
@@ -413,17 +424,12 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
     post_execute = full_disaggregation
 
-    def collect_result(self, result_pik):
+    def collect_result(self, result):
         """
-        Collect the results coming from collect_bins into self.results,
+        Collect the results coming from compute_disagg into self.results,
         a dictionary with key (rlz_id, site, poe, imt) and values
         (mag_bins, dist_bins, lon_bins, lat_bins, trt_bins, eps_bins).
         """
-        if result_pik is None:
-            return
-        with self.monitor('unpickling bins'):
-            logs.LOG.debug('Unpickling %dK', len(result_pik) / 1024)
-            result = cPickle.loads(result_pik)
         for key, dic in result.iteritems():
             for k, v in dic.iteritems():
                 res = self.result[key]
