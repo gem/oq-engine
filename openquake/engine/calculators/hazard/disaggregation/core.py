@@ -170,60 +170,6 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
     return [mags, dists, lons, lats, trts, pnes]
 
 
-def _arrange_data_in_bins(bins_data, bin_edges, num_trt):
-    """
-    Given bins data, as it comes from :func:`_collect_bins_data`, and bin edges
-    from :func:`_define_bins`, create a normalized 6d disaggregation matrix.
-    """
-    mags, dists, lons, lats, tect_reg_types, probs_no_exceed = bins_data
-    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins = bin_edges
-    shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
-             len(lat_bins) - 1, len(eps_bins) - 1, num_trt)
-    todo = numpy.prod(shape)  # number of matrix elements to compute
-    diss_matrix = numpy.zeros(shape)
-    logs.LOG.info('Populating disaggregation matrix of size %d, %s',
-                  todo, shape)
-
-    for i_mag in xrange(len(mag_bins) - 1):
-        mag_idx = mags <= mag_bins[i_mag + 1]
-        if i_mag != 0:
-            mag_idx &= mags > mag_bins[i_mag]
-
-        for i_dist in xrange(len(dist_bins) - 1):
-            dist_idx = dists <= dist_bins[i_dist + 1]
-            if i_dist != 0:
-                dist_idx &= dists > dist_bins[i_dist]
-
-            for i_lon in xrange(len(lon_bins) - 1):
-                extents = get_longitudinal_extent(lons, lon_bins[i_lon + 1])
-                lon_idx = extents >= 0
-                if i_lon != 0:
-                    extents = get_longitudinal_extent(lon_bins[i_lon], lons)
-                    lon_idx &= extents > 0
-
-                for i_lat in xrange(len(lat_bins) - 1):
-                    lat_idx = lats <= lat_bins[i_lat + 1]
-                    if i_lat != 0:
-                        lat_idx &= lats > lat_bins[i_lat]
-
-                    for i_eps in xrange(len(eps_bins) - 1):
-
-                        for i_trt in xrange(num_trt):
-                            trt_idx = tect_reg_types == i_trt
-
-                            diss_idx = (i_mag, i_dist, i_lon,
-                                        i_lat, i_eps, i_trt)
-
-                            prob_idx = (mag_idx & dist_idx & lon_idx
-                                        & lat_idx & trt_idx)
-
-                            poe = 1 - numpy.prod(
-                                probs_no_exceed[prob_idx, i_eps])
-
-                            diss_matrix[diss_idx] = poe
-    return diss_matrix
-
-
 _DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s-%(wkt)s'
 
 
@@ -351,13 +297,13 @@ def collect_bins(job_id, sources, lt_model, gsims_by_rlz,
                     [pne[key] for pne in bins[5]])
                 iml, newbins = probs.iml, [
                     bins[0], bins[1], bins[2], bins[3],
-                    bins[4], numpy.array(probs.vals, float)
+                    bins[4], None, numpy.array(probs.vals, float)
                     ]
                 with EnginePerformanceMonitor(
                         'arrange data', job_id, collect_bins):
                     dic[site.id, rlz.id, poe, imt, iml, trt_names] =\
-                        pmf_dict(_arrange_data_in_bins(
-                            newbins, bin_edges, len(trt_names)))
+                        pmf_dict(disagg._arrange_data_in_bins(
+                            newbins, bin_edges + (trt_names,)))
 
     return cPickle.dumps(dic, cPickle.HIGHEST_PROTOCOL)
 
