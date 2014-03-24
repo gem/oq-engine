@@ -20,9 +20,7 @@ from openquake.hazardlib.gsim.boore_1993 import (
 )
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# All test data were generated from the hazardlib implementation
-# Proper test data from original author or alternative implementation
-# should be provided
+# Test data provided by Geological Survey of Canada
 
 
 class BooreEtAl1993GSCBestTestCase(BaseGSIMTestCase):
