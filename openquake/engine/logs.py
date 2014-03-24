@@ -85,7 +85,7 @@ class tracing(object):
         self.msg = msg
 
     def __enter__(self):
-        LOG.info('> starting %s' % self.msg)
+        LOG.info('starting %s' % self.msg)
 
     def __exit__(self, *args, **kwargs):
-        LOG.info('< done with %s' % self.msg)
+        LOG.debug('done with %s' % self.msg)
