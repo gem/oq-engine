@@ -58,12 +58,15 @@ class BoundingBox(object):
             self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
                         [bb.south, bb.north])
 
-    def __bool__(self):
+    def __nonzero__(self):
         """
         True if the bounding box is non empty
         """
-        return (self.min_dist < self.max_dist and
-                self.west != self.east and self.south < self.north)
+        ok = (self.min_dist is not None and self.west is not None
+              and self.south is not None) and (
+            self.min_dist < self.max_dist and
+            self.west < self.east and self.south < self.north)
+        return bool(ok)
 
 
 @tasks.oqtask
@@ -104,7 +107,8 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
                 jb_dists = rupture.surface.get_joyner_boore_distance(sitemesh)
                 closest_points = rupture.surface.get_closest_points(sitemesh)
                 for bb, dist, point in zip(bbs, jb_dists, closest_points):
-                    bb.update([dist], [point.longitude], [point.latitude])
+                    if dist < hc.maximum_distance:
+                        bb.update([dist], [point.longitude], [point.latitude])
 
             for rlz, curv in curves.iteritems():
                 gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
