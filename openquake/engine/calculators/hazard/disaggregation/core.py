@@ -312,9 +312,10 @@ def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
                     bins[4], None, numpy.array(probs.vals, float)
                     ]
                 with EnginePerformanceMonitor(
-                        'arranging bins', job_id, compute_disagg):
-                    result[site.id, rlz.id, poe, imt, iml, trt_names] =\
-                        pmf_dict(disagg._arrange_data_in_bins(
+                        'arranging bins', job_id, compute_disagg, tracing=1):
+                    key = site.id, rlz.id, poe, imt, iml, trt_names
+                    result[key] = pmf_dict(
+                        disagg._arrange_data_in_bins(
                             newbins, bin_edges + (trt_names,)))
 
     return result
@@ -428,9 +429,9 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
             for key, dic in self.result.iteritems():
                 site_id, rlz_id, poe, imt, iml, trt_names = key
                 lt_model = models.LtRealization.objects.get(pk=rlz_id).lt_model
-                bins = bin_edges[lt_model.id, site_id]
+                edges = bin_edges[lt_model.id, site_id]
                 alist.append(
-                    (job_id, site_id, bins, trt_names, dic,
+                    (job_id, site_id, edges, trt_names, dic,
                      rlz_id, hc.investigation_time, imt, iml, poe))
             self.parallelize(save_disagg_matrix, alist, self.log_percent)
 
