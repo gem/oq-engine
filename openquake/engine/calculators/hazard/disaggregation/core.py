@@ -403,6 +403,15 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                     int(numpy.floor(min_mag / mag_bin_width)),
                     int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
+                logs.LOG.info('%d mag bins from %s to %s', len(mag_bins) - 1,
+                              min_mag, max_mag)
+                logs.LOG.info('%d dist bins from %s to %s', len(dist_bins) - 1,
+                              min(dist_bins), max(dist_bins))
+                logs.LOG.info('%d lon bins from %s to %s', len(lon_bins) - 1,
+                              bb.west, bb.east)
+                logs.LOG.info('%d lat bins from %s to %s', len(lon_bins) - 1,
+                              bb.south, bb.north)
+
                 bin_edges[lt_model.id, site.id] = bins = (
                     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
 
