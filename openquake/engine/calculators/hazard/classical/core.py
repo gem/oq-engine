@@ -35,9 +35,34 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
-def get_min_max_dists_lons_lats(dists, lons, lats):
-    west, east, north, south = get_spherical_bounding_box(lons, lats)
-    return [min(dists), max(dists)], [west, east], [south, north]
+class BoundingBox(object):
+    def __init__(self, lt_model_id, site_id):
+        self.lt_model_id = lt_model_id
+        self.site_id = site_id
+        self.min_dist = self.max_dist = None
+        self.east = self.west = self.south = self.north = None
+
+    def update(self, dists, lons, lats):
+        dists_ = [self.min_dist, self.max_dist] + dists \
+            if self.min_dist is not None else dists
+        lons_ = [self.west, self.east] + lons \
+            if self.west is not None else lons
+        lats_ = [self.south, self.north] + lats \
+            if self.south is not None else lats
+        self.min_dist, self.max_dist = min(dists_), max(dists_)
+        self.west, self.east, self.north, self.south = \
+            get_spherical_bounding_box(lons_, lats_)
+
+    def update_bb(self, bb):
+        self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
+                    [bb.south, bb.north])
+
+    def __bool__(self):
+        """
+        True if the bounding box is non empty
+        """
+        return (self.min_dist < self.max_dist and
+                self.west != self.east and self.south < self.north)
 
 
 @tasks.oqtask
@@ -62,13 +87,11 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
                              for imt in imts))
                   for rlz in gsims_by_rlz)
+    bbs = [BoundingBox(lt_model.id, site.id) for site in hc.site_collection]
 
     mon = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
     make_ctxt = LightMonitor('making contexts', job_id, compute_hazard_curves)
     calc_poes = LightMonitor('computing poes', job_id, compute_hazard_curves)
-
-    dists, lons, lats = [], [], []
-
     for source, rows in itertools.groupby(
             hc.gen_ruptures(sources, mon), key=operator.itemgetter(0)):
         # a row is a triple (source, rupture, rupture_sites)
@@ -78,10 +101,9 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
             num_ruptures += 1
             if hc.poes_disagg:  # doing disaggregation
                 jb_dists = rupture.surface.get_joyner_boore_distance(sitemesh)
-                dists.append(jb_dists)
                 closest_points = rupture.surface.get_closest_points(sitemesh)
-                lons.append(numpy.array([p.longitude for p in closest_points]))
-                lats.append(numpy.array([p.latitude for p in closest_points]))
+                for bb, dist, point in zip(bbs, jb_dists, closest_points):
+                    bb.update([dist], [point.longitude], [point.latitude])
 
             for rlz, curv in curves.iteritems():
                 gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
@@ -107,18 +129,7 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
     curve_dict = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
                              for imt in sorted(imts)])
                       for rlz, curv in curves.iteritems())
-    bin_dict = {}
-    if hc.poes_disagg:  # for disaggregation
-        for i, site in enumerate(hc.site_collection):
-            dist = map(operator.itemgetter(i), dists)
-            lon = map(operator.itemgetter(i), lons)
-            lat = map(operator.itemgetter(i), lats)
-            mm1, mm2, mm3 = get_min_max_dists_lons_lats(dist, lon, lat)
-            if mm1[1] < hc.maximum_distance:
-                # max_dist < maximum_distance:
-                # considering only sites close to all ruptures
-                bin_dict[lt_model.id, site.id] = (mm1, mm2, mm3)
-    return curve_dict, bin_dict
+    return curve_dict, bbs
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -158,13 +169,13 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             for rlz in realizations)
         lt_models = models.LtSourceModel.objects.filter(
             hazard_calculation=self.hc)
-        self.bin_dict = dict(((lt_model.id, site.id), ([], [], []))
-                             # dists, lons, lats
-                             for site in self.hc.site_collection
-                             for lt_model in lt_models)
+        self.bb_dict = dict(
+            ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
+            for site in self.hc.site_collection
+            for lt_model in lt_models)
 
     @EnginePerformanceMonitor.monitor
-    def task_completed(self, (result, bin_dict)):
+    def task_completed(self, (result, bbs)):
         """
         This is used to incrementally update hazard curve results by combining
         an initial value with some new results. (Each set of new results is
@@ -183,9 +194,8 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 # j is the IMT index
                 self.curves_by_rlz[rlz][j] = 1. - (
                     1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
-        for key, lists in bin_dict.iteritems():
-            for ls1, ls2 in zip(self.bin_dict[key], lists):
-                ls1.extend(ls2)
+        for bb in bbs:
+            self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
         self.log_percent()
 
     # this could be parallelized in the future, however in all the cases
