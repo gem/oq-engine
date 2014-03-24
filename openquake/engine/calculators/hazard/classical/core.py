@@ -64,8 +64,8 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
                   for rlz in gsims_by_rlz)
 
     mon = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
-    mon1 = LightMonitor('making contexts', job_id, compute_hazard_curves)
-    mon2 = LightMonitor('computing poes', job_id, compute_hazard_curves)
+    make_ctxt = LightMonitor('making contexts', job_id, compute_hazard_curves)
+    calc_poes = LightMonitor('computing poes', job_id, compute_hazard_curves)
 
     dists, lons, lats = [], [], []
 
@@ -85,9 +85,9 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
 
             for rlz, curv in curves.iteritems():
                 gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
-                with mon1:
+                with make_ctxt:
                     sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                with mon2:
+                with calc_poes:
                     for imt in imts:
                         poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                              hc.truncation_level)
@@ -98,8 +98,8 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
                       job_id, source.source_id, source.__class__.__name__,
                       num_ruptures, time.time() - t0)
 
-    mon1.flush()
-    mon2.flush()
+    make_ctxt.flush()
+    calc_poes.flush()
 
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
