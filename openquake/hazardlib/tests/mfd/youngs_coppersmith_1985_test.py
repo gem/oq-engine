@@ -19,6 +19,7 @@ from openquake.hazardlib.tests.mfd.base_test import BaseMFDTestCase
 
 import numpy
 
+
 class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
     def test_negative_or_zero_min_mag(self):
         exc = self.assert_mfd_error(
@@ -166,7 +167,7 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
                           (6.95, 7.057610011964502e-05)]
         numpy.testing.assert_allclose(computed_rates, expected_rates)
 
-        self.assertEqual(5.05, mfd.get_min_mag())
+        self.assertEqual((5.05, 6.95), mfd.get_min_max_mag())
 
     def test_from_characteristic_rate(self):
         mfd = YoungsCoppersmith1985MFD.from_characteristic_rate(
@@ -196,4 +197,4 @@ class YoungsCoppersmith1985MFDConstraintsTestCase(BaseMFDTestCase):
                           (6.95, 2.5e-05)]
         numpy.testing.assert_allclose(computed_rates, expected_rates)
 
-        self.assertEqual(5.05, mfd.get_min_mag())
+        self.assertEqual((5.05, 6.95), mfd.get_min_max_mag())

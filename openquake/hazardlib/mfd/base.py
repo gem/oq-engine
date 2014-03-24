@@ -83,9 +83,9 @@ class BaseMFD(object):
         """
 
     @abc.abstractmethod
-    def get_min_mag(self):
+    def get_min_max_mag(self):
         """
-        Return the minimum magnitude this MFD is defined for.
+        Return the minimum and maximum magnitudes this MFD is defined for.
 
         This method must be implemented by subclasses.
 

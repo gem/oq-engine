@@ -29,7 +29,7 @@ class BaseMFDTestCase(unittest.TestCase):
         def get_annual_occurrence_rates(self):
             pass
 
-        def get_min_mag(self):
+        def get_min_max_mag(self):
             pass
 
     def assert_mfd_error(self, func, *args, **kwargs):
