@@ -30,7 +30,7 @@ from openquake.engine.export import hazard as haz_export
 from qa_tests import _utils as qa_utils
 from qa_tests.hazard.disagg.case_1 import _test_data as test_data
 
-aac = lambda a, b: numpy.testing.assert_allclose(a, b, atol=1e-5)
+aac = lambda a, b: numpy.testing.assert_allclose(a, b, atol=5e-3)
 
 
 class DisaggHazardCase1TestCase(qa_utils.BaseQATestCase):
