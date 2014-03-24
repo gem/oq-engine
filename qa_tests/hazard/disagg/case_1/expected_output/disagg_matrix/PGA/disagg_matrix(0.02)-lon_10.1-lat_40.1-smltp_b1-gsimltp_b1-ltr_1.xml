@@ -8,7 +8,7 @@
     </disaggMatrix>
     <disaggMatrix type="Dist" dims="4" poE="0.02" iml="0.547689595695">
       <prob index="0" value="0.0192965229359"/>
-      <prob index="1" value="2.60649824484e-05"/>
+      <prob index="1" value="2.60649824485e-05"/>
       <prob index="2" value="0.0"/>
       <prob index="3" value="0.0"/>
     </disaggMatrix>
@@ -25,7 +25,7 @@
       <prob index="1,2" value="0.0"/>
       <prob index="1,3" value="0.0"/>
       <prob index="2,0" value="0.0032839062509"/>
-      <prob index="2,1" value="2.09311967982e-05"/>
+      <prob index="2,1" value="2.09311967984e-05"/>
       <prob index="2,2" value="0.0"/>
       <prob index="2,3" value="0.0"/>
     </disaggMatrix>
@@ -59,7 +59,7 @@
       <prob index="2,0,2" value="0.00183912447729"/>
       <prob index="2,1,0" value="0.0"/>
       <prob index="2,1,1" value="0.0"/>
-      <prob index="2,1,2" value="2.09311967982e-05"/>
+      <prob index="2,1,2" value="2.09311967984e-05"/>
       <prob index="2,2,0" value="0.0"/>
       <prob index="2,2,1" value="0.0"/>
       <prob index="2,2,2" value="0.0"/>
@@ -68,20 +68,20 @@
       <prob index="2,3,2" value="0.0"/>
     </disaggMatrix>
     <disaggMatrix type="Lon,Lat" dims="2,1" poE="0.02" iml="0.547689595695">
-      <prob index="0,0" value="0.0193220849548"/>
-      <prob index="1,0" value="0.0"/>
+      <prob index="0,0" value="0.0193174701013"/>
+      <prob index="1,0" value="4.70575677658e-06"/>
     </disaggMatrix>
     <disaggMatrix type="Mag,Lon,Lat" dims="3,2,1" poE="0.02" iml="0.547689595695">
       <prob index="0,0,0" value="0.00895767855962"/>
       <prob index="0,1,0" value="0.0"/>
-      <prob index="1,0,0" value="0.00717703630646"/>
-      <prob index="1,1,0" value="0.0"/>
+      <prob index="1,0,0" value="0.00717236430109"/>
+      <prob index="1,1,0" value="4.70575677658e-06"/>
       <prob index="2,0,0" value="0.00330476871161"/>
       <prob index="2,1,0" value="0.0"/>
     </disaggMatrix>
     <disaggMatrix type="Lon,Lat,TRT" dims="2,1,1" poE="0.02" iml="0.547689595695">
-      <prob index="0,0,0" value="0.0193220849548"/>
-      <prob index="1,0,0" value="0.0"/>
+      <prob index="0,0,0" value="0.0193174701013"/>
+      <prob index="1,0,0" value="4.70575677658e-06"/>
     </disaggMatrix>
   </disaggMatrices>
 </nrml>
