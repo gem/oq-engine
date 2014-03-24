@@ -247,7 +247,7 @@ def save_disagg_matrix(job_id, site_id, bin_edges, trt_names, pmf_dict,
 
 @tasks.oqtask
 def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
-                 trt_num, site, curves, bin_edges):
+                   trt_num, site, curves, bin_edges):
     """
     Here is the basic calculation workflow:
 
@@ -378,15 +378,18 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                     self.task_arg_gen():
                 lt_model_ids.append(lt_model.id)
 
-                dists, lons, lats = self.bin_dict[lt_model.id, site.id]
-                if not dists:
+                bb = self.bb_dict[lt_model.id, site.id]
+                if not bb:
                     logs.LOG.info(
                         'location %s was too far, skipping disaggregation',
                         site.location)
                     continue
 
                 dist_bins, lon_bins, lat_bins = dist_lon_lat_bins(
-                    dists, lons, lats, hc.distance_bin_width,
+                    [bb.min_dist, bb.max_dist],
+                    [bb.west, bb.east],
+                    [bb.south, bb.north],
+                    hc.distance_bin_width,
                     hc.coordinate_bin_width)
 
                 trt_num = dict((trt, i) for i, trt in enumerate(
