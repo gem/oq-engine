@@ -31,7 +31,9 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     Given an earthquake rupture, the ground motion field calculator computes
     ground shaking over a set of sites, by randomly sampling a ground shaking
     intensity model. A ground motion field represents a possible 'realization'
-    of the ground shaking due to an earthquake rupture.
+    of the ground shaking due to an earthquake rupture. If a non-trivial
+    filtering function is passed, the final result is expanded and filled
+    with zeros in the places corresponding to the filtered out sites.
 
     .. note::
 
@@ -75,7 +77,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     if not ruptures_sites:
         return dict((imt, numpy.zeros((len(sites), realizations)))
                     for imt in imts)
-
+    no_filter = rupture_site_filter is filters.rupture_site_noop_filter
     [(rupture, sites)] = ruptures_sites
 
     sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
@@ -89,7 +91,8 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
             mean = gsim.to_imt_unit_values(mean)
             mean.shape += (1, )
             mean = mean.repeat(realizations, axis=1)
-            result[imt] = sites.expand(mean, placeholder=0)
+            result[imt] = mean if no_filter else sites.expand(
+                mean, placeholder=0)
         return result
 
     if truncation_level is None:
@@ -140,7 +143,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
             gmf = gsim.to_imt_unit_values(
                 mean + intra_residual + inter_residual)
 
-        result[imt] = sites.expand(gmf, placeholder=0)
+        result[imt] = gmf if no_filter else sites.expand(gmf, placeholder=0)
 
     return result
 
