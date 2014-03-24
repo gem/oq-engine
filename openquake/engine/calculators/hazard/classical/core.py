@@ -54,8 +54,9 @@ class BoundingBox(object):
             get_spherical_bounding_box(lons_, lats_)
 
     def update_bb(self, bb):
-        self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
-                    [bb.south, bb.north])
+        if bb:
+            self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
+                        [bb.south, bb.north])
 
     def __bool__(self):
         """
