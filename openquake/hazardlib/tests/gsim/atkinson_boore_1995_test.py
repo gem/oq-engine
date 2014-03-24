@@ -20,9 +20,7 @@ from openquake.hazardlib.gsim.atkinson_boore_1995 import (
 )
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# All test data were generated from the hazardlib implementation.
-# Test data from alternative implementation or from original author
-# would be better for more robust checking
+# Test data provided by Geological Survey of Canada
 
 
 class AtkinsonBoore1995GSCBestTestCase(BaseGSIMTestCase):
