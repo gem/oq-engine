@@ -34,6 +34,31 @@ from openquake.engine.performance import EnginePerformanceMonitor, \
     LightMonitor
 
 
+class Pickled(object):
+    """
+	An utility to manually pickling/unpickling objects.
+    The reason is that celery does not use the HIGHEST_PROTOCOL,
+	so relying on celery is slower. Moreover Pickled instances
+    have a nice string representation and length giving the size
+	of the pickled bytestring.
+	"""
+    def __init__(self, obj):
+        self.clsname = obj.__class__.__name__
+        self.pik = cPickle.dumps(obj, cPickle.HIGHEST_PROTOCOL)
+
+    def __repr__(self):
+        """String representation of the pickled object"""
+        return '<Pickled %s %dK>' % (self.clsname, len(self) / 1024)
+
+    def __len__(self):
+        """Length of the pickled bytestring"""
+        return len(self.pik)
+
+    def unpickle(self):
+        """Unpickle the underlying object"""
+        return cPickle.loads(self.pik)
+
+
 def safely_call(func, args):
     """
     Call the given function with the given arguments safely, i.e.
@@ -93,10 +118,10 @@ def map_reduce(task, task_args, agg, acc):
                 raise exctype(result)
             unpik += len(result)
             with mon:
-                res = cPickle.loads(result)
+                res = result.unpickle()
             acc = agg(acc, res)
-        mon.flush()
-        logs.LOG.info('Unpickled %d K', unpik / 1024)
+        logs.LOG.info('Unpickled %d K in %s seconds',
+                      unpik / 1024, mon.duration)
     return acc
 
 
@@ -149,9 +174,8 @@ def oqtask(task_func):
             # tasks write on the celery log file
             logs.set_level(job.log_level)
             try:
-                # run the task
-                res = task_func(*args)
-                return cPickle.dumps(res, cPickle.HIGHEST_PROTOCOL)
+                # run the task and pickle the result
+                return Pickled(task_func(*args))
             finally:
                 # save on the db
                 CacheInserter.flushall()
