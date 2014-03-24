@@ -28,6 +28,7 @@ Built-in GSIMs
     campbell_bozorgnia_2008
     cauzzi_faccioli_2008
     chiou_youngs_2008
+    douglas_stochastic_2013
     faccioli_2010
     frankel_1996
     geomatrix_1993
@@ -39,6 +40,7 @@ Built-in GSIMs
     si_midorikawa_1999
     somerville_2001
     somerville_2009
+    tavakoli_pezeshk_2005
     toro_1997
     toro_2002
     youngs_1997

@@ -15,8 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from openquake.hazardlib.gsim.atkinson_boore_2006 import (
     AtkinsonBoore2006,
-    AtkinsonBoore2006NSHMP2008bar140,
-    AtkinsonBoore2006NSHMP2008bar200
+    AtkinsonBoore2006MblgAB1987bar140NSHMP2008,
+    AtkinsonBoore2006MblgJ1996bar140NSHMP2008,
+    AtkinsonBoore2006Mwbar140NSHMP2008,
+    AtkinsonBoore2006MblgAB1987bar200NSHMP2008,
+    AtkinsonBoore2006MblgJ1996bar200NSHMP2008,
+    AtkinsonBoore2006Mwbar200NSHMP2008
 )
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
@@ -62,29 +66,70 @@ class AtkinsonBoore2006TestCase(BaseGSIMTestCase):
         numpy.testing.assert_array_equal(stds_0, stds_01)
 
 
-class AtkinsonBoore2006NSHMP2008bar140TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = AtkinsonBoore2006NSHMP2008bar140
+class AtkinsonBoore2006MblgAB1987bar140NSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2006MblgAB1987bar140NSHMP2008
 
     # Test data generated from subroutine getAB06 in hazgridXnga2.f
 
     def test_mean(self):
-        self.check('AB06/AB06NSHMP140bar_MEAN.csv',
+        self.check('AB06/AB06MblgAB1987NSHMP140bar_MEAN.csv',
                     max_discrep_percentage=2.1)
 
     def test_std_total(self):
-        self.check('AB06/AB06NSHMP140bar_STD_TOTAL.csv',
+        self.check('AB06/AB06MblgAB1987NSHMP140bar_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)
 
-class AtkinsonBoore2006NSHMP2008bar200TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = AtkinsonBoore2006NSHMP2008bar200
+
+class AtkinsonBoore2006MblgJ1996bar140NSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2006MblgJ1996bar140NSHMP2008
 
     # Test data generated from subroutine getAB06 in hazgridXnga2.f
 
     def test_mean(self):
-        self.check('AB06/AB06NSHMP200bar_MEAN.csv',
+        self.check('AB06/AB06MblgJ1996NSHMP140bar_MEAN.csv',
+                    max_discrep_percentage=2.2)
+
+
+class AtkinsonBoore2006Mwbar140NSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2006Mwbar140NSHMP2008
+
+    # Test data generated from subroutine getAB06 in hazgridXnga2.f
+
+    def test_mean(self):
+        self.check('AB06/AB06MwNSHMP140bar_MEAN.csv',
+                    max_discrep_percentage=1.9)
+
+
+class AtkinsonBoore2006MblgAB1987bar200NSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2006MblgAB1987bar200NSHMP2008
+
+    # Test data generated from subroutine getAB06 in hazgridXnga2.f
+
+    def test_mean(self):
+        self.check('AB06/AB06MblgAB1987NSHMP200bar_MEAN.csv',
                     max_discrep_percentage=2.1)
 
     # change in stress drop does not affect standard deviation
     def test_std_total(self):
-        self.check('AB06/AB06NSHMP140bar_STD_TOTAL.csv',
+        self.check('AB06/AB06MblgAB1987NSHMP140bar_STD_TOTAL.csv',
                     max_discrep_percentage=0.1)
+
+
+class AtkinsonBoore2006MblgJ1996bar200NSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2006MblgJ1996bar200NSHMP2008
+
+    # Test data generated from subroutine getAB06 in hazgridXnga2.f
+
+    def test_mean(self):
+        self.check('AB06/AB06MblgJ1996NSHMP200bar_MEAN.csv',
+                    max_discrep_percentage=2.2)
+
+
+class AtkinsonBoore2006Mwbar200NSHMP2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AtkinsonBoore2006Mwbar200NSHMP2008
+
+    # Test data generated from subroutine getAB06 in hazgridXnga2.f
+
+    def test_mean(self):
+        self.check('AB06/AB06MwNSHMP200bar_MEAN.csv',
+                    max_discrep_percentage=1.9)
