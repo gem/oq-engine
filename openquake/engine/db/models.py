@@ -1777,7 +1777,7 @@ class SESRupture(djm.Model):
         ordering = ['tag']
 
     @classmethod
-    def create(cls, prob_rupture, ses, source_id, occurrencies, seed):
+    def create(cls, prob_rupture, ses, source_id, numbers, seed):
         """
         Create a SESRupture row in the database.
 
@@ -1787,13 +1787,15 @@ class SESRupture(djm.Model):
             :class:`openquake.engine.db.models.SES` instance
         :param str source_id:
             id of the source that generated the rupture
-        :param int occurrencies:
-            the number of occurrencies of the rupture in the given ses
+        :param numbers:
+            a pair of numbers starting from 1: the rupture number for the
+            given source and the occurrence number in the given ses
         :param int seed:
             a seed that will be used when computing the GMF from the rupture
         """
-        tag = 'smlt=%02d|ses=%04d|src=%s|occ=%02d' % (
-            ses.ses_collection.ordinal, ses.ordinal, source_id, occurrencies)
+        no = '%03d-%02d' % numbers
+        tag = 'smlt=%02d|ses=%04d|src=%s|rup=%s' % (
+            ses.ses_collection.ordinal, ses.ordinal, source_id, no)
         return cls.objects.create(
             rupture=prob_rupture, ses=ses, tag=tag, seed=seed)
 

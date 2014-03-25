@@ -705,7 +705,7 @@ def create_ses_ruptures(job, ses_collection, num):
         source_typology=object())
     seed = 42
     pr = models.ProbabilisticRupture.create(rupture, ses_collection)
-    return [models.SESRupture.create(pr, ses, 'test', i, seed + i)
+    return [models.SESRupture.create(pr, ses, 'test', (1, i), seed + i)
             for i in range(num)]
 
 
