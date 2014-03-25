@@ -59,7 +59,7 @@ CREATE INDEX hzrdr_ses_rupture_tag_idx ON hzrdr.ses_rupture (tag);
 -- disagg_result
 CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(location);
 -- lt_realization
-CREATE INDEX hzrdr_lt_realization_hazard_calculation_id_idx on hzrdr.lt_realization(hazard_calculation_id);
+CREATE INDEX hzrdr_lt_model_hazard_calculation_id_idx on hzrdr.lt_source_model(hazard_calculation_id);
 
 -- gmf_data
 CREATE INDEX hzrdr_gmf_data_idx on hzrdr.gmf_data(site_id);
