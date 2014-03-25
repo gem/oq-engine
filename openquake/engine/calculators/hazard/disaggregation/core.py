@@ -312,7 +312,7 @@ def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
                     bins[4], None, numpy.array(probs.vals, float)
                     ]
                 with EnginePerformanceMonitor(
-                        'arranging bins', job_id, compute_disagg, tracing=1):
+                        'arranging bins', job_id, compute_disagg):
                     key = site.id, rlz.id, poe, imt, iml, trt_names
                     result[key] = pmf_dict(
                         disagg._arrange_data_in_bins(
