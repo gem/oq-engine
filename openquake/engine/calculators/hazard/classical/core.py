@@ -36,6 +36,14 @@ from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
 class BoundingBox(object):
+    """
+    A class to store the bounding box in distances, longitudes and magnitudes,
+    given a source model and a site. This is used for disaggregation
+    calculations. The goal is to determine the minimum and maximum
+    distances of the ruptures generated from the model from the site;
+    moreover the maximum and minimum longitudes and magnitudes are stored, by
+    taking in account the international date line.
+    """
     def __init__(self, lt_model_id, site_id):
         self.lt_model_id = lt_model_id
         self.site_id = site_id
@@ -43,24 +51,43 @@ class BoundingBox(object):
         self.east = self.west = self.south = self.north = None
 
     def update(self, dists, lons, lats):
-        dists_ = [self.min_dist, self.max_dist] + dists \
-            if self.min_dist is not None else dists
-        lons_ = [self.west, self.east] + lons \
-            if self.west is not None else lons
-        lats_ = [self.south, self.north] + lats \
-            if self.south is not None else lats
-        self.min_dist, self.max_dist = min(dists_), max(dists_)
+        """
+        Compare the current bounding box with the value in the arrays
+        dists, lons, lats and enlarge it if needed.
+
+        :param dists:
+            a sequence of distances
+        :param lons:
+            a sequence of longitudes
+        :param lats:
+            a sequence of latitudes
+        """
+        if self.min_dist is not None:
+            dists = [self.min_dist, self.max_dist] + dists
+        if self.west is not None:
+            lons = [self.west, self.east] + lons
+        if self.south is not None:
+            lats = [self.south, self.north] + lats
+        self.min_dist, self.max_dist = min(dists), max(dists)
         self.west, self.east, self.north, self.south = \
-            get_spherical_bounding_box(lons_, lats_)
+            get_spherical_bounding_box(lons, lats)
 
     def update_bb(self, bb):
-        if bb:
+        """
+        Compare the current bounding box with the given bounding box
+        and enlarge it if needed.
+
+        :param bb:
+            an instance of :class:
+            `openquake.engine.calculators.hazard.classical.core.BoundingBox`
+        """
+        if bb:  # the given bounding box must be non-empty
             self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
                         [bb.south, bb.north])
 
     def __nonzero__(self):
         """
-        True if the bounding box is non empty
+        True if the bounding box is non empty.
         """
         ok = (self.min_dist is not None and self.west is not None
               and self.south is not None) and (
@@ -91,8 +118,11 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
                              for imt in imts))
                   for rlz in gsims_by_rlz)
-    bbs = [BoundingBox(lt_model.id, site.id) for site in hc.site_collection]
-
+    if hc.poes_disagg:  # doing disaggregation
+        bbs = [BoundingBox(lt_model.id, site.id)
+               for site in hc.site_collection]
+    else:
+        bbs = []
     mon = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
     make_ctxt = LightMonitor('making contexts', job_id, compute_hazard_curves)
     calc_poes = LightMonitor('computing poes', job_id, compute_hazard_curves)
@@ -108,6 +138,7 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
                 closest_points = rupture.surface.get_closest_points(sitemesh)
                 for bb, dist, point in zip(bbs, jb_dists, closest_points):
                     if dist < hc.maximum_distance:
+                        # ruptures too far away are ignored
                         bb.update([dist], [point.longitude], [point.latitude])
 
             for rlz, curv in curves.iteritems():
@@ -174,10 +205,15 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             for rlz in realizations)
         lt_models = models.LtSourceModel.objects.filter(
             hazard_calculation=self.hc)
-        self.bb_dict = dict(
-            ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
-            for site in self.hc.site_collection
-            for lt_model in lt_models)
+
+        # a dictionary with the bounding boxes for earch source
+        # model and each site, defined only for disaggregation
+        # calculations:
+        if self.poes_disagg:
+            self.bb_dict = dict(
+                ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
+                for site in self.hc.site_collection
+                for lt_model in lt_models)
 
     @EnginePerformanceMonitor.monitor
     def task_completed(self, (result, bbs)):
@@ -199,8 +235,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 # j is the IMT index
                 self.curves_by_rlz[rlz][j] = 1. - (
                     1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
-        for bb in bbs:
-            self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
+        if self.poes_disagg:
+            for bb in bbs:
+                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
         self.log_percent()
 
     # this could be parallelized in the future, however in all the cases
