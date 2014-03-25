@@ -222,7 +222,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         This phase is concerned with computing the disaggregation histograms.
         """
         realizations = models.LtRealization.objects.filter(
-            hazard_calculation=self.hc)
+            lt_model__hazard_calculation=self.hc)
 
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         # then distribute tasks for disaggregation histogram computation

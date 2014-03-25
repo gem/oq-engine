@@ -133,14 +133,14 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
     if hazard_calculation_id or hazard_output_id:
         rc = job.risk_calculation
         calc = get_calculator_class('risk', rc.calculation_mode)(job)
-        logs.init_logs(level='ERROR', calc_domain='risk', calc_id=rc.id)
+        logs.set_level('ERROR')
         job = engine._do_run_calc(job, exports, calc, 'risk')
         job.is_running = False
         job.save()
     else:
         hc = job.hazard_calculation
         calc = get_calculator_class('hazard', hc.calculation_mode)(job)
-        logs.init_logs(level='ERROR', calc_domain='hazard', calc_id=hc.id)
+        logs.set_level('ERROR')
         job = engine._do_run_calc(job, exports, calc, 'hazard')
         job.is_running = False
         job.save()
@@ -306,7 +306,7 @@ class ConfigTestCase(object):
         os.environ.clear()
         # Move the local configuration file out of the way if it exists.
         # Otherwise the tests that follow will break.
-        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        local_path = "%s/openquake.cfg" % os.path.abspath(config.OQDIR)
         if os.path.isfile(local_path):
             shutil.move(local_path, "%s.test_bakk" % local_path)
 
@@ -315,7 +315,7 @@ class ConfigTestCase(object):
         os.environ.update(self.orig_env)
         # Move the local configuration file back into place if it was stashed
         # away.
-        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        local_path = "%s/openquake.cfg" % os.path.abspath(config.OQDIR)
         if os.path.isfile("%s.test_bakk" % local_path):
             shutil.move("%s.test_bakk" % local_path, local_path)
         config.Config().cfg.clear()
@@ -385,7 +385,7 @@ def _deep_eq(a, b, decimal, exclude=None):
         assert len(a) == len(b), (
             "Dicts %(a)s and %(b)s do not have the same length."
             " Actual lengths: %(len_a)s and %(len_b)s") % dict(
-            a=a, b=b, len_a=len(a), len_b=len(b))
+                a=a, b=b, len_a=len(a), len_b=len(b))
 
         for key in a:
             if not key in exclude:
@@ -469,8 +469,9 @@ def create_gmf(hazard_job, rlz=None):
     hc = hazard_job.hazard_calculation
 
     rlz = rlz or models.LtRealization.objects.create(
-        hazard_calculation=hc, ordinal=0, seed=1, weight=None,
-        sm_lt_path="test_sm", gsim_lt_path="test_gsim")
+        lt_model=models.LtSourceModel.objects.create(
+            hazard_calculation=hc, ordinal=0, sm_lt_path="test_sm"),
+        ordinal=0, seed=1, weight=None, gsim_lt_path="test_gsim")
 
     gmf = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
@@ -488,7 +489,7 @@ def create_gmf_data_records(hazard_job, rlz=None, ses_coll=None, points=None):
     ses_coll = ses_coll or models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             hazard_job, "Test SES Collection", "ses"),
-        lt_realization_ids=[gmf.lt_realization.id],
+        lt_model=gmf.lt_realization.lt_model,
         ordinal=0)
     ruptures = create_ses_ruptures(hazard_job, ses_coll, 3)
     records = []
@@ -529,7 +530,7 @@ def create_gmf_from_csv(job, fname):
     ses_coll = models.SESCollection.objects.create(
         output=models.Output.objects.create_output(
             job, "Test SES Collection", "ses"),
-        lt_realization_ids=[gmf.lt_realization.id],
+        lt_model=gmf.lt_realization.lt_model,
         ordinal=0)
     with open(fname, 'rb') as csvfile:
         gmfreader = csv.reader(csvfile, delimiter=',')
@@ -603,10 +604,13 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
     hazard_job = get_job(hazard_cfg, username)
     hc = hazard_job.hazard_calculation
 
-    rlz = models.LtRealization.objects.create(
+    lt_model = models.LtSourceModel.objects.create(
         hazard_calculation=hazard_job.hazard_calculation,
-        ordinal=1, seed=1, weight=None,
-        sm_lt_path="test_sm", gsim_lt_path="test_gsim")
+        ordinal=1, sm_lt_path="test_sm")
+
+    rlz = models.LtRealization.objects.create(
+        lt_model=lt_model, ordinal=1, seed=1, weight=None,
+        gsim_lt_path="test_gsim")
 
     if output_type == "curve":
         models.HazardCurve.objects.create(
@@ -689,25 +693,20 @@ def create_ses_ruptures(job, ses_collection, num):
         ses_collection=ses_collection,
         investigation_time=job.hazard_calculation.investigation_time,
         ordinal=1)
-
-    return [
-        models.SESRupture.objects.create(
-            ses=ses,
-            tag='smlt=%s|ses=%d|src=test|i=%d' % (
-                ses_collection.ordinal, ses.ordinal, i),
-            magnitude=1 + i * 10. / float(num),
-            hypocenter=Point(0, 0, 0.1).wkt2d,
-            rupture=ParametricProbabilisticRupture(
-                mag=1 + i * 10. / float(num), rake=0,
-                tectonic_region_type="test region type",
-                hypocenter=Point(0, 0, 0.1),
-                surface=PlanarSurface(
-                    10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
-                    Point(1, 0, 2), Point(0, 0, 2)),
-                occurrence_rate=1,
-                temporal_occurrence_model=PoissonTOM(10),
-                source_typology=object()))
-        for i in range(num)]
+    rupture = ParametricProbabilisticRupture(
+        mag=1 + 10. / float(num), rake=0,
+        tectonic_region_type="test region type",
+        hypocenter=Point(0, 0, 0.1),
+        surface=PlanarSurface(
+            10, 11, 12, Point(0, 0, 1), Point(1, 0, 1),
+            Point(1, 0, 2), Point(0, 0, 2)),
+        occurrence_rate=1,
+        temporal_occurrence_model=PoissonTOM(10),
+        source_typology=object())
+    seed = 42
+    pr = models.ProbabilisticRupture.create(rupture, ses_collection)
+    return [models.SESRupture.create(pr, ses, 'test', i, seed + i)
+            for i in range(num)]
 
 
 class MultiMock(object):

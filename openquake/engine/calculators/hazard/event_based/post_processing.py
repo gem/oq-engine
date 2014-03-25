@@ -82,7 +82,7 @@ def gmf_to_hazard_curve_arg_gen(job):
     sites = models.HazardSite.objects.filter(hazard_calculation=hc)
 
     lt_realizations = models.LtRealization.objects.filter(
-        hazard_calculation=hc.id)
+        lt_model__hazard_calculation=hc.id)
 
     invest_time = hc.investigation_time
     duration = hc.ses_per_logic_tree_path * invest_time

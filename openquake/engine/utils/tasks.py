@@ -21,7 +21,6 @@
 
 import sys
 import traceback
-from functools import wraps
 
 from celery.task.sets import TaskSet
 from celery.task import task
@@ -31,6 +30,22 @@ from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
 from openquake.engine.performance import EnginePerformanceMonitor
+
+
+def safely_call(func, args):
+    """
+    Call the given function with the given arguments safely, i.e.
+    by trapping the exceptions. Return a pair (result, exc_type)
+    where exc_type is None if no exceptions occur, otherwise it
+    is the exception class and the result is a string containing
+    error message and traceback.
+    """
+    try:
+        return func(*args), None
+    except:
+        etype, exc, tb = sys.exc_info()
+        tb_str = ''.join(traceback.format_tb(tb))
+        return '\n%s%s: %s' % (tb_str, etype.__name__, exc), etype
 
 
 def map_reduce(task, task_args, agg, acc):
@@ -60,11 +75,14 @@ def map_reduce(task, task_args, agg, acc):
     """
     if no_distribute():
         for the_args in task_args:
-            result = task.task_func(*the_args)
+            result, exctype = safely_call(task.task_func, the_args)
+            if exctype:
+                raise exctype(result)
             acc = agg(acc, result)
     else:
         taskset = TaskSet(tasks=map(task.subtask, task_args))
-        for result, exctype in taskset.apply_async():
+        for task_id, result_dict in taskset.apply_async().iter_native():
+            result, exctype = result_dict['result']
             if exctype:
                 raise exctype(result)
             acc = agg(acc, result)
@@ -98,8 +116,6 @@ def oqtask(task_func):
     actually still running. If it is not running, the task doesn't get
     executed, so we don't do useless computation.
     """
-
-    @wraps(task_func)
     def wrapped(*args):
         """
         Initialize logs, make sure the job is still running, and run the task
@@ -111,7 +127,7 @@ def oqtask(task_func):
         job = models.OqJob.objects.get(id=job_id)
         if job.is_running is False:
             # the job was killed, it is useless to run the task
-            return
+            return None, None
 
         # it is important to save the task id soon, so that
         # the revoke functionality can work
@@ -119,24 +135,13 @@ def oqtask(task_func):
 
         with EnginePerformanceMonitor(
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
-
-            with EnginePerformanceMonitor(
-                    'loading calculation object', job_id, tsk, flush=True):
-                calculation = job.calculation
-
             # tasks write on the celery log file
-            logs.init_logs(
-                level=job.log_level,
-                calc_domain='hazard' if isinstance(
-                    calculation, models.HazardCalculation) else'risk',
-                calc_id=calculation.id)
+            logs.set_level(job.log_level)
             try:
-                return task_func(*args), None
-            except:
-                etype, exc, tb = sys.exc_info()
-                tb_str = ''.join(traceback.format_tb(tb))
-                return '%s\n%s' % (exc, tb_str), etype
+                # run the task
+                return task_func(*args)
             finally:
+                # save on the db
                 CacheInserter.flushall()
                 # the task finished, we can remove from the performance
                 # table the associated row 'storing task id'
@@ -145,6 +150,8 @@ def oqtask(task_func):
                     operation='storing task id',
                     task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
-    tsk = task(wrapped, queue=celery_queue)
+    f = lambda *args: safely_call(wrapped, args)
+    f.__name__ = task_func.__name__
+    tsk = task(f, queue=celery_queue)
     tsk.task_func = task_func
     return tsk

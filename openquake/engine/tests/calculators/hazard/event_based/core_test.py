@@ -24,7 +24,7 @@ from nose.plugins.attrib import attr
 
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.source.rupture import Rupture
-from openquake.hazardlib.site import Site
+from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
@@ -53,7 +53,7 @@ def make_site_coll(lon, lat, n):
         site = Site(Point(lon - float(i) / 1000, lat),
                     800., 'measured', 50., 2.5, i)
         sites.append(site)
-    return models.SiteCollection(sites)
+    return SiteCollection(sites)
 
 
 class FakeRupture(object):
@@ -93,8 +93,7 @@ class GmfCollectorTestCase(unittest.TestCase):
         rup = FakeRupture(rup_id, trt)
         pga = PGA()
         rlz = mock.Mock()
-        coll = core.GmfCollector(
-            [s.id for s in site_coll], params, [pga], {rlz: {trt: gsim}})
+        coll = core.GmfCollector(params, [pga], {rlz: {trt: gsim}})
         coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
             (rlz, pga, 0): [rup_id],
@@ -124,8 +123,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.cfg = helpers.get_data_path('event_based_hazard/job_2.ini')
         self.job = helpers.get_job(self.cfg, username=getpass.getuser())
         self.calc = core.EventBasedHazardCalculator(self.job)
-        hc_id = self.job.hazard_calculation.id
-        models.SiteCollection.cache[hc_id] = make_site_coll(0, 0, n=5)
+        hc = self.job.hazard_calculation
+        hc._site_collection = make_site_coll(0, 0, n=5)
         models.JobStats.objects.create(oq_job=self.job)
 
     @unittest.skip  # temporarily skipped
@@ -169,11 +168,12 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # With this job configuration, we have 2 logic tree realizations
         # for the GMPEs
-        lt_rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+        lt_rlzs = models.LtRealization.objects.filter(
+            lt_model__hazard_calculation=hc)
         self.assertEqual(2, len(lt_rlzs))
 
         sess = models.SES.objects.filter(
-            ses_collection__lt_realization_ids=[r.id for r in lt_rlzs])
+            ses_collection__lt_model=lt_rlzs[0].lt_model)
         self.assertEqual(hc.ses_per_logic_tree_path, len(sess))
         for ses in sess:
             # The only metadata in in the SES is investigation time.
@@ -190,7 +190,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             del os.environ['OQ_NO_DISTRIBUTE']
         hc = job.hazard_calculation
         rlz1, rlz2 = models.LtRealization.objects.filter(
-            hazard_calculation=hc.id).order_by('ordinal')
+            lt_model__hazard_calculation=hc.id).order_by('ordinal')
 
         # check that the parameters are read correctly from the files
         self.assertEqual(hc.ses_per_logic_tree_path, 5)
@@ -229,11 +229,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         hc = self.job.hazard_calculation
         self.calc.pre_execute()
 
-        [rlz1, rlz2] = models.LtRealization.objects.filter(
-            hazard_calculation=hc).order_by('id')
-
         # create the ses collection
-        self.calc.initialize_ses_db_records(0, [rlz1, rlz2])
+        lt_model = models.LtSourceModel.objects.get(hazard_calculation=hc)
+        self.calc.initialize_ses_db_records(lt_model)
 
         # this is also testing the splitting of fault sources
         expected = [  # source_id, seed

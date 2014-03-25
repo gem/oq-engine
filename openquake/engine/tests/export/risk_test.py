@@ -304,6 +304,8 @@ class EventBasedExportTestCase(BaseExportTestCase):
             loss_curve_files = []
             for o in loss_curve_outputs:
                 loss_curve_files.append(risk.export(o.id, target_dir, 'xml'))
+            for o in loss_fraction_outputs:
+                loss_curve_files.append(risk.export(o.id, target_dir, 'xml'))
             for o in event_loss_curve_outputs:
                 loss_curve_files.append(risk.export(o.id, target_dir, 'xml'))
 
@@ -323,7 +325,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             for o in loss_map_outputs:
                 loss_map_files.append(risk.export(o.id, target_dir, 'xml'))
 
-            self.assertEqual(38, len(loss_curve_files))
+            self.assertEqual(70, len(loss_curve_files))
             self.assertEqual(16, len(agg_loss_curve_files))
             self.assertEqual(16, len(event_loss_table_files))
             self.assertEqual(19, len(loss_map_files))

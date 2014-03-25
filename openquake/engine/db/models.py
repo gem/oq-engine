@@ -40,9 +40,8 @@ from django.contrib.gis.db import models as djm
 from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import geo as hazardlib_geo
-from openquake.hazardlib import source as hazardlib_source
-import openquake.hazardlib.site
+from openquake.hazardlib import source, geo
+from openquake.hazardlib.site import Site, SiteCollection
 
 from openquake.engine.db import fields
 from openquake.engine import writer
@@ -158,7 +157,10 @@ def risk_almost_equal(o1, o2, key=lambda x: x, rtol=RISK_RTOL, atol=RISK_ATOL):
 
 
 def loss_curve_almost_equal(curve, expected_curve):
-    if curve.losses[curve.losses > 0].any():
+    if getattr(curve, 'asset_value', None) == 0.0 and getattr(
+            expected_curve, 'asset_value', None) == 0.0:
+        return risk_almost_equal(curve.loss_ratios, expected_curve.loss_ratios)
+    elif curve.losses[curve.losses > 0].any():
         poes = interpolate.interp1d(
             curve.losses, curve.poes,
             bounds_error=False, fill_value=0)(expected_curve.losses)
@@ -207,43 +209,6 @@ def queryset_iter(queryset, chunk_size):
             yield chunk
             offset += chunk_size
 
-
-# FIXME (ms): this is needed until we fix SiteCollection in hazardlib;
-# the issue is the reset of the depts; we need QA tests for that
-class SiteCollection(openquake.hazardlib.site.SiteCollection):
-    cache = {}  # hazard_calculation_id -> site_collection
-
-    def __init__(self, sites):
-        super(SiteCollection, self).__init__(sites)
-        self.sites_dict = dict((s.id, s) for s in sites)
-
-    def subcollection(self, indices):
-        """
-        :param indices:
-            an array of integer identifying the ordinal of the sites
-            to select. Sites are ordered by the value of their id field
-        :returns:
-            `self` if `indices` is None, otherwise, a `SiteCollection`
-            holding sites at `indices`
-        """
-        if indices is None:
-            return self
-        sites = []
-        for i, site in enumerate(self):
-            if i in indices:
-                sites.append(site)
-        return self.__class__(sites)
-
-    def __iter__(self):
-        ids = sorted(self.sites_dict)
-        for site_id in ids:
-            yield self.sites_dict[site_id]
-
-    def get_by_id(self, site_id):
-        return self.sites_dict[site_id]
-
-    def __contains__(self, site):
-        return site.id in self.sites_dict
 
 ## Tables in the 'admin' schema.
 
@@ -410,6 +375,8 @@ class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
     '''
+    _site_collection = ()  # see the corresponding instance variable
+
     @classmethod
     def create(cls, **kw):
         _prep_geometry(kw)
@@ -757,14 +724,14 @@ class HazardCalculation(djm.Model):
                 lons, lats = zip(*sorted(set((asset.site.x, asset.site.y)
                                              for asset in assets)))
                 # Cache the mesh:
-                self._points_to_compute = hazardlib_geo.Mesh(
+                self._points_to_compute = geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
                 )
             elif self.region and self.region_grid_spacing:
                 # assume that the polygon is a single linear ring
                 coords = self.region.coords[0]
-                points = [hazardlib_geo.Point(*x) for x in coords]
-                poly = hazardlib_geo.Polygon(points)
+                points = [geo.Point(*x) for x in coords]
+                poly = geo.Polygon(points)
                 # Cache the mesh:
                 self._points_to_compute = poly.discretize(
                     self.region_grid_spacing
@@ -772,7 +739,7 @@ class HazardCalculation(djm.Model):
             elif self.sites is not None:
                 lons, lats = zip(*self.sites.coords)
                 # Cache the mesh:
-                self._points_to_compute = hazardlib_geo.Mesh(
+                self._points_to_compute = geo.Mesh(
                     numpy.array(lons), numpy.array(lats), depths=None
                 )
             # store the sites
@@ -795,8 +762,8 @@ class HazardCalculation(djm.Model):
         site parameters are used for all sites. The sites are ordered by id,
         to ensure reproducibility in tests.
         """
-        if self.id in SiteCollection.cache:
-            return SiteCollection.cache[self.id]
+        if len(self._site_collection):
+            return self._site_collection
 
         hsites = HazardSite.objects.filter(
             hazard_calculation=self).order_by('id')
@@ -814,8 +781,7 @@ class HazardCalculation(djm.Model):
         sites = []
         site_model_inp = self.site_model
         for hsite in hsites:
-            pt = openquake.hazardlib.geo.point.Point(
-                hsite.location.x, hsite.location.y)
+            pt = geo.point.Point(hsite.location.x, hsite.location.y)
             if site_model_inp:
                 smd = self.get_closest_site_model_data(pt)
                 measured = smd.vs30_type == 'measured'
@@ -828,10 +794,9 @@ class HazardCalculation(djm.Model):
                 z1pt0 = self.reference_depth_to_1pt0km_per_sec
                 z2pt5 = self.reference_depth_to_2pt5km_per_sec
 
-            sites.append(openquake.hazardlib.site.Site(
-                         pt, vs30, measured, z1pt0, z2pt5, hsite.id))
+            sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
 
-        sc = SiteCollection.cache[self.id] = SiteCollection(sites)
+        sc = self._site_collection = SiteCollection(sites)
         return sc
 
     def get_imts(self):
@@ -870,7 +835,7 @@ class HazardCalculation(djm.Model):
             # We can get the number of logic tree realizations by counting
             # initialized lt_realization records.
             n_lt_realizations = LtRealization.objects.filter(
-                hazard_calculation=self).count()
+                lt_model__hazard_calculation=self).count()
 
         investigation_time = (self.investigation_time
                               * self.ses_per_logic_tree_path
@@ -1534,7 +1499,7 @@ class SESCollection(djm.Model):
     See also :class:`SES` and :class:`SESRupture`.
     """
     output = djm.OneToOneField('Output', related_name="ses")
-    lt_realization_ids = fields.IntArrayField(null=False)
+    lt_model = djm.OneToOneField('LtSourceModel', related_name='ses_collection')
     ordinal = djm.IntegerField(null=False)
 
     class Meta:
@@ -1553,21 +1518,7 @@ class SESCollection(djm.Model):
         """
         The source model logic tree path corresponding to the collection
         """
-        # all lt_realization_ids correspond to the same sm_lt_path
-        return LtRealization.objects.get(
-            pk=self.lt_realization_ids[0]).sm_lt_path
-
-    @property
-    def weight(self):
-        """
-        The logic tree weight corresponding to the collection
-        """
-        weights = [LtRealization.objects.get(pk=rlz_id).weight
-                   for rlz_id in self.lt_realization_ids]
-        if all(w is None for w in weights):
-            return None
-        else:
-            return sum(weights)
+        return tuple(self.lt_model.sm_lt_path)
 
 
 class SES(djm.Model):
@@ -1595,50 +1546,179 @@ class SES(djm.Model):
             .iterator()
 
 
-def old_field_property(prop):
-    def wrapped_property(s):
-        if getattr(s, "old_%s" % prop.__name__) is not None:
-            return getattr(s, "old_%s" % prop.__name__)
+def is_from_fault_source(rupture):
+    """
+    If True, this rupture was generated from a simple/complex fault
+    source. If False, this rupture was generated from a point/area source.
+
+    :param rupture: an instance of :class:
+    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+    """
+    typology = rupture.source_typology
+    is_char = typology is source.CharacteristicFaultSource
+    is_complex_or_simple = typology in (
+        source.ComplexFaultSource,
+        source.SimpleFaultSource)
+    is_complex_or_simple_surface = isinstance(
+        rupture.surface, (geo.ComplexFaultSurface,
+                          geo.SimpleFaultSurface))
+    return is_complex_or_simple or (
+        is_char and is_complex_or_simple_surface)
+
+
+def is_multi_surface(rupture):
+    """
+    :param rupture: an instance of :class:
+    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+
+    :returns: a boolean
+    """
+    typology = rupture.source_typology
+    is_char = typology is source.CharacteristicFaultSource
+    is_multi_sur = isinstance(rupture.surface, geo.MultiSurface)
+    return is_char and is_multi_sur
+
+
+def get_geom(surface, is_from_fault_source, is_multi_surface):
+    """
+    The following fields can be interpreted different ways,
+    depending on the value of `is_from_fault_source`. If
+    `is_from_fault_source` is True, each of these fields should
+    contain a 2D numpy array (all of the same shape). Each triple
+    of (lon, lat, depth) for a given index represents the node of
+    a rectangular mesh. If `is_from_fault_source` is False, each
+    of these fields should contain a sequence (tuple, list, or
+    numpy array, for example) of 4 values. In order, the triples
+    of (lon, lat, depth) represent top left, top right, bottom
+    left, and bottom right corners of the the rupture's planar
+    surface. Update: There is now a third case. If the rupture
+    originated from a characteristic fault source with a
+    multi-planar-surface geometry, `lons`, `lats`, and `depths`
+    will contain one or more sets of 4 points, similar to how
+    planar surface geometry is stored (see above).
+
+    :param rupture: an instance of :class:
+    `openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
+
+    :param is_from_fault_source: a boolean
+    :param is_multi_surface: a boolean
+    """
+    if is_from_fault_source:
+        # for simple and complex fault sources,
+        # rupture surface geometry is represented by a mesh
+        surf_mesh = surface.get_mesh()
+        lons = surf_mesh.lons
+        lats = surf_mesh.lats
+        depths = surf_mesh.depths
+    else:
+        if is_multi_surface:
+            # `list` of
+            # openquake.hazardlib.geo.surface.planar.PlanarSurface
+            # objects:
+            surfaces = surface.surfaces
+
+            # lons, lats, and depths are arrays with len == 4*N,
+            # where N is the number of surfaces in the
+            # multisurface for each `corner_*`, the ordering is:
+            #   - top left
+            #   - top right
+            #   - bottom left
+            #   - bottom right
+            lons = numpy.concatenate([x.corner_lons for x in surfaces])
+            lats = numpy.concatenate([x.corner_lats for x in surfaces])
+            depths = numpy.concatenate([x.corner_depths for x in surfaces])
         else:
-            return prop(s)
-    return property(wrapped_property)
+            # For area or point source,
+            # rupture geometry is represented by a planar surface,
+            # defined by 3D corner points
+            lons = numpy.zeros((4))
+            lats = numpy.zeros((4))
+            depths = numpy.zeros((4))
+
+            # NOTE: It is important to maintain the order of these
+            # corner points. TODO: check the ordering
+            for i, corner in enumerate((surface.top_left,
+                                        surface.top_right,
+                                        surface.bottom_left,
+                                        surface.bottom_right)):
+                lons[i] = corner.longitude
+                lats[i] = corner.latitude
+                depths[i] = corner.depth
+    return lons, lats, depths
 
 
-class SESRupture(djm.Model):
+class ProbabilisticRupture(djm.Model):
     """
-    A rupture as part of a Stochastic Event Set.
+    A rupture as part of a Stochastic Event Set Collection.
     """
-    ses = djm.ForeignKey('SES')
-
-    #: A pickled
-    #: :class:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture`
-    #: instance
-    rupture = fields.PickleField()
-
-    magnitude = djm.FloatField(null=True)
+    ses_collection = djm.ForeignKey('SESCollection')
+    magnitude = djm.FloatField(null=False)
     hypocenter = djm.PointField(srid=DEFAULT_SRID)
-
-    # a tag with rlz, ses, src and ordinal info
-    tag = djm.TextField()
-
-    old_strike = djm.FloatField(null=True)
-    old_dip = djm.FloatField(null=True)
-    old_rake = djm.FloatField(null=True)
-    old_tectonic_region_type = djm.TextField(null=True)
-    old_is_from_fault_source = djm.NullBooleanField(null=True)
-    old_is_multi_surface = djm.NullBooleanField(null=True)
-    old_lons = fields.PickleField(null=True)
-    old_lats = fields.PickleField(null=True)
-    old_depths = fields.PickleField(null=True)
-
-    #: A pickled
-    #: :class:`openquake.hazardlib.geo.surface.BaseSurface`
-    #: instance
-    old_surface = fields.PickleField(null=True)
+    rake = djm.FloatField(null=False)
+    tectonic_region_type = djm.TextField(null=False)
+    is_from_fault_source = djm.NullBooleanField(null=False)
+    is_multi_surface = djm.NullBooleanField(null=False)
+    surface = fields.PickleField(null=False)
 
     class Meta:
-        db_table = 'hzrdr\".\"ses_rupture'
-        ordering = ['tag']
+        db_table = 'hzrdr\".\"probabilistic_rupture'
+
+    @classmethod
+    def create(cls, rupture, ses_collection):
+        """
+        Create a ProbabilisticRupture row on the database.
+
+        :param rupture:
+            a hazardlib rupture
+        :param ses_collection:
+            a Stochastic Event Set Collection object
+        """
+        iffs = is_from_fault_source(rupture)
+        ims = is_multi_surface(rupture)
+        lons, lats, depths = get_geom(rupture.surface, iffs, ims)
+        return cls.objects.create(
+            ses_collection=ses_collection,
+            magnitude=rupture.mag,
+            rake=rupture.rake,
+            tectonic_region_type=rupture.tectonic_region_type,
+            is_from_fault_source=iffs,
+            is_multi_surface=ims,
+            surface=rupture.surface,
+            hypocenter=rupture.hypocenter.wkt2d)
+
+    _geom = None
+
+    @property
+    def geom(self):
+        """
+        Extract the triple (lons, lats, depths) from the surface geometry
+        (cached).
+        """
+        if self._geom is not None:
+            return self._geom
+        self._geom = get_geom(self.surface, self.is_from_fault_source,
+                              self.is_multi_surface)
+        return self._geom
+
+    @property
+    def lons(self):
+        return self.geom[0]
+
+    @property
+    def lats(self):
+        return self.geom[1]
+
+    @property
+    def depths(self):
+        return self.geom[2]
+
+    @property
+    def strike(self):
+        return self.surface.get_strike()
+
+    @property
+    def dip(self):
+        return self.surface.get_dip()
 
     def _validate_planar_surface(self):
         """
@@ -1682,124 +1762,40 @@ class SESRupture(djm.Model):
             return self.lons[3], self.lats[3], self.depths[3]
         return None
 
-    @old_field_property
-    def is_from_fault_source(self):
+
+class SESRupture(djm.Model):
+    """
+    A rupture as part of a Stochastic Event Set.
+    """
+    rupture = djm.ForeignKey('ProbabilisticRupture')
+    ses = djm.ForeignKey('SES')
+    tag = djm.TextField(null=False)
+    seed = djm.IntegerField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"ses_rupture'
+        ordering = ['tag']
+
+    @classmethod
+    def create(cls, prob_rupture, ses, source_id, occurrencies, seed):
         """
-        If True, this rupture was generated from a simple/complex fault
-        source. If False, this rupture was generated from a point/area source.
+        Create a SESRupture row in the database.
+
+        :param prob_rupture:
+            :class:`openquake.engine.db.models.ProbabilisticRupture` instance
+        :param ses:
+            :class:`openquake.engine.db.models.SES` instance
+        :param str source_id:
+            id of the source that generated the rupture
+        :param int occurrencies:
+            the number of occurrencies of the rupture in the given ses
+        :param int seed:
+            a seed that will be used when computing the GMF from the rupture
         """
-        typology = self.rupture.source_typology
-        is_char = typology is hazardlib_source.CharacteristicFaultSource
-        is_complex_or_simple = typology in (
-            hazardlib_source.ComplexFaultSource,
-            hazardlib_source.SimpleFaultSource)
-        is_complex_or_simple_surface = isinstance(
-            self.rupture.surface, (hazardlib_geo.ComplexFaultSurface,
-                                   hazardlib_geo.SimpleFaultSurface))
-        return is_complex_or_simple or (
-            is_char and is_complex_or_simple_surface)
-
-    @old_field_property
-    def is_multi_surface(self):
-        typology = self.rupture.source_typology
-        is_char = typology is hazardlib_source.CharacteristicFaultSource
-        is_multi_sur = isinstance(
-            self.rupture.surface, hazardlib_geo.MultiSurface)
-        return is_char and is_multi_sur
-
-    def get_geom(self):
-        """
-        The following fields can be interpreted different ways,
-        depending on the value of `is_from_fault_source`. If
-        `is_from_fault_source` is True, each of these fields should
-        contain a 2D numpy array (all of the same shape). Each triple
-        of (lon, lat, depth) for a given index represents the node of
-        a rectangular mesh. If `is_from_fault_source` is False, each
-        of these fields should contain a sequence (tuple, list, or
-        numpy array, for example) of 4 values. In order, the triples
-        of (lon, lat, depth) represent top left, top right, bottom
-        left, and bottom right corners of the the rupture's planar
-        surface. Update: There is now a third case. If the rupture
-        originated from a characteristic fault source with a
-        multi-planar-surface geometry, `lons`, `lats`, and `depths`
-        will contain one or more sets of 4 points, similar to how
-        planar surface geometry is stored (see above).
-        """
-        if self.is_from_fault_source:
-            # for simple and complex fault sources,
-            # rupture surface geometry is represented by a mesh
-            surf_mesh = self.rupture.surface.get_mesh()
-            lons = surf_mesh.lons
-            lats = surf_mesh.lats
-            depths = surf_mesh.depths
-        else:
-            if self.is_multi_surface:
-                # `list` of
-                # openquake.hazardlib.geo.surface.planar.PlanarSurface
-                # objects:
-                surfaces = self.rupture.surface.surfaces
-
-                # lons, lats, and depths are arrays with len == 4*N,
-                # where N is the number of surfaces in the
-                # multisurface for each `corner_*`, the ordering is:
-                #   - top left
-                #   - top right
-                #   - bottom left
-                #   - bottom right
-                lons = numpy.concatenate([x.corner_lons for x in surfaces])
-                lats = numpy.concatenate([x.corner_lats for x in surfaces])
-                depths = numpy.concatenate([x.corner_depths for x in surfaces])
-            else:
-                # For area or point source,
-                # rupture geometry is represented by a planar surface,
-                # defined by 3D corner points
-                surface = self.rupture.surface
-                lons = numpy.zeros((4))
-                lats = numpy.zeros((4))
-                depths = numpy.zeros((4))
-
-                # NOTE: It is important to maintain the order of these
-                # corner points. TODO: check the ordering
-                for i, corner in enumerate((surface.top_left,
-                                            surface.top_right,
-                                            surface.bottom_left,
-                                            surface.bottom_right)):
-                    lons[i] = corner.longitude
-                    lats[i] = corner.latitude
-                    depths[i] = corner.depth
-        return lons, lats, depths
-
-    @old_field_property
-    def lons(self):
-        return self.get_geom()[0]
-
-    @old_field_property
-    def lats(self):
-        return self.get_geom()[1]
-
-    @old_field_property
-    def depths(self):
-        return self.get_geom()[2]
-
-    @old_field_property
-    def surface(self):
-        return self.rupture.surface
-
-    @old_field_property
-    def strike(self):
-        return self.rupture.surface.get_strike()
-
-    @old_field_property
-    def dip(self):
-        return self.rupture.surface.get_dip()
-
-    @old_field_property
-    def rake(self):
-        return self.rupture.rake
-
-    @old_field_property
-    def tectonic_region_type(self):
-        return self.rupture.tectonic_region_type
+        tag = 'smlt=%02d|ses=%04d|src=%s|occ=%02d' % (
+            ses.ses_collection.ordinal, ses.ordinal, source_id, occurrencies)
+        return cls.objects.create(
+            rupture=prob_rupture, ses=ses, tag=tag, seed=seed)
 
 
 class _Point(object):
@@ -2128,24 +2124,44 @@ class UHSData(djm.Model):
         db_table = 'hzrdr\".\"uhs_data'
 
 
+class LtSourceModel(djm.Model):
+    """
+    Identify a logic tree source model.
+    """
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    ordinal = djm.IntegerField()
+    sm_lt_path = fields.CharArrayField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"lt_source_model'
+
+    def __iter__(self):
+        """
+        Yield the realizations corresponding to the given model
+        """
+        return iter(LtRealization.objects.filter(lt_model=self))
+
+
 class LtRealization(djm.Model):
     """
     Identify a logic tree branch.
     """
 
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    lt_model = djm.ForeignKey('LtSourceModel')
     ordinal = djm.IntegerField()
     seed = djm.IntegerField()
     weight = djm.DecimalField(decimal_places=100, max_digits=101)
-    sm_lt_path = fields.CharArrayField()
     gsim_lt_path = fields.CharArrayField()
+
+    @property
+    def sm_lt_path(self):
+        return self.lt_model.sm_lt_path
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
 
 
 ## Tables in the 'riskr' schema.
-
 
 class LossFraction(djm.Model):
     """
@@ -2454,6 +2470,13 @@ class AggregateLoss(djm.Model):
         return risk_almost_equal(
             self, data, lambda x: operator.attrgetter('mean', 'std_dev'))
 
+    def to_csv_str(self):
+        """
+        Convert AggregateLoss into a CSV string
+        """
+        return '\n'.join(data.to_csv_str('row-%d' % i)
+                         for i, data in enumerate(self, 1))
+
 
 class LossCurve(djm.Model):
     '''
@@ -2479,6 +2502,13 @@ class LossCurve(djm.Model):
             return iter([self.aggregatelosscurvedata])
         else:
             return iter(self.losscurvedata_set.all())
+
+    def to_csv_str(self):
+        """
+        Convert LossCurve into a CSV string
+        """
+        return '\n'.join(data.to_csv_str('row-%d' % i)
+                         for i, data in enumerate(self, 1))
 
     @property
     def output_hash(self):
@@ -2533,6 +2563,18 @@ class LossCurveData(djm.Model):
     def assertAlmostEqual(self, data):
         return loss_curve_almost_equal(self, data)
 
+    def to_csv_str(self, label):
+        """
+        Convert LossCurveData into a CSV string.
+
+        :param str label:
+            an identifier for the curve (for instance the asset_ref)
+        """
+        ratios = [label, 'Ratios'] + map(str, self.loss_ratios)
+        data = ','.join(ratios) + '\n'
+        data += ','.join(map(str, [self.asset_value, 'PoE'] + list(self.poes)))
+        return data
+
 
 class AggregateLossCurveData(djm.Model):
     '''
@@ -2557,6 +2599,17 @@ class AggregateLossCurveData(djm.Model):
 
     def assertAlmostEqual(self, data):
         return loss_curve_almost_equal(self, data)
+
+    def to_csv_str(self, label):
+        """
+        Convert AggregateLossCurveData into a CSV string.
+
+        :param str label:
+            an identifier for the curve (for instance the cost type)
+        """
+        data = ','.join(map(str, [label, 'Losses'] + list(self.losses))) + '\n'
+        data += ','.join(map(str, ['', 'PoE'] + list(self.poes)))
+        return data
 
 
 class EventLoss(djm.Model):
@@ -2607,6 +2660,12 @@ class EventLossData(djm.Model):
 
     class Meta:
         db_table = 'riskr\".\"event_loss_data'
+
+    def to_csv_str(self):
+        """
+        Convert EventLossData into a CSV string
+        """
+        return '%s,%s' % (self.rupture.id, self.aggregate_loss)
 
 
 class BCRDistribution(djm.Model):
