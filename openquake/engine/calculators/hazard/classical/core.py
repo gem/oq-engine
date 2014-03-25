@@ -209,7 +209,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
-        if self.poes_disagg:
+        if self.hc.poes_disagg:
             self.bb_dict = dict(
                 ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
                 for site in self.hc.site_collection
@@ -235,7 +235,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 # j is the IMT index
                 self.curves_by_rlz[rlz][j] = 1. - (
                     1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
-        if self.poes_disagg:
+        if self.hc.poes_disagg:
             for bb in bbs:
                 self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
         self.log_percent()
