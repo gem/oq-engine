@@ -859,7 +859,7 @@ sed -i "s/^\([ ${TB}]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__i
 
 # mods pre-packaging
 mv LICENSE         openquake/engine
-mv README.txt      openquake/engine/README
+mv README.md       openquake/engine/README
 mv celeryconfig.py openquake/engine
 mv openquake.cfg   openquake/engine
 
