@@ -90,7 +90,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
-        self.assertEqual(["A", "B"], sorted(config.Config().cfg.keys()))
+        self.assertEqual(["A", "B"], sorted(config.Config().cfg))
         self.assertEqual({"a": "1", "b": "c"}, config.Config().cfg.get("A"))
         self.assertEqual({"b": "2"}, config.Config().cfg.get("B"))
 
