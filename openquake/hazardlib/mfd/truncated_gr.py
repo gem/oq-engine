@@ -153,8 +153,8 @@ class TruncatedGRMFD(BaseMFD):
         values appear equal after rounding.
 
         :returns:
-            See :meth:`openquake.hazardlib.mfd.base.
-            BaseMFD.get_annual_occurrence_rates`.
+            See :meth:
+            `openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`.
         """
         mag, num_bins = self._get_min_mag_and_num_bins()
         rates = []
