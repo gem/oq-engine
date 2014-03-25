@@ -28,6 +28,12 @@ def log_percent_gen(taskname, todo):
     """
     Generator factory. Each time the generator object is called
     log a message if the percentage is bigger than the last one.
+    Yield the number of calls done at the current iteration.
+
+    :param str taskname:
+        the name of the task
+    :param int todo:
+        the number of times the generator object will be called
     """
     done = 1
     prev_percent = 0
@@ -65,7 +71,8 @@ class Calculator(object):
 
         :param str operation: the operation to monitor
         """
-        return EnginePerformanceMonitor(operation, self.job.id, flush=True)
+        return EnginePerformanceMonitor(
+            operation, self.job.id, tracing=True, flush=True)
 
     def task_arg_gen(self):
         """
