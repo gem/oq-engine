@@ -7,9 +7,9 @@
                                 branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>source_model.xml</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                    <uncertaintyWeight>1</uncertaintyWeight>
                 </logicTreeBranch>
-            </logicTreeBranchSet>
+           </logicTreeBranchSet>
         </logicTreeBranchingLevel>
     </logicTree>
 </nrml>

@@ -118,7 +118,8 @@ def compare_hazard_curve_with_csv(
     the expected values in the csv. The csv is expected to have the form
     `lon, lat, poe1, poe2, ...`
     """
-    rlzs = list(models.LtRealization.objects.filter(hazard_calculation=hc))
+    rlzs = list(
+        models.LtRealization.objects.filter(lt_model__hazard_calculation=hc))
     # there is some contorsion here since is seems that Django filtering
     # with CharArrayFields does not work, so I get all the realizations
     # and I extract by hand the one with the given lt_paths
