@@ -77,6 +77,10 @@ class TrtInfo(object):
         """
         Update the dictionaries num_sources, min_mag, max_mag
         according to the given source.
+
+        :param src:
+            an instance of :class:
+            `openquake.hazardlib.source.base.BaseSeismicSource`
         """
         trt = src.tectonic_region_type
         min_mag, max_mag = src.mfd.get_min_max_mag()
