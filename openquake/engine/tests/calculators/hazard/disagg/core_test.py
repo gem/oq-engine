@@ -48,48 +48,20 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
         self.assertEqual(2, job_stats.num_sites)
 
-        # To test the disagg function, we first need to compute the hazard
-        # curves:
         os.environ['OQ_NO_DISTRIBUTE'] = '1'
         try:
+            # to test the disagg function, we first need to compute the hazard
+            # curves
             self.calc.execute()
-            self.calc.save_hazard_curves()
-        finally:
-            del os.environ['OQ_NO_DISTRIBUTE']
-
-        diss1, diss2, diss3, diss4 = list(self.calc.disagg_task_arg_gen())
-
-        base_path = 'openquake.engine.calculators.hazard.disaggregation.core'
-
-        disagg_calc_func = (
-            'openquake.hazardlib.calc.disagg.disaggregation'
-        )
-        with mock.patch(disagg_calc_func) as disagg_mock:
-            disagg_mock.return_value = (None, None)
-            with mock.patch('%s.%s' % (base_path, '_save_disagg_matrix')
-                            ) as save_mock:
+            with mock.patch(
+                    'openquake.engine.calculators.hazard.disaggregation.'
+                    'core.save_disagg_matrix') as save:
+                save.__name__ = 'save_disagg_matrix'
+                save.task_func = save
                 # Some of these tasks will not compute anything, since the
                 # hazard  curves for these few are all 0.0s.
-
-                # Here's what we expect:
-                # diss1: compute
-                # diss2: skip
-                # diss3: compute
-                # diss4: skip
-
-                core.compute_disagg.task_func(*diss1)
-                # 2 poes * 2 imts * 1 site = 4
-                self.assertEqual(4, disagg_mock.call_count)
-                self.assertEqual(0, save_mock.call_count)  # no rupt generated
-
-                core.compute_disagg.task_func(*diss2)
-                self.assertEqual(4, disagg_mock.call_count)
-                self.assertEqual(0, save_mock.call_count)  # no rupt generated
-
-                core.compute_disagg.task_func(*diss3)
-                self.assertEqual(8, disagg_mock.call_count)
-                self.assertEqual(0, save_mock.call_count)  # no rupt generated
-
-                core.compute_disagg.task_func(*diss4)
-                self.assertEqual(8, disagg_mock.call_count)
-                self.assertEqual(0, save_mock.call_count)  # no rupt generated
+                # 2 poes * 2 imts * 2 sites = 8
+                self.calc.post_execute()
+                self.assertEqual(8, save.call_count)
+        finally:
+            del os.environ['OQ_NO_DISTRIBUTE']
