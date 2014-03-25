@@ -46,9 +46,12 @@ class TestCaseWithAJob(unittest.TestCase):
         cfg = helpers.get_data_path('simple_fault_demo_hazard/job.ini')
         self.job = helpers.get_job(cfg, username="test_user")
         for i in range(0, random.randint(1, 10)):
-            models.LtRealization(
+            lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.job.hazard_calculation,
-                ordinal=i, seed=None, weight=1 / (i + 1), sm_lt_path=[i],
+                ordinal=i, sm_lt_path=[i])
+            models.LtRealization(
+                lt_model=lt_model,
+                ordinal=i, seed=None, weight=1 / (i + 1),
                 gsim_lt_path=[i]).save()
 
 

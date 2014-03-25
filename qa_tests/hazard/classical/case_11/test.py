@@ -129,11 +129,12 @@ class ClassicalHazardCase11TestCase(qa_utils.BaseQATestCase):
             job = self.run_hazard(cfg)
 
             # Test the poe values for the two curves:
-            curve_b1_b2, curve_b1_b3, curve_b1_b4 = \
-                models.HazardCurveData.objects\
-                    .filter(hazard_curve__output__oq_job=job.id,
-                            hazard_curve__lt_realization__isnull=False)\
-                    .order_by('hazard_curve__lt_realization__sm_lt_path')
+            curve_b1_b2, curve_b1_b3, curve_b1_b4 = (
+                models.HazardCurveData.objects
+                .filter(hazard_curve__output__oq_job=job.id,
+                        hazard_curve__lt_realization__isnull=False)
+                .order_by(
+                    'hazard_curve__lt_realization__lt_model__sm_lt_path'))
 
             # Sanity check, to make sure we have the curves ordered correctly:
             self.assertEqual(

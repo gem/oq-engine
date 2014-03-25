@@ -24,6 +24,7 @@ import numpy
 from openquake.nrmllib.hazard.parsers import RuptureModelParser
 
 # HAZARDLIB
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc import ground_motion_fields
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
@@ -89,8 +90,7 @@ def save_gmf(gmf_id, gmf_dict, sites, task_no):
     :param dict gmf_dict:
         The GMF results during the calculation
     :param sites:
-        An :class:`openquake.engine.models.SiteCollection`
-        object
+        An :class:`openquake.hazardlib.site.SiteCollection` object
     """
     inserter = writer.CacheInserter(models.GmfData, 100)
     # NB: GmfData may contain large arrays and the cache may become large
@@ -179,6 +179,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         blocks = block_splitter(self.hc.site_collection, 1000)
         for task_no, sites in enumerate(blocks):
             task_seed = rnd.randint(0, models.MAX_SINT_32)
-            yield (self.job.id, models.SiteCollection(sites),
+            yield (self.job.id, SiteCollection(sites),
                    self.rupture, self.gmf.id, task_seed,
                    self.hc.number_of_ground_motion_fields, task_no)

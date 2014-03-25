@@ -202,7 +202,7 @@ def do_uhs_post_proc(job):
     """
     hc = job.hazard_calculation
 
-    rlzs = models.LtRealization.objects.filter(hazard_calculation=hc)
+    rlzs = models.LtRealization.objects.filter(lt_model__hazard_calculation=hc)
 
     for poe in hc.poes:
         maps_for_poe = models.HazardMap.objects.filter(

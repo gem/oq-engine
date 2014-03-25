@@ -31,7 +31,7 @@ def extract(hc_id, a_writer):
     hc = models.HazardCalculation.objects.get(pk=hc_id)
 
     for lt in models.LtRealization.objects.filter(
-            hazard_calculation=hc):
+            lt_model__hazard_calculation=hc):
 
         for imt in hc.intensity_measure_types:
             imt_type, sa_period, _ = from_string(imt)
