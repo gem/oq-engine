@@ -159,7 +159,7 @@ def compute_ses_and_gmfs(job_id, src_seeds, lt_model, gsims_by_rlz, task_no):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             ses_rup = models.SESRupture.create(
                                 prob_rup, ses, src.source_id,
-                                (rup.rup_no, occ_no), rup_seed)
+                                rup.rup_no, occ_no, rup_seed)
                             ses_ruptures.append(ses_rup)
 
             with compute_gmfs_mon:  # computing GMFs
