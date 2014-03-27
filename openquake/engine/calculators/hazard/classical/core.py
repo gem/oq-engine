@@ -17,11 +17,16 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 import time
+import operator
+import itertools
 import collections
 
 import numpy
 
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.geo.utils import get_spherical_bounding_box
+from openquake.hazardlib.geo.utils import get_longitudinal_extent
+from openquake.hazardlib.geo.geodetic import npoints_between
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
@@ -32,8 +37,100 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 
+class BoundingBox(object):
+    """
+    A class to store the bounding box in distances, longitudes and magnitudes,
+    given a source model and a site. This is used for disaggregation
+    calculations. The goal is to determine the minimum and maximum
+    distances of the ruptures generated from the model from the site;
+    moreover the maximum and minimum longitudes and magnitudes are stored, by
+    taking in account the international date line.
+    """
+    def __init__(self, lt_model_id, site_id):
+        self.lt_model_id = lt_model_id
+        self.site_id = site_id
+        self.min_dist = self.max_dist = None
+        self.east = self.west = self.south = self.north = None
+
+    def update(self, dists, lons, lats):
+        """
+        Compare the current bounding box with the value in the arrays
+        dists, lons, lats and enlarge it if needed.
+
+        :param dists:
+            a sequence of distances
+        :param lons:
+            a sequence of longitudes
+        :param lats:
+            a sequence of latitudes
+        """
+        if self.min_dist is not None:
+            dists = [self.min_dist, self.max_dist] + dists
+        if self.west is not None:
+            lons = [self.west, self.east] + lons
+        if self.south is not None:
+            lats = [self.south, self.north] + lats
+        self.min_dist, self.max_dist = min(dists), max(dists)
+        self.west, self.east, self.north, self.south = \
+            get_spherical_bounding_box(lons, lats)
+
+    def update_bb(self, bb):
+        """
+        Compare the current bounding box with the given bounding box
+        and enlarge it if needed.
+
+        :param bb:
+            an instance of :class:
+            `openquake.engine.calculators.hazard.classical.core.BoundingBox`
+        """
+        if bb:  # the given bounding box must be non-empty
+            self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
+                        [bb.south, bb.north])
+
+    def bins_edges(self, dist_bin_width, coord_bin_width):
+        """
+        Define bin edges for disaggregation histograms, from the bin data
+        collected from the ruptures.
+
+        :param dists:
+            array of distances from the ruptures
+        :param lons:
+            array of longitudes from the ruptures
+        :param lats:
+            array of latitudes from the ruptures
+        :param dist_bin_width:
+            distance_bin_width from job.ini
+        :param coord_bin_width:
+            coordinate_bin_width from job.ini
+        """
+        dist_edges = dist_bin_width * numpy.arange(
+            int(self.min_dist / dist_bin_width),
+            int(numpy.ceil(self.max_dist / dist_bin_width) + 1))
+
+        west = numpy.floor(self.west / coord_bin_width) * coord_bin_width
+        east = numpy.ceil(self.east / coord_bin_width) * coord_bin_width
+        lon_extent = get_longitudinal_extent(west, east)
+
+        lon_edges, _, _ = npoints_between(
+            west, 0, 0, east, 0, 0,
+            numpy.round(lon_extent / coord_bin_width) + 1)
+
+        lat_edges = coord_bin_width * numpy.arange(
+            int(numpy.floor(self.south / coord_bin_width)),
+            int(numpy.ceil(self.north / coord_bin_width) + 1))
+
+        return dist_edges, lon_edges, lat_edges
+
+    def __nonzero__(self):
+        """
+        True if the bounding box is non empty.
+        """
+        return (self.min_dist is not None and self.west is not None
+                and self.south is not None)
+
+
 @tasks.oqtask
-def compute_hazard_curves(job_id, sources, gsims_by_rlz):
+def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -48,47 +145,40 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     total_sites = len(hc.site_collection)
+    sitemesh = hc.site_collection.mesh
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
                              for imt in imts))
                   for rlz in gsims_by_rlz)
-
-    mon1 = LightMonitor('filtering sources', job_id, compute_hazard_curves)
-    mon2 = LightMonitor('generating ruptures', job_id, compute_hazard_curves)
-    mon3 = LightMonitor('filtering ruptures', job_id, compute_hazard_curves)
-    mon4 = LightMonitor('making contexts', job_id, compute_hazard_curves)
-    mon5 = LightMonitor('computing poes', job_id, compute_hazard_curves)
-
-    for source in sources:
+    if hc.poes_disagg:  # doing disaggregation
+        bbs = [BoundingBox(lt_model.id, site.id)
+               for site in hc.site_collection]
+    else:
+        bbs = []
+    mon = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
+    make_ctxt = LightMonitor('making contexts', job_id, compute_hazard_curves)
+    calc_poes = LightMonitor('computing poes', job_id, compute_hazard_curves)
+    for source, rows in itertools.groupby(
+            hc.gen_ruptures(sources, mon), key=operator.itemgetter(0)):
+        # a row is a triple (source, rupture, rupture_sites)
         t0 = time.time()
-
-        with mon1:
-            s_sites = source.filter_sites_by_distance_to_source(
-                hc.maximum_distance, hc.site_collection
-            ) if hc.maximum_distance else hc.site_collection
-            if s_sites is None:
-                continue
-
-        with mon2:
-            ruptures = list(source.iter_ruptures())
-            if not ruptures:
-                continue
-
-        for rupture in ruptures:
-            with mon3:
-                r_sites = rupture.source_typology.\
-                    filter_sites_by_distance_to_rupture(
-                        rupture, hc.maximum_distance, s_sites
-                    ) if hc.maximum_distance else s_sites
-                if r_sites is None:
-                    continue
+        num_ruptures = 0
+        for _source, rupture, r_sites in rows:
+            num_ruptures += 1
+            if hc.poes_disagg:  # doing disaggregation
+                jb_dists = rupture.surface.get_joyner_boore_distance(sitemesh)
+                closest_points = rupture.surface.get_closest_points(sitemesh)
+                for bb, dist, point in zip(bbs, jb_dists, closest_points):
+                    if dist < hc.maximum_distance:
+                        # ruptures too far away are ignored
+                        bb.update([dist], [point.longitude], [point.latitude])
 
             for rlz, curv in curves.iteritems():
                 gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
-                with mon4:
+                with make_ctxt:
                     sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                with mon5:
+                with calc_poes:
                     for imt in imts:
                         poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                              hc.truncation_level)
@@ -97,20 +187,18 @@ def compute_hazard_curves(job_id, sources, gsims_by_rlz):
 
         logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
                       job_id, source.source_id, source.__class__.__name__,
-                      len(ruptures), time.time() - t0)
+                      num_ruptures, time.time() - t0)
 
-    mon1.flush()
-    mon2.flush()
-    mon3.flush()
-    mon4.flush()
-    mon5.flush()
+    make_ctxt.flush()
+    calc_poes.flush()
+
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    dic = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
-                      for imt in sorted(imts)])
-               for rlz, curv in curves.iteritems())
-    return dic
+    curve_dict = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
+                             for imt in sorted(imts)])
+                      for rlz, curv in curves.iteritems())
+    return curve_dict, bbs
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -148,9 +236,20 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             (rlz, [numpy.zeros((n_sites, len(self.imtls[imt])))
                    for imt in sorted(self.imtls)])
             for rlz in realizations)
+        lt_models = models.LtSourceModel.objects.filter(
+            hazard_calculation=self.hc)
+
+        # a dictionary with the bounding boxes for earch source
+        # model and each site, defined only for disaggregation
+        # calculations:
+        if self.hc.poes_disagg:
+            self.bb_dict = dict(
+                ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
+                for site in self.hc.site_collection
+                for lt_model in lt_models)
 
     @EnginePerformanceMonitor.monitor
-    def task_completed(self, result):
+    def task_completed(self, (result, bbs)):
         """
         This is used to incrementally update hazard curve results by combining
         an initial value with some new results. (Each set of new results is
@@ -169,6 +268,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 # j is the IMT index
                 self.curves_by_rlz[rlz][j] = 1. - (
                     1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
+        if self.hc.poes_disagg:
+            for bb in bbs:
+                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
         self.log_percent()
 
     # this could be parallelized in the future, however in all the cases
