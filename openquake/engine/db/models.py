@@ -750,6 +750,13 @@ class HazardCalculation(djm.Model):
 
         return self._points_to_compute
 
+    def has_site_collection(self):
+        """
+        True if the site collection has been initialized for the
+        current calculation.
+        """
+        return self._site_collection_cache[self.id] is not None
+
     @property
     def site_collection(self):
         """
@@ -763,7 +770,7 @@ class HazardCalculation(djm.Model):
         site parameters are used for all sites. The sites are ordered by id,
         to ensure reproducibility in tests.
         """
-        if self.id in self._site_collection_cache:
+        if self.has_site_collection():
             return self._site_collection_cache[self.id]
 
         hsites = HazardSite.objects.filter(
