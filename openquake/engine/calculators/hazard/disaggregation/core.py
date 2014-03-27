@@ -182,6 +182,8 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 @tasks.oqtask
 def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
                    trt_num, curves_dict, bin_edges):
+    # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
+    # of the algorithm used
     """
     :param int job_id:
         ID of the currently running :class:`openquake.engine.db.models.OqJob`
@@ -248,7 +250,7 @@ def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
                     # call disagg._arrange_data_in_bins and populate the result
                     with EnginePerformanceMonitor(
                             'arranging bins', job_id, compute_disagg):
-                        key = site.id, rlz.id, poe, imt, iml, trt_names
+                        key = (site.id, rlz.id, poe, imt, iml, trt_names)
                         matrix = disagg._arrange_data_in_bins(
                             bins, edges + (trt_names,))
                         result[key] = numpy.array(
