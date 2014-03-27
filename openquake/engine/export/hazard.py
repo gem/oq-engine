@@ -512,9 +512,9 @@ def export_disagg_matrix_xml(output, target):
 
     writer = writers.DisaggXMLWriter(dest, **writer_kwargs)
 
-    data = (_DisaggMatrix(disagg_result.matrix[dim_labels], dim_labels,
+    data = (_DisaggMatrix(disagg_result.matrix[i], dim_labels,
                           disagg_result.poe, disagg_result.iml)
-            for dim_labels in disagg.pmf_map)
+            for i, dim_labels in enumerate(disagg.pmf_map))
 
     writer.serialize(data)
 

@@ -25,6 +25,8 @@ import numpy
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.geo.utils import get_spherical_bounding_box
+from openquake.hazardlib.geo.utils import get_longitudinal_extent
+from openquake.hazardlib.geo.geodetic import npoints_between
 
 from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
@@ -84,6 +86,40 @@ class BoundingBox(object):
         if bb:  # the given bounding box must be non-empty
             self.update([bb.min_dist, bb.max_dist], [bb.west, bb.east],
                         [bb.south, bb.north])
+
+    def bins_edges(self, dist_bin_width, coord_bin_width):
+        """
+        Define bin edges for disaggregation histograms, from the bin data
+        collected from the ruptures.
+
+        :param dists:
+            array of distances from the ruptures
+        :param lons:
+            array of longitudes from the ruptures
+        :param lats:
+            array of latitudes from the ruptures
+        :param dist_bin_width:
+            distance_bin_width from job.ini
+        :param coord_bin_width:
+            coordinate_bin_width from job.ini
+        """
+        dist_edges = dist_bin_width * numpy.arange(
+            int(self.min_dist / dist_bin_width)),
+            int(numpy.ceil(self.max_dist / dist_bin_width) + 1))
+
+        west = numpy.floor(self.west / coord_bin_width) * coord_bin_width
+        east = numpy.ceil(self.east / coord_bin_width) * coord_bin_width
+        lon_extent = get_longitudinal_extent(west, east)
+
+        lon_edges, _, _ = npoints_between(
+            west, 0, 0, east, 0, 0,
+            numpy.round(lon_extent / coord_bin_width) + 1)
+
+        lat_edges = coord_bin_width * numpy.arange(
+            int(numpy.floor(self.south / coord_bin_width)),
+            int(numpy.ceil(self.north / coord_bin_width) + 1))
+
+        return dist_edges, lon_edges, lat_edges
 
     def __nonzero__(self):
         """
