@@ -37,12 +37,12 @@ from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
 
 
-# a pair (vals, iml) where vals is a list of arrays of poes
-# with num_epsilon_bins elements each
-ProbNoExceed = namedtuple('ProbNoExceed', 'vals iml')
+# a 6-uple containing float 4 arrays mags, dists, lons, lats,
+# 1 int array trts and a list of dictionaries pnes
+BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
-def dist_lon_lat_bins(dists, lons, lats, dist_bin_width, coord_bin_width):
+def dist_lon_lat_edges(dists, lons, lats, dist_bin_width, coord_bin_width):
     """
     Define bin edges for disaggregation histograms, from the bin data
     collected from the ruptures.
@@ -58,43 +58,24 @@ def dist_lon_lat_bins(dists, lons, lats, dist_bin_width, coord_bin_width):
     :param coord_bin_width:
         coordinate_bin_width from job.ini
     """
-    dist_bins = dist_bin_width * numpy.arange(
+    dist_edges = dist_bin_width * numpy.arange(
         int(numpy.floor(min(dists) / dist_bin_width)),
-        int(numpy.ceil(max(dists) / dist_bin_width) + 1)
-    )
+        int(numpy.ceil(max(dists) / dist_bin_width) + 1))
 
     west, east, north, south = get_spherical_bounding_box(lons, lats)
     west = numpy.floor(west / coord_bin_width) * coord_bin_width
     east = numpy.ceil(east / coord_bin_width) * coord_bin_width
     lon_extent = get_longitudinal_extent(west, east)
 
-    lon_bins, _, _ = npoints_between(
+    lon_edges, _, _ = npoints_between(
         west, 0, 0, east, 0, 0,
-        numpy.round(lon_extent / coord_bin_width) + 1
-    )
+        numpy.round(lon_extent / coord_bin_width) + 1)
 
-    lat_bins = coord_bin_width * numpy.arange(
+    lat_edges = coord_bin_width * numpy.arange(
         int(numpy.floor(south / coord_bin_width)),
-        int(numpy.ceil(north / coord_bin_width) + 1)
-    )
+        int(numpy.ceil(north / coord_bin_width) + 1))
 
-    return dist_bins, lon_bins, lat_bins
-
-
-def merge_prob_no_exceed(prob_no_exceed_list):
-    """
-    Merge a list containing ProbNoExceed objects all with the same .iml
-    attribute. Raise an error if the list is empty. Return a
-    ProbNoExceed object with the merged list and the given iml.
-    """
-    assert prob_no_exceed_list
-    prob_no_exceed = prob_no_exceed_list[0]
-    iml = prob_no_exceed.iml
-    vals = []
-    for el in prob_no_exceed_list:
-        assert el.iml == iml
-        vals.extend(el.vals)
-    return ProbNoExceed(vals, iml)
+    return dist_edges, lon_edges, lat_edges
 
 
 def pmf_dict(matrix):
@@ -108,10 +89,10 @@ def pmf_dict(matrix):
                        for key, pmf_fn in disagg.pmf_map.iteritems())
 
 
-# returns mags, dists, lons, lats, tect_reg_types, probs_no_exceed
 def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
                        gsims_by_rlz, imtls, poes, truncation_level,
                        n_epsilons):
+    # returns a BinData instance
     sitecol = SiteCollection([site])
     mags = []
     dists = []
@@ -163,8 +144,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
                                     truncation_level, n_epsilons)
                             pne = rupture.get_probability_no_exceedance(
                                 poes_given_rup_eps)
-                            pne_dict[rlz.id, poe, imt_str] = \
-                                ProbNoExceed([pne], iml)
+                            pne_dict[rlz.id, poe, imt_str] = (pne, iml)
 
                 pnes.append(pne_dict)
         except Exception as err:
@@ -177,14 +157,18 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
     make_ctxt.flush()
     disagg_poe.flush()
 
-    return [mags, dists, lons, lats, trts, pnes]
+    return BinData(numpy.array(mags, float),
+                   numpy.array(dists, float),
+                   numpy.array(lons, float),
+                   numpy.array(lats, float),
+                   numpy.array(trts, int),
+                   pnes)
 
 
 _DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s-%(wkt)s'
 
 
-@tasks.oqtask
-def save_disagg_matrix(job_id, site_id, bin_edges, trt_names, pmf_dict,
+def save_disagg_result(job_id, site_id, bin_edges, trt_names, pmf_dict,
                        rlz_id, investigation_time, imt_str, iml, poe):
     """
     Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
@@ -198,8 +182,8 @@ def save_disagg_matrix(job_id, site_id, bin_edges, trt_names, pmf_dict,
         The 5-uple mag, dist, lon, lat, eps
     :param trt_names:
         The list of Tectonic Region Types
-    :param diss_matrix:
-        The diseggregation matrix as a 6-dimensional numpy array
+    :param pmf_dict:
+        A dictionary key -> probability array, with key in the pmf_map
     :param rlz:
         :class:`openquake.engine.db.models.LtRealization` to which these
         results belong.
@@ -247,76 +231,72 @@ def save_disagg_matrix(job_id, site_id, bin_edges, trt_names, pmf_dict,
 
 @tasks.oqtask
 def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
-                   trt_num, site, curves, bin_edges):
+                   trt_num, curves_dict, bin_edges):
     """
-    Here is the basic calculation workflow:
-
-    1. Get the hazard curve for each point, IMT, and realization
-    2. For each `poes_disagg`, interpolate the IML for each curve.
-    3. Collect bins data into a result dictionary of the form
-       (rlz_id, site, poe, iml, im_type, sa_period, sa_damping) ->
-       (mags, dists, lons, lats, tect_reg_types, probs_no_exceed)
-
     :param int job_id:
         ID of the currently running :class:`openquake.engine.db.models.OqJob`
     :param list sources:
         list of hazardlib source objects
+    :param lt_model:
+        an instance of :class:`openquake.engine.db.models.LtSourceModel`
     :param dict gsims_by_rlz:
         a dictionary of gsim dictionaries, one for each realization
     :param dict trt_num:
         a dictionary Tectonic Region Type -> incremental number
-    :param site:
-        the current site
-    :param curves:
-        a dictionary with the hazard curves for the given site, for
-        all realizations and IMTs
+    :param curves_dict:
+        a dictionary with the hazard curves for all sites, realizations and IMTs
+    :returns:
+        a dictionary of pmf dictionaries, which composite key
+        (site.id, rlz.id, poe, imt, probs.iml, trt_names).
     """
     mon = LightMonitor('disagg', job_id, compute_disagg)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
     trt_names = tuple(lt_model.tectonic_region_types)
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> pmf
 
-    # generate source, rupture, sites once per site
-    source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
-    if not source_ruptures:
-        return result
-    logs.LOG.info('Collecting bins from %d ruptures close to %s',
-                  sum(len(rupts) for src, rupts in source_ruptures),
-                  site.location)
+    for site in hc.site_collection:
+        # edges as wanted by disagg._arrange_data_in_bins
+        edges = bin_edges[lt_model.id, site.id] + (trt_names,)
 
-    with EnginePerformanceMonitor(
-            'collecting bins', job_id, compute_disagg):
-        bins = _collect_bins_data(
-            mon, trt_num, source_ruptures, site, curves,
-            gsims_by_rlz, hc.intensity_measure_types_and_levels,
-            hc.poes_disagg, hc.truncation_level,
-            hc.num_epsilon_bins)
+        # generate source, rupture, sites once per site
+        source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
+        if not source_ruptures:
+            continue
+        logs.LOG.info('Collecting bins from %d ruptures close to %s',
+                      sum(len(rupts) for src, rupts in source_ruptures),
+                      site.location)
 
-    if not bins[0]:  # no contributions for this site
-        return result
+        with EnginePerformanceMonitor(
+                'collecting bins', job_id, compute_disagg):
+            bdata = _collect_bins_data(
+                mon, trt_num, source_ruptures, site, curves_dict[site.id],
+                gsims_by_rlz, hc.intensity_measure_types_and_levels,
+                hc.poes_disagg, hc.truncation_level,
+                hc.num_epsilon_bins)
 
-    bins[0] = numpy.array(bins[0], float)
-    bins[1] = numpy.array(bins[1], float)
-    bins[2] = numpy.array(bins[2], float)
-    bins[3] = numpy.array(bins[3], float)
-    bins[4] = numpy.array(bins[4], int)
+        if not bdata.pnes:  # no contributions for this site
+            continue
 
-    for poe in hc.poes_disagg:
-        for imt in hc.intensity_measure_types_and_levels:
-            for rlz in gsims_by_rlz:
-                key = rlz.id, poe, imt
-                probs = merge_prob_no_exceed(
-                    [pne[key] for pne in bins[5]])
-                iml, newbins = probs.iml, [
-                    bins[0], bins[1], bins[2], bins[3],
-                    bins[4], None, numpy.array(probs.vals, float)
-                    ]
-                with EnginePerformanceMonitor(
-                        'arranging bins', job_id, compute_disagg):
-                    key = site.id, rlz.id, poe, imt, iml, trt_names
-                    result[key] = pmf_dict(
-                        disagg._arrange_data_in_bins(
-                            newbins, bin_edges + (trt_names,)))
+        for poe in hc.poes_disagg:
+            for imt in hc.intensity_measure_types_and_levels:
+                for rlz in gsims_by_rlz:
+
+                    # extract the probabilities of non-exceedance for the
+                    # given realization, disaggregation PoE, and IMT
+                    iml_pne_pairs = [pne[rlz.id, poe, imt]
+                                     for pne in bdata.pnes]
+                    iml = iml_pne_pairs[0][0]
+                    probs = numpy.array([p for (i, p) in iml_pne_pairs], float)
+                    # bins in a format handy for hazardlib
+                    bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats,
+                            bdata.trts, None, probs]
+
+                    # call disagg._arrange_data_in_bins and populate the result
+                    with EnginePerformanceMonitor(
+                            'arranging bins', job_id, compute_disagg):
+                        key = site.id, rlz.id, poe, imt, probs.iml, trt_names
+                        matrix = disagg._arrange_data_in_bins(bins, edges)
+                        result[key] = pmf_dict(matrix)
 
     return result
 
@@ -365,20 +345,17 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         mag_bin_width = self.hc.mag_bin_width
         eps_bins = numpy.linspace(-tl, tl, self.hc.num_epsilon_bins + 1)
 
-        lt_model_ids = []
         arglist = []
         bin_edges = {}
-        for site in self.hc.site_collection:
-            curves = self.get_curves(site)
-            if not curves:
-                logs.LOG.warn('* only zero-valued hazard curves found '
-                              'for site %s, skipping disaggregation', site)
-                continue
+        curves_dict = dict((site.id, self.get_curves(site))
+                           for site in self.hc.site_collection)
 
-            for job_id, srcs, lt_model, gsims_by_rlz, task_no in \
-                    self.task_arg_gen():
-                lt_model_ids.append(lt_model.id)
-
+        for job_id, srcs, lt_model, gsims_by_rlz, task_no in \
+                self.task_arg_gen():
+            for site in self.hc.site_collection:
+                curves = curves_dict[site.id]
+                if not curves:
+                    continue  # skip zero-valued hazard curves
                 bb = self.bb_dict[lt_model.id, site.id]
                 if not bb:
                     logs.LOG.info(
@@ -386,7 +363,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                         site.location)
                     continue
 
-                dist_bins, lon_bins, lat_bins = dist_lon_lat_bins(
+                dist_edges, lon_edges, lat_edges = dist_lon_lat_edges(
                     [bb.min_dist, bb.max_dist],
                     [bb.west, bb.east],
                     [bb.south, bb.north],
@@ -400,51 +377,55 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
                 max_mag = max(i.max_mag for i in infos)
                 min_mag = min(i.min_mag for i in infos)
-                mag_bins = mag_bin_width * numpy.arange(
+                mag_edges = mag_bin_width * numpy.arange(
                     int(numpy.floor(min_mag / mag_bin_width)),
                     int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
-                logs.LOG.info('%d mag bins from %s to %s', len(mag_bins) - 1,
+                logs.LOG.info('%d mag bins from %s to %s', len(mag_edges) - 1,
                               min_mag, max_mag)
-                logs.LOG.info('%d dist bins from %s to %s', len(dist_bins) - 1,
-                              min(dist_bins), max(dist_bins))
-                logs.LOG.info('%d lon bins from %s to %s', len(lon_bins) - 1,
+                logs.LOG.info('%d dist bins from %s to %s', len(dist_edges) - 1,
+                              min(dist_edges), max(dist_edges))
+                logs.LOG.info('%d lon bins from %s to %s', len(lon_edges) - 1,
                               bb.west, bb.east)
-                logs.LOG.info('%d lat bins from %s to %s', len(lon_bins) - 1,
+                logs.LOG.info('%d lat bins from %s to %s', len(lon_edges) - 1,
                               bb.south, bb.north)
 
-                bin_edges[lt_model.id, site.id] = bins = (
-                    mag_bins, dist_bins, lon_bins, lat_bins, eps_bins)
+                bin_edges[lt_model.id, site.id] = (
+                    mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-                arglist.append((self.job.id, srcs, lt_model, gsims_by_rlz,
-                                trt_num, site, curves, bins))
+            arglist.append((self.job.id, srcs, lt_model, gsims_by_rlz,
+                            trt_num, curves_dict, bin_edges))
 
-        # the memory goes in the population of the dictionary below
-        with self.monitor('compute disagg matrices'):
-            self.result = defaultdict(lambda: defaultdict(float))
-            self.parallelize(compute_disagg, arglist, self.collect_result)
+        res = tasks.map_reduce(compute_disagg, arglist, self.agg_result, {})
+        self.save_results(res)  # dictionary key -> pmf_dict
 
-        with self.monitor('save disagg matrices'):
-            alist = []
-            for key, dic in self.result.iteritems():
-                site_id, rlz_id, poe, imt, iml, trt_names = key
-                lt_model = models.LtRealization.objects.get(pk=rlz_id).lt_model
-                edges = bin_edges[lt_model.id, site_id]
-                alist.append(
-                    (job_id, site_id, edges, trt_names, dic,
-                     rlz_id, hc.investigation_time, imt, iml, poe))
-            self.parallelize(save_disagg_matrix, alist, self.log_percent)
+    @EnginePerformanceMonitor.monitor
+    def save_disagg_results(self, results):
+        """
+        The number of results to save is
+        #sites * #rlzs * #disagg_poes * #IMTs
+        """
+        for key, pmf_dict in results.iteritems():
+            site_id, rlz_id, poe, imt, iml, trt_names = key
+            lt_model = models.LtRealization.objects.get(pk=rlz_id).lt_model
+            edges = bin_edges[lt_model.id, site_id]
+            save_disagg_result(job_id, site_id, edges, trt_names, pmf_dict,
+                               rlz_id, hc.investigation_time, imt, iml, poe)
 
     post_execute = full_disaggregation
 
-    def collect_result(self, result):
+    def agg_result(self, acc, result):
         """
         Collect the results coming from compute_disagg into self.results,
-        a dictionary with key (rlz_id, site, poe, imt) and values
-        (mag_bins, dist_bins, lon_bins, lat_bins, trt_bins, eps_bins).
+        a dictionary with key site.id, rlz.id, poe, imt, iml, trt_names
+        and pmf dictionaries as values.
         """
-        for key, dic in result.iteritems():
-            for k, v in dic.iteritems():
-                res = self.result[key]
-                res[k] = 1. - (1. - res[k]) * (1. - v)
+        new_acc = {}
+        for key, pmf_dict in result.iteritems():
+            new_acc[key] = {}
+            a = acc.get(key, {})
+            for pmf_key, pmf_vals in pmf_dict.iteritems():
+                new_acc[key][pmf_key] = 1. - (1. - a.get(pmf_key, 0)) * (
+                    1. - pmf_vals)
         self.log_percent()
+        return acc
