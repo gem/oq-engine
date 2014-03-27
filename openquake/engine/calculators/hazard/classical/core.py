@@ -104,7 +104,7 @@ class BoundingBox(object):
             coordinate_bin_width from job.ini
         """
         dist_edges = dist_bin_width * numpy.arange(
-            int(self.min_dist / dist_bin_width)),
+            int(self.min_dist / dist_bin_width),
             int(numpy.ceil(self.max_dist / dist_bin_width) + 1))
 
         west = numpy.floor(self.west / coord_bin_width) * coord_bin_width
