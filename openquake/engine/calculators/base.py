@@ -24,6 +24,30 @@ from openquake.engine.utils import tasks
 ROUTING_KEY_FMT = 'oq.job.%(job_id)s.tasks'
 
 
+def log_percent_gen(taskname, todo):
+    """
+    Generator factory. Each time the generator object is called
+    log a message if the percentage is bigger than the last one.
+    Yield the number of calls done at the current iteration.
+
+    :param str taskname:
+        the name of the task
+    :param int todo:
+        the number of times the generator object will be called
+    """
+    done = 1
+    prev_percent = 0
+    while done < todo:
+        percent = int(float(done) / todo * 100)
+        if percent > prev_percent:
+            logs.LOG.progress('%s %3d%%', taskname, percent)
+            prev_percent = percent
+        yield done
+        done += 1
+    logs.LOG.progress('%s 100%%', taskname)
+    yield done
+
+
 class Calculator(object):
     """
     Base class for all calculators.
@@ -85,13 +109,11 @@ class Calculator(object):
         tasks.parallelize(task_func, arglist, task_completed)
 
     def initialize_percent(self, task_func, task_arg_gen):
-        self.taskname = task_func.__name__
         arglist = list(task_arg_gen)
-        self.num_tasks = len(arglist)
-        self.tasksdone = 0
-        self.percent = 0.0
-        logs.LOG.progress(
-            'spawning %d tasks of kind %s', self.num_tasks, self.taskname)
+        taskname = task_func.__name__
+        num_tasks = len(arglist)
+        self._log_percent = log_percent_gen(taskname, num_tasks)
+        logs.LOG.progress('spawning %d tasks of kind %s', num_tasks, taskname)
         return arglist
 
     def task_completed(self, task_result):
@@ -111,11 +133,7 @@ class Calculator(object):
 
         :param task_result: the result of the task (often None)
         """
-        self.tasksdone += 1
-        percent = int(float(self.tasksdone) / self.num_tasks * 100)
-        if percent > self.percent:
-            logs.LOG.progress('> %s %3d%%', self.taskname, percent)
-            self.percent = percent
+        self._log_percent.next()
 
     def pre_execute(self):
         """
@@ -123,6 +141,7 @@ class Calculator(object):
         initialize result records, perform detailed parsing of input data, etc.
         """
 
+    @EnginePerformanceMonitor.monitor
     def execute(self):
         """
         Run the core_calc_task in parallel, by passing the arguments
