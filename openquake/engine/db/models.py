@@ -755,7 +755,7 @@ class HazardCalculation(djm.Model):
         True if the site collection has been initialized for the
         current calculation.
         """
-        return self._site_collection_cache[self.id] is not None
+        return self._site_collection_cache.get(self.id) is not None
 
     @property
     def site_collection(self):
