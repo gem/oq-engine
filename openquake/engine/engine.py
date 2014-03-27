@@ -370,6 +370,7 @@ def run_calc(job, log_level, log_file, exports, job_type):
     handler = (LogFileHandler(job_type, calc, log_file) if log_file
                else LogStreamHandler(job_type, calc))
     logging.root.addHandler(handler)
+    models.HazardCalculation._site_collection_cache[calc.id] = ()
     try:
         # create job stats, which implicitly records the start time for the job
         models.JobStats.objects.create(oq_job=job)
@@ -380,6 +381,7 @@ def run_calc(job, log_level, log_file, exports, job_type):
             _do_run_calc(job, exports, calculator, job_type)
     finally:
         logging.root.removeHandler(handler)
+        del models.HazardCalculation._site_collection_cache[calc.id]
     return job
 
 

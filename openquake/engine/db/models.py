@@ -376,7 +376,7 @@ class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
     '''
-    _site_collection = ()  # see the corresponding instance variable
+    _site_collection_cache = {}  # hc.id -> site_collection
 
     @classmethod
     def create(cls, **kw):
@@ -763,8 +763,8 @@ class HazardCalculation(djm.Model):
         site parameters are used for all sites. The sites are ordered by id,
         to ensure reproducibility in tests.
         """
-        if len(self._site_collection):
-            return self._site_collection
+        if self.id in self._site_collection_cache:
+            return self._site_collection_cache[self.id]
 
         hsites = HazardSite.objects.filter(
             hazard_calculation=self).order_by('id')
@@ -797,7 +797,7 @@ class HazardCalculation(djm.Model):
 
             sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
 
-        sc = self._site_collection = SiteCollection(sites)
+        sc = self._site_collection_cache[self.id] = SiteCollection(sites)
         return sc
 
     def get_imts(self):
