@@ -19,7 +19,7 @@ Disaggregation calculator core functionality
 """
 
 import sys
-from collections import OrderedDict, namedtuple, defaultdict
+from collections import namedtuple
 import numpy
 
 from openquake.hazardlib.calc import disagg
@@ -94,7 +94,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
                                     truncation_level, n_epsilons)
                             pne = rupture.get_probability_no_exceedance(
                                 poes_given_rup_eps)
-                            pne_dict[rlz.id, poe, imt_str] = (pne, iml)
+                            pne_dict[rlz.id, poe, imt_str] = (iml, pne)
 
                 pnes.append(pne_dict)
         except Exception as err:
@@ -194,7 +194,7 @@ def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
     :param dict trt_num:
         a dictionary Tectonic Region Type -> incremental number
     :param curves_dict:
-        a dictionary with the hazard curves for all sites, realizations and IMTs
+        a dictionary with the hazard curves for sites, realizations and IMTs
     :returns:
         a dictionary of probability arrays, with composite key
         (site.id, rlz.id, poe, imt, iml, trt_names).
@@ -206,7 +206,11 @@ def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
 
     for site in hc.site_collection:
         # edges as wanted by disagg._arrange_data_in_bins
-        edges = bin_edges[lt_model.id, site.id] + (trt_names,)
+        try:
+            edges = bin_edges[lt_model.id, site.id]
+        except KeyError:
+            # bin_edges for a given site are missing if the site is far away
+            continue
 
         # generate source, rupture, sites once per site
         source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
@@ -245,7 +249,8 @@ def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
                     with EnginePerformanceMonitor(
                             'arranging bins', job_id, compute_disagg):
                         key = site.id, rlz.id, poe, imt, iml, trt_names
-                        matrix = disagg._arrange_data_in_bins(bins, edges)
+                        matrix = disagg._arrange_data_in_bins(
+                            bins, edges + (trt_names,))
                         result[key] = numpy.array(
                             [fn(matrix) for fn in disagg.pmf_map.values()])
 
@@ -299,7 +304,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                       min(eps_edges), max(eps_edges))
 
         arglist = []
-        bin_edges = {}
+        self.bin_edges = {}
         curves_dict = dict((site.id, self.get_curves(site))
                            for site in self.hc.site_collection)
 
@@ -332,21 +337,23 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
                 dist_edges, lon_edges, lat_edges = bb.bins_edges(
                     hc.distance_bin_width, hc.coordinate_bin_width)
-                logs.LOG.info('%d dist bins from %s to %s', len(dist_edges) - 1,
-                              min(dist_edges), max(dist_edges))
+                logs.LOG.info(
+                    '%d dist bins from %s to %s', len(dist_edges) - 1,
+                    min(dist_edges), max(dist_edges))
                 logs.LOG.info('%d lon bins from %s to %s', len(lon_edges) - 1,
                               bb.west, bb.east)
                 logs.LOG.info('%d lat bins from %s to %s', len(lon_edges) - 1,
                               bb.south, bb.north)
 
-                bin_edges[lt_model.id, site.id] = (
+                self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
             arglist.append((self.job.id, srcs, lt_model, gsims_by_rlz,
-                            trt_num, curves_dict, bin_edges))
+                            trt_num, curves_dict, self.bin_edges))
 
+        self.initialize_percent(compute_disagg, arglist)
         res = tasks.map_reduce(compute_disagg, arglist, self.agg_result, {})
-        self.save_results(res)  # dictionary key -> probability array
+        self.save_disagg_results(res)  # dictionary key -> probability array
 
     post_execute = full_disaggregation
 
@@ -376,6 +383,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         for key, probs in results.iteritems():
             site_id, rlz_id, poe, imt, iml, trt_names = key
             lt_model = models.LtRealization.objects.get(pk=rlz_id).lt_model
-            edges = bin_edges[lt_model.id, site_id]
-            save_disagg_result(job_id, site_id, edges, trt_names, probs,
-                               rlz_id, hc.investigation_time, imt, iml, poe)
+            edges = self.bin_edges[lt_model.id, site_id]
+            save_disagg_result(
+                self.job.id, site_id, edges, trt_names, probs,
+                rlz_id, self.hc.investigation_time, imt, iml, poe)
