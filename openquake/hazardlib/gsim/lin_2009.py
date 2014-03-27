@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013 GEM Foundation & Chung-Han Chan
+# Copyright (C) 2013-2014, GEM Foundation & Chung-Han Chan
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
