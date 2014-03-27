@@ -89,11 +89,8 @@ class BoundingBox(object):
         """
         True if the bounding box is non empty.
         """
-        ok = (self.min_dist is not None and self.west is not None
-              and self.south is not None) and (
-            self.min_dist < self.max_dist and
-            self.west < self.east and self.south < self.north)
-        return bool(ok)
+        return (self.min_dist is not None and self.west is not None
+                and self.south is not None)
 
 
 @tasks.oqtask
