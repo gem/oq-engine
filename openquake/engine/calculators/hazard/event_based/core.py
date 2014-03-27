@@ -125,8 +125,9 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
         # for each occurring rupture for each ses in the ses collection
         ses_num_occ = collections.defaultdict(list)
-        with generate_ruptures_mon:  # generating ruptures for the current source
-            for rup in src.iter_ruptures():
+        with generate_ruptures_mon:  # generating ruptures for the given source
+            for rup_no, rup in enumerate(src.iter_ruptures(), 1):
+                rup.rup_no = rup_no
                 for ses in all_ses:
                     numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
                     num_occurrences = rup.sample_number_of_occurrences()
@@ -155,10 +156,11 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                     prob_rup = models.ProbabilisticRupture.create(
                         rup, ses_coll)
                     for ses, num_occurrences in ses_num_occ[rup]:
-                        for occ in range(1, num_occurrences + 1):
+                        for occ_no in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             ses_rup = models.SESRupture.create(
-                                prob_rup, ses, src.source_id, occ, rup_seed)
+                                prob_rup, ses, src.source_id,
+                                rup.rup_no, occ_no, rup_seed)
                             ses_ruptures.append(ses_rup)
 
             with compute_gmfs_mon:  # computing GMFs
