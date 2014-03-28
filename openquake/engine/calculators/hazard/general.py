@@ -44,7 +44,7 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
-from openquake.engine.utils import config
+from openquake.engine.utils import config, tasks
 from openquake.engine.utils.general import \
     block_splitter, SequenceSplitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -220,10 +220,12 @@ class BaseHazardCalculator(base.Calculator):
         Override this in subclasses as necessary.
         """
         task_no = 0
+        sitecol_pik = tasks.Pickled(self.hc.site_collection)
         for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
             ltpath = tuple(lt_model.sm_lt_path)
             for block in self.source_blocks_per_ltpath[ltpath]:
-                yield self.job.id, block, lt_model, gsims_by_rlz, task_no
+                yield (self.job.id, sitecol_pik, block, lt_model,
+                       gsims_by_rlz, task_no)
                 task_no += 1
 
     def gen_gsims_by_rlz(self):

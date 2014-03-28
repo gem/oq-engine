@@ -130,7 +130,8 @@ class BoundingBox(object):
 
 
 @tasks.oqtask
-def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
+def compute_hazard_curves(
+        job_id, sitecol_pik, sources, lt_model, gsims_by_rlz, task_no):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -138,22 +139,26 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
 
     :param job_id:
         ID of the currently running job
+    :param sitecol_pik:
+        A pickled SiteCollection
     :param sources:
         a block of source objects
+    :param lt_model:
+        a :class:`openquake.engine.db.LtSourceModel` instance
     :param gsims_by_rlz:
         a dictionary of gsim dictionaries, one for each realization
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    total_sites = len(hc.site_collection)
-    sitemesh = hc.site_collection.mesh
+    sitecol = sitecol_pik.unpickle()
+    total_sites = len(sitecol)
+    sitemesh = sitecol.mesh
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
                              for imt in imts))
                   for rlz in gsims_by_rlz)
     if hc.poes_disagg:  # doing disaggregation
-        bbs = [BoundingBox(lt_model.id, site.id)
-               for site in hc.site_collection]
+        bbs = [BoundingBox(lt_model.id, site_id) for site_id in sitecol.sids]
     else:
         bbs = []
     mon = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
