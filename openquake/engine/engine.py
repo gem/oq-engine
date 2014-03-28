@@ -154,8 +154,8 @@ def save_job_stats(job, disk_space=None, stop_time=None):
         hc = job.risk_calculation.hazard_calculation
     else:
         hc = job.hazard_calculation
-    if hc and hc._site_collection:  # sites already imported
-        js.num_sites = len(hc._site_collection)
+    if hc and hc.has_site_collection():  # sites already imported
+        js.num_sites = len(hc.site_collection)
     js.save()
 
 
@@ -370,7 +370,7 @@ def run_calc(job, log_level, log_file, exports, job_type):
     handler = (LogFileHandler(job_type, calc, log_file) if log_file
                else LogStreamHandler(job_type, calc))
     logging.root.addHandler(handler)
-    models.HazardCalculation._site_collection_cache[calc.id] = ()
+    models.HazardCalculation._site_collection_cache[calc.id] = None
     try:
         # create job stats, which implicitly records the start time for the job
         models.JobStats.objects.create(oq_job=job)
