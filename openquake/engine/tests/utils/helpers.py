@@ -306,7 +306,7 @@ class ConfigTestCase(object):
         os.environ.clear()
         # Move the local configuration file out of the way if it exists.
         # Otherwise the tests that follow will break.
-        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        local_path = "%s/openquake.cfg" % os.path.abspath(config.OQDIR)
         if os.path.isfile(local_path):
             shutil.move(local_path, "%s.test_bakk" % local_path)
 
@@ -315,7 +315,7 @@ class ConfigTestCase(object):
         os.environ.update(self.orig_env)
         # Move the local configuration file back into place if it was stashed
         # away.
-        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        local_path = "%s/openquake.cfg" % os.path.abspath(config.OQDIR)
         if os.path.isfile("%s.test_bakk" % local_path):
             shutil.move("%s.test_bakk" % local_path, local_path)
         config.Config().cfg.clear()
@@ -705,7 +705,7 @@ def create_ses_ruptures(job, ses_collection, num):
         source_typology=object())
     seed = 42
     pr = models.ProbabilisticRupture.create(rupture, ses_collection)
-    return [models.SESRupture.create(pr, ses, 'test', i, seed + i)
+    return [models.SESRupture.create(pr, ses, 'test', 1, i, seed + i)
             for i in range(num)]
 
 

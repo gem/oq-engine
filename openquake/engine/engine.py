@@ -22,6 +22,7 @@ import getpass
 import os
 import sys
 import time
+import signal
 import logging
 import warnings
 from contextlib import contextmanager
@@ -60,6 +61,15 @@ LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
 
 TERMINATE = general.str2bool(
     config.get('celery', 'terminate_workers_on_revoke'))
+
+
+def keyboard_interrupt(_signum, _stack):
+    """
+    When a SIGTERM is received, raise a KeyboardInterrupt
+    """
+    raise KeyboardInterrupt
+
+signal.signal(signal.SIGTERM, keyboard_interrupt)
 
 
 def cleanup_after_job(job, terminate):
