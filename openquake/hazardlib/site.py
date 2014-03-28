@@ -255,6 +255,20 @@ for name in 'vs30 vs30measured z1pt0 z2pt5'.split():
 
 @with_slots
 class FilteredSiteCollection(object):
+    """
+    A class meant to store proper subsets of a complete collection of sites
+    in a memory-efficient way.
+
+    :param indices:
+        an array of indices referring to the complete site collection
+    :param complete:
+        the complete site collection the filtered collection was
+        derived from
+
+    Notice that if you filter a FilteredSiteCollection `fsc`, you will
+    get a different FilteredSiteCollection referring to the complete
+    SiteCollection `fsc.complete`, not to the filtered collection `fsc`.
+    """
     __slots__ = 'indices complete'.split()
 
     def __init__(self, indices, complete):
@@ -263,6 +277,7 @@ class FilteredSiteCollection(object):
 
     @property
     def total_sites(self):
+        """The total number of the original sites, without filtering"""
         return self.complete.total_sites
 
     @property
