@@ -165,7 +165,8 @@ def compute_hazard_curves(
     make_ctxt = LightMonitor('making contexts', job_id, compute_hazard_curves)
     calc_poes = LightMonitor('computing poes', job_id, compute_hazard_curves)
     for source, rows in itertools.groupby(
-            hc.gen_ruptures(sources, mon), key=operator.itemgetter(0)):
+            hc.gen_ruptures(sources, mon, sitecol),
+            key=operator.itemgetter(0)):
         # a row is a triple (source, rupture, rupture_sites)
         t0 = time.time()
         num_ruptures = 0
