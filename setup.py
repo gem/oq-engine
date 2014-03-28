@@ -1,5 +1,5 @@
 # oq-risklib: The Risk Library
-# Copyright (C) 2013 GEM Foundation
+# Copyright (C) 2013-2014, GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,7 +19,7 @@ oq-risklib needs a description.
 Comments, suggestions and criticisms from the community are always
 very welcome.
 
-Copyright (C) 2013 GEM Foundation.
+Copyright (C) 2013-2014, GEM Foundation.
 """
 import os
 import re
