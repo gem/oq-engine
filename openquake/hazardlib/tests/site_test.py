@@ -18,8 +18,11 @@ import unittest
 
 import numpy
 
-from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.site import \
+    Site, SiteCollection, FilteredSiteCollection
 from openquake.hazardlib.geo.point import Point
+
+assert_eq = numpy.testing.assert_equal
 
 
 class FakePoint(object):
@@ -98,29 +101,27 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         self.assertIsInstance(cll.vs30measured, numpy.ndarray)
         self.assertEqual(cll.vs30measured.flags.writeable, False)
         self.assertEqual(cll.vs30measured.dtype, bool)
-
         self.assertEqual(len(cll), 2)
-
 
     def test_from_points(self):
         p1 = FakePoint(10, 20)
         p2 = FakePoint(-1.2, -3.4)
         cll = SiteCollection.from_points([p1, p2], [1, 2], SiteModelParam())
-        self.assertTrue(cll.vs30 == [1.2, 1.2])
-        self.assertTrue(cll.vs30measured == True)
-        self.assertTrue(cll.z1pt0 == [3.4, 3.4])
-        self.assertTrue(cll.z2pt5 == [5.6, 5.6])
-        self.assertTrue((cll.mesh.lons == [10, -1.2]).all())
-        self.assertTrue((cll.mesh.lats == [20, -3.4]).all())
-        self.assertIs(cll.mesh.depths, None)
+        assert_eq(cll.vs30, [1.2, 1.2])
+        assert_eq(cll.vs30measured, [True, True])
+        assert_eq(cll.z1pt0, [3.4, 3.4])
+        assert_eq(cll.z2pt5, [5.6, 5.6])
+        assert_eq(cll.mesh.lons, [10, -1.2])
+        assert_eq(cll.mesh.lats, [20, -3.4])
+        assert_eq(cll.mesh.depths, None)
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
             self.assertEqual(arr.dtype, float)
         self.assertIsInstance(cll.vs30measured, numpy.ndarray)
         self.assertEqual(cll.vs30measured.flags.writeable, False)
         self.assertEqual(cll.vs30measured.dtype, bool)
-
         self.assertEqual(len(cll), 2)
+
 
 class SiteCollectionFilterTestCase(unittest.TestCase):
     SITES = [
@@ -137,7 +138,7 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
     def test_filter(self):
         col = SiteCollection(self.SITES)
         filtered = col.filter(numpy.array([True, False, True, False]))
-        self.assertIsInstance(filtered, SiteCollection)
+        self.assertIsInstance(filtered, FilteredSiteCollection)
         arreq = numpy.testing.assert_array_equal
         arreq(filtered.vs30, [1.2, 2])
         arreq(filtered.vs30measured, [True, True])
@@ -148,7 +149,7 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         self.assertIs(filtered.mesh.depths, None)
 
         filtered = col.filter(numpy.array([False, True, True, True]))
-        self.assertIsInstance(filtered, SiteCollection)
+        self.assertIsInstance(filtered, FilteredSiteCollection)
         arreq(filtered.vs30, [55.4, 2, 4])
         arreq(filtered.vs30measured, [False, True, False])
         arreq(filtered.z1pt0, [6, 9, 22])
@@ -185,7 +186,8 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         arreq(filtered2.indices, [0, 3])
 
     def test_expand_2d(self):
-        col = SiteCollection(self.SITES).filter(numpy.array([False, True, False, True]))
+        col = SiteCollection(self.SITES).filter(
+            numpy.array([False, True, False, True]))
         data_condensed = numpy.array([
             [1, 2, 3],
             [5, 6, 7],

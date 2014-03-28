@@ -27,8 +27,8 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.geo import Point, PlanarSurface, NodalPlane, Polygon
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.site import \
+    Site, SiteCollection, FilteredSiteCollection
 
 from openquake.hazardlib.tests.geo.surface import \
     _planar_test_data as planar_surface_test_data
@@ -545,7 +545,7 @@ class PointSourceSourceFilterTestCase(unittest.TestCase):
         filtered = self.source1.filter_sites_by_distance_to_source(
             integration_distance=0, sites=self.sitecol
         )
-        self.assertIsInstance(filtered, SiteCollection)
+        self.assertIsInstance(filtered, FilteredSiteCollection)
         self.assertIsNot(filtered, self.sitecol)
         numpy.testing.assert_array_equal(filtered.indices, [0])
         numpy.testing.assert_array_equal(filtered.vs30, [0.1])
@@ -575,8 +575,7 @@ class PointSourceSourceFilterTestCase(unittest.TestCase):
         filtered = self.source2.filter_sites_by_distance_to_source(
             integration_distance=495, sites=self.sitecol
         )
-        self.assertIs(filtered, self.sitecol)
-        numpy.testing.assert_array_equal(filtered.indices, None)
+        self.assertIs(filtered, self.sitecol)  # nothing filtered
 
     def test_filter_all_out(self):
         self.source1.location.latitude = 13.6
