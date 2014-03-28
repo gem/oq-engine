@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <disaggMatrices sourceModelTreePath="b1" gsimTreePath="b1" IMT="PGA" investigationTime="50.0" lon="10.1" lat="40.1" magBinEdges="5.0, 6.0, 7.0, 8.0" distBinEdges="0.0, 25.0, 50.0, 75.0, 100.0" lonBinEdges="9.0, 10.5" latBinEdges="39.0, 40.5" epsBinEdges="-3.0, -1.0, 1.0, 3.0" tectonicRegionTypes="Active Shallow Crust">
+  <disaggMatrices sourceModelTreePath="b1" gsimTreePath="b1" IMT="PGA" investigationTime="50.0" lon="10.1" lat="40.1" magBinEdges="5.0, 6.0, 7.0, 8.0" distBinEdges="0.0, 25.0, 50.0, 75.0, 100.0" lonBinEdges="9.0, 10.5, 12.0" latBinEdges="39.0, 40.5" epsBinEdges="-3.0, -1.0, 1.0, 3.0" tectonicRegionTypes="Active Shallow Crust">
     <disaggMatrix type="Mag" dims="3" poE="0.1" iml="0.300499775729">
       <prob index="0" value="0.0558077088302"/>
       <prob index="1" value="0.0322903899253"/>
@@ -67,16 +67,21 @@
       <prob index="2,3,1" value="0.0"/>
       <prob index="2,3,2" value="0.0"/>
     </disaggMatrix>
-    <disaggMatrix type="Lon,Lat" dims="1,1" poE="0.1" iml="0.300499775729">
-      <prob index="0,0" value="0.0957597582098"/>
+    <disaggMatrix type="Lon,Lat" dims="2,1" poE="0.1" iml="0.300499775729">
+      <prob index="0,0" value="0.0928789513925"/>
+      <prob index="1,0" value="0.00317576890287"/>
     </disaggMatrix>
-    <disaggMatrix type="Mag,Lon,Lat" dims="3,1,1" poE="0.1" iml="0.300499775729">
-      <prob index="0,0,0" value="0.0558077088302"/>
-      <prob index="1,0,0" value="0.0322903899253"/>
+    <disaggMatrix type="Mag,Lon,Lat" dims="3,2,1" poE="0.1" iml="0.300499775729">
+      <prob index="0,0,0" value="0.0557801061088"/>
+      <prob index="0,1,0" value="2.92333614099e-05"/>
+      <prob index="1,0,0" value="0.0292357564334"/>
+      <prob index="1,1,0" value="0.00314662752796"/>
       <prob index="2,0,0" value="0.0103575256434"/>
+      <prob index="2,1,0" value="0.0"/>
     </disaggMatrix>
-    <disaggMatrix type="Lon,Lat,TRT" dims="1,1,1" poE="0.1" iml="0.300499775729">
-      <prob index="0,0,0" value="0.0957597582098"/>
+    <disaggMatrix type="Lon,Lat,TRT" dims="2,1,1" poE="0.1" iml="0.300499775729">
+      <prob index="0,0,0" value="0.0928789513925"/>
+      <prob index="1,0,0" value="0.00317576890287"/>
     </disaggMatrix>
   </disaggMatrices>
 </nrml>
