@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,7 @@ Up-to-date sphinx documentation is at
 This software is licensed under the AGPL license, for more details
 please see the LICENSE file.
 
-Copyright (c) 2010-2013, GEM Foundation.
+Copyright (c) 2010-2014, GEM Foundation.
 
 OpenQuake is free software: you can redistribute it and/or modify it
 under the terms of the GNU Affero General Public License as published
