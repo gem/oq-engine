@@ -261,7 +261,7 @@ class ArangeDataInBinsTestCase(unittest.TestCase):
         trt_bins = ['trt1', 'trt2']
 
         probs_one_or_more = numpy.array([0.1] * len(mags)).reshape(2, 1)
-        probs_exceed_given_rup = numpy.ones((len(mags), 3)) * 0.1
+        probs_exceed_given_rup = numpy.ones((len(mags), 2)) * 0.1
         probs_no_exceed = (1 - probs_one_or_more) ** probs_exceed_given_rup
 
         bins_data = (mags, dists, lons, lats, trts, trt_bins,
@@ -303,19 +303,66 @@ class DisaggregateTestCase(_BaseDisaggTestCase):
         aaae(lat_bins, [43.2, 45.6, 48.])
         aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
         self.assertEqual(trt_bins, ['trt1', 'trt2'])
-        for idx, value in [((0, 2, 4, 0, 0, 0), 0.0429088739427),
-                           ((0, 2, 4, 0, 1, 0), 0.0915231841771),
-                           ((0, 2, 4, 0, 2, 0), 0.0539109573863),
-                           ((0, 2, 5, 0, 0, 0), 0.0524944739774),
-                           ((0, 2, 5, 0, 1, 0), 0.0831147185105),
-                           ((0, 2, 5, 0, 2, 0), 0.0553469961235),
-                           ((0, 3, 5, 0, 1, 0), 0.0198247319211),
-                           ((0, 3, 5, 0, 2, 0), 0.00040039738616),
-                           ((1, 1, 0, 0, 1, 1), 0.00407387860215),
-                           ((1, 1, 0, 0, 2, 1), 0.00163154735795),
-                           ((1, 1, 0, 1, 0, 1), 0.00304128663811),
-                           ((1, 1, 0, 1, 1, 1), 0.0151142198204),
-                           ((1, 1, 0, 1, 2, 1), 0.00304128663811)]:
+        for idx, value in [((0, 2, 5, 0, 0, 0), 0.022067231457071457),
+                           ((0, 2, 5, 0, 1, 0), 0.043647500209963),
+                           ((0, 2, 5, 0, 2, 0), 0.022067231457071457),
+                           ((0, 3, 5, 0, 1, 0), 0.01982473192105061),
+                           ((0, 3, 5, 0, 2, 0), 0.003409751870464106),
+                           ((0, 2, 4, 0, 0, 0), 0.04290887394265486),
+                           ((0, 2, 4, 0, 1, 0), 0.09152318417708383),
+                           ((0, 2, 4, 0, 2, 0), 0.0438902176307755),
+                           ((1, 3, 5, 0, 0, 0), 0.03111383880273666),
+                           ((1, 3, 5, 0, 1, 0), 0.041268484485817325),
+                           ((1, 3, 5, 0, 2, 0), 0.03111383880273666),
+                           ((1, 3, 4, 0, 2, 0), 0.010480741793785553),
+                           ((1, 1, 0, 0, 1, 1), 0.004073878602149361),
+                           ((1, 1, 0, 0, 2, 1), 0.0016315473579483486),
+                           ((1, 1, 0, 1, 0, 1), 0.003041286638106211),
+                           ((1, 1, 0, 1, 1, 1), 0.015114219820389518),
+                           ((1, 1, 0, 1, 2, 1), 0.003041286638106211)]:
+            self.assertAlmostEqual(matrix[idx], value)
+            matrix[idx] = 0
+
+        self.assertEqual(matrix.sum(), 0)
+
+    def test_cross_idl(self):
+        # test disaggregation with source generating ruptures crossing
+        # internation date line
+        ruptures_and_poes = [
+            ([0, 0.2, 0.3], self.FakeRupture(5.5, 0.04, 55, -179.5, 45.5)),
+            ([0.4, 0.5, 0.6], self.FakeRupture(7.5, 0.03, 75, 179.5, 46.5))
+        ]
+        source = self.FakeSource(
+            1, [rupture for poes, rupture in ruptures_and_poes],
+            self.tom, 'trt1'
+        )
+
+        disagreggated_poes = dict(
+            (rupture, poes) for (poes, rupture) in ruptures_and_poes
+        )
+        gsim = self.FakeGSIM(self.iml, self.imt, truncation_level=1,
+                             n_epsilons=3,
+                             disaggregated_poes=disagreggated_poes)
+
+        bin_edges, matrix = disagg.disaggregation(
+            [source], self.site, self.imt, self.iml, {'trt1': gsim},
+            truncation_level=1, n_epsilons=3,
+            mag_bin_width=1, dist_bin_width=10, coord_bin_width=1.0
+        )
+        mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
+        aaae = numpy.testing.assert_array_almost_equal
+        aaae(mag_bins, [5, 6, 7, 8])
+        aaae(dist_bins, [50, 60, 70, 80])
+        aaae(lon_bins, [179., -180, -179.])
+        aaae(lat_bins, [45., 46., 47.])
+        aaae(eps_bins, [-1, -0.3333333, 0.3333333, 1])
+        self.assertEqual(trt_bins, ['trt1'])
+        for idx, value in [((0, 0, 1, 0, 0, 0), 0),
+                           ((0, 0, 1, 0, 1, 0), 0.008131160717433694),
+                           ((0, 0, 1, 0, 2, 0), 0.012171913957925717),
+                           ((2, 2, 0, 1, 0, 0), 0.012109762440985716),
+                           ((2, 2, 0, 1, 1, 0), 0.015114219820389518),
+                           ((2, 2, 0, 1, 2, 0), 0.01810953978371055)]:
             self.assertAlmostEqual(matrix[idx], value)
             matrix[idx] = 0
 

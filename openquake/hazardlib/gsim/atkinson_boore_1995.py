@@ -36,6 +36,9 @@ class AtkinsonBoore1995GSCBest(GMPE):
     Seismological Society of America, Vol. 85, No. 1, pp. 17-30, February 1995.
     Table of coefficients were provided by GSC and are associated to the 'Best'
     case (that is mean value unaffected).
+
+    The class assumes magnitude to be in Mblg scale. The Atkinson 1993
+    conversion equation is used to obtain Mw values.
     """
     #: Supported tectonic region type is stable continental, given
     #: that the equations have been derived for Eastern North America
@@ -82,13 +85,17 @@ class AtkinsonBoore1995GSCBest(GMPE):
         rhypo = dists.rhypo
         rhypo[rhypo < 10] = 10
 
+        # convert magnitude from Mblg to Mw
+        mag = rup.mag * 0.98 - 0.39 if rup.mag <= 5.5 else \
+              2.715 - 0.277 * rup.mag + 0.127 * rup.mag * rup.mag
+
         # functional form as explained in 'Youngs_fit_to_AB95lookup.doc'
         f1 = np.minimum(np.log(rhypo), np.log(70.))
         f2 = np.maximum(np.log(rhypo / 130.), 0)
         mean = (
-            C['c1'] + C['c2'] * rup.mag + C['c3'] * rup.mag ** 2 +
-            (C['c4'] + C['c5'] * rup.mag) * f1 +
-            (C['c6'] + C['c7'] * rup.mag) * f2 +
+            C['c1'] + C['c2'] * mag + C['c3'] * mag ** 2 +
+            (C['c4'] + C['c5'] * mag) * f1 +
+            (C['c6'] + C['c7'] * mag) * f2 +
             C['c8'] * rhypo
         )
 

@@ -80,7 +80,7 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.dip = dip
         self.rake = rake
 
-        min_mag = self.mfd.get_min_mag()
+        min_mag, max_mag = self.mfd.get_min_max_mag()
         cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
                                                  min_mag)
         if 1 in cols_rows:

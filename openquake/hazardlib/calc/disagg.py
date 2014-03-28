@@ -22,11 +22,12 @@ import sys
 import numpy
 import warnings
 import collections
+from itertools import izip
 
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.geodetic import npoints_between
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
-from openquake.hazardlib.geo.utils import get_spherical_bounding_box
+from openquake.hazardlib.geo.utils import get_spherical_bounding_box, cross_idl
 from openquake.hazardlib.site import SiteCollection
 
 
@@ -254,51 +255,62 @@ def _arrange_data_in_bins(bins_data, bin_edges):
     (mags, dists, lons, lats, tect_reg_types, trt_bins, probs_no_exceed) = \
         bins_data
     mag_bins, dist_bins, lon_bins, lat_bins, eps_bins, trt_bins = bin_edges
-    shape = (len(mag_bins) - 1, len(dist_bins) - 1, len(lon_bins) - 1,
-             len(lat_bins) - 1, len(eps_bins) - 1, len(trt_bins))
-    diss_matrix = numpy.zeros(shape)
 
-    for i_mag in xrange(len(mag_bins) - 1):
-        mag_idx = mags <= mag_bins[i_mag + 1]
-        if i_mag != 0:
-            mag_idx &= mags > mag_bins[i_mag]
+    dim1 = len(mag_bins) - 1
+    dim2 = len(dist_bins) - 1
+    dim3 = len(lon_bins) - 1
+    dim4 = len(lat_bins) - 1
+    shape = (dim1, dim2, dim3, dim4, len(eps_bins) - 1, len(trt_bins))
+    diss_matrix = numpy.ones(shape)
 
-        for i_dist in xrange(len(dist_bins) - 1):
-            dist_idx = dists <= dist_bins[i_dist + 1]
-            if i_dist != 0:
-                dist_idx &= dists > dist_bins[i_dist]
+    # find bin indexes of rupture attributes; bins are assumed closed
+    # on the lower bound, and open on the upper bound, that is [ )
+    # longitude values need an ad-hoc method to take into account
+    # the 'international date line' issue
+    # the 'minus 1' is needed because the digitize method returns the index
+    # of the upper bound of the bin
+    mags_idx = numpy.digitize(mags, mag_bins) - 1
+    dists_idx = numpy.digitize(dists, dist_bins) - 1
+    lons_idx = _digitize_lons(lons, lon_bins)
+    lats_idx = numpy.digitize(lats, lat_bins) - 1
 
-            for i_lon in xrange(len(lon_bins) - 1):
-                extents = get_longitudinal_extent(lons, lon_bins[i_lon + 1])
-                lon_idx = extents >= 0
-                if i_lon != 0:
-                    extents = get_longitudinal_extent(lon_bins[i_lon], lons)
-                    lon_idx &= extents > 0
+    # because of the way numpy.digitize works, values equal to the last bin
+    # edge are associated to an index equal to len(bins) which is not a valid
+    # index for the disaggregation matrix. Such values are assumed to fall
+    # in the last bin.
+    mags_idx[mags_idx == dim1] = dim1 - 1
+    dists_idx[dists_idx == dim2] = dim2 - 1
+    lons_idx[lons_idx == dim3] = dim3 - 1
+    lats_idx[lats_idx == dim4] = dim4 - 1
 
-                for i_lat in xrange(len(lat_bins) - 1):
-                    lat_idx = lats <= lat_bins[i_lat + 1]
-                    if i_lat != 0:
-                        lat_idx &= lats > lat_bins[i_lat]
+    for i, (i_mag, i_dist, i_lon, i_lat, i_trt) in \
+        enumerate(
+            izip(mags_idx, dists_idx, lons_idx, lats_idx, tect_reg_types)):
 
-                    for i_eps in xrange(len(eps_bins) - 1):
+        diss_matrix[i_mag, i_dist, i_lon, i_lat, :, i_trt] *= \
+            probs_no_exceed[i, :]
 
-                        for i_trt in xrange(len(trt_bins)):
-                            trt_idx = tect_reg_types == i_trt
+    return 1 - diss_matrix
 
-                            diss_idx = (i_mag, i_dist, i_lon,
-                                        i_lat, i_eps, i_trt)
 
-                            prob_idx = (mag_idx & dist_idx & lon_idx
-                                        & lat_idx & trt_idx)
-
-                            poe = numpy.prod(
-                                probs_no_exceed[prob_idx, i_eps]
-                            )
-                            poe = 1 - poe
-
-                            diss_matrix[diss_idx] = poe
-
-    return diss_matrix
+def _digitize_lons(lons, lon_bins):
+    """
+    Return indices of the bins to which each value in lons belongs.
+    Takes into account the case in which longitude values cross the
+    international date line.
+    """
+    if cross_idl(lon_bins[0], lon_bins[-1]):
+        idx = []
+        for i_lon in xrange(len(lon_bins) - 1):
+            extents = get_longitudinal_extent(lons, lon_bins[i_lon + 1])
+            lon_idx = extents > 0
+            if i_lon != 0:
+                extents = get_longitudinal_extent(lon_bins[i_lon], lons)
+                lon_idx &= extents >= 0
+            idx.append(lon_idx)
+        return numpy.array(idx)
+    else:
+        return numpy.digitize(lons, lon_bins) - 1
 
 
 def mag_pmf(matrix):
