@@ -36,12 +36,12 @@ from openquake.engine.performance import EnginePerformanceMonitor, \
 
 class Pickled(object):
     """
-	An utility to manually pickling/unpickling objects.
+    An utility to manually pickling/unpickling objects.
     The reason is that celery does not use the HIGHEST_PROTOCOL,
-	so relying on celery is slower. Moreover Pickled instances
+    so relying on celery is slower. Moreover Pickled instances
     have a nice string representation and length giving the size
-	of the pickled bytestring.
-	"""
+    of the pickled bytestring.
+    """
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
         self.pik = cPickle.dumps(obj, cPickle.HIGHEST_PROTOCOL)
