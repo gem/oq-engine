@@ -4,7 +4,7 @@
 # pylint: disable=C0103,R0904
 # pylint: enable=W0511,W0142,I0011,E1101,E0611,F0401,E1103,R0801,W0232
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
