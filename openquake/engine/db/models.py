@@ -779,25 +779,23 @@ class HazardCalculation(djm.Model):
         # ordering no ruptures are generated and the test
         # qa_tests/hazard/disagg/case_1/test.py fails with a bad
         # error message
-        sites = []
-        site_model_inp = self.site_model
-        for hsite in hsites:
-            pt = geo.point.Point(hsite.location.x, hsite.location.y)
-            if site_model_inp:
+        if self.site_model:
+            sites = []
+            for hsite in hsites:
+                pt = geo.point.Point(hsite.location.x, hsite.location.y)
                 smd = self.get_closest_site_model_data(pt)
                 measured = smd.vs30_type == 'measured'
                 vs30 = smd.vs30
                 z1pt0 = smd.z1pt0
                 z2pt5 = smd.z2pt5
-            else:
-                vs30 = self.reference_vs30_value
-                measured = self.reference_vs30_type == 'measured'
-                z1pt0 = self.reference_depth_to_1pt0km_per_sec
-                z2pt5 = self.reference_depth_to_2pt5km_per_sec
-
-            sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
-
-        sc = self._site_collection = SiteCollection(sites)
+                sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
+            sc = SiteCollection(sites)
+        else:
+            lons = [hsite.location.x for hsite in hsites]
+            lats = [hsite.location.y for hsite in hsites]
+            site_ids = [hsite.id  for hsite in hsites]
+            sc = SiteCollection.from_points(lons, lats, site_ids, self)
+        self._site_collection = sc
         return sc
 
     def get_imts(self):
@@ -1831,7 +1829,7 @@ class SESRupture(djm.Model):
         ordering = ['tag']
 
     @classmethod
-    def create(cls, prob_rupture, ses, source_id, numbers, seed):
+    def create(cls, prob_rupture, ses, source_id, rupt_no, rupt_occ, seed):
         """
         Create a SESRupture row in the database.
 
@@ -1841,15 +1839,16 @@ class SESRupture(djm.Model):
             :class:`openquake.engine.db.models.SES` instance
         :param str source_id:
             id of the source that generated the rupture
-        :param numbers:
-            a pair of numbers starting from 1: the rupture number for the
-            given source and the occurrence number in the given ses
+        :param rupt_no:
+            the rupture number (an ordinal from source.iter_ruptures())
+        :param rupt_occ:
+            the occurrence number of the rupture in the given ses
         :param int seed:
             a seed that will be used when computing the GMF from the rupture
         """
-        no = '%03d-%02d' % numbers
-        tag = 'smlt=%02d|ses=%04d|src=%s|rup=%s' % (
-            ses.ses_collection.ordinal, ses.ordinal, source_id, no)
+        tag = 'smlt=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
+            ses.ses_collection.ordinal, ses.ordinal, source_id, rupt_no,
+            rupt_occ)
         return cls.objects.create(
             rupture=prob_rupture, ses=ses, tag=tag, seed=seed)
 
