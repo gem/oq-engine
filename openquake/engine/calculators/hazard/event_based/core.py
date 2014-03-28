@@ -301,11 +301,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        for job_id, block, lt_model, gsims_by_rlz, task_no in super(
-                EventBasedHazardCalculator, self).task_arg_gen():
+        for job_id, sitecol_pik, block, lt_model, gsims_by_rlz, task_no in \
+                super(EventBasedHazardCalculator, self).task_arg_gen():
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in block]  # source, seed pairs
-            yield job_id, ss, lt_model, gsims_by_rlz, task_no
+            yield job_id, sitecol_pik, ss, lt_model, gsims_by_rlz, task_no
 
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
