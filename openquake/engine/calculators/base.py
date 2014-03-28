@@ -123,6 +123,7 @@ class Calculator(object):
         initialize result records, perform detailed parsing of input data, etc.
         """
 
+    @EnginePerformanceMonitor.monitor
     def execute(self):
         """
         Run the core_calc_task in parallel, by passing the arguments
