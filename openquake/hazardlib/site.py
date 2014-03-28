@@ -136,7 +136,7 @@ class SiteCollection(object):
         self = cls.__new__(cls)
         self.complete = self
         self.total_sites = len(lons)
-        self.sid = numpy.array(site_ids, int)
+        self.sids = numpy.array(site_ids, int)
         self.lons = numpy.array(lons)
         self.lats = numpy.array(lats)
         self._vs30 = sitemodel.reference_vs30_value
@@ -148,7 +148,7 @@ class SiteCollection(object):
     def __init__(self, sites):
         self.complete = self
         self.total_sites = n = len(sites)
-        self.sid = numpy.zeros(n, dtype=int)
+        self.sids = numpy.zeros(n, dtype=int)
         self.lons = numpy.zeros(n, dtype=float)
         self.lats = numpy.zeros(n, dtype=float)
         self._vs30 = numpy.zeros(n, dtype=float)
@@ -157,7 +157,7 @@ class SiteCollection(object):
         self._z2pt5 = numpy.zeros(n, dtype=float)
 
         for i in xrange(n):
-            self.sid[i] = sites[i].id
+            self.sids[i] = sites[i].id
             self.lons[i] = sites[i].location.longitude
             self.lats[i] = sites[i].location.latitude
             self._vs30[i] = sites[i].vs30
@@ -172,7 +172,7 @@ class SiteCollection(object):
         # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         for arr in (self._vs30, self._vs30measured, self._z1pt0, self._z2pt5,
-                    self.sid, self.lons, self.lats):
+                    self.lons, self.lats, self.sids):
             arr.flags.writeable = False
 
     @property
@@ -188,11 +188,11 @@ class SiteCollection(object):
         if isinstance(self.vs30, float):  # from points
             for i, location in enumerate(self.mesh):
                 yield Site(location, self._vs30, self._vs30measured,
-                           self._z1pt0, self._z2pt5, self.sid[i])
+                           self._z1pt0, self._z2pt5, self.sids[i])
         else:  # from sites
             for i, location in enumerate(self.mesh):
                 yield Site(location, self.vs30[i], self.vs30measured[i],
-                           self.z1pt0[i], self.z2pt5[i], self.sid[i])
+                           self.z1pt0[i], self.z2pt5[i], self.sids[i])
 
     def filter(self, mask):
         """
@@ -384,7 +384,7 @@ class FilteredSiteCollection(object):
             len(self.indices), self.total_sites)
 
 # attach a number of properties filtering the arrays
-for name in 'vs30 vs30measured z1pt0 z2pt5 lons lats'.split():
+for name in 'vs30 vs30measured z1pt0 z2pt5 lons lats sids'.split():
     prop = property(
         lambda fsc, name=name: getattr(fsc.complete, name).take(fsc.indices),
         doc='Extract %s array from FilteredSiteCollection' % name)
