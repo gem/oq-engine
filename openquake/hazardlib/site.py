@@ -114,14 +114,14 @@ class SiteCollection(object):
         A list of instances of :class:`Site` class.
     """
     @classmethod
-    def from_points(cls, points, site_ids, sitemodel):
+    def from_points(cls, lons, lats, site_ids, sitemodel):
         """
         Build the site collection from
 
-        :param points:
-            a sequence of points with attributes x and y corresponding
-            to longitude and latitude respectively (this is the case for
-            Django libgeos points)
+        :param lons:
+            a sequence of longitudes
+        :param lats:
+            a sequence of latitudes
         :param site_ids:
             a sequence of distinct integers
         :param sitemodel:
@@ -131,12 +131,14 @@ class SiteCollection(object):
             reference_depth_to_1pt0km_per_sec,
             reference_depth_to_2pt5km_per_sec.
         """
+        assert len(lons) == len(lats) == len(site_ids), (
+            len(lons), len(lats), len(site_ids))
         self = cls.__new__(cls)
         self.complete = self
-        self.total_sites = len(points)
+        self.total_sites = len(lons)
         self.sid = numpy.array(site_ids, int)
-        self.lons = numpy.array([p.x for p in points])
-        self.lats = numpy.array([p.y for p in points])
+        self.lons = numpy.array(lons)
+        self.lats = numpy.array(lats)
         self._vs30 = sitemodel.reference_vs30_value
         self._vs30measured = sitemodel.reference_vs30_type == 'measured'
         self._z1pt0 = sitemodel.reference_depth_to_1pt0km_per_sec

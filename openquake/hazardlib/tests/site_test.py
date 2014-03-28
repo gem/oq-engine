@@ -25,12 +25,6 @@ from openquake.hazardlib.geo.point import Point
 assert_eq = numpy.testing.assert_equal
 
 
-class FakePoint(object):
-    def __init__(self, lon, lat):
-        self.x = lon
-        self.y = lat
-
-
 class SiteModelParam(object):
     def __init__(self):
         self.reference_vs30_value = 1.2
@@ -104,9 +98,9 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         self.assertEqual(len(cll), 2)
 
     def test_from_points(self):
-        p1 = FakePoint(10, 20)
-        p2 = FakePoint(-1.2, -3.4)
-        cll = SiteCollection.from_points([p1, p2], [1, 2], SiteModelParam())
+        lons = [10, -1.2]
+        lats = [20, -3.4]
+        cll = SiteCollection.from_points(lons, lats, [1, 2], SiteModelParam())
         assert_eq(cll.vs30, [1.2, 1.2])
         assert_eq(cll.vs30measured, [True, True])
         assert_eq(cll.z1pt0, [3.4, 3.4])
