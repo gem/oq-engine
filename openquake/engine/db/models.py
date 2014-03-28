@@ -24,7 +24,7 @@
 '''
 Model representations of the OpenQuake DB tables.
 '''
-
+import weakref
 import collections
 import operator
 import itertools
@@ -376,7 +376,8 @@ class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
     '''
-    _site_collection_cache = {}  # hc.id -> site_collection
+    # dictionary {hc.id: site_collection}
+    _site_collection_cache = weakref.WeakValueDictionary()
 
     @classmethod
     def create(cls, **kw):
@@ -779,25 +780,22 @@ class HazardCalculation(djm.Model):
         # ordering no ruptures are generated and the test
         # qa_tests/hazard/disagg/case_1/test.py fails with a bad
         # error message
-        sites = []
-        site_model_inp = self.site_model
-        for hsite in hsites:
-            pt = geo.point.Point(hsite.location.x, hsite.location.y)
-            if site_model_inp:
+        if self.site_model:
+            sites = []
+            for hsite in hsites:
+                pt = geo.point.Point(hsite.location.x, hsite.location.y)
                 smd = self.get_closest_site_model_data(pt)
                 measured = smd.vs30_type == 'measured'
                 vs30 = smd.vs30
                 z1pt0 = smd.z1pt0
                 z2pt5 = smd.z2pt5
-            else:
-                vs30 = self.reference_vs30_value
-                measured = self.reference_vs30_type == 'measured'
-                z1pt0 = self.reference_depth_to_1pt0km_per_sec
-                z2pt5 = self.reference_depth_to_2pt5km_per_sec
-
-            sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
-
-        sc = self._site_collection_cache[self.id] = SiteCollection(sites)
+                sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
+            sc = SiteCollection(sites)
+        else:
+            points = [hsite.location for hsite in hsites]
+            site_ids = [hsite.id for hsite in hsites]
+            sc = SiteCollection.from_points(points, site_ids, self)
+        self._site_collection_cache[self.id] = sc
         return sc
 
     def get_imts(self):
