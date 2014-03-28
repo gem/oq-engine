@@ -791,9 +791,10 @@ class HazardCalculation(djm.Model):
                 sites.append(Site(pt, vs30, measured, z1pt0, z2pt5, hsite.id))
             sc = SiteCollection(sites)
         else:
-            points = [hsite.location for hsite in hsites]
+            lons = [hsite.location.x for hsite in hsites]
+            lats = [hsite.location.y for hsite in hsites]
             site_ids = [hsite.id  for hsite in hsites]
-            sc = SiteCollection.from_points(points, site_ids, self)
+            sc = SiteCollection.from_points(lons, lats, site_ids, self)
         self._site_collection = sc
         return sc
 
