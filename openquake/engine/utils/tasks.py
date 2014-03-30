@@ -71,7 +71,10 @@ def pickle_sequence(objects):
     for obj in objects:
         obj_id = id(obj)
         if obj_id not in cache:
-            cache[obj_id] = obj if isinstance(obj, Pickled) else Pickled(obj)
+            if isinstance(obj, Pickled):  # already pickled
+                cache[obj_id] = obj
+            else:  # pickle the object
+                cache[obj_id] = Pickled(obj)
         out.append(cache[obj_id])
     return out
 
@@ -128,7 +131,13 @@ def map_reduce(task, task_args, agg, acc):
         job_id = task_args[0][0]
         taskname = task.__name__
         mon = LightMonitor('unpickling %s' % taskname, job_id, task)
-        pickled_args = map(pickle_sequence, task_args)
+        to_send = 0
+        pickled_args = []
+        for args in task_args:
+            piks = pickle_sequence(args)
+            pickled_args.append(piks)
+            to_send += sum(len(p) for p in piks)
+        logs.LOG.info('Sending %d K', to_send / 1024)
         taskset = TaskSet(tasks=map(task.subtask, pickled_args))
         for task_id, result_dict in taskset.apply_async().iter_native():
             result_pik = result_dict['result']
