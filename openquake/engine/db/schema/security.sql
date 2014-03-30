@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2013, GEM Foundation.
+  Copyright (c) 2010-2014, GEM Foundation.
 
   OpenQuake is free software: you can redistribute it and/or modify it
   under the terms of the GNU Affero General Public License as published
@@ -82,6 +82,7 @@ GRANT SELECT,INSERT        ON hzrdr.uhs               TO oq_job_init;
 GRANT SELECT,INSERT        ON hzrdr.uhs_data          TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON hzrdr.lt_realization    TO oq_job_init;
 GRANT SELECT,INSERT        ON hzrdr.lt_source_model   TO oq_job_init;
+GRANT SELECT, INSERT       ON hzrdr.lt_model_info     TO oq_job_init;
 GRANT SELECT,INSERT        ON hzrdr.ses_collection    TO oq_job_init;
 GRANT SELECT,INSERT        ON hzrdr.ses               TO oq_job_init;
 GRANT SELECT,INSERT        ON hzrdr.ses_rupture       TO oq_job_init;

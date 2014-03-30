@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -90,7 +90,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
-        self.assertEqual(["A", "B"], sorted(config.Config().cfg.keys()))
+        self.assertEqual(["A", "B"], sorted(config.Config().cfg))
         self.assertEqual({"a": "1", "b": "c"}, config.Config().cfg.get("A"))
         self.assertEqual({"b": "2"}, config.Config().cfg.get("B"))
 

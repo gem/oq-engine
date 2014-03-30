@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -59,7 +59,8 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 
 
 @tasks.oqtask
-def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
+def compute_ses_and_gmfs(
+        job_id, sitecol_pik, src_seeds, lt_model, gsims_by_rlz, task_no):
     """
     Celery task for the stochastic event set calculator.
 
@@ -74,6 +75,8 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
     :param int job_id:
         ID of the currently running job.
+    :param sitecol_pik:
+        A pickled site collection
     :param src_seeds:
         List of pairs (source, seed)
     :params gsims_by_rlz:
@@ -82,10 +85,10 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         an ordinal so that GMV can be collected in a reproducible order
     """
     # NB: all realizations in gsims_by_rlz correspond to the same source model
-    lt_model = gsims_by_rlz.keys()[0].lt_model
     ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
+    sitecol = sitecol_pik.unpickle()
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
     imts = map(from_string, hc.intensity_measure_types)
     params = dict(
@@ -117,16 +120,17 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
 
         with filter_sites_mon:  # filtering sources
             s_sites = src.filter_sites_by_distance_to_source(
-                hc.maximum_distance, hc.site_collection
-            ) if hc.maximum_distance else hc.site_collection
+                hc.maximum_distance, sitecol
+            ) if hc.maximum_distance else sitecol
             if s_sites is None:
                 continue
 
         # the dictionary `ses_num_occ` contains [(ses, num_occurrences)]
         # for each occurring rupture for each ses in the ses collection
         ses_num_occ = collections.defaultdict(list)
-        with generate_ruptures_mon:  # generating ruptures for the current source
-            for rup in src.iter_ruptures():
+        with generate_ruptures_mon:  # generating ruptures for the given source
+            for rup_no, rup in enumerate(src.iter_ruptures(), 1):
+                rup.rup_no = rup_no
                 for ses in all_ses:
                     numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
                     num_occurrences = rup.sample_number_of_occurrences()
@@ -155,10 +159,11 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
                     prob_rup = models.ProbabilisticRupture.create(
                         rup, ses_coll)
                     for ses, num_occurrences in ses_num_occ[rup]:
-                        for occ in range(1, num_occurrences + 1):
+                        for occ_no in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             ses_rup = models.SESRupture.create(
-                                prob_rup, ses, src.source_id, occ, rup_seed)
+                                prob_rup, ses, src.source_id,
+                                rup.rup_no, occ_no, rup_seed)
                             ses_ruptures.append(ses_rup)
 
             with compute_gmfs_mon:  # computing GMFs
@@ -247,7 +252,7 @@ class GmfCollector(object):
             for imt, gmf_1_realiz in gmf_dict.iteritems():
                 # since DEFAULT_GMF_REALIZATIONS is 1, gmf_1_realiz is a matrix
                 # with n_sites rows and 1 column
-                for site_id, gmv in zip(r_sites.sid, gmf_1_realiz):
+                for site_id, gmv in zip(r_sites.sids, gmf_1_realiz):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
@@ -296,13 +301,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        task_no = 0
-        for job_id, block, gsims_by_rlz in super(
-                EventBasedHazardCalculator, self).task_arg_gen():
+        for job_id, sitecol_pik, block, lt_model, gsims_by_rlz, task_no in \
+                super(EventBasedHazardCalculator, self).task_arg_gen():
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in block]  # source, seed pairs
-            yield job_id, ss, gsims_by_rlz, task_no
-            task_no += 1
+            yield job_id, sitecol_pik, ss, lt_model, gsims_by_rlz, task_no
 
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()

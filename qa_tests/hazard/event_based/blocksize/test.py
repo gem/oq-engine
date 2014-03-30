@@ -1,4 +1,4 @@
-# Copyright (c) 2013, GEM Foundation.
+# Copyright (c) 2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,27 +35,27 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
     # then you will see in /tmp a few files which you can diff
     # to see the problem
     expected_tags = [
-        'smlt=00|ses=0001|src=1-389|occ=01',
-        'smlt=00|ses=0001|src=2-126|occ=01',
-        'smlt=00|ses=0001|src=2-315|occ=01',
-        'smlt=00|ses=0001|src=2-52|occ=01',
-        'smlt=00|ses=0001|src=3-255|occ=01']
+        'smlt=00|ses=0001|src=1-389|rup=002-01',
+        'smlt=00|ses=0001|src=2-126|rup=001-01',
+        'smlt=00|ses=0001|src=2-315|rup=002-01',
+        'smlt=00|ses=0001|src=2-52|rup=002-01',
+        'smlt=00|ses=0001|src=3-255|rup=002-01']
 
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=1-389|occ=01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=1-389|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0019092>
 <X=131.00000, Y= 40.10000, GMV=0.0017119>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-126|occ=01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-126|rup=001-01
 <X=131.00000, Y= 40.00000, GMV=0.0001250>
 <X=131.00000, Y= 40.10000, GMV=0.0001781>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-315|occ=01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-315|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0015655>
 <X=131.00000, Y= 40.10000, GMV=0.0016485>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-52|occ=01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-52|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0002431>
 <X=131.00000, Y= 40.10000, GMV=0.0001554>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-255|occ=01
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-255|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0002826>
 <X=131.00000, Y= 40.10000, GMV=0.0004627>))'''
 
