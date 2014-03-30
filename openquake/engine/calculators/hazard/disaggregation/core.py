@@ -312,7 +312,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         curves_dict = dict((site.id, self.get_curves(site))
                            for site in self.hc.site_collection)
 
-        for job_id, srcs, lt_model, gsims_by_rlz, task_no in \
+        for job_id, sitecol, srcs, lt_model, gsims_by_rlz, task_no in \
                 self.task_arg_gen():
 
             trt_num = dict((trt, i) for i, trt in enumerate(
@@ -352,7 +352,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            arglist.append((self.job.id, srcs, lt_model, gsims_by_rlz,
+            arglist.append((self.job.id, sitecol, srcs, lt_model, gsims_by_rlz,
                             trt_num, curves_dict, self.bin_edges))
 
         self.initialize_percent(compute_disagg, arglist)

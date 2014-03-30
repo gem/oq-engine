@@ -250,8 +250,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for args in arg_gen:  # args is (job_id, src_seed_pairs, ...)
-                for src, seed in args[1]:
+            for args in arg_gen:  # args is (job_id, sitecol, src_seed_pairs, ...)
+                for src, seed in args[2]:
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
 

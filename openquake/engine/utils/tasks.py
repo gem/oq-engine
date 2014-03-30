@@ -131,13 +131,13 @@ def map_reduce(task, task_args, agg, acc):
         pickled_args = map(pickle_sequence, task_args)
         taskset = TaskSet(tasks=map(task.subtask, pickled_args))
         for task_id, result_dict in taskset.apply_async().iter_native():
-            result, exctype = result_dict['result']
+            result_pik = result_dict['result']
+            with mon:
+                result, exctype = result_pik.unpickle()
             if exctype:
                 raise exctype(result)
-            unpik += len(result)
-            with mon:
-                res = result.unpickle()
-            acc = agg(acc, res)
+            unpik += len(result_pik)
+            acc = agg(acc, result)
         logs.LOG.info('Unpickled %d K in %s seconds',
                       unpik / 1024, mon.duration)
     return acc
@@ -170,20 +170,18 @@ def oqtask(task_func):
     actually still running. If it is not running, the task doesn't get
     executed, so we don't do useless computation.
     """
-    def wrapped(*pickled_args):
+    def wrapped(*args):
         """
         Initialize logs, make sure the job is still running, and run the task
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        args = [a.unpickle() for a in pickled_args]
-
         # job_id is always assumed to be the first argument
         job_id = args[0]
         job = models.OqJob.objects.get(id=job_id)
         if job.is_running is False:
             # the job was killed, it is useless to run the task
-            return None, None
+            return
 
         # it is important to save the task id soon, so that
         # the revoke functionality can work
@@ -194,8 +192,8 @@ def oqtask(task_func):
             # tasks write on the celery log file
             logs.set_level(job.log_level)
             try:
-                # run the task and pickle the result
-                return Pickled(task_func(*args))
+                # run the task
+                return task_func(*args)
             finally:
                 # save on the db
                 CacheInserter.flushall()
@@ -206,7 +204,7 @@ def oqtask(task_func):
                     operation='storing task id',
                     task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
-    f = lambda *args: safely_call(wrapped, args)
+    f = lambda *args: Pickled(safely_call(wrapped, [a.unpickle() for a in args]))
     f.__name__ = task_func.__name__
     tsk = task(f, queue=celery_queue)
     tsk.task_func = task_func
