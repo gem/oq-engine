@@ -59,6 +59,23 @@ class Pickled(object):
         return cPickle.loads(self.pik)
 
 
+def pickle_sequence(objects):
+    """
+    Convert an iterable of objects into a list of pickled objects.
+    If the iterable contains copies, the pickling will be done only once.
+    If the iterable contains objects already pickled, they will not be
+    pickled again.
+    """
+    cache = {}
+    out = []
+    for obj in objects:
+        obj_id = id(obj)
+        if obj_id not in cache:
+            cache[obj_id] = obj if isinstance(obj, Pickled) else Pickled(obj)
+        out.append(cache[obj_id])
+    return out
+
+
 def safely_call(func, args):
     """
     Call the given function with the given arguments safely, i.e.
@@ -111,7 +128,8 @@ def map_reduce(task, task_args, agg, acc):
         job_id = task_args[0][0]
         taskname = task.__name__
         mon = LightMonitor('unpickling %s' % taskname, job_id, task)
-        taskset = TaskSet(tasks=map(task.subtask, task_args))
+        pickled_args = map(pickle_sequence, task_args)
+        taskset = TaskSet(tasks=map(task.subtask, pickled_args))
         for task_id, result_dict in taskset.apply_async().iter_native():
             result, exctype = result_dict['result']
             if exctype:
@@ -152,12 +170,14 @@ def oqtask(task_func):
     actually still running. If it is not running, the task doesn't get
     executed, so we don't do useless computation.
     """
-    def wrapped(*args):
+    def wrapped(*pickled_args):
         """
         Initialize logs, make sure the job is still running, and run the task
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
+        args = [a.unpickle() for a in pickled_args]
+
         # job_id is always assumed to be the first argument
         job_id = args[0]
         job = models.OqJob.objects.get(id=job_id)
