@@ -539,6 +539,7 @@ CREATE TABLE hzrdr.lt_model_info (
    lt_model_id INTEGER NOT NULL, -- fk to lt_source_model
    tectonic_region_type TEXT NOT NULL,
    num_sources INTEGER NOT NULL,
+   num_ruptures INTEGER NOT NULL,
    min_mag FLOAT NOT NULL,
    max_mag FLOAT NOT NULL
 ) TABLESPACE hzrdr_ts;
