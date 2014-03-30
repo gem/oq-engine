@@ -2224,6 +2224,7 @@ class LtModelInfo(djm.Model):
     lt_model = djm.ForeignKey('LtSourceModel')
     tectonic_region_type = djm.TextField(null=False)
     num_sources = djm.IntegerField(null=False)
+    num_ruptures = djm.IntegerField(null=False)
     min_mag = djm.FloatField(null=False)
     max_mag = djm.FloatField(null=False)
 
