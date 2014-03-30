@@ -180,15 +180,15 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 
 
 @tasks.oqtask
-def compute_disagg(job_id, sitecol_pik, sources, lt_model, gsims_by_rlz,
+def compute_disagg(job_id, sitecol, sources, lt_model, gsims_by_rlz,
                    trt_num, curves_dict, bin_edges):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param int job_id:
         ID of the currently running :class:`openquake.engine.db.models.OqJob`
-    :param sitecol_pik:
-        a pickled site collection
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param list sources:
         list of hazardlib source objects
     :param lt_model:
@@ -205,7 +205,6 @@ def compute_disagg(job_id, sitecol_pik, sources, lt_model, gsims_by_rlz,
     """
     mon = LightMonitor('disagg', job_id, compute_disagg)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
-    sitecol = sitecol_pik.unpickle()
     trt_names = tuple(lt_model.tectonic_region_types)
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
 
