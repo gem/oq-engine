@@ -131,7 +131,7 @@ class BoundingBox(object):
 
 @tasks.oqtask
 def compute_hazard_curves(
-        job_id, sitecol_pik, sources, lt_model, gsims_by_rlz, task_no):
+        job_id, sitecol, sources, lt_model, gsims_by_rlz, task_no):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -139,8 +139,8 @@ def compute_hazard_curves(
 
     :param job_id:
         ID of the currently running job
-    :param sitecol_pik:
-        A pickled SiteCollection
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param sources:
         a block of source objects
     :param lt_model:
@@ -149,7 +149,6 @@ def compute_hazard_curves(
         a dictionary of gsim dictionaries, one for each realization
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    sitecol = sitecol_pik.unpickle()
     total_sites = len(sitecol)
     sitemesh = sitecol.mesh
     imts = general.im_dict_to_hazardlib(
