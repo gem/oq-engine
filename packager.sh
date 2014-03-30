@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# packager.sh  Copyright (c) 2013, GEM Foundation.
+# packager.sh  Copyright (c) 2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -859,7 +859,7 @@ sed -i "s/^\([ ${TB}]*\)[^)]*\()  # release date .*\)/\1${dt}\2/g" openquake/__i
 
 # mods pre-packaging
 mv LICENSE         openquake/engine
-mv README.txt      openquake/engine/README
+mv README.md       openquake/engine/README
 mv celeryconfig.py openquake/engine
 mv openquake.cfg   openquake/engine
 
