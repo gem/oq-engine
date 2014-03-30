@@ -182,12 +182,12 @@ class BaseHazardCalculator(base.Calculator):
         Override this in subclasses as necessary.
         """
         task_no = 0
-        sitecol_pik = tasks.Pickled(self.hc.site_collection)
+        sitecol = self.hc.site_collection
         for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
             ltpath = tuple(lt_model.sm_lt_path)
             for trt in lt_model.tectonic_region_types:
                 for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                    yield self.job.id, block, lt_model, gsims_by_rlz, task_no
+                    yield self.job.id, sitecol, block, lt_model, gsims_by_rlz, task_no
                     task_no += 1
 
     def gen_gsims_by_rlz(self):
