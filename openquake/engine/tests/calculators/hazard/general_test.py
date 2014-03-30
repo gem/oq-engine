@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -207,8 +207,9 @@ class InitializeSourcesTestCase(unittest.TestCase):
     def test_few_sites(self):
         # site_collection is smaller than FILTERING_THRESHOLD:
         # prefiltering is enabled and sources are filtered
-        n = self.calc.initialize_sources()
-        self.assertEqual(n, [1, 1, 1])  # 1 source instead of 2
+        m1, m2, m3 = self.calc.initialize_sources()
+        self.assertEqual([m1.num_sources, m2.num_sources, m3.num_sources],
+                         [1, 1, 1])  # 1 source instead of 2
 
     def test_many_sites(self):
         # site_collection is bigger than FILTERING_THRESHOLD:
@@ -216,7 +217,8 @@ class InitializeSourcesTestCase(unittest.TestCase):
         ft = models.FILTERING_THRESHOLD
         try:
             models.FILTERING_THRESHOLD = 0
-            n = self.calc.initialize_sources()
-            self.assertEqual(n, [2, 2, 2])  # the original 2 sources
+            m1, m2, m3 = self.calc.initialize_sources()
+            self.assertEqual([m1.num_sources, m2.num_sources, m3.num_sources],
+                             [2, 2, 2])  # the original 2 sources
         finally:
             models.FILTERING_THRESHOLD = ft
