@@ -60,7 +60,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 
 @tasks.oqtask
 def compute_ses_and_gmfs(
-        job_id, sitecol_pik, src_seeds, lt_model, gsims_by_rlz, task_no):
+        job_id, sitecol, src_seeds, lt_model, gsims_by_rlz, task_no):
     """
     Celery task for the stochastic event set calculator.
 
@@ -75,8 +75,8 @@ def compute_ses_and_gmfs(
 
     :param int job_id:
         ID of the currently running job.
-    :param sitecol_pik:
-        A pickled site collection
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param src_seeds:
         List of pairs (source, seed)
     :params gsims_by_rlz:
@@ -88,7 +88,6 @@ def compute_ses_and_gmfs(
     ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    sitecol = sitecol_pik.unpickle()
     all_ses = models.SES.objects.filter(ses_collection=ses_coll)
     imts = map(from_string, hc.intensity_measure_types)
     params = dict(

@@ -62,44 +62,6 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
-class TrtInfo(object):
-    """
-    A collection of three dictionaries num_sources, min_mag, max_mag
-    keyed by the tectonic region type.
-    """
-    def __init__(self):
-        self.trt = set()
-        self.num_sources = collections.defaultdict(int)
-        self.min_mag = {}
-        self.max_mag = {}
-
-    def update(self, src):
-        """
-        Update the dictionaries num_sources, min_mag, max_mag
-        according to the given source.
-
-        :param src:
-            an instance of :class:
-            `openquake.hazardlib.source.base.BaseSeismicSource`
-        """
-        trt = src.tectonic_region_type
-        min_mag, max_mag = src.mfd.get_min_max_mag()
-        self.num_sources[trt] += 1
-        prev_min_mag = self.min_mag.get(trt)
-        if prev_min_mag is None or min_mag < prev_min_mag:
-            self.min_mag[trt] = min_mag
-        prev_max_mag = self.max_mag.get(trt)
-        if prev_max_mag is None or max_mag > prev_max_mag:
-            self.max_mag[trt] = max_mag
-
-    def sorted_trts(self):
-        """
-        Return the tectonic region types sorted per number of sources.
-        """
-        return [trt for (num, trt) in sorted(
-                (num, trt) for (trt, num) in self.num_sources.items())]
-
-
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -223,10 +185,10 @@ class BaseHazardCalculator(base.Calculator):
         sitecol_pik = tasks.Pickled(self.hc.site_collection)
         for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
             ltpath = tuple(lt_model.sm_lt_path)
-            for block in self.source_blocks_per_ltpath[ltpath]:
-                yield (self.job.id, sitecol_pik, block, lt_model,
-                       gsims_by_rlz, task_no)
-                task_no += 1
+            for trt in lt_model.tectonic_region_types:
+                for block in self.source_blocks_per_ltpath[ltpath, trt]:
+                    yield self.job.id, block, lt_model, gsims_by_rlz, task_no
+                    task_no += 1
 
     def gen_gsims_by_rlz(self):
         """
@@ -280,41 +242,42 @@ class BaseHazardCalculator(base.Calculator):
         bs = SequenceSplitter(nblocks)
 
         # here we are doing a full enumeration of the source model logic tree;
-        # this is not bad because for very large source models there are
+        # this is not bad since for very large source models there are
         # typically very few realizations; moreover, the filtering will remove
         # most of the sources, so the memory occupation is typically low
         lt_models = []
         for i, (sm, path) in enumerate(sm_paths):
             smpath = tuple(path)
-            source_weight_list = list(source.parse_source_model_smart(
+            collector = source.parse_source_model_smart(
                 os.path.join(self.hc.base_path, sm),
                 self.hc.sites_affected_by,
                 self.smlt.make_apply_uncertainties(path),
-                self.hc))
+                self.hc)
+            ss = SequenceSplitter(ceil(nblocks, len(collector.source_weights)))
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, ordinal=i, sm_lt_path=smpath)
             lt_models.append(lt_model)
-            trtinfo = TrtInfo()
-            for src, weight in source_weight_list:
-                trtinfo.update(src)
-            blocks = bs.split_on_max_weight(source_weight_list)
-            self.source_blocks_per_ltpath[smpath] = blocks
-            n = sum(len(block) for block in blocks)
-            logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
-            logs.LOG.info('Splitting in %d blocks with max_weight=%s',
-                          len(blocks), bs.max_weight)
-            for i, block in enumerate(blocks, 1):
-                logs.LOG.info('Block %d: %d sources, weight %s',
-                              i, len(block), block.weight)
+            for trt, source_weights in collector.source_weights.iteritems():
+                blocks = ss.split_on_max_weight(source_weights)
+                self.source_blocks_per_ltpath[smpath, trt] = blocks
+                n = sum(len(block) for block in blocks)
+                logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
+                              n, sm, path, trt)
+                logs.LOG.info('Splitting in %d blocks with max_weight=%s',
+                              len(blocks), ss.max_weight)
+                for i, block in enumerate(blocks, 1):
+                    logs.LOG.info('%s, block %d: %d source(s), weight %s',
+                                  trt, i, len(block), block.weight)
 
             # save LtModelInfo objects for each tectonic region type
-            for trt in trtinfo.sorted_trts():
+            for trt in collector.sorted_trts():
                 models.LtModelInfo.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
-                    num_sources=trtinfo.num_sources[trt],
-                    min_mag=trtinfo.min_mag[trt],
-                    max_mag=trtinfo.max_mag[trt])
+                    num_sources=len(collector.source_weights[trt]),
+                    num_ruptures=collector.num_ruptures[trt],
+                    min_mag=collector.min_mag[trt],
+                    max_mag=collector.max_mag[trt])
         return lt_models
 
     @EnginePerformanceMonitor.monitor
