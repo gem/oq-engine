@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,180 +17,151 @@
 """
 Disaggregation calculator core functionality
 """
+
+import sys
+from collections import namedtuple
 import numpy
 
-import openquake.hazardlib
+from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.site import SiteCollection
+
 from openquake.engine import logs
+from openquake.engine.db import models
+from openquake.engine.utils import tasks
+from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 from openquake.engine.calculators.hazard.classical.core import \
     ClassicalHazardCalculator
-from openquake.engine.db import models
-from openquake.engine.input import logictree
-from openquake.engine.utils import tasks, general
-from openquake.engine.performance import EnginePerformanceMonitor
 
 
-@tasks.oqtask
-def compute_disagg(job_id, sites, sources, lt_rlz, ltp):
-    """
-    Calculate disaggregation histograms and saving the results to the database.
+# a 6-uple containing float 4 arrays mags, dists, lons, lats,
+# 1 int array trts and a list of dictionaries pnes
+BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
-    Here is the basic calculation workflow:
 
-    1. Get all sources
-    2. Get IMTs
-    3. Get the hazard curve for each point, IMT, and realization
-    4. For each `poes_disagg`, interpolate the IML for each curve.
-    5. Get GSIMs, TOM (Temporal Occurence Model), and truncation level.
-    6. Get histogram bin edges.
-    7. Prepare calculation args.
-    8. Call the hazardlib calculator
-       (see :func:`openquake.hazardlib.calc.disagg.disaggregation`
-       for more info).
+def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
+                       gsims_by_rlz, imtls, poes, truncation_level,
+                       n_epsilons):
+    # returns a BinData instance
+    sitecol = SiteCollection([site])
+    mags = []
+    dists = []
+    lons = []
+    lats = []
+    trts = []
+    pnes = []
+    sitemesh = sitecol.mesh
+    calc_dist = mon.copy('calc distances')
+    make_ctxt = mon.copy('making contexts')
+    disagg_poe = mon.copy('disaggregate_poe')
 
-    :param int job_id:
-        ID of the currently running :class:`openquake.engine.db.models.OqJob`
-    :param list sites:
-        `list` of :class:`openquake.hazardlib.site.Site` objects, which
-        indicate the locations (and associated soil parameters) for which we
-        need to compute disaggregation histograms.
-    :param list sources:
-        `list` of hazardlib source objects
-    :param lt_rlz:
-        instance of :class:`openquake.engine.db.models.LtRealization` for which
-        we want to compute disaggregation histograms. This realization will
-        determine which hazard curve results to use as a basis for the
-        calculation.
-    :param ltp:
-        a :class:`openquake.engine.input.LogicTreeProcessor` instance
-    """
-    # Silencing 'Too many local variables'
-    # pylint: disable=R0914
-    assert sites, sites
-    assert sources, sources
-    logs.LOG.debug(
-        '> computing disaggregation for %(np)s sites for realization %(rlz)s'
-        % dict(np=len(sites), rlz=lt_rlz.id))
+    for source, ruptures in source_ruptures:
+        try:
+            tect_reg = trt_num[source.tectonic_region_type]
+            for rupture in ruptures:
+                # extract rupture parameters of interest
+                mags.append(rupture.mag)
+                with calc_dist:
+                    [jb_dist] = rupture.surface.get_joyner_boore_distance(
+                        sitemesh)
+                    dists.append(jb_dist)
+                    [closest_point] = rupture.surface.get_closest_points(
+                        sitemesh)
+                lons.append(closest_point.longitude)
+                lats.append(closest_point.latitude)
+                trts.append(tect_reg)
 
-    job = models.OqJob.objects.get(id=job_id)
-    hc = job.hazard_calculation
-    gsims = ltp.parse_gmpe_logictree_path(lt_rlz.gsim_lt_path)
-    f = openquake.hazardlib.calc.filters
-    src_site_filter = f.source_site_distance_filter(hc.maximum_distance)
-    rup_site_filter = f.rupture_site_distance_filter(hc.maximum_distance)
+                pne_dict = {}
+                # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
+                for rlz, gsims in gsims_by_rlz.items():
+                    gsim = gsims[source.tectonic_region_type]
+                    with make_ctxt:
+                        sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
+                    for imt_str, imls in imtls.iteritems():
+                        imt = from_string(imt_str)
+                        imls = numpy.array(imls[::-1])
+                        curve_poes = curves[rlz.id, imt_str].poes[::-1]
 
-    for imt, imls in hc.intensity_measure_types_and_levels.iteritems():
-        hc_im_type, sa_period, sa_damping = imt = from_string(imt)
+                        for poe in poes:
+                            iml = numpy.interp(poe, curve_poes, imls)
+                            # compute probability of exceeding iml given
+                            # the current rupture and epsilon level, that is
+                            # ``P(IMT >= iml | rup, epsilon_bin)``
+                            # for each of the epsilon bins
+                            with disagg_poe:
+                                [poes_given_rup_eps] = gsim.disaggregate_poe(
+                                    sctx, rctx, dctx, imt, iml,
+                                    truncation_level, n_epsilons)
+                            pne = rupture.get_probability_no_exceedance(
+                                poes_given_rup_eps)
+                            pne_dict[rlz.id, poe, imt_str] = (iml, pne)
 
-        imls = numpy.array(imls[::-1])
+                pnes.append(pne_dict)
+        except Exception as err:
+            etype, err, tb = sys.exc_info()
+            msg = 'An error occurred with source id=%s. Error: %s'
+            msg %= (source.source_id, err.message)
+            raise etype, msg, tb
 
-        # loop over sites
-        for site in sites:
-            # get curve for this point/IMT/realization
-            [curve] = models.HazardCurveData.objects.filter(
-                location=site.location.wkt2d,
-                hazard_curve__lt_realization=lt_rlz,
-                hazard_curve__imt=hc_im_type,
-                hazard_curve__sa_period=sa_period,
-                hazard_curve__sa_damping=sa_damping,
-            )
+    calc_dist.flush()
+    make_ctxt.flush()
+    disagg_poe.flush()
 
-            # If the hazard curve is all zeros, don't even do the
-            # disagg calculation.
-            if all(x == 0.0 for x in curve.poes):
-                logs.LOG.debug(
-                    '* hazard curve contained all 0 probability values; '
-                    'skipping')
-                continue
-
-            for poe in hc.poes_disagg:
-                iml = numpy.interp(poe, curve.poes[::-1], imls)
-                calc_kwargs = {
-                    'sources': sources,
-                    'site': site,
-                    'imt': imt,
-                    'iml': iml,
-                    'gsims': gsims,
-                    'truncation_level': hc.truncation_level,
-                    'n_epsilons': hc.num_epsilon_bins,
-                    'mag_bin_width': hc.mag_bin_width,
-                    'dist_bin_width': hc.distance_bin_width,
-                    'coord_bin_width': hc.coordinate_bin_width,
-                    'source_site_filter': src_site_filter,
-                    'rupture_site_filter': rup_site_filter,
-                }
-                with EnginePerformanceMonitor(
-                        'computing disaggregation', job_id, compute_disagg):
-                    bin_edges, diss_matrix = openquake.hazardlib.calc.\
-                        disagg.disaggregation(**calc_kwargs)
-                    if not bin_edges:  # no ruptures generated
-                        continue
-
-                with EnginePerformanceMonitor(
-                        'saving disaggregation', job_id, compute_disagg):
-                    _save_disagg_matrix(
-                        job, site, bin_edges, diss_matrix, lt_rlz,
-                        hc.investigation_time, hc_im_type, iml, poe, sa_period,
-                        sa_damping
-                    )
-
-    logs.LOG.debug('< done computing disaggregation')
+    return BinData(numpy.array(mags, float),
+                   numpy.array(dists, float),
+                   numpy.array(lons, float),
+                   numpy.array(lats, float),
+                   numpy.array(trts, int),
+                   pnes)
 
 
 _DISAGG_RES_NAME_FMT = 'disagg(%(poe)s)-rlz-%(rlz)s-%(imt)s-%(wkt)s'
 
 
-def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
-                        investigation_time, imt, iml, poe, sa_period,
-                        sa_damping):
+def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
+                       rlz_id, investigation_time, imt_str, iml, poe):
     """
     Save a computed disaggregation matrix to `hzrdr.disagg_result` (see
     :class:`~openquake.engine.db.models.DisaggResult`).
 
-    :param job:
-        :class:`openquake.engine.db.models.OqJob` representing the current job.
-    :param site:
-        :class:`openquake.hazardlib.site.Site`, containing the location
-        geometry for these results.
-    :param bin_edges, diss_matrix
-        The outputs of :func:
-        `openquake.hazardlib.calc.disagg.disaggregation`.
-    :param lt_rlz:
+    :param int job_id:
+        id of the current job.
+    :param int site_id:
+        id of the current site
+    :param bin_edges:
+        The 5-uple mag, dist, lon, lat, eps
+    :param trt_names:
+        The list of Tectonic Region Types
+    :param matrix:
+        A probability array
+    :param rlz:
         :class:`openquake.engine.db.models.LtRealization` to which these
         results belong.
     :param float investigation_time:
         Investigation time (years) for the calculation.
-    :param imt:
+    :param imt_str:
         Intensity measure type (PGA, SA, etc.)
     :param float iml:
         Intensity measure level interpolated (using ``poe``) from the hazard
         curve at the ``site``.
     :param float poe:
         Disaggregation probability of exceedance value for this result.
-    :param float sa_period:
-        Spectral Acceleration period; only relevant when ``imt`` is 'SA'.
-    :param float sa_damping:
-        Spectral Acceleration damping; only relevant when ``imt`` is 'SA'.
     """
-    # Silencing 'Too many arguments', 'Too many local variables'
-    # pylint: disable=R0913,R0914
-    disp_name = _DISAGG_RES_NAME_FMT
-    disp_imt = imt
-    if disp_imt == 'SA':
-        disp_imt = 'SA(%s)' % sa_period
+    job = models.OqJob.objects.get(id=job_id)
 
-    disp_name_args = dict(poe=poe, rlz=lt_rlz.id, imt=disp_imt,
-                          wkt=site.location.wkt2d)
-    disp_name %= disp_name_args
+    site_wkt = models.HazardSite.objects.get(pk=site_id).location.wkt
+
+    disp_name = _DISAGG_RES_NAME_FMT % dict(
+        poe=poe, rlz=rlz_id, imt=imt_str, wkt=site_wkt)
 
     output = models.Output.objects.create_output(
-        job, disp_name, 'disagg_matrix'
-    )
+        job, disp_name, 'disagg_matrix')
 
-    mag, dist, lon, lat, eps, trts = bin_edges
+    imt, sa_period, sa_damping = from_string(imt_str)
+    mag, dist, lon, lat, eps = bin_edges
     models.DisaggResult.objects.create(
         output=output,
-        lt_realization=lt_rlz,
+        lt_realization_id=rlz_id,
         investigation_time=investigation_time,
         imt=imt,
         sa_period=sa_period,
@@ -202,10 +173,93 @@ def _save_disagg_matrix(job, site, bin_edges, diss_matrix, lt_rlz,
         lon_bin_edges=lon,
         lat_bin_edges=lat,
         eps_bin_edges=eps,
-        trts=trts,
-        location=site.location.wkt2d,
-        matrix=diss_matrix,
+        trts=trt_names,
+        location=site_wkt,
+        matrix=matrix,
     )
+
+
+@tasks.oqtask
+def compute_disagg(job_id, sitecol_pik, sources, lt_model, gsims_by_rlz,
+                   trt_num, curves_dict, bin_edges):
+    # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
+    # of the algorithm used
+    """
+    :param int job_id:
+        ID of the currently running :class:`openquake.engine.db.models.OqJob`
+    :param sitecol_pik:
+        a pickled site collection
+    :param list sources:
+        list of hazardlib source objects
+    :param lt_model:
+        an instance of :class:`openquake.engine.db.models.LtSourceModel`
+    :param dict gsims_by_rlz:
+        a dictionary of gsim dictionaries, one for each realization
+    :param dict trt_num:
+        a dictionary Tectonic Region Type -> incremental number
+    :param curves_dict:
+        a dictionary with the hazard curves for sites, realizations and IMTs
+    :returns:
+        a dictionary of probability arrays, with composite key
+        (site.id, rlz.id, poe, imt, iml, trt_names).
+    """
+    mon = LightMonitor('disagg', job_id, compute_disagg)
+    hc = models.OqJob.objects.get(id=job_id).hazard_calculation
+    sitecol = sitecol_pik.unpickle()
+    trt_names = tuple(lt_model.tectonic_region_types)
+    result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
+
+    for site in sitecol:
+        # edges as wanted by disagg._arrange_data_in_bins
+        try:
+            edges = bin_edges[lt_model.id, site.id]
+        except KeyError:
+            # bin_edges for a given site are missing if the site is far away
+            continue
+
+        # generate source, rupture, sites once per site
+        source_ruptures = list(hc.gen_ruptures_for_site(site, sources, mon))
+        if not source_ruptures:
+            continue
+        logs.LOG.info('Collecting bins from %d ruptures close to %s',
+                      sum(len(rupts) for src, rupts in source_ruptures),
+                      site.location)
+
+        with EnginePerformanceMonitor(
+                'collecting bins', job_id, compute_disagg):
+            bdata = _collect_bins_data(
+                mon, trt_num, source_ruptures, site, curves_dict[site.id],
+                gsims_by_rlz, hc.intensity_measure_types_and_levels,
+                hc.poes_disagg, hc.truncation_level,
+                hc.num_epsilon_bins)
+
+        if not bdata.pnes:  # no contributions for this site
+            continue
+
+        for poe in hc.poes_disagg:
+            for imt in hc.intensity_measure_types_and_levels:
+                for rlz in gsims_by_rlz:
+
+                    # extract the probabilities of non-exceedance for the
+                    # given realization, disaggregation PoE, and IMT
+                    iml_pne_pairs = [pne[rlz.id, poe, imt]
+                                     for pne in bdata.pnes]
+                    iml = iml_pne_pairs[0][0]
+                    probs = numpy.array([p for (i, p) in iml_pne_pairs], float)
+                    # bins in a format handy for hazardlib
+                    bins = [bdata.mags, bdata.dists, bdata.lons, bdata.lats,
+                            bdata.trts, None, probs]
+
+                    # call disagg._arrange_data_in_bins and populate the result
+                    with EnginePerformanceMonitor(
+                            'arranging bins', job_id, compute_disagg):
+                        key = (site.id, rlz.id, poe, imt, iml, trt_names)
+                        matrix = disagg._arrange_data_in_bins(
+                            bins, edges + (trt_names,))
+                        result[key] = numpy.array(
+                            [fn(matrix) for fn in disagg.pmf_map.values()])
+
+    return result
 
 
 class DisaggHazardCalculator(ClassicalHazardCalculator):
@@ -216,27 +270,125 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
     See :func:`openquake.hazardlib.calc.disagg.disaggregation` for more
     details about the nature of this type of calculation.
     """
-    def disagg_task_arg_gen(self):
+    def get_curves(self, site):
         """
-        Generate task args for the second phase of disaggregation calculations.
-        This phase is concerned with computing the disaggregation histograms.
+        Get all the relevant hazard curves for the given site.
+        Returns a dictionary {(rlz_id, imt) -> curve}.
         """
-        realizations = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=self.hc)
+        dic = {}
+        wkt = site.location.wkt2d
+        for rlz in self._get_realizations():
+            for imt_str in self.hc.intensity_measure_types_and_levels:
+                imt = from_string(imt_str)
+                [curve] = models.HazardCurveData.objects.filter(
+                    location=wkt,
+                    hazard_curve__lt_realization=rlz,
+                    hazard_curve__imt=imt[0],
+                    hazard_curve__sa_period=imt[1],
+                    hazard_curve__sa_damping=imt[2])
+                if all(x == 0.0 for x in curve.poes):
+                    logs.LOG.warn(
+                        '* hazard curve %d contains all zero '
+                        'probabilities; skipping SRID=4326;%s, rlz=%d, IMT=%s',
+                        curve.id, wkt, rlz.id, imt_str)
+                    continue
+                dic[rlz.id, imt_str] = curve
+        return dic
 
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        # then distribute tasks for disaggregation histogram computation
-        for lt_rlz in realizations:
-            path = tuple(lt_rlz.sm_lt_path)
-            sources = general.WeightedSequence.merge(
-                self.source_blocks_per_ltpath[path])
-            for sites in self.block_split(self.hc.site_collection):
-                yield self.job.id, sites, sources, lt_rlz, ltp
-
-    def post_execute(self):
+    @EnginePerformanceMonitor.monitor
+    def full_disaggregation(self):
         """
-        Start the disaggregation phase after hazard curve finalization.
+        Run the disaggregation phase after hazard curve finalization.
         """
         super(DisaggHazardCalculator, self).post_execute()
-        self.parallelize(
-            compute_disagg, self.disagg_task_arg_gen(), self.log_percent)
+        hc = self.hc
+        tl = self.hc.truncation_level
+        mag_bin_width = self.hc.mag_bin_width
+        eps_edges = numpy.linspace(-tl, tl, self.hc.num_epsilon_bins + 1)
+        logs.LOG.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
+                      min(eps_edges), max(eps_edges))
+
+        arglist = []
+        self.bin_edges = {}
+        curves_dict = dict((site.id, self.get_curves(site))
+                           for site in self.hc.site_collection)
+
+        for job_id, srcs, lt_model, gsims_by_rlz, task_no in \
+                self.task_arg_gen():
+
+            trt_num = dict((trt, i) for i, trt in enumerate(
+                           lt_model.tectonic_region_types))
+            infos = list(models.LtModelInfo.objects.filter(
+                         lt_model=lt_model))
+
+            max_mag = max(i.max_mag for i in infos)
+            min_mag = min(i.min_mag for i in infos)
+            mag_edges = mag_bin_width * numpy.arange(
+                int(numpy.floor(min_mag / mag_bin_width)),
+                int(numpy.ceil(max_mag / mag_bin_width) + 1))
+            logs.LOG.info('%d mag bins from %s to %s', len(mag_edges) - 1,
+                          min_mag, max_mag)
+
+            for site in self.hc.site_collection:
+                curves = curves_dict[site.id]
+                if not curves:
+                    continue  # skip zero-valued hazard curves
+                bb = self.bb_dict[lt_model.id, site.id]
+                if not bb:
+                    logs.LOG.info(
+                        'location %s was too far, skipping disaggregation',
+                        site.location)
+                    continue
+
+                dist_edges, lon_edges, lat_edges = bb.bins_edges(
+                    hc.distance_bin_width, hc.coordinate_bin_width)
+                logs.LOG.info(
+                    '%d dist bins from %s to %s', len(dist_edges) - 1,
+                    min(dist_edges), max(dist_edges))
+                logs.LOG.info('%d lon bins from %s to %s', len(lon_edges) - 1,
+                              bb.west, bb.east)
+                logs.LOG.info('%d lat bins from %s to %s', len(lon_edges) - 1,
+                              bb.south, bb.north)
+
+                self.bin_edges[lt_model.id, site.id] = (
+                    mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
+
+            arglist.append((self.job.id, srcs, lt_model, gsims_by_rlz,
+                            trt_num, curves_dict, self.bin_edges))
+
+        self.initialize_percent(compute_disagg, arglist)
+        res = tasks.map_reduce(compute_disagg, arglist, self.agg_result, {})
+        self.save_disagg_results(res)  # dictionary key -> probability array
+
+    post_execute = full_disaggregation
+
+    def agg_result(self, acc, result):
+        """
+        Collect the results coming from compute_disagg into self.results,
+        a dictionary with key (site.id, rlz.id, poe, imt, iml, trt_names)
+        and values which are probability arrays.
+
+        :param acc: dictionary accumulating the results
+        :param result: dictionary with the result coming from a task
+        """
+        for key, val in result.iteritems():
+            acc[key] = 1. - (1. - acc.get(key, 0)) * (1. - val)
+        self.log_percent()
+        return acc
+
+    @EnginePerformanceMonitor.monitor
+    def save_disagg_results(self, results):
+        """
+        :param results: a dictionary of probability arrays
+
+        The number of results to save is #sites * #rlzs * #disagg_poes * #IMTs
+        """
+        # since an extremely small subset of the full disaggregation matrix
+        # is saved this method can be run sequentially on the controller node
+        for key, probs in results.iteritems():
+            site_id, rlz_id, poe, imt, iml, trt_names = key
+            lt_model = models.LtRealization.objects.get(pk=rlz_id).lt_model
+            edges = self.bin_edges[lt_model.id, site_id]
+            save_disagg_result(
+                self.job.id, site_id, edges, trt_names, probs,
+                rlz_id, self.hc.investigation_time, imt, iml, poe)
