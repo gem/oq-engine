@@ -42,7 +42,6 @@ class SourceCollector(object):
     min_mag, max_mag keyed by the tectonic region type.
     """
     def __init__(self):
-        self.trt = set()
         self.source_weights = collections.defaultdict(list)
         self.num_ruptures = collections.defaultdict(int)
         self.min_mag = {}
@@ -75,8 +74,9 @@ class SourceCollector(object):
 
         :param int nblocks: the maximum number of blocks to generate
         """
+        # nblocks / number of tectonic region types
+        ss = SequenceSplitter(ceil(nblocks, len(self.source_weights)))
         for trt, source_weights in self.source_weights.iteritems():
-            ss = SequenceSplitter(ceil(nblocks, len(source_weights)))
             yield trt, ss.split_on_max_weight(source_weights)
 
     def sorted_trts(self):
