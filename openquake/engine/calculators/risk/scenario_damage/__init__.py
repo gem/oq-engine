@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 #  vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-#  Copyright (c) 2010-2013, GEM foundation
+#  Copyright (c) 2010-2014, GEM Foundation
 #  OpenQuake is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Affero General Public License as published
 #  by the Free Software Foundation, either version 3 of the License, or

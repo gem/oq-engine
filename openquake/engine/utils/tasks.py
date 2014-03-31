@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2013, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,16 +20,44 @@
 """Utility functions related to splitting work into tasks."""
 
 import sys
+import cPickle
 import traceback
 
 from celery.task.sets import TaskSet
+from celery.app import current_app
 from celery.task import task
 
 from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.performance import EnginePerformanceMonitor, \
+    LightMonitor
+
+
+class Pickled(object):
+    """
+    An utility to manually pickling/unpickling objects.
+    The reason is that celery does not use the HIGHEST_PROTOCOL,
+    so relying on celery is slower. Moreover Pickled instances
+    have a nice string representation and length giving the size
+    of the pickled bytestring.
+    """
+    def __init__(self, obj):
+        self.clsname = obj.__class__.__name__
+        self.pik = cPickle.dumps(obj, cPickle.HIGHEST_PROTOCOL)
+
+    def __repr__(self):
+        """String representation of the pickled object"""
+        return '<Pickled %s %dK>' % (self.clsname, len(self) / 1024)
+
+    def __len__(self):
+        """Length of the pickled bytestring"""
+        return len(self.pik)
+
+    def unpickle(self):
+        """Unpickle the underlying object"""
+        return cPickle.loads(self.pik)
 
 
 def safely_call(func, args):
@@ -80,12 +108,23 @@ def map_reduce(task, task_args, agg, acc):
                 raise exctype(result)
             acc = agg(acc, result)
     else:
+        backend = current_app().backend
+        unpik = 0
+        job_id = task_args[0][0]
+        taskname = task.__name__
+        mon = LightMonitor('unpickling %s' % taskname, job_id, task)
         taskset = TaskSet(tasks=map(task.subtask, task_args))
         for task_id, result_dict in taskset.apply_async().iter_native():
             result, exctype = result_dict['result']
             if exctype:
                 raise exctype(result)
-            acc = agg(acc, result)
+            unpik += len(result)
+            with mon:
+                res = result.unpickle()
+            acc = agg(acc, res)
+            del backend._cache[task_id]  # work around a celery bug
+        logs.LOG.info('Unpickled %d K in %s seconds',
+                      unpik / 1024, mon.duration)
     return acc
 
 
@@ -138,8 +177,8 @@ def oqtask(task_func):
             # tasks write on the celery log file
             logs.set_level(job.log_level)
             try:
-                # run the task
-                return task_func(*args)
+                # run the task and pickle the result
+                return Pickled(task_func(*args))
             finally:
                 # save on the db
                 CacheInserter.flushall()

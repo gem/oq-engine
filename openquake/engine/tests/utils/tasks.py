@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,13 +23,15 @@ Task functions for our unit tests.
 import sys
 import functools
 from celery.task import task
+from openquake.engine.utils.tasks import Pickled
 
 
 def test_task(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
-            return func(*args, **kwargs), None
+            res = func(*args, **kwargs)
+            return Pickled(res), None
         except:
             exctype, exc, _tb = sys.exc_info()
             return str(exc), exctype
