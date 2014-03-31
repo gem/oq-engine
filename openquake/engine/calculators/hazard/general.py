@@ -45,8 +45,7 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import \
-    block_splitter, SequenceSplitter, ceil
+from openquake.engine.utils.general import block_splitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -130,15 +129,12 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # see below two dictionaries populated in initialize_sources
-        # a dictionary (sm_lt_path, source_type) -> sources
+        # a dictionary (sm_lt_path, trt) -> source blocks
         self.source_blocks_per_ltpath = collections.defaultdict(list)
-        self.bin_dict = {}
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
         self.source_blocks_per_ltpath.clear()
-        self.bin_dict.clear()
 
     @property
     def hc(self):
@@ -236,9 +232,7 @@ class BaseHazardCalculator(base.Calculator):
         self.smlt = logictree.SourceModelLogicTree(
             file(smlt_file).read(), self.hc.base_path, smlt_file)
         sm_paths = list(self.smlt.get_sm_paths())
-
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
-        bs = SequenceSplitter(nblocks)
 
         # here we are doing a full enumeration of the source model logic tree;
         # this is not bad since for very large source models there are
@@ -252,21 +246,18 @@ class BaseHazardCalculator(base.Calculator):
                 self.hc.sites_affected_by,
                 self.smlt.make_apply_uncertainties(path),
                 self.hc)
-            ss = SequenceSplitter(ceil(nblocks, len(collector.source_weights)))
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, ordinal=i, sm_lt_path=smpath)
             lt_models.append(lt_model)
-            for trt, source_weights in collector.source_weights.iteritems():
-                blocks = ss.split_on_max_weight(source_weights)
+            for trt, blocks in collector.split_blocks(nblocks):
                 self.source_blocks_per_ltpath[smpath, trt] = blocks
                 n = sum(len(block) for block in blocks)
                 logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
                               n, sm, path, trt)
-                logs.LOG.info('Splitting in %d blocks with max_weight=%s',
-                              len(blocks), ss.max_weight)
+                logs.LOG.info('Splitting in %d blocks', len(blocks))
                 for i, block in enumerate(blocks, 1):
-                    logs.LOG.info('%s, block %d: %d source(s), weight %s',
-                                  trt, i, len(block), block.weight)
+                    logs.LOG.debug('%s, block %d: %d source(s), weight %s',
+                                   trt, i, len(block), block.weight)
 
             # save LtModelInfo objects for each tectonic region type
             for trt in collector.sorted_trts():
