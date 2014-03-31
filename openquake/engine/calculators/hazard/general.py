@@ -45,8 +45,7 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import \
-    block_splitter, SequenceSplitter, ceil
+from openquake.engine.utils.general import block_splitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -130,7 +129,7 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary (sm_lt_path, source_type) -> sources
+        # a dictionary (sm_lt_path, trt) -> source blocks
         self.source_blocks_per_ltpath = collections.defaultdict(list)
 
     def clean_up(self, *args, **kwargs):
@@ -178,15 +177,24 @@ class BaseHazardCalculator(base.Calculator):
 
         Override this in subclasses as necessary.
         """
+        task_no = 0
+        for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
+            ltpath = tuple(lt_model.sm_lt_path)
+            for trt in lt_model.get_tectonic_region_types():
+                for block in self.source_blocks_per_ltpath[ltpath, trt]:
+                    yield self.job.id, block, lt_model, gsims_by_rlz, task_no
+                    task_no += 1
+
+    def gen_gsims_by_rlz(self):
+        """
+        Yield pairs (lt_model, gsims_by_rlz) for that lt_model
+        """
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_model in models.LtSourceModel.objects.filter(
                 hazard_calculation=self.hc):
-            gsims_by_rlz = collections.OrderedDict(
+            yield lt_model, collections.OrderedDict(
                 (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
                 for rlz in lt_model)
-            ltpath = tuple(lt_model.sm_lt_path)
-            for block in self.source_blocks_per_ltpath[ltpath]:
-                yield self.job.id, block, gsims_by_rlz
 
     def _get_realizations(self):
         """
@@ -201,9 +209,9 @@ class BaseHazardCalculator(base.Calculator):
         """
         self.parse_risk_models()
         self.initialize_site_model()
-        num_sources = self.initialize_sources()
+        lt_models = self.initialize_sources()
         js = models.JobStats.objects.get(oq_job=self.job)
-        js.num_sources = num_sources
+        js.num_sources = [model.get_num_sources() for model in lt_models]
         js.save()
         self.initialize_realizations()
 
@@ -224,33 +232,43 @@ class BaseHazardCalculator(base.Calculator):
         self.smlt = logictree.SourceModelLogicTree(
             file(smlt_file).read(), self.hc.base_path, smlt_file)
         sm_paths = list(self.smlt.get_sm_paths())
-
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
-        bs = SequenceSplitter(nblocks)
 
         # here we are doing a full enumeration of the source model logic tree;
-        # this is not bad because for very large source models there are
+        # this is not bad since for very large source models there are
         # typically very few realizations; moreover, the filtering will remove
         # most of the sources, so the memory occupation is typically low
-        num_sources = []  # the number of sources per sm_lt_path
-        for sm, path in sm_paths:
+        lt_models = []
+        for i, (sm, path) in enumerate(sm_paths):
             smpath = tuple(path)
-            source_weight_pairs = source.parse_source_model_smart(
+            source_collector = source.parse_source_model_smart(
                 os.path.join(self.hc.base_path, sm),
                 self.hc.sites_affected_by,
                 self.smlt.make_apply_uncertainties(path),
                 self.hc)
-            blocks = bs.split_on_max_weight(list(source_weight_pairs))
-            self.source_blocks_per_ltpath[smpath] = blocks
-            n = sum(len(block) for block in blocks)
-            logs.LOG.info('Found %d relevant source(s) for %s %s', n, sm, path)
-            logs.LOG.info('Splitting in %d blocks with max_weight=%s',
-                          len(blocks), bs.max_weight)
-            for i, block in enumerate(blocks, 1):
-                logs.LOG.info('Block %d: %d sources, weight %s',
-                              i, len(block), block.weight)
-            num_sources.append(n)
-        return num_sources
+            lt_model = models.LtSourceModel.objects.create(
+                hazard_calculation=self.hc, ordinal=i, sm_lt_path=smpath)
+            lt_models.append(lt_model)
+            for trt, blocks in source_collector.split_blocks(nblocks):
+                self.source_blocks_per_ltpath[smpath, trt] = blocks
+                n = sum(len(block) for block in blocks)
+                logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
+                              n, sm, path, trt)
+                logs.LOG.info('Splitting in %d blocks', len(blocks))
+                for i, block in enumerate(blocks, 1):
+                    logs.LOG.debug('%s, block %d: %d source(s), weight %s',
+                                   trt, i, len(block), block.weight)
+
+            # save LtModelInfo objects for each tectonic region type
+            for trt in source_collector.sorted_trts():
+                models.LtModelInfo.objects.create(
+                    lt_model=lt_model,
+                    tectonic_region_type=trt,
+                    num_sources=len(source_collector.source_weights[trt]),
+                    num_ruptures=source_collector.num_ruptures[trt],
+                    min_mag=source_collector.min_mag[trt],
+                    max_mag=source_collector.max_mag[trt])
+        return lt_models
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -364,9 +382,10 @@ class BaseHazardCalculator(base.Calculator):
             self._initialize_realizations_enumeration(rlzs_per_ltpath)
 
         ordinal = 0
-        for i, (ltpath, path_infos) in enumerate(rlzs_per_ltpath.iteritems()):
-            lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.hc, ordinal=i, sm_lt_path=ltpath)
+        lt_models = models.LtSourceModel.objects.filter(
+            hazard_calculation=self.hc)
+        for lt_model, (ltpath, path_infos) in zip(
+                lt_models, rlzs_per_ltpath.iteritems()):
             for seed, weight, sm_lt_path, gsim_lt_path in path_infos:
                 models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=gsim_lt_path,

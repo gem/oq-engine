@@ -59,7 +59,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 
 
 @tasks.oqtask
-def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
+def compute_ses_and_gmfs(job_id, src_seeds, lt_model, gsims_by_rlz, task_no):
     """
     Celery task for the stochastic event set calculator.
 
@@ -82,7 +82,6 @@ def compute_ses_and_gmfs(job_id, src_seeds, gsims_by_rlz, task_no):
         an ordinal so that GMV can be collected in a reproducible order
     """
     # NB: all realizations in gsims_by_rlz correspond to the same source model
-    lt_model = gsims_by_rlz.keys()[0].lt_model
     ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
@@ -298,13 +297,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        task_no = 0
-        for job_id, block, gsims_by_rlz in super(
+        for job_id, block, lt_model, gsims_by_rlz, task_no in super(
                 EventBasedHazardCalculator, self).task_arg_gen():
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in block]  # source, seed pairs
-            yield job_id, ss, gsims_by_rlz, task_no
-            task_no += 1
+            yield job_id, ss, lt_model, gsims_by_rlz, task_no
 
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
