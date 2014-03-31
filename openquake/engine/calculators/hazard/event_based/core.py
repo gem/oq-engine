@@ -248,7 +248,7 @@ class GmfCollector(object):
             for imt, gmf_1_realiz in gmf_dict.iteritems():
                 # since DEFAULT_GMF_REALIZATIONS is 1, gmf_1_realiz is a matrix
                 # with n_sites rows and 1 column
-                for site_id, gmv in zip(r_sites.sid, gmf_1_realiz):
+                for site_id, gmv in zip(r_sites.sids, gmf_1_realiz):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
