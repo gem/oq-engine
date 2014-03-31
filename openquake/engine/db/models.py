@@ -129,6 +129,12 @@ RiskModel = collections.namedtuple(
     'imt vulnerability_function fragility_functions')
 
 
+#: The output of HazardCalculation.gen_ruptures
+SourceRuptureSites = collections.namedtuple(
+    'SourceRuptureSites',
+    'source rupture sites')
+
+
 def required_imts(risk_models):
     """
     Get all the intensity measure types required by `risk_models`
@@ -889,7 +895,7 @@ class HazardCalculation(djm.Model):
                         ) if self.maximum_distance else s_sites
                     if r_sites is None:
                         continue
-                yield src, rupture, r_sites
+                yield SourceRuptureSites(src, rupture, r_sites)
         filtsources_mon.flush()
         genruptures_mon.flush()
         filtruptures_mon.flush()
@@ -902,12 +908,11 @@ class HazardCalculation(djm.Model):
         :param sources: a sequence of sources
         :param monitor: a Monitor object
         """
-        SOURCE, RUPTURE, SITES = 0, 1, 2
         source_rupture_sites = self.gen_ruptures(
             sources, monitor, SiteCollection([site]))
         for src, rows in itertools.groupby(
-                source_rupture_sites, key=operator.itemgetter(SOURCE)):
-            yield src, [row[RUPTURE] for row in rows]
+                source_rupture_sites, key=operator.attrgetter('source')):
+            yield src, [row.rupture for row in rows]
 
 
 class RiskCalculation(djm.Model):
