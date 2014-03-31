@@ -34,6 +34,9 @@ from openquake.engine.performance import EnginePerformanceMonitor, \
     LightMonitor
 
 
+ONE_MB = 1024 * 1024
+
+
 class Pickled(object):
     """
     An utility to manually pickling/unpickling objects.
@@ -137,7 +140,7 @@ def map_reduce(task, task_args, agg, acc):
             piks = pickle_sequence(args)
             pickled_args.append(piks)
             to_send += sum(len(p) for p in piks)
-        logs.LOG.info('Sending %d K', to_send / 1024)
+        logs.LOG.info('Sending %dM', to_send / ONE_MB)
         taskset = TaskSet(tasks=map(task.subtask, pickled_args))
         for task_id, result_dict in taskset.apply_async().iter_native():
             result_pik = result_dict['result']
@@ -147,8 +150,8 @@ def map_reduce(task, task_args, agg, acc):
                 raise exctype(result)
             unpik += len(result_pik)
             acc = agg(acc, result)
-        logs.LOG.info('Unpickled %d K in %s seconds',
-                      unpik / 1024, mon.duration)
+        logs.LOG.info('Unpickled %dM in %s seconds',
+                      unpik / ONE_MB, mon.duration)
     return acc
 
 
