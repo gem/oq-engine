@@ -40,20 +40,6 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         self.job.status = 'executing'
         self.job.save()
 
-    def test_celery_task(self):
-        # Test that the celery task when called properly call the
-        # specific method to write loss map data.
-
-        patch_dbwriter = helpers.patch(
-            'openquake.engine.calculators.risk.writers.loss_map',)
-        try:
-            write_lossmap_mock = patch_dbwriter.start()
-            scenario.scenario(*self.calculator.task_arg_gen().next())
-        finally:
-            patch_dbwriter.stop()
-
-        self.assertEqual(1, write_lossmap_mock.call_count)
-
     def test_complete_workflow(self):
         """
         Test the complete risk scenario calculation workflow and test
