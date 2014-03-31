@@ -623,7 +623,7 @@ def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
         an object with attributes rupture_mesh_spacing,
         width_of_mfd_bin, area_source_discretization, investigation_time
     """
-    collector = SourceCollector()
+    source_collector = SourceCollector()
     nrml_to_hazardlib = NrmlHazardlibConverter(hc)
     for src_nrml in haz_parsers.SourceModelParser(fname).parse():
         src = nrml_to_hazardlib(src_nrml)
@@ -634,7 +634,7 @@ def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
         num_ruptures, weight = get_num_ruptures_weight(src)
         if num_ruptures > MAX_RUPTURES:
             for s in split_source(src, hc.area_source_discretization):
-                collector.update(s, *get_num_ruptures_weight(s))
+                source_collector.update(s, *get_num_ruptures_weight(s))
         else:
-            collector.update(src, num_ruptures, weight)
-    return collector
+            source_collector.update(src, num_ruptures, weight)
+    return source_collector
