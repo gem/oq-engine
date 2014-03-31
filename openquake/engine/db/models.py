@@ -868,24 +868,24 @@ class HazardCalculation(djm.Model):
         :param monitor: a Monitor object
         """
         site_coll = site_coll or self.site_collection
-        mon1 = monitor.copy('filtering sources')
-        mon2 = monitor.copy('generating ruptures')
-        mon3 = monitor.copy('filtering ruptures')
+        filtsources = monitor.copy('filtering sources')
+        genruptures = monitor.copy('generating ruptures')
+        filtruptures = monitor.copy('filtering ruptures')
         for src in sources:
-            with mon1:
+            with filtsources:
                 s_sites = src.filter_sites_by_distance_to_source(
                     self.maximum_distance, site_coll
                 ) if self.maximum_distance else site_coll
                 if s_sites is None:
                     continue
 
-            with mon2:
+            with genruptures:
                 ruptures = list(src.iter_ruptures())
-                if not ruptures:
-                    continue
+            if not ruptures:
+                continue
 
             for rupture in ruptures:
-                with mon3:
+                with filtruptures:
                     r_sites = rupture.source_typology.\
                         filter_sites_by_distance_to_rupture(
                             rupture, self.maximum_distance, s_sites
@@ -893,9 +893,9 @@ class HazardCalculation(djm.Model):
                     if r_sites is None:
                         continue
                 yield src, rupture, r_sites
-        mon1.flush()
-        mon2.flush()
-        mon3.flush()
+        filtsources.flush()
+        genruptures.flush()
+        filtruptures.flush()
 
     def gen_ruptures_for_site(self, site, sources, monitor):
         """
