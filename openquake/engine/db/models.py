@@ -868,24 +868,24 @@ class HazardCalculation(djm.Model):
         :param monitor: a Monitor object
         """
         site_coll = site_coll or self.site_collection
-        filtsources = monitor.copy('filtering sources')
-        genruptures = monitor.copy('generating ruptures')
-        filtruptures = monitor.copy('filtering ruptures')
+        filtsources_mon = monitor.copy('filtering sources')
+        genruptures_mon = monitor.copy('generating ruptures')
+        filtruptures_mon = monitor.copy('filtering ruptures')
         for src in sources:
-            with filtsources:
+            with filtsources_mon:
                 s_sites = src.filter_sites_by_distance_to_source(
                     self.maximum_distance, site_coll
                 ) if self.maximum_distance else site_coll
                 if s_sites is None:
                     continue
 
-            with genruptures:
+            with genruptures_mon:
                 ruptures = list(src.iter_ruptures())
             if not ruptures:
                 continue
 
             for rupture in ruptures:
-                with filtruptures:
+                with filtruptures_mon:
                     r_sites = rupture.source_typology.\
                         filter_sites_by_distance_to_rupture(
                             rupture, self.maximum_distance, s_sites
@@ -893,9 +893,9 @@ class HazardCalculation(djm.Model):
                     if r_sites is None:
                         continue
                 yield src, rupture, r_sites
-        filtsources.flush()
-        genruptures.flush()
-        filtruptures.flush()
+        filtsources_mon.flush()
+        genruptures_mon.flush()
+        filtruptures_mon.flush()
 
     def gen_ruptures_for_site(self, site, sources, monitor):
         """
@@ -905,11 +905,12 @@ class HazardCalculation(djm.Model):
         :param sources: a sequence of sources
         :param monitor: a Monitor object
         """
+        SOURCE, RUPTURE, SITES = 0, 1, 2
         source_rupture_sites = self.gen_ruptures(
             sources, monitor, SiteCollection([site]))
         for src, rows in itertools.groupby(
-                source_rupture_sites, key=operator.itemgetter(0)):
-            yield src, [row[1] for row in rows]
+                source_rupture_sites, key=operator.itemgetter(SOURCE)):
+            yield src, [row[RUPTURE] for row in rows]
 
 
 class RiskCalculation(djm.Model):
@@ -2189,16 +2190,14 @@ class LtSourceModel(djm.Model):
     ordinal = djm.IntegerField()
     sm_lt_path = fields.CharArrayField()
 
-    @property
-    def num_sources(self):
+    def get_num_sources(self):
         """
         Return the number of sources in the model.
         """
         return sum(info.num_sources for info in
                    LtModelInfo.objects.filter(lt_model=self))
 
-    @property
-    def tectonic_region_types(self):
+    def get_tectonic_region_types(self):
         """
         Return the tectonic region types in the model,
         ordered by number of sources.
