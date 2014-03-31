@@ -31,10 +31,10 @@ def test_task(func):
     def wrapper(*args):
         try:
             res = func(*[a.unpickle() for a in args])
-            return Pickled(res), None
+            return Pickled((res, None))
         except:
             exctype, exc, _tb = sys.exc_info()
-            return str(exc), exctype
+            return Pickled((str(exc), exctype))
     return task(wrapper)
 
 
