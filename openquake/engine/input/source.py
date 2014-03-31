@@ -17,8 +17,9 @@ import sys
 import math
 import copy
 import collections
-
 from itertools import izip
+
+from shapely import wkt
 
 from openquake.hazardlib import geo
 from openquake.hazardlib import mfd
@@ -29,7 +30,8 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
-from shapely import wkt
+from openquake.engine.utils.general import SequenceSplitter, ceil
+
 
 MAX_RUPTURES = 500  # if there are more ruptures, split the source
 
@@ -40,7 +42,6 @@ class SourceCollector(object):
     min_mag, max_mag keyed by the tectonic region type.
     """
     def __init__(self):
-        self.trt = set()
         self.source_weights = collections.defaultdict(list)
         self.num_ruptures = collections.defaultdict(int)
         self.min_mag = {}
@@ -65,6 +66,18 @@ class SourceCollector(object):
         prev_max_mag = self.max_mag.get(trt)
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag[trt] = max_mag
+
+    def split_blocks(self, nblocks):
+        """
+        Split the sources in blocks of similar weight. Yield tectonic
+        region type and blocks.
+
+        :param int nblocks: the maximum number of blocks to generate
+        """
+        # nblocks / number of tectonic region types
+        ss = SequenceSplitter(ceil(nblocks, len(self.source_weights)))
+        for trt, source_weights in self.source_weights.iteritems():
+            yield trt, ss.split_on_max_weight(source_weights)
 
     def sorted_trts(self):
         """
@@ -610,7 +623,7 @@ def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
         an object with attributes rupture_mesh_spacing,
         width_of_mfd_bin, area_source_discretization, investigation_time
     """
-    collector = SourceCollector()
+    source_collector = SourceCollector()
     nrml_to_hazardlib = NrmlHazardlibConverter(hc)
     for src_nrml in haz_parsers.SourceModelParser(fname).parse():
         src = nrml_to_hazardlib(src_nrml)
@@ -621,7 +634,7 @@ def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
         num_ruptures, weight = get_num_ruptures_weight(src)
         if num_ruptures > MAX_RUPTURES:
             for s in split_source(src, hc.area_source_discretization):
-                collector.update(s, *get_num_ruptures_weight(s))
+                source_collector.update(s, *get_num_ruptures_weight(s))
         else:
-            collector.update(src, num_ruptures, weight)
-    return collector
+            source_collector.update(src, num_ruptures, weight)
+    return source_collector
