@@ -180,7 +180,7 @@ class BaseHazardCalculator(base.Calculator):
         task_no = 0
         for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
             ltpath = tuple(lt_model.sm_lt_path)
-            for trt in lt_model.tectonic_region_types:
+            for trt in lt_model.get_tectonic_region_types():
                 for block in self.source_blocks_per_ltpath[ltpath, trt]:
                     yield self.job.id, block, lt_model, gsims_by_rlz, task_no
                     task_no += 1
@@ -211,7 +211,7 @@ class BaseHazardCalculator(base.Calculator):
         self.initialize_site_model()
         lt_models = self.initialize_sources()
         js = models.JobStats.objects.get(oq_job=self.job)
-        js.num_sources = [model.num_sources for model in lt_models]
+        js.num_sources = [model.get_num_sources() for model in lt_models]
         js.save()
         self.initialize_realizations()
 
@@ -241,7 +241,7 @@ class BaseHazardCalculator(base.Calculator):
         lt_models = []
         for i, (sm, path) in enumerate(sm_paths):
             smpath = tuple(path)
-            collector = source.parse_source_model_smart(
+            source_collector = source.parse_source_model_smart(
                 os.path.join(self.hc.base_path, sm),
                 self.hc.sites_affected_by,
                 self.smlt.make_apply_uncertainties(path),
@@ -249,7 +249,7 @@ class BaseHazardCalculator(base.Calculator):
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, ordinal=i, sm_lt_path=smpath)
             lt_models.append(lt_model)
-            for trt, blocks in collector.split_blocks(nblocks):
+            for trt, blocks in source_collector.split_blocks(nblocks):
                 self.source_blocks_per_ltpath[smpath, trt] = blocks
                 n = sum(len(block) for block in blocks)
                 logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
@@ -260,14 +260,14 @@ class BaseHazardCalculator(base.Calculator):
                                    trt, i, len(block), block.weight)
 
             # save LtModelInfo objects for each tectonic region type
-            for trt in collector.sorted_trts():
+            for trt in source_collector.sorted_trts():
                 models.LtModelInfo.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
-                    num_sources=len(collector.source_weights[trt]),
-                    num_ruptures=collector.num_ruptures[trt],
-                    min_mag=collector.min_mag[trt],
-                    max_mag=collector.max_mag[trt])
+                    num_sources=len(source_collector.source_weights[trt]),
+                    num_ruptures=source_collector.num_ruptures[trt],
+                    min_mag=source_collector.min_mag[trt],
+                    max_mag=source_collector.max_mag[trt])
         return lt_models
 
     @EnginePerformanceMonitor.monitor
