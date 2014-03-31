@@ -24,6 +24,7 @@ import cPickle
 import traceback
 
 from celery.task.sets import TaskSet
+from celery.app import current_app
 from celery.task import task
 
 from openquake.engine import logs, no_distribute
@@ -127,6 +128,7 @@ def map_reduce(task, task_args, agg, acc):
                 raise exctype(result)
             acc = agg(acc, result)
     else:
+        backend = current_app().backend
         unpik = 0
         job_id = task_args[0][0]
         taskname = task.__name__
@@ -147,6 +149,7 @@ def map_reduce(task, task_args, agg, acc):
                 raise exctype(result)
             unpik += len(result_pik)
             acc = agg(acc, result)
+            del backend._cache[task_id]  # work around a celery bug
         logs.LOG.info('Unpickled %d K in %s seconds',
                       unpik / 1024, mon.duration)
     return acc
