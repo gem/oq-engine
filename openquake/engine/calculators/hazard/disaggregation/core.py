@@ -205,7 +205,7 @@ def compute_disagg(job_id, sitecol, sources, lt_model, gsims_by_rlz,
     """
     mon = LightMonitor('disagg', job_id, compute_disagg)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
-    trt_names = tuple(lt_model.tectonic_region_types)
+    trt_names = tuple(lt_model.get_tectonic_region_types())
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
 
     for site in sitecol:
@@ -316,7 +316,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.task_arg_gen():
 
             trt_num = dict((trt, i) for i, trt in enumerate(
-                           lt_model.tectonic_region_types))
+                           lt_model.get_tectonic_region_types()))
             infos = list(models.LtModelInfo.objects.filter(
                          lt_model=lt_model))
 
@@ -378,9 +378,11 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
     @EnginePerformanceMonitor.monitor
     def save_disagg_results(self, results):
         """
-        :param results: a dictionary of probability arrays
+        Save all the results of the disaggregation. NB: the number of results
+        to save is #sites * #rlzs * #disagg_poes * #IMTs.
 
-        The number of results to save is #sites * #rlzs * #disagg_poes * #IMTs
+        :param results:
+            a dictionary of probability arrays
         """
         # since an extremely small subset of the full disaggregation matrix
         # is saved this method can be run sequentially on the controller node
