@@ -22,7 +22,8 @@ from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import Polygon, Point, RectangularMesh
-from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.site import \
+    Site, SiteCollection, FilteredSiteCollection
 from openquake.hazardlib.tom import PoissonTOM
 
 
@@ -94,7 +95,7 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
         filtered = self.source.filter_sites_by_distance_to_source(
             integration_distance=0, sites=self.sitecol
         )
-        self.assertIsInstance(filtered, SiteCollection)
+        self.assertIsInstance(filtered, FilteredSiteCollection)
         self.assertEqual(len(filtered), 5)
         numpy.testing.assert_array_equal(filtered.indices, [0, 5, 6, 7, 8])
         numpy.testing.assert_array_equal(filtered.vs30, [0.1, 5, 6, 7, 8])
@@ -117,8 +118,7 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
         filtered = self.source.filter_sites_by_distance_to_source(
             integration_distance=1000, sites=self.sitecol
         )
-        self.assertIs(filtered, self.sitecol)
-        self.assertIs(filtered.indices, None)
+        self.assertIs(filtered, self.sitecol)  # nothing filtered
 
     def test_source_filter_filter_all_out(self):
         col = SiteCollection([Site(Point(10, 10), 1, True, 2, 3),
@@ -128,7 +128,7 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
             filtered = self.source.filter_sites_by_distance_to_source(
                 integration_distance=int_dist, sites=col
             )
-            self.assertIs(filtered, None)
+            self.assertIs(filtered, None)  # all filtered
 
 
 class SeismicSourceFilterSitesByRuptureTestCase(_BaseSeismicSourceTestCase):
