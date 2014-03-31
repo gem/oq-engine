@@ -17,8 +17,9 @@ import sys
 import math
 import copy
 import collections
-
 from itertools import izip
+
+from shapely import wkt
 
 from openquake.hazardlib import geo
 from openquake.hazardlib import mfd
@@ -29,7 +30,8 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
-from shapely import wkt
+from openquake.engine.utils.general import SequenceSplitter, ceil
+
 
 MAX_RUPTURES = 500  # if there are more ruptures, split the source
 
@@ -65,6 +67,17 @@ class SourceCollector(object):
         prev_max_mag = self.max_mag.get(trt)
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag[trt] = max_mag
+
+    def split_blocks(self, nblocks):
+        """
+        Split the sources in blocks of similar weight. Yield tectonic
+        region type and blocks.
+
+        :param int nblocks: the maximum number of blocks to generate
+        """
+        for trt, source_weights in self.source_weights.iteritems():
+            ss = SequenceSplitter(ceil(nblocks, len(source_weights)))
+            yield trt, ss.split_on_max_weight(source_weights)
 
     def sorted_trts(self):
         """
