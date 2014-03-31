@@ -129,6 +129,12 @@ RiskModel = collections.namedtuple(
     'imt vulnerability_function fragility_functions')
 
 
+#: The output of HazardCalculation.gen_ruptures
+SourceRuptureSites = collections.namedtuple(
+    'SourceRuptureSites',
+    'source rupture sites')
+
+
 def required_imts(risk_models):
     """
     Get all the intensity measure types required by `risk_models`
@@ -866,34 +872,34 @@ class HazardCalculation(djm.Model):
         :param monitor: a Monitor object
         """
         site_coll = site_coll or self.site_collection
-        mon1 = monitor.copy('filtering sources')
-        mon2 = monitor.copy('generating ruptures')
-        mon3 = monitor.copy('filtering ruptures')
+        filtsources_mon = monitor.copy('filtering sources')
+        genruptures_mon = monitor.copy('generating ruptures')
+        filtruptures_mon = monitor.copy('filtering ruptures')
         for src in sources:
-            with mon1:
+            with filtsources_mon:
                 s_sites = src.filter_sites_by_distance_to_source(
                     self.maximum_distance, site_coll
                 ) if self.maximum_distance else site_coll
                 if s_sites is None:
                     continue
 
-            with mon2:
+            with genruptures_mon:
                 ruptures = list(src.iter_ruptures())
-                if not ruptures:
-                    continue
+            if not ruptures:
+                continue
 
             for rupture in ruptures:
-                with mon3:
+                with filtruptures_mon:
                     r_sites = rupture.source_typology.\
                         filter_sites_by_distance_to_rupture(
                             rupture, self.maximum_distance, s_sites
                         ) if self.maximum_distance else s_sites
                     if r_sites is None:
                         continue
-                yield src, rupture, r_sites
-        mon1.flush()
-        mon2.flush()
-        mon3.flush()
+                yield SourceRuptureSites(src, rupture, r_sites)
+        filtsources_mon.flush()
+        genruptures_mon.flush()
+        filtruptures_mon.flush()
 
     def gen_ruptures_for_site(self, site, sources, monitor):
         """
@@ -906,8 +912,8 @@ class HazardCalculation(djm.Model):
         source_rupture_sites = self.gen_ruptures(
             sources, monitor, SiteCollection([site]))
         for src, rows in itertools.groupby(
-                source_rupture_sites, key=operator.itemgetter(0)):
-            yield src, [row[1] for row in rows]
+                source_rupture_sites, key=operator.attrgetter('source')):
+            yield src, [row.rupture for row in rows]
 
 
 class RiskCalculation(djm.Model):
@@ -2187,16 +2193,14 @@ class LtSourceModel(djm.Model):
     ordinal = djm.IntegerField()
     sm_lt_path = fields.CharArrayField()
 
-    @property
-    def num_sources(self):
+    def get_num_sources(self):
         """
         Return the number of sources in the model.
         """
         return sum(info.num_sources for info in
                    LtModelInfo.objects.filter(lt_model=self))
 
-    @property
-    def tectonic_region_types(self):
+    def get_tectonic_region_types(self):
         """
         Return the tectonic region types in the model,
         ordered by number of sources.
@@ -2222,6 +2226,7 @@ class LtModelInfo(djm.Model):
     lt_model = djm.ForeignKey('LtSourceModel')
     tectonic_region_type = djm.TextField(null=False)
     num_sources = djm.IntegerField(null=False)
+    num_ruptures = djm.IntegerField(null=False)
     min_mag = djm.FloatField(null=False)
     max_mag = djm.FloatField(null=False)
 
