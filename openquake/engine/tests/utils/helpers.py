@@ -45,7 +45,7 @@ from django.core import exceptions
 from openquake.engine.db import models
 from openquake.engine import engine
 from openquake.engine import logs
-from openquake.engine.utils import config, get_calculator_class
+from openquake.engine.utils import config
 from openquake.engine.job.validation import validate
 
 
@@ -128,23 +128,10 @@ def run_job(cfg, exports=None, hazard_calculation_id=None,
     job.is_running = True
     job.save()
 
-    models.JobStats.objects.create(oq_job=job)
-
-    if hazard_calculation_id or hazard_output_id:
-        rc = job.risk_calculation
-        calc = get_calculator_class('risk', rc.calculation_mode)(job)
-        logs.set_level('ERROR')
-        job = engine._do_run_calc(job, exports, calc, 'risk')
-        job.is_running = False
-        job.save()
-    else:
-        hc = job.hazard_calculation
-        calc = get_calculator_class('hazard', hc.calculation_mode)(job)
-        logs.set_level('ERROR')
-        job = engine._do_run_calc(job, exports, calc, 'hazard')
-        job.is_running = False
-        job.save()
-
+    logfile = os.path.join(tempfile.gettempdir(), 'qatest.log')
+    job_type = 'risk' if (
+        hazard_calculation_id or hazard_output_id) else 'hazard'
+    engine.run_calc(job, 'error', logfile, exports, job_type)
     return job
 
 
