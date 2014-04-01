@@ -39,8 +39,7 @@ from lxml import etree
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.job.validation import validate
-from openquake.engine.utils import (
-    config, monitor, get_calculator_class, general)
+from openquake.engine.utils import config, get_calculator_class, general
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import Performance
@@ -398,13 +397,6 @@ def _switch_to_job_phase(job, job_type, status):
     job.status = status
     job.save()
     logs.LOG.progress("%s (%s)", status, job_type)
-    if status == "executing" and not openquake.engine.no_distribute():
-        # Record the compute nodes that were available at the beginning of the
-        # execute phase so we can detect failed nodes later.
-        failed_nodes = monitor.count_failed_nodes(job)
-        if failed_nodes == -1:
-            logs.LOG.critical("No live compute nodes, aborting calculation")
-            sys.exit(1)
 
 
 def _do_run_calc(job, exports, calc, job_type):
@@ -572,6 +564,14 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
+    if not openquake.engine.no_distribute():
+        ins = celery.task.control.inspect()
+        live_nodes = ins.ping()
+        # ping returns a dict like this:
+        #  {'gemsun04': 'pong', 'gemsun01': 'pong', 'bigstar04': 'pong'}
+        if not live_nodes:
+            sys.exit("No live compute nodes, aborting calculation")
+
     hazard = hazard_output_id is None and hazard_calculation_id is None
     if log_file is not None:
         touch_log_file(log_file)

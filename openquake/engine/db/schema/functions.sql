@@ -36,39 +36,8 @@ COMMENT ON FUNCTION refresh_last_update() IS
 'Refresh the ''last_update'' time stamp whenever a row is updated.';
 
 
-CREATE OR REPLACE FUNCTION uiapi.pcount_cnode_failures()
-  RETURNS TRIGGER
-AS $$
-    from datetime import datetime
-
-    OLD = TD["old"]
-    NEW = TD["new"]
-
-    if NEW["current_status"] != OLD["current_status"]:
-        NEW["current_ts"] = datetime.utcnow()
-        NEW["previous_ts"] = OLD["current_ts"]
-        result = "MODIFY"
-
-        if NEW["current_status"] == "down":
-            # state transition: up -> down
-            NEW["failures"] += 1
-    else:
-        result = "OK"
-
-    return result
-$$ LANGUAGE plpythonu;
-
-
-COMMENT ON FUNCTION uiapi.pcount_cnode_failures() IS
-'Update the failure count for the compute node at hand as needed.';
-
-
 CREATE AGGREGATE array_concat(anyarray)(sfunc=array_cat, stype=anyarray, initcond='{}');
 
-
-CREATE TRIGGER uiapi_cnode_stats_before_update_trig
-BEFORE UPDATE ON uiapi.cnode_stats
-FOR EACH ROW EXECUTE PROCEDURE uiapi.pcount_cnode_failures();
 
 ----- statistical helpers
 
