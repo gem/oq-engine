@@ -1569,7 +1569,7 @@ class SESCollection(djm.Model):
         Iterator for walking through all child :class:`SES` objects.
         """
         hc = self.output.oq_job.hazard_calculation
-        for ordinal in xrange(hc.ses_per_logic_tree_path):
+        for ordinal in xrange(1, hc.ses_per_logic_tree_path + 1):
             yield SES(self, ordinal)
 
     def __len__(self):
@@ -1591,7 +1591,10 @@ class SES(object):
     Stochastic Event Set: A container for 1 or more ruptures associated with a
     specific investigation time span.
     """
-    def __init__(self, ses_collection, ordinal=0):
+    # the ordinal must be > 0: the reason is that it appears in the
+    # exported XML file and the schema constraints the number to be
+    # nonzero
+    def __init__(self, ses_collection, ordinal=1):
         self.ses_collection = ses_collection
         self.ordinal = ordinal
 
