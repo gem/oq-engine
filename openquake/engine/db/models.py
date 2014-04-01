@@ -774,9 +774,12 @@ class HazardCalculation(djm.Model):
         else:
             lons = [hsite.location.x for hsite in hsites]
             lats = [hsite.location.y for hsite in hsites]
-            site_ids = [hsite.id  for hsite in hsites]
+            site_ids = [hsite.id for hsite in hsites]
             sc = SiteCollection.from_points(lons, lats, site_ids, self)
         self._site_collection = sc
+        js = JobStats.objects.get(oq_job=self.oqjob)
+        js.num_sites = len(sc)
+        js.save()
         return sc
 
     def get_imts(self):
