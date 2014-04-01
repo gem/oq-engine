@@ -173,29 +173,32 @@ class BaseHazardCalculator(base.Calculator):
         task arg tuples. Each tuple of args applies to a single task.
 
         For this default implementation, yielded results are quartets
-        (job_id, sources, tom, gsims_by_rlz).
+        (job_id, sources, tom, gsim_by_rlz).
 
         Override this in subclasses as necessary.
         """
         task_no = 0
         sitecol = self.hc.site_collection
-        for lt_model, gsims_by_rlz in self.gen_gsims_by_rlz():
+        for lt_model, trt, gsim_by_rlz in self.gen_gsim_by_trt():
             ltpath = tuple(lt_model.sm_lt_path)
-            for trt in lt_model.get_tectonic_region_types():
-                for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                    yield self.job.id, sitecol, block, lt_model, gsims_by_rlz, task_no
-                    task_no += 1
+            for block in self.source_blocks_per_ltpath[ltpath, trt]:
+                yield (self.job.id, sitecol, block, lt_model,
+                       gsim_by_rlz, task_no)
+                task_no += 1
 
-    def gen_gsims_by_rlz(self):
+    def gen_gsim_by_trt(self):
         """
-        Yield pairs (lt_model, gsims_by_rlz) for that lt_model
+        Yield triples (lt_model, trt, gsim_by_rlz) for all models
         """
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_model in models.LtSourceModel.objects.filter(
                 hazard_calculation=self.hc):
-            yield lt_model, collections.OrderedDict(
-                (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
-                for rlz in lt_model)
+            gsim_dicts = [ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path)
+                          for rlz in lt_model]
+            for trt in lt_model.get_tectonic_region_types():
+                yield lt_model, trt, collections.OrderedDict(
+                    (rlz, gsim_dict[trt])
+                    for rlz, gsim_dict in zip(lt_model, gsim_dicts))
 
     def _get_realizations(self):
         """
