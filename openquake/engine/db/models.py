@@ -353,31 +353,6 @@ class JobStats(djm.Model):
         db_table = 'uiapi\".\"job_stats'
 
 
-class CNodeStats(djm.Model):
-    '''
-    Captures the compute node status (changes).
-    '''
-    oq_job = djm.ForeignKey('OqJob')
-    node = djm.TextField(help_text="Compute node name")
-    STATUS_CHOICES = (
-        (u"up", u"Compute node available"),
-        (u"down", u"Compute node unavailable"),
-    )
-    current_status = djm.TextField(
-        choices=STATUS_CHOICES, help_text="Current compute node status")
-
-    # Please note: the time stamps are managed by triggers, no need to set
-    # them manually
-    current_ts = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    previous_ts = djm.DateTimeField(null=True)
-
-    failures = djm.IntegerField(
-        help_text="Number of up -> down status changes", default=0)
-
-    class Meta:
-        db_table = 'uiapi\".\"cnode_stats'
-
-
 class HazardCalculation(djm.Model):
     '''
     Parameters needed to run a Hazard job.
