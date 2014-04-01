@@ -153,7 +153,7 @@ def map_reduce(task, task_args, agg, acc):
             unpik += len(result_pik)
             acc = agg(acc, result)
             del backend._cache[task_id]  # work around a celery bug
-        logs.LOG.info('Unpickled %dM in %s seconds',
+        logs.LOG.info('Unpickled %dM of received data in %s seconds',
                       unpik / ONE_MB, mon.duration)
     return acc
 
