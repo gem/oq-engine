@@ -162,13 +162,16 @@ def compute_hazard_curves(
         bbs = [BoundingBox(lt_model.id, site_id) for site_id in sitecol.sids]
     else:
         bbs = []
-    mon = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
-    make_ctxt = LightMonitor('making contexts', job_id, compute_hazard_curves)
-    calc_poes = LightMonitor('computing poes', job_id, compute_hazard_curves)
+    mon = LightMonitor(
+        'getting ruptures', job_id, compute_hazard_curves)
+    make_ctxt_mon = LightMonitor(
+        'making contexts', job_id, compute_hazard_curves)
+    calc_poes_mon = LightMonitor(
+        'computing poes', job_id, compute_hazard_curves)
     for source, rows in itertools.groupby(
             hc.gen_ruptures(sources, mon, sitecol),
             key=operator.attrgetter('source')):
-        # a row is a triple (source, rupture, rupture_sites)
+        # a row is a namedtuple (source, rupture, rupture_sites)
         t0 = time.time()
         num_ruptures = 0
         for _source, rupture, r_sites in rows:
@@ -181,11 +184,12 @@ def compute_hazard_curves(
                         # ruptures too far away are ignored
                         bb.update([dist], [point.longitude], [point.latitude])
 
+            # compute probabilities for all realizations
             for rlz, curv in curves.iteritems():
                 gsim = gsim_by_rlz[rlz]
-                with make_ctxt:
+                with make_ctxt_mon:
                     sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                with calc_poes:
+                with calc_poes_mon:
                     for imt in imts:
                         poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                              hc.truncation_level)
@@ -196,8 +200,8 @@ def compute_hazard_curves(
                       job_id, source.source_id, source.__class__.__name__,
                       num_ruptures, time.time() - t0)
 
-    make_ctxt.flush()
-    calc_poes.flush()
+    make_ctxt_mon.flush()
+    calc_poes_mon.flush()
 
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning

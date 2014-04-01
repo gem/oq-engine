@@ -45,6 +45,8 @@ class Pickled(object):
     so relying on celery is slower. Moreover Pickled instances
     have a nice string representation and length giving the size
     of the pickled bytestring.
+
+    :param obj: the object to pickle
     """
     def __init__(self, obj):
         self.clsname = obj.__class__.__name__
@@ -69,6 +71,8 @@ def pickle_sequence(objects):
     If the iterable contains copies, the pickling will be done only once.
     If the iterable contains objects already pickled, they will not be
     pickled again.
+
+    :param objects: a sequence of objects to pickle
     """
     cache = {}
     out = []
@@ -90,6 +94,9 @@ def safely_call(func, args):
     where exc_type is None if no exceptions occur, otherwise it
     is the exception class and the result is a string containing
     error message and traceback.
+
+    :param func: the function to call
+    :param args: the arguments
     """
     try:
         return func(*args), None
@@ -108,12 +115,6 @@ def map_reduce(task, task_args, agg, acc):
     not preserved and there is no list with the intermediated results:
     the accumulator is incremented as soon as a task result comes.
 
-    :param task: a `celery` task callable.
-    :param task_args: an iterable over positional arguments
-    :param agg: the aggregation function, (acc, val) -> new acc
-    :param acc: the initial value of the accumulator
-    :returns: the final value of the accumulator
-
     NB: if the environment variable OQ_NO_DISTRIBUTE is set the
     tasks are run sequentially in the current process and then
     map_reduce(task, task_args, agg, acc) is the same as
@@ -123,6 +124,12 @@ def map_reduce(task, task_args, agg, acc):
     or large results are returned they may incur in memory issue:
     this is way the calculators limit the queue with the
     `concurrent_task` concept.
+
+    :param task: a `celery` task callable.
+    :param task_args: an iterable over positional arguments
+    :param agg: the aggregation function, (acc, val) -> new acc
+    :param acc: the initial value of the accumulator
+    :returns: the final value of the accumulator
     """
     if no_distribute():
         for the_args in task_args:
@@ -168,12 +175,12 @@ def parallelize(task, task_args, side_effect=lambda val: None):
     callable and does something with it (such as saving or printing
     it). Notice that the order is not preserved. parallelize returns None.
 
+    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
+    tasks are run sequentially in the current process.
+
     :param task: a celery task
     :param task_args: an iterable over positional arguments
     :param side_effect: a function val -> None
-
-    NB: if the environment variable OQ_NO_DISTRIBUTE is set the
-    tasks are run sequentially in the current process.
     """
     map_reduce(task, task_args, lambda acc, val: side_effect(val), None)
 
@@ -184,6 +191,8 @@ def oqtask(task_func):
     errors which occur inside the task. Also checks to make sure the job is
     actually still running. If it is not running, the task doesn't get
     executed, so we don't do useless computation.
+
+    :param task_func: the function to decorate
     """
     def wrapped(*args):
         """
@@ -219,7 +228,8 @@ def oqtask(task_func):
                     operation='storing task id',
                     task_id=tsk.request.id).delete()
     celery_queue = config.get('amqp', 'celery_queue')
-    f = lambda *args: Pickled(safely_call(wrapped, [a.unpickle() for a in args]))
+    f = lambda *args: Pickled(
+        safely_call(wrapped, [a.unpickle() for a in args]))
     f.__name__ = task_func.__name__
     tsk = task(f, queue=celery_queue)
     tsk.task_func = task_func
