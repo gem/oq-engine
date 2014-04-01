@@ -193,11 +193,13 @@ def compute_disagg(job_id, sitecol, sources, lt_model, gsim_by_rlz,
     :param lt_model:
         an instance of :class:`openquake.engine.db.models.LtSourceModel`
     :param dict gsim_by_rlz:
-        a dictionary of gsim dictionaries, one for each realization
+        a dictionary of gsims, one for each realization
     :param dict trt_num:
         a dictionary Tectonic Region Type -> incremental number
     :param curves_dict:
         a dictionary with the hazard curves for sites, realizations and IMTs
+    :param bin_egdes:
+        a dictionary (lt_model_id, site_id) -> edges
     :returns:
         a dictionary of probability arrays, with composite key
         (site.id, rlz.id, poe, imt, iml, trt_names).

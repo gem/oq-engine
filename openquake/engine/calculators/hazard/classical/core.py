@@ -147,6 +147,8 @@ def compute_hazard_curves(
         a :class:`openquake.engine.db.LtSourceModel` instance
     :param gsim_by_rlz:
         a dictionary of gsims, one for each realization
+    :param int task_no:
+        the ordinal number of the current task
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     total_sites = len(sitecol)
@@ -165,7 +167,7 @@ def compute_hazard_curves(
     calc_poes = LightMonitor('computing poes', job_id, compute_hazard_curves)
     for source, rows in itertools.groupby(
             hc.gen_ruptures(sources, mon, sitecol),
-            key=operator.itemgetter(0)):
+            key=operator.attrgetter('source')):
         # a row is a triple (source, rupture, rupture_sites)
         t0 = time.time()
         num_ruptures = 0
