@@ -257,18 +257,6 @@ CREATE TABLE uiapi.risk_calculation (
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'region_constraint', 4326, 'POLYGON', 2);
 SELECT AddGeometryColumn('uiapi', 'risk_calculation', 'sites_disagg', 4326, 'MULTIPOINT', 2);
 
-CREATE TABLE uiapi.cnode_stats (
-    id SERIAL PRIMARY KEY,
-    oq_job_id INTEGER NOT NULL,
-    node VARCHAR NOT NULL,
-    current_status VARCHAR NOT NULL CONSTRAINT current_status_value
-        CHECK(current_status IN ('up', 'down')),
-    current_ts timestamp without time zone NOT NULL,
-    previous_ts timestamp without time zone,
-    failures INTEGER NOT NULL DEFAULT 0
-) TABLESPACE uiapi_ts;
-
-
 -- A single OpenQuake calculation engine output. The data may reside in a file
 -- or in the database.
 CREATE TABLE uiapi.output (
@@ -897,9 +885,6 @@ ALTER TABLE uiapi.performance ADD CONSTRAINT uiapi_performance_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.job_stats ADD CONSTRAINT uiapi_job_stats_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.cnode_stats ADD CONSTRAINT  uiapi_cnode_stats_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
