@@ -81,6 +81,7 @@ class GmfCollectorTestCase(unittest.TestCase):
         hc.truncation_level = None
         hc.maximum_distance = 200.
 
+        trt = 'Subduction Interface'
         gsim = get_available_gsims()['AkkarBommer2010']()
         num_sites = 5
         site_coll = make_site_coll(-78, 15.5, num_sites)
@@ -88,12 +89,11 @@ class GmfCollectorTestCase(unittest.TestCase):
                       correl_model=None,
                       maximum_distance=200,
                       num_sites=num_sites)
-        trt = 'Subduction Interface'
         rup_id, rup_seed = 42, 44
         rup = FakeRupture(rup_id, trt)
         pga = PGA()
         rlz = mock.Mock()
-        coll = core.GmfCollector(params, [pga], {rlz: {trt: gsim}})
+        coll = core.GmfCollector(params, [pga], {rlz: gsim})
         coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
             (rlz, pga, 0): [rup_id],

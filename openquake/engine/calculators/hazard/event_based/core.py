@@ -210,7 +210,7 @@ class GmfCollector(object):
         :param imts:
             a list of hazardlib intensity measure types
         :param gsim_by_rlz:
-            a dictionary  {rlz -> {tectonic region type -> GSIM instance}}
+            a dictionary rlz -> GSIM instance
         """
         self.params = params
         self.imts = imts
@@ -236,12 +236,12 @@ class GmfCollector(object):
         :param seed:
             an integer to be used as stochastic seed
         """
-        for rlz, gsims in self.gsim_by_rlz.items():
+        for rlz, gsim in self.gsim_by_rlz.items():
             gmf_calc_kwargs = {
                 'rupture': rupture,
                 'sites': r_sites,
                 'imts': self.imts,
-                'gsim': gsims[rupture.tectonic_region_type],
+                'gsim': gsim,
                 'truncation_level': self.params['truncation_level'],
                 'realizations': DEFAULT_GMF_REALIZATIONS,
                 'correlation_model': self.params['correl_model'],
