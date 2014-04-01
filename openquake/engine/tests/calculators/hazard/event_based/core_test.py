@@ -183,11 +183,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     def test_complete_event_based_calculation_cycle(self):
         # run the calculation in process (to easy debugging)
         # and check the outputs
-        os.environ['OQ_NO_DISTRIBUTE'] = '1'
-        try:
+        with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             job = helpers.run_job(self.cfg)
-        finally:
-            del os.environ['OQ_NO_DISTRIBUTE']
         hc = job.hazard_calculation
         rlz1, rlz2 = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=hc.id).order_by('ordinal')
