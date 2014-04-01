@@ -131,7 +131,7 @@ class BoundingBox(object):
 
 @tasks.oqtask
 def compute_hazard_curves(
-        job_id, sitecol, sources, lt_model, gsims_by_rlz, task_no):
+        job_id, sitecol, sources, lt_model, gsim_by_rlz, task_no):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -145,8 +145,8 @@ def compute_hazard_curves(
         a block of source objects
     :param lt_model:
         a :class:`openquake.engine.db.LtSourceModel` instance
-    :param gsims_by_rlz:
-        a dictionary of gsim dictionaries, one for each realization
+    :param gsim_by_rlz:
+        a dictionary of gsims, one for each realization
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     total_sites = len(sitecol)
@@ -155,7 +155,7 @@ def compute_hazard_curves(
         hc.intensity_measure_types_and_levels)
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
                              for imt in imts))
-                  for rlz in gsims_by_rlz)
+                  for rlz in gsim_by_rlz)
     if hc.poes_disagg:  # doing disaggregation
         bbs = [BoundingBox(lt_model.id, site_id) for site_id in sitecol.sids]
     else:
@@ -180,7 +180,7 @@ def compute_hazard_curves(
                         bb.update([dist], [point.longitude], [point.latitude])
 
             for rlz, curv in curves.iteritems():
-                gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
+                gsim = gsim_by_rlz[rlz]
                 with make_ctxt:
                     sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
                 with calc_poes:
