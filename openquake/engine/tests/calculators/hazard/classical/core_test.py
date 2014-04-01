@@ -23,7 +23,6 @@ from nose.plugins.attrib import attr
 
 from openquake.engine.calculators.hazard.classical import core
 from openquake.engine.db import models
-from openquake.engine.engine import save_job_stats
 from openquake.engine.tests.utils import helpers
 from openquake.engine.utils.general import WeightedSequence
 
@@ -150,7 +149,6 @@ store_site_model'
         hc = self.job.hazard_calculation
 
         self.calc.pre_execute()
-        save_job_stats(self.job)
 
         # Test the job stats:
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
