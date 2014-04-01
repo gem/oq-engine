@@ -74,6 +74,7 @@ signal.signal(signal.SIGTERM, keyboard_interrupt)
 def cleanup_after_job(job, terminate):
     """
     Release the resources used by an openquake job.
+    In particular revoke the running tasks (if any).
 
     :param int job_id: the job id
     :param bool terminate: the celery revoke command terminate flag
@@ -141,17 +142,6 @@ class LogFileHandler(logging.FileHandler):
         super(LogFileHandler, self).emit(record)
 
 
-def save_job_stats(job, disk_space=None, stop_time=None):
-    """
-    Save the job_stats for the given job. Should be called only after
-    the site_collection has been initialized.
-    """
-    js = models.JobStats.objects.get(oq_job=job)
-    js.disk_space = disk_space
-    js.stop_time = stop_time
-    js.save()
-
-
 @contextmanager
 def job_stats(job):
     """
@@ -163,14 +153,22 @@ def job_stats(job):
     curs = models.getcursor('job_init')
     curs.execute("select pg_database_size(%s)", (dbname,))
     dbsize = curs.fetchall()[0][0]
+
+    # create job stats, which implicitly records the start time for the job
+    js = models.JobStats.objects.create(oq_job=job)
     try:
         yield
     finally:
         job.is_running = False
         job.save()
+
+        # save job stats
         curs.execute("select pg_database_size(%s)", (dbname,))
         new_dbsize = curs.fetchall()[0][0]
-        save_job_stats(job, new_dbsize - dbsize, datetime.utcnow())
+        js.disk_space = new_dbsize - dbsize
+        js.stop_time = datetime.utcnow()
+        js.save()
+
         cleanup_after_job(job, terminate=TERMINATE)
 
 
@@ -364,8 +362,6 @@ def run_calc(job, log_level, log_file, exports, job_type):
                else LogStreamHandler(job_type, calc))
     logging.root.addHandler(handler)
     try:
-        # create job stats, which implicitly records the start time for the job
-        models.JobStats.objects.create(oq_job=job)
         with job_stats(job):  # run the job
             logs.set_level(log_level)
             job.is_running = True
