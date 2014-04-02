@@ -570,7 +570,8 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
         # ping returns a dict like this:
         #  {'gemsun04': 'pong', 'gemsun01': 'pong', 'bigstar04': 'pong'}
         if not live_nodes:
-            sys.exit("No live compute nodes, aborting calculation")
+            print "No live compute nodes, aborting calculation"
+            sys.exit(2)
 
     hazard = hazard_output_id is None and hazard_calculation_id is None
     if log_file is not None:

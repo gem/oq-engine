@@ -48,6 +48,8 @@ fi
 GEM_BUILD_ROOT="build-deb"
 GEM_BUILD_SRC="${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}"
 
+GEM_MAXLOOP=20
+
 GEM_ALWAYS_YES=false
 
 if [ "$GEM_EPHEM_CMD" = "" ]; then
@@ -97,6 +99,7 @@ sig_hand () {
         rm /tmp/packager.eph.$$.log
     fi
 }
+
 
 #
 #  dep2var <dep> - converts in a proper way the name of a dependency to a variable name
@@ -286,7 +289,27 @@ _devtest_innervm_run () {
 
     if [ -z "$GEM_DEVTEST_SKIP_TESTS" ]; then
         # wait for celeryd startup time
-        sleep 5
+        ssh $lxc_ip "
+celeryd_wait() {
+    local cw_nloop=\"\$1\" cw_ret cw_i
+
+    for cw_i in \$(seq 1 \$cw_nloop); do
+        cw_ret=\"\$(celeryctl status)\"
+        if echo \"\$cw_ret\" | grep -iq '^error:'; then
+            if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
+                return 1
+            fi
+        else
+            return 0
+        fi
+        sleep 1
+    done
+
+    return 1
+}
+
+celeryd_wait $GEM_MAXLOOP"
+
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine
@@ -422,7 +445,21 @@ _pkgtest_innervm_run () {
         ssh $lxc_ip "set -e ; cd demos
         for ini in \$(find ./hazard -name job.ini | sort); do
             echo \"Running \$ini\"
-            openquake --run-hazard  \$ini --exports xml -l info
+            for loop in \$(seq 1 $GEM_MAXLOOP\); do
+                set +e
+                openquake --run-hazard  \$ini --exports xml -l info
+                oq_ret=\$?
+                set -e
+                if [ \$oq_ret -eq 0 ]; then
+                    break
+                elif [ \$oq_ret -ne 2 ]; then
+                    exit \$oq_ret
+                fi
+                sleep 1
+            done
+            if [ \$loop -eq $GEM_MAXLOOP ]; then
+                exit \$oq_ret
+            fi
         done
 
         for demo_dir in \$(find ./risk  -mindepth 1 -maxdepth 1 -type d | sort); do
