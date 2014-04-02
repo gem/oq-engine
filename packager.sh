@@ -384,12 +384,12 @@ while [ $# -gt 0 ]; do
             break
             ;;
         devtest)
-            devtest_run $2
+            devtest_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
         pkgtest)
-            pkgtest_run $2
+            pkgtest_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
@@ -398,7 +398,7 @@ while [ $# -gt 0 ]; do
             break
             ;;
     esac
-    BUILD_FLAGS="$BUILD_FLAGS $1"    
+    BUILD_FLAGS="$BUILD_FLAGS $1"
     shift
 done
 
@@ -416,7 +416,7 @@ mksafedir "$GEM_BUILD_SRC"
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 
 # NOTE: if in the future we need modules we need to execute the following commands
-# 
+#
 # git submodule init
 # git submodule update
 ##  "submodule foreach" vars: $name, $path, $sha1 and $toplevel:
@@ -511,10 +511,10 @@ if [ 0 -eq 1 ]; then
     mv README.txt      openquake/README
     mv celeryconfig.py openquake
     mv openquake.cfg   openquake
-    
+
     mv bin/openquake   bin/oqscript.py
     mv bin             openquake/bin
-    
+
     rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
 fi
 
