@@ -1,5 +1,5 @@
 # NRML: Natural hazards' Risk Markup Language
-# Copyright (c) 2010-2012, GEM Foundation.
+# Copyright (c) 2010-2014, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,7 @@ NRML was created as part of the Global Earthquake Model
 exchange format definition for the OpenQuake Engine (http://www.openquake.org/)
 and related software.
 
-Copyright (C) 2010-2012 GEM Foundation.
+Copyright (c) 2010-2014, GEM Foundation.
 """
 
 import os
