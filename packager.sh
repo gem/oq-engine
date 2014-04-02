@@ -445,7 +445,7 @@ _pkgtest_innervm_run () {
         ssh $lxc_ip "set -e ; cd demos
         for ini in \$(find ./hazard -name job.ini | sort); do
             echo \"Running \$ini\"
-            for loop in \$(seq 1 $GEM_MAXLOOP\); do
+            for loop in \$(seq 1 $GEM_MAXLOOP); do
                 set +e
                 openquake --run-hazard  \$ini --exports xml -l info
                 oq_ret=\$?
