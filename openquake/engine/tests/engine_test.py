@@ -21,6 +21,8 @@ import subprocess
 import tempfile
 import unittest
 import warnings
+import time
+import mock
 
 from openquake.engine.db import models
 from django.core import exceptions
@@ -433,3 +435,45 @@ class DeleteRiskCalcTestCase(unittest.TestCase):
         risk_calc = risk_job.risk_calculation
 
         self.assertRaises(RuntimeError, engine.del_risk_calc, risk_calc.id)
+
+
+class CeleryNodeMonitorTestCase(unittest.TestCase):
+    def setUp(self):
+        self.patch = mock.patch('celery.task.control.inspect')
+        self.inspect = self.patch.start()
+
+    def test_all_nodes_were_down(self):
+        ping = self.inspect().ping
+        ping.return_value = {}
+        mon = engine.CeleryNodeMonitor(no_distribute=False, interval=0.1)
+        with self.assertRaises(SystemExit), mock.patch('sys.stderr') as stderr:
+            mon.__enter__()
+        self.assertEqual(mon.pings, 0)  # the thread did not start
+        self.assertTrue(stderr.write.called)  # an error message was printed
+
+    def test_all_nodes_are_up(self):
+        ping = self.inspect().ping
+        ping.return_value = {'node1': []}
+        mon = engine.CeleryNodeMonitor(no_distribute=False, interval=0.1)
+        with mon:
+            time.sleep(.21)
+        self.assertEqual(mon.pings, 3)  # three pings were done in the thread
+
+    def test_one_node_goes_down(self):
+        ping = self.inspect().ping
+        ping.return_value = {'node1': []}
+        mon = engine.CeleryNodeMonitor(no_distribute=False, interval=0.1)
+        with mon, mock.patch('os.kill') as kill:
+            time.sleep(.11)
+            ping.return_value = {}
+            time.sleep(.1)
+            self.assertEqual(mon.pings, 2)  # two pings were done in the thread
+            self.assertTrue(kill.called)
+
+    def test_no_distribute(self):
+        with engine.CeleryNodeMonitor(no_distribute=True, interval=0.1):
+            time.sleep(0.5)
+        self.assertIsNone(self.inspect.call_args)
+
+    def tearDown(self):
+        self.patch.stop()
