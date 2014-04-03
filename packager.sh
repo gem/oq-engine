@@ -391,11 +391,13 @@ while [ $# -gt 0 ]; do
             break
             ;;
         devtest)
+            # Sed removes 'origin/' from the branch name
             devtest_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
         pkgtest)
+            # Sed removes 'origin/' from the branch name
             pkgtest_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
