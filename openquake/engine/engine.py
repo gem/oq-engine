@@ -546,46 +546,55 @@ def print_outputs_summary(outputs):
                 o.id, o.get_output_type_display(), o.display_name)
 
 
-def check_nodes(parent_running, expected_nodes_set, interval):
+class CeleryNodeMonitor(object):
     """
-    Check that the expected celery nodes are all up. The loop
-    continue until the parent_running condition is verified.
-    """
-    while parent_running[0]:
-        time.sleep(interval)
-        live_nodes = celery.task.control.inspect().ping() or {}
-        live_nodes_set = set(live_nodes)
-        if live_nodes_set < expected_nodes_set:
-            print 'Cluster node(s) not accessible: %s' % (
-                expected_nodes_set - live_nodes_set)
-            os.kill(os.getpid(), signal.SIGTERM)
-            break
+    Context manager wrapping a block of code with a monitor thread
+    checking that the celery nodes are accessible. The check is performed
+    periodically with celery.task.control.
 
+    :param float interval:
+        polling interval in seconds
+    :param bool no_distribute:
+        if True, the CeleryNodeMonitor will do nothing at all
+    """
+    def __init__(self, no_distribute, interval):
+        self.interval = interval
+        self.no_distribute = no_distribute
+        self.job_running = True
+        self.live_nodes = None  # set of live worker nodes
+        self.th = None
+        self.pings = 0  # number of pings in the monitoring thread
 
-@contextmanager
-def cluster_monitor(check_nodes, interval):
-    """
-    Context manager wrapping a block of code with a monitor threading
-    checking that the celery nodes are accessible.
-    """
-    if openquake.engine.no_distribute():  # do-nothing monitor
-        yield
-        return
-    live_nodes = celery.task.control.inspect().ping()
-    # ping returns a dict like this:
-    #  {'gemsun04': 'pong', 'gemsun01': 'pong', 'bigstar04': 'pong'}
-    if not live_nodes:
-        print "No live compute nodes, aborting calculation"
-        sys.exit(2)
-    parent_running = [True]  # poor man condition variable
-    th = threading.Thread(
-        None, check_nodes, args=(parent_running, set(live_nodes), interval))
-    th.start()
-    try:
-        yield
-    finally:
-        parent_running[0] = False
-        th.join()
+    def __enter__(self):
+        if self.no_distribute:
+            return self  # do nothing
+        self.live_nodes = set(celery.task.control.inspect().ping() or {})
+        if not self.live_nodes:
+            print >> sys.stderr, "No live compute nodes, aborting calculation"
+            sys.exit(2)
+        self.th = threading.Thread(None, self.check_nodes)
+        self.th.start()
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        self.job_running = False
+        if self.th:
+            self.th.join()
+
+    def check_nodes(self):
+        """
+        Check that the expected celery nodes are all up. The loop
+        continue until the job_running condition is verified.
+        """
+        while self.job_running:
+            time.sleep(self.interval)
+            live_nodes = set(celery.task.control.inspect().ping() or {})
+            self.pings += 1
+            if live_nodes < self.live_nodes:
+                print >> sys.stderr, 'Cluster nodes not accessible: %s' % (
+                    self.live_nodes - live_nodes)
+                os.kill(os.getpid(), signal.SIGTERM)  # commit suicide
+                break
 
 
 def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
@@ -607,7 +616,7 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
-    with cluster_monitor(check_nodes, interval=10):
+    with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=5):
         hazard = hazard_output_id is None and hazard_calculation_id is None
         if log_file is not None:
             touch_log_file(log_file)
