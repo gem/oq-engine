@@ -16,6 +16,7 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
+import threading
 import ConfigParser
 import csv
 import getpass
@@ -545,6 +546,48 @@ def print_outputs_summary(outputs):
                 o.id, o.get_output_type_display(), o.display_name)
 
 
+def check_nodes(parent_running, expected_nodes_set, interval):
+    """
+    Check that the expected celery nodes are all up. The loop
+    continue until the parent_running condition is verified.
+    """
+    while parent_running[0]:
+        time.sleep(interval)
+        live_nodes = celery.task.control.inspect().ping() or {}
+        live_nodes_set = set(live_nodes)
+        if live_nodes_set < expected_nodes_set:
+            print 'Cluster node(s) not accessible: %s' % (
+                expected_nodes_set - live_nodes_set)
+            os.kill(os.getpid(), signal.SIGTERM)
+            break
+
+
+@contextmanager
+def cluster_monitor(check_nodes, interval):
+    """
+    Context manager wrapping a block of code with a monitor threading
+    checking that the celery nodes are accessible.
+    """
+    if openquake.engine.no_distribute():  # do-nothing monitor
+        yield
+        return
+    live_nodes = celery.task.control.inspect().ping()
+    # ping returns a dict like this:
+    #  {'gemsun04': 'pong', 'gemsun01': 'pong', 'bigstar04': 'pong'}
+    if not live_nodes:
+        print "No live compute nodes, aborting calculation"
+        sys.exit(2)
+    parent_running = [True]  # poor man condition variable
+    th = threading.Thread(
+        None, check_nodes, args=(parent_running, set(live_nodes), interval))
+    th.start()
+    try:
+        yield
+    finally:
+        parent_running[0] = False
+        th.join()
+
+
 def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
             hazard_calculation_id=None):
     """
@@ -564,43 +607,35 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
-    if not openquake.engine.no_distribute():
-        ins = celery.task.control.inspect()
-        live_nodes = ins.ping()
-        # ping returns a dict like this:
-        #  {'gemsun04': 'pong', 'gemsun01': 'pong', 'bigstar04': 'pong'}
-        if not live_nodes:
-            print "No live compute nodes, aborting calculation"
-            sys.exit(2)
+    with cluster_monitor(check_nodes, interval=10):
+        hazard = hazard_output_id is None and hazard_calculation_id is None
+        if log_file is not None:
+            touch_log_file(log_file)
 
-    hazard = hazard_output_id is None and hazard_calculation_id is None
-    if log_file is not None:
-        touch_log_file(log_file)
+        job = job_from_file(
+            cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
+            hazard_calculation_id)
 
-    job = job_from_file(
-        cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
-        hazard_calculation_id)
-
-    # Instantiate the calculator and run the calculation.
-    t0 = time.time()
-    completed_job = run_calc(
-        job, log_level, log_file, exports, 'hazard' if hazard else 'risk'
-    )
-    duration = time.time() - t0
-    if hazard:
-        if completed_job.status == 'complete':
-            print_results(completed_job.hazard_calculation.id,
-                          duration, list_hazard_outputs)
+        # Instantiate the calculator and run the calculation.
+        t0 = time.time()
+        completed_job = run_calc(
+            job, log_level, log_file, exports, 'hazard' if hazard else 'risk'
+        )
+        duration = time.time() - t0
+        if hazard:
+            if completed_job.status == 'complete':
+                print_results(completed_job.hazard_calculation.id,
+                              duration, list_hazard_outputs)
+            else:
+                sys.exit('Calculation %s failed' %
+                         completed_job.hazard_calculation.id)
         else:
-            sys.exit('Calculation %s failed' %
-                     completed_job.hazard_calculation.id)
-    else:
-        if completed_job.status == 'complete':
-            print_results(completed_job.risk_calculation.id,
-                          duration, list_risk_outputs)
-        else:
-            sys.exit('Calculation %s failed' %
-                     completed_job.risk_calculation.id)
+            if completed_job.status == 'complete':
+                print_results(completed_job.risk_calculation.id,
+                              duration, list_risk_outputs)
+            else:
+                sys.exit('Calculation %s failed' %
+                         completed_job.risk_calculation.id)
 
 
 @django_db.transaction.commit_on_success
