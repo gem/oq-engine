@@ -178,7 +178,7 @@ _devtest_innervm_run () {
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
     ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-nrmllib:\$PWD/oq-risklib\" ;
-                 cd $GEM_GIT_PACKAGE ; 
+                 cd $GEM_GIT_PACKAGE ;
                  nosetests -v --with-doctest --with-coverage --cover-package=openquake.commonlib --with-xunit"
     scp "$lxc_ip:$GEM_GIT_PACKAGE/nosetests.xml" .
 
@@ -473,12 +473,14 @@ while [ $# -gt 0 ]; do
             break
             ;;
         devtest)
-            devtest_run $2
+            # Sed removes 'origin/' from the branch name
+            devtest_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
         pkgtest)
-            pkgtest_run $2
+            # Sed removes 'origin/' from the branch name
+            pkgtest_run $(echo "$2" | sed 's@.*/@@g')
             exit $?
             break
             ;;
@@ -487,7 +489,7 @@ while [ $# -gt 0 ]; do
             break
             ;;
     esac
-    BUILD_FLAGS="$BUILD_FLAGS $1"    
+    BUILD_FLAGS="$BUILD_FLAGS $1"
     shift
 done
 
@@ -505,7 +507,7 @@ mksafedir "$GEM_BUILD_SRC"
 git archive HEAD | (cd "$GEM_BUILD_SRC" ; tar xv)
 
 # NOTE: if in the future we need modules we need to execute the following commands
-# 
+#
 # git submodule init
 # git submodule update
 ##  "submodule foreach" vars: $name, $path, $sha1 and $toplevel:
@@ -584,10 +586,10 @@ if [ 0 -eq 1 ]; then
     mv README.txt      openquake/README
     mv celeryconfig.py openquake
     mv openquake.cfg   openquake
-    
+
     mv bin/openquake   bin/oqscript.py
     mv bin             openquake/bin
-    
+
     rm -rf $(find demos -mindepth 1 -maxdepth 1 | egrep -v 'demos/simple_fault_demo_hazard|demos/event_based_hazard|demos/_site_model')
 fi
 
