@@ -16,14 +16,12 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
-import threading
 import ConfigParser
 import csv
 import getpass
 import os
 import sys
 import time
-import signal
 import logging
 import warnings
 from contextlib import contextmanager
@@ -41,6 +39,7 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.job.validation import validate
 from openquake.engine.utils import config, get_calculator_class, general
+from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import Performance
@@ -61,31 +60,6 @@ LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
 
 TERMINATE = general.str2bool(
     config.get('celery', 'terminate_workers_on_revoke'))
-
-
-class MasterKilled(KeyboardInterrupt):
-    """
-    Exception raised when a job is killed or aborted. This includes
-    the case some celery node fail, for instance due to an out of
-    memory error, since in that case the CeleryNodeMonitor sends a
-    SIGABRT signal to the master process.
-    """
-    @classmethod
-    def handle_signal(cls, signum, _stack):
-        """
-        When a SIGTERM is received, raise the exception
-        """
-        if signum == signal.SIGTERM:
-            msg = 'The openquake master process was killed manually'
-        elif signum == signal.SIGABRT:
-            msg = ('The openquake master process was killed by the '
-                   'CeleryNodeMonitor because some node failed')
-        else:
-            msg = 'This should never happen'
-        raise cls(msg)
-
-signal.signal(signal.SIGTERM, MasterKilled.handle_signal)
-signal.signal(signal.SIGABRT, MasterKilled.handle_signal)
 
 
 def cleanup_after_job(job, terminate):
@@ -560,57 +534,6 @@ def print_outputs_summary(outputs):
         for o in outputs.order_by('output_type'):
             print '%s | %s | %s' % (
                 o.id, o.get_output_type_display(), o.display_name)
-
-
-class CeleryNodeMonitor(object):
-    """
-    Context manager wrapping a block of code with a monitor thread
-    checking that the celery nodes are accessible. The check is performed
-    periodically with celery.task.control.
-
-    :param float interval:
-        polling interval in seconds
-    :param bool no_distribute:
-        if True, the CeleryNodeMonitor will do nothing at all
-    """
-    def __init__(self, no_distribute, interval):
-        self.interval = interval
-        self.no_distribute = no_distribute
-        self.job_running = True
-        self.live_nodes = None  # set of live worker nodes
-        self.th = None
-        self.pings = 0  # number of pings in the monitoring thread
-
-    def __enter__(self):
-        if self.no_distribute:
-            return self  # do nothing
-        self.live_nodes = set(celery.task.control.inspect().ping() or {})
-        if not self.live_nodes:
-            print >> sys.stderr, "No live compute nodes, aborting calculation"
-            sys.exit(2)
-        self.th = threading.Thread(None, self.check_nodes)
-        self.th.start()
-        return self
-
-    def __exit__(self, etype, exc, tb):
-        self.job_running = False
-        if self.th:
-            self.th.join()
-
-    def check_nodes(self):
-        """
-        Check that the expected celery nodes are all up. The loop
-        continue until the job_running condition is verified.
-        """
-        while self.job_running:
-            time.sleep(self.interval)
-            live_nodes = set(celery.task.control.inspect().ping() or {})
-            self.pings += 1
-            if live_nodes < self.live_nodes:
-                print >> sys.stderr, 'Cluster nodes not accessible: %s' % (
-                    self.live_nodes - live_nodes)
-                os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
-                break
 
 
 def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
