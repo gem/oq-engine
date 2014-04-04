@@ -32,7 +32,7 @@ class AkkarEtAlRjb2014(GMPE):
     Implements GMPE developed by S. Akkar, M. A. Sandikkaya, and J. J. Bommer
     as published in "Empirical Ground-Motion Models for Point- and Extended-
     Source Crustal Earthquake Scenarios in Europe and the Middle East",
-    Bullettin of Earthquake Engineering (2013).
+    Bulletin of Earthquake Engineering (2014), 12(1): 359 - 387
     The class implements the equations for Joyner-Boore distance and based on
     manuscript provided by the original authors.
     """
@@ -298,7 +298,7 @@ class AkkarEtAlRepi2014(AkkarEtAlRjb2014):
         )
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-      IMT         a1       a2         a3         a4       a5    a6        a7        a8        a9     c1   Vcon  Vref     c     n         b1         b2   sigma       tau
+      IMT         a1       a2         a3         a4       a5    a6        a7        a8        a9     c1   Vcon  Vref     c     n         b1         b2    sigma      tau
       pga    2.52977   0.0029   -0.05496   -1.31001   0.2529   7.5   -0.5096   -0.1091    0.0937   6.75   1000   750   2.5   3.2   -0.41997   -0.28846   0.6375   0.3581
       pgv    6.13498   0.0029   -0.12091   -1.04013   0.2529   7.5   -0.5096   -0.0616    0.0630   6.75   1000   750   2.5   3.2   -0.72057   -0.19688   0.6143   0.3485
     0.010    2.54832   0.0029   -0.05434   -1.31268   0.2529   7.5   -0.5096   -0.1115    0.0953   6.75   1000   750   2.5   3.2   -0.41729   -0.28685   0.6389   0.3607
@@ -389,7 +389,7 @@ class AkkarEtAlRhyp2014(AkkarEtAlRjb2014):
         )
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-      IMT         a1       a2         a3         a4       a5    a6        a7        a8        a9     c1   Vcon  Vref     c     n         b1         b2   sigma       tau
+      IMT         a1       a2         a3         a4       a5    a6        a7        a8        a9     c1   Vcon  Vref     c     n         b1         b2    sigma      tau
       pga    3.26685   0.0029   -0.04846   -1.47905   0.2529   7.5   -0.5096   -0.1091    0.0937   6.75   1000   750   2.5   3.2   -0.41997   -0.28846   0.6475   0.3472
       pgv    6.72743   0.0029   -0.11474   -1.17694   0.2529   7.5   -0.5096   -0.0616    0.0630   6.75   1000   750   2.5   3.2   -0.72057   -0.19688   0.6280   0.3312
     0.010    3.28656   0.0029   -0.04784   -1.48197   0.2529   7.5   -0.5096   -0.1115    0.0953   6.75   1000   750   2.5   3.2   -0.41729   -0.28685   0.6492   0.3481
