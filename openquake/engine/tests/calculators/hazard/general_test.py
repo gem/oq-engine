@@ -199,6 +199,7 @@ class InitializeSourcesTestCase(unittest.TestCase):
         cfg = helpers.get_data_path(
             'calculators/hazard/classical/haz_map_test_job.ini')
         job = helpers.get_job(cfg)
+        models.JobStats.objects.create(oq_job=job)
         hc = job.hazard_calculation
         cls.calc = get_calculator_class('hazard', hc.calculation_mode)(job)
         cls.calc.initialize_site_model()

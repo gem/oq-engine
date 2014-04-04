@@ -20,7 +20,6 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from openquake.engine import engine
 from openquake.engine.calculators.hazard.disaggregation import core
 from openquake.engine.db import models
 
@@ -44,7 +43,6 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         # Test `pre_execute` to ensure that all stats are properly initialized.
         # Then test the core disaggregation function.
         self.calc.pre_execute()
-        engine.save_job_stats(self.job)
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
         self.assertEqual(2, job_stats.num_sites)
 
