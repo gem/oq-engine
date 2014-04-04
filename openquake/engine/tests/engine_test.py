@@ -23,6 +23,7 @@ import unittest
 import warnings
 import time
 import mock
+import signal
 
 from openquake.engine.db import models
 from django.core import exceptions
@@ -457,18 +458,26 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
         mon = engine.CeleryNodeMonitor(no_distribute=False, interval=0.1)
         with mon:
             time.sleep(.21)
-        self.assertEqual(mon.pings, 3)  # three pings were done in the thread
+        # three ping were done in the thread, plus 1 at the beginning
+        self.assertEqual(ping.call_count, 4)
 
-    def test_one_node_goes_down(self):
+    def test_one_node_went_down(self):
         ping = self.inspect().ping
         ping.return_value = {'node1': []}
         mon = engine.CeleryNodeMonitor(no_distribute=False, interval=0.1)
-        with mon, mock.patch('os.kill') as kill:
+        with mon, mock.patch('os.kill') as kill, \
+                mock.patch('sys.stderr') as stderr:
             time.sleep(.11)
             ping.return_value = {}
             time.sleep(.1)
-            self.assertEqual(mon.pings, 2)  # two pings were done in the thread
-            self.assertTrue(kill.called)
+            # two ping were done in the thread, plus 1 at the beginning
+            self.assertEqual(ping.call_count, 3)
+
+            # check that kill was called with a SIGABRT
+            pid, signum = kill.call_args[0]
+            self.assertEqual(pid, os.getpid())
+            self.assertEqual(signum, signal.SIGABRT)
+            self.assertTrue(stderr.write.called)
 
     def test_no_distribute(self):
         with engine.CeleryNodeMonitor(no_distribute=True, interval=0.1):
