@@ -65,9 +65,8 @@ def scenario_damage(job_id, units, containers, params):
 
 
 def do_scenario_damage(unit, params, monitor):
-    with monitor.copy('getting hazard'):
-        _hid, assets, ground_motion_values = unit.getter(
-            monitor.copy('')).next()
+    _hid, assets, ground_motion_values = unit.getter(
+        monitor.copy('getting hazard')).next()
 
     if not len(assets):
         logs.LOG.warn("Exit from task as no asset could be processed")
