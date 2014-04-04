@@ -61,12 +61,13 @@ def scenario_damage(job_id, units, containers, params):
     assert len(containers) == 0
 
     with db.transaction.commit_on_success(using='job_init'):
-        return do_scenario_damage(unit, params, monitor.copy)
+        return do_scenario_damage(unit, params, monitor)
 
 
-def do_scenario_damage(unit, params, profile):
-    with profile('getting hazard'):
-        _hid, assets, ground_motion_values = unit.getter().next()
+def do_scenario_damage(unit, params, monitor):
+    with monitor.copy('getting hazard'):
+        _hid, assets, ground_motion_values = unit.getter(
+            monitor.copy('')).next()
 
     if not len(assets):
         logs.LOG.warn("Exit from task as no asset could be processed")
@@ -79,12 +80,12 @@ def do_scenario_damage(unit, params, profile):
         # how it is possible that sites without gmvs are returned
         raise RuntimeError("No GMVs for assets %s" % assets)
 
-    with profile('computing risk'):
+    with monitor.copy('computing risk'):
         fraction_matrix = unit.workflow(ground_motion_values)
         aggfractions = sum(fraction_matrix[i] * asset.number_of_units
                            for i, asset in enumerate(assets))
 
-    with profile('saving damage per assets'):
+    with monitor.copy('saving damage per assets'):
         writers.damage_distribution(
             assets, fraction_matrix, params.damage_state_ids)
 
