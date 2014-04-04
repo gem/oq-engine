@@ -29,6 +29,7 @@ from openquake.engine.db import models
 from django.core import exceptions
 
 from openquake.engine import engine
+from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.tests.utils import helpers
 
 
@@ -446,16 +447,16 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
     def test_all_nodes_were_down(self):
         ping = self.inspect().ping
         ping.return_value = {}
-        mon = engine.CeleryNodeMonitor(no_distribute=False, interval=0.1)
+        mon = CeleryNodeMonitor(no_distribute=False, interval=0.1)
         with self.assertRaises(SystemExit), mock.patch('sys.stderr') as stderr:
             mon.__enter__()
-        self.assertEqual(mon.pings, 0)  # the thread did not start
+        self.assertEqual(ping.call_count, 1)  # called only once
         self.assertTrue(stderr.write.called)  # an error message was printed
 
     def test_all_nodes_are_up(self):
         ping = self.inspect().ping
         ping.return_value = {'node1': []}
-        mon = engine.CeleryNodeMonitor(no_distribute=False, interval=0.1)
+        mon = CeleryNodeMonitor(no_distribute=False, interval=0.1)
         with mon:
             time.sleep(.21)
         # three ping were done in the thread, plus 1 at the beginning
@@ -464,7 +465,7 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
     def test_one_node_went_down(self):
         ping = self.inspect().ping
         ping.return_value = {'node1': []}
-        mon = engine.CeleryNodeMonitor(no_distribute=False, interval=0.1)
+        mon = CeleryNodeMonitor(no_distribute=False, interval=0.1)
         with mon, mock.patch('os.kill') as kill, \
                 mock.patch('sys.stderr') as stderr:
             time.sleep(.11)
@@ -480,7 +481,7 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
             self.assertTrue(stderr.write.called)
 
     def test_no_distribute(self):
-        with engine.CeleryNodeMonitor(no_distribute=True, interval=0.1):
+        with CeleryNodeMonitor(no_distribute=True, interval=0.1):
             time.sleep(0.5)
         self.assertIsNone(self.inspect.call_args)
 
