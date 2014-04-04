@@ -22,7 +22,6 @@ import getpass
 import os
 import sys
 import time
-import signal
 import logging
 import warnings
 from contextlib import contextmanager
@@ -40,6 +39,7 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.job.validation import validate
 from openquake.engine.utils import config, get_calculator_class, general
+from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
 from openquake.engine.db.models import Performance
@@ -60,15 +60,6 @@ LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
 
 TERMINATE = general.str2bool(
     config.get('celery', 'terminate_workers_on_revoke'))
-
-
-def keyboard_interrupt(_signum, _stack):
-    """
-    When a SIGTERM is received, raise a KeyboardInterrupt
-    """
-    raise KeyboardInterrupt
-
-signal.signal(signal.SIGTERM, keyboard_interrupt)
 
 
 def cleanup_after_job(job, terminate):
@@ -564,43 +555,35 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
-    if not openquake.engine.no_distribute():
-        ins = celery.task.control.inspect()
-        live_nodes = ins.ping()
-        # ping returns a dict like this:
-        #  {'gemsun04': 'pong', 'gemsun01': 'pong', 'bigstar04': 'pong'}
-        if not live_nodes:
-            print "No live compute nodes, aborting calculation"
-            sys.exit(2)
+    with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=5):
+        hazard = hazard_output_id is None and hazard_calculation_id is None
+        if log_file is not None:
+            touch_log_file(log_file)
 
-    hazard = hazard_output_id is None and hazard_calculation_id is None
-    if log_file is not None:
-        touch_log_file(log_file)
+        job = job_from_file(
+            cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
+            hazard_calculation_id)
 
-    job = job_from_file(
-        cfg_file, getpass.getuser(), log_level, exports, hazard_output_id,
-        hazard_calculation_id)
-
-    # Instantiate the calculator and run the calculation.
-    t0 = time.time()
-    completed_job = run_calc(
-        job, log_level, log_file, exports, 'hazard' if hazard else 'risk'
-    )
-    duration = time.time() - t0
-    if hazard:
-        if completed_job.status == 'complete':
-            print_results(completed_job.hazard_calculation.id,
-                          duration, list_hazard_outputs)
+        # Instantiate the calculator and run the calculation.
+        t0 = time.time()
+        completed_job = run_calc(
+            job, log_level, log_file, exports, 'hazard' if hazard else 'risk'
+        )
+        duration = time.time() - t0
+        if hazard:
+            if completed_job.status == 'complete':
+                print_results(completed_job.hazard_calculation.id,
+                              duration, list_hazard_outputs)
+            else:
+                sys.exit('Calculation %s failed' %
+                         completed_job.hazard_calculation.id)
         else:
-            sys.exit('Calculation %s failed' %
-                     completed_job.hazard_calculation.id)
-    else:
-        if completed_job.status == 'complete':
-            print_results(completed_job.risk_calculation.id,
-                          duration, list_risk_outputs)
-        else:
-            sys.exit('Calculation %s failed' %
-                     completed_job.risk_calculation.id)
+            if completed_job.status == 'complete':
+                print_results(completed_job.risk_calculation.id,
+                              duration, list_risk_outputs)
+            else:
+                sys.exit('Calculation %s failed' %
+                         completed_job.risk_calculation.id)
 
 
 @django_db.transaction.commit_on_success
