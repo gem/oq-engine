@@ -63,13 +63,29 @@ TERMINATE = general.str2bool(
     config.get('celery', 'terminate_workers_on_revoke'))
 
 
-def keyboard_interrupt(_signum, _stack):
+class MasterKilled(KeyboardInterrupt):
     """
-    When a SIGTERM is received, raise a KeyboardInterrupt
+    Exception raised when a job is killed or aborted. This includes
+    the case some celery node fail, for instance due to an out of
+    memory error, since in that case the CeleryNodeMonitor sends a
+    SIGABRT signal to the master process.
     """
-    raise KeyboardInterrupt
+    @classmethod
+    def handle_signal(cls, signum, _stack):
+        """
+        When a SIGTERM is received, raise the exception
+        """
+        if signum == signal.SIGTERM:
+            msg = 'The openquake master process was killed manually'
+        elif signum == signal.SIGABRT:
+            msg = ('The openquake master process was killed by the '
+                   'CeleryNodeMonitor because some node failed')
+        else:
+            msg = 'This should never happen'
+        raise cls(msg)
 
-signal.signal(signal.SIGTERM, keyboard_interrupt)
+signal.signal(signal.SIGTERM, MasterKilled.handle_signal)
+signal.signal(signal.SIGABRT, MasterKilled.handle_signal)
 
 
 def cleanup_after_job(job, terminate):
@@ -593,7 +609,7 @@ class CeleryNodeMonitor(object):
             if live_nodes < self.live_nodes:
                 print >> sys.stderr, 'Cluster nodes not accessible: %s' % (
                     self.live_nodes - live_nodes)
-                os.kill(os.getpid(), signal.SIGTERM)  # commit suicide
+                os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
                 break
 
 
