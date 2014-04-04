@@ -58,17 +58,17 @@ def event_based_bcr(job_id, units, containers, _params):
             do_event_based_bcr(
                 unit,
                 containers.with_args(loss_type=unit.loss_type),
-                monitor.copy)
+                monitor)
 
 
-def do_event_based_bcr(unit, containers, profile):
+def do_event_based_bcr(unit, containers, monitor):
     """
     See `event_based_bcr` for docstring
     """
-    outputs, _stats = unit(profile('getting hazard'),
-                           profile('computing bcr'))
+    outputs, _stats = unit(monitor.copy('getting hazard'),
+                           monitor.copy('computing bcr'))
 
-    with profile('writing results'):
+    with monitor.copy('writing results'):
         for out in outputs:
             containers.write(
                 unit.workflow.assets,
