@@ -57,22 +57,22 @@ def scenario(job_id, units, containers, _params):
                 containers.with_args(
                     loss_type=unit.loss_type,
                     output_type="loss_map"),
-                monitor.copy)
+                monitor)
     return agg, insured
 
 
-def do_scenario(unit, containers, profile):
+def do_scenario(unit, containers, monitor):
     """
     See `scenario` for a description of the input parameters
     """
 
-    ((hid, outputs),), _stats = unit(profile('getting data'),
-                                     profile('computing risk'))
+    ((hid, outputs),), _stats = unit(monitor.copy('getting data'),
+                                     monitor.copy('computing risk'))
 
     (assets, loss_ratio_matrix, aggregate_losses,
      insured_loss_matrix, insured_losses) = outputs
 
-    with profile('saving risk outputs'):
+    with monitor.copy('saving risk outputs'):
         containers.write(
             assets,
             loss_ratio_matrix.mean(axis=1),
