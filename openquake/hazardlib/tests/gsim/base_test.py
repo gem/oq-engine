@@ -496,7 +496,9 @@ class DeprecationWarningTestCase(unittest.TestCase):
             deprecated = True
 
         with mock.patch('warnings.warn') as warn:
-            OldGMPE()
+            OldGMPE()  # instantiating this class will call warnings.warn
 
-        msg = warn.call_args[0][0]
-        self.assertEqual(msg, 'OldGMPE is deprecated - use NewGMPE instead')
+        warning_msg, warning_type = warn.call_args[0]
+        self.assertIs(warning_type, DeprecationWarning)
+        self.assertEqual(
+            warning_msg, 'OldGMPE is deprecated - use NewGMPE instead')
