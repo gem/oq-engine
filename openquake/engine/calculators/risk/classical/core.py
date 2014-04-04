@@ -55,17 +55,17 @@ def classical(job_id, units, containers, params):
                 unit,
                 containers.with_args(loss_type=unit.loss_type),
                 params,
-                monitor.copy)
+                monitor)
 
 
-def do_classical(unit, containers, params, profile):
+def do_classical(unit, containers, params, monitor):
     """
     See `classical` for a description of the parameters.
 
     :param str loss_type:
       the type of losses we are considering
 
-    :param profile:
+    :param monitor:
       a context manager for logging/profiling purposes
 
     For each calculation unit we compute loss curves, loss maps and
@@ -73,11 +73,11 @@ def do_classical(unit, containers, params, profile):
     compute mean and quantile artifacts.
     """
 
-    outputs, stats = unit(profile('getting data'),
-                          profile('computing individual risk'),
+    outputs, stats = unit(monitor.copy('getting data'),
+                          monitor.copy('computing individual risk'),
                           post_processing, params.quantiles)
 
-    with profile('saving risk'):
+    with monitor.copy('saving risk'):
         for out in outputs:
             save_individual_outputs(
                 containers.with_args(hazard_output_id=out.hid),
