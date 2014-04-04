@@ -22,6 +22,7 @@ from __future__ import division
 
 import abc
 import math
+import warnings
 
 import scipy.stats
 from scipy.special import ndtr
@@ -29,6 +30,20 @@ import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
+
+
+class MetaGSIM(abc.ABCMeta):
+    """
+    Metaclass providing a deprecation mechanism. A
+    GroundShakingIntensityModel subclass with a 'deprecated'
+    attribute prints a deprecation warning when instantiated.
+    """
+    def __call__(cls, *args, **kw):
+        if getattr(cls, 'deprecated', False):
+            msg = '%s is deprecated - use %s instead' % (
+                cls.__name__, cls.__base__.__name__)
+            warnings.warn(msg, DeprecationWarning)
+        return super(MetaGSIM, cls).__call__(*args, **kw)
 
 
 class GroundShakingIntensityModel(object):
@@ -47,7 +62,7 @@ class GroundShakingIntensityModel(object):
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
-    __metaclass__ = abc.ABCMeta
+    __metaclass__ = MetaGSIM
 
     #: Reference to a
     #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
