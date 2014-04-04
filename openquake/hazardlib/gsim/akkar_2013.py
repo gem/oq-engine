@@ -19,7 +19,7 @@ Module exports :class:`AkkarEtAl2013`.
 from __future__ import division
 
 import numpy as np
-
+import warnings
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -70,6 +70,8 @@ class AkkarEtAl2013(GMPE):
     #: The required distance parameter is 'Joyner-Boore' distance, because
     #: coefficients in table 4.a, pages 22-23, are used.
     REQUIRES_DISTANCES = set(('rjb', ))
+    warnings.warn('AkkarEtAl2013 is deprecated - use AkkarEtAlRjb2014 instead',
+                  DeprecationWarning)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -83,12 +85,12 @@ class AkkarEtAl2013(GMPE):
         # amplification
         C_pga = self.COEFFS[PGA()]
         median_pga = np.exp(
-            self._compute_mean(C_pga, rup.mag, dists.rjb, rup.rake)
+            self._compute_mean(C_pga, rup.mag, dists, rup.rake)
         )
 
         # compute full mean value by adding nonlinear site amplification terms
         C = self.COEFFS[imt]
-        mean = (self._compute_mean(C, rup.mag, dists.rjb, rup.rake) +
+        mean = (self._compute_mean(C, rup.mag, dists, rup.rake) +
                 self._compute_non_linear_term(C, median_pga, sites))
 
         stddevs = self._get_stddevs(C, stddev_types, num_sites=sites.vs30.size)
@@ -130,14 +132,14 @@ class AkkarEtAl2013(GMPE):
         """
         return C['a3'] * (8.5 - mag) ** 2
 
-    def _compute_logarithmic_distance_term(self, C, mag, rjb):
+    def _compute_logarithmic_distance_term(self, C, mag, dists):
         """
         Compute and return fourth term in equations (2a)
         and (2b), page 20.
         """
         return (
             (C['a4'] + C['a5'] * (mag - self.c1)) *
-            np.log(np.sqrt(rjb ** 2 + C['a6'] ** 2))
+            np.log(np.sqrt(dists.rjb ** 2 + C['a6'] ** 2))
         )
 
     def _compute_faulting_style_term(self, C, rake):
@@ -178,7 +180,7 @@ class AkkarEtAl2013(GMPE):
 
         return lnS
 
-    def _compute_mean(self, C, mag, rjb, rake):
+    def _compute_mean(self, C, mag, dists, rake):
         """
         Compute and return mean value without site conditions,
         that is equations (1a) and (1b), p.2981-2982.
@@ -187,7 +189,7 @@ class AkkarEtAl2013(GMPE):
             C['a1'] +
             self._compute_linear_magnitude_term(C, mag) +
             self._compute_quadratic_magnitude_term(C, mag) +
-            self._compute_logarithmic_distance_term(C, mag, rjb) +
+            self._compute_logarithmic_distance_term(C, mag, dists) +
             self._compute_faulting_style_term(C, rake)
         )
 
