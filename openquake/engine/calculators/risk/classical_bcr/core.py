@@ -56,13 +56,14 @@ def classical_bcr(job_id, units, containers, _params):
         for unit in units:
             do_classical_bcr(
                 unit,
-                containers.with_args(loss_type=unit.loss_type), monitor.copy)
+                containers.with_args(loss_type=unit.loss_type), monitor)
 
 
-def do_classical_bcr(unit, containers, profile):
-    outputs, _stats = unit(profile('getting hazard'), profile('computing bcr'))
+def do_classical_bcr(unit, containers, monitor):
+    outputs, _stats = unit(monitor.copy('getting hazard'),
+                           monitor.copy('computing bcr'))
 
-    with profile('writing results'):
+    with monitor.copy('writing results'):
         for out in outputs:
             containers.write(
                 unit.workflow.assets,
