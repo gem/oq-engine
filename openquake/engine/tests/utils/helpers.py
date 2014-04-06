@@ -615,6 +615,8 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
 
         for point in ["POINT(-1.01 1.01)", "POINT(0.9 1.01)",
                       "POINT(0.01 0.01)", "POINT(0.9 0.9)"]:
+            models.HazardSite.objects.create(
+                hazard_calculation=hc, location=point)
             models.HazardCurveData.objects.create(
                 hazard_curve=hazard_output,
                 poes=[0.1, 0.2, 0.3],
