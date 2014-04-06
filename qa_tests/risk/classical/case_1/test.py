@@ -103,6 +103,9 @@ class ClassicalRiskCase1TestCase(risk.BaseRiskQATestCase):
             (0.60, 0.000757544444296432), (0.70, 0.000272824002045979),
             (0.80, 0.00), (0.9, 0.00), (1.0, 0.00)]
 
+        models.HazardSite.objects.create(
+            hazard_calculation=job.hazard_calculation,
+            location="POINT(1 1)")
         models.HazardCurveData.objects.create(
             hazard_curve=models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
