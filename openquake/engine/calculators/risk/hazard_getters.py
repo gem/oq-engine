@@ -83,6 +83,44 @@ class HazardGetter(object):
         """
         raise NotImplementedError
 
+    def assets_gen(self, hazard_output):
+        """
+        Iterator yielding site_id, assets.
+        """
+        cursor = models.getcursor('job_init')
+        # NB: the ``distinct ON (exposure_data.id)`` combined with the
+        # ``ORDER BY ST_Distance`` does the job to select the closest site.
+        # The other ORDER BY are there to help debugging, it is always
+        # nice to have numbers coming in a fixed order. They have an
+        # insignificant effect on the performance.
+        query = """
+SELECT site_id, array_agg(asset_id ORDER BY asset_id) AS asset_ids FROM (
+  SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
+  FROM riski.exposure_data AS exp
+  JOIN hzrdi.hazard_site AS hsite
+  ON ST_DWithin(exp.site, hsite.location, %s)
+  WHERE hsite.hazard_calculation_id = %s
+  AND taxonomy = %s AND exposure_model_id = %s AND exp.site && %s
+  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)) AS x
+GROUP BY site_id ORDER BY site_id;
+   """
+        args = (self.max_distance * KILOMETERS_TO_METERS,
+                hazard_output.output.oq_job.hazard_calculation.id,
+                self.assets[0].taxonomy,
+                self.assets[0].exposure_model_id,
+                self._assets_mesh.get_convex_hull().wkt)
+        cursor.execute(query, args)
+        sites_assets = cursor.fetchall()
+        for site_id, asset_ids in sites_assets:
+            assets = [self.asset_dict[i] for i in asset_ids
+                      if i in self.asset_dict]
+            # notice the "if i in self.asset_dict": in principle, it should
+            # not be necessary; in practice, the query may returns spurious
+            # assets not in the initial set; this is why we are filtering
+            # the spurious assets; it is a mysterious behaviour of PostGIS
+            if assets:
+                yield site_id, assets
+
     def get_assets_data(self, hazard_output, monitor=None):
         """
         :param monitor: a performance monitor or None
@@ -143,33 +181,34 @@ class HazardCurveGetterPerAsset(HazardGetter):
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :meth:`HazardGetter.get_data` interface.
         """
-        hc = hazard_output
+        ho = hazard_output
 
-        if hc.output.output_type == 'hazard_curve':
-            imls = hc.imls
-        elif hc.output.output_type == 'hazard_curve_multi':
-            hc = models.HazardCurve.objects.get(
-                output__oq_job=hc.output.oq_job,
+        if ho.output.output_type == 'hazard_curve':
+            imls = ho.imls
+        elif ho.output.output_type == 'hazard_curve_multi':
+            ho = models.HazardCurve.objects.get(
+                output__oq_job=ho.output.oq_job,
                 output__output_type='hazard_curve',
-                statistics=hc.statistics,
-                lt_realization=hc.lt_realization,
+                statistics=ho.statistics,
+                lt_realization=ho.lt_realization,
                 imt=self.imt_type,
                 sa_period=self.sa_period,
                 sa_damping=self.sa_damping)
-            imls = hc.imls
+            imls = ho.imls
 
+        with monitor.copy('associating assets->site'):
+            site_assets = list(self.assets_gen(hazard_output))
+
+        all_assets, all_curves = [], []
         with monitor.copy('getting closest hazard curves'):
-            assets = []
-            curves = []
-
-            for asset in self.assets:
-                queryset = self.get_by_site(asset.site, hc.id)
-                if queryset is not None:
-                    [poes] = queryset
-                    assets.append(asset)
-                    curves.append(zip(imls, poes))
-
-        return assets, curves
+            for site_id, assets in site_assets:
+                site = models.HazardSite.objects.get(pk=site_id)
+                [poes] = self.get_by_site(site, ho.id)
+                curve = zip(imls, poes)
+                for asset in assets:
+                    all_assets.append(asset)
+                    all_curves.append(curve)
+        return all_assets, all_curves
 
     def get_by_site(self, site, hazard_id):
         """
@@ -179,20 +218,12 @@ class HazardCurveGetterPerAsset(HazardGetter):
         """
         cursor = models.getcursor('job_init')
 
-        query = """
+        query = """\
         SELECT hzrdr.hazard_curve_data.poes
         FROM hzrdr.hazard_curve_data
-        WHERE hazard_curve_id = %s
-        AND ST_DWithin(ST_GeographyFromText(%s), location::geography, %s)
-        ORDER BY
-            ST_Distance(location::geography, ST_GeographyFromText(%s), false)
-        LIMIT 1
+        WHERE hazard_curve_id = %s AND location = %s
         """
-
-        args = (hazard_id, site.wkt, self.max_distance * KILOMETERS_TO_METERS,
-                site.wkt)
-
-        cursor.execute(query, args)
+        cursor.execute(query, (hazard_id, 'SRID=4326; ' + site.location.wkt))
         return cursor.fetchone()
 
 
@@ -210,44 +241,6 @@ class GroundMotionValuesGetter(HazardGetter):
             assets, data = self.get_assets_data(h, monitor)
             if len(assets) > 0:
                 yield hazard.id, assets, data
-
-    def assets_gen(self, hazard_output):
-        """
-        Iterator yielding site_id, assets.
-        """
-        cursor = models.getcursor('job_init')
-        # NB: the ``distinct ON (exposure_data.id)`` combined with the
-        # ``ORDER BY ST_Distance`` does the job to select the closest site.
-        # The other ORDER BY are there to help debugging, it is always
-        # nice to have numbers coming in a fixed order. They have an
-        # insignificant effect on the performance.
-        query = """
-SELECT site_id, array_agg(asset_id ORDER BY asset_id) AS asset_ids FROM (
-  SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
-  FROM riski.exposure_data AS exp
-  JOIN hzrdi.hazard_site AS hsite
-  ON ST_DWithin(exp.site, hsite.location, %s)
-  WHERE hsite.hazard_calculation_id = %s
-  AND taxonomy = %s AND exposure_model_id = %s AND exp.site && %s
-  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)) AS x
-GROUP BY site_id ORDER BY site_id;
-   """
-        args = (self.max_distance * KILOMETERS_TO_METERS,
-                hazard_output.output.oq_job.hazard_calculation.id,
-                self.assets[0].taxonomy,
-                self.assets[0].exposure_model_id,
-                self._assets_mesh.get_convex_hull().wkt)
-        cursor.execute(query, args)
-        sites_assets = cursor.fetchall()
-        for site_id, asset_ids in sites_assets:
-            assets = [self.asset_dict[i] for i in asset_ids
-                      if i in self.asset_dict]
-            # notice the "if i in self.asset_dict": in principle, it should
-            # not be necessary; in practice, the query may returns spurious
-            # assets not in the initial set; this is why we are filtering
-            # the spurious assets; it is a mysterious behaviour of PostGIS
-            if assets:
-                yield site_id, assets
 
     def get_gmvs_ruptures(self, gmf, site_id):
         """
