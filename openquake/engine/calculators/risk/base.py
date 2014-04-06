@@ -131,7 +131,7 @@ class RiskCalculator(base.Calculator):
             asset_offsets = range(0, assets_nr, block_size)
 
             for offset in asset_offsets:
-                with logs.tracing("getting assets"):
+                with self.monitor("getting asset chunks"):
                     assets = models.ExposureData.objects.get_asset_chunk(
                         self.rc, taxonomy, offset, block_size)
 
