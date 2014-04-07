@@ -394,7 +394,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             loss_type,
             workflows.ProbabilisticEventBased(
                 risk_model.vulnerability_function,
-                self.rnd.randint(0, models.MAX_SINT_32),
+                self.rc.master_seed,  # self.rnd.randint(0, models.MAX_SINT_32)
                 self.rc.asset_correlation,
                 time_span, tses,
                 self.rc.loss_curve_resolution,
