@@ -56,7 +56,7 @@ import numpy as np
 from openquake.hazardlib.geo.point import Point
 from openquake.nrmllib import models
 import hmtk.sources.source_conversion_utils as conv
-
+from openquake.hazardlib.source.point import PointSource
 
 class mtkPointSource(object):
     '''New class to describe the mtkPointsource object
@@ -291,7 +291,7 @@ class mtkPointSource(object):
             conv.render_npd(self.nodal_plane_dist, use_defaults),
             conv.render_hdd(self.hypo_depth_dist, use_defaults))
 
-    def create_oqhazardlib_source(self, use_defaults=False):
+    def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
         """
         Converts the point source model into an instance of the :class:
         openquake.hazardlib.source
@@ -302,5 +302,20 @@ class mtkPointSource(object):
             or hypocentral depth distribution where missing. If set to False
             then value errors will be raised when information is missing.
         """
+        return PointSource(
+            self.id,
+            self.name,
+            self.trt,
+            conv.mfd_to_hazardlib(self.mfd),
+            mesh_spacing,
+            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults),
+            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
+            tom,
+            self.upper_depth,
+            self.lower_depth,
+            self.geometry,
+            conv.npd_to_pmf(self.nodal_plane_dist, use_defaults),
+            conv.hdd_to_pmf(self.hypo_depth_dist, use_defaults))
+
 
 
