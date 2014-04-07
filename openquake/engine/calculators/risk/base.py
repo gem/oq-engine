@@ -60,13 +60,13 @@ class RiskCalculator(base.Calculator):
             3. Initialize progress counters
             4. Validate exposure and risk models
         """
-        with logs.tracing('get exposure'):
+        with self.monitor('get exposure'):
             self.taxonomies_asset_count = \
                 (self.rc.preloaded_exposure_model or loaders.exposure(
                     self.job, self.rc.inputs['exposure'])
                  ).taxonomies_in(self.rc.region_constraint)
 
-        with logs.tracing('parse risk models'):
+        with self.monitor('parse risk models'):
             self.risk_models = self.get_risk_models()
 
             # consider only the taxonomies in the risk models if
@@ -77,6 +77,12 @@ class RiskCalculator(base.Calculator):
                     (t, count)
                     for t, count in self.taxonomies_asset_count.items()
                     if t in self.risk_models)
+
+        n_assets = sum(self.taxonomies_asset_count.itervalues())
+        logs.LOG.info('Considering %d assets of %d distinct taxonomies',
+                      n_assets, len(self.taxonomies_asset_count))
+        for taxonomy, counts in self.taxonomies_asset_count.iteritems():
+            logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
 
         for validator_class in self.validators:
             validator = validator_class(self)
@@ -131,7 +137,7 @@ class RiskCalculator(base.Calculator):
             asset_offsets = range(0, assets_nr, block_size)
 
             for offset in asset_offsets:
-                with logs.tracing("getting assets"):
+                with self.monitor("getting asset chunks"):
                     assets = models.ExposureData.objects.get_asset_chunk(
                         self.rc, taxonomy, offset, block_size)
 
