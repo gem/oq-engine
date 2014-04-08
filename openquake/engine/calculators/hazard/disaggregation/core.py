@@ -40,7 +40,7 @@ BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
 def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
-                       gsims_by_rlz, imtls, poes, truncation_level,
+                       gsim_by_rlz, imtls, poes, truncation_level,
                        n_epsilons):
     # returns a BinData instance
     sitecol = SiteCollection([site])
@@ -73,8 +73,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
 
                 pne_dict = {}
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
-                for rlz, gsims in gsims_by_rlz.items():
-                    gsim = gsims[source.tectonic_region_type]
+                for rlz, gsim in gsim_by_rlz.items():
                     with make_ctxt:
                         sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
                     for imt_str, imls in imtls.iteritems():
@@ -180,23 +179,27 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 
 
 @tasks.oqtask
-def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
+def compute_disagg(job_id, sitecol, sources, lt_model, gsim_by_rlz,
                    trt_num, curves_dict, bin_edges):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param int job_id:
         ID of the currently running :class:`openquake.engine.db.models.OqJob`
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param list sources:
         list of hazardlib source objects
     :param lt_model:
         an instance of :class:`openquake.engine.db.models.LtSourceModel`
-    :param dict gsims_by_rlz:
-        a dictionary of gsim dictionaries, one for each realization
+    :param dict gsim_by_rlz:
+        a dictionary of gsims, one for each realization
     :param dict trt_num:
         a dictionary Tectonic Region Type -> incremental number
     :param curves_dict:
         a dictionary with the hazard curves for sites, realizations and IMTs
+    :param bin_egdes:
+        a dictionary (lt_model_id, site_id) -> edges
     :returns:
         a dictionary of probability arrays, with composite key
         (site.id, rlz.id, poe, imt, iml, trt_names).
@@ -206,7 +209,7 @@ def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
     trt_names = tuple(lt_model.get_tectonic_region_types())
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
 
-    for site in hc.site_collection:
+    for site in sitecol:
         # edges as wanted by disagg._arrange_data_in_bins
         try:
             edges = bin_edges[lt_model.id, site.id]
@@ -226,7 +229,7 @@ def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
                 'collecting bins', job_id, compute_disagg):
             bdata = _collect_bins_data(
                 mon, trt_num, source_ruptures, site, curves_dict[site.id],
-                gsims_by_rlz, hc.intensity_measure_types_and_levels,
+                gsim_by_rlz, hc.intensity_measure_types_and_levels,
                 hc.poes_disagg, hc.truncation_level,
                 hc.num_epsilon_bins)
 
@@ -235,7 +238,7 @@ def compute_disagg(job_id, sources, lt_model, gsims_by_rlz,
 
         for poe in hc.poes_disagg:
             for imt in hc.intensity_measure_types_and_levels:
-                for rlz in gsims_by_rlz:
+                for rlz in gsim_by_rlz:
 
                     # extract the probabilities of non-exceedance for the
                     # given realization, disaggregation PoE, and IMT
@@ -310,7 +313,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         curves_dict = dict((site.id, self.get_curves(site))
                            for site in self.hc.site_collection)
 
-        for job_id, srcs, lt_model, gsims_by_rlz, task_no in \
+        for job_id, sitecol, srcs, lt_model, gsim_by_rlz, task_no in \
                 self.task_arg_gen():
 
             trt_num = dict((trt, i) for i, trt in enumerate(
@@ -350,7 +353,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            arglist.append((self.job.id, srcs, lt_model, gsims_by_rlz,
+            arglist.append((self.job.id, sitecol, srcs, lt_model, gsim_by_rlz,
                             trt_num, curves_dict, self.bin_edges))
 
         self.initialize_percent(compute_disagg, arglist)

@@ -130,7 +130,8 @@ class BoundingBox(object):
 
 
 @tasks.oqtask
-def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
+def compute_hazard_curves(
+        job_id, sitecol, sources, lt_model, gsim_by_rlz, task_no):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -138,30 +139,40 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
 
     :param job_id:
         ID of the currently running job
+    :param sitecol:
+        a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param sources:
         a block of source objects
-    :param gsims_by_rlz:
-        a dictionary of gsim dictionaries, one for each realization
+    :param lt_model:
+        a :class:`openquake.engine.db.LtSourceModel` instance
+    :param gsim_by_rlz:
+        a dictionary of gsims, one for each realization
+    :param int task_no:
+        the ordinal number of the current task
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    total_sites = len(hc.site_collection)
-    sitemesh = hc.site_collection.mesh
+    total_sites = len(sitecol)
+    sitemesh = sitecol.mesh
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
     curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
                              for imt in imts))
-                  for rlz in gsims_by_rlz)
+                  for rlz in gsim_by_rlz)
     if hc.poes_disagg:  # doing disaggregation
-        bbs = [BoundingBox(lt_model.id, site.id)
-               for site in hc.site_collection]
+        bbs = [BoundingBox(lt_model.id, site_id) for site_id in sitecol.sids]
     else:
         bbs = []
-    mon = LightMonitor('getting ruptures', job_id, compute_hazard_curves)
-    make_ctxt = LightMonitor('making contexts', job_id, compute_hazard_curves)
-    calc_poes = LightMonitor('computing poes', job_id, compute_hazard_curves)
+    mon = LightMonitor(
+        'getting ruptures', job_id, compute_hazard_curves)
+    make_ctxt_mon = LightMonitor(
+        'making contexts', job_id, compute_hazard_curves)
+    calc_poes_mon = LightMonitor(
+        'computing poes', job_id, compute_hazard_curves)
+
+    # NB: rows are a namedtuples with fields (source, rupture, rupture_sites)
     for source, rows in itertools.groupby(
-            hc.gen_ruptures(sources, mon), key=operator.itemgetter(0)):
-        # a row is a triple (source, rupture, rupture_sites)
+            hc.gen_ruptures(sources, mon, sitecol),
+            key=operator.attrgetter('source')):
         t0 = time.time()
         num_ruptures = 0
         for _source, rupture, r_sites in rows:
@@ -174,11 +185,12 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
                         # ruptures too far away are ignored
                         bb.update([dist], [point.longitude], [point.latitude])
 
+            # compute probabilities for all realizations
             for rlz, curv in curves.iteritems():
-                gsim = gsims_by_rlz[rlz][rupture.tectonic_region_type]
-                with make_ctxt:
+                gsim = gsim_by_rlz[rlz]
+                with make_ctxt_mon:
                     sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                with calc_poes:
+                with calc_poes_mon:
                     for imt in imts:
                         poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                              hc.truncation_level)
@@ -189,8 +201,8 @@ def compute_hazard_curves(job_id, sources, lt_model, gsims_by_rlz, task_no):
                       job_id, source.source_id, source.__class__.__name__,
                       num_ruptures, time.time() - t0)
 
-    make_ctxt.flush()
-    calc_poes.flush()
+    make_ctxt_mon.flush()
+    calc_poes_mon.flush()
 
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning

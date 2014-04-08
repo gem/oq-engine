@@ -46,8 +46,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         job_stats = models.JobStats.objects.get(oq_job=self.job.id)
         self.assertEqual(2, job_stats.num_sites)
 
-        os.environ['OQ_NO_DISTRIBUTE'] = '1'
-        try:
+        with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             # to test the disagg function, we first need to compute the hazard
             # curves
             self.calc.execute()
@@ -61,5 +60,3 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
                 # 2 poes * 2 imts * 2 sites = 8
                 self.calc.post_execute()
                 self.assertEqual(8, save.call_count)
-        finally:
-            del os.environ['OQ_NO_DISTRIBUTE']
