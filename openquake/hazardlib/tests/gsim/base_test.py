@@ -20,8 +20,9 @@ import mock
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import (GMPE, IPE, SitesContext,
-                                           RuptureContext, DistancesContext)
+from openquake.hazardlib.gsim.base import (
+    GMPE, IPE, SitesContext, RuptureContext, DistancesContext,
+    NotVerifiedWarning)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV
@@ -483,8 +484,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                           'get_joyner_boore_distance': 1})
 
 
-class DeprecationWarningTestCase(unittest.TestCase):
-    def test(self):
+class GsimWarningTestCase(unittest.TestCase):
+    def test_deprecated(self):
         # check that a deprecation warning is raised when a deprecated
         # GSIM is instantiated
 
@@ -502,3 +503,19 @@ class DeprecationWarningTestCase(unittest.TestCase):
         self.assertIs(warning_type, DeprecationWarning)
         self.assertEqual(
             warning_msg, 'OldGMPE is deprecated - use NewGMPE instead')
+
+    def test_non_verified(self):
+        # check that a NonVerifiedWarning is raised when a non-verified
+        # GSIM is instantiated
+
+        class MyGMPE(TGMPE):
+            non_verified = True
+
+        with mock.patch('warnings.warn') as warn:
+            MyGMPE()  # instantiating this class will call warnings.warn
+
+        warning_msg, warning_type = warn.call_args[0]
+        self.assertIs(warning_type, NotVerifiedWarning)
+        self.assertEqual(
+            warning_msg, 'MyGMPE is not independently verified - '
+            'the user is liable for their application')

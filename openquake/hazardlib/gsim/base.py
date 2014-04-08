@@ -32,17 +32,28 @@ from openquake.hazardlib import const
 from openquake.hazardlib import imt as imt_module
 
 
+class NotVerifiedWarning(UserWarning):
+    """
+    Raised when a non verified GSIM is instantiated
+    """
+
+
 class MetaGSIM(abc.ABCMeta):
     """
-    Metaclass providing a deprecation mechanism. A
-    GroundShakingIntensityModel subclass with a 'deprecated'
-    attribute prints a deprecation warning when instantiated.
+    Metaclass providing a warning on instantiation mechanism. A
+    GroundShakingIntensityModel subclass with an attribute deprecated=True
+    will print a deprecation warning when instantiated. Moreover, as
+    subclass with an attribute non_verified=True will print a UserWarning.
     """
     def __call__(cls, *args, **kw):
         if getattr(cls, 'deprecated', False):
             msg = '%s is deprecated - use %s instead' % (
                 cls.__name__, cls.__base__.__name__)
             warnings.warn(msg, DeprecationWarning)
+        if getattr(cls, 'non_verified', False):
+            msg = ('%s is not independently verified - the user is liable '
+                   'for their application') % cls.__name__
+            warnings.warn(msg, NotVerifiedWarning)
         return super(MetaGSIM, cls).__call__(*args, **kw)
 
 
