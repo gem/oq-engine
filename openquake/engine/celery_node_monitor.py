@@ -93,11 +93,20 @@ class CeleryNodeMonitor(object):
         Check that the expected celery nodes are all up. The loop
         continues until the main thread keeps running.
         """
-        while self.job_running:
-            time.sleep(self.interval)
+        while self.job_is_running(sleep=self.interval):
             live_nodes = set(celery.task.control.inspect().ping() or {})
             if live_nodes < self.live_nodes:
                 print >> sys.stderr, 'Cluster nodes not accessible: %s' % (
                     self.live_nodes - live_nodes)
                 os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
+
+    def job_is_running(self, sleep):
+        """
+        Check for 100 times during the sleep interval if the flag
+        self.job_running becomes false and then exit.
+        """
+        for _ in range(100):
+            if not self.job_running:
                 break
+            time.sleep(sleep / 100.)
+        return self.job_running
