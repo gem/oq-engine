@@ -81,6 +81,7 @@ class GmfCollectorTestCase(unittest.TestCase):
         hc.truncation_level = None
         hc.maximum_distance = 200.
 
+        trt = 'Subduction Interface'
         gsim = get_available_gsims()['AkkarBommer2010']()
         num_sites = 5
         site_coll = make_site_coll(-78, 15.5, num_sites)
@@ -88,12 +89,11 @@ class GmfCollectorTestCase(unittest.TestCase):
                       correl_model=None,
                       maximum_distance=200,
                       num_sites=num_sites)
-        trt = 'Subduction Interface'
         rup_id, rup_seed = 42, 44
         rup = FakeRupture(rup_id, trt)
         pga = PGA()
         rlz = mock.Mock()
-        coll = core.GmfCollector(params, [pga], {rlz: {trt: gsim}})
+        coll = core.GmfCollector(params, [pga], {rlz: gsim})
         coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
             (rlz, pga, 0): [rup_id],
@@ -183,11 +183,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     def test_complete_event_based_calculation_cycle(self):
         # run the calculation in process (to easy debugging)
         # and check the outputs
-        os.environ['OQ_NO_DISTRIBUTE'] = '1'
-        try:
+        with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             job = helpers.run_job(self.cfg)
-        finally:
-            del os.environ['OQ_NO_DISTRIBUTE']
         hc = job.hazard_calculation
         rlz1, rlz2 = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=hc.id).order_by('ordinal')
@@ -250,8 +247,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for args in arg_gen:  # args is (job_id, src_seed_pairs, ...)
-                for src, seed in args[1]:
+            for args in arg_gen:  # args is (job_id, sitecol, src_seed_pairs, ...)
+                for src, seed in args[2]:
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
 

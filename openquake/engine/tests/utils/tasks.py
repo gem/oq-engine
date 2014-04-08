@@ -28,30 +28,30 @@ from openquake.engine.utils.tasks import Pickled
 
 def test_task(func):
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args):
         try:
-            res = func(*args, **kwargs)
-            return Pickled(res), None
+            res = func(*[a.unpickle() for a in args])
+            return Pickled((res, None))
         except:
             exctype, exc, _tb = sys.exc_info()
-            return str(exc), exctype
+            return Pickled((str(exc), exctype))
     return task(wrapper)
 
 
 @test_task
-def reflect_args(*args, **kwargs):
+def reflect_args(*args):
     """Merely returns the parameters received."""
-    return (args, kwargs)
+    return args
 
 
 @test_task
-def just_say_hello(*args, **kwargs):
+def just_say_hello(*args):
     """Merely returns 'hello'."""
     return "hello"
 
 
 @test_task
-def just_say_1(*args, **kwargs):
+def just_say_1(*args):
     """Merely returns 1."""
     return 1
 
