@@ -168,10 +168,11 @@ def compute_hazard_curves(
         'making contexts', job_id, compute_hazard_curves)
     calc_poes_mon = LightMonitor(
         'computing poes', job_id, compute_hazard_curves)
+
+    # NB: rows are a namedtuples with fields (source, rupture, rupture_sites)
     for source, rows in itertools.groupby(
             hc.gen_ruptures(sources, mon, sitecol),
             key=operator.attrgetter('source')):
-        # a row is a namedtuple (source, rupture, rupture_sites)
         t0 = time.time()
         num_ruptures = 0
         for _source, rupture, r_sites in rows:
