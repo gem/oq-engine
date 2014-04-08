@@ -545,7 +545,7 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
     :param str hazard_calculation_id:
         The Hazard Calculation ID used by the risk calculation (can be None)
     """
-    with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=5):
+    with CeleryNodeMonitor(openquake.engine.no_distribute(), interval=30):
         hazard = hazard_output_id is None and hazard_calculation_id is None
         if log_file is not None:
             touch_log_file(log_file)
