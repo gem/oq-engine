@@ -180,6 +180,11 @@ class SiteCollection(object):
         """Return a mesh with the given lons and lats"""
         return Mesh(self.lons, self.lats, depths=None)
 
+    @property
+    def indices(self):
+        """The full set of indices from 0 to total_sites - 1"""
+        return numpy.arange(0, self.total_sites)
+
     def __iter__(self):
         """
         Iterate through all :class:`sites <Site>` in the collection, yielding
