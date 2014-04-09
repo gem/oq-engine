@@ -60,6 +60,7 @@ from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.sources.point_source import mtkPointSource
+from obspy.imaging.beachball import Beach
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 
 DEFAULT_SYMBOLOGY = [(-np.inf, 1., 'k.'), # M < 1
@@ -354,3 +355,60 @@ class HMTKBaseMap(object):
                        zorder=4)
         if not overlay:
             plt.show()
+
+    def _select_color_mag(self, mag):
+        if (mag > 8.0):
+            color = 'k'
+            #color.append('k')
+        elif (mag < 8.0) and (mag >= 7.0):
+            color = 'b'
+            #color.append('b')
+        elif (mag < 7.0) and (mag >= 6.0):
+            color = 'y'
+            #color.append('y')
+        elif (mag < 6.0) and (mag >= 5.0):
+            color = 'g'
+            #color.append('g')
+        elif (mag < 5.0):
+            color = 'm'
+            #color.append('m')
+        return color
+
+    def add_focal_mechanism(self, catalogue, magnitude=None, overlay=True):
+        """
+        Plots a the the focal mechanism based on the beachball representation.
+        The focal_menchanism flag must contain: strike, dip, rake.
+        """
+        longitude = catalogue.data['longitude']
+        latitude = catalogue.data['latitude']
+        strike = catalogue.data['strike1']
+        dip = catalogue.data['dip1']
+        rake = catalogue.data['rake1']
+
+        if not magnitude or (magnitude < 0):
+            magnitude = catalogue.data['magnitude']
+            for i, mag in enumerate(magnitude):
+                color = self._select_color_mag(mag)
+                focal_mechanism = [strike[i], dip[i], rake[i]]
+                x, y = self.m(longitude[i], latitude[i])
+                self.m.plot(x, y)
+                size = mag * 10000
+                beach = Beach(focal_mechanism, linewidth=1, xy=(x, y),
+                              width=size, zorder=size, facecolor=color)
+                plt.gca().add_collection(beach)
+                if not overlay:
+                    plt.show()
+        else:
+            for i in xrange(0, catalogue.get_number_tensors()):
+                x, y = self.m(longitude[i], latitude[i])
+                self.m.plot(x, y)
+                focal_mechanism = [strike[i], dip[i], rake[i]]
+                size = magnitude * 10000.
+                beach = Beach(focal_mechanism, linewidth=1, xy=(x, y),
+                              width=size, zorder=size, facecolor='r')
+                plt.gca().add_collection(beach)
+                if not overlay:
+                    plt.show()
+            
+            
+        
