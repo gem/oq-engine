@@ -75,7 +75,7 @@ def do_scenario_damage(unit, params, monitor):
     elif not len(ground_motion_values):
         # NB: (MS) this should not happen, but I saw it happens;
         # should it happen again, to debug this situation you should run
-        # the query in GroundMotionValuesGetter.assets_gen and see
+        # the query in ScenarioGetter.assets_gen and see
         # how it is possible that sites without gmvs are returned
         raise RuntimeError("No GMVs for assets %s" % assets)
 
@@ -135,7 +135,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         ret = workflows.CalculationUnit(
             loss_type,
             calculators.Damage(model.fragility_functions),
-            hazard_getters.GroundMotionValuesGetter(
+            hazard_getters.ScenarioGetter(
                 self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
