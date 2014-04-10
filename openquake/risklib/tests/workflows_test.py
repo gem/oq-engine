@@ -119,7 +119,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                                   dict(structural=0.8))]
         gmf = mock.Mock()
         hazard = (gmf, [1])
-        self.workflow.vulnerability_function.call_many.return_value = \
+        self.workflow.vulnerability_function.apply_to.return_value = \
             numpy.empty((1, 1))
 
         output = self.workflow("structural", assets, hazard)
@@ -217,7 +217,7 @@ class ScenarioTestCase(unittest.TestCase):
             insurance_limits=dict(structural=0.8))] * 4
 
         hazard = (mock.Mock(), mock.Mock())
-        calc.vulnerability_function.call_many = mock.Mock(
+        calc.vulnerability_function.apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
         (_assets, loss_ratio_matrix, aggregate_losses,
@@ -235,7 +235,7 @@ class ScenarioTestCase(unittest.TestCase):
 
         assets = [workflows.Asset(dict(structural=10))] * 4
         hazard = (mock.Mock(), mock.Mock())
-        calc.vulnerability_function.call_many = mock.Mock(
+        calc.vulnerability_function.apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
         (assets, loss_ratio_matrix, aggregate_losses,

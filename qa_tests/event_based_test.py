@@ -38,7 +38,7 @@ class EventBasedTestCase(unittest.TestCase):
         gmvs = numpy.array([[10., 20., 30., 40., 50.],
                             [1., 2., 3., 4., 5.]])
 
-        loss_matrix = vf.call_many(gmvs, seed=1, asset_correlation=0)
+        loss_matrix = vf.apply_to(gmvs, seed=1, asset_correlation=0)
         losses, poes = scientific.event_based(
             loss_matrix[0], 120, 30, curve_resolution=4)
 
@@ -54,7 +54,7 @@ class EventBasedTestCase(unittest.TestCase):
                 [0.01, 0.02, 0.02, 0.01, 0.03], "LN"))
         gmvs = numpy.array([[10., 20., 30., 40., 50.],
                            [1., 2., 3., 4., 5.]])
-        loss_matrix = vf.call_many(gmvs, seed=1, asset_correlation=0.5)
+        loss_matrix = vf.apply_to(gmvs, seed=1, asset_correlation=0.5)
 
         losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
         first_curve_integral = scientific.average_loss(losses, poes)
@@ -71,7 +71,7 @@ class EventBasedTestCase(unittest.TestCase):
         gmvs = [[10., 20., 30., 40., 50.],
                 [1., 2., 3., 4., 5.]]
 
-        loss_matrix = vf.call_many(gmvs, seed=1, asset_correlation=1)
+        loss_matrix = vf.apply_to(gmvs, seed=1, asset_correlation=1)
         losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
 
         first_curve_integral = scientific.average_loss(losses, poes)
@@ -90,13 +90,13 @@ class EventBasedTestCase(unittest.TestCase):
                 [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         curve_rm_1 = scientific.event_based(
-            vulnerability_function_rm.call_many([gmf[0]])[0], 50, 50)
+            vulnerability_function_rm.apply_to([gmf[0]])[0], 50, 50)
 
         curve_rm_2 = scientific.event_based(
-            vulnerability_function_rm.call_many([gmf[1]])[0], 50, 50)
+            vulnerability_function_rm.apply_to([gmf[1]])[0], 50, 50)
 
         curve_rc = scientific.event_based(
-            vulnerability_function_rc.call_many([gmf[2]])[0], 50, 50)
+            vulnerability_function_rc.apply_to([gmf[2]])[0], 50, 50)
 
         for i, curve_rm in enumerate([curve_rm_1, curve_rm_2]):
 
@@ -123,7 +123,7 @@ class EventBasedTestCase(unittest.TestCase):
             [0.0, 0.0, 0.0, 0.0, 0.0],
             "LN")
 
-        loss_ratios = vf.call_many(gmf[0:2])
+        loss_ratios = vf.apply_to(gmf[0:2])
 
         values = [3000, 1000]
         insured_limits = [1250., 40.]

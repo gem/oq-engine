@@ -59,7 +59,7 @@ class ScenarioTestCase(unittest.TestCase):
     def test_mean_based(self):
 
         [asset_output_a1, asset_output_a3] = \
-            self.vulnerability_model_mean["RM"].call_many(
+            self.vulnerability_model_mean["RM"].apply_to(
                 [self.hazard_mean["a1"], self.hazard_mean["a3"]])
 
         self.assertAlmostEqual(440.147078317589, asset_output_a1.mean() * 3000)
@@ -73,7 +73,7 @@ class ScenarioTestCase(unittest.TestCase):
             92.2122644809969,
             asset_output_a3.std(ddof=1) * 1000)
 
-        [asset_output_a2] = self.vulnerability_model_mean["RC"].call_many(
+        [asset_output_a2] = self.vulnerability_model_mean["RC"].apply_to(
             [self.hazard_mean["a2"]])
 
         self.assertAlmostEqual(
@@ -89,7 +89,7 @@ class ScenarioTestCase(unittest.TestCase):
         )
 
         [asset_output_a1, asset_output_a3] = \
-            vulnerability_model['RM'].call_many(
+            vulnerability_model['RM'].apply_to(
                 [gmv.a1, gmv.a3], seed=37)
 
         self.assertAlmostEqual(521.885458891, asset_output_a1.mean() * 3000,
@@ -101,7 +101,7 @@ class ScenarioTestCase(unittest.TestCase):
 
         self.assertTrue(asset_output_a3.std(ddof=1) * 1000 > 94.2302991022)
 
-        [asset_output_a2] = vulnerability_model["RC"].call_many(
+        [asset_output_a2] = vulnerability_model["RC"].apply_to(
             [gmv.a2], seed=37)
 
         self.assertAlmostEqual(

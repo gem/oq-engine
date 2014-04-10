@@ -99,7 +99,7 @@ class VulnerabilityFunction(object):
 
         self.distribution.init(asset_count, sample_num, seed, correlation)
 
-    def call_many(self, ground_motion_values,
+    def apply_to(self, ground_motion_values,
                   seed=None, asset_correlation=0):
         vulnerability_function = copy.copy(self)
         vulnerability_function.init_distribution(

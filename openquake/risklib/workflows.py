@@ -396,7 +396,7 @@ class ProbabilisticEventBased(object):
            a numpy array of R event ID (integer)
         """
 
-        loss_matrix = self.vulnerability_function.call_many(
+        loss_matrix = self.vulnerability_function.apply_to(
             ground_motion_values, self.seed, self.asset_correlation)
 
         curves = self.curves(loss_matrix)
@@ -591,7 +591,7 @@ class Scenario(object):
     def __call__(self, loss_type, assets, ground_motion_values):
         values = numpy.array([a.value(loss_type) for a in assets])
 
-        loss_ratio_matrix = self.vulnerability_function.call_many(
+        loss_ratio_matrix = self.vulnerability_function.apply_to(
             ground_motion_values, self.seed, self.asset_correlation)
 
         aggregate_losses = numpy.sum(
