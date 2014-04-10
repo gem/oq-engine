@@ -27,7 +27,4 @@ class AkkarEtAl2013(AkkarEtAlRjb2014):
     the call AkkarEtAl2013 is retained as legacy. The AkkarEtAl2013 GMPE
     is now implemented as AkkarEtAlRjb2014
     """
-    def __init__(self):
-        warnings.warn("AkkarEtAl2013 is deprecated - AkkarEtAlRjb2014 instead",
-                      DeprecationWarning)
-        super(AkkarEtAl2013, self).__init__()
+    deprecated = True
