@@ -71,24 +71,6 @@ def EventBasedLossCurve(time_span, tses, curve_resolution):
             time_span=time_span, tses=tses))
 
 
-def ProbabilisticLoss(
-        vulnerability_function, seed=None, asset_correlation=0):
-    """
-    :param vulnerability_function:
-       a :class:`openquake.risklib.scientific.VulnerabilityFunction`
-       instance used to losses
-    :param float seed: a seed used to initialize the rng
-    :param float asset_correlation:
-       a value between 0 and 1 used to derive correlation of generated
-       losses between different assets of the same taxonomy.
-    """
-    return functools.partial(
-        scientific.vulnerability_function_applier,
-        vulnerability_function,
-        seed=seed,
-        asset_correlation=asset_correlation)
-
-
 def Damage(fragility_functions):
     """
     :param fragility_functions:

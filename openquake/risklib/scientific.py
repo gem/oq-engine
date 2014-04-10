@@ -22,6 +22,7 @@ This module includes the scientific API of the oq-risklib
 """
 
 import abc
+import copy
 import itertools
 import bisect
 
@@ -97,6 +98,15 @@ class VulnerabilityFunction(object):
                           seed=None, correlation=0):
 
         self.distribution.init(asset_count, sample_num, seed, correlation)
+
+    def call_many(self, ground_motion_values,
+                  seed=None, asset_correlation=0):
+        vulnerability_function = copy.copy(self)
+        vulnerability_function.init_distribution(
+            len(ground_motion_values),
+            len(ground_motion_values[0]),
+            seed, asset_correlation)
+        return utils.numpy_map(vulnerability_function, ground_motion_values)
 
     @utils.memoized
     def strictly_increasing(self):
@@ -258,21 +268,6 @@ VulnerabilityFunction`
         return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
                 [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
-
-
-def vulnerability_function_applier(
-        vulnerability_function, ground_motion_values,
-        seed=None, asset_correlation=0):
-    if numpy.array(ground_motion_values).ndim == 1:
-        return numpy.array([])
-
-    # FIXME(lp). Refactor me to avoid the side effect
-    vulnerability_function.init_distribution(
-        len(ground_motion_values),
-        len(ground_motion_values[0]),
-        seed,
-        asset_correlation)
-    return utils.numpy_map(vulnerability_function, ground_motion_values)
 
 
 class FragilityFunctionContinuous(object):
@@ -667,7 +662,6 @@ def insured_losses(losses, deductible, insured_limit):
     :param float deductible: the deductible limit in fraction form
     :param float insured_limit: the insured limit in fraction form
     """
-
     return numpy.piecewise(
         losses,
         [losses < deductible, losses > insured_limit],

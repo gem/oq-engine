@@ -352,8 +352,9 @@ class ProbabilisticEventBased(object):
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters
         """
-        self.losses = calculators.ProbabilisticLoss(
-            vulnerability_function, seed, asset_correlation)
+        self.seed = seed
+        self.asset_correlation = asset_correlation
+        self.vulnerability_function = vulnerability_function
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
@@ -395,7 +396,8 @@ class ProbabilisticEventBased(object):
            a numpy array of R event ID (integer)
         """
 
-        loss_matrix = self.losses(ground_motion_values)
+        loss_matrix = self.vulnerability_function.call_many(
+            ground_motion_values, self.seed, self.asset_correlation)
 
         curves = self.curves(loss_matrix)
         average_losses = numpy.array([scientific.average_loss(losses, poes)
@@ -409,7 +411,6 @@ class ProbabilisticEventBased(object):
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
-
             insured_loss_matrix = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
             insured_curves = self.curves(insured_loss_matrix)
@@ -580,18 +581,19 @@ class ProbabilisticEventBasedBCR(object):
 
 
 class Scenario(object):
-    def __init__(self,
-                 vulnerability_function,
-                 seed, asset_correlation,
-                 insured_losses):
-        self.losses = calculators.ProbabilisticLoss(
-            vulnerability_function, seed, asset_correlation)
+    def __init__(self, vulnerability_function,
+                 seed, asset_correlation,  insured_losses):
+        self.vulnerability_function = vulnerability_function
+        self.seed = seed
+        self.asset_correlation = asset_correlation
         self.insured_losses = insured_losses
 
     def __call__(self, loss_type, assets, ground_motion_values):
         values = numpy.array([a.value(loss_type) for a in assets])
 
-        loss_ratio_matrix = self.losses(ground_motion_values)
+        loss_ratio_matrix = self.vulnerability_function.call_many(
+            ground_motion_values, self.seed, self.asset_correlation)
+
         aggregate_losses = numpy.sum(
             loss_ratio_matrix.transpose() * values, axis=1)
 
