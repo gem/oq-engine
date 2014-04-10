@@ -559,7 +559,7 @@ class ProbabilisticEventBasedBCR(object):
         original_loss_curves = self.curves(
             self.vf_orig.apply_to(orig, self.seed_orig, self.correlation))
         retrofitted_loss_curves = self.curves(
-            self.vf_retro.apply_to_(retro, self.seed_retro, self.correlation))
+            self.vf_retro.apply_to(retro, self.seed_retro, self.correlation))
 
         eal_original = [
             scientific.average_loss(losses, poes)
