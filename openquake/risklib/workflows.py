@@ -246,22 +246,22 @@ class Classical(object):
 
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
-             calculators.exposure_statistics(
-                 [normalize_curves(curves)
-                  for curves
-                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                 self.maps.poes + self.fractions.poes,
-                 weights, quantiles, post_processing))
+            calculators.exposure_statistics(
+                [normalize_curves(curves)
+                 for curves
+                 in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                self.maps.poes + self.fractions.poes,
+                weights, quantiles, post_processing))
 
         if self.insured_losses:
             loss_curves = [out.insured_curves for out in outputs]
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
-                 calculators.exposure_statistics(
-                     [normalize_curves(curves)
-                      for curves
-                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                     [], weights, quantiles, post_processing))
+                calculators.exposure_statistics(
+                    [normalize_curves(curves)
+                     for curves
+                     in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                    [], weights, quantiles, post_processing))
         else:
             mean_insured_curves = None
             mean_average_insured_losses = None
@@ -357,8 +357,23 @@ class ProbabilisticEventBased(object):
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
-        self.event_loss = calculators.EventLossTable()
         self.insured_losses = insured_losses
+
+    def event_loss(self, loss_matrix, event_ids):
+        """
+        :param loss_matrix:
+           a numpy array of losses shaped N x E, where E is the number
+           of events and N the number of samplings
+
+        :param event_ids:
+           a numpy array holding E event ids
+
+        :returns:
+            a :class:`collections.Counter` with the sums of the loss matrix
+            per each event_id
+        """
+        return collections.Counter(
+            dict(zip(event_ids, numpy.sum(loss_matrix, axis=1))))
 
     def __call__(self, loss_type, assets, (ground_motion_values, event_ids)):
         """
@@ -434,9 +449,9 @@ class ProbabilisticEventBased(object):
 
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
-             calculators.exposure_statistics(
-                 [self._normalize_curves(curves) for curves in curve_matrix],
-                 self.maps.poes, weights, quantiles, post_processing))
+            calculators.exposure_statistics(
+                [self._normalize_curves(curves) for curves in curve_matrix],
+                self.maps.poes, weights, quantiles, post_processing))
         elt = sum((out.event_loss_table for out in outputs),
                   collections.Counter())
 
@@ -444,11 +459,11 @@ class ProbabilisticEventBased(object):
             loss_curves = [out.insured_curves for out in outputs]
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
-                 calculators.exposure_statistics(
-                     [self._normalize_curves(curves)
-                      for curves
-                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                     [], weights, quantiles, post_processing))
+                calculators.exposure_statistics(
+                    [self._normalize_curves(curves)
+                     for curves
+                     in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                    [], weights, quantiles, post_processing))
         else:
             mean_insured_curves = None
             mean_average_insured_losses = None

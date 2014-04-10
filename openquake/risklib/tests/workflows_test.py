@@ -117,9 +117,8 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         assets = [workflows.Asset(dict(structural=10),
                                   dict(structural=0.1),
                                   dict(structural=0.8))]
-        hazard = (mock.Mock(), mock.Mock())
+        hazard = (mock.Mock(), [1])
         self.workflow.losses.return_value = numpy.empty((1, 100))
-        self.workflow.event_loss.return_value = collections.Counter((1, 1))
 
         output = self.workflow("structural", assets, hazard)
 
@@ -132,10 +131,6 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.assertEqual(
             [((50, 1000, 20), {})],
             self.calcs.EventBasedLossCurve.call_args_list)
-
-        self.assertEqual(
-            [((), {})],
-            self.calcs.EventLossTable.call_args_list)
 
         numpy.testing.assert_allclose(
             numpy.ones((3,)) * 3, output.average_losses)
@@ -228,7 +223,7 @@ class ScenarioTestCase(unittest.TestCase):
 
         (_assets, loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
-             calc("structural", assets, hazard))
+            calc("structural", assets, hazard))
 
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)
@@ -245,7 +240,7 @@ class ScenarioTestCase(unittest.TestCase):
 
         (assets, loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
-             calc("structural", assets, hazard))
+            calc("structural", assets, hazard))
 
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)

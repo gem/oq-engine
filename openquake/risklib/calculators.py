@@ -103,26 +103,6 @@ def Damage(fragility_functions):
             fragility_functions))
 
 
-class EventLossTable(object):
-    def __call__(self, loss_matrix, event_ids):
-        """
-        Compute the event loss table given a loss matrix and a set of event
-        ids.
-
-        :param loss_matrix:
-           a numpy array of losses shaped N x E, where E is the number
-           of events and N the number of samplings
-
-        :param event_ids:
-           a numpy array holding E event ids
-        """
-        if numpy.array(loss_matrix).ndim == 1:
-            return collections.Counter()
-
-        return collections.Counter(
-            dict(zip(event_ids, numpy.sum(loss_matrix, axis=1))))
-
-
 class LossMap(object):
     def __init__(self, poes):
         self.poes = poes or []

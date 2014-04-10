@@ -163,16 +163,6 @@ class DamageTest(unittest.TestCase):
                              m.call_args_list)
 
 
-class EventLossTableTest(unittest.TestCase):
-    def test_call_no_events(self):
-        self.assertEqual({}, calculators.EventLossTable()([[]], []))
-
-    def test_call(self):
-        self.assertEqual(
-            {1: 3, 2: 12},
-            calculators.EventLossTable()([[0, 1, 2], [3, 4, 5]], [1, 2]))
-
-
 class LossMapTest(unittest.TestCase):
     def setUp(self):
         losses = numpy.linspace(0, 10, 11)
