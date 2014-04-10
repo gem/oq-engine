@@ -175,7 +175,6 @@ class HazardCurveGetterPerAsset(HazardGetter):
     :attr imls:
         The intensity measure levels of the curves we are going to get.
     """
-
     def get_data(self, hazard_output, monitor):
         """
         Calls ``get_by_site`` for each asset and pack the results as
@@ -227,35 +226,70 @@ class HazardCurveGetterPerAsset(HazardGetter):
         return cursor.fetchone()
 
 
-class GroundMotionValuesGetter(HazardGetter):
+class ScenarioGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
-    def __call__(self, monitor=None):
-        """
-        Override base method to seed the rng for each hazard output
-        """
-        for hazard in self.hazard_outputs:
-            h = hazard.output_container
-            assets, data = self.get_assets_data(h, monitor)
-            if len(assets) > 0:
-                yield hazard.id, assets, data
 
+    def get_gmvs(self, gmf, site_id):
+        """
+        :returns: gmvs and ruptures for the given site and IMT
+        """
+        gmvs = []
+        for gmf in models.GmfData.objects.filter(
+                gmf=gmf,
+                site=site_id, imt=self.imt_type, sa_period=self.sa_period,
+                sa_damping=self.sa_damping):
+            gmvs.extend(gmf.gmvs)
+            if not gmvs:
+                logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
+        return gmvs
+
+    def get_data(self, hazard_output, monitor):
+        """
+        :returns: a list with all the assets and the hazard data.
+
+        For scenario computations the data is a numpy.array
+        with the GMVs; for event based computations the data is
+        a pair (GMVs, rupture_ids).
+        """
+        all_assets = []
+        all_gmvs = []
+        # dictionary site -> ({rupture_id: gmv}, n_assets)
+        # the ordering is there only to have repeatable runs
+        with monitor.copy('associating assets->site'):
+            site_assets = list(self.assets_gen(hazard_output))
+
+        with monitor.copy('getting gmvs and ruptures'):
+            for site_id, assets in site_assets:
+                n_assets = len(assets)
+                all_assets.extend(assets)
+                gmvs = self.get_gmvs(hazard_output, site_id)
+                if gmvs:
+                    array = numpy.array(gmvs)
+                    all_gmvs.extend([array] * n_assets)
+
+        return all_assets, all_gmvs
+
+
+class GroundMotionValuesGetter(ScenarioGetter):
+    """
+    Hazard getter for loading ground motion values. It is instantiated
+    with a set of assets all of the same taxonomy.
+    """
     def get_gmvs_ruptures(self, gmf, site_id):
         """
         :returns: gmvs and ruptures for the given site and IMT
         """
         gmvs = []
         ruptures = []
-
         for gmf in models.GmfData.objects.filter(
                 gmf=gmf,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
                 sa_damping=self.sa_damping):
             gmvs.extend(gmf.gmvs)
-            if gmf.rupture_ids:
-                ruptures.extend(gmf.rupture_ids)
+            ruptures.extend(gmf.rupture_ids)
         if not gmvs:
             logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
         return gmvs, ruptures
@@ -268,7 +302,6 @@ class GroundMotionValuesGetter(HazardGetter):
         with the GMVs; for event based computations the data is
         a pair (GMVs, rupture_ids).
         """
-
         all_ruptures = set()
         all_assets = []
         all_gmvs = []
@@ -283,17 +316,11 @@ class GroundMotionValuesGetter(HazardGetter):
                 n_assets = len(assets)
                 all_assets.extend(assets)
                 gmvs, ruptures = self.get_gmvs_ruptures(hazard_output, site_id)
-                if ruptures:  # event based
-                    site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
-                    for r in ruptures:
-                        all_ruptures.add(r)
-                elif gmvs:  # scenario
-                    array = numpy.array(gmvs)
-                    all_gmvs.extend([array] * n_assets)
-        if all_assets and not all_ruptures:  # scenario
-            return all_assets, all_gmvs
+                site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
+                for r in ruptures:
+                    all_ruptures.add(r)
 
-        # second pass for event based, filling with zeros
+        # second pass, filling with zeros
         with monitor.copy('filling gmvs with zeros'):
             all_ruptures = sorted(all_ruptures)
             for site_id, (gmv, n_assets) in site_gmv.iteritems():
