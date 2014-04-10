@@ -545,22 +545,21 @@ class ProbabilisticEventBasedBCR(object):
         self.assets = None
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
-        self.losses_orig = calculators.ProbabilisticLoss(
-            vulnerability_function_orig,
-            seed_orig,
-            asset_correlation)
-        self.losses_retro = calculators.ProbabilisticLoss(
-            vulnerability_function_retro,
-            seed_retro,
-            asset_correlation)
+        self.vf_orig = vulnerability_function_orig
+        self.seed_orig = seed_orig
+        self.correlation = asset_correlation
+        self.vf_retro = vulnerability_function_retro
+        self.seed_retro = seed_retro
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
 
     def __call__(self, loss_type, assets, ((orig, _), (retro, __))):
         self.assets = assets
 
-        original_loss_curves = self.curves(self.losses_orig(orig))
-        retrofitted_loss_curves = self.curves(self.losses_retro(retro))
+        original_loss_curves = self.curves(
+            self.vf_orig.apply_to(orig, self.seed_orig, self.correlation))
+        retrofitted_loss_curves = self.curves(
+            self.vf_retro.apply_to_(retro, self.seed_retro, self.correlation))
 
         eal_original = [
             scientific.average_loss(losses, poes)

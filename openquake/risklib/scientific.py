@@ -99,8 +99,14 @@ class VulnerabilityFunction(object):
 
         self.distribution.init(asset_count, sample_num, seed, correlation)
 
-    def apply_to(self, ground_motion_values,
-                  seed=None, asset_correlation=0):
+    def apply_to(self, ground_motion_values, seed=None, asset_correlation=0):
+        """
+        Apply a copy of the vulnerability function to a set of N
+        ground_motion_values, where N is the number of assets. seed
+        and asset_correlation are used to initialize the distribution,
+        i.e. the epsilons. The original function is left unchanged, i.e.
+        uninitialized if it was unitialized at the beginning.
+        """
         vulnerability_function = copy.copy(self)
         vulnerability_function.init_distribution(
             len(ground_motion_values),
