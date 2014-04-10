@@ -92,3 +92,8 @@ SECRET_KEY = 'change-me-in-production'
 
 USE_I18N = False
 USE_L10N = False
+
+try:
+    from local_settings import *
+except ImportError:
+    pass
