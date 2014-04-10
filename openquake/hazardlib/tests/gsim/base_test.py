@@ -15,12 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import collections
+import mock
 
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import (GMPE, IPE, SitesContext,
-                                           RuptureContext, DistancesContext)
+from openquake.hazardlib.gsim.base import (
+    GMPE, IPE, SitesContext, RuptureContext, DistancesContext,
+    NotVerifiedWarning)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV
@@ -153,7 +155,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
 
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             return numpy.array([-0.7872268528578843]), \
-                   [numpy.array([0.5962393527251486])]
+                [numpy.array([0.5962393527251486])]
 
         self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         imls = [-2.995732273553991, -0.6931471805599453, 0.6931471805599453]
@@ -170,6 +172,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
             const.StdDev.TOTAL
         )
         mean_stddev = numpy.array([[3, 4], [5, 6]])
+
         def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             mean, stddev = mean_stddev
             mean_stddev[0] += 1
@@ -295,35 +298,39 @@ class DisaggregatePoETestCase(_FakeGSIMTestCase):
         aaae(poes, epoes)
 
 
+class TGMPE(GMPE):
+    DEFINED_FOR_TECTONIC_REGION_TYPE = None
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+    REQUIRES_SITES_PARAMETERS = None
+    REQUIRES_RUPTURE_PARAMETERS = None
+    REQUIRES_DISTANCES = None
+    get_mean_and_stddevs = None
+
+
+class TIPE(IPE):
+    DEFINED_FOR_TECTONIC_REGION_TYPE = None
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+    REQUIRES_SITES_PARAMETERS = None
+    REQUIRES_RUPTURE_PARAMETERS = None
+    REQUIRES_DISTANCES = None
+    get_mean_and_stddevs = None
+
+
 class ToIMTUnitsToDistributionTestCase(unittest.TestCase):
     def test_gmpe(self):
-        class TGMPE(GMPE):
-            DEFINED_FOR_TECTONIC_REGION_TYPE = None
-            DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
-            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-            DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
-            REQUIRES_SITES_PARAMETERS = None
-            REQUIRES_RUPTURE_PARAMETERS = None
-            REQUIRES_DISTANCES = None
-            get_mean_and_stddevs = None
         gmpe = TGMPE()
         lin_intensity = [0.001, 0.1, 0.7, 1.4]
         log_intensity = [-6.90775528, -2.30258509, -0.35667494, 0.33647224]
-        numpy.testing.assert_allclose(gmpe.to_distribution_values(lin_intensity),
-                                      log_intensity)
+        numpy.testing.assert_allclose(
+            gmpe.to_distribution_values(lin_intensity), log_intensity)
         numpy.testing.assert_allclose(gmpe.to_imt_unit_values(log_intensity),
                                       lin_intensity)
 
     def test_ipe(self):
-        class TIPE(IPE):
-            DEFINED_FOR_TECTONIC_REGION_TYPE = None
-            DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
-            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
-            DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
-            REQUIRES_SITES_PARAMETERS = None
-            REQUIRES_RUPTURE_PARAMETERS = None
-            REQUIRES_DISTANCES = None
-            get_mean_and_stddevs = None
         ipe = TIPE()
         intensity = [0.001, 0.1, 0.7, 1.4]
         numpy.testing.assert_equal(ipe.to_distribution_values(intensity),
@@ -475,3 +482,40 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1})
+
+
+class GsimWarningTestCase(unittest.TestCase):
+    def test_deprecated(self):
+        # check that a deprecation warning is raised when a deprecated
+        # GSIM is instantiated
+
+        class NewGMPE(TGMPE):
+            'The version which is not deprecated'
+
+        class OldGMPE(NewGMPE):
+            'The version which is deprecated'
+            deprecated = True
+
+        with mock.patch('warnings.warn') as warn:
+            OldGMPE()  # instantiating this class will call warnings.warn
+
+        warning_msg, warning_type = warn.call_args[0]
+        self.assertIs(warning_type, DeprecationWarning)
+        self.assertEqual(
+            warning_msg, 'OldGMPE is deprecated - use NewGMPE instead')
+
+    def test_non_verified(self):
+        # check that a NonVerifiedWarning is raised when a non-verified
+        # GSIM is instantiated
+
+        class MyGMPE(TGMPE):
+            non_verified = True
+
+        with mock.patch('warnings.warn') as warn:
+            MyGMPE()  # instantiating this class will call warnings.warn
+
+        warning_msg, warning_type = warn.call_args[0]
+        self.assertIs(warning_type, NotVerifiedWarning)
+        self.assertEqual(
+            warning_msg, 'MyGMPE is not independently verified - '
+            'the user is liable for their application')
