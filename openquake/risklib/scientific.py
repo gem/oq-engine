@@ -106,6 +106,13 @@ class VulnerabilityFunction(object):
         and asset_correlation are used to initialize the distribution,
         i.e. the epsilons. The original function is left unchanged, i.e.
         uninitialized if it was unitialized at the beginning.
+
+        :param ground_motion_values:
+           a sequence of ground motion values (1 array per site)
+        :param seed:
+           a stochastic seed
+        :param asset_correlation:
+           correlation parameter in the range [0, 1]
         """
         vulnerability_function = copy.copy(self)
         vulnerability_function.init_distribution(

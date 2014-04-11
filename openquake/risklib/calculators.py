@@ -23,7 +23,6 @@ returns callables useful to compute artifacts for multiple assets
 """
 
 import functools
-import collections
 
 import numpy
 

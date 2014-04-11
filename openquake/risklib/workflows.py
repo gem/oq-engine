@@ -580,8 +580,11 @@ class ProbabilisticEventBasedBCR(object):
 
 
 class Scenario(object):
+    """
+    Implements the Scenario workflow
+    """
     def __init__(self, vulnerability_function,
-                 seed, asset_correlation,  insured_losses):
+                 seed, asset_correlation, insured_losses):
         self.vulnerability_function = vulnerability_function
         self.seed = seed
         self.asset_correlation = asset_correlation
