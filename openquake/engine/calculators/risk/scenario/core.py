@@ -179,7 +179,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 self.rnd.randint(0, models.MAX_SINT_32),
                 self.rc.asset_correlation,
                 self.rc.insured_losses),
-            hazard_getters.GroundMotionValuesGetter(
+            hazard_getters.ScenarioGetter(
                 self.rc.hazard_outputs(),
                 assets,
                 self.rc.best_maximum_distance,
