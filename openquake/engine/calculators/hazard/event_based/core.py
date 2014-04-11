@@ -88,7 +88,7 @@ def compute_ses_and_gmfs(
     ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    all_ses = models.SES.objects.filter(ses_collection=ses_coll)
+    all_ses = list(ses_coll)
     imts = map(from_string, hc.intensity_measure_types)
     params = dict(
         correl_model=general.get_correl_model(hc),
@@ -337,14 +337,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                     output_type='gmf')
                 models.Gmf.objects.create(output=output, lt_realization=rlz)
 
-        all_ses = []
-        for i in xrange(1, self.hc.ses_per_logic_tree_path + 1):
-            all_ses.append(
-                models.SES.objects.create(
-                    ses_collection=ses_coll,
-                    investigation_time=self.hc.investigation_time,
-                    ordinal=i))
-        return all_ses
+        return ses_coll
 
     def pre_execute(self):
         """

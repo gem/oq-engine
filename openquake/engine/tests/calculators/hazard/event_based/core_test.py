@@ -168,14 +168,12 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # With this job configuration, we have 2 logic tree realizations
         # for the GMPEs
-        lt_rlzs = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=hc)
-        self.assertEqual(2, len(lt_rlzs))
+        [lt_model] = models.LtSourceModel.objects.filter(hazard_calculation=hc)
+        self.assertEqual(2, len(list(lt_model)))
 
-        sess = models.SES.objects.filter(
-            ses_collection__lt_model=lt_rlzs[0].lt_model)
-        self.assertEqual(hc.ses_per_logic_tree_path, len(sess))
-        for ses in sess:
+        ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
+        self.assertEqual(hc.ses_per_logic_tree_path, len(ses_coll))
+        for ses in ses_coll:
             # The only metadata in in the SES is investigation time.
             self.assertEqual(hc.investigation_time, ses.investigation_time)
 
@@ -186,8 +184,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             job = helpers.run_job(self.cfg)
         hc = job.hazard_calculation
-        rlz1, rlz2 = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=hc.id).order_by('ordinal')
+        [(rlz1, rlz2)] = models.LtSourceModel.objects.filter(
+            hazard_calculation=hc.id)
 
         # check that the parameters are read correctly from the files
         self.assertEqual(hc.ses_per_logic_tree_path, 5)
@@ -195,7 +193,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # check that we generated the right number of ruptures
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
-            ses__ses_collection__output__oq_job=job.id).count()
+            rupture__ses_collection__output__oq_job=job.id).count()
         self.assertEqual(num_ruptures, 96)
 
         # check that we generated the right number of rows in GmfData

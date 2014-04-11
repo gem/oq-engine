@@ -84,7 +84,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-255
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             job = self.run_hazard(cfg)
             tags = models.SESRupture.objects.filter(
-                ses__ses_collection__output__oq_job=job
+                rupture__ses_collection__output__oq_job=job
                 ).values_list('tag', flat=True)
             # gets the GMFs for all the ruptures in the only existing SES
             [gmfs_per_ses] = list(models.Gmf.objects.get(output__oq_job=job))

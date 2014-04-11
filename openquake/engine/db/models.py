@@ -1545,8 +1545,15 @@ class SESCollection(djm.Model):
         """
         Iterator for walking through all child :class:`SES` objects.
         """
-        return SES.objects.filter(ses_collection=self.id).order_by('ordinal') \
-            .iterator()
+        hc = self.output.oq_job.hazard_calculation
+        for ordinal in xrange(1, hc.ses_per_logic_tree_path + 1):
+            yield SES(self, ordinal)
+
+    def __len__(self):
+        """
+        Return the ses_per_logic_tree_path parameter
+        """
+        return self.output.oq_job.hazard_calculation.ses_per_logic_tree_path
 
     @property
     def sm_lt_path(self):
@@ -1556,29 +1563,32 @@ class SESCollection(djm.Model):
         return tuple(self.lt_model.sm_lt_path)
 
 
-class SES(djm.Model):
+class SES(object):
     """
     Stochastic Event Set: A container for 1 or more ruptures associated with a
     specific investigation time span.
-
-    See also :class:`SESRupture`.
     """
-    ses_collection = djm.ForeignKey('SESCollection')
-    investigation_time = djm.FloatField()
-    # Order number of this Stochastic Event Set in a series of SESs
-    # (for a given logic tree realization).
-    ordinal = djm.IntegerField(null=True)
+    # the ordinal must be > 0: the reason is that it appears in the
+    # exported XML file and the schema constraints the number to be
+    # nonzero
+    def __init__(self, ses_collection, ordinal=1):
+        self.ses_collection = ses_collection
+        self.ordinal = ordinal
 
-    class Meta:
-        db_table = 'hzrdr\".\"ses'
-        ordering = ['ordinal']
+    @property
+    def investigation_time(self):
+        hc = self.ses_collection.output.oq_job.hazard_calculation
+        return hc.investigation_time
+
+    def __cmp__(self, other):
+        return cmp(self.ordinal, other.ordinal)
 
     def __iter__(self):
         """
         Iterator for walking through all child :class:`SESRupture` objects.
         """
-        return SESRupture.objects.filter(ses=self.id).order_by('tag') \
-            .iterator()
+        return SESRupture.objects.filter(
+            ses_id=self.ordinal).order_by('tag').iterator()
 
 
 def is_from_fault_source(rupture):
@@ -1803,7 +1813,7 @@ class SESRupture(djm.Model):
     A rupture as part of a Stochastic Event Set.
     """
     rupture = djm.ForeignKey('ProbabilisticRupture')
-    ses = djm.ForeignKey('SES')
+    ses_id = djm.IntegerField(null=False)
     tag = djm.TextField(null=False)
     seed = djm.IntegerField(null=False)
 
@@ -1833,7 +1843,7 @@ class SESRupture(djm.Model):
             ses.ses_collection.ordinal, ses.ordinal, source_id, rupt_no,
             rupt_occ)
         return cls.objects.create(
-            rupture=prob_rupture, ses=ses, tag=tag, seed=seed)
+            rupture=prob_rupture, ses_id=ses.ordinal, tag=tag, seed=seed)
 
 
 class _Point(object):
@@ -1881,9 +1891,10 @@ class Gmf(djm.Model):
         If a SES does not generate any GMF, it is ignored.
         """
         hc = self.output.oq_job.hazard_calculation
-        for ses in SES.objects.filter(
-                ses_collection__output__oq_job=self.output.oq_job):
-            query = """
+        for ses_coll in SESCollection.objects.filter(
+                output__oq_job=self.output.oq_job):
+            for ses in ses_coll:
+                query = """
         SELECT imt, sa_period, sa_damping, tag,
                array_agg(gmv) AS gmvs,
                array_agg(ST_X(location::geometry)) AS xs,
@@ -1891,26 +1902,28 @@ class Gmf(djm.Model):
         FROM (SELECT imt, sa_period, sa_damping,
              unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
            FROM hzrdr.gmf_data, hzrdi.hazard_site
-           WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
+            WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
            AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y
         WHERE x.rupture_id = y.id AND y.ses_id=%d
         GROUP BY imt, sa_period, sa_damping, tag
         ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (hc.id, self.id, ses.id)
-            with transaction.commit_on_success(using='job_init'):
-                curs = getcursor('job_init')
-                curs.execute(query)
-            # a set of GMFs generate by the same SES, one per rupture
-            gmfset = []
-            for imt, sa_period, sa_damping, rupture_tag, gmvs, xs, ys in curs:
-                # using a generator here saves a lot of memory
-                nodes = (_GroundMotionFieldNode(gmv, _Point(x, y))
-                         for gmv, x, y in zip(gmvs, xs, ys))
-                gmfset.append(
-                    _GroundMotionField(
-                        imt, sa_period, sa_damping, rupture_tag, nodes))
-            if gmfset:
-                yield GmfSet(ses, gmfset)
+        """ % (hc.id, self.id, ses.ordinal)
+                with transaction.commit_on_success(using='job_init'):
+                    curs = getcursor('job_init')
+                    curs.execute(query)
+                # a set of GMFs generate by the same SES, one per rupture
+                gmfset = []
+                for (imt, sa_period, sa_damping, rupture_tag, gmvs,
+                     xs, ys) in curs:
+                    # using a generator here saves a lot of memory
+                    nodes = (_GroundMotionFieldNode(gmv, _Point(x, y))
+                             for gmv, x, y in zip(gmvs, xs, ys))
+                    gmfset.append(
+                        _GroundMotionField(
+                            imt, sa_period, sa_damping, rupture_tag,
+                            nodes))
+                if gmfset:
+                    yield GmfSet(ses, gmfset)
 
 
 class GmfSet(object):
