@@ -57,11 +57,10 @@ class ScenarioTestCase(unittest.TestCase):
     )
 
     def test_mean_based(self):
-        calculator = scientific.vulnerability_function_applier
 
-        [asset_output_a1, asset_output_a3] = calculator(
-            self.vulnerability_model_mean["RM"],
-            [self.hazard_mean["a1"], self.hazard_mean["a3"]])
+        [asset_output_a1, asset_output_a3] = \
+            self.vulnerability_model_mean["RM"].apply_to(
+                [self.hazard_mean["a1"], self.hazard_mean["a3"]])
 
         self.assertAlmostEqual(440.147078317589, asset_output_a1.mean() * 3000)
 
@@ -74,8 +73,7 @@ class ScenarioTestCase(unittest.TestCase):
             92.2122644809969,
             asset_output_a3.std(ddof=1) * 1000)
 
-        [asset_output_a2] = calculator(
-            self.vulnerability_model_mean["RC"],
+        [asset_output_a2] = self.vulnerability_model_mean["RC"].apply_to(
             [self.hazard_mean["a2"]])
 
         self.assertAlmostEqual(
@@ -90,12 +88,9 @@ class ScenarioTestCase(unittest.TestCase):
             RC=vf([0.035, 0.07, 0.14, 0.28, 0.56], [0.1, 0.2, 0.3, 0.4, 0.5]),
         )
 
-        calculator = scientific.vulnerability_function_applier
-
-        [asset_output_a1, asset_output_a3] = calculator(
-            vulnerability_model['RM'],
-            [gmv.a1, gmv.a3],
-            seed=37)
+        [asset_output_a1, asset_output_a3] = \
+            vulnerability_model['RM'].apply_to(
+                [gmv.a1, gmv.a3], seed=37)
 
         self.assertAlmostEqual(521.885458891, asset_output_a1.mean() * 3000,
                                delta=0.05 * 521.885458891)
@@ -106,10 +101,8 @@ class ScenarioTestCase(unittest.TestCase):
 
         self.assertTrue(asset_output_a3.std(ddof=1) * 1000 > 94.2302991022)
 
-        [asset_output_a2] = calculator(
-            vulnerability_model["RC"],
-            [gmv.a2],
-            seed=37)
+        [asset_output_a2] = vulnerability_model["RC"].apply_to(
+            [gmv.a2], seed=37)
 
         self.assertAlmostEqual(
             510.821363253,

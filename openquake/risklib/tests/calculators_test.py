@@ -132,24 +132,6 @@ class EventBasedLossCurveTest(unittest.TestCase):
         numpy.testing.assert_almost_equal([1, 1, 1, 1, 0], poes2)
 
 
-class ProbabilisticLossTest(unittest.TestCase):
-    def test_generator(self):
-        vf = mock.Mock()
-        seed = mock.Mock()
-        asset_correlation = mock.Mock()
-
-        fn = 'openquake.risklib.scientific.vulnerability_function_applier'
-
-        with mock.patch(fn) as m:
-            calc = calculators.ProbabilisticLoss(vf, seed, asset_correlation)
-            calc([1, 2, 3])
-
-            self.assertEqual(
-                m.call_args_list,
-                [((vf, [1, 2, 3]), {'seed': seed,
-                                    'asset_correlation': asset_correlation})])
-
-
 class DamageTest(unittest.TestCase):
     def test_generator(self):
         with mock.patch('openquake.risklib.scientific.scenario_damage') as m:
@@ -161,16 +143,6 @@ class DamageTest(unittest.TestCase):
                               ((fragility_functions, 2,), dict()),
                               ((fragility_functions, 3,), dict())],
                              m.call_args_list)
-
-
-class EventLossTableTest(unittest.TestCase):
-    def test_call_no_events(self):
-        self.assertEqual({}, calculators.EventLossTable()([[]], []))
-
-    def test_call(self):
-        self.assertEqual(
-            {1: 3, 2: 12},
-            calculators.EventLossTable()([[0, 1, 2], [3, 4, 5]], [1, 2]))
 
 
 class LossMapTest(unittest.TestCase):

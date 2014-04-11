@@ -246,22 +246,22 @@ class Classical(object):
 
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
-             calculators.exposure_statistics(
-                 [normalize_curves(curves)
-                  for curves
-                  in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                 self.maps.poes + self.fractions.poes,
-                 weights, quantiles, post_processing))
+            calculators.exposure_statistics(
+                [normalize_curves(curves)
+                 for curves
+                 in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                self.maps.poes + self.fractions.poes,
+                weights, quantiles, post_processing))
 
         if self.insured_losses:
             loss_curves = [out.insured_curves for out in outputs]
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
-                 calculators.exposure_statistics(
-                     [normalize_curves(curves)
-                      for curves
-                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                     [], weights, quantiles, post_processing))
+                calculators.exposure_statistics(
+                    [normalize_curves(curves)
+                     for curves
+                     in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                    [], weights, quantiles, post_processing))
         else:
             mean_insured_curves = None
             mean_average_insured_losses = None
@@ -352,13 +352,29 @@ class ProbabilisticEventBased(object):
         See :func:`openquake.risklib.scientific.event_based` for a description
         of the input parameters
         """
-        self.losses = calculators.ProbabilisticLoss(
-            vulnerability_function, seed, asset_correlation)
+        self.seed = seed
+        self.asset_correlation = asset_correlation
+        self.vulnerability_function = vulnerability_function
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
         self.maps = calculators.LossMap(conditional_loss_poes)
-        self.event_loss = calculators.EventLossTable()
         self.insured_losses = insured_losses
+
+    def event_loss(self, loss_matrix, event_ids):
+        """
+        :param loss_matrix:
+           a numpy array of losses shaped N x E, where E is the number
+           of events and N the number of samplings
+
+        :param event_ids:
+           a numpy array holding E event ids
+
+        :returns:
+            a :class:`collections.Counter` with the sums of the loss matrix
+            per each event_id
+        """
+        return collections.Counter(
+            dict(zip(event_ids, numpy.sum(loss_matrix, axis=1))))
 
     def __call__(self, loss_type, assets, (ground_motion_values, event_ids)):
         """
@@ -380,7 +396,8 @@ class ProbabilisticEventBased(object):
            a numpy array of R event ID (integer)
         """
 
-        loss_matrix = self.losses(ground_motion_values)
+        loss_matrix = self.vulnerability_function.apply_to(
+            ground_motion_values, self.seed, self.asset_correlation)
 
         curves = self.curves(loss_matrix)
         average_losses = numpy.array([scientific.average_loss(losses, poes)
@@ -394,7 +411,6 @@ class ProbabilisticEventBased(object):
         if self.insured_losses and loss_type != 'fatalities':
             deductibles = [a.deductible(loss_type) for a in assets]
             limits = [a.insurance_limit(loss_type) for a in assets]
-
             insured_loss_matrix = utils.numpy_map(
                 scientific.insured_losses, loss_matrix, deductibles, limits)
             insured_curves = self.curves(insured_loss_matrix)
@@ -434,9 +450,9 @@ class ProbabilisticEventBased(object):
 
         (mean_curves, mean_average_losses, mean_maps,
          quantile_curves, quantile_average_losses, quantile_maps) = (
-             calculators.exposure_statistics(
-                 [self._normalize_curves(curves) for curves in curve_matrix],
-                 self.maps.poes, weights, quantiles, post_processing))
+            calculators.exposure_statistics(
+                [self._normalize_curves(curves) for curves in curve_matrix],
+                self.maps.poes, weights, quantiles, post_processing))
         elt = sum((out.event_loss_table for out in outputs),
                   collections.Counter())
 
@@ -444,11 +460,11 @@ class ProbabilisticEventBased(object):
             loss_curves = [out.insured_curves for out in outputs]
             (mean_insured_curves, mean_average_insured_losses, _,
              quantile_insured_curves, quantile_average_insured_losses, _) = (
-                 calculators.exposure_statistics(
-                     [self._normalize_curves(curves)
-                      for curves
-                      in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
-                     [], weights, quantiles, post_processing))
+                calculators.exposure_statistics(
+                    [self._normalize_curves(curves)
+                     for curves
+                     in numpy.array(loss_curves).transpose(1, 0, 2, 3)],
+                    [], weights, quantiles, post_processing))
         else:
             mean_insured_curves = None
             mean_average_insured_losses = None
@@ -529,22 +545,21 @@ class ProbabilisticEventBasedBCR(object):
         self.assets = None
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
-        self.losses_orig = calculators.ProbabilisticLoss(
-            vulnerability_function_orig,
-            seed_orig,
-            asset_correlation)
-        self.losses_retro = calculators.ProbabilisticLoss(
-            vulnerability_function_retro,
-            seed_retro,
-            asset_correlation)
+        self.vf_orig = vulnerability_function_orig
+        self.seed_orig = seed_orig
+        self.correlation = asset_correlation
+        self.vf_retro = vulnerability_function_retro
+        self.seed_retro = seed_retro
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
 
     def __call__(self, loss_type, assets, ((orig, _), (retro, __))):
         self.assets = assets
 
-        original_loss_curves = self.curves(self.losses_orig(orig))
-        retrofitted_loss_curves = self.curves(self.losses_retro(retro))
+        original_loss_curves = self.curves(
+            self.vf_orig.apply_to(orig, self.seed_orig, self.correlation))
+        retrofitted_loss_curves = self.curves(
+            self.vf_retro.apply_to(retro, self.seed_retro, self.correlation))
 
         eal_original = [
             scientific.average_loss(losses, poes)
@@ -565,18 +580,22 @@ class ProbabilisticEventBasedBCR(object):
 
 
 class Scenario(object):
-    def __init__(self,
-                 vulnerability_function,
-                 seed, asset_correlation,
-                 insured_losses):
-        self.losses = calculators.ProbabilisticLoss(
-            vulnerability_function, seed, asset_correlation)
+    """
+    Implements the Scenario workflow
+    """
+    def __init__(self, vulnerability_function,
+                 seed, asset_correlation, insured_losses):
+        self.vulnerability_function = vulnerability_function
+        self.seed = seed
+        self.asset_correlation = asset_correlation
         self.insured_losses = insured_losses
 
     def __call__(self, loss_type, assets, ground_motion_values):
         values = numpy.array([a.value(loss_type) for a in assets])
 
-        loss_ratio_matrix = self.losses(ground_motion_values)
+        loss_ratio_matrix = self.vulnerability_function.apply_to(
+            ground_motion_values, self.seed, self.asset_correlation)
+
         aggregate_losses = numpy.sum(
             loss_ratio_matrix.transpose() * values, axis=1)
 

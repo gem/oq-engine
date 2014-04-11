@@ -22,6 +22,7 @@ This module includes the scientific API of the oq-risklib
 """
 
 import abc
+import copy
 import itertools
 import bisect
 
@@ -97,6 +98,28 @@ class VulnerabilityFunction(object):
                           seed=None, correlation=0):
 
         self.distribution.init(asset_count, sample_num, seed, correlation)
+
+    def apply_to(self, ground_motion_values, seed=None, asset_correlation=0):
+        """
+        Apply a copy of the vulnerability function to a set of N
+        ground_motion_values, where N is the number of assets. seed
+        and asset_correlation are used to initialize the distribution,
+        i.e. the epsilons. The original function is left unchanged, i.e.
+        uninitialized if it was unitialized at the beginning.
+
+        :param ground_motion_values:
+           a sequence of ground motion values (1 array per site)
+        :param seed:
+           a stochastic seed
+        :param asset_correlation:
+           correlation parameter in the range [0, 1]
+        """
+        vulnerability_function = copy.copy(self)
+        vulnerability_function.init_distribution(
+            len(ground_motion_values),
+            len(ground_motion_values[0]),
+            seed, asset_correlation)
+        return utils.numpy_map(vulnerability_function, ground_motion_values)
 
     @utils.memoized
     def strictly_increasing(self):
@@ -258,21 +281,6 @@ VulnerabilityFunction`
         return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
                 [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
                 [self.imls[-1] + ((self.imls[-1] - self.imls[-2]) / 2)])
-
-
-def vulnerability_function_applier(
-        vulnerability_function, ground_motion_values,
-        seed=None, asset_correlation=0):
-    if numpy.array(ground_motion_values).ndim == 1:
-        return numpy.array([])
-
-    # FIXME(lp). Refactor me to avoid the side effect
-    vulnerability_function.init_distribution(
-        len(ground_motion_values),
-        len(ground_motion_values[0]),
-        seed,
-        asset_correlation)
-    return utils.numpy_map(vulnerability_function, ground_motion_values)
 
 
 class FragilityFunctionContinuous(object):
@@ -667,7 +675,6 @@ def insured_losses(losses, deductible, insured_limit):
     :param float deductible: the deductible limit in fraction form
     :param float insured_limit: the insured limit in fraction form
     """
-
     return numpy.piecewise(
         losses,
         [losses < deductible, losses > insured_limit],
