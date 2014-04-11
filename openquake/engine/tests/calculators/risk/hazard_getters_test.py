@@ -45,7 +45,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
         self._assets = models.ExposureData.objects.filter(
             exposure_model=self.job.risk_calculation.exposure_model).order_by(
-                'asset_ref')
+            'asset_ref')
 
         self.getter = self.getter_class(self.ho(), self.assets(), 500, "PGA")
 
@@ -57,7 +57,8 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
     def test_call(self):
         _hid, assets, values = self.getter().next()
-        self.assertEqual([a.id for a in self.assets()], [a.id for a in assets])
+        self.assertEqual(
+            set(a.id for a in self.assets()), set(a.id for a in assets))
         numpy.testing.assert_allclose(
             [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
              [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
@@ -91,12 +92,12 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
             self.getter().next()
 
 
-class GroundMotionScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
+class ScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
 
     hazard_demo = get_data_path('scenario_hazard/job.ini')
     risk_demo = get_data_path('scenario_risk/job.ini')
     hazard_output_type = 'gmf_scenario'
-    getter_class = hazard_getters.GroundMotionValuesGetter
+    getter_class = hazard_getters.ScenarioGetter
     taxonomy = 'RM'
 
     def test_call(self):
