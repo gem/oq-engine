@@ -336,8 +336,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                         lt_model=hazard_output.output_container.
                         lt_realization.lt_model)
                     rupture_ids = models.SESRupture.objects.filter(
-                        ses__ses_collection=ses_coll).values_list(
-                            'id', flat=True)
+                        rupture__ses_collection=ses_coll).values_list(
+                        'id', flat=True)
                     for rupture_id in rupture_ids:
                         if rupture_id in event_loss_table:
                             inserter.add(
