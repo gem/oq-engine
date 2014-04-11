@@ -83,6 +83,44 @@ class HazardGetter(object):
         """
         raise NotImplementedError
 
+    def assets_gen(self, hazard_output):
+        """
+        Iterator yielding site_id, assets.
+        """
+        cursor = models.getcursor('job_init')
+        # NB: the ``distinct ON (exposure_data.id)`` combined with the
+        # ``ORDER BY ST_Distance`` does the job to select the closest site.
+        # The other ORDER BY are there to help debugging, it is always
+        # nice to have numbers coming in a fixed order. They have an
+        # insignificant effect on the performance.
+        query = """
+SELECT site_id, array_agg(asset_id ORDER BY asset_id) AS asset_ids FROM (
+  SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
+  FROM riski.exposure_data AS exp
+  JOIN hzrdi.hazard_site AS hsite
+  ON ST_DWithin(exp.site, hsite.location, %s)
+  WHERE hsite.hazard_calculation_id = %s
+  AND taxonomy = %s AND exposure_model_id = %s AND exp.site && %s
+  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)) AS x
+GROUP BY site_id ORDER BY site_id;
+   """
+        args = (self.max_distance * KILOMETERS_TO_METERS,
+                hazard_output.output.oq_job.hazard_calculation.id,
+                self.assets[0].taxonomy,
+                self.assets[0].exposure_model_id,
+                self._assets_mesh.get_convex_hull().wkt)
+        cursor.execute(query, args)
+        sites_assets = cursor.fetchall()
+        for site_id, asset_ids in sites_assets:
+            assets = [self.asset_dict[i] for i in asset_ids
+                      if i in self.asset_dict]
+            # notice the "if i in self.asset_dict": in principle, it should
+            # not be necessary; in practice, the query may returns spurious
+            # assets not in the initial set; this is why we are filtering
+            # the spurious assets; it is a mysterious behaviour of PostGIS
+            if assets:
+                yield site_id, assets
+
     def get_assets_data(self, hazard_output, monitor=None):
         """
         :param monitor: a performance monitor or None
@@ -137,39 +175,39 @@ class HazardCurveGetterPerAsset(HazardGetter):
     :attr imls:
         The intensity measure levels of the curves we are going to get.
     """
-
     def get_data(self, hazard_output, monitor):
         """
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :meth:`HazardGetter.get_data` interface.
         """
-        hc = hazard_output
+        ho = hazard_output
 
-        if hc.output.output_type == 'hazard_curve':
-            imls = hc.imls
-        elif hc.output.output_type == 'hazard_curve_multi':
-            hc = models.HazardCurve.objects.get(
-                output__oq_job=hc.output.oq_job,
+        if ho.output.output_type == 'hazard_curve':
+            imls = ho.imls
+        elif ho.output.output_type == 'hazard_curve_multi':
+            ho = models.HazardCurve.objects.get(
+                output__oq_job=ho.output.oq_job,
                 output__output_type='hazard_curve',
-                statistics=hc.statistics,
-                lt_realization=hc.lt_realization,
+                statistics=ho.statistics,
+                lt_realization=ho.lt_realization,
                 imt=self.imt_type,
                 sa_period=self.sa_period,
                 sa_damping=self.sa_damping)
-            imls = hc.imls
+            imls = ho.imls
 
+        with monitor.copy('associating assets->site'):
+            site_assets = list(self.assets_gen(hazard_output))
+
+        all_assets, all_curves = [], []
         with monitor.copy('getting closest hazard curves'):
-            assets = []
-            curves = []
-
-            for asset in self.assets:
-                queryset = self.get_by_site(asset.site, hc.id)
-                if queryset is not None:
-                    [poes] = queryset
-                    assets.append(asset)
-                    curves.append(zip(imls, poes))
-
-        return assets, curves
+            for site_id, assets in site_assets:
+                site = models.HazardSite.objects.get(pk=site_id)
+                [poes] = self.get_by_site(site, ho.id)
+                curve = zip(imls, poes)
+                for asset in assets:
+                    all_assets.append(asset)
+                    all_curves.append(curve)
+        return all_assets, all_curves
 
     def get_by_site(self, site, hazard_id):
         """
@@ -179,90 +217,79 @@ class HazardCurveGetterPerAsset(HazardGetter):
         """
         cursor = models.getcursor('job_init')
 
-        query = """
+        query = """\
         SELECT hzrdr.hazard_curve_data.poes
         FROM hzrdr.hazard_curve_data
-        WHERE hazard_curve_id = %s
-        AND ST_DWithin(ST_GeographyFromText(%s), location::geography, %s)
-        ORDER BY
-            ST_Distance(location::geography, ST_GeographyFromText(%s), false)
-        LIMIT 1
+        WHERE hazard_curve_id = %s AND location = %s
         """
-
-        args = (hazard_id, site.wkt, self.max_distance * KILOMETERS_TO_METERS,
-                site.wkt)
-
-        cursor.execute(query, args)
+        cursor.execute(query, (hazard_id, 'SRID=4326; ' + site.location.wkt))
         return cursor.fetchone()
 
 
-class GroundMotionValuesGetter(HazardGetter):
+class ScenarioGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
-    def __call__(self, monitor=None):
-        """
-        Override base method to seed the rng for each hazard output
-        """
-        for hazard in self.hazard_outputs:
-            h = hazard.output_container
-            assets, data = self.get_assets_data(h, monitor)
-            if len(assets) > 0:
-                yield hazard.id, assets, data
 
-    def assets_gen(self, hazard_output):
+    def get_gmvs(self, gmf, site_id):
         """
-        Iterator yielding site_id, assets.
+        :returns: gmvs and ruptures for the given site and IMT
         """
-        cursor = models.getcursor('job_init')
-        # NB: the ``distinct ON (exposure_data.id)`` combined with the
-        # ``ORDER BY ST_Distance`` does the job to select the closest site.
-        # The other ORDER BY are there to help debugging, it is always
-        # nice to have numbers coming in a fixed order. They have an
-        # insignificant effect on the performance.
-        query = """
-SELECT site_id, array_agg(asset_id ORDER BY asset_id) AS asset_ids FROM (
-  SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
-  FROM riski.exposure_data AS exp
-  JOIN hzrdi.hazard_site AS hsite
-  ON ST_DWithin(exp.site, hsite.location, %s)
-  WHERE hsite.hazard_calculation_id = %s
-  AND taxonomy = %s AND exposure_model_id = %s AND exp.site && %s
-  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)) AS x
-GROUP BY site_id ORDER BY site_id;
-   """
-        args = (self.max_distance * KILOMETERS_TO_METERS,
-                hazard_output.output.oq_job.hazard_calculation.id,
-                self.assets[0].taxonomy,
-                self.assets[0].exposure_model_id,
-                self._assets_mesh.get_convex_hull().wkt)
-        cursor.execute(query, args)
-        sites_assets = cursor.fetchall()
-        for site_id, asset_ids in sites_assets:
-            assets = [self.asset_dict[i] for i in asset_ids
-                      if i in self.asset_dict]
-            # notice the "if i in self.asset_dict": in principle, it should
-            # not be necessary; in practice, the query may returns spurious
-            # assets not in the initial set; this is why we are filtering
-            # the spurious assets; it is a mysterious behaviour of PostGIS
-            if assets:
-                yield site_id, assets
+        gmvs = []
+        for gmf in models.GmfData.objects.filter(
+                gmf=gmf,
+                site=site_id, imt=self.imt_type, sa_period=self.sa_period,
+                sa_damping=self.sa_damping):
+            gmvs.extend(gmf.gmvs)
+            if not gmvs:
+                logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
+        return gmvs
 
+    def get_data(self, hazard_output, monitor):
+        """
+        :returns: a list with all the assets and the hazard data.
+
+        For scenario computations the data is a numpy.array
+        with the GMVs; for event based computations the data is
+        a pair (GMVs, rupture_ids).
+        """
+        all_assets = []
+        all_gmvs = []
+        # dictionary site -> ({rupture_id: gmv}, n_assets)
+        # the ordering is there only to have repeatable runs
+        with monitor.copy('associating assets->site'):
+            site_assets = list(self.assets_gen(hazard_output))
+
+        with monitor.copy('getting gmvs and ruptures'):
+            for site_id, assets in site_assets:
+                n_assets = len(assets)
+                all_assets.extend(assets)
+                gmvs = self.get_gmvs(hazard_output, site_id)
+                if gmvs:
+                    array = numpy.array(gmvs)
+                    all_gmvs.extend([array] * n_assets)
+
+        return all_assets, all_gmvs
+
+
+class GroundMotionValuesGetter(ScenarioGetter):
+    """
+    Hazard getter for loading ground motion values. It is instantiated
+    with a set of assets all of the same taxonomy.
+    """
     def get_gmvs_ruptures(self, gmf, site_id):
         """
         :returns: gmvs and ruptures for the given site and IMT
         """
         gmvs = []
         ruptures = []
-
         for gmf in models.GmfData.objects.filter(
                 gmf=gmf,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
                 sa_damping=self.sa_damping):
             gmvs.extend(gmf.gmvs)
-            if gmf.rupture_ids:
-                ruptures.extend(gmf.rupture_ids)
+            ruptures.extend(gmf.rupture_ids)
         if not gmvs:
             logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
         return gmvs, ruptures
@@ -275,7 +302,6 @@ GROUP BY site_id ORDER BY site_id;
         with the GMVs; for event based computations the data is
         a pair (GMVs, rupture_ids).
         """
-
         all_ruptures = set()
         all_assets = []
         all_gmvs = []
@@ -290,17 +316,11 @@ GROUP BY site_id ORDER BY site_id;
                 n_assets = len(assets)
                 all_assets.extend(assets)
                 gmvs, ruptures = self.get_gmvs_ruptures(hazard_output, site_id)
-                if ruptures:  # event based
-                    site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
-                    for r in ruptures:
-                        all_ruptures.add(r)
-                elif gmvs:  # scenario
-                    array = numpy.array(gmvs)
-                    all_gmvs.extend([array] * n_assets)
-        if all_assets and not all_ruptures:  # scenario
-            return all_assets, all_gmvs
+                site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
+                for r in ruptures:
+                    all_ruptures.add(r)
 
-        # second pass for event based, filling with zeros
+        # second pass, filling with zeros
         with monitor.copy('filling gmvs with zeros'):
             all_ruptures = sorted(all_ruptures)
             for site_id, (gmv, n_assets) in site_gmv.iteritems():
