@@ -245,11 +245,18 @@ class BaseHazardCalculator(base.Calculator):
         lt_models = []
         for i, (sm, path) in enumerate(sm_paths):
             smpath = tuple(path)
+            fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(
-                os.path.join(self.hc.base_path, sm),
+                fname,
                 self.hc.sites_affected_by,
                 self.smlt.make_apply_uncertainties(path),
                 self.hc)
+            if not source_collector.source_weights:
+                raise RuntimeError(
+                    'Could not find sources close to the sites in %s '
+                    '(maximum_distance=%s km)' %
+                    (fname, self.hc.maximum_distance))
+
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, ordinal=i, sm_lt_path=smpath)
             lt_models.append(lt_model)
