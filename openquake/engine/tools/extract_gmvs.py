@@ -44,23 +44,22 @@ def extract(hc_id, a_writer):
                 sa_period_fix = sa_period
 
             ruptures = sorted(
-                [r.id
-                 for r in models.SESRupture.objects.filter(
-                         ses__ses_collection__lt_realization=lt)])
+                [r.id for r in models.SESRupture.objects.filter(
+                    rupture__ses_collection__lt_realization=lt)])
 
             for site in hc.hazardsite_set.all().order_by('id'):
                 gmvs = []
                 gmvs_data = dict()
 
-                for ses in models.SES.objects.filter(
-                        ses_collection__lt_realization=lt).order_by('id'):
-
-                    for gmf in models.GmfData.objects.filter(
-                            ses=ses,
-                            site=site,
-                            imt=imt_type, sa_period=sa_period):
-
-                        gmvs_data.update(dict(zip(gmf.rupture_ids, gmf.gmvs)))
+                for ses_coll in models.SESCollection.objects.filter(
+                        lt_realization=lt).order_by('id'):
+                    for ses in ses_coll:
+                        for gmf in models.GmfData.objects.filter(
+                                ses_id=ses.ordinal,
+                                site=site,
+                                imt=imt_type, sa_period=sa_period):
+                            gmvs_data.update(
+                                dict(zip(gmf.rupture_ids, gmf.gmvs)))
                 gmvs.extend([gmvs_data.get(r, 0.0) for r in ruptures])
                 a_writer.writerow([lt.id, site.location.x, site.location.y,
                                    imt_type_fix, sa_period_fix] + gmvs)

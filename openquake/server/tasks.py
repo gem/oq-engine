@@ -217,8 +217,8 @@ DBINTERFACE = {
     'ses': DbInterface(
         """SELECT tag, magnitude, St_AsText(hypocenter)
            FROM hzrdr.ses_rupture r
-           JOIN hzrdr.ses ses ON ses.id = r.ses_id
-           JOIN hzrdr.ses_collection sc ON ses.ses_collection_id = sc.id
+           JOIN hzrdr.probabilistic_rupture pr ON r.id = r.rupture_id
+           JOIN hzrdr.ses_collection sc ON pr.ses_collection_id = sc.id
            JOIN uiapi.output o ON o.id = sc.output_id
            WHERE o.id = %(output_id)d""",
         "icebox_ses",
