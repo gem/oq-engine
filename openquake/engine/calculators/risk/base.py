@@ -140,16 +140,15 @@ class RiskCalculator(base.Calculator):
                 with self.monitor("getting asset chunks"):
                     assets = models.ExposureData.objects.get_asset_chunk(
                         self.rc, taxonomy, offset, block_size)
-
-                calculation_units = [
-                    self.calculation_unit(loss_type, assets)
-                    for loss_type in models.loss_types(self.risk_models)]
+                for risk_model in self.risk_models[taxonomy].values():
+                    self.init_risk_model(risk_model, assets)
 
                 num_tasks += 1
-                yield [self.job.id,
-                       calculation_units,
-                       outputdict,
-                       self.calculator_parameters]
+                yield [
+                    self.job.id,
+                    self.risk_models[taxonomy].values(),
+                    outputdict,
+                    self.calculator_parameters]
 
         # sanity check to protect against future changes of the distribution
         # logic
@@ -214,7 +213,8 @@ class RiskCalculator(base.Calculator):
 
         for v_input, loss_type in self.rc.vulnerability_inputs(retrofitted):
             for taxonomy, model in loaders.vulnerability(v_input):
-                risk_models[taxonomy][loss_type] = model
+                risk_models[taxonomy][loss_type] = model.copy(
+                    loss_type=loss_type)
 
         return risk_models
 
