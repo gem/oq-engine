@@ -47,16 +47,14 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
             exposure_model=self.job.risk_calculation.exposure_model).order_by(
             'asset_ref')
 
-        self.getter = self.getter_class(self.ho(), self.assets(), 500, "PGA")
+        ho = self.job.risk_calculation.hazard_output
+        self.getter = self.getter_class(ho, self.assets(), 500, "PGA")
 
     def test_is_pickleable(self):
         pickle.dumps(self.getter)  # raises an error if not
 
-    def ho(self):
-        return [self.job.risk_calculation.hazard_output]
-
     def test_call(self):
-        _hid, assets, values = self.getter().next()
+        assets, values = self.getter()
         self.assertEqual(
             set(a.id for a in self.assets()), set(a.id for a in assets))
         numpy.testing.assert_allclose(
@@ -69,8 +67,8 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
     def test_filter(self):
         self.getter.max_distance = 0.00001  # 1 cm
-        with self.assertRaises(StopIteration):
-            self.getter().next()
+        assets, data = self.getter()
+        self.assertFalse(assets)
 
 
 class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
@@ -82,14 +80,9 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
     taxonomy = 'RM'
 
     def test_call(self):
-        _hid, assets, (gmfs, _ruptures) = self.getter().next()
+        assets, (gmfs, _ruptures) = self.getter()
         for gmvs in gmfs:
             numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
-
-    def test_filter(self):
-        self.getter.max_distance = 0.00001  # 1 cm
-        with self.assertRaises(StopIteration):
-            self.getter().next()
 
 
 class ScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
@@ -101,13 +94,6 @@ class ScenarioGetterTestCase(HazardCurveGetterPerAssetTestCase):
     taxonomy = 'RM'
 
     def test_call(self):
-        hazard = list(self.getter())
-        self.assertEqual(1, len(hazard))
-        _hid, _assets, gmfs = hazard[0]
+        _assets, gmfs = self.getter()
         for gmvs in gmfs:
             numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
-
-    def test_filter(self):
-        self.getter.max_distance = 0.00001  # 1 cm
-        with self.assertRaises(StopIteration):
-            self.getter().next()

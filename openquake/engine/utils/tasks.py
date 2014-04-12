@@ -135,7 +135,7 @@ def map_reduce(task, task_args, agg, acc):
         for the_args in task_args:
             result, exctype = safely_call(task.task_func, the_args)
             if exctype:
-                raise exctype(result)
+                raise RuntimeError(result)
             acc = agg(acc, result)
     else:
         backend = current_app().backend
