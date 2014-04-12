@@ -73,15 +73,18 @@ class ClassicalTest(unittest.TestCase):
         self.calcs.exposure_statistics.return_value = [
             mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
             numpy.empty((3, 2))]
+        weight = 0.5
         self.workflow.statistics(
-            [workflows.Output(1, 1, 'structural', out)],
+            [workflows.Output(1, weight, 'structural', out),
+             workflows.Output(1, weight, 'structural', out)],
             mock.Mock(), mock.Mock())
         self.assertEqual(
             1, self.calcs.exposure_statistics.call_count)
 
         self.workflow.insured_losses = True
         self.workflow.statistics(
-            [workflows.Output(1, 1, 'structural', out)],
+            [workflows.Output(1, weight, 'structural', out),
+             workflows.Output(1, weight, 'structural', out)],
             mock.Mock(), mock.Mock())
         self.assertEqual(
             3,  # 2 more
@@ -146,15 +149,18 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.calcs.exposure_statistics.return_value = [
             mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
             numpy.empty((3, 2))]
+        weight = 0.5
         self.workflow.statistics(
-            [workflows.Output(1, 1, 'structural', out)],
+            [workflows.Output(1, weight, 'structural', out),
+             workflows.Output(1, weight, 'structural', out)],
             mock.Mock(), mock.Mock())
         self.assertEqual(
             1, self.calcs.exposure_statistics.call_count)
 
         self.workflow.insured_losses = True
         self.workflow.statistics(
-            [workflows.Output(1, 1, 'structural', out)],
+            [workflows.Output(1, weight, 'structural', out),
+             workflows.Output(1, weight, 'structural', out)],
             mock.Mock(), mock.Mock())
         self.assertEqual(
             3,  # 2 more
