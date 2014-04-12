@@ -46,8 +46,8 @@ class HazardGetter(object):
     should be possible to use different strategies (e.g. distributed
     or not, using postgis or not).
 
-    :attr hazard_outputs:
-        A list of hazard output container instances (e.g. HazardCurve)
+    :attr hazard_output:
+        A :class:`openquake.engine.db.models.Output` instance
 
     :attr assets:
         The assets for which we wants to compute.
@@ -58,8 +58,20 @@ class HazardGetter(object):
     :attr imt:
         The imt (in long form) for which data have to be retrieved
     """
-    def __init__(self, hazard_outputs, assets, max_distance, imt):
-        self.hazard_outputs = hazard_outputs
+    @property
+    def hid(self):
+        """Return the id of the given hazard output"""
+        return self.hazard_output.id
+
+    @property
+    def weight(self):
+        """Return the weight of the realization of the hazard output"""
+        h = self.hazard_output.output_container
+        if hasattr(h, 'lt_realization') and h.lt_realization:
+            return h.lt_realization.weight
+
+    def __init__(self, hazard_output, assets, max_distance, imt):
+        self.hazard_output = hazard_output
         self.assets = assets
         self.max_distance = max_distance
         self.imt = imt
@@ -77,13 +89,13 @@ class HazardGetter(object):
             self.__class__.__name__, self.max_distance,
             [a.id for a in self.assets])
 
-    def get_data(self, hazard_output, monitor):
+    def get_data(self, monitor):
         """
         Subclasses must implement this.
         """
         raise NotImplementedError
 
-    def assets_gen(self, hazard_output):
+    def assets_gen(self):
         """
         Iterator yielding site_id, assets.
         """
@@ -105,7 +117,7 @@ SELECT site_id, array_agg(asset_id ORDER BY asset_id) AS asset_ids FROM (
 GROUP BY site_id ORDER BY site_id;
    """
         args = (self.max_distance * KILOMETERS_TO_METERS,
-                hazard_output.output.oq_job.hazard_calculation.id,
+                self.hazard_output.oq_job.hazard_calculation.id,
                 self.assets[0].taxonomy,
                 self.assets[0].exposure_model_id,
                 self._assets_mesh.get_convex_hull().wkt)
@@ -121,7 +133,7 @@ GROUP BY site_id ORDER BY site_id;
             if assets:
                 yield site_id, assets
 
-    def get_assets_data(self, hazard_output, monitor=None):
+    def __call__(self, monitor=None):
         """
         :param monitor: a performance monitor or None
         :returns:
@@ -130,7 +142,7 @@ GROUP BY site_id ORDER BY site_id;
             the corresponding hazard data.
         """
         monitor = monitor or DummyMonitor()
-        assets, data = self.get_data(hazard_output, monitor)
+        assets, data = self.get_data(monitor)
         if not assets:
             logs.LOG.warn(
                 'No hazard site found within the maximum distance of %f km for'
@@ -151,21 +163,6 @@ GROUP BY site_id ORDER BY site_id;
 
         return assets, data
 
-    def __call__(self, monitor=None):
-        for hazard in self.hazard_outputs:
-            h = hazard.output_container
-            assets, data = self.get_assets_data(h, monitor)
-            if len(assets) > 0:
-                yield hazard.id, assets, data
-
-    def weights(self):
-        ws = []
-        for hazard in self.hazard_outputs:
-            h = hazard.output_container
-            if hasattr(h, 'lt_realization') and h.lt_realization:
-                ws.append(h.lt_realization.weight)
-        return ws
-
 
 class HazardCurveGetterPerAsset(HazardGetter):
     """
@@ -175,34 +172,34 @@ class HazardCurveGetterPerAsset(HazardGetter):
     :attr imls:
         The intensity measure levels of the curves we are going to get.
     """
-    def get_data(self, hazard_output, monitor):
+    def get_data(self, monitor):
         """
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :meth:`HazardGetter.get_data` interface.
         """
-        ho = hazard_output
+        oc = self.hazard_output.output_container
 
-        if ho.output.output_type == 'hazard_curve':
-            imls = ho.imls
-        elif ho.output.output_type == 'hazard_curve_multi':
-            ho = models.HazardCurve.objects.get(
-                output__oq_job=ho.output.oq_job,
+        if oc.output.output_type == 'hazard_curve':
+            imls = oc.imls
+        elif oc.output.output_type == 'hazard_curve_multi':
+            oc = models.HazardCurve.objects.get(
+                output__oq_job=oc.output.oq_job,
                 output__output_type='hazard_curve',
-                statistics=ho.statistics,
-                lt_realization=ho.lt_realization,
+                statistics=oc.statistics,
+                lt_realization=oc.lt_realization,
                 imt=self.imt_type,
                 sa_period=self.sa_period,
                 sa_damping=self.sa_damping)
-            imls = ho.imls
+            imls = oc.imls
 
         with monitor.copy('associating assets->site'):
-            site_assets = list(self.assets_gen(hazard_output))
+            site_assets = list(self.assets_gen())
 
         all_assets, all_curves = [], []
         with monitor.copy('getting closest hazard curves'):
             for site_id, assets in site_assets:
                 site = models.HazardSite.objects.get(pk=site_id)
-                [poes] = self.get_by_site(site, ho.id)
+                [poes] = self.get_by_site(site, oc.id)
                 curve = zip(imls, poes)
                 for asset in assets:
                     all_assets.append(asset)
@@ -231,14 +228,13 @@ class ScenarioGetter(HazardGetter):
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
-
-    def get_gmvs(self, gmf, site_id):
+    def get_gmvs(self, site_id):
         """
         :returns: gmvs and ruptures for the given site and IMT
         """
         gmvs = []
         for gmf in models.GmfData.objects.filter(
-                gmf=gmf,
+                gmf=self.hazard_output.output_container,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
                 sa_damping=self.sa_damping):
             gmvs.extend(gmf.gmvs)
@@ -246,26 +242,22 @@ class ScenarioGetter(HazardGetter):
                 logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
         return gmvs
 
-    def get_data(self, hazard_output, monitor):
+    def get_data(self, monitor):
         """
-        :returns: a list with all the assets and the hazard data.
-
-        For scenario computations the data is a numpy.array
-        with the GMVs; for event based computations the data is
-        a pair (GMVs, rupture_ids).
+        :returns: the assets and the corresponding ground motion values
         """
         all_assets = []
         all_gmvs = []
         # dictionary site -> ({rupture_id: gmv}, n_assets)
         # the ordering is there only to have repeatable runs
         with monitor.copy('associating assets->site'):
-            site_assets = list(self.assets_gen(hazard_output))
+            site_assets = list(self.assets_gen())
 
         with monitor.copy('getting gmvs and ruptures'):
             for site_id, assets in site_assets:
                 n_assets = len(assets)
                 all_assets.extend(assets)
-                gmvs = self.get_gmvs(hazard_output, site_id)
+                gmvs = self.get_gmvs(site_id)
                 if gmvs:
                     array = numpy.array(gmvs)
                     all_gmvs.extend([array] * n_assets)
@@ -278,14 +270,14 @@ class GroundMotionValuesGetter(ScenarioGetter):
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
-    def get_gmvs_ruptures(self, gmf, site_id):
+    def get_gmvs_ruptures(self, site_id):
         """
         :returns: gmvs and ruptures for the given site and IMT
         """
         gmvs = []
         ruptures = []
         for gmf in models.GmfData.objects.filter(
-                gmf=gmf,
+                gmf=self.hazard_output.output_container,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
                 sa_damping=self.sa_damping):
             gmvs.extend(gmf.gmvs)
@@ -294,13 +286,10 @@ class GroundMotionValuesGetter(ScenarioGetter):
             logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
         return gmvs, ruptures
 
-    def get_data(self, hazard_output, monitor):
+    def get_data(self, monitor):
         """
-        :returns: a list with all the assets and the hazard data.
-
-        For scenario computations the data is a numpy.array
-        with the GMVs; for event based computations the data is
-        a pair (GMVs, rupture_ids).
+        :returns:
+            the assets and the hazard data as a pair (GMVs, rupture_ids).
         """
         all_ruptures = set()
         all_assets = []
@@ -309,13 +298,13 @@ class GroundMotionValuesGetter(ScenarioGetter):
         # dictionary site -> ({rupture_id: gmv}, n_assets)
         # the ordering is there only to have repeatable runs
         with monitor.copy('associating assets->site'):
-            site_assets = list(self.assets_gen(hazard_output))
+            site_assets = list(self.assets_gen())
 
         with monitor.copy('getting gmvs and ruptures'):
             for site_id, assets in site_assets:
                 n_assets = len(assets)
                 all_assets.extend(assets)
-                gmvs, ruptures = self.get_gmvs_ruptures(hazard_output, site_id)
+                gmvs, ruptures = self.get_gmvs_ruptures(site_id)
                 site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
                 for r in ruptures:
                     all_ruptures.add(r)
@@ -335,15 +324,10 @@ class BCRGetter(object):
         self.assets = getter_orig.assets
         self.getter_orig = getter_orig
         self.getter_retro = getter_retro
+        self.hid = getter_orig.hid
+        self.weight = getter_orig.hid
 
     def __call__(self, monitor):
-        orig_gen = self.getter_orig(monitor)
-        retro_gen = self.getter_retro(monitor)
-
-        try:
-            while 1:
-                hid, assets, orig = orig_gen.next()
-                _hid, _assets, retro = retro_gen.next()
-                yield hid, assets, (orig, retro)
-        except StopIteration:
-            pass
+        assets, orig = self.getter_orig(monitor)
+        _assets, retro = self.getter_retro(monitor)
+        return assets, (orig, retro)
