@@ -127,14 +127,12 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         """
         taxonomy = assets[0].taxonomy
         model = self.risk_models[taxonomy][loss_type]
+        [ho] = self.rc.hazard_outputs()
         return (
             loss_type,
             calculators.Damage(model.fragility_functions),
             hazard_getters.ScenarioGetter(
-                self.rc.hazard_output,
-                assets,
-                self.rc.best_maximum_distance,
-                model.imt))
+                ho, assets, self.rc.best_maximum_distance, model.imt))
 
     def task_completed(self, task_result):
         """
