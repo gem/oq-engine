@@ -655,6 +655,34 @@ class Scenario(object):
     compute_all_outputs = Classical.compute_all_outputs.im_func
 
 
+class RiskModel(object):
+    """
+    Container for the attributes imt, vulnerability_function,
+    fragility_functions, loss_type, workflow and getters. The last three
+    can be set after instantiation, but before calling compute_outputs.
+    """
+    def __init__(self, imt, vulnerability_function, fragility_functions,
+                 loss_type=None, workflow=None, getters=None):
+        self.imt = imt
+        self.vulnerability_function = vulnerability_function
+        self.fragility_functions = fragility_functions
+        self.workflow = workflow
+        self.getters = getters
+
+    def copy(self, **kw):
+        new = self.__class__(self.imt, self.vulnerability_function,
+                             self.fragility_functions)
+        vars(new).update(kw)
+        return new
+
+    def compute_outputs(self, getter_monitor):
+        return self.workflow.compute_all_outputs(
+            self.getters, self.loss_type, getter_monitor)
+
+    def compute_stats(self, outputs, quantiles, post_processing):
+        return self.workflow.statistics(outputs, quantiles, post_processing)
+
+
 class DummyMonitor(object):
     """
     This class makes it easy to disable the monitoring
