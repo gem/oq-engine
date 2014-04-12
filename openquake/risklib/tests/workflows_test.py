@@ -74,14 +74,15 @@ class ClassicalTest(unittest.TestCase):
             mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
             numpy.empty((3, 2))]
         self.workflow.statistics(
-            [out],
-            mock.Mock(), mock.Mock(), mock.Mock())
+            [workflows.Output(1, 1, 'structural', out)],
+            mock.Mock(), mock.Mock())
         self.assertEqual(
             1, self.calcs.exposure_statistics.call_count)
 
         self.workflow.insured_losses = True
         self.workflow.statistics(
-            [out], mock.Mock(), mock.Mock(), mock.Mock())
+            [workflows.Output(1, 1, 'structural', out)],
+            mock.Mock(), mock.Mock())
         self.assertEqual(
             3,  # 2 more
             self.calcs.exposure_statistics.call_count)
@@ -146,14 +147,15 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
             mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
             numpy.empty((3, 2))]
         self.workflow.statistics(
-            [out],
-            mock.Mock(), mock.Mock(), mock.Mock())
+            [workflows.Output(1, 1, 'structural', out)],
+            mock.Mock(), mock.Mock())
         self.assertEqual(
             1, self.calcs.exposure_statistics.call_count)
 
         self.workflow.insured_losses = True
         self.workflow.statistics(
-            [out], mock.Mock(), mock.Mock(), mock.Mock())
+            [workflows.Output(1, 1, 'structural', out)],
+            mock.Mock(), mock.Mock())
         self.assertEqual(
             3,  # 2 more
             self.calcs.exposure_statistics.call_count)
@@ -246,23 +248,3 @@ class ScenarioTestCase(unittest.TestCase):
         self.assertEqual((2,), aggregate_losses.shape)
         self.assertIsNone(insured_loss_matrix)
         self.assertIsNone(insured_losses)
-
-
-class CalculationUnitTestCase(unittest.TestCase):
-    def test_call_three_realizations(self):
-        c = workflows.CalculationUnit(mock.Mock(), mock.Mock(), mock.Mock())
-
-        c.getter.return_value = [(mock.Mock(), mock.Mock(), mock.Mock())] * 3
-        outputs, stats = c()
-        self.assertIsNotNone(stats)
-        self.assertEqual(3, len(outputs))
-        outputs, stats = c(post_processing=mock.Mock())
-        self.assertIsNotNone(stats)
-
-    def test_call_one_realizations(self):
-        c = workflows.CalculationUnit(mock.Mock(), mock.Mock(), mock.Mock())
-
-        c.getter.return_value = [(mock.Mock(), mock.Mock(), mock.Mock())]
-        outputs, stats = c(post_processing=mock.Mock())
-        self.assertIsNone(stats)
-        self.assertEqual(1, len(outputs))

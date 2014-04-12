@@ -22,6 +22,8 @@ from scipy import interpolate
 
 from openquake.risklib import calculators, utils, scientific
 
+Output = collections.namedtuple('Output', 'hid weight loss_type output')
+
 
 class Asset(object):
     """
@@ -222,14 +224,11 @@ class Classical(object):
             curves, average_losses, insured_curves, average_insured_losses,
             maps, fractions)
 
-    def statistics(self, outputs, weights, quantiles, post_processing):
+    def statistics(self, all_outputs, quantiles, post_processing):
         """
         :returns:
             a :class:`openquake.risklib.workflows.Classical.StatisticalOutput`
             instance holding statistical outputs (e.g. mean loss curves).
-        :param weights:
-            a collection of weights associated with each realization, to
-            allow the user to compute weighted means, weighted quantiles, etc.
         :param quantiles:
             quantile levels used to compute quantile outputs
         :param post_processing:
@@ -238,7 +237,16 @@ class Classical(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        loss_curves = [out.loss_curves for out in outputs]
+        if len(all_outputs) == 1:  # single realization
+            return
+
+        outputs = []
+        weights = []
+        loss_curves = []
+        for out in all_outputs:
+            outputs.append(out.output)
+            weights.append(out.weight)
+            loss_curves.append(out.output.loss_curves)
 
         def normalize_curves(curves):
             losses = curves[0][0]
@@ -278,6 +286,20 @@ class Classical(object):
             quantile_maps[:, len(self.maps.poes):],
             mean_insured_curves, mean_average_insured_losses,
             quantile_insured_curves, quantile_average_insured_losses)
+
+    def compute_all_outputs(self, getters, loss_type, getter_monitor):
+        """
+        :returns: a number of outputs equal to the number of realizations
+        """
+        all_outputs = []
+        for getter in getters:
+            assets, hazard_data = getter(getter_monitor)
+            if assets:
+                with getter_monitor.copy('computing individual risk'):
+                    all_outputs.append(
+                        Output(getter.hid, getter.weight, loss_type,
+                               self(loss_type, assets, hazard_data)))
+        return all_outputs
 
 
 class ProbabilisticEventBased(object):
@@ -429,14 +451,13 @@ class ProbabilisticEventBased(object):
             insured_curves, average_insured_losses, stddev_insured_losses,
             maps, elt)
 
-    def statistics(self, outputs, weights, quantiles, post_processing):
+    compute_all_outputs = Classical.compute_all_outputs.im_func
+
+    def statistics(self, all_outputs, quantiles, post_processing):
         """
         :returns:
             a :class:`.ProbabilisticEventBased.StatisticalOutput`
             instance holding statistical outputs (e.g. mean loss curves).
-        :param weights:
-            a collection of weights associated with each realization, to
-            allow the user to compute weighted means, weighted quantiles, etc.
         :param quantiles:
             quantile levels used to compute quantile outputs
         :param post_processing:
@@ -445,7 +466,17 @@ class ProbabilisticEventBased(object):
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
         """
-        loss_curves = [out.loss_curves for out in outputs]
+        if len(all_outputs) == 1:  # single realization
+            return
+
+        outputs = []
+        weights = []
+        loss_curves = []
+        for out in all_outputs:
+            outputs.append(out.output)
+            weights.append(out.weight)
+            loss_curves.append(out.output.loss_curves)
+
         curve_matrix = numpy.array(loss_curves).transpose(1, 0, 2, 3)
 
         (mean_curves, mean_average_losses, mean_maps,
@@ -532,6 +563,8 @@ class ClassicalBCR(object):
 
         return zip(eal_original, eal_retrofitted, bcr_results)
 
+    compute_all_outputs = Classical.compute_all_outputs.im_func
+
 
 class ProbabilisticEventBasedBCR(object):
     def __init__(self,
@@ -578,6 +611,8 @@ class ProbabilisticEventBasedBCR(object):
 
         return zip(eal_original, eal_retrofitted, bcr_results)
 
+    compute_all_outputs = Classical.compute_all_outputs.im_func
+
 
 class Scenario(object):
     """
@@ -617,39 +652,7 @@ class Scenario(object):
         return (assets, loss_ratio_matrix, aggregate_losses,
                 insured_loss_matrix, insured_losses)
 
-
-class CalculationUnit(object):
-    """
-    A calculation unit a risklib.workflow, a getter that
-    retrieves the data to work on, and the type of losses we are considering
-    """
-    UnitOutput = collections.namedtuple('RealizationOutput', 'hid output')
-
-    def __init__(self, loss_type, workflow, getter):
-        self.loss_type = loss_type
-        self.workflow = workflow
-        self.getter = getter
-
-    # FIXME(lp). move quantiles into a Calculator
-    def __call__(self, getter_monitor=None, calc_monitor=None,
-                 post_processing=None, quantiles=None):
-        getter_monitor = getter_monitor or DummyMonitor()
-        calc_monitor = calc_monitor or DummyMonitor()
-
-        outputs = []
-        for hid, assets, hazard_data in self.getter(getter_monitor):
-            with calc_monitor:
-                output = self.workflow(self.loss_type, assets, hazard_data)
-            outputs.append(self.UnitOutput(hid, output))
-
-        if len(outputs) > 1 and hasattr(self.workflow, 'statistics'):
-            return outputs, self.workflow.statistics(
-                [out.output for out in outputs],
-                self.getter.weights(),
-                quantiles,
-                post_processing)
-        else:
-            return outputs, None
+    compute_all_outputs = Classical.compute_all_outputs.im_func
 
 
 class DummyMonitor(object):
