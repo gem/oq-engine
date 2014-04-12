@@ -35,13 +35,13 @@ from openquake.engine import logs
 
 
 @tasks.oqtask
-def scenario_damage(job_id, units, outputdict, params):
+def scenario_damage(job_id, risk_models, outputdict, params):
     """
     Celery task for the scenario damage risk calculator.
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
+    :param list risk_models:
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
@@ -54,14 +54,16 @@ def scenario_damage(job_id, units, outputdict, params):
     monitor = EnginePerformanceMonitor(
         None, job_id, scenario_damage, tracing=True)
 
-    # in scenario damage calculation we have only ONE calculation unit
-    [(loss_type, workflow, getter)] = units
+    # in scenario damage calculation we have only ONE risk_model
+    [risk_model] = risk_models
+    [getter] = risk_model.getters
 
     # and NO containes
     assert len(outputdict) == 0
 
     with db.transaction.commit_on_success(using='job_init'):
-        return do_scenario_damage(loss_type, workflow, getter, params, monitor)
+        return do_scenario_damage(
+            risk_model.loss_type, risk_model.workflow, getter, params, monitor)
 
 
 def do_scenario_damage(loss_type, workflow, getter, params, monitor):
@@ -120,19 +122,12 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         self.ddpt = {}
         self.damage_state_ids = None
 
-    def calculation_unit(self, loss_type, assets):
-        """
-        :returns:
-          a list of :class:`..base.CalculationUnit` instances
-        """
-        taxonomy = assets[0].taxonomy
-        model = self.risk_models[taxonomy][loss_type]
+    def init_risk_model(self, model, assets):
         [ho] = self.rc.hazard_outputs()
-        return (
-            loss_type,
-            calculators.Damage(model.fragility_functions),
+        model.workflow = calculators.Damage(model.fragility_functions)
+        model.getters = [
             hazard_getters.ScenarioGetter(
-                ho, assets, self.rc.best_maximum_distance, model.imt))
+                ho, assets, self.rc.best_maximum_distance, model.imt)]
 
     def task_completed(self, task_result):
         """
@@ -191,6 +186,8 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             self.rc, self.rc.inputs['fragility'])
 
         self.damage_state_ids = damage_state_ids
+        for rm in risk_models.values():
+            rm['damage'].loss_type = 'damage'  # single loss_type
         return risk_models
 
     @property

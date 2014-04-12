@@ -29,7 +29,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def event_based_bcr(job_id, units, outputdict, _params):
+def event_based_bcr(job_id, risk_models, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -39,7 +39,7 @@ def event_based_bcr(job_id, units, outputdict, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
+    :param list risk_models:
       A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
@@ -54,24 +54,23 @@ def event_based_bcr(job_id, units, outputdict, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for loss_type, workflow, getters in units:
+        for risk_model in risk_models:
             do_event_based_bcr(
-                loss_type, workflow, getters,
-                outputdict.with_args(loss_type=loss_type),
+                risk_model,
+                outputdict.with_args(loss_type=risk_model.loss_type),
                 monitor)
 
 
-def do_event_based_bcr(loss_type, workflow, getters, outputdict, monitor):
+def do_event_based_bcr(risk_model, outputdict, monitor):
     """
     See `event_based_bcr` for docstring
     """
-    outputs = workflow.compute_all_outputs(
-        getters, loss_type, monitor.copy('getting hazard'))
+    outputs = risk_model.compute_outputs(monitor.copy('getting hazard'))
 
     with monitor.copy('writing results'):
         for out in outputs:
             outputdict.write(
-                workflow.assets,
+                risk_model. workflow.assets,
                 out.output,
                 output_type="bcr_distribution",
                 hazard_output_id=out.hid)
@@ -93,37 +92,34 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         super(EventBasedBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
 
-    def calculation_unit(self, loss_type, assets):
+    def init_risk_model(self, model, assets):
         """
         :returns:
           a list of instances of `..base.CalculationUnit` for the given
           `assets` to be run in the celery task
         """
-
         # assume all assets have the same taxonomy
         taxonomy = assets[0].taxonomy
-        model_orig = self.risk_models[taxonomy][loss_type]
-        model_retro = self.risk_models_retrofitted[taxonomy][loss_type]
+        model_orig = self.risk_models[taxonomy][model.loss_type]
+        model_retro = self.risk_models_retrofitted[taxonomy][model.loss_type]
         max_dist = self.rc.best_maximum_distance
         time_span, tses = self.hazard_times()
-
-        return (
-            loss_type,
-            workflows.ProbabilisticEventBasedBCR(
-                model_orig.vulnerability_function,
-                self.rnd.randint(0, models.MAX_SINT_32),
-                model_retro.vulnerability_function,
-                self.rnd.randint(0, models.MAX_SINT_32),
-                self.rc.asset_correlation,
-                time_span, tses, self.rc.loss_curve_resolution,
-                self.rc.interest_rate,
-                self.rc.asset_life_expectancy),
-            [hazard_getters.BCRGetter(
+        model.workflow = workflows.ProbabilisticEventBasedBCR(
+            model_orig.vulnerability_function,
+            self.rnd.randint(0, models.MAX_SINT_32),
+            model_retro.vulnerability_function,
+            self.rnd.randint(0, models.MAX_SINT_32),
+            self.rc.asset_correlation,
+            time_span, tses, self.rc.loss_curve_resolution,
+            self.rc.interest_rate,
+            self.rc.asset_life_expectancy)
+        model.getters = [
+            hazard_getters.BCRGetter(
                 hazard_getters.GroundMotionValuesGetter(
                     ho, assets, max_dist, model_orig.imt),
                 hazard_getters.GroundMotionValuesGetter(
                     ho, assets, max_dist, model_retro.imt))
-             for ho in self.rc.hazard_outputs()])
+            for ho in self.rc.hazard_outputs()]
 
     def post_process(self):
         """

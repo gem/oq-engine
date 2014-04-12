@@ -23,15 +23,15 @@ import mock
 from openquake.engine.calculators.risk import validation
 from openquake.engine.db import models
 
+from openquake.risklib.workflows import RiskModel
+
 
 class HazardIMTTestCase(unittest.TestCase):
     def test_get_error(self):
         calc = mock.Mock()
         calc.risk_models = {
-            'tax1': {
-                'loss1': models.RiskModel('imt1', None, None)},
-            'tax2': {
-                'loss2': models.RiskModel('imt2', None, None)}}
+            'tax1': {'loss1': RiskModel('imt1', None, None)},
+            'tax2': {'loss2': RiskModel('imt2', None, None)}}
         calc.hc.get_imts = mock.Mock(return_value=['imt1', 'imt2'])
         val = validation.HazardIMT(calc)
 
