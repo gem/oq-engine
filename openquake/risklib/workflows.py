@@ -402,7 +402,7 @@ class ProbabilisticEventBased(object):
         return collections.Counter(
             dict(zip(event_ids, numpy.sum(loss_matrix, axis=1))))
 
-    def __call__(self, loss_type, assets, (ground_motion_values, event_ids)):
+    def __call__(self, loss_type, assets, ground_motion_values, event_ids):
         """
         :returns:
             a
@@ -455,7 +455,20 @@ class ProbabilisticEventBased(object):
             insured_curves, average_insured_losses, stddev_insured_losses,
             maps, elt)
 
-    compute_all_outputs = Classical.compute_all_outputs.im_func
+    def compute_all_outputs(self, getters, loss_type, getter_monitor):
+        """
+        :returns: a number of outputs equal to the number of realizations
+        """
+        all_outputs = []
+        for getter in getters:
+            assets, (gmvs, ruptures) = getter(getter_monitor)
+            if assets:
+                with getter_monitor.copy('computing individual risk'):
+                    self.set_epsilons(len(assets), len(ruptures))
+                    all_outputs.append(
+                        Output(getter.hid, getter.weight, loss_type,
+                               self(loss_type, assets, gmvs, ruptures)))
+        return all_outputs
 
     def statistics(self, all_outputs, quantiles, post_processing):
         """
@@ -693,15 +706,3 @@ class RiskModel(object):
 
     def compute_stats(self, outputs, quantiles, post_processing):
         return self.workflow.statistics(outputs, quantiles, post_processing)
-
-
-class DummyMonitor(object):
-    """
-    This class makes it easy to disable the monitoring
-    in client code. Disabling the monitor can improve the performance.
-    """
-    def __enter__(self):
-        return self
-
-    def __exit__(self, _etype, _exc, _tb):
-        pass

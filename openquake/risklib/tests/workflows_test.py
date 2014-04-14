@@ -122,12 +122,11 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                                   dict(structural=0.1),
                                   dict(structural=0.8))]
         gmf = mock.Mock()
-        hazard = (gmf, [1])
         self.workflow.epsilons = mock.Mock()
         self.workflow.vulnerability_function.apply_to.return_value = \
             numpy.empty((1, 1))
 
-        output = self.workflow("structural", assets, hazard)
+        output = self.workflow("structural", assets, gmf, [1])
 
         self.assertEqual(assets, output.assets)
 
@@ -225,14 +224,13 @@ class ScenarioTestCase(unittest.TestCase):
             deductibles=dict(structural=0.1),
             insurance_limits=dict(structural=0.8))] * 4
 
-        hazard = (mock.Mock(), mock.Mock())
         calc.epsilons = mock.Mock()
         calc.vulnerability_function.apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
         (_assets, loss_ratio_matrix, aggregate_losses,
-         insured_loss_matrix, insured_losses) = (
-            calc("structural", assets, hazard))
+         insured_loss_matrix, insured_losses) = \
+            calc("structural", assets, mock.Mock())
 
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)

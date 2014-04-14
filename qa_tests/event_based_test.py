@@ -66,7 +66,7 @@ class EventBasedTestCase(unittest.TestCase):
             insured_losses=False
             )
         wf.set_epsilons(2, 5)
-        out = wf('structural', assets, (gmvs, [1, 2, 3, 4, 5]))
+        out = wf('structural', assets, gmvs, [1, 2, 3, 4, 5])
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 16.246646231503398,
@@ -103,7 +103,7 @@ class EventBasedTestCase(unittest.TestCase):
             insured_losses=False
             )
         wf.set_epsilons(2, 5)
-        out = wf('structural', assets, (gmvs, [1, 2, 3, 4, 5]))
+        out = wf('structural', assets, gmvs, [1, 2, 3, 4, 5])
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 15.332714802464356,
@@ -142,7 +142,7 @@ class EventBasedTestCase(unittest.TestCase):
             insured_losses=False
             )
         wf.set_epsilons(2, 5)
-        out = wf('structural', assets, (gmvs, [1, 2, 3, 4, 5]))
+        out = wf('structural', assets, gmvs, [1, 2, 3, 4, 5])
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 15.232320555463319,
@@ -228,7 +228,7 @@ class EventBasedTestCase(unittest.TestCase):
             insured_losses=True
             )
         wf.epsilons = epsilons
-        out = wf('structural', assets, (gmf[0:2], [1, 2, 3, 4, 5]))
+        out = wf('structural', assets, gmf[0:2], [1, 2, 3, 4, 5])
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 0.20314761658291458,
