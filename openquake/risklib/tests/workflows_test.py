@@ -123,6 +123,7 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                                   dict(structural=0.8))]
         gmf = mock.Mock()
         hazard = (gmf, [1])
+        self.workflow.epsilons = mock.Mock()
         self.workflow.vulnerability_function.apply_to.return_value = \
             numpy.empty((1, 1))
 
@@ -225,6 +226,7 @@ class ScenarioTestCase(unittest.TestCase):
             insurance_limits=dict(structural=0.8))] * 4
 
         hazard = (mock.Mock(), mock.Mock())
+        calc.epsilons = mock.Mock()
         calc.vulnerability_function.apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
@@ -243,6 +245,7 @@ class ScenarioTestCase(unittest.TestCase):
 
         assets = [workflows.Asset(dict(structural=10))] * 4
         hazard = (mock.Mock(), mock.Mock())
+        calc.epsilons = mock.Mock()
         calc.vulnerability_function.apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 

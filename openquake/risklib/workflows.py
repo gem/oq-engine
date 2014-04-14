@@ -382,6 +382,10 @@ class ProbabilisticEventBased(object):
         self.maps = calculators.LossMap(conditional_loss_poes)
         self.insured_losses = insured_losses
 
+    def set_epsilons(self, num_assets, num_realizations):
+        self.epsilons = scientific.make_epsilons(
+            num_assets, num_realizations, self.seed, self.asset_correlation)
+
     def event_loss(self, loss_matrix, event_ids):
         """
         :param loss_matrix:
@@ -419,7 +423,7 @@ class ProbabilisticEventBased(object):
         """
 
         loss_matrix = self.vulnerability_function.apply_to(
-            ground_motion_values, self.seed, self.asset_correlation)
+            ground_motion_values, self.epsilons)
 
         curves = self.curves(loss_matrix)
         average_losses = numpy.array([scientific.average_loss(losses, poes)
@@ -586,13 +590,17 @@ class ProbabilisticEventBasedBCR(object):
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
 
+    def set_epsilons(self, num_assets, num_realizations):
+        self.epsilons = scientific.make_epsilons(
+            num_assets, num_realizations, self.seed, self.asset_correlation)
+
     def __call__(self, loss_type, assets, ((orig, _), (retro, __))):
         self.assets = assets
 
         original_loss_curves = self.curves(
-            self.vf_orig.apply_to(orig, self.seed_orig, self.correlation))
+            self.vf_orig.apply_to(orig, self.epsilons))
         retrofitted_loss_curves = self.curves(
-            self.vf_retro.apply_to(retro, self.seed_retro, self.correlation))
+            self.vf_retro.apply_to(retro, self.epsilons))
 
         eal_original = [
             scientific.average_loss(losses, poes)
@@ -625,11 +633,15 @@ class Scenario(object):
         self.asset_correlation = asset_correlation
         self.insured_losses = insured_losses
 
+    def set_epsilons(self, num_assets, num_realizations):
+        self.epsilons = scientific.make_epsilons(
+            num_assets, num_realizations, self.seed, self.asset_correlation)
+
     def __call__(self, loss_type, assets, ground_motion_values):
         values = numpy.array([a.value(loss_type) for a in assets])
 
         loss_ratio_matrix = self.vulnerability_function.apply_to(
-            ground_motion_values, self.seed, self.asset_correlation)
+            ground_motion_values, self.epsilons)
 
         aggregate_losses = numpy.sum(
             loss_ratio_matrix.transpose() * values, axis=1)

@@ -46,7 +46,8 @@ class EventBasedTestCase(unittest.TestCase):
         gmvs = numpy.array([[10., 20., 30., 40., 50.],
                             [1., 2., 3., 4., 5.]])
 
-        loss_matrix = vf.apply_to(gmvs, seed=1, asset_correlation=0)
+        epsilons = scientific.make_epsilons(2, 5, seed=1, correlation=0)
+        loss_matrix = vf.apply_to(gmvs, epsilons)
         losses, poes = scientific.event_based(
             loss_matrix[0], 120, 30, curve_resolution=4)
 
@@ -54,7 +55,7 @@ class EventBasedTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(0.500993631, first_curve_integral)
 
-        out = workflows.ProbabilisticEventBased(
+        wf = workflows.ProbabilisticEventBased(
             vulnerability_function=vf,
             seed=1,
             asset_correlation=0,
@@ -63,7 +64,9 @@ class EventBasedTestCase(unittest.TestCase):
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
-            )('structural', assets, (gmvs, [1, 2, 3, 4, 5]))
+            )
+        wf.set_epsilons(2, 5)
+        out = wf('structural', assets, (gmvs, [1, 2, 3, 4, 5]))
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 16.246646231503398,
@@ -81,14 +84,15 @@ class EventBasedTestCase(unittest.TestCase):
                 [0.01, 0.02, 0.02, 0.01, 0.03], "LN"))
         gmvs = numpy.array([[10., 20., 30., 40., 50.],
                            [1., 2., 3., 4., 5.]])
-        loss_matrix = vf.apply_to(gmvs, seed=1, asset_correlation=0.5)
+        epsilons = scientific.make_epsilons(2, 5, seed=1, correlation=0.5)
+        loss_matrix = vf.apply_to(gmvs, epsilons)
 
         losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
         first_curve_integral = scientific.average_loss(losses, poes)
 
         self.assertAlmostEqual(0.48983614471, first_curve_integral)
 
-        out = workflows.ProbabilisticEventBased(
+        wf = workflows.ProbabilisticEventBased(
             vulnerability_function=vf,
             seed=1,
             asset_correlation=0.5,
@@ -97,7 +101,9 @@ class EventBasedTestCase(unittest.TestCase):
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
-            )('structural', assets, (gmvs, [1, 2, 3, 4, 5]))
+            )
+        wf.set_epsilons(2, 5)
+        out = wf('structural', assets, (gmvs, [1, 2, 3, 4, 5]))
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 15.332714802464356,
@@ -117,14 +123,15 @@ class EventBasedTestCase(unittest.TestCase):
         gmvs = [[10., 20., 30., 40., 50.],
                 [1., 2., 3., 4., 5.]]
 
-        loss_matrix = vf.apply_to(gmvs, seed=1, asset_correlation=1)
+        epsilons = scientific.make_epsilons(2, 5, seed=1, correlation=1)
+        loss_matrix = vf.apply_to(gmvs, epsilons)
         losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
 
         first_curve_integral = scientific.average_loss(losses, poes)
 
         self.assertAlmostEqual(0.483041416, first_curve_integral)
 
-        out = workflows.ProbabilisticEventBased(
+        wf = workflows.ProbabilisticEventBased(
             vulnerability_function=vf,
             seed=1,
             asset_correlation=1,
@@ -133,7 +140,9 @@ class EventBasedTestCase(unittest.TestCase):
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
-            )('structural', assets, (gmvs, [1, 2, 3, 4, 5]))
+            )
+        wf.set_epsilons(2, 5)
+        out = wf('structural', assets, (gmvs, [1, 2, 3, 4, 5]))
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 15.232320555463319,
@@ -144,6 +153,7 @@ class EventBasedTestCase(unittest.TestCase):
                                  }))
 
     def test_mean_based(self):
+        epsilons = scientific.make_epsilons(1, 5, seed=1, correlation=0)
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
@@ -155,13 +165,13 @@ class EventBasedTestCase(unittest.TestCase):
                 [0.0, 0.0, 0.0, 0.0, 0.0], "LN"))
 
         curve_rm_1 = scientific.event_based(
-            vulnerability_function_rm.apply_to([gmf[0]])[0], 50, 50)
+            vulnerability_function_rm.apply_to([gmf[0]], epsilons)[0], 50, 50)
 
         curve_rm_2 = scientific.event_based(
-            vulnerability_function_rm.apply_to([gmf[1]])[0], 50, 50)
+            vulnerability_function_rm.apply_to([gmf[1]], epsilons)[0], 50, 50)
 
         curve_rc = scientific.event_based(
-            vulnerability_function_rc.apply_to([gmf[2]])[0], 50, 50)
+            vulnerability_function_rc.apply_to([gmf[2]], epsilons)[0], 50, 50)
 
         for i, curve_rm in enumerate([curve_rm_1, curve_rm_2]):
 
@@ -188,7 +198,8 @@ class EventBasedTestCase(unittest.TestCase):
             [0.0, 0.0, 0.0, 0.0, 0.0],
             "LN")
 
-        loss_ratios = vf.apply_to(gmf[0:2])
+        epsilons = scientific.make_epsilons(2, 5, seed=1, correlation=0)
+        loss_ratios = vf.apply_to(gmf[0:2], epsilons)
 
         values = [3000, 1000]
         insured_limits = [1250., 40.]
@@ -206,7 +217,7 @@ class EventBasedTestCase(unittest.TestCase):
             [207.86489132 / 3000,   38.07815797 / 1000],
             insured_average_losses)
 
-        out = workflows.ProbabilisticEventBased(
+        wf = workflows.ProbabilisticEventBased(
             vulnerability_function=vf,
             seed=1,
             asset_correlation=1,
@@ -215,7 +226,9 @@ class EventBasedTestCase(unittest.TestCase):
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=True
-            )('structural', assets, (gmf[0:2], [1, 2, 3, 4, 5]))
+            )
+        wf.epsilons = epsilons
+        out = wf('structural', assets, (gmf[0:2], [1, 2, 3, 4, 5]))
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 0.20314761658291458,

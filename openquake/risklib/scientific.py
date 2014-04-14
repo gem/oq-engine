@@ -99,7 +99,7 @@ class VulnerabilityFunction(object):
 
         self.distribution.init(asset_count, sample_num, seed, correlation)
 
-    def apply_to(self, ground_motion_values, seed=None, asset_correlation=0):
+    def apply_to(self, ground_motion_values, epsilons):
         """
         Apply a copy of the vulnerability function to a set of N
         ground_motion_values, where N is the number of assets. seed
@@ -108,17 +108,13 @@ class VulnerabilityFunction(object):
         uninitialized if it was unitialized at the beginning.
 
         :param ground_motion_values:
-           a sequence of ground motion values (1 array per site)
-        :param seed:
-           a stochastic seed
-        :param asset_correlation:
-           correlation parameter in the range [0, 1]
+           matrix N x R
+        :param epsilons:
+           matrix R x N
         """
         vulnerability_function = copy.copy(self)
-        vulnerability_function.init_distribution(
-            len(ground_motion_values),
-            len(ground_motion_values[0]),
-            seed, asset_correlation)
+        vulnerability_function.distribution.epsilons = epsilons
+        vulnerability_function.distribution.epsilon_idx = 0
         return utils.numpy_map(vulnerability_function, ground_motion_values)
 
     @utils.memoized
@@ -417,6 +413,17 @@ class DegenerateDistribution(Distribution):
             loss_ratio, [loss_ratio > mean or not mean], [0, 1])
 
 
+def make_epsilons(asset_count, samples, seed, correlation):
+    if seed is not None:
+        numpy.random.seed(seed)
+    means_vector = numpy.zeros(asset_count)
+    covariance_matrix = (
+        numpy.ones((asset_count, asset_count)) * correlation +
+        numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
+    return numpy.random.multivariate_normal(
+        means_vector, covariance_matrix, samples).transpose()
+
+
 @DISTRIBUTIONS.add('LN')
 class LogNormalDistribution(Distribution):
     """
@@ -435,15 +442,8 @@ class LogNormalDistribution(Distribution):
         self.epsilon_idx = 0
 
     def init(self, asset_count=1, samples=1, seed=None, correlation=0):
-        if seed is not None:
-            numpy.random.seed(seed)
-
-        means_vector = numpy.zeros(asset_count)
-        covariance_matrix = (
-            numpy.ones((asset_count, asset_count)) * correlation +
-            numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
-        self.epsilons = numpy.random.multivariate_normal(
-            means_vector, covariance_matrix, samples).transpose()
+        self.epsilons = make_epsilons(
+            asset_count, samples, seed, correlation)
         self.epsilon_idx = 0
 
     def sample(self, means, covs, _stddevs):
@@ -453,9 +453,8 @@ class LogNormalDistribution(Distribution):
         epsilons = self.epsilons[self.epsilon_idx]
         self.epsilon_idx += 1
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
-
         return (means / numpy.sqrt(1 + covs ** 2) *
-                numpy.exp(epsilons[0:len(sigma)] * sigma))
+                numpy.exp(epsilons[0:len(covs)] * sigma))
 
     def survival(self, loss_ratio, mean, stddev):
 
