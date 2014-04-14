@@ -46,7 +46,7 @@ class EventBasedTestCase(unittest.TestCase):
         gmvs = numpy.array([[10., 20., 30., 40., 50.],
                             [1., 2., 3., 4., 5.]])
 
-        epsilons = scientific.make_epsilons(2, 5, seed=1, correlation=0)
+        epsilons = scientific.make_epsilons(gmvs, seed=1, correlation=0)
         loss_matrix = vf.apply_to(gmvs, epsilons)
         losses, poes = scientific.event_based(
             loss_matrix[0], 120, 30, curve_resolution=4)
@@ -65,8 +65,7 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
-        wf.set_epsilons(2, 5)
-        out = wf('structural', assets, gmvs, [1, 2, 3, 4, 5])
+        out = wf('structural', assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 16.246646231503398,
@@ -84,7 +83,7 @@ class EventBasedTestCase(unittest.TestCase):
                 [0.01, 0.02, 0.02, 0.01, 0.03], "LN"))
         gmvs = numpy.array([[10., 20., 30., 40., 50.],
                            [1., 2., 3., 4., 5.]])
-        epsilons = scientific.make_epsilons(2, 5, seed=1, correlation=0.5)
+        epsilons = scientific.make_epsilons(gmvs, seed=1, correlation=0.5)
         loss_matrix = vf.apply_to(gmvs, epsilons)
 
         losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
@@ -102,8 +101,7 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
-        wf.set_epsilons(2, 5)
-        out = wf('structural', assets, gmvs, [1, 2, 3, 4, 5])
+        out = wf('structural', assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 15.332714802464356,
@@ -123,7 +121,7 @@ class EventBasedTestCase(unittest.TestCase):
         gmvs = [[10., 20., 30., 40., 50.],
                 [1., 2., 3., 4., 5.]]
 
-        epsilons = scientific.make_epsilons(2, 5, seed=1, correlation=1)
+        epsilons = scientific.make_epsilons(gmvs, seed=1, correlation=1)
         loss_matrix = vf.apply_to(gmvs, epsilons)
         losses, poes = scientific.event_based(loss_matrix[0], 120, 30, 4)
 
@@ -141,8 +139,7 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
-        wf.set_epsilons(2, 5)
-        out = wf('structural', assets, gmvs, [1, 2, 3, 4, 5])
+        out = wf('structural', assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 15.232320555463319,
@@ -153,7 +150,7 @@ class EventBasedTestCase(unittest.TestCase):
                                  }))
 
     def test_mean_based(self):
-        epsilons = scientific.make_epsilons(1, 5, seed=1, correlation=0)
+        epsilons = scientific.make_epsilons([gmf[0]], seed=1, correlation=0)
         vulnerability_function_rm = (
             scientific.VulnerabilityFunction(
                 [0.001, 0.2, 0.3, 0.5, 0.7], [0.01, 0.1, 0.2, 0.4, 0.8],
@@ -198,7 +195,7 @@ class EventBasedTestCase(unittest.TestCase):
             [0.0, 0.0, 0.0, 0.0, 0.0],
             "LN")
 
-        epsilons = scientific.make_epsilons(2, 5, seed=1, correlation=0)
+        epsilons = scientific.make_epsilons(gmf[0:2], seed=1, correlation=0)
         loss_ratios = vf.apply_to(gmf[0:2], epsilons)
 
         values = [3000, 1000]
@@ -227,8 +224,7 @@ class EventBasedTestCase(unittest.TestCase):
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=True
             )
-        wf.epsilons = epsilons
-        out = wf('structural', assets, gmf[0:2], [1, 2, 3, 4, 5])
+        out = wf('structural', assets, gmf[0:2], epsilons, [1, 2, 3, 4, 5])
         self.assertEqual(
             out.event_loss_table,
             collections.Counter({1: 0.20314761658291458,

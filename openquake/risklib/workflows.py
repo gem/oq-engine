@@ -382,10 +382,6 @@ class ProbabilisticEventBased(object):
         self.maps = calculators.LossMap(conditional_loss_poes)
         self.insured_losses = insured_losses
 
-    def set_epsilons(self, num_assets, num_realizations):
-        self.epsilons = scientific.make_epsilons(
-            num_assets, num_realizations, self.seed, self.asset_correlation)
-
     def event_loss(self, loss_matrix, event_ids):
         """
         :param loss_matrix:
@@ -402,7 +398,8 @@ class ProbabilisticEventBased(object):
         return collections.Counter(
             dict(zip(event_ids, numpy.sum(loss_matrix, axis=1))))
 
-    def __call__(self, loss_type, assets, ground_motion_values, event_ids):
+    def __call__(self, loss_type, assets, ground_motion_values, epsilons,
+                 event_ids):
         """
         :returns:
             a
@@ -421,9 +418,8 @@ class ProbabilisticEventBased(object):
         :param event_ids:
            a numpy array of R event ID (integer)
         """
-
         loss_matrix = self.vulnerability_function.apply_to(
-            ground_motion_values, self.epsilons)
+            ground_motion_values, epsilons)
 
         curves = self.curves(loss_matrix)
         average_losses = numpy.array([scientific.average_loss(losses, poes)
@@ -464,10 +460,12 @@ class ProbabilisticEventBased(object):
             assets, (gmvs, ruptures) = getter(getter_monitor)
             if assets:
                 with getter_monitor.copy('computing individual risk'):
-                    self.set_epsilons(len(assets), len(ruptures))
+                    epsilons = scientific.make_epsilons(
+                        gmvs, self.seed, self.asset_correlation)
                     all_outputs.append(
                         Output(getter.hid, getter.weight, loss_type,
-                               self(loss_type, assets, gmvs, ruptures)))
+                               self(loss_type, assets, gmvs, epsilons,
+                                    ruptures)))
         return all_outputs
 
     def statistics(self, all_outputs, quantiles, post_processing):
@@ -604,22 +602,12 @@ class ProbabilisticEventBasedBCR(object):
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
 
-    def set_epsilons(self, num_assets, num_realizations):
-        self.epsilons_orig = scientific.make_epsilons(
-            num_assets, num_realizations, self.seed_orig,
-            self.correlation)
-
-        self.epsilons_retro = scientific.make_epsilons(
-            num_assets, num_realizations, self.seed_retro,
-            self.correlation)
-
-    def __call__(self, loss_type, assets, orig, retro):
+    def __call__(self, loss_type, assets, gmf_eps_orig, gmf_eps_retro):
         self.assets = assets
-
         original_loss_curves = self.curves(
-            self.vf_orig.apply_to(orig, self.epsilons_orig))
+            self.vf_orig.apply_to(*gmf_eps_orig))
         retrofitted_loss_curves = self.curves(
-            self.vf_retro.apply_to(retro, self.epsilons_retro))
+            self.vf_retro.apply_to(*gmf_eps_retro))
 
         eal_original = [
             scientific.average_loss(losses, poes)
@@ -645,14 +633,19 @@ class ProbabilisticEventBasedBCR(object):
         all_outputs = []
         for getter in getters:
             assets, (orig, retro) = getter(getter_monitor)
-            assert retro[1] == orig[1]
-            ruptures = orig[1]
+            assert retro[1] == orig[1]  # same ruptures
             if assets:
+
+                orig_eps = (orig[0], scientific.make_epsilons(
+                    orig[0], self.seed_orig, self.correlation))
+
+                retro_eps = (retro[0], scientific.make_epsilons(
+                    retro[0], self.seed_retro, self.correlation))
+
                 with getter_monitor.copy('computing individual risk'):
-                    self.set_epsilons(len(assets), len(ruptures))
                     all_outputs.append(
                         Output(getter.hid, getter.weight, loss_type,
-                               self(loss_type, assets, orig[0], retro[0])))
+                               self(loss_type, assets, orig_eps, retro_eps)))
         return all_outputs
 
 
@@ -667,15 +660,11 @@ class Scenario(object):
         self.asset_correlation = asset_correlation
         self.insured_losses = insured_losses
 
-    def set_epsilons(self, num_assets, num_realizations):
-        self.epsilons = scientific.make_epsilons(
-            num_assets, num_realizations, self.seed, self.asset_correlation)
-
-    def __call__(self, loss_type, assets, ground_motion_values):
+    def __call__(self, loss_type, assets, ground_motion_values, epsilons):
         values = numpy.array([a.value(loss_type) for a in assets])
 
         loss_ratio_matrix = self.vulnerability_function.apply_to(
-            ground_motion_values, self.epsilons)
+            ground_motion_values, epsilons)
 
         aggregate_losses = numpy.sum(
             loss_ratio_matrix.transpose() * values, axis=1)
@@ -707,10 +696,11 @@ class Scenario(object):
             assets, gmvs = getter(getter_monitor)
             if assets:
                 with getter_monitor.copy('computing individual risk'):
-                    self.set_epsilons(len(assets), len(gmvs[0]))
+                    epsilons = scientific.make_epsilons(
+                        gmvs, self.seed, self.asset_correlation)
                     all_outputs.append(
                         Output(getter.hid, getter.weight, loss_type,
-                               self(loss_type, assets, gmvs)))
+                               self(loss_type, assets, gmvs, epsilons)))
         return all_outputs
 
 

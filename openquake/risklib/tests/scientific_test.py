@@ -85,7 +85,9 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         self.test_func = scientific.VulnerabilityFunction(
             self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_GOOD, "LN")
 
-        self.test_func.init_distribution(1, 1, seed=3)
+        epsilons = scientific.make_epsilons(
+            numpy.zeros((1, 1)), seed=3, correlation=0)
+        self.test_func.set_distribution(epsilons)
 
     def test_vuln_func_constructor_raises_on_bad_imls(self):
         # This test attempts to invoke AssertionErrors by passing 3 different
@@ -238,15 +240,14 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
 class LogNormalDistributionTestCase(unittest.TestCase):
 
-    def setUp(self):
-        self.dist = scientific.LogNormalDistribution()
-
     def test_init(self):
         assets_num = 100
         samples_num = 1000
         correlation = 0.37
-        self.dist.init(assets_num, samples_num, correlation=correlation,
-                       seed=17)
+        epsilons = scientific.make_epsilons(
+            numpy.zeros((assets_num, samples_num)),
+            seed=17, correlation=correlation)
+        self.dist = scientific.LogNormalDistribution(epsilons)
 
         tol = 0.1
         for a1, a2 in utils.pairwise(range(assets_num)):
@@ -262,8 +263,13 @@ class LogNormalDistributionTestCase(unittest.TestCase):
     def test_sample_mixed(self):
         # test that sampling works also when we have both covs = 0 and
         # covs != 0
-
-        self.dist.init(1, 1, seed=17)
+        assets_num = 1
+        samples_num = 1
+        correlation = 0.37
+        epsilons = scientific.make_epsilons(
+            numpy.zeros((assets_num, samples_num)),
+            seed=17, correlation=correlation)
+        self.dist = scientific.LogNormalDistribution(epsilons)
         samples = self.dist.sample(numpy.array([0., 0., .1, .1]),
                                    numpy.array([0., .1, 0., .1]),
                                    None)
