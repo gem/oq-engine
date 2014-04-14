@@ -560,6 +560,7 @@ class ClassicalBCR(object):
 
     def __call__(self, loss_type, assets, (orig, retro)):
         self.assets = assets
+
         original_loss_curves = self.curves_orig(orig)
         retrofitted_loss_curves = self.curves_retro(retro)
 
@@ -604,16 +605,21 @@ class ProbabilisticEventBasedBCR(object):
             time_span, tses, loss_curve_resolution)
 
     def set_epsilons(self, num_assets, num_realizations):
-        self.epsilons = scientific.make_epsilons(
-            num_assets, num_realizations, self.seed, self.asset_correlation)
+        self.epsilons_orig = scientific.make_epsilons(
+            num_assets, num_realizations, self.seed_orig,
+            self.correlation)
 
-    def __call__(self, loss_type, assets, ((orig, _), (retro, __))):
+        self.epsilons_retro = scientific.make_epsilons(
+            num_assets, num_realizations, self.seed_retro,
+            self.correlation)
+
+    def __call__(self, loss_type, assets, orig, retro):
         self.assets = assets
 
         original_loss_curves = self.curves(
-            self.vf_orig.apply_to(orig, self.epsilons))
+            self.vf_orig.apply_to(orig, self.epsilons_orig))
         retrofitted_loss_curves = self.curves(
-            self.vf_retro.apply_to(retro, self.epsilons))
+            self.vf_retro.apply_to(retro, self.epsilons_retro))
 
         eal_original = [
             scientific.average_loss(losses, poes)
@@ -632,7 +638,22 @@ class ProbabilisticEventBasedBCR(object):
 
         return zip(eal_original, eal_retrofitted, bcr_results)
 
-    compute_all_outputs = Classical.compute_all_outputs.im_func
+    def compute_all_outputs(self, getters, loss_type, getter_monitor):
+        """
+        :returns: a number of outputs equal to the number of realizations
+        """
+        all_outputs = []
+        for getter in getters:
+            assets, (orig, retro) = getter(getter_monitor)
+            assert retro[1] == orig[1]
+            ruptures = orig[1]
+            if assets:
+                with getter_monitor.copy('computing individual risk'):
+                    self.set_epsilons(len(assets), len(ruptures))
+                    all_outputs.append(
+                        Output(getter.hid, getter.weight, loss_type,
+                               self(loss_type, assets, orig[0], retro[0])))
+        return all_outputs
 
 
 class Scenario(object):
@@ -677,7 +698,20 @@ class Scenario(object):
         return (assets, loss_ratio_matrix, aggregate_losses,
                 insured_loss_matrix, insured_losses)
 
-    compute_all_outputs = Classical.compute_all_outputs.im_func
+    def compute_all_outputs(self, getters, loss_type, getter_monitor):
+        """
+        :returns: a number of outputs equal to the number of realizations
+        """
+        all_outputs = []
+        for getter in getters:
+            assets, gmvs = getter(getter_monitor)
+            if assets:
+                with getter_monitor.copy('computing individual risk'):
+                    self.set_epsilons(len(assets), len(gmvs[0]))
+                    all_outputs.append(
+                        Output(getter.hid, getter.weight, loss_type,
+                               self(loss_type, assets, gmvs)))
+        return all_outputs
 
 
 class RiskModel(object):
