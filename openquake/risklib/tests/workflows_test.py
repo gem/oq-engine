@@ -73,15 +73,19 @@ class ClassicalTest(unittest.TestCase):
         self.calcs.exposure_statistics.return_value = [
             mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
             numpy.empty((3, 2))]
+        weight = 0.5
         self.workflow.statistics(
-            [out],
-            mock.Mock(), mock.Mock(), mock.Mock())
+            [workflows.Output(1, weight, 'structural', out),
+             workflows.Output(1, weight, 'structural', out)],
+            mock.Mock(), mock.Mock())
         self.assertEqual(
             1, self.calcs.exposure_statistics.call_count)
 
         self.workflow.insured_losses = True
         self.workflow.statistics(
-            [out], mock.Mock(), mock.Mock(), mock.Mock())
+            [workflows.Output(1, weight, 'structural', out),
+             workflows.Output(1, weight, 'structural', out)],
+            mock.Mock(), mock.Mock())
         self.assertEqual(
             3,  # 2 more
             self.calcs.exposure_statistics.call_count)
@@ -118,11 +122,10 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                                   dict(structural=0.1),
                                   dict(structural=0.8))]
         gmf = mock.Mock()
-        hazard = (gmf, [1])
         self.workflow.vulnerability_function.apply_to.return_value = \
             numpy.empty((1, 1))
 
-        output = self.workflow("structural", assets, hazard)
+        output = self.workflow("structural", assets, gmf, mock.Mock(), [1])
 
         self.assertEqual(assets, output.assets)
 
@@ -145,15 +148,19 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         self.calcs.exposure_statistics.return_value = [
             mock.Mock(), mock.Mock(), [1, 2], mock.Mock(), mock.Mock(),
             numpy.empty((3, 2))]
+        weight = 0.5
         self.workflow.statistics(
-            [out],
-            mock.Mock(), mock.Mock(), mock.Mock())
+            [workflows.Output(1, weight, 'structural', out),
+             workflows.Output(1, weight, 'structural', out)],
+            mock.Mock(), mock.Mock())
         self.assertEqual(
             1, self.calcs.exposure_statistics.call_count)
 
         self.workflow.insured_losses = True
         self.workflow.statistics(
-            [out], mock.Mock(), mock.Mock(), mock.Mock())
+            [workflows.Output(1, weight, 'structural', out),
+             workflows.Output(1, weight, 'structural', out)],
+            mock.Mock(), mock.Mock())
         self.assertEqual(
             3,  # 2 more
             self.calcs.exposure_statistics.call_count)
@@ -216,13 +223,12 @@ class ScenarioTestCase(unittest.TestCase):
             deductibles=dict(structural=0.1),
             insurance_limits=dict(structural=0.8))] * 4
 
-        hazard = (mock.Mock(), mock.Mock())
         calc.vulnerability_function.apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
         (_assets, loss_ratio_matrix, aggregate_losses,
-         insured_loss_matrix, insured_losses) = (
-            calc("structural", assets, hazard))
+         insured_loss_matrix, insured_losses) = \
+            calc("structural", assets, mock.Mock(), mock.Mock())
 
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)
@@ -234,35 +240,14 @@ class ScenarioTestCase(unittest.TestCase):
         calc = workflows.Scenario(vf, 0, 0, False)
 
         assets = [workflows.Asset(dict(structural=10))] * 4
-        hazard = (mock.Mock(), mock.Mock())
         calc.vulnerability_function.apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
         (assets, loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
-            calc("structural", assets, hazard))
+            calc("structural", assets, mock.Mock(), mock.Mock()))
 
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)
         self.assertIsNone(insured_loss_matrix)
         self.assertIsNone(insured_losses)
-
-
-class CalculationUnitTestCase(unittest.TestCase):
-    def test_call_three_realizations(self):
-        c = workflows.CalculationUnit(mock.Mock(), mock.Mock(), mock.Mock())
-
-        c.getter.return_value = [(mock.Mock(), mock.Mock(), mock.Mock())] * 3
-        outputs, stats = c()
-        self.assertIsNotNone(stats)
-        self.assertEqual(3, len(outputs))
-        outputs, stats = c(post_processing=mock.Mock())
-        self.assertIsNotNone(stats)
-
-    def test_call_one_realizations(self):
-        c = workflows.CalculationUnit(mock.Mock(), mock.Mock(), mock.Mock())
-
-        c.getter.return_value = [(mock.Mock(), mock.Mock(), mock.Mock())]
-        outputs, stats = c(post_processing=mock.Mock())
-        self.assertIsNone(stats)
-        self.assertEqual(1, len(outputs))

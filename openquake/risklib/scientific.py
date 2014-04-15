@@ -78,47 +78,37 @@ class VulnerabilityFunction(object):
 
         self.distribution_name = distribution
 
-        # to be set in #init
+        # to be set in .init(), called also by __setstate__
         (self.stddevs, self._mlr_i1d, self._covs_i1d,
          self.distribution) = None, None, None, None
-
         self.init()
 
     def init(self):
         self.stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
+        self.set_distribution(None)
 
+    def set_distribution(self, epsilons=None):
         if (self.covs > 0).any():
             self.distribution = DISTRIBUTIONS[self.distribution_name]()
         else:
             self.distribution = DegenerateDistribution()
+        self.distribution.epsilons = epsilons
 
-    def init_distribution(self, asset_count=1, sample_num=1,
-                          seed=None, correlation=0):
-
-        self.distribution.init(asset_count, sample_num, seed, correlation)
-
-    def apply_to(self, ground_motion_values, seed=None, asset_correlation=0):
+    def apply_to(self, ground_motion_values, epsilons):
         """
         Apply a copy of the vulnerability function to a set of N
-        ground_motion_values, where N is the number of assets. seed
-        and asset_correlation are used to initialize the distribution,
-        i.e. the epsilons. The original function is left unchanged, i.e.
-        uninitialized if it was unitialized at the beginning.
+        ground motion vectors, by using N epsilon vectors of length R.
+        N is the number of assets and R the number of realizations.
 
         :param ground_motion_values:
-           a sequence of ground motion values (1 array per site)
-        :param seed:
-           a stochastic seed
-        :param asset_correlation:
-           correlation parameter in the range [0, 1]
+           matrix of floats N x R
+        :param epsilons:
+           matrix of floats N x R
         """
         vulnerability_function = copy.copy(self)
-        vulnerability_function.init_distribution(
-            len(ground_motion_values),
-            len(ground_motion_values[0]),
-            seed, asset_correlation)
+        vulnerability_function.set_distribution(epsilons)
         return utils.numpy_map(vulnerability_function, ground_motion_values)
 
     @utils.memoized
@@ -363,28 +353,6 @@ class Distribution(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def init(self, asset_count=1, sample_count=1, seed=None, correlation=0):
-        """
-        Abstract method to be extended by derived classes. It must be
-        called before any previous use of the method `sample`. It
-        initialize the random number generator and it may be
-        overridden to precompute random values with a given
-        correlation among assets.
-
-        :param int asset_count: the expected number of assets
-
-        :param int sample_count: the expected number of samples for
-        each asset
-
-        :param int seed: the seed used to initialize the random number
-        generator
-
-        :param float correlation: a value between 0 (inclusive) and 1
-        that indicates the correlation between samples across
-        different assets.
-        """
-        assert correlation >= 0 and correlation <= 1
-
     @abc.abstractmethod
     def sample(self, means, covs, stddevs):
         """
@@ -417,6 +385,25 @@ class DegenerateDistribution(Distribution):
             loss_ratio, [loss_ratio > mean or not mean], [0, 1])
 
 
+def make_epsilons(matrix, seed, correlation):
+    """
+    Given a matrix N * R returns a matrix of the same shape N * R
+    obtained by applying the multivariate_normal distribution to
+    N points and R samples, by starting from the given seed and
+    correlation.
+    """
+    if seed is not None:
+        numpy.random.seed(seed)
+    asset_count = len(matrix)
+    samples = len(matrix[0])
+    means_vector = numpy.zeros(asset_count)
+    covariance_matrix = (
+        numpy.ones((asset_count, asset_count)) * correlation +
+        numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
+    return numpy.random.multivariate_normal(
+        means_vector, covariance_matrix, samples).transpose()
+
+
 @DISTRIBUTIONS.add('LN')
 class LogNormalDistribution(Distribution):
     """
@@ -430,20 +417,8 @@ class LogNormalDistribution(Distribution):
     :attr epsilon_idx: a counter used in sampling to iterate over the
     attribute `epsilons`
     """
-    def __init__(self):
-        self.epsilons = None
-        self.epsilon_idx = 0
-
-    def init(self, asset_count=1, samples=1, seed=None, correlation=0):
-        if seed is not None:
-            numpy.random.seed(seed)
-
-        means_vector = numpy.zeros(asset_count)
-        covariance_matrix = (
-            numpy.ones((asset_count, asset_count)) * correlation +
-            numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
-        self.epsilons = numpy.random.multivariate_normal(
-            means_vector, covariance_matrix, samples).transpose()
+    def __init__(self, epsilons=None):
+        self.epsilons = epsilons
         self.epsilon_idx = 0
 
     def sample(self, means, covs, _stddevs):
@@ -453,12 +428,10 @@ class LogNormalDistribution(Distribution):
         epsilons = self.epsilons[self.epsilon_idx]
         self.epsilon_idx += 1
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
-
         return (means / numpy.sqrt(1 + covs ** 2) *
-                numpy.exp(epsilons[0:len(sigma)] * sigma))
+                numpy.exp(epsilons[0:len(covs)] * sigma))
 
     def survival(self, loss_ratio, mean, stddev):
-
         # scipy does not handle correctly the limit case stddev = 0.
         # In that case, when `mean` > 0 the survival function
         # approaches to a step function, otherwise (`mean` == 0) we
