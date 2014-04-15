@@ -22,6 +22,7 @@
 import sys
 import cPickle
 import traceback
+import psutil
 
 from celery.task.sets import TaskSet
 from celery.app import current_app
@@ -36,6 +37,17 @@ from openquake.engine.performance import EnginePerformanceMonitor, \
 
 
 ONE_MB = 1024 * 1024
+
+
+def check_mem_usage(used_mem_percent=90):
+    """
+    Display a warning if we are running out of memory
+
+    :param int used_mem_percent: the memory limit as a percentage
+    """
+    mem_percent = psutil.virtmem_usage().percent
+    if mem_percent > used_mem_percent:
+        logs.LOG.warn('Using over %d%% of the memory!', mem_percent)
 
 
 class Pickled(object):
@@ -152,6 +164,7 @@ def map_reduce(task, task_args, agg, acc):
         logs.LOG.info('Sending %dM', to_send / ONE_MB)
         taskset = TaskSet(tasks=map(task.subtask, pickled_args))
         for task_id, result_dict in taskset.apply_async().iter_native():
+            check_mem_usage()  # log a warning if too much memory is used
             result_pik = result_dict['result']
             with mon:
                 result, exctype = result_pik.unpickle()
@@ -215,6 +228,7 @@ def oqtask(task_func):
                 'total ' + task_func.__name__, job_id, tsk, flush=True):
             # tasks write on the celery log file
             logs.set_level(job.log_level)
+            check_mem_usage()  # log a warning if too much memory is used
             try:
                 # run the task
                 return task_func(*args)
