@@ -293,12 +293,12 @@ class Classical(object):
         """
         all_outputs = []
         for getter in getters:
-            assets, hazard_data = getter(getter_monitor)
+            assets, hazard_curves = getter(getter_monitor)
             if assets:
                 with getter_monitor.copy('computing individual risk'):
                     all_outputs.append(
                         Output(getter.hid, getter.weight, loss_type,
-                               self(loss_type, assets, hazard_data)))
+                               self(loss_type, assets, hazard_curves)))
         return all_outputs
 
 
