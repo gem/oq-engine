@@ -112,17 +112,24 @@ class RiskCalculator(base.Calculator):
         outputdict = writers.combine_builders(
             [builder(self) for builder in self.output_builders])
 
+        # TODO: (MS) we will remove the block size dependency in the near
+        # future; for the moment let's used a fixed size
+        block_size = 100
+
         for taxonomy, assets_nr in self.taxonomies_asset_count.items():
-            with self.monitor("getting asset chunks"):
-                assets = models.ExposureData.objects.get_asset_chunk(
-                    self.rc, taxonomy, 0, assets_nr)
-            for risk_model in self.risk_models[taxonomy].values():
-                self.init_risk_model(risk_model, assets)
-            yield [
-                self.job.id,
-                self.risk_models[taxonomy].values(),
-                outputdict,
-                self.calculator_parameters]
+            asset_offsets = range(0, assets_nr, block_size)
+            for offset in asset_offsets:
+
+                with self.monitor("getting asset chunks"):
+                    assets = models.ExposureData.objects.get_asset_chunk(
+                        self.rc, taxonomy, offset, block_size)
+                for risk_model in self.risk_models[taxonomy].values():
+                    self.init_risk_model(risk_model, assets)
+                yield [
+                    self.job.id,
+                    self.risk_models[taxonomy].values(),
+                    outputdict,
+                    self.calculator_parameters]
 
     def _get_outputs_for_export(self):
         """
