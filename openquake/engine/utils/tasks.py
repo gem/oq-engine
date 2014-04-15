@@ -39,13 +39,13 @@ from openquake.engine.performance import EnginePerformanceMonitor, \
 ONE_MB = 1024 * 1024
 
 
-def check_mem_usage(used_mem_percent=90):
+def check_mem_usage(used_mem_percent=80):
     """
     Display a warning if we are running out of memory
 
     :param int used_mem_percent: the memory limit as a percentage
     """
-    mem_percent = psutil.virtmem_usage().percent
+    mem_percent = psutil.phymem_usage().percent
     if mem_percent > used_mem_percent:
         logs.LOG.warn('Using over %d%% of the memory!', mem_percent)
 
