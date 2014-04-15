@@ -28,7 +28,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical_bcr(job_id, units, containers, _params):
+def classical_bcr(job_id, units, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -40,7 +40,7 @@ def classical_bcr(job_id, units, containers, _params):
       ID of the currently running job
     :param list units:
       A list of :class:`openquake.risklib.workflows.CalculationUnit`
-    :param containers:
+    :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
     :param params:
@@ -53,20 +53,20 @@ def classical_bcr(job_id, units, containers, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for unit in units:
+        for loss_type, workflow, getters in units:
             do_classical_bcr(
-                unit,
-                containers.with_args(loss_type=unit.loss_type), monitor)
+                loss_type, workflow, getters,
+                outputdict.with_args(loss_type=loss_type), monitor)
 
 
-def do_classical_bcr(unit, containers, monitor):
-    outputs, _stats = unit(monitor.copy('getting hazard'),
-                           monitor.copy('computing bcr'))
+def do_classical_bcr(loss_type, workflow, getters, outputdict, monitor):
+    outputs = workflow.compute_all_outputs(
+        getters, loss_type, monitor.copy('getting hazard'))
 
     with monitor.copy('writing results'):
         for out in outputs:
-            containers.write(
-                unit.workflow.assets,
+            outputdict.write(
+                workflow.assets,
                 out.output,
                 output_type="bcr_distribution",
                 hazard_output_id=out.hid)
@@ -96,8 +96,8 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         taxonomy = assets[0].taxonomy
         model_orig = self.risk_models[taxonomy][loss_type]
         model_retro = self.risk_models_retrofitted[taxonomy][loss_type]
-
-        return workflows.CalculationUnit(
+        max_dist = self.rc.best_maximum_distance
+        return (
             loss_type,
             workflows.ClassicalBCR(
                 model_orig.vulnerability_function,
@@ -105,17 +105,12 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
                 self.rc.lrem_steps_per_interval,
                 self.rc.interest_rate,
                 self.rc.asset_life_expectancy),
-            hazard_getters.BCRGetter(
+            [hazard_getters.BCRGetter(
                 hazard_getters.HazardCurveGetterPerAsset(
-                    self.rc.hazard_outputs(),
-                    assets,
-                    self.rc.best_maximum_distance,
-                    model_orig.imt),
+                    ho, assets, max_dist, model_orig.imt),
                 hazard_getters.HazardCurveGetterPerAsset(
-                    self.rc.hazard_outputs(),
-                    assets,
-                    self.rc.best_maximum_distance,
-                    model_retro.imt)))
+                    ho, assets, max_dist, model_retro.imt))
+             for ho in self.rc.hazard_outputs()])
 
     def pre_execute(self):
         """
