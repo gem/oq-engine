@@ -85,6 +85,8 @@ def compute_hazard_maps(curves, imls, poes):
             if poe > curve_cutoff[-1]:  # the greatest poes in the curve
                 # extrapolate the iml to zero as per
                 # https://bugs.launchpad.net/oq-engine/+bug/1292093
+                # a consequence is that if all poes are zero any poe > 0
+                # is big and the hmap goes automatically to zero
                 hmap_val.append(0)
             else:
                 # exp-log interpolation, to reduce numerical errors
