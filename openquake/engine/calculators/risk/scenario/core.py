@@ -110,8 +110,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         super(ScenarioRiskCalculator, self).__init__(job)
         self.aggregate_losses = dict()
         self.insured_losses = dict()
-        self.rnd = random.Random()
-        self.rnd.seed(self.rc.master_seed)
 
     def task_completed(self, task_result):
         self.log_percent(task_result)
@@ -166,7 +164,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         [ho] = self.rc.hazard_outputs()
         model.workflow = workflows.Scenario(
             model.vulnerability_function,
-            self.rnd.randint(0, models.MAX_SINT_32),
+            self.rc.master_seed,
             self.rc.asset_correlation,
             self.rc.insured_losses)
         model.getters = [
