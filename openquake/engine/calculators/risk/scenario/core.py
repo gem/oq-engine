@@ -31,7 +31,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def scenario(job_id, units, containers, _params):
+def scenario(job_id, risk_models, outputdict, _params):
     """
     Celery task for the scenario risk calculator.
 
@@ -39,7 +39,7 @@ def scenario(job_id, units, containers, _params):
       ID of the currently running job
     :param list units:
       A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
-    :param containers:
+    :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
     :param params:
@@ -51,42 +51,41 @@ def scenario(job_id, units, containers, _params):
     agg = dict()
     insured = dict()
     with db.transaction.commit_on_success(using='job_init'):
-        for unit in units:
-            agg[unit.loss_type], insured[unit.loss_type] = do_scenario(
-                unit,
-                containers.with_args(
-                    loss_type=unit.loss_type,
+        for risk_model in risk_models:
+            loss_type = risk_model.loss_type
+            agg[loss_type], insured[loss_type] = do_scenario(
+                risk_model,
+                outputdict.with_args(
+                    loss_type=loss_type,
                     output_type="loss_map"),
                 monitor)
     return agg, insured
 
 
-def do_scenario(unit, containers, monitor):
+def do_scenario(risk_model, outputdict, monitor):
     """
     See `scenario` for a description of the input parameters
     """
-
-    ((hid, outputs),), _stats = unit(monitor.copy('getting data'),
-                                     monitor.copy('computing risk'))
+    [output] = risk_model.compute_outputs(monitor.copy('getting data'))
 
     (assets, loss_ratio_matrix, aggregate_losses,
-     insured_loss_matrix, insured_losses) = outputs
+     insured_loss_matrix, insured_losses) = output.output
 
     with monitor.copy('saving risk outputs'):
-        containers.write(
+        outputdict.write(
             assets,
             loss_ratio_matrix.mean(axis=1),
             loss_ratio_matrix.std(ddof=1, axis=1),
-            hazard_output_id=hid,
+            hazard_output_id=risk_model.getters[0].hid,
             insured=False)
 
         if insured_loss_matrix is not None:
-            containers.write(
+            outputdict.write(
                 assets,
                 insured_loss_matrix.mean(axis=1),
                 insured_loss_matrix.std(ddof=1, axis=1),
                 itertools.cycle([True]),
-                hazard_output_id=hid,
+                hazard_output_id=risk_model.getters[0].hid,
                 insured=True)
 
     return aggregate_losses, insured_losses
@@ -161,26 +160,15 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         mean=numpy.mean(insured_losses),
                         std_dev=numpy.std(insured_losses, ddof=1))
 
-    def calculation_unit(self, loss_type, assets):
+    def init_risk_model(self, model, assets):
         """
-        :returns:
-          a list of instances of `..base.CalculationUnit` for the given
-          `assets` to be run in the celery task
         """
-
-        # assume all assets have the same taxonomy
-        taxonomy = assets[0].taxonomy
-        model = self.risk_models[taxonomy][loss_type]
-
-        return workflows.CalculationUnit(
-            loss_type,
-            workflows.Scenario(
-                model.vulnerability_function,
-                self.rnd.randint(0, models.MAX_SINT_32),
-                self.rc.asset_correlation,
-                self.rc.insured_losses),
+        [ho] = self.rc.hazard_outputs()
+        model.workflow = workflows.Scenario(
+            model.vulnerability_function,
+            self.rnd.randint(0, models.MAX_SINT_32),
+            self.rc.asset_correlation,
+            self.rc.insured_losses)
+        model.getters = [
             hazard_getters.ScenarioGetter(
-                self.rc.hazard_outputs(),
-                assets,
-                self.rc.best_maximum_distance,
-                model.imt))
+                ho, assets, self.rc.best_maximum_distance, model.imt)]
