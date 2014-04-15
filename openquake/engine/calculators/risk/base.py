@@ -124,12 +124,12 @@ class RiskCalculator(base.Calculator):
             1. the job id
             2. a getter object needed to get the hazard data
             3. the needed risklib calculators
-            4. the output containers to be populated
+            4. the outputdict to be populated
             5. the specific calculator parameter set
         """
         block_size = int(config.get('risk', 'block_size'))
 
-        output_containers = writers.combine_builders(
+        outputdict = writers.combine_builders(
             [builder(self) for builder in self.output_builders])
 
         num_tasks = 0
@@ -148,7 +148,7 @@ class RiskCalculator(base.Calculator):
                 num_tasks += 1
                 yield [self.job.id,
                        calculation_units,
-                       output_containers,
+                       outputdict,
                        self.calculator_parameters]
 
         # sanity check to protect against future changes of the distribution
