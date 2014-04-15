@@ -30,13 +30,13 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical(job_id, units, outputdict, params):
+def classical(job_id, risk_models, outputdict, params):
     """
     Celery task for the classical risk calculator.
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
+    :param list risk_models:
       A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
@@ -50,15 +50,15 @@ def classical(job_id, units, outputdict, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for loss_type, workflow, getters in units:
+        for risk_model in risk_models:
             do_classical(
-                loss_type, workflow, getters,
-                outputdict.with_args(loss_type=loss_type),
+                risk_model,
+                outputdict.with_args(loss_type=risk_model.loss_type),
                 params,
                 monitor)
 
 
-def do_classical(loss_type, workflow, getters, outputdict, params, monitor):
+def do_classical(risk_model, outputdict, params, monitor):
     """
     See `classical` for a description of the parameters.
 
@@ -72,10 +72,10 @@ def do_classical(loss_type, workflow, getters, outputdict, params, monitor):
     loss fractions. Then if the number of units are bigger than 1, we
     compute mean and quantile artifacts.
     """
-    outputs = workflow.compute_all_outputs(
-        getters, loss_type, monitor.copy('getting data'))
+    outputs = risk_model.compute_outputs(monitor.copy('getting data'))
 
-    stats = workflow.statistics(outputs, params.quantiles, post_processing)
+    stats = risk_model.compute_stats(
+        outputs, params.quantiles, post_processing)
 
     with monitor.copy('saving risk'):
         for out in outputs:
@@ -213,31 +213,20 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
 
-    def calculation_unit(self, loss_type, assets):
+    def init_risk_model(self, risk_model, assets):
         """
-        :returns:
-          a :class:`openquake.risklib.workflows.CalculationUnit`
-          instance for the given `loss_type` and `assets` to be run in
-          the celery task
+        Set the attributes .workflow and .getters
         """
-
-        # assume all assets have the same taxonomy
-        taxonomy = assets[0].taxonomy
-        model = self.risk_models[taxonomy][loss_type]
-
-        return (
-            loss_type,
-            workflows.Classical(
-                model.vulnerability_function,
-                self.rc.lrem_steps_per_interval,
-                self.rc.conditional_loss_poes,
-                self.rc.poes_disagg,
-                self.rc.insured_losses),
-            [hazard_getters.HazardCurveGetterPerAsset(
-                ho,
-                assets,
-                self.rc.best_maximum_distance,
-                model.imt) for ho in self.rc.hazard_outputs()])
+        risk_model.workflow = workflows.Classical(
+            risk_model.vulnerability_function,
+            self.rc.lrem_steps_per_interval,
+            self.rc.conditional_loss_poes,
+            self.rc.poes_disagg,
+            self.rc.insured_losses)
+        risk_model.getters = [
+            hazard_getters.HazardCurveGetterPerAsset(
+                ho, assets, self.rc.best_maximum_distance, risk_model.imt)
+            for ho in self.rc.hazard_outputs()]
 
     @property
     def calculator_parameters(self):

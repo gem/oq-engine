@@ -67,7 +67,6 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         actual_data = self.actual_data(job)
 
         # assert actual_data, 'Got no actual data!'
-
         for i, actual in enumerate(actual_data):
             numpy.testing.assert_allclose(
                 expected_data[i], actual,

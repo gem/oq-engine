@@ -31,7 +31,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def scenario(job_id, units, outputdict, _params):
+def scenario(job_id, risk_models, outputdict, _params):
     """
     Celery task for the scenario risk calculator.
 
@@ -51,9 +51,10 @@ def scenario(job_id, units, outputdict, _params):
     agg = dict()
     insured = dict()
     with db.transaction.commit_on_success(using='job_init'):
-        for loss_type, workflow, getter in units:
+        for risk_model in risk_models:
+            loss_type = risk_model.loss_type
             agg[loss_type], insured[loss_type] = do_scenario(
-                loss_type, workflow, getter,
+                risk_model,
                 outputdict.with_args(
                     loss_type=loss_type,
                     output_type="loss_map"),
@@ -61,12 +62,11 @@ def scenario(job_id, units, outputdict, _params):
     return agg, insured
 
 
-def do_scenario(loss_type, workflow, getter, outputdict, monitor):
+def do_scenario(risk_model, outputdict, monitor):
     """
     See `scenario` for a description of the input parameters
     """
-    [output] = workflow.compute_all_outputs(
-        [getter], loss_type, monitor.copy('getting data'))
+    [output] = risk_model.compute_outputs(monitor.copy('getting data'))
 
     (assets, loss_ratio_matrix, aggregate_losses,
      insured_loss_matrix, insured_losses) = output.output
@@ -76,7 +76,7 @@ def do_scenario(loss_type, workflow, getter, outputdict, monitor):
             assets,
             loss_ratio_matrix.mean(axis=1),
             loss_ratio_matrix.std(ddof=1, axis=1),
-            hazard_output_id=getter.hid,
+            hazard_output_id=risk_model.getters[0].hid,
             insured=False)
 
         if insured_loss_matrix is not None:
@@ -85,7 +85,7 @@ def do_scenario(loss_type, workflow, getter, outputdict, monitor):
                 insured_loss_matrix.mean(axis=1),
                 insured_loss_matrix.std(ddof=1, axis=1),
                 itertools.cycle([True]),
-                hazard_output_id=getter.hid,
+                hazard_output_id=risk_model.getters[0].hid,
                 insured=True)
 
     return aggregate_losses, insured_losses
@@ -110,8 +110,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         super(ScenarioRiskCalculator, self).__init__(job)
         self.aggregate_losses = dict()
         self.insured_losses = dict()
-        self.rnd = random.Random()
-        self.rnd.seed(self.rc.master_seed)
 
     def task_completed(self, task_result):
         self.log_percent(task_result)
@@ -160,22 +158,15 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         mean=numpy.mean(insured_losses),
                         std_dev=numpy.std(insured_losses, ddof=1))
 
-    def calculation_unit(self, loss_type, assets):
+    def init_risk_model(self, model, assets):
         """
-        :returns:
-          a list of instances of `..base.CalculationUnit` for the given
-          `assets` to be run in the celery task
         """
-        # assume all assets have the same taxonomy
-        taxonomy = assets[0].taxonomy
-        model = self.risk_models[taxonomy][loss_type]
         [ho] = self.rc.hazard_outputs()
-        return (
-            loss_type,
-            workflows.Scenario(
-                model.vulnerability_function,
-                self.rnd.randint(0, models.MAX_SINT_32),
-                self.rc.asset_correlation,
-                self.rc.insured_losses),
+        model.workflow = workflows.Scenario(
+            model.vulnerability_function,
+            self.rc.master_seed,
+            self.rc.asset_correlation,
+            self.rc.insured_losses)
+        model.getters = [
             hazard_getters.ScenarioGetter(
-                ho, assets, self.rc.best_maximum_distance, model.imt))
+                ho, assets, self.rc.best_maximum_distance, model.imt)]

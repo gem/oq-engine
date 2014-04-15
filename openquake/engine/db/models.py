@@ -122,13 +122,6 @@ VULNERABILITY_TYPE_CHOICES = [choice[0]
                               if choice[0].endswith('vulnerability')]
 
 
-#: Hold both a Vulnerability function or a fragility function set and
-#: the IMT associated to it
-RiskModel = collections.namedtuple(
-    'RiskModel',
-    'imt vulnerability_function fragility_functions')
-
-
 #: The output of HazardCalculation.gen_ruptures
 SourceRuptureSites = collections.namedtuple(
     'SourceRuptureSites',

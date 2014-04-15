@@ -57,11 +57,10 @@ class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
                  result.average_annual_loss_retrofitted, result.bcr)
                 for result in models.BCRDistributionData.objects.filter(
                     bcr_distribution__output__oq_job=job).order_by(
-                        'asset_ref')]
+                    'asset_ref')]
         return data
 
     def expected_data(self):
-        return [
-            [0.15280346, 0., 26.42475147],
-            [0.31141922, 0., 26.92732075],
-            [0.39231522, 0., 33.92211259]]
+        return [(0.19099232, 0.0, 33.028864),
+                (0.3129898, 0.0, 27.063132),
+                (0.3287649, 0.0, 28.427144)]
