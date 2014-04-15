@@ -53,8 +53,8 @@ class MapReduceTestCase(unittest.TestCase):
     def test_failing_subtask(self):
         try:
             tasks.parallelize(failing_task, [(42, )], None)
-        except NotImplementedError as exc:
-            self.assertEqual('42', exc.args[0])
+        except RuntimeError as exc:
+            self.assertIn('NotImplementedError: 42', str(exc))
         else:
             raise Exception("Exception not raised.")
 
