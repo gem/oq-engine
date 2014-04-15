@@ -38,11 +38,12 @@ class ScenarioRiskCase2TestCase(risk.BaseRiskQATestCase):
         maps = models.LossMapData.objects.filter(
             loss_map__output__oq_job=job).order_by('asset_ref', 'value')
         agg = models.AggregateLoss.objects.get(output__oq_job=job)
-        return [[[m.value, m.std_dev] for m in maps],
+        data = [[[m.value, m.std_dev] for m in maps],
                 [agg.mean, agg.std_dev]]
+        return data
 
     def expected_data(self):
-        return [[[522.40316578, 249.26357273],
-                 [512.3892894, 347.75665613],
-                 [200.21969199, 95.12689831]],
-                [1235.01214717, 503.25181506]]
+        return [[[522.675485, 248.86320],
+                 [516.1156, 369.162],
+                 [200.0154, 94.8534]],
+                [1238.806, 519.7878]]
