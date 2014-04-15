@@ -22,10 +22,14 @@ Task functions for our unit tests.
 
 import sys
 import functools
+import traceback
+
 from celery.task import task
+
 from openquake.engine.utils.tasks import Pickled
 
 
+# mimic the behavior of oqtask
 def test_task(func):
     @functools.wraps(func)
     def wrapper(*args):
@@ -33,8 +37,10 @@ def test_task(func):
             res = func(*[a.unpickle() for a in args])
             return Pickled((res, None))
         except:
-            exctype, exc, _tb = sys.exc_info()
-            return Pickled((str(exc), exctype))
+            exctype, exc, tb = sys.exc_info()
+            tb_str = ''.join(traceback.format_tb(tb))
+            err_msg = '\n%s%s: %s' % (tb_str, exctype.__name__, exc)
+            return Pickled((err_msg, exctype))
     return task(wrapper)
 
 
