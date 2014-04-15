@@ -410,7 +410,7 @@ SELECT AddGeometryColumn('hzrdr', 'probabilistic_rupture', 'hypocenter', 4326, '
 
 CREATE TABLE hzrdr.ses_rupture (
     id SERIAL PRIMARY KEY,
-    ses_id INTEGER NOT NULL,  -- FK to ses.id
+    ses_id INTEGER NOT NULL,
     rupture_id INTEGER NOT NULL,  -- FK to probabilistic_rupture.id
     tag VARCHAR NOT NULL,
     seed INTEGER NOT NULL
@@ -996,12 +996,6 @@ FOREIGN KEY (ses_collection_id) REFERENCES hzrdr.ses_collection(id);
 ALTER TABLE hzrdr.ses_rupture
 ADD CONSTRAINT hzrdr_ses_rupture_probabilistic_rupture_fk
 FOREIGN KEY (rupture_id) REFERENCES hzrdr.probabilistic_rupture(id)
-ON DELETE CASCADE;
-
--- hzrdr.ses_rupture to hzrdr.ses FK
-ALTER TABLE hzrdr.ses_rupture
-ADD CONSTRAINT hzrdr_ses_rupture_ses_fk
-FOREIGN KEY (ses_id) REFERENCES hzrdr.ses(id)
 ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map

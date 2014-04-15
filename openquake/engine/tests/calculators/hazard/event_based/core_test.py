@@ -81,6 +81,7 @@ class GmfCollectorTestCase(unittest.TestCase):
         hc.truncation_level = None
         hc.maximum_distance = 200.
 
+        trt = 'Subduction Interface'
         gsim = get_available_gsims()['AkkarBommer2010']()
         num_sites = 5
         site_coll = make_site_coll(-78, 15.5, num_sites)
@@ -88,12 +89,11 @@ class GmfCollectorTestCase(unittest.TestCase):
                       correl_model=None,
                       maximum_distance=200,
                       num_sites=num_sites)
-        trt = 'Subduction Interface'
         rup_id, rup_seed = 42, 44
         rup = FakeRupture(rup_id, trt)
         pga = PGA()
         rlz = mock.Mock()
-        coll = core.GmfCollector(params, [pga], {rlz: {trt: gsim}})
+        coll = core.GmfCollector(params, [pga], {rlz: gsim})
         coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
             (rlz, pga, 0): [rup_id],
@@ -168,14 +168,12 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # With this job configuration, we have 2 logic tree realizations
         # for the GMPEs
-        lt_rlzs = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=hc)
-        self.assertEqual(2, len(lt_rlzs))
+        [lt_model] = models.LtSourceModel.objects.filter(hazard_calculation=hc)
+        self.assertEqual(2, len(list(lt_model)))
 
-        sess = models.SES.objects.filter(
-            ses_collection__lt_model=lt_rlzs[0].lt_model)
-        self.assertEqual(hc.ses_per_logic_tree_path, len(sess))
-        for ses in sess:
+        ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
+        self.assertEqual(hc.ses_per_logic_tree_path, len(ses_coll))
+        for ses in ses_coll:
             # The only metadata in in the SES is investigation time.
             self.assertEqual(hc.investigation_time, ses.investigation_time)
 
@@ -183,14 +181,11 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
     def test_complete_event_based_calculation_cycle(self):
         # run the calculation in process (to easy debugging)
         # and check the outputs
-        os.environ['OQ_NO_DISTRIBUTE'] = '1'
-        try:
+        with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             job = helpers.run_job(self.cfg)
-        finally:
-            del os.environ['OQ_NO_DISTRIBUTE']
         hc = job.hazard_calculation
-        rlz1, rlz2 = models.LtRealization.objects.filter(
-            lt_model__hazard_calculation=hc.id).order_by('ordinal')
+        [(rlz1, rlz2)] = models.LtSourceModel.objects.filter(
+            hazard_calculation=hc.id)
 
         # check that the parameters are read correctly from the files
         self.assertEqual(hc.ses_per_logic_tree_path, 5)
@@ -198,7 +193,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # check that we generated the right number of ruptures
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
-            ses__ses_collection__output__oq_job=job.id).count()
+            rupture__ses_collection__output__oq_job=job.id).count()
         self.assertEqual(num_ruptures, 96)
 
         # check that we generated the right number of rows in GmfData
@@ -250,8 +245,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for args in arg_gen:  # args is (job_id, src_seed_pairs, ...)
-                for src, seed in args[1]:
+            for args in arg_gen:  # args is (job_id, sitecol, src_seed_pairs, ...)
+                for src, seed in args[2]:
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
 
