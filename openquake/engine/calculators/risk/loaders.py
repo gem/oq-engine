@@ -26,7 +26,9 @@ from openquake.risklib import scientific
 
 from openquake.nrmllib.risk import parsers
 from openquake.engine.input.exposure import ExposureDBWriter
-from openquake.engine.db.models import RiskModel, DmgState
+from openquake.engine.db.models import DmgState
+
+from openquake.risklib.workflows import RiskModel
 
 
 def exposure(job, exposure_model_input):
@@ -49,8 +51,7 @@ def vulnerability(vulnerability_file):
     :raises:
         * `ValueError` if validation of any vulnerability function fails
     """
-    vfs = dict()
-
+    vfs = {}
     for record in parsers.VulnerabilityModelParser(vulnerability_file):
         taxonomy = record['ID']
         imt = record['IMT']
@@ -62,8 +63,7 @@ def vulnerability(vulnerability_file):
             raise ValueError("Error creating vulnerability function for "
                              "taxonomy %s. A taxonomy can not "
                              "be associated with "
-                             "different vulnerability functions" % (
-                             taxonomy))
+                             "different vulnerability functions" % taxonomy)
 
         try:
             vfs[taxonomy] = RiskModel(

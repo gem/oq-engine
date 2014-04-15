@@ -28,7 +28,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical_bcr(job_id, units, containers, _params):
+def classical_bcr(job_id, risk_models, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -38,9 +38,9 @@ def classical_bcr(job_id, units, containers, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
+    :param list risk_models:
       A list of :class:`openquake.risklib.workflows.CalculationUnit`
-    :param containers:
+    :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
     :param params:
@@ -53,20 +53,20 @@ def classical_bcr(job_id, units, containers, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for unit in units:
+        for risk_model in risk_models:
             do_classical_bcr(
-                unit,
-                containers.with_args(loss_type=unit.loss_type), monitor)
+                risk_model,
+                outputdict.with_args(loss_type=risk_model.loss_type),
+                monitor)
 
 
-def do_classical_bcr(unit, containers, monitor):
-    outputs, _stats = unit(monitor.copy('getting hazard'),
-                           monitor.copy('computing bcr'))
+def do_classical_bcr(risk_model, outputdict, monitor):
+    outputs = risk_model.compute_outputs(monitor.copy('getting hazard'))
 
     with monitor.copy('writing results'):
         for out in outputs:
-            containers.write(
-                unit.workflow.assets,
+            outputdict.write(
+                risk_model.workflow.assets,
                 out.output,
                 output_type="bcr_distribution",
                 hazard_output_id=out.hid)
@@ -92,30 +92,27 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         super(ClassicalBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
 
-    def calculation_unit(self, loss_type, assets):
-        taxonomy = assets[0].taxonomy
-        model_orig = self.risk_models[taxonomy][loss_type]
-        model_retro = self.risk_models_retrofitted[taxonomy][loss_type]
-
-        return workflows.CalculationUnit(
-            loss_type,
-            workflows.ClassicalBCR(
-                model_orig.vulnerability_function,
-                model_retro.vulnerability_function,
-                self.rc.lrem_steps_per_interval,
-                self.rc.interest_rate,
-                self.rc.asset_life_expectancy),
+    def init_risk_model(self, model, assets):
+        """
+        Set the attributes .workflow and .getters
+        """
+        taxonomy = assets[0].taxonomy  # all the assets have the same taxonomy
+        model_orig = self.risk_models[taxonomy][model.loss_type]
+        model_retro = self.risk_models_retrofitted[taxonomy][model.loss_type]
+        max_dist = self.rc.best_maximum_distance
+        model.workflow = workflows.ClassicalBCR(
+            model_orig.vulnerability_function,
+            model_retro.vulnerability_function,
+            self.rc.lrem_steps_per_interval,
+            self.rc.interest_rate,
+            self.rc.asset_life_expectancy)
+        model.getters = [
             hazard_getters.BCRGetter(
                 hazard_getters.HazardCurveGetterPerAsset(
-                    self.rc.hazard_outputs(),
-                    assets,
-                    self.rc.best_maximum_distance,
-                    model_orig.imt),
+                    ho, assets, max_dist, model_orig.imt),
                 hazard_getters.HazardCurveGetterPerAsset(
-                    self.rc.hazard_outputs(),
-                    assets,
-                    self.rc.best_maximum_distance,
-                    model_retro.imt)))
+                    ho, assets, max_dist, model_retro.imt))
+            for ho in self.rc.hazard_outputs()]
 
     def pre_execute(self):
         """
