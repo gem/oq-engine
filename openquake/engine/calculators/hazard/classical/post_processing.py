@@ -61,9 +61,9 @@ def compute_hazard_maps(curves, imls, poes):
         specified. If ``poes`` is just a single scalar value, the result array
         will have a length of 1.
 
-        The results are structure this way so it is easy to iterate over the
-        hazard map results, and in a consistent way (no matter how many
-        ``poes`` values are specified).
+        The results are structured this way so that it is easy to iterate over
+        the hazard map results in a consistent way, no matter how many
+        ``poes`` values are specified.
     """
     poes = numpy.array(poes)
 
@@ -76,14 +76,25 @@ def compute_hazard_maps(curves, imls, poes):
     imls = numpy.log(numpy.array(imls[::-1]))
 
     for curve in curves:
+        # the hazard curve, having replaced the too small poes with EPSILON
         curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
-        # exp-log interpolation, to reduce numerical errors
-        # see https://bugs.launchpad.net/oq-engine/+bug/1252770
-        hmap_val = numpy.exp(numpy.interp(
-            numpy.log(poes), numpy.log(curve_cutoff), imls))
+        hmap_val = []
+        for poe in poes:
+            # special case when the interpolation poe is bigger than the
+            # maximum, i.e the iml must be smaller than the minumum
+            if poe > curve_cutoff[-1]:  # the greatest poes in the curve
+                # extrapolate the iml to zero as per
+                # https://bugs.launchpad.net/oq-engine/+bug/1292093
+                hmap_val.append(0)
+            else:
+                # exp-log interpolation, to reduce numerical errors
+                # see https://bugs.launchpad.net/oq-engine/+bug/1252770
+                val = numpy.exp(
+                    numpy.interp(
+                        numpy.log(poe), numpy.log(curve_cutoff), imls))
+                hmap_val.append(val)
 
         result.append(hmap_val)
-
     return numpy.array(result).transpose()
 
 
