@@ -106,9 +106,9 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         time_span, tses = self.hazard_times()
         model.workflow = workflows.ProbabilisticEventBasedBCR(
             model_orig.vulnerability_function,
-            self.rnd.randint(0, models.MAX_SINT_32),
+            self.rc.master_seed,
             model_retro.vulnerability_function,
-            self.rnd.randint(0, models.MAX_SINT_32),
+            self.rc.master_seed,
             self.rc.asset_correlation,
             time_span, tses, self.rc.loss_curve_resolution,
             self.rc.interest_rate,

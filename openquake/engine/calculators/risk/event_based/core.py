@@ -300,8 +300,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)
         self.event_loss_tables = collections.defaultdict(collections.Counter)
-        self.rnd = random.Random()
-        self.rnd.seed(self.rc.master_seed)
 
     def task_completed(self, event_loss_tables):
         """
