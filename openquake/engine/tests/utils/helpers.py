@@ -615,6 +615,8 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
 
         for point in ["POINT(-1.01 1.01)", "POINT(0.9 1.01)",
                       "POINT(0.01 0.01)", "POINT(0.9 0.9)"]:
+            models.HazardSite.objects.create(
+                hazard_calculation=hc, location=point)
             models.HazardCurveData.objects.create(
                 hazard_curve=hazard_output,
                 poes=[0.1, 0.2, 0.3],
@@ -676,10 +678,6 @@ def create_ses_ruptures(job, ses_collection, num):
     Each rupture has a magnitude ranging from 0 to 10 and no geographic
     information.
     """
-    ses = models.SES.objects.create(
-        ses_collection=ses_collection,
-        investigation_time=job.hazard_calculation.investigation_time,
-        ordinal=1)
     rupture = ParametricProbabilisticRupture(
         mag=1 + 10. / float(num), rake=0,
         tectonic_region_type="test region type",
@@ -690,6 +688,7 @@ def create_ses_ruptures(job, ses_collection, num):
         occurrence_rate=1,
         temporal_occurrence_model=PoissonTOM(10),
         source_typology=object())
+    ses = models.SES(ses_collection, ordinal=1)
     seed = 42
     pr = models.ProbabilisticRupture.create(rupture, ses_collection)
     return [models.SESRupture.create(pr, ses, 'test', 1, i, seed + i)
