@@ -153,7 +153,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
                                     4.64095499])
         test_input = [0.005, 0.006, 0.0269]
 
-        numpy.testing.assert_allclose(expected_lrs, self.test_func(test_input))
+        numpy.testing.assert_allclose(
+            expected_lrs, self.test_func._apply(test_input))
 
     def test_loss_ratio_interp_many_values_clipped(self):
         # Given a list of IML values (abscissae), test for proper interpolation
@@ -163,7 +164,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         expected_lrs = numpy.array([0.0, 0.07685701, 4.64095499])
         test_input = [0.00049, 0.006, 2.7]
 
-        numpy.testing.assert_allclose(expected_lrs, self.test_func(test_input))
+        numpy.testing.assert_allclose(
+            expected_lrs, self.test_func._apply(test_input))
 
     def test_cov_interp_many_values(self):
         expected_covs = numpy.array([0.3, 0.2, 10])

@@ -109,7 +109,8 @@ class VulnerabilityFunction(object):
         """
         vulnerability_function = copy.copy(self)
         vulnerability_function.set_distribution(epsilons)
-        return utils.numpy_map(vulnerability_function, ground_motion_values)
+        return utils.numpy_map(
+            vulnerability_function._apply, ground_motion_values)
 
     @utils.memoized
     def strictly_increasing(self):
@@ -198,7 +199,7 @@ class VulnerabilityFunction(object):
         assert covs is None or all(x >= 0.0 for x in covs)
         assert distribution in ["LN", "BT"]
 
-    def __call__(self, imls):
+    def _apply(self, imls):
         """
         Given IML values, interpolate the corresponding loss ratio
         value(s) on the curve.
