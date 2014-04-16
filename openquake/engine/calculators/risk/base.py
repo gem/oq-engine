@@ -129,7 +129,7 @@ class RiskCalculator(base.Calculator):
                 with self.monitor("building getters"):
                     risk_model.getters = builder.make_getters(
                         self.rc.hazard_outputs(), assets, risk_model.imt)
-                risk_model.workflow = self.get_workflow(taxonomy)
+                    risk_model.workflow = self.get_workflow(taxonomy)
                 yield [
                     self.job.id,
                     [risk_model.copy(loss_type=loss_type)
