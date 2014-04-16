@@ -707,14 +707,17 @@ class Scenario(object):
 class RiskModel(object):
     """
     Container for the attributes imt, vulnerability_function,
-    fragility_functions, loss_type, workflow and getters. The last three
-    can be set after instantiation, but before calling compute_outputs.
+    fragility_functions, taxonomy, loss_type, workflow and getters.
+    The last four can be set after instantiation, but before calling
+    compute_outputs.
     """
     def __init__(self, imt, vulnerability_function, fragility_functions,
-                 loss_type=None, workflow=None, getters=None):
+                 taxonomy=None, loss_type=None, workflow=None, getters=None):
         self.imt = imt
         self.vulnerability_function = vulnerability_function
         self.fragility_functions = fragility_functions
+        self.taxonomy = taxonomy
+        self.loss_type = loss_type
         self.workflow = workflow
         self.getters = getters
 
