@@ -99,19 +99,18 @@ class VulnerabilityFunction(object):
     def apply_to(self, ground_motion_values, epsilons):
         """
         Apply a copy of the vulnerability function to a set of N
-        ground_motion_values, where N is the number of assets. seed
-        and asset_correlation are used to initialize the distribution,
-        i.e. the epsilons. The original function is left unchanged, i.e.
-        uninitialized if it was unitialized at the beginning.
+        ground motion vectors, by using N epsilon vectors of length R.
+        N is the number of assets and R the number of realizations.
 
         :param ground_motion_values:
-           matrix N x R
+           matrix of floats N x R
         :param epsilons:
-           matrix R x N
+           matrix of floats N x R
         """
         vulnerability_function = copy.copy(self)
         vulnerability_function.set_distribution(epsilons)
-        return utils.numpy_map(vulnerability_function, ground_motion_values)
+        return utils.numpy_map(
+            vulnerability_function._apply, ground_motion_values)
 
     @utils.memoized
     def strictly_increasing(self):
@@ -200,7 +199,7 @@ class VulnerabilityFunction(object):
         assert covs is None or all(x >= 0.0 for x in covs)
         assert distribution in ["LN", "BT"]
 
-    def __call__(self, imls):
+    def _apply(self, imls):
         """
         Given IML values, interpolate the corresponding loss ratio
         value(s) on the curve.
@@ -388,6 +387,12 @@ class DegenerateDistribution(Distribution):
 
 
 def make_epsilons(matrix, seed, correlation):
+    """
+    Given a matrix N * R returns a matrix of the same shape N * R
+    obtained by applying the multivariate_normal distribution to
+    N points and R samples, by starting from the given seed and
+    correlation.
+    """
     if seed is not None:
         numpy.random.seed(seed)
     asset_count = len(matrix)
