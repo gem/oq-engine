@@ -382,8 +382,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         time_span, tses = self.hazard_times()
         risk_model.workflow = workflows.ProbabilisticEventBased(
             risk_model.vulnerability_function,
-                self.rc.master_seed, 
-            self.rc.asset_correlation,
             time_span, tses,
             self.rc.loss_curve_resolution,
             self.rc.conditional_loss_poes,
