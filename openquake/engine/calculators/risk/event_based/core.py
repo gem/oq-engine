@@ -17,8 +17,6 @@
 """
 Core functionality for the classical PSHA risk calculator.
 """
-
-import random
 import collections
 import itertools
 import numpy
@@ -296,6 +294,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     output_builders = [writers.EventLossCurveMapBuilder,
                        writers.LossFractionBuilder]
+    getter_class = hazard_getters.GroundMotionValuesGetter
 
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)
@@ -306,7 +305,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Updates the event loss table
         """
         self.log_percent(event_loss_tables)
-        for loss_type in models.loss_types(self.risk_models):
+        for loss_type in self.loss_types:
             task_loss_table = event_loss_tables[loss_type]
             self.event_loss_tables[loss_type] += task_loss_table
 
@@ -375,21 +374,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                                 aggregate_loss_losses, aggregate_loss_poes),
                             stddev_loss=numpy.std(aggregate_losses))
 
-    def init_risk_model(self, risk_model, assets):
-        """
-        Set the attributes .workflow and .getters
-        """
+    def get_workflow(self):
         time_span, tses = self.hazard_times()
-        risk_model.workflow = workflows.ProbabilisticEventBased(
-            risk_model.vulnerability_function,
+        return workflows.ProbabilisticEventBased(
+            self.risk_models[taxonomy].vulnerability_function,
             time_span, tses,
             self.rc.loss_curve_resolution,
             self.rc.conditional_loss_poes,
             self.rc.insured_losses)
-        risk_model.getters = [
-            hazard_getters.GroundMotionValuesGetter(
-                ho, assets, self.rc.best_maximum_distance, risk_model.imt)
-            for ho in self.rc.hazard_outputs()]
 
     def hazard_times(self):
         """

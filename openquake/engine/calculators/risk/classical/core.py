@@ -213,20 +213,15 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
 
-    def init_risk_model(self, risk_model, assets):
-        """
-        Set the attributes .workflow and .getters
-        """
-        risk_model.workflow = workflows.Classical(
-            risk_model.vulnerability_function,
+    getter_class = hazard_getters.HazardCurveGetterPerAsset
+
+    def get_workflow(self, taxonomy):
+        return workflows.Classical(
+            self.risk_models[taxonomy].vulnerability_function,
             self.rc.lrem_steps_per_interval,
             self.rc.conditional_loss_poes,
             self.rc.poes_disagg,
             self.rc.insured_losses)
-        risk_model.getters = [
-            hazard_getters.HazardCurveGetterPerAsset(
-                ho, assets, self.rc.best_maximum_distance, risk_model.imt)
-            for ho in self.rc.hazard_outputs()]
 
     @property
     def calculator_parameters(self):
