@@ -128,22 +128,6 @@ SourceRuptureSites = collections.namedtuple(
     'source rupture sites')
 
 
-def required_imts(risk_models):
-    """
-    Get all the intensity measure types required by `risk_models`
-
-    A nested dict taxonomy -> loss_type -> `RiskModel` instance
-
-    :returns: a set with all the required imts
-    """
-    risk_models = sum([d.values() for d in risk_models.values()], [])
-    return set([m.imt for m in risk_models])
-
-
-def loss_types(risk_models):
-    return set(sum([d.keys() for d in risk_models.values()], []))
-
-
 def cost_type(loss_type):
     if loss_type == "fatalities":
         return "occupants"

@@ -41,7 +41,7 @@ class HazardIMT(Validator):
     intensity measure types given in the risk models
     """
     def get_error(self):
-        model_imts = models.required_imts(self.calc.risk_models)
+        model_imts = set(rm.imt for rm in self.calc.risk_models.values())
         imts = self.calc.hc.get_imts()
 
         # check that the hazard data have all the imts needed by the
@@ -85,9 +85,7 @@ class ExposureLossTypes(Validator):
     types given in the risk models
     """
     def get_error(self):
-        loss_types = models.loss_types(self.calc.risk_models)
-
-        for loss_type in loss_types:
+        for loss_type in self.calc.loss_types:
             if not self.calc.rc.exposure_model.supports_loss_type(loss_type):
                 return ("Invalid exposure "
                         "for computing loss type %s. " % loss_type)
