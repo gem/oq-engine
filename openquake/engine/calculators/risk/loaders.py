@@ -127,6 +127,7 @@ def _parse_fragility(content):
             fragility_functions[taxonomy] = [
                 scientific.FragilityFunctionContinuous(*mean_stddev)
                 for mean_stddev in params]
-    risk_models = dict((tax, dict(damage=RiskModel(tax_imt[tax], None, ffs)))
+    risk_models = dict((tax, RiskModel(tax_imt[tax], None, ffs,
+                                       loss_type='damage'))
                        for tax, ffs in fragility_functions.items())
     return damage_states, risk_models
