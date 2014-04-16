@@ -21,8 +21,6 @@ Hazard getters for Risk calculators.
 A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
-
-import collections
 import numpy
 
 from openquake.hazardlib.imt import from_string
@@ -218,23 +216,6 @@ class GroundMotionValuesGetter(HazardGetter):
         return all_gmvs
 
 
-class BCRGetter(object):
-    def __init__(self, getter_orig, getter_retro):
-        self.assets = getter_orig.assets
-        self.hid = getter_orig.hid
-        self.weight = getter_orig.hid
-        #if hasattr(getter_orig, 'rupture_ids'):
-        #    self.ruptures = getter_orig.rupture_ids
-        #if hasattr(getter_orig, 'epsilons'):
-        #    self.epsilons = getter_orig.epsilons
-
-        self.getter_orig = getter_orig
-        self.getter_retro = getter_retro
-
-    def __call__(self, monitor):
-        return self.getter_orig(monitor), self.getter_retro(monitor)
-
-
 class GetterBuilder(object):
     """
     .asset_ids
@@ -243,9 +224,9 @@ class GetterBuilder(object):
     Warning: instantiating a GetterBuilder performs a potentially
     expensive geospatial query.
     """
-    def __init__(self, gettercls, riskmodel, rc):
+    def __init__(self, gettercls, taxonomy, rc):
         self.gettercls = gettercls
-        self.riskmodel = riskmodel
+        self.taxonomy = taxonomy
         self.rc = rc
         self.hc = rc.get_hazard_calculation()
         self.max_dist = rc.best_maximum_distance * 1000  # km to meters
@@ -260,7 +241,7 @@ AND exposure_model_id = %s AND taxonomy=%s
 AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 """, (self.max_dist, self.hc.id, rc.exposure_model.id,
-            self.riskmodel.taxonomy, rc.region_constraint.wkt))
+            taxonomy, rc.region_constraint.wkt))
         self.asset_ids, self.site_ids = zip(*cursor.fetchall())
         self.rupture_ids = {}
         self.epsilons = {}
@@ -290,21 +271,19 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 idx = self.asset_ids.index(asset.id)
             except ValueError:  # asset.id not in list
                 logs.LOG.info(
-                    "No hazard with imt %s has been found for "
-                    "the asset %s within %s km", self.riskmodel.imt,
-                    asset, self.max_dist)
+                    "No hazard has been found for "
+                    "the asset %s within %s km", asset, self.max_dist)
             else:
                 asset_site[asset.id] = self.site_ids[idx]
                 assets.append(asset)
                 indices.append(idx)
         return indices, assets, asset_site
 
-    def init_getters(self, hazard_outputs, asset_block):
+    def make_getters(self, hazard_outputs, asset_block, imt):
         indices, assets, asset_site = self.indices_asset_site(asset_block)
         getters = []
         for ho in hazard_outputs:
-            getter = self.gettercls(
-                ho, assets, asset_site, self.riskmodel.imt)
+            getter = self.gettercls(ho, assets, asset_site, imt)
             if self.hc.calculation_mode == 'event_based':
                 ses_coll = models.SESCollection.objects.get(
                     lt_model=ho.output_container.lt_realization.lt_model)
@@ -313,4 +292,4 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             elif self.hc.calculation_mode == 'scenario':
                 getter.epsilons = self.epsilons[0][indices]
             getters.append(getter)
-        self.riskmodel.getters = getters
+        return getters

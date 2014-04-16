@@ -20,10 +20,10 @@
 import collections
 
 from openquake.engine import logs, export
-from openquake.engine.utils import config
 from openquake.engine.db import models
 from openquake.engine.calculators import base
-from openquake.engine.calculators.risk import writers, validation, loaders
+from openquake.engine.calculators.risk import \
+    writers, validation, loaders, hazard_getters
 
 
 class RiskCalculator(base.Calculator):
@@ -51,6 +51,7 @@ class RiskCalculator(base.Calculator):
 
         self.taxonomies_asset_count = None
         self.risk_models = None
+        self.loss_types = []
 
     def pre_execute(self):
         """
@@ -117,17 +118,22 @@ class RiskCalculator(base.Calculator):
         block_size = 100
 
         for taxonomy, assets_nr in self.taxonomies_asset_count.items():
-            asset_offsets = range(0, assets_nr, block_size)
-            for offset in asset_offsets:
-
+            risk_model = self.risk_models[taxonomy]
+            with self.monitor("associating asset->site"):
+                builder = hazard_getters.GetterBuilder(
+                    self.getter_class, taxonomy, self.job.risk_calculation)
+            for offset in range(0, assets_nr, block_size):
                 with self.monitor("getting asset chunks"):
                     assets = models.ExposureData.objects.get_asset_chunk(
                         self.rc, taxonomy, offset, block_size)
-                for risk_model in self.risk_models[taxonomy].values():
-                    self.init_risk_model(risk_model, assets)
+                with self.monitor("building getters"):
+                    risk_model.getters = builder.make_getters(
+                        self.rc.hazard_outputs(), assets, risk_model.imt)
+                risk_model.workflow = self.get_workflow(taxonomy)
                 yield [
                     self.job.id,
-                    self.risk_models[taxonomy].values(),
+                    [risk_model.copy(loss_type=loss_type)
+                     for loss_type in self.loss_types],
                     outputdict,
                     self.calculator_parameters]
 
@@ -181,14 +187,13 @@ class RiskCalculator(base.Calculator):
         :param bool retrofitted:
             True if retrofitted models should be retrieved
         :returns:
-            A nested dict taxonomy -> loss type -> instances of `RiskModel`.
+            A nested taxonomy -> instance of `RiskModel`.
         """
         risk_models = collections.defaultdict(dict)
-
         for v_input, loss_type in self.rc.vulnerability_inputs(retrofitted):
+            self.loss_types.append(loss_type)
             for taxonomy, model in loaders.vulnerability(v_input):
-                risk_models[taxonomy][loss_type] = model.copy(
-                    taxonomy=taxonomy, loss_type=loss_type)
+                risk_models[taxonomy] = model.copy(taxonomy=taxonomy)
 
         return risk_models
 

@@ -31,7 +31,6 @@ from openquake.engine.calculators.risk import (
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
-from openquake.engine import logs
 
 
 @tasks.oqtask
@@ -55,6 +54,7 @@ def scenario_damage(job_id, risk_models, outputdict, params):
         None, job_id, scenario_damage, tracing=True)
 
     # in scenario damage calculation we have only ONE risk_model
+    # since the only loss_type is 'damage'
     [risk_model] = risk_models
     [getter] = risk_model.getters
 
@@ -63,33 +63,22 @@ def scenario_damage(job_id, risk_models, outputdict, params):
 
     with db.transaction.commit_on_success(using='job_init'):
         return do_scenario_damage(
-            risk_model.loss_type, risk_model.workflow, getter, params, monitor)
+            risk_model.workflow, getter, params, monitor)
 
 
-def do_scenario_damage(loss_type, workflow, getter, params, monitor):
-    assets, ground_motion_values = getter(monitor.copy('getting hazard'))
-
-    if not len(assets):
-        logs.LOG.warn("Exit from task as no asset could be processed")
-        return None, None
-
-    elif not len(ground_motion_values):
-        # NB: (MS) this should not happen, but I saw it happens;
-        # should it happen again, to debug this situation you should run
-        # the query in ScenarioGetter.assets_gen and see
-        # how it is possible that sites without gmvs are returned
-        raise RuntimeError("No GMVs for assets %s" % assets)
+def do_scenario_damage(workflow, getter, params, monitor):
+    ground_motion_values = getter(monitor.copy('getting hazard'))
 
     with monitor.copy('computing risk'):
         fraction_matrix = workflow(ground_motion_values)
         aggfractions = sum(fraction_matrix[i] * asset.number_of_units
-                           for i, asset in enumerate(assets))
+                           for i, asset in enumerate(getter.assets))
 
     with monitor.copy('saving damage per assets'):
         writers.damage_distribution(
-            assets, fraction_matrix, params.damage_state_ids)
+            getter.assets, fraction_matrix, params.damage_state_ids)
 
-    return aggfractions, assets[0].taxonomy
+    return aggfractions, getter.assets[0].taxonomy
 
 
 class ScenarioDamageRiskCalculator(base.RiskCalculator):
@@ -113,6 +102,7 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
 
     # FIXME. scenario damage calculator does not use output builders
     output_builders = []
+    getter_class = hazard_getters.ScenarioGetter
 
     def __init__(self, job):
         super(ScenarioDamageRiskCalculator, self).__init__(job)
@@ -122,12 +112,9 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         self.ddpt = {}
         self.damage_state_ids = None
 
-    def init_risk_model(self, model, assets):
-        [ho] = self.rc.hazard_outputs()
-        model.workflow = calculators.Damage(model.fragility_functions)
-        model.getters = [
-            hazard_getters.ScenarioGetter(
-                ho, assets, self.rc.best_maximum_distance, model.imt)]
+    def get_workflow(self, taxonomy):
+        return calculators.Damage(
+            self.risk_models[taxonomy].fragility_functions)
 
     def task_completed(self, task_result):
         """

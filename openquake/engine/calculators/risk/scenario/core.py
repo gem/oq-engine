@@ -17,7 +17,6 @@
 """
 Core functionality for the scenario risk calculator.
 """
-import random
 import itertools
 import numpy
 from django import db
@@ -106,6 +105,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     output_builders = [writers.LossMapBuilder]
 
+    getter_class = hazard_getters.ScenarioGetter
+
     def __init__(self, job):
         super(ScenarioRiskCalculator, self).__init__(job)
         self.aggregate_losses = dict()
@@ -115,7 +116,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.log_percent(task_result)
         aggregate_losses_dict, insured_losses_dict = task_result
 
-        for loss_type in models.loss_types(self.risk_models):
+        for loss_type in self.loss_types:
             aggregate_losses = aggregate_losses_dict.get(loss_type)
 
             if aggregate_losses is not None:
@@ -125,7 +126,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 self.aggregate_losses[loss_type] += aggregate_losses
 
         if self.rc.insured_losses:
-            for loss_type in models.loss_types(self.risk_models):
+            for loss_type in self.loss_types:
                 insured_losses = insured_losses_dict.get(
                     loss_type)
                 if insured_losses is not None:
@@ -158,15 +159,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         mean=numpy.mean(insured_losses),
                         std_dev=numpy.std(insured_losses, ddof=1))
 
-    def init_risk_model(self, model, assets):
-        """
-        """
-        [ho] = self.rc.hazard_outputs()
-        model.workflow = workflows.Scenario(
-            model.vulnerability_function,
-            self.rc.master_seed,
-            self.rc.asset_correlation,
+    def get_workflow(self, taxonomy):
+        return workflows.Scenario(
+            self.risk_models[taxonomy].vulnerability_function,
             self.rc.insured_losses)
-        model.getters = [
-            hazard_getters.ScenarioGetter(
-                ho, assets, self.rc.best_maximum_distance, model.imt)]
