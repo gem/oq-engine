@@ -127,12 +127,13 @@ class RiskCalculator(base.Calculator):
                     assets = models.ExposureData.objects.get_asset_chunk(
                         self.rc, taxonomy, offset, block_size)
                 with self.monitor("building getters"):
-                    risk_model.getters = builder.make_getters(
-                        self.rc.hazard_outputs(), assets, risk_model.imt)
-                    risk_model.workflow = self.get_workflow(taxonomy)
+                    rm = risk_model.copy(
+                        getters=builder.make_getters(
+                            self.rc.hazard_outputs(), assets, risk_model.imt),
+                        workflow=self.get_workflow(taxonomy))
                 yield [
                     self.job.id,
-                    [risk_model.copy(loss_type=loss_type)
+                    [rm.copy(loss_type=loss_type)
                      for loss_type in sorted(self.loss_types)],
                     outputdict,
                     self.calculator_parameters]
