@@ -100,7 +100,6 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         return workflows.ProbabilisticEventBasedBCR(
             model_orig.vulnerability_function,
             model_retro.vulnerability_function,
-            self.rc.asset_correlation,
             time_span, tses, self.rc.loss_curve_resolution,
             self.rc.interest_rate,
             self.rc.asset_life_expectancy)

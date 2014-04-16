@@ -30,8 +30,8 @@ class HazardIMTTestCase(unittest.TestCase):
     def test_get_error(self):
         calc = mock.Mock()
         calc.risk_models = {
-            'tax1': {'loss1': RiskModel('imt1', None, None)},
-            'tax2': {'loss2': RiskModel('imt2', None, None)}}
+            'tax1': RiskModel('imt1', None, None, loss_type='loss1'),
+            'tax2': RiskModel('imt2', None, None, loss_type='loss_2')}
         calc.hc.get_imts = mock.Mock(return_value=['imt1', 'imt2'])
         val = validation.HazardIMT(calc)
 
@@ -82,13 +82,14 @@ class ExposureLossTypesTestCase(unittest.TestCase):
         calc = mock.Mock()
         val = validation.ExposureLossTypes(calc)
 
-        calc.risk_models = {'RM': {'loss_type': mock.Mock()}}
+        calc.loss_types = models.LOSS_TYPES
+        calc.risk_models = {'RM': mock.Mock()}
 
         calc.rc.exposure_model.supports_loss_type = mock.Mock(
             return_value=False)
 
         self.assertEqual(("Invalid exposure "
-                          "for computing loss type loss_type. "),
+                          "for computing loss type structural. "),
                          val.get_error())
 
         calc.rc.exposure_model.supports_loss_type = mock.Mock(

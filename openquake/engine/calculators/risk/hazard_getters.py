@@ -152,6 +152,7 @@ class ScenarioGetter(HazardGetter):
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
+    rupture_ids = [0]  # there is a single rupture kept in memory
     epsilons = None  # set by the GetterBuilder
 
     def get_gmvs(self, site_id):
