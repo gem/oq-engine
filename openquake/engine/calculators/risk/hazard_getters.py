@@ -25,12 +25,13 @@ calculation.
 import collections
 import numpy
 
-from openquake.hazardlib import geo
 from openquake.hazardlib.imt import from_string
+from openquake.risklib.scientific import make_epsilons
 
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.performance import DummyMonitor
+from django.db import connections
 
 
 # all hazard getters are to be considered private, they should be called by
@@ -65,9 +66,10 @@ class HazardGetter(object):
         if hasattr(h, 'lt_realization') and h.lt_realization:
             return h.lt_realization.weight
 
-    def __init__(self, hazard_output, site_assets, imt):
+    def __init__(self, hazard_output, assets, asset_site, imt):
         self.hazard_output = hazard_output
-        self.site_assets = site_assets
+        self.assets = assets
+        self.asset_site = asset_site
         self.imt = imt
         self.imt_type, self.sa_period, self.sa_damping = from_string(imt)
         self.epsilons = None
@@ -120,16 +122,15 @@ class HazardCurveGetterPerAsset(HazardGetter):
                 sa_damping=self.sa_damping)
             imls = oc.imls
 
-        all_assets, all_curves = [], []
+        all_curves = []
         with monitor.copy('getting closest hazard curves'):
-            for site_id, assets in self.site_assets:
+            for asset in self.assets:
+                site_id = self.asset_site[asset.id]
                 site = models.HazardSite.objects.get(pk=site_id)
                 [poes] = self.get_by_site(site, oc.id)
                 curve = zip(imls, poes)
-                for asset in assets:
-                    all_assets.append(asset)
-                    all_curves.append(curve)
-        return all_assets, all_curves
+                all_curves.append(curve)
+        return all_curves
 
     def get_by_site(self, site, hazard_id):
         """
@@ -153,6 +154,8 @@ class ScenarioGetter(HazardGetter):
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
+    epsilons = None  # set by the GetterBuilder
+
     def get_gmvs(self, site_id):
         """
         :returns: gmvs and ruptures for the given site and IMT
@@ -161,7 +164,7 @@ class ScenarioGetter(HazardGetter):
         for gmf in models.GmfData.objects.filter(
                 gmf=self.hazard_output.output_container,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
-                sa_damping=self.sa_damping):
+                sa_damping=self.sa_damping):  # ordered by task_no
             gmvs.extend(gmf.gmvs)
             if not gmvs:
                 logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
@@ -171,24 +174,13 @@ class ScenarioGetter(HazardGetter):
         """
         :returns: the assets and the corresponding ground motion values
         """
-        all_assets = []
         all_gmvs = []
         with monitor.copy('getting gmvs and ruptures'):
-            for site_id, assets in self.site_assets:
-                n_assets = len(assets)
-                all_assets.extend(assets)
+            for asset in self.assets:
+                site_id = self.asset_site[asset.id]
                 gmvs = self.get_gmvs(site_id)
-                if gmvs:
-                    array = numpy.array(gmvs)
-                    all_gmvs.extend([array] * n_assets)
-        return all_assets, all_gmvs
-
-    @classmethod
-    def make_epsilons(cls, lt_model, num_assets, seed, correlation):
-        self.hazard_output.output_container
-        num_ruptures = ses_coll.get_ruptures().count()
-        zeros = numpy.zeros((num_assets, num_ruptures))
-        return scientific.make_epsilons(zeros, seed, correlation)
+                all_gmvs.append(gmvs)
+        return all_gmvs
 
 
 class GroundMotionValuesGetter(HazardGetter):
@@ -196,71 +188,51 @@ class GroundMotionValuesGetter(HazardGetter):
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
     """
-    def get_gmvs_ruptures(self, site_id):
+    rupture_ids = None  # set by the GetterBuilder
+    epsilons = None  # set by the GetterBuilder
+
+    def get_gmv_dict(self, site_id):
         """
-        :returns: gmvs and ruptures for the given site and IMT
+        :returns: a dictionary {rupture_id: gmv}
         """
         gmvs = []
         ruptures = []
         for gmf in models.GmfData.objects.filter(
                 gmf=self.hazard_output.output_container,
                 site=site_id, imt=self.imt_type, sa_period=self.sa_period,
-                sa_damping=self.sa_damping):
+                sa_damping=self.sa_damping):  # ordered by task_no
             gmvs.extend(gmf.gmvs)
             ruptures.extend(gmf.rupture_ids)
         if not gmvs:
             logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
-        return gmvs, ruptures
+        return dict(zip(ruptures, gmvs))
 
     def get_data(self, monitor):
-        """
-        :returns:
-            the assets and the hazard data as a pair (GMVs, rupture_ids).
-        """
-        all_ruptures = set()
-        all_assets = []
         all_gmvs = []
-        site_gmv = collections.OrderedDict()
-        # dictionary site -> ({rupture_id: gmv}, n_assets)
-        # the ordering is there only to have repeatable runs
         with monitor.copy('getting gmvs and ruptures'):
-            for site_id, assets in self.site_assets:
-                n_assets = len(assets)
-                all_assets.extend(assets)
-                gmvs, ruptures = self.get_gmvs_ruptures(site_id)
-                site_gmv[site_id] = dict(zip(ruptures, gmvs)), n_assets
-                for r in ruptures:
-                    all_ruptures.add(r)
-
-        # second pass, filling with zeros
-        with monitor.copy('filling gmvs with zeros'):
-            all_ruptures = sorted(all_ruptures)
-            for site_id, (gmv, n_assets) in site_gmv.iteritems():
-                array = numpy.array([gmv.get(r, 0.) for r in all_ruptures])
-                gmv.clear()  # save memory
-                all_gmvs.extend([array] * n_assets)
-        return all_assets, (all_gmvs, all_ruptures)
-
-    @classmethod
-    def make_epsilons(cls, lt_model, num_assets, seed, correlation):
-        ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
-        num_ruptures = ses_coll.get_ruptures().count()
-        zeros = numpy.zeros((num_assets, num_ruptures))
-        return scientific.make_epsilons(zeros, seed, correlation)
+            for asset in self.assets:
+                site_id = self.asset_site[asset.id]
+                gmv = self.get_gmv_dict(site_id)
+                array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
+                all_gmvs.append(array)
+        return all_gmvs
 
 
 class BCRGetter(object):
     def __init__(self, getter_orig, getter_retro):
         self.assets = getter_orig.assets
-        self.getter_orig = getter_orig
-        self.getter_retro = getter_retro
         self.hid = getter_orig.hid
         self.weight = getter_orig.hid
+        #if hasattr(getter_orig, 'rupture_ids'):
+        #    self.ruptures = getter_orig.rupture_ids
+        #if hasattr(getter_orig, 'epsilons'):
+        #    self.epsilons = getter_orig.epsilons
+
+        self.getter_orig = getter_orig
+        self.getter_retro = getter_retro
 
     def __call__(self, monitor):
-        assets, orig = self.getter_orig(monitor)
-        _assets, retro = self.getter_retro(monitor)
-        return assets, (orig, retro)
+        return self.getter_orig(monitor), self.getter_retro(monitor)
 
 
 class GetterBuilder(object):
@@ -268,7 +240,7 @@ class GetterBuilder(object):
     .asset_ids
     .site_ids
 
-    Warning: instantiation a GetterBuilder performs a potentially
+    Warning: instantiating a GetterBuilder performs a potentially
     expensive geospatial query.
     """
     def __init__(self, gettercls, riskmodel, rc):
@@ -276,7 +248,7 @@ class GetterBuilder(object):
         self.riskmodel = riskmodel
         self.rc = rc
         self.hc = rc.get_hazard_calculation()
-        self.max_dist = rc.best_maximum_distance * 1000 # km to meters
+        self.max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = connections['job_init'].cursor()
         cursor.execute("""
 SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
@@ -288,33 +260,57 @@ AND exposure_model_id = %s AND taxonomy=%s
 AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 """, (self.max_dist, self.hc.id, rc.exposure_model.id,
-      self.riskmodel.taxonomy, rc.region_constraint.wkt))
+            self.riskmodel.taxonomy, rc.region_constraint.wkt))
         self.asset_ids, self.site_ids = zip(*cursor.fetchall())
+        self.rupture_ids = {}
+        self.epsilons = {}
+        if self.hc.calculation_mode == 'event_based':
+            ses_collections = models.SESCollection.objects.filter(
+                lt_model__hazard_calculation=self.hc)
+            for ses_coll in ses_collections:  # only if hc was an event based
+                scid = ses_coll.id
+                self.rupture_ids[scid] = rupture_ids = ses_coll.get_ruptures(
+                    ).values_list('id', flat=True)
+                self.epsilons[scid] = self.make_epsilons(len(rupture_ids))
+        elif self.hc.calculation_mode == 'scenario':
+            self.epsilons[0] = self.make_epsilons(
+                self.hc.number_of_ground_motion_fields)
 
-    def indices_site_assets(self, all_assets)
+    def make_epsilons(self, num_samples):
+        zeros = numpy.zeros((len(self.asset_ids), num_samples))
+        return make_epsilons(
+            zeros, self.rc.master_seed, self.rc.asset_correlation)
+
+    def indices_asset_site(self, all_assets):
         indices = []
-        site_assets = collections.defaultdict(list)
+        assets = []
+        asset_site = {}
         for asset in all_assets:
             try:
                 idx = self.asset_ids.index(asset.id)
             except ValueError:  # asset.id not in list
                 logs.LOG.info(
-                "No hazard with imt %s has been found for "
-                "the asset %s within %s km", self.riskmodel.imt,
+                    "No hazard with imt %s has been found for "
+                    "the asset %s within %s km", self.riskmodel.imt,
                     asset, self.max_dist)
             else:
-                site_id = self.site_ids[idx]
-                site_assets[site_id].append(asset)
+                asset_site[asset.id] = self.site_ids[idx]
+                assets.append(asset)
                 indices.append(idx)
-        return site_assets, indices
+        return indices, assets, asset_site
 
-    def init_getters(self, hazard_outputs, site_assets, indices):
-        epsilons = self.gettercls.make_epsilons(len(self.asset_ids))
+    def init_getters(self, hazard_outputs, asset_block):
+        indices, assets, asset_site = self.indices_asset_site(asset_block)
         getters = []
-        for ho in self.hazard_outputs:
-            getter = self.gettercls(ho, site_assets.items(), self.riskmodel.imt)
-            if epsilons is not None:
-                getter.epsilons = self.epsilons[indices]
+        for ho in hazard_outputs:
+            getter = self.gettercls(
+                ho, assets, asset_site, self.riskmodel.imt)
+            if self.hc.calculation_mode == 'event_based':
+                ses_coll = models.SESCollection.objects.get(
+                    lt_model=ho.output_container.lt_realization.lt_model)
+                getter.rupture_ids = self.rupture_ids[ses_coll.id]
+                getter.epsilons = self.epsilons[ses_coll.id][indices]
+            elif self.hc.calculation_mode == 'scenario':
+                getter.epsilons = self.epsilons[0][indices]
             getters.append(getter)
         self.riskmodel.getters = getters
-
