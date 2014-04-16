@@ -52,7 +52,6 @@ def scenario_damage(job_id, risk_models, outputdict, params):
     """
     monitor = EnginePerformanceMonitor(
         None, job_id, scenario_damage, tracing=True)
-
     # in scenario damage calculation we have only ONE risk_model
     # since the only loss_type is 'damage'
     [risk_model] = risk_models
@@ -171,10 +170,8 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         """
         risk_models, damage_state_ids = loaders.fragility(
             self.rc, self.rc.inputs['fragility'])
-
         self.damage_state_ids = damage_state_ids
-        for rm in risk_models.values():
-            rm['damage'].loss_type = 'damage'  # single loss_type
+        self.loss_types.add('damage')  # single loss_type
         return risk_models
 
     @property
