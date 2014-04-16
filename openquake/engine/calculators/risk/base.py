@@ -188,7 +188,7 @@ class RiskCalculator(base.Calculator):
         for v_input, loss_type in self.rc.vulnerability_inputs(retrofitted):
             for taxonomy, model in loaders.vulnerability(v_input):
                 risk_models[taxonomy][loss_type] = model.copy(
-                    loss_type=loss_type)
+                    taxonomy=taxonomy, loss_type=loss_type)
 
         return risk_models
 
