@@ -75,4 +75,8 @@ class ImportGmfScenarioTestCase(risk.BaseRiskQATestCase):
     def get_hazard_job(self):
         with open(self._test_path('gmf-scenario.xml')) as data:
             output = import_gmf_scenario(data)
-        return output.oq_job
+        job = output.oq_job
+        # this is needed to make happy the GetterBuilder
+        job.hazard_calculation.number_of_ground_motion_fields = 3
+        job.hazard_calculation.save()
+        return job
