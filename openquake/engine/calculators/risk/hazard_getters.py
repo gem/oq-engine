@@ -32,11 +32,9 @@ from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.performance import DummyMonitor
 
-#: Scaling constant do adapt to the postgis functions (that work with
-#: meters)
-KILOMETERS_TO_METERS = 1000
 
-
+# all hazard getters are to be considered private, they should be called by
+# the GetterBuilder only
 class HazardGetter(object):
     """
     Base abstract class of an Hazard Getter.
@@ -51,9 +49,6 @@ class HazardGetter(object):
 
     :attr assets:
         The assets for which we wants to compute.
-
-    :attr max_distance:
-        The maximum distance, in kilometers, to use.
 
     :attr imt:
         The imt (in long form) for which data have to be retrieved
@@ -70,68 +65,22 @@ class HazardGetter(object):
         if hasattr(h, 'lt_realization') and h.lt_realization:
             return h.lt_realization.weight
 
-    def __init__(self, hazard_output, assets, max_distance, imt):
+    def __init__(self, hazard_output, site_assets, imt):
         self.hazard_output = hazard_output
-        self.assets = assets
-        self.max_distance = max_distance
+        self.site_assets = site_assets
         self.imt = imt
         self.imt_type, self.sa_period, self.sa_damping = from_string(imt)
-        # FIXME(lp). It is better to directly store the convex hull
-        # instead of the mesh. We are not doing it because
-        # hazardlib.Polygon is not (yet) pickeable
-        self._assets_mesh = geo.mesh.Mesh.from_points_list([
-            geo.point.Point(asset.site.x, asset.site.y)
-            for asset in self.assets])
-        self.asset_dict = dict((asset.id, asset) for asset in self.assets)
+        self.epsilons = None
 
     def __repr__(self):
-        return "<%s max_distance=%s assets=%s>" % (
-            self.__class__.__name__, self.max_distance,
-            [a.id for a in self.assets])
+        return "<%s assets=%s>" % (
+            self.__class__.__name__, [a.id for a in self.assets])
 
     def get_data(self, monitor):
         """
         Subclasses must implement this.
         """
         raise NotImplementedError
-
-    def assets_gen(self):
-        """
-        Iterator yielding site_id, assets.
-        """
-        cursor = models.getcursor('job_init')
-        # NB: the ``distinct ON (exposure_data.id)`` combined with the
-        # ``ORDER BY ST_Distance`` does the job to select the closest site.
-        # The other ORDER BY are there to help debugging, it is always
-        # nice to have numbers coming in a fixed order. They have an
-        # insignificant effect on the performance.
-        query = """
-SELECT site_id, array_agg(asset_id ORDER BY asset_id) AS asset_ids FROM (
-  SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
-  FROM riski.exposure_data AS exp
-  JOIN hzrdi.hazard_site AS hsite
-  ON ST_DWithin(exp.site, hsite.location, %s)
-  WHERE hsite.hazard_calculation_id = %s
-  AND taxonomy = %s AND exposure_model_id = %s AND exp.site && %s
-  ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)) AS x
-GROUP BY site_id ORDER BY site_id;
-   """
-        args = (self.max_distance * KILOMETERS_TO_METERS,
-                self.hazard_output.oq_job.hazard_calculation.id,
-                self.assets[0].taxonomy,
-                self.assets[0].exposure_model_id,
-                self._assets_mesh.get_convex_hull().wkt)
-        cursor.execute(query, args)
-        sites_assets = cursor.fetchall()
-        for site_id, asset_ids in sites_assets:
-            assets = [self.asset_dict[i] for i in asset_ids
-                      if i in self.asset_dict]
-            # notice the "if i in self.asset_dict": in principle, it should
-            # not be necessary; in practice, the query may returns spurious
-            # assets not in the initial set; this is why we are filtering
-            # the spurious assets; it is a mysterious behaviour of PostGIS
-            if assets:
-                yield site_id, assets
 
     def __call__(self, monitor=None):
         """
@@ -141,27 +90,7 @@ GROUP BY site_id ORDER BY site_id;
             :class:`openquake.engine.db.models.ExposureData`, the second is
             the corresponding hazard data.
         """
-        monitor = monitor or DummyMonitor()
-        assets, data = self.get_data(monitor)
-        if not assets:
-            logs.LOG.warn(
-                'No hazard site found within the maximum distance of %f km for'
-                ' %d assets of taxonomy %s, IMT=%s: %s', self.max_distance,
-                len(self.assets), self.assets[0].taxonomy, self.imt,
-                ' '.join(a.asset_ref for a in self.assets))
-            return [], []
-
-        missing_asset_ids = set(self.asset_dict) - set(a.id for a in assets)
-
-        for missing_asset_id in missing_asset_ids:
-            logs.LOG.warn(
-                "No hazard with imt %s has been found for "
-                "the asset %s within %s km" % (
-                    self.imt,
-                    self.asset_dict[missing_asset_id],
-                    self.max_distance))
-
-        return assets, data
+        return self.get_data(monitor or DummyMonitor())
 
 
 class HazardCurveGetterPerAsset(HazardGetter):
@@ -178,7 +107,6 @@ class HazardCurveGetterPerAsset(HazardGetter):
         requested by the :meth:`HazardGetter.get_data` interface.
         """
         oc = self.hazard_output.output_container
-
         if oc.output.output_type == 'hazard_curve':
             imls = oc.imls
         elif oc.output.output_type == 'hazard_curve_multi':
@@ -192,12 +120,9 @@ class HazardCurveGetterPerAsset(HazardGetter):
                 sa_damping=self.sa_damping)
             imls = oc.imls
 
-        with monitor.copy('associating assets->site'):
-            site_assets = list(self.assets_gen())
-
         all_assets, all_curves = [], []
         with monitor.copy('getting closest hazard curves'):
-            for site_id, assets in site_assets:
+            for site_id, assets in self.site_assets:
                 site = models.HazardSite.objects.get(pk=site_id)
                 [poes] = self.get_by_site(site, oc.id)
                 curve = zip(imls, poes)
@@ -248,24 +173,25 @@ class ScenarioGetter(HazardGetter):
         """
         all_assets = []
         all_gmvs = []
-        # dictionary site -> ({rupture_id: gmv}, n_assets)
-        # the ordering is there only to have repeatable runs
-        with monitor.copy('associating assets->site'):
-            site_assets = list(self.assets_gen())
-
         with monitor.copy('getting gmvs and ruptures'):
-            for site_id, assets in site_assets:
+            for site_id, assets in self.site_assets:
                 n_assets = len(assets)
                 all_assets.extend(assets)
                 gmvs = self.get_gmvs(site_id)
                 if gmvs:
                     array = numpy.array(gmvs)
                     all_gmvs.extend([array] * n_assets)
-
         return all_assets, all_gmvs
 
+    @classmethod
+    def make_epsilons(cls, lt_model, num_assets, seed, correlation):
+        self.hazard_output.output_container
+        num_ruptures = ses_coll.get_ruptures().count()
+        zeros = numpy.zeros((num_assets, num_ruptures))
+        return scientific.make_epsilons(zeros, seed, correlation)
 
-class GroundMotionValuesGetter(ScenarioGetter):
+
+class GroundMotionValuesGetter(HazardGetter):
     """
     Hazard getter for loading ground motion values. It is instantiated
     with a set of assets all of the same taxonomy.
@@ -297,11 +223,8 @@ class GroundMotionValuesGetter(ScenarioGetter):
         site_gmv = collections.OrderedDict()
         # dictionary site -> ({rupture_id: gmv}, n_assets)
         # the ordering is there only to have repeatable runs
-        with monitor.copy('associating assets->site'):
-            site_assets = list(self.assets_gen())
-
         with monitor.copy('getting gmvs and ruptures'):
-            for site_id, assets in site_assets:
+            for site_id, assets in self.site_assets:
                 n_assets = len(assets)
                 all_assets.extend(assets)
                 gmvs, ruptures = self.get_gmvs_ruptures(site_id)
@@ -318,6 +241,13 @@ class GroundMotionValuesGetter(ScenarioGetter):
                 all_gmvs.extend([array] * n_assets)
         return all_assets, (all_gmvs, all_ruptures)
 
+    @classmethod
+    def make_epsilons(cls, lt_model, num_assets, seed, correlation):
+        ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
+        num_ruptures = ses_coll.get_ruptures().count()
+        zeros = numpy.zeros((num_assets, num_ruptures))
+        return scientific.make_epsilons(zeros, seed, correlation)
+
 
 class BCRGetter(object):
     def __init__(self, getter_orig, getter_retro):
@@ -331,3 +261,60 @@ class BCRGetter(object):
         assets, orig = self.getter_orig(monitor)
         _assets, retro = self.getter_retro(monitor)
         return assets, (orig, retro)
+
+
+class GetterBuilder(object):
+    """
+    .asset_ids
+    .site_ids
+
+    Warning: instantiation a GetterBuilder performs a potentially
+    expensive geospatial query.
+    """
+    def __init__(self, gettercls, riskmodel, rc):
+        self.gettercls = gettercls
+        self.riskmodel = riskmodel
+        self.rc = rc
+        self.hc = rc.get_hazard_calculation()
+        self.max_dist = rc.best_maximum_distance * 1000 # km to meters
+        cursor = connections['job_init'].cursor()
+        cursor.execute("""
+SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
+FROM riski.exposure_data AS exp
+JOIN hzrdi.hazard_site AS hsite
+ON ST_DWithin(exp.site, hsite.location, %s)
+WHERE hsite.hazard_calculation_id = %s
+AND exposure_model_id = %s AND taxonomy=%s
+AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
+ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
+""", (self.max_dist, self.hc.id, rc.exposure_model.id,
+      self.riskmodel.taxonomy, rc.region_constraint.wkt))
+        self.asset_ids, self.site_ids = zip(*cursor.fetchall())
+
+    def indices_site_assets(self, all_assets)
+        indices = []
+        site_assets = collections.defaultdict(list)
+        for asset in all_assets:
+            try:
+                idx = self.asset_ids.index(asset.id)
+            except ValueError:  # asset.id not in list
+                logs.LOG.info(
+                "No hazard with imt %s has been found for "
+                "the asset %s within %s km", self.riskmodel.imt,
+                    asset, self.max_dist)
+            else:
+                site_id = self.site_ids[idx]
+                site_assets[site_id].append(asset)
+                indices.append(idx)
+        return site_assets, indices
+
+    def init_getters(self, hazard_outputs, site_assets, indices):
+        epsilons = self.gettercls.make_epsilons(len(self.asset_ids))
+        getters = []
+        for ho in self.hazard_outputs:
+            getter = self.gettercls(ho, site_assets.items(), self.riskmodel.imt)
+            if epsilons is not None:
+                getter.epsilons = self.epsilons[indices]
+            getters.append(getter)
+        self.riskmodel.getters = getters
+
