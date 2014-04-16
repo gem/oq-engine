@@ -87,32 +87,24 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         validation.ExposureHasRetrofittedCosts]
 
     output_builders = [writers.BCRMapBuilder]
+    getter_class = hazard_getters.HazardCurveGetterPerAsset
 
     def __init__(self, job):
         super(ClassicalBCRRiskCalculator, self).__init__(job)
         self.risk_models_retrofitted = None
 
-    def init_risk_model(self, model, assets):
+    def get_workflow(self, taxonomy):
         """
         Set the attributes .workflow and .getters
         """
-        taxonomy = assets[0].taxonomy  # all the assets have the same taxonomy
-        model_orig = self.risk_models[taxonomy][model.loss_type]
-        model_retro = self.risk_models_retrofitted[taxonomy][model.loss_type]
-        max_dist = self.rc.best_maximum_distance
-        model.workflow = workflows.ClassicalBCR(
+        model_orig = self.risk_models[taxonomy]
+        model_retro = self.risk_models_retrofitted[taxonomy]
+        return workflows.ClassicalBCR(
             model_orig.vulnerability_function,
             model_retro.vulnerability_function,
             self.rc.lrem_steps_per_interval,
             self.rc.interest_rate,
             self.rc.asset_life_expectancy)
-        model.getters = [
-            hazard_getters.BCRGetter(
-                hazard_getters.HazardCurveGetterPerAsset(
-                    ho, assets, max_dist, model_orig.imt),
-                hazard_getters.HazardCurveGetterPerAsset(
-                    ho, assets, max_dist, model_retro.imt))
-            for ho in self.rc.hazard_outputs()]
 
     def pre_execute(self):
         """

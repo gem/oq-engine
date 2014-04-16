@@ -26,12 +26,6 @@ from openquake.engine.calculators.risk.base import RiskCalculator
 from openquake.engine.tests.utils.helpers import get_data_path
 
 
-class FakeRiskModel(object):
-    def __init__(self, imt, taxonomy):
-        self.imt = imt
-        self.taxonomy = taxonomy
-
-
 class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
     hazard_demo = get_data_path('simple_fault_demo_hazard/job.ini')
@@ -50,17 +44,15 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
         models.JobStats.objects.create(oq_job=self.job)
         calc.pre_execute()
 
-        risk_model = FakeRiskModel(self.imt, self.taxonomy)
         builder = hazard_getters.GetterBuilder(
-            self.getter_class, risk_model, self.job.risk_calculation)
+            self.getter_class, self.taxonomy, self.job.risk_calculation)
 
         self.assets = models.ExposureData.objects.filter(
             exposure_model=self.job.risk_calculation.exposure_model).order_by(
             'asset_ref').filter(taxonomy=self.taxonomy)
 
         ho = self.job.risk_calculation.hazard_output
-        builder.init_getters([ho], self.assets)
-        [self.getter] = risk_model.getters
+        [self.getter] = builder.make_getters([ho], self.assets, self.imt)
 
     def test_is_pickleable(self):
         pickle.dumps(self.getter)  # raises an error if not
