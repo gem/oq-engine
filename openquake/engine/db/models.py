@@ -1545,6 +1545,10 @@ class SESCollection(djm.Model):
         """
         return self.output.oq_job.hazard_calculation.ses_per_logic_tree_path
 
+    def get_ruptures(self):
+        """Return the SESRuptures associated to self"""
+        return SESRupture.objects.filter(rupture__ses_collection=self)
+
     @property
     def sm_lt_path(self):
         """
