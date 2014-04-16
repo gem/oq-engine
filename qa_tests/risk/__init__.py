@@ -82,9 +82,10 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         try:
+            haz_job = self.get_hazard_job()
             job = self.run_risk(
                 self._test_path('job_risk.ini'),
-                self.hazard_id(self.get_hazard_job()))
+                self.hazard_id(haz_job))
 
             self.check_outputs(job)
 
