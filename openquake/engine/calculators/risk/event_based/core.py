@@ -374,7 +374,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                                 aggregate_loss_losses, aggregate_loss_poes),
                             stddev_loss=numpy.std(aggregate_losses))
 
-    def get_workflow(self):
+    def get_workflow(self, taxonomy):
         time_span, tses = self.hazard_times()
         return workflows.ProbabilisticEventBased(
             self.risk_models[taxonomy].vulnerability_function,

@@ -51,7 +51,7 @@ class RiskCalculator(base.Calculator):
 
         self.taxonomies_asset_count = None
         self.risk_models = None
-        self.loss_types = []
+        self.loss_types = set()
 
     def pre_execute(self):
         """
@@ -133,7 +133,7 @@ class RiskCalculator(base.Calculator):
                 yield [
                     self.job.id,
                     [risk_model.copy(loss_type=loss_type)
-                     for loss_type in self.loss_types],
+                     for loss_type in sorted(self.loss_types)],
                     outputdict,
                     self.calculator_parameters]
 
@@ -191,7 +191,7 @@ class RiskCalculator(base.Calculator):
         """
         risk_models = collections.defaultdict(dict)
         for v_input, loss_type in self.rc.vulnerability_inputs(retrofitted):
-            self.loss_types.append(loss_type)
+            self.loss_types.add(loss_type)
             for taxonomy, model in loaders.vulnerability(v_input):
                 risk_models[taxonomy] = model.copy(taxonomy=taxonomy)
 
