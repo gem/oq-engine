@@ -230,8 +230,10 @@ class GetterBuilder(object):
         self.taxonomy = taxonomy
         self.rc = rc
         self.hc = rc.get_hazard_calculation()
-        self.max_dist = rc.best_maximum_distance * 1000  # km to meters
+        max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = connections['job_init'].cursor()
+        logs.LOG.info('Running site->asset association query for taxonomy %s',
+                      taxonomy)
         cursor.execute("""
 SELECT DISTINCT ON (exp.id) exp.id AS asset_id, hsite.id AS site_id
 FROM riski.exposure_data AS exp
@@ -241,7 +243,7 @@ WHERE hsite.hazard_calculation_id = %s
 AND exposure_model_id = %s AND taxonomy=%s
 AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
-""", (self.max_dist, self.hc.id, rc.exposure_model.id,
+""", (max_dist, self.hc.id, rc.exposure_model.id,
             taxonomy, rc.region_constraint.wkt))
         self.asset_ids, self.site_ids = zip(*cursor.fetchall())
         self.rupture_ids = {}
@@ -273,7 +275,8 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             except ValueError:  # asset.id not in list
                 logs.LOG.info(
                     "No hazard has been found for "
-                    "the asset %s within %s km", asset, self.max_dist)
+                    "the asset %s within %s km", asset,
+                    self.rc.best_maximum_distance)
             else:
                 asset_site[asset.id] = self.site_ids[idx]
                 assets.append(asset)
@@ -282,6 +285,10 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 
     def make_getters(self, hazard_outputs, asset_block, imt):
         indices, assets, asset_site = self.indices_asset_site(asset_block)
+        if not indices:
+            raise RuntimeError('Could not associated any asset in %s to '
+                               'hazard sites within the distance of %s km',
+                               asset_block, self.rc.best_maximum_distance)
         getters = []
         for ho in hazard_outputs:
             getter = self.gettercls(ho, assets, asset_site, imt)
