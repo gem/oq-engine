@@ -36,6 +36,10 @@ from openquake.engine.performance import EnginePerformanceMonitor, \
     LightMonitor
 
 
+class JobNotRunning(Exception):
+    pass
+
+
 ONE_MB = 1024 * 1024
 
 
@@ -218,7 +222,7 @@ def oqtask(task_func):
         job = models.OqJob.objects.get(id=job_id)
         if job.is_running is False:
             # the job was killed, it is useless to run the task
-            return
+            raise JobNotRunning(job_id)
 
         # it is important to save the task id soon, so that
         # the revoke functionality can work
