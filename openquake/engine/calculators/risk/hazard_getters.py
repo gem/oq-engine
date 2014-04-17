@@ -62,12 +62,10 @@ class HazardGetter(object):
         if hasattr(h, 'lt_realization') and h.lt_realization:
             return h.lt_realization.weight
 
-    def __init__(self, hazard_output, assets, asset_site, imt):
+    def __init__(self, hazard_output, assets, asset_site):
         self.hazard_output = hazard_output
         self.assets = assets
         self.asset_site = asset_site
-        self.imt = imt
-        self.imt_type, self.sa_period, self.sa_damping = from_string(imt)
         self.epsilons = None
 
     def __repr__(self):
@@ -89,11 +87,13 @@ class HazardCurveGetterPerAsset(HazardGetter):
     :attr imls:
         The intensity measure levels of the curves we are going to get.
     """
-    def get_data(self):
+    def get_data(self, imt):
         """
         Calls ``get_by_site`` for each asset and pack the results as
         requested by the :meth:`HazardGetter.get_data` interface.
         """
+        imt_type, sa_period, sa_damping = from_string(imt)
+
         oc = self.hazard_output.output_container
         if oc.output.output_type == 'hazard_curve':
             imls = oc.imls
@@ -103,9 +103,9 @@ class HazardCurveGetterPerAsset(HazardGetter):
                 output__output_type='hazard_curve',
                 statistics=oc.statistics,
                 lt_realization=oc.lt_realization,
-                imt=self.imt_type,
-                sa_period=self.sa_period,
-                sa_damping=self.sa_damping)
+                imt=imt_type,
+                sa_period=sa_period,
+                sa_damping=sa_damping)
             imls = oc.imls
 
         cursor = models.getcursor('job_init')
@@ -133,28 +133,29 @@ class ScenarioGetter(HazardGetter):
     rupture_ids = [0]  # there is a single rupture kept in memory
     epsilons = None  # set by the GetterBuilder
 
-    def get_gmvs(self, site_id):
+    def get_gmvs(self, site_id, imt_type, sa_period, sa_damping):
         """
         :returns: gmvs and ruptures for the given site and IMT
         """
         gmvs = []
         for gmf in models.GmfData.objects.filter(
                 gmf=self.hazard_output.output_container,
-                site=site_id, imt=self.imt_type, sa_period=self.sa_period,
-                sa_damping=self.sa_damping):  # ordered by task_no
+                site=site_id, imt=imt_type, sa_period=sa_period,
+                sa_damping=sa_damping):  # ordered by task_no
             gmvs.extend(gmf.gmvs)
             if not gmvs:
                 logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
         return gmvs
 
-    def get_data(self):
+    def get_data(self, imt):
         """
         :returns: the assets and the corresponding ground motion values
         """
+        imt_type, sa_period, sa_damping = from_string(imt)
         all_gmvs = []
         for asset in self.assets:
             site_id = self.asset_site[asset.id]
-            gmvs = self.get_gmvs(site_id)
+            gmvs = self.get_gmvs(site_id, imt_type, sa_period, sa_damping)
             all_gmvs.append(gmvs)
         return all_gmvs
 
@@ -167,7 +168,7 @@ class GroundMotionValuesGetter(HazardGetter):
     rupture_ids = None  # set by the GetterBuilder
     epsilons = None  # set by the GetterBuilder
 
-    def get_gmv_dict(self, site_id):
+    def get_gmv_dict(self, site_id, imt_type, sa_period, sa_damping):
         """
         :returns: a dictionary {rupture_id: gmv}
         """
@@ -175,19 +176,20 @@ class GroundMotionValuesGetter(HazardGetter):
         ruptures = []
         for gmf in models.GmfData.objects.filter(
                 gmf=self.hazard_output.output_container,
-                site=site_id, imt=self.imt_type, sa_period=self.sa_period,
-                sa_damping=self.sa_damping):  # ordered by task_no
+                site=site_id, imt=imt_type, sa_period=sa_period,
+                sa_damping=sa_damping):  # ordered by task_no
             gmvs.extend(gmf.gmvs)
             ruptures.extend(gmf.rupture_ids)
         if not gmvs:
             logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
         return dict(zip(ruptures, gmvs))
 
-    def get_data(self):
+    def get_data(self, imt):
+        imt_type, sa_period, sa_damping = from_string(imt)
         all_gmvs = []
         for asset in self.assets:
             site_id = self.asset_site[asset.id]
-            gmv = self.get_gmv_dict(site_id)
+            gmv = self.get_gmv_dict(site_id, imt_type, sa_period, sa_damping)
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
         return all_gmvs
@@ -217,7 +219,7 @@ AND exposure_model_id = %s AND taxonomy=%s
 AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 """, (max_dist, self.hc.id, rc.exposure_model.id, taxonomy,
-          rc.region_constraint.wkt))
+            rc.region_constraint.wkt))
         self.asset_ids, self.site_ids = zip(*cursor.fetchall())
         self.rupture_ids = {}
         self.epsilons = {}
@@ -262,7 +264,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 indices.append(idx)
         return indices, assets, asset_site
 
-    def make_getters(self, gettercls, hazard_outputs, asset_block, imt):
+    def make_getters(self, gettercls, hazard_outputs, asset_block):
         indices, assets, asset_site = self.indices_asset_site(asset_block)
         if not indices:
             raise RuntimeError('Could not associated any asset in %s to '
@@ -270,7 +272,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                                asset_block, self.rc.best_maximum_distance)
         getters = []
         for ho in hazard_outputs:
-            getter = gettercls(ho, assets, asset_site, imt)
+            getter = gettercls(ho, assets, asset_site)
             if self.hc.calculation_mode == 'event_based':
                 ses_coll = models.SESCollection.objects.get(
                     lt_model=ho.output_container.lt_realization.lt_model)

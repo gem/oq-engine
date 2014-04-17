@@ -28,19 +28,24 @@ from openquake.risklib.workflows import RiskModel
 
 class HazardIMTTestCase(unittest.TestCase):
     def test_get_error(self):
+        vf1 = mock.Mock()
+        vf1.imt = 'PGA'
+        vf2 = mock.Mock()
+        vf2.imt = 'PGV'
         calc = mock.Mock()
         workflow = mock.Mock()
-        workflow.vulnerability_functions = {}
+        workflow.vulnerability_functions = dict(
+            structural=vf1, nonstructural=vf2)
         calc.risk_models = {
-            'tax1': RiskModel('imt1', 'tax1', workflow),
-            'tax2': RiskModel('imt2', 'tax2', workflow)}
-        calc.hc.get_imts = mock.Mock(return_value=['imt1', 'imt2'])
+            'tax1': RiskModel('tax1', workflow),
+            'tax2': RiskModel('tax2', workflow)}
+        calc.hc.get_imts = mock.Mock(return_value=['PGA', 'PGV'])
         val = validation.HazardIMT(calc)
 
         self.assertIsNone(val.get_error())
-        calc.hc.get_imts = mock.Mock(return_value=['imt1'])
-        self.assertEqual(("There is no hazard output for: imt2. "
-                          "The available IMTs are: imt1."), val.get_error())
+        calc.hc.get_imts = mock.Mock(return_value=['PGA'])
+        self.assertEqual(("There is no hazard output for: PGV. "
+                          "The available IMTs are: PGA."), val.get_error())
 
 
 class EmptyExposureTestCase(unittest.TestCase):

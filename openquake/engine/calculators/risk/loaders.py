@@ -63,10 +63,8 @@ def vulnerability(vulnerability_file):
                              "be associated with "
                              "different vulnerability functions" % taxonomy)
         try:
-            vfs[taxonomy] = (
-                imt,
-                scientific.VulnerabilityFunction(
-                    record['IML'], loss_ratios, covs, distribution))
+            vfs[taxonomy] = scientific.VulnerabilityFunction(
+                imt, record['IML'], loss_ratios, covs, distribution)
         except ValueError, err:
             msg = "Invalid vulnerability function with ID '%s': %s" % (
                 taxonomy, err.message)
@@ -85,6 +83,15 @@ def fragility(risk_calculation, fragility_input):
         risk_calculation=risk_calculation).order_by('lsi')]
 
     return data, damage_state_ids
+
+
+class List(list):
+    """
+    Class to store lists of objects with common attributes
+    """
+    def __init__(self, elements, **attrs):
+        list.__init__(self, elements)
+        vars(self).update(attrs)
 
 
 def _parse_fragility(content):
@@ -119,6 +126,6 @@ def _parse_fragility(content):
                 scientific.FragilityFunctionContinuous(*mean_stddev)
                 for mean_stddev in params]
 
-    data = [(tax_imt[tax], tax, dict(damage=ffs))
+    data = [(tax, dict(damage=List(ffs, imt=tax_imt[tax])))
             for tax, ffs in fragility_functions.items()]
     return damage_states, data
