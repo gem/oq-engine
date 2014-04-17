@@ -162,7 +162,7 @@ class ExposureHasInsuranceBounds(Validator):
 
     def get_error(self):
         if (self.calc.rc.insured_losses and
-            not self.calc.rc.exposure_model.has_insurance_bounds()):
+                not self.calc.rc.exposure_model.has_insurance_bounds()):
             return "Deductible or insured limit missing in exposure"
 
 

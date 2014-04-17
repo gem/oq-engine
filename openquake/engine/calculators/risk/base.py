@@ -34,7 +34,8 @@ from openquake.risklib.workflows import RiskModel
 @tasks.oqtask
 def make_getter_builder(job_id, taxonomy):
     rc = models.OqJob.objects.get(pk=job_id).risk_calculation
-    return hazard_getters.GetterBuilder(taxonomy, rc)
+    gb = hazard_getters.GetterBuilder(taxonomy, rc)
+    return gb
 
 
 class RiskCalculator(base.Calculator):
@@ -108,6 +109,7 @@ class RiskCalculator(base.Calculator):
             acc[builder.taxonomy] = builder
             logs.LOG.progress('Built builder for %s', builder.taxonomy)
             return acc
+
         self.getter_builders = tasks.map_reduce(
             make_getter_builder,
             [(self.job.id, taxo) for taxo in self.taxonomies_asset_count],
