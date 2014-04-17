@@ -36,7 +36,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def event_based(job_id, risk_models, outputdict, params):
+def event_based(job_id, risk_model, loss_types, outputdict, params):
     """
     Celery task for the event based risk calculator.
 
@@ -61,10 +61,11 @@ def event_based(job_id, risk_models, outputdict, params):
     event_loss_tables = dict()
 
     with db.transaction.commit_on_success(using='job_init'):
-        for risk_model in risk_models:
-            event_loss_tables[risk_model.loss_type] = do_event_based(
+        for loss_type in loss_types:
+            risk_model.loss_type = loss_type
+            event_loss_tables[loss_type] = do_event_based(
                 risk_model,
-                outputdict.with_args(loss_type=risk_model.loss_type),
+                outputdict.with_args(loss_type=loss_type),
                 params, monitor)
     return event_loss_tables
 

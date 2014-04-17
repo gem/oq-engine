@@ -28,7 +28,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def event_based_bcr(job_id, risk_models, outputdict, _params):
+def event_based_bcr(job_id, risk_model, loss_types, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -53,10 +53,11 @@ def event_based_bcr(job_id, risk_models, outputdict, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for risk_model in risk_models:
+        for loss_type in loss_types:
+            risk_model.loss_type = loss_type
             do_event_based_bcr(
                 risk_model,
-                outputdict.with_args(loss_type=risk_model.loss_type),
+                outputdict.with_args(loss_type=loss_type),
                 monitor)
 
 

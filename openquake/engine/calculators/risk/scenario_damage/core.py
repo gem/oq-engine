@@ -34,7 +34,7 @@ from openquake.engine.db import models
 
 
 @tasks.oqtask
-def scenario_damage(job_id, risk_models, outputdict, params):
+def scenario_damage(job_id, risk_model, loss_types, outputdict, params):
     """
     Celery task for the scenario damage risk calculator.
 
@@ -52,9 +52,7 @@ def scenario_damage(job_id, risk_models, outputdict, params):
     """
     monitor = EnginePerformanceMonitor(
         None, job_id, scenario_damage, tracing=True)
-    # in scenario damage calculation we have only ONE risk_model
-    # since the only loss_type is 'damage'
-    [risk_model] = risk_models
+    # in scenario damage calculation the only loss_type is 'damage'
     [getter] = risk_model.getters
 
     # and NO containes

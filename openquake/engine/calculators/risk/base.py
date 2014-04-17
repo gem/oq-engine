@@ -150,8 +150,8 @@ class RiskCalculator(base.Calculator):
                         workflow=self.get_workflow(taxonomy))
                 yield [
                     self.job.id,
-                    [rm.copy(loss_type=loss_type)
-                     for loss_type in sorted(self.loss_types)],
+                    rm,
+                    sorted(self.loss_types),
                     outputdict,
                     self.calculator_parameters]
         if epsilon_nbytes:
