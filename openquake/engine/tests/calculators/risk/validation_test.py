@@ -29,9 +29,11 @@ from openquake.risklib.workflows import RiskModel
 class HazardIMTTestCase(unittest.TestCase):
     def test_get_error(self):
         calc = mock.Mock()
+        workflow = mock.Mock()
+        workflow.vulnerability_functions = {}
         calc.risk_models = {
-            'tax1': RiskModel('imt1', None, None, loss_type='loss1'),
-            'tax2': RiskModel('imt2', None, None, loss_type='loss_2')}
+            'tax1': RiskModel('imt1', 'tax1', workflow),
+            'tax2': RiskModel('imt2', 'tax2', workflow)}
         calc.hc.get_imts = mock.Mock(return_value=['imt1', 'imt2'])
         val = validation.HazardIMT(calc)
 
