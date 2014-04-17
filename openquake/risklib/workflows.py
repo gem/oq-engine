@@ -293,7 +293,8 @@ class Classical(object):
         """
         all_outputs = []
         for getter in getters:
-            hazard_curves = getter(getter_monitor)
+            with getter_monitor.copy('getting hazard'):
+                hazard_curves = getter.get_data()
             with getter_monitor.copy('computing individual risk'):
                 all_outputs.append(
                     Output(getter.hid, getter.weight, loss_type,
@@ -409,7 +410,10 @@ class ProbabilisticEventBased(object):
            :class:`openquake.risklib.workflows.Asset` instances
 
         :param ground_motion_values:
-           a numpy array with ground_motion_values shaped (N x R)
+           a numpy array with ground_motion_values of shape N x R
+
+        :param epsilons:
+           a numpy array with stochastic values of shape N x R
 
         :param event_ids:
            a numpy array of R event ID (integer)
@@ -453,7 +457,8 @@ class ProbabilisticEventBased(object):
         """
         all_outputs = []
         for getter in getters:
-            gmvs = getter(getter_monitor)
+            with getter_monitor.copy('getting hazard'):
+                gmvs = getter.get_data()
             with getter_monitor.copy('computing individual risk'):
                 all_outputs.append(
                     Output(getter.hid, getter.weight, loss_type,
