@@ -30,7 +30,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def scenario(job_id, risk_model, loss_types, outputdict, _params):
+def scenario(job_id, risk_model, outputdict, _params):
     """
     Celery task for the scenario risk calculator.
 
@@ -50,10 +50,10 @@ def scenario(job_id, risk_model, loss_types, outputdict, _params):
     agg = dict()
     insured = dict()
     with db.transaction.commit_on_success(using='job_init'):
-        for loss_type in loss_types:
-            risk_model.loss_type = loss_type
+        for loss_type in risk_model.loss_types:
             agg[loss_type], insured[loss_type] = do_scenario(
                 risk_model,
+                loss_type,
                 outputdict.with_args(
                     loss_type=loss_type,
                     output_type="loss_map"),
@@ -61,11 +61,12 @@ def scenario(job_id, risk_model, loss_types, outputdict, _params):
     return agg, insured
 
 
-def do_scenario(risk_model, outputdict, monitor):
+def do_scenario(risk_model, loss_type, outputdict, monitor):
     """
     See `scenario` for a description of the input parameters
     """
-    [output] = risk_model.compute_outputs(monitor.copy('getting data'))
+    [output] = risk_model.compute_outputs(
+        loss_type, monitor.copy('getting data'))
 
     (assets, loss_ratio_matrix, aggregate_losses,
      insured_loss_matrix, insured_losses) = output.output
@@ -159,7 +160,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                         mean=numpy.mean(insured_losses),
                         std_dev=numpy.std(insured_losses, ddof=1))
 
-    def get_workflow(self, taxonomy):
+    def get_workflow(self, vulnerability_functions):
         return workflows.Scenario(
-            self.risk_models[taxonomy].vulnerability_function,
-            self.rc.insured_losses)
+            vulnerability_functions, self.rc.insured_losses)

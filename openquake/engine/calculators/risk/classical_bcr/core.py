@@ -28,7 +28,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical_bcr(job_id, risk_model, loss_types, outputdict, _params):
+def classical_bcr(job_id, risk_model, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -53,16 +53,17 @@ def classical_bcr(job_id, risk_model, loss_types, outputdict, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for loss_type in loss_types:
+        for loss_type in risk_model.loss_types:
             risk_model.loss_type = loss_type
             do_classical_bcr(
-                risk_model,
+                risk_model, loss_type,
                 outputdict.with_args(loss_type=loss_type),
                 monitor)
 
 
-def do_classical_bcr(risk_model, outputdict, monitor):
-    outputs = risk_model.compute_outputs(monitor.copy('getting hazard'))
+def do_classical_bcr(risk_model, loss_type, outputdict, monitor):
+    outputs = risk_model.compute_outputs(
+        loss_type, monitor.copy('getting hazard'))
 
     with monitor.copy('writing results'):
         for out in outputs:
@@ -88,29 +89,17 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
         validation.ExposureHasRetrofittedCosts]
 
     output_builders = [writers.BCRMapBuilder]
+
     getter_class = hazard_getters.HazardCurveGetterPerAsset
 
-    def __init__(self, job):
-        super(ClassicalBCRRiskCalculator, self).__init__(job)
-        self.risk_models_retrofitted = None
+    bcr = True
 
-    def get_workflow(self, taxonomy):
+    def get_workflow(self, vf_orig, vf_retro):
         """
         Set the attributes .workflow and .getters
         """
-        model_orig = self.risk_models[taxonomy]
-        model_retro = self.risk_models_retrofitted[taxonomy]
         return workflows.ClassicalBCR(
-            model_orig.vulnerability_function,
-            model_retro.vulnerability_function,
+            vf_orig, vf_retro,
             self.rc.lrem_steps_per_interval,
             self.rc.interest_rate,
             self.rc.asset_life_expectancy)
-
-    def pre_execute(self):
-        """
-        Store both the risk model for the original asset configuration
-        and the risk model for the retrofitted one.
-        """
-        super(ClassicalBCRRiskCalculator, self).pre_execute()
-        self.risk_models_retrofitted = self.get_risk_models(retrofitted=True)
