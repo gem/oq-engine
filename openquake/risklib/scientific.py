@@ -45,8 +45,11 @@ DEFAULT_CURVE_RESOLUTION = 50
 
 class VulnerabilityFunction(object):
     # FIXME (lp). Provide description
-    def __init__(self, imls, mean_loss_ratios, covs=None, distribution="LN"):
+    def __init__(self, imt, imls, mean_loss_ratios, covs=None,
+                 distribution="LN"):
         """
+        :param str imt: Intensity Measure Type as a string
+
         :param list imls: Intensity Measure Levels for the
             vulnerability function. All values must be >= 0.0, values
             must be arranged in ascending order with no duplicates
@@ -62,6 +65,7 @@ class VulnerabilityFunction(object):
         """
         self._check_vulnerability_data(
             imls, mean_loss_ratios, covs, distribution)
+        self.imt = imt
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
 
@@ -132,7 +136,8 @@ class VulnerabilityFunction(object):
                 covs.append(self.covs[i])
                 previous_mlr = mlr
 
-        return self.__class__(imls, mlrs, covs, self.distribution_name)
+        return self.__class__(
+            self.imt, imls, mlrs, covs, self.distribution_name)
 
     def mean_loss_ratios_with_steps(self, steps):
         """

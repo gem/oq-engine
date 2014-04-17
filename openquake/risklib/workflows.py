@@ -295,9 +295,10 @@ class Classical(object):
         :returns: a number of outputs equal to the number of realizations
         """
         all_outputs = []
+        imt = self.vulnerability_functions[loss_type].imt
         for getter in getters:
             with getter_monitor.copy('getting hazard'):
-                hazard_curves = getter.get_data()
+                hazard_curves = getter.get_data(imt)
             with getter_monitor.copy('computing individual risk'):
                 all_outputs.append(
                     Output(getter.hid, getter.weight, loss_type,
@@ -459,9 +460,10 @@ class ProbabilisticEventBased(object):
         :returns: a number of outputs equal to the number of realizations
         """
         all_outputs = []
+        imt = self.vulnerability_functions[loss_type].imt
         for getter in getters:
             with getter_monitor.copy('getting hazard'):
-                gmvs = getter.get_data()
+                gmvs = getter.get_data(imt)
             with getter_monitor.copy('computing individual risk'):
                 all_outputs.append(
                     Output(getter.hid, getter.weight, loss_type,
@@ -680,20 +682,26 @@ class Damage(object):
 
 class RiskModel(object):
     """
-    Container for the attributes imt, taxonomy, workflow and getters.
+    Container for the attributes taxonomy, workflow and getters.
     The last one can be set after instantiation, but before calling
     compute_outputs_and_stats.
     """
-    def __init__(self, imt, taxonomy, workflow, getters=None):
-        self.imt = imt
+    def __init__(self, taxonomy, workflow, getters=None):
         self.taxonomy = taxonomy
         self.workflow = workflow
         self.getters = getters
-        self.loss_types = sorted(workflow.vulnerability_functions)
+
+    @property
+    def loss_types(self):
+        return sorted(self.workflow.vulnerability_functions)
+
+    @property
+    def vulnerability_functions(self):
+        return [self.workflow.vulnerability_functions[lt]
+                for lt in self.loss_types]
 
     def copy(self, **kw):
-        new = self.__class__(
-            self.imt, self.taxonomy, self.workflow, self.getters)
+        new = self.__class__(self.taxonomy, self.workflow, self.getters)
         vars(new).update(kw)
         return new
 

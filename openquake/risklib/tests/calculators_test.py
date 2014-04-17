@@ -27,7 +27,7 @@ from openquake.risklib import calculators
 
 class ClassicalLossCurveTest(unittest.TestCase):
     def setUp(self):
-        vf = VulnerabilityFunction([0.4, 0.7], [0.1, 0.9])
+        vf = VulnerabilityFunction('PGA', [0.4, 0.7], [0.1, 0.9])
         self.calc = calculators.ClassicalLossCurve(vf, steps=3)
         self.hazard_imls = numpy.linspace(0, 1, 10)
 
