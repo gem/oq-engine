@@ -543,21 +543,22 @@ class ProbabilisticEventBased(object):
 
 class ClassicalBCR(object):
     def __init__(self,
-                 vulnerability_function_orig,
-                 vulnerability_function_retro,
+                 vulnerability_functions_orig,
+                 vulnerability_functions_retro,
                  lrem_steps_per_interval,
                  interest_rate, asset_life_expectancy):
+        self.vulnerability_functions = vulnerability_functions_orig
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
         self.curves_orig = dict(
             (loss_type,
              calculators.ClassicalLossCurve(vf, lrem_steps_per_interval))
-            for loss_type, vf in vulnerability_function_orig.items())
+            for loss_type, vf in vulnerability_functions_orig.items())
         self.curves_retro = dict(
             (loss_type,
              calculators.ClassicalLossCurve(vf, lrem_steps_per_interval))
-            for loss_type, vf in vulnerability_function_retro.items())
+            for loss_type, vf in vulnerability_functions_retro.items())
 
     def __call__(self, loss_type, assets, hazard):
         self.assets = assets
@@ -587,15 +588,16 @@ class ClassicalBCR(object):
 
 class ProbabilisticEventBasedBCR(object):
     def __init__(self,
-                 vulnerability_function_orig,
-                 vulnerability_function_retro,
+                 vulnerability_functions_orig,
+                 vulnerability_functions_retro,
                  time_span, tses, loss_curve_resolution,
                  interest_rate, asset_life_expectancy):
+        self.vulnerability_functions = vulnerability_functions_orig
         self.assets = None  # set a __call__ time
         self.interest_rate = interest_rate
         self.asset_life_expectancy = asset_life_expectancy
-        self.vf_orig = vulnerability_function_orig
-        self.vf_retro = vulnerability_function_retro
+        self.vf_orig = vulnerability_functions_orig
+        self.vf_retro = vulnerability_functions_retro
         self.curves = calculators.EventBasedLossCurve(
             time_span, tses, loss_curve_resolution)
 
@@ -663,6 +665,17 @@ class Scenario(object):
                 insured_loss_matrix, insured_losses)
 
     compute_all_outputs = ProbabilisticEventBased.compute_all_outputs.im_func
+
+
+class Damage(object):
+    def __init__(self, fragility_functions):
+        # NB: we call the fragility_functions vulnerability_functions
+        # for API compatibility
+        self.vulnerability_functions = fragility_functions
+
+    def __call__(self, gmfs):
+        ffs = self.vulnerability_functions['damage']
+        return [scientific.scenario_damage(ffs, gmvs) for gmvs in gmfs]
 
 
 class RiskModel(object):

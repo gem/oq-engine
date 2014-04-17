@@ -263,3 +263,15 @@ class ScenarioTestCase(unittest.TestCase):
         self.assertEqual((2,), aggregate_losses.shape)
         self.assertIsNone(insured_loss_matrix)
         self.assertIsNone(insured_losses)
+
+
+class DamageTest(unittest.TestCase):
+    def test_generator(self):
+        with mock.patch('openquake.risklib.scientific.scenario_damage') as m:
+            fragility_functions = mock.Mock()
+            calc = workflows.Damage(dict(damage=fragility_functions))
+            calc([1, 2, 3])
+            self.assertEqual([((fragility_functions, 1,), dict()),
+                              ((fragility_functions, 2,), dict()),
+                              ((fragility_functions, 3,), dict())],
+                             m.call_args_list)
