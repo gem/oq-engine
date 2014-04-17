@@ -264,11 +264,11 @@ class AssetStatisticsTestCase(unittest.TestCase):
 
                 (mean_curves, mean_average_losses, mean_maps,
                  quantile_curves, quantile_average_losses, quantile_maps) = (
-                     calculators.exposure_statistics(loss_curves,
-                                                     numpy.empty(poe_nr),
-                                                     numpy.empty(asset_nr),
-                                                     numpy.empty(quantile_nr),
-                                                     mock.Mock()))
+                    calculators.exposure_statistics(loss_curves,
+                                                    numpy.empty(poe_nr),
+                                                    numpy.empty(asset_nr),
+                                                    numpy.empty(quantile_nr),
+                                                    mock.Mock()))
 
                 self.assertEqual((asset_nr, 2, resolution), mean_curves.shape)
                 self.assertEqual((asset_nr, ), mean_average_losses.shape)
