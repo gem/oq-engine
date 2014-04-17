@@ -55,29 +55,25 @@ def scenario_damage(job_id, risk_model, outputdict, params):
         None, job_id, scenario_damage, tracing=True)
     # in scenario damage calculation the only loss_type is 'damage'
     [getter] = risk_model.getters
+    [ffs] = risk_model.vulnerability_functions
 
     # and NO containes
     assert len(outputdict) == 0
-
     with db.transaction.commit_on_success(using='job_init'):
-        return do_scenario_damage(
-            risk_model.workflow, getter, params, monitor)
 
+        with monitor.copy('getting hazard'):
+            ground_motion_values = getter.get_data(ffs.imt)
 
-def do_scenario_damage(workflow, getter, params, monitor):
-    with monitor.copy('getting hazard'):
-        ground_motion_values = getter.get_data()
+        with monitor.copy('computing risk'):
+            fractions = risk_model.workflow(ground_motion_values)
+            aggfractions = sum(fractions[i] * asset.number_of_units
+                               for i, asset in enumerate(getter.assets))
 
-    with monitor.copy('computing risk'):
-        fractions = workflow(ground_motion_values)
-        aggfractions = sum(fractions[i] * asset.number_of_units
-                           for i, asset in enumerate(getter.assets))
+        with monitor.copy('saving damage per assets'):
+            writers.damage_distribution(
+                getter.assets, fractions, params.damage_state_ids)
 
-    with monitor.copy('saving damage per assets'):
-        writers.damage_distribution(
-            getter.assets, fractions, params.damage_state_ids)
-
-    return aggfractions, getter.assets[0].taxonomy
+        return aggfractions, risk_model.taxonomy
 
 
 class ScenarioDamageRiskCalculator(base.RiskCalculator):
@@ -171,9 +167,11 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             self.rc, self.rc.inputs['fragility'])
         self.damage_state_ids = damage_state_ids
         self.loss_types.add('damage')  # single loss_type
-        return dict(
-            (taxonomy, RiskModel(imt, taxonomy, self.get_workflow(ffs)))
-            for imt, taxonomy, ffs in data)
+        risk_models = {}
+        for taxonomy, ffs in data:
+            risk_models[taxonomy] = RiskModel(taxonomy, self.get_workflow(ffs))
+
+        return risk_models
 
     @property
     def calculator_parameters(self):
