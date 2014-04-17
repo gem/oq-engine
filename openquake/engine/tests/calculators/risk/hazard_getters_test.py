@@ -63,7 +63,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
         [a1, a2, a3] = self.assets
         self.assertEqual(self.getter.assets, [a2, a3])
 
-        values = self.getter()
+        values = self.getter.get_data()
         numpy.testing.assert_allclose(
             [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
              [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], values)
@@ -85,7 +85,7 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
         self.assertEqual(self.getter.assets, [a1])
         rupture_ids = self.getter.rupture_ids
         self.assertEqual(len(rupture_ids), 3)
-        [gmvs] = self.getter()
+        [gmvs] = self.getter.get_data()
         numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
 
 
@@ -104,5 +104,5 @@ class ScenarioGetterTestCase(GroundMotionValuesGetterTestCase):
         a1, a3 = self.assets
         self.assertEqual(self.getter.assets, [a1])
 
-        [gmvs] = self.getter()
+        [gmvs] = self.getter.get_data()
         numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
