@@ -41,7 +41,9 @@ class HazardIMT(Validator):
     intensity measure types given in the risk models
     """
     def get_error(self):
-        model_imts = set(rm.imt for rm in self.calc.risk_models.values())
+        model_imts = set()
+        for rm in self.calc.risk_models.values():
+            model_imts.update(vf.imt for vf in rm.vulnerability_functions)
         imts = self.calc.hc.get_imts()
 
         # check that the hazard data have all the imts needed by the

@@ -53,7 +53,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
 
         ho = self.job.risk_calculation.hazard_output
         [self.getter] = builder.make_getters(
-            self.getter_class, [ho], self.assets, self.imt)
+            self.getter_class, [ho], self.assets)
 
     def test_is_pickleable(self):
         pickle.dumps(self.getter)  # raises an error if not
@@ -64,7 +64,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
         [a1, a2, a3] = self.assets
         self.assertEqual(self.getter.assets, [a2, a3])
 
-        values = self.getter.get_data()
+        values = self.getter.get_data(self.imt)
         numpy.testing.assert_allclose(
             [[(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)],
              [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], values)
@@ -86,7 +86,7 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
         self.assertEqual(self.getter.assets, [a1])
         rupture_ids = self.getter.rupture_ids
         self.assertEqual(len(rupture_ids), 3)
-        [gmvs] = self.getter.get_data()
+        [gmvs] = self.getter.get_data(self.imt)
         numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
 
 
@@ -105,5 +105,5 @@ class ScenarioGetterTestCase(GroundMotionValuesGetterTestCase):
         a1, a3 = self.assets
         self.assertEqual(self.getter.assets, [a1])
 
-        [gmvs] = self.getter.get_data()
+        [gmvs] = self.getter.get_data(self.imt)
         numpy.testing.assert_allclose([0.1, 0.2, 0.3], gmvs)
