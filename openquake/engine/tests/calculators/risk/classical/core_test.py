@@ -25,7 +25,6 @@ class ClassicalRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     """
     def setUp(self):
         super(ClassicalRiskCalculatorTestCase, self).setUp()
-
         self.calculator = classical.ClassicalRiskCalculator(self.job)
 
     def test_complete_workflow(self):
