@@ -35,6 +35,7 @@ assets = [workflows.Asset(
 
 
 class EventBasedTestCase(unittest.TestCase):
+    loss_type = 'structural'
 
     def assert_similar(self, a, b):
         assert a.keys() == b.keys(), (a.keys(), b.keys())
@@ -60,16 +61,14 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.500993631, first_curve_integral)
 
         wf = workflows.ProbabilisticEventBased(
-            vulnerability_function=vf,
-            seed=1,
-            asset_correlation=0,
+            vulnerability_functions={self.loss_type: vf},
             time_span=50,
             tses=10000,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
-        out = wf('structural', assets, gmvs, epsilons, [1, 2, 3, 4, 5])
+        out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         self.assert_similar(
             out.event_loss_table,
             {1: 16.246646231503398,
@@ -96,16 +95,14 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.48983614471, first_curve_integral)
 
         wf = workflows.ProbabilisticEventBased(
-            vulnerability_function=vf,
-            seed=1,
-            asset_correlation=0.5,
+            vulnerability_functions={self.loss_type: vf},
             time_span=50,
             tses=10000,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
-        out = wf('structural', assets, gmvs, epsilons, [1, 2, 3, 4, 5])
+        out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         self.assert_similar(
             out.event_loss_table,
             {1: 15.332714802464356,
@@ -134,16 +131,14 @@ class EventBasedTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.483041416, first_curve_integral)
 
         wf = workflows.ProbabilisticEventBased(
-            vulnerability_function=vf,
-            seed=1,
-            asset_correlation=1,
+            vulnerability_functions={self.loss_type: vf},
             time_span=50,
             tses=10000,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=False
             )
-        out = wf('structural', assets, gmvs, epsilons, [1, 2, 3, 4, 5])
+        out = wf(self.loss_type, assets, gmvs, epsilons, [1, 2, 3, 4, 5])
         self.assert_similar(
             out.event_loss_table,
             {1: 15.232320555463319,
@@ -219,16 +214,14 @@ class EventBasedTestCase(unittest.TestCase):
             insured_average_losses)
 
         wf = workflows.ProbabilisticEventBased(
-            vulnerability_function=vf,
-            seed=1,
-            asset_correlation=1,
+            vulnerability_functions={self.loss_type: vf},
             time_span=50,
             tses=10000,
             loss_curve_resolution=4,
             conditional_loss_poes=[0.1, 0.5, 0.9],
             insured_losses=True
             )
-        out = wf('structural', assets, gmf[0:2], epsilons, [1, 2, 3, 4, 5])
+        out = wf(self.loss_type, assets, gmf[0:2], epsilons, [1, 2, 3, 4, 5])
         self.assert_similar(
             out.event_loss_table,
             {1: 0.20314761658291458,
