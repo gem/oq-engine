@@ -24,6 +24,7 @@ from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, loaders, hazard_getters
+from openquake.engine.utils import tasks
 
 @tasks.oqtask
 def make_getter_builder(job_id, taxonomy):
@@ -98,7 +99,7 @@ class RiskCalculator(base.Calculator):
                                  %s""" % error)
 
         def update_dict(acc, builder):
-            acc.update(builder)
+            acc[builder.taxonomy] = builder
             logs.LOG.progress('Built builder for %s', builder.taxonomy)
             return acc
         self.getter_builders = tasks.map_reduce(
