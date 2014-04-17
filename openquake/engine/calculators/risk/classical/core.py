@@ -30,7 +30,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical(job_id, risk_models, outputdict, params):
+def classical(job_id, risk_model, loss_types, outputdict, params):
     """
     Celery task for the classical risk calculator.
 
@@ -50,10 +50,11 @@ def classical(job_id, risk_models, outputdict, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for risk_model in risk_models:
+        for loss_type in loss_types:
+            risk_model.loss_type = loss_type
             do_classical(
                 risk_model,
-                outputdict.with_args(loss_type=risk_model.loss_type),
+                outputdict.with_args(loss_type=loss_type),
                 params,
                 monitor)
 
