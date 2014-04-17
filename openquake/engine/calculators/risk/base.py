@@ -25,6 +25,11 @@ from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, loaders, hazard_getters
 
+@tasks.oqtask
+def make_getter_builder(job_id, taxonomy):
+    rc = models.OqJob.objects.get(pk=job_id).risk_calculation
+    return hazard_getters.GetterBuilder(taxonomy, rc)
+    
 
 class RiskCalculator(base.Calculator):
     """
@@ -92,6 +97,15 @@ class RiskCalculator(base.Calculator):
                 raise ValueError("""Problems in calculator configuration:
                                  %s""" % error)
 
+        def update_dict(acc, builder):
+            acc.update(builder)
+            logs.LOG.progress('Built builder for %s', builder.taxonomy)
+            return acc
+        self.getter_builders = tasks.map_reduce(
+            make_getter_builder,
+            [(self.job.id, taxo) for taxo in self.taxonomies_asset_count],
+            update_dict, {})  # a dictionary {taxonomy: builder}
+
     def task_arg_gen(self):
         """
         Generator function for creating the arguments for each task.
@@ -113,15 +127,16 @@ class RiskCalculator(base.Calculator):
         outputdict = writers.combine_builders(
             [builder(self) for builder in self.output_builders])
 
-        # TODO: (MS) we will remove the block size dependency in the near
-        # future; for the moment let's used a fixed size
+        # TODO: check that the block size dependency has been removed
         block_size = 100
 
+        epsilon_nbytes = 0  # number of epsilons * number of bytes per float
         for taxonomy, assets_nr in self.taxonomies_asset_count.items():
             risk_model = self.risk_models[taxonomy]
             with self.monitor("associating asset->site"):
-                builder = hazard_getters.GetterBuilder(
-                    self.getter_class, taxonomy, self.job.risk_calculation)
+                builder = self.getter_builders[taxonomy]
+                epsilon_nbytes += sum(
+                    eps.nbytes for eps in builder.epsilons.itervalues())
             for offset in range(0, assets_nr, block_size):
                 with self.monitor("getting asset chunks"):
                     assets = models.ExposureData.objects.get_asset_chunk(
@@ -129,7 +144,9 @@ class RiskCalculator(base.Calculator):
                 with self.monitor("building getters"):
                     rm = risk_model.copy(
                         getters=builder.make_getters(
-                            self.rc.hazard_outputs(), assets, risk_model.imt),
+                            self.getter_class, 
+                            self.rc.hazard_outputs(),
+                            assets, risk_model.imt),
                         workflow=self.get_workflow(taxonomy))
                 yield [
                     self.job.id,
@@ -137,6 +154,9 @@ class RiskCalculator(base.Calculator):
                      for loss_type in sorted(self.loss_types)],
                     outputdict,
                     self.calculator_parameters]
+        if epsilon_nbytes:
+            logs.LOG.info('Allocating %dM for the epsilons',
+                          epsilon_nbytes / 1024 / 1024)
 
     def _get_outputs_for_export(self):
         """
