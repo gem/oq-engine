@@ -26,11 +26,14 @@ from openquake.engine.calculators.risk import \
     writers, validation, loaders, hazard_getters
 from openquake.engine.utils import tasks
 
+from openquake.risklib.workflows import RiskModel
+
+
 @tasks.oqtask
 def make_getter_builder(job_id, taxonomy):
     rc = models.OqJob.objects.get(pk=job_id).risk_calculation
     return hazard_getters.GetterBuilder(taxonomy, rc)
-    
+
 
 class RiskCalculator(base.Calculator):
     """
@@ -51,6 +54,8 @@ class RiskCalculator(base.Calculator):
     validators = [validation.HazardIMT, validation.EmptyExposure,
                   validation.OrphanTaxonomies, validation.ExposureLossTypes,
                   validation.NoRiskModels]
+
+    bcr = False  # overridden in BCR calculators
 
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
@@ -145,16 +150,10 @@ class RiskCalculator(base.Calculator):
                 with self.monitor("building getters"):
                     rm = risk_model.copy(
                         getters=builder.make_getters(
-                            self.getter_class, 
+                            self.getter_class,
                             self.rc.hazard_outputs(),
-                            assets, risk_model.imt),
-                        workflow=self.get_workflow(taxonomy))
-                yield [
-                    self.job.id,
-                    rm,
-                    sorted(self.loss_types),
-                    outputdict,
-                    self.calculator_parameters]
+                            assets, risk_model.imt))
+                yield [self.job.id, rm, outputdict, self.calculator_parameters]
         if epsilon_nbytes:
             logs.LOG.info('Allocating %dM for the epsilons',
                           epsilon_nbytes / 1024 / 1024)
@@ -200,7 +199,29 @@ class RiskCalculator(base.Calculator):
         """
         return []
 
-    def get_risk_models(self, retrofitted=False):
+    def get_risk_models(self):
+        # regular risk models
+        if self.bcr is False:
+            return dict(
+                (taxonomy, RiskModel(imt, taxonomy, self.get_workflow(vfs)))
+                for imt, taxonomy, vfs in self._get_vfs())
+
+        # BCR risk models
+        risk_models = {}
+        orig_data = self._get_vfs(retrofitted=False)
+        retro_data = self._get_vfs(retrofitted=True)
+
+        for orig, retro in zip(orig_data, retro_data):
+            imt, taxonomy, vfs = orig
+            imt_, taxonomy_, vfs_ = retro
+            assert imt == imt_   # same imt
+            assert taxonomy_ == taxonomy_  # same taxonomy
+            risk_models[taxonomy] = RiskModel(
+                imt, taxonomy, self.get_workflow(vfs, vfs_))
+
+        return risk_models
+
+    def _get_vfs(self, retrofitted=False):
         """
         Parse vulnerability models for each loss type in
         `openquake.engine.db.models.LOSS_TYPES`,
@@ -209,15 +230,27 @@ class RiskCalculator(base.Calculator):
         :param bool retrofitted:
             True if retrofitted models should be retrieved
         :returns:
-            A nested taxonomy -> instance of `RiskModel`.
+            A dictionary taxonomy -> instance of `RiskModel`.
         """
-        risk_models = collections.defaultdict(dict)
+        data = collections.defaultdict(list)  # imt, loss_type, vf per taxonomy
         for v_input, loss_type in self.rc.vulnerability_inputs(retrofitted):
             self.loss_types.add(loss_type)
-            for taxonomy, model in loaders.vulnerability(v_input):
-                risk_models[taxonomy] = model.copy(taxonomy=taxonomy)
+            for taxonomy, (imt, vf) in loaders.vulnerability(v_input).items():
+                data[taxonomy].append((imt, loss_type, vf))
+        for taxonomy in data:
+            imts, loss_types, vfs = zip(*data[taxonomy])
+            if len(set(imts)) > 1:  # no taxonomy <-> imt mismatch
+                import pdb; pdb.set_trace()
+            vulnerability_functions = dict(zip(loss_types, vfs))
+            yield imts[0], taxonomy, vulnerability_functions
 
-        return risk_models
+    def get_workflow(self, vulnerability_functions):
+        """
+        To be overridden in subclasses. Must return a workflow instance.
+        """
+        class Workflow():
+            vulnerability_functions = {}
+        return Workflow()
 
 #: Calculator parameters are used to compute derived outputs like loss
 #: maps, disaggregation plots, quantile/mean curves. See

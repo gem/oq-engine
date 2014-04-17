@@ -30,7 +30,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical(job_id, risk_model, loss_types, outputdict, params):
+def classical(job_id, risk_model, outputdict, params):
     """
     Celery task for the classical risk calculator.
 
@@ -50,16 +50,14 @@ def classical(job_id, risk_model, loss_types, outputdict, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for loss_type in loss_types:
-            risk_model.loss_type = loss_type
+        for loss_type in risk_model.loss_types:
             do_classical(
-                risk_model,
+                risk_model, loss_type,
                 outputdict.with_args(loss_type=loss_type),
-                params,
-                monitor)
+                params, monitor)
 
 
-def do_classical(risk_model, outputdict, params, monitor):
+def do_classical(risk_model, loss_type, outputdict, params, monitor):
     """
     See `classical` for a description of the parameters.
 
@@ -73,7 +71,8 @@ def do_classical(risk_model, outputdict, params, monitor):
     loss fractions. Then if the number of units are bigger than 1, we
     compute mean and quantile artifacts.
     """
-    outputs = risk_model.compute_outputs(monitor.copy('getting data'))
+    outputs = risk_model.compute_outputs(
+        loss_type, monitor.copy('getting data'))
 
     stats = risk_model.compute_stats(
         outputs, params.quantiles, post_processing)
@@ -216,9 +215,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
 
     getter_class = hazard_getters.HazardCurveGetterPerAsset
 
-    def get_workflow(self, taxonomy):
+    def get_workflow(self, vulnerability_functions):
         return workflows.Classical(
-            self.risk_models[taxonomy].vulnerability_function,
+            vulnerability_functions,
             self.rc.lrem_steps_per_interval,
             self.rc.conditional_loss_poes,
             self.rc.poes_disagg,

@@ -24,7 +24,8 @@ import numpy
 
 from django import db
 
-from openquake.risklib import calculators
+from openquake.risklib import workflows
+from openquake.risklib.workflows import RiskModel
 
 from openquake.engine.calculators.risk import (
     base, hazard_getters, writers, validation, loaders)
@@ -34,7 +35,7 @@ from openquake.engine.db import models
 
 
 @tasks.oqtask
-def scenario_damage(job_id, risk_model, loss_types, outputdict, params):
+def scenario_damage(job_id, risk_model, outputdict, params):
     """
     Celery task for the scenario damage risk calculator.
 
@@ -64,16 +65,17 @@ def scenario_damage(job_id, risk_model, loss_types, outputdict, params):
 
 
 def do_scenario_damage(workflow, getter, params, monitor):
-    ground_motion_values = getter(monitor.copy('getting hazard'))
+    with monitor.copy('getting hazard'):
+        ground_motion_values = getter.get_data()
 
     with monitor.copy('computing risk'):
-        fraction_matrix = workflow(ground_motion_values)
-        aggfractions = sum(fraction_matrix[i] * asset.number_of_units
+        fractions = workflow(ground_motion_values)
+        aggfractions = sum(fractions[i] * asset.number_of_units
                            for i, asset in enumerate(getter.assets))
 
     with monitor.copy('saving damage per assets'):
         writers.damage_distribution(
-            getter.assets, fraction_matrix, params.damage_state_ids)
+            getter.assets, fractions, params.damage_state_ids)
 
     return aggfractions, getter.assets[0].taxonomy
 
@@ -109,9 +111,8 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         self.ddpt = {}
         self.damage_state_ids = None
 
-    def get_workflow(self, taxonomy):
-        return calculators.Damage(
-            self.risk_models[taxonomy].fragility_functions)
+    def get_workflow(self, fragility_functions):
+        return workflows.Damage(fragility_functions)
 
     def task_completed(self, task_result):
         """
@@ -162,15 +163,17 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
                 "dmg_dist_total")
             writers.total_damage_distribution(tot, self.damage_state_ids)
 
-    def get_risk_models(self, retrofitted=False):
+    def get_risk_models(self):
         """
         Load fragility model and store damage states
         """
-        risk_models, damage_state_ids = loaders.fragility(
+        data, damage_state_ids = loaders.fragility(
             self.rc, self.rc.inputs['fragility'])
         self.damage_state_ids = damage_state_ids
         self.loss_types.add('damage')  # single loss_type
-        return risk_models
+        return dict(
+            (taxonomy, RiskModel(imt, taxonomy, self.get_workflow(ffs)))
+            for imt, taxonomy, ffs in data)
 
     @property
     def calculator_parameters(self):

@@ -28,7 +28,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def event_based_bcr(job_id, risk_model, loss_types, outputdict, _params):
+def event_based_bcr(job_id, risk_model, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the event based
     calculator.
@@ -53,19 +53,19 @@ def event_based_bcr(job_id, risk_model, loss_types, outputdict, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for loss_type in loss_types:
-            risk_model.loss_type = loss_type
+        for loss_type in risk_model.loss_types:
             do_event_based_bcr(
-                risk_model,
+                risk_model, loss_type,
                 outputdict.with_args(loss_type=loss_type),
                 monitor)
 
 
-def do_event_based_bcr(risk_model, outputdict, monitor):
+def do_event_based_bcr(risk_model, loss_type, outputdict, monitor):
     """
     See `event_based_bcr` for docstring
     """
-    outputs = risk_model.compute_outputs(monitor.copy('getting hazard'))
+    outputs = risk_model.compute_outputs(
+        loss_type, monitor.copy('getting hazard'))
 
     with monitor.copy('writing results'):
         for out in outputs:
@@ -90,17 +90,12 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
 
     getter_cls = hazard_getters.GroundMotionValuesGetter
 
-    def __init__(self, job):
-        super(EventBasedBCRRiskCalculator, self).__init__(job)
-        self.risk_models_retrofitted = None
+    bcr = True
 
-    def get_workflow(self, taxonomy):
-        model_orig = self.risk_models[taxonomy]
-        model_retro = self.risk_models_retrofitted[taxonomy]
+    def get_workflow(self, vf_orig, vf_retro):
         time_span, tses = self.hazard_times()
         return workflows.ProbabilisticEventBasedBCR(
-            model_orig.vulnerability_function,
-            model_retro.vulnerability_function,
+            vf_orig, vf_retro,
             time_span, tses, self.rc.loss_curve_resolution,
             self.rc.interest_rate,
             self.rc.asset_life_expectancy)
@@ -115,11 +110,3 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         No need to update event loss tables in the BCR calculator
         """
         self.log_percent(event_loss_tables)
-
-    def pre_execute(self):
-        """
-        Store both the risk model for the original asset configuration
-        and the risk model for the retrofitted one.
-        """
-        super(EventBasedBCRRiskCalculator, self).pre_execute()
-        self.risk_models_retrofitted = self.get_risk_models(retrofitted=True)

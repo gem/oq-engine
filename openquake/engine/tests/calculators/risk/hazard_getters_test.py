@@ -45,14 +45,15 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
         calc.pre_execute()
 
         builder = hazard_getters.GetterBuilder(
-            self.getter_class, self.taxonomy, self.job.risk_calculation)
+            self.taxonomy, self.job.risk_calculation)
 
         self.assets = models.ExposureData.objects.filter(
             exposure_model=self.job.risk_calculation.exposure_model).order_by(
             'asset_ref').filter(taxonomy=self.taxonomy)
 
         ho = self.job.risk_calculation.hazard_output
-        [self.getter] = builder.make_getters([ho], self.assets, self.imt)
+        [self.getter] = builder.make_getters(
+            self.getter_class, [ho], self.assets, self.imt)
 
     def test_is_pickleable(self):
         pickle.dumps(self.getter)  # raises an error if not
