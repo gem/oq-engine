@@ -30,7 +30,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def scenario(job_id, risk_models, outputdict, _params):
+def scenario(job_id, risk_model, loss_types, outputdict, _params):
     """
     Celery task for the scenario risk calculator.
 
@@ -50,8 +50,8 @@ def scenario(job_id, risk_models, outputdict, _params):
     agg = dict()
     insured = dict()
     with db.transaction.commit_on_success(using='job_init'):
-        for risk_model in risk_models:
-            loss_type = risk_model.loss_type
+        for loss_type in loss_types:
+            risk_model.loss_type = loss_type
             agg[loss_type], insured[loss_type] = do_scenario(
                 risk_model,
                 outputdict.with_args(
