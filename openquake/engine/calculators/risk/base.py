@@ -15,7 +15,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Base RiskCalculator class."""
+"""
+Base RiskCalculator class.
+"""
 
 import collections
 
@@ -59,7 +61,6 @@ class RiskCalculator(base.Calculator):
 
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
-
         self.taxonomies_asset_count = None
         self.risk_models = None
         self.loss_types = set()
@@ -152,7 +153,7 @@ class RiskCalculator(base.Calculator):
                         getters=builder.make_getters(
                             self.getter_class,
                             self.rc.hazard_outputs(),
-                            assets, risk_model.imt))
+                            assets))
                 yield [self.job.id, rm, outputdict, self.calculator_parameters]
         if epsilon_nbytes:
             logs.LOG.info('Allocating %dM for the epsilons',
@@ -203,8 +204,8 @@ class RiskCalculator(base.Calculator):
         # regular risk models
         if self.bcr is False:
             return dict(
-                (taxonomy, RiskModel(imt, taxonomy, self.get_workflow(vfs)))
-                for imt, taxonomy, vfs in self._get_vfs())
+                (taxonomy, RiskModel(taxonomy, self.get_workflow(vfs)))
+                for taxonomy, vfs in self._get_vfs())
 
         # BCR risk models
         risk_models = {}
@@ -212,12 +213,11 @@ class RiskCalculator(base.Calculator):
         retro_data = self._get_vfs(retrofitted=True)
 
         for orig, retro in zip(orig_data, retro_data):
-            imt, taxonomy, vfs = orig
-            imt_, taxonomy_, vfs_ = retro
-            assert imt == imt_   # same imt
+            taxonomy, vfs = orig
+            taxonomy_, vfs_ = retro
             assert taxonomy_ == taxonomy_  # same taxonomy
             risk_models[taxonomy] = RiskModel(
-                imt, taxonomy, self.get_workflow(vfs, vfs_))
+                taxonomy, self.get_workflow(vfs, vfs_))
 
         return risk_models
 
@@ -235,14 +235,10 @@ class RiskCalculator(base.Calculator):
         data = collections.defaultdict(list)  # imt, loss_type, vf per taxonomy
         for v_input, loss_type in self.rc.vulnerability_inputs(retrofitted):
             self.loss_types.add(loss_type)
-            for taxonomy, (imt, vf) in loaders.vulnerability(v_input).items():
-                data[taxonomy].append((imt, loss_type, vf))
+            for taxonomy, vf in loaders.vulnerability(v_input).items():
+                data[taxonomy].append((loss_type, vf))
         for taxonomy in data:
-            imts, loss_types, vfs = zip(*data[taxonomy])
-            if len(set(imts)) > 1:  # no taxonomy <-> imt mismatch
-                import pdb; pdb.set_trace()
-            vulnerability_functions = dict(zip(loss_types, vfs))
-            yield imts[0], taxonomy, vulnerability_functions
+            yield taxonomy, dict(data[taxonomy])
 
     def get_workflow(self, vulnerability_functions):
         """
