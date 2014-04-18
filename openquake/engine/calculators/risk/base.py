@@ -156,12 +156,13 @@ class RiskCalculator(base.Calculator):
                     rm = risk_model.copy(
                         getters=builder.make_getters(
                             self.getter_class, haz_outs, assets))
+                # submitting task
                 res = tasks.submit(
                     self.core_calc_task,
                     self.job.id, rm, outputdict, self.calculator_parameters)
                 results.append(res)
         if epsilon_nbytes:
-            logs.LOG.info('Allocating %dM for the epsilons',
+            logs.LOG.info('Allocated %dM for the epsilons',
                           epsilon_nbytes / 1024 / 1024)
 
         # aggregating task results
