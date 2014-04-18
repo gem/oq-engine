@@ -33,6 +33,15 @@ from openquake.risklib.workflows import RiskModel
 
 @tasks.oqtask
 def make_getter_builder(job_id, taxonomy):
+    """
+    Performs a heavy geospatial query associating each asset in
+    the exposure model to the closest hazard site (if any).
+
+    :returns:
+        a :class:
+        `openquake.engine.calculators.risk.hazard_getters.GetterBuilder`
+        instance, containing the associations.
+    """
     rc = models.OqJob.objects.get(pk=job_id).risk_calculation
     gb = hazard_getters.GetterBuilder(taxonomy, rc)
     return gb
@@ -58,7 +67,7 @@ class RiskCalculator(base.Calculator):
                   validation.OrphanTaxonomies, validation.ExposureLossTypes,
                   validation.NoRiskModels]
 
-    bcr = False  # overridden in BCR calculators
+    bcr = False  # flag overridden in BCR calculators
 
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
@@ -71,14 +80,13 @@ class RiskCalculator(base.Calculator):
         In this phase, the general workflow is:
             1. Parse the exposure to get the taxonomies
             2. Parse the available risk models
-            3. Initialize progress counters
-            4. Validate exposure and risk models
+            3. Validate exposure and risk models
         """
         with self.monitor('get exposure'):
-            self.taxonomies_asset_count = \
-                (self.rc.preloaded_exposure_model or loaders.exposure(
+            self.taxonomies_asset_count = (
+                self.rc.preloaded_exposure_model or loaders.exposure(
                     self.job, self.rc.inputs['exposure'])
-                 ).taxonomies_in(self.rc.region_constraint)
+                ).taxonomies_in(self.rc.region_constraint)
 
         with self.monitor('parse risk models'):
             self.risk_models = self.get_risk_models()
@@ -92,10 +100,13 @@ class RiskCalculator(base.Calculator):
                     for t, count in self.taxonomies_asset_count.items()
                     if t in self.risk_models)
 
-        n_assets = sum(self.taxonomies_asset_count.itervalues())
+        # taxonomies ordered by asset counts
+        self.asset_counts, self.taxonomies = zip(*sorted(
+            (c, t) for (t, c) in self.taxonomies_asset_count.iteritems()))
+
         logs.LOG.info('Considering %d assets of %d distinct taxonomies',
-                      n_assets, len(self.taxonomies_asset_count))
-        for taxonomy, counts in self.taxonomies_asset_count.iteritems():
+                      sum(self.asset_counts), len(self.taxonomies))
+        for taxonomy, counts in zip(self.taxonomies, self.asset_counts):
             logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
 
         for validator_class in self.validators:
@@ -105,47 +116,44 @@ class RiskCalculator(base.Calculator):
                 raise ValueError("""Problems in calculator configuration:
                                  %s""" % error)
 
-        def update_dict(acc, builder):
-            acc[builder.taxonomy] = builder
-            logs.LOG.progress('Built builder for %s', builder.taxonomy)
-            return acc
-
-        self.getter_builders = tasks.map_reduce(
-            make_getter_builder,
-            [(self.job.id, taxo) for taxo in self.taxonomies_asset_count],
-            update_dict, {})  # a dictionary {taxonomy: builder}
-
     def task_arg_gen(self):
         """
         Generator function for creating the arguments for each task.
 
         It is responsible for the distribution strategy. It divides
         the considered exposure into chunks of homogeneous assets
-        (i.e. having the same taxonomy). The chunk size is given by
-        the `block_size` openquake config parameter.
+        (i.e. having the same taxonomy).
 
         :returns:
             An iterator over a list of arguments. Each contains:
 
             1. the job id
-            2. a getter object needed to get the hazard data
-            3. the needed risklib calculators
-            4. the outputdict to be populated
-            5. the specific calculator parameter set
+            2. an :class:`openquake.risklib.workflows.RiskModel` instance
+            3. the outputdict to be populated
+            4. the specific calculator parameter set
         """
+        def update_dict(acc, builder):
+            acc[builder.taxonomy] = builder
+            logs.LOG.progress('Built builder for %s', builder.taxonomy)
+            return acc
+
+        getter_builders = tasks.map_reduce(
+            make_getter_builder,
+            [(self.job.id, taxonomy) for taxonomy in self.taxonomies],
+            update_dict, {})  # a dictionary {taxonomy: builder}
+
         outputdict = writers.combine_builders(
             [builder(self) for builder in self.output_builders])
 
-        # TODO: check that the block size dependency has been removed
+        # NB: the block size dependency has been removed
         block_size = 100
 
         epsilon_nbytes = 0  # number of epsilons * number of bytes per float
-        for taxonomy, assets_nr in self.taxonomies_asset_count.items():
+        for taxonomy, assets_nr in zip(self.taxonomies, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
-            with self.monitor("associating asset->site"):
-                builder = self.getter_builders[taxonomy]
-                epsilon_nbytes += sum(
-                    eps.nbytes for eps in builder.epsilons.itervalues())
+            builder = getter_builders[taxonomy]
+            epsilon_nbytes += sum(
+                eps.nbytes for eps in builder.epsilons.itervalues())
             for offset in range(0, assets_nr, block_size):
                 with self.monitor("getting asset chunks"):
                     assets = models.ExposureData.objects.get_asset_chunk(
@@ -156,7 +164,7 @@ class RiskCalculator(base.Calculator):
                             self.getter_class,
                             self.rc.hazard_outputs(),
                             assets))
-                yield [self.job.id, rm, outputdict, self.calculator_parameters]
+                yield self.job.id, rm, outputdict, self.calculator_parameters
         if epsilon_nbytes:
             logs.LOG.info('Allocating %dM for the epsilons',
                           epsilon_nbytes / 1024 / 1024)
