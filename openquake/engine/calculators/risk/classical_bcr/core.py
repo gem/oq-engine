@@ -90,7 +90,7 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
 
     output_builders = [writers.BCRMapBuilder]
 
-    getter_class = hazard_getters.HazardCurveGetterPerAsset
+    getter_class = hazard_getters.HazardCurveGetter
 
     bcr = True
 
