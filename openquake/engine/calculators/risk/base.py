@@ -32,22 +32,6 @@ from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.risklib.workflows import RiskModel
 
 
-@tasks.oqtask
-def make_getter_builder(job_id, taxonomy):
-    """
-    Performs a heavy geospatial query associating each asset in
-    the exposure model to the closest hazard site (if any).
-
-    :returns:
-        a :class:
-        `openquake.engine.calculators.risk.hazard_getters.GetterBuilder`
-        instance, containing the associations.
-    """
-    rc = models.OqJob.objects.get(pk=job_id).risk_calculation
-    gb = hazard_getters.GetterBuilder(taxonomy, rc)
-    return gb
-
-
 class RiskCalculator(base.Calculator):
     """
     Abstract base class for risk calculators. Contains a bunch of common
