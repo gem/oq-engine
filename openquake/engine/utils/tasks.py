@@ -33,8 +33,7 @@ from openquake.engine import logs, no_distribute
 from openquake.engine.db import models
 from openquake.engine.utils import config
 from openquake.engine.writer import CacheInserter
-from openquake.engine.performance import EnginePerformanceMonitor, \
-    LightMonitor
+from openquake.engine.performance import EnginePerformanceMonitor
 
 
 class JobNotRunning(Exception):
@@ -216,6 +215,7 @@ def submit(oqtask, *args):
     to_send = sum(len(p) for p in piks)
     logs.LOG.info('Sending %s with %dM of data',
                   oqtask.__name__, to_send / ONE_MB)
+    check_mem_usage()  # log a warning if too much memory is used
     return oqtask.delay(*piks)
 
 
