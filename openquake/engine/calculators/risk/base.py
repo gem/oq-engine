@@ -27,6 +27,7 @@ from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, loaders, hazard_getters
 from openquake.engine.utils import tasks
+from openquake.engine.performance import EnginePerformanceMonitor
 
 from openquake.risklib.workflows import RiskModel
 
@@ -116,6 +117,7 @@ class RiskCalculator(base.Calculator):
                 raise ValueError("""Problems in calculator configuration:
                                  %s""" % error)
 
+    @EnginePerformanceMonitor.monitor
     def execute(self):
         """
         Method responsible for the distribution strategy. It divides
@@ -138,11 +140,12 @@ class RiskCalculator(base.Calculator):
         results = []  # celery AsyncResults, unless OQ_NO_DISTRIBUTE is set
         haz_outs = self.rc.hazard_outputs()
         epsilon_nbytes = 0  # number of epsilons * number of bytes per float
-        task_no = 0
         for taxonomy, assets_nr in zip(self.taxonomies, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
-            builder = hazard_getters.GetterBuilder(taxonomy, self.rc)
-            builder.init_epsilons(haz_outs)
+            with self.monitor("associating asset->site"):
+                builder = hazard_getters.GetterBuilder(taxonomy, self.rc)
+            with self.monitor("building epsilons"):
+                builder.init_epsilons(haz_outs)
             epsilon_nbytes += sum(
                 eps.nbytes for eps in builder.epsilons.itervalues())
             for offset in range(0, assets_nr, block_size):
@@ -153,9 +156,6 @@ class RiskCalculator(base.Calculator):
                     rm = risk_model.copy(
                         getters=builder.make_getters(
                             self.getter_class, haz_outs, assets))
-                task_no += 1
-                logs.LOG.info('Sending %s task #%d',
-                              self.core_calc_task.__name__, task_no)
                 res = tasks.submit(
                     self.core_calc_task,
                     self.job.id, rm, outputdict, self.calculator_parameters)
@@ -164,6 +164,7 @@ class RiskCalculator(base.Calculator):
             logs.LOG.info('Allocating %dM for the epsilons',
                           epsilon_nbytes / 1024 / 1024)
 
+        # aggregating task results
         self.initialize_percent(self.core_calc_task, results)
         tasks.aggregate_results(
             results, lambda acc, res: self.task_completed(res), None)
