@@ -148,10 +148,12 @@ class RiskCalculator(base.Calculator):
         # NB: the block size dependency has been removed
         block_size = 100
 
+        haz_outs = self.rc.hazard_outputs()
         epsilon_nbytes = 0  # number of epsilons * number of bytes per float
         for taxonomy, assets_nr in zip(self.taxonomies, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
             builder = getter_builders[taxonomy]
+            builder.init_epsilons(haz_outs)
             epsilon_nbytes += sum(
                 eps.nbytes for eps in builder.epsilons.itervalues())
             for offset in range(0, assets_nr, block_size):
@@ -161,9 +163,7 @@ class RiskCalculator(base.Calculator):
                 with self.monitor("building getters"):
                     rm = risk_model.copy(
                         getters=builder.make_getters(
-                            self.getter_class,
-                            self.rc.hazard_outputs(),
-                            assets))
+                            self.getter_class, haz_outs, assets))
                 yield self.job.id, rm, outputdict, self.calculator_parameters
         if epsilon_nbytes:
             logs.LOG.info('Allocating %dM for the epsilons',

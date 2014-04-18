@@ -234,7 +234,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         self.rupture_ids = {}
         self.epsilons = {}
 
-    def _make_epsilons(self, hazard_outputs):
+    def init_epsilons(self, hazard_outputs):
         """
         :param hazard_outputs: the outputs of a hazard calculation
 
@@ -313,7 +313,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                                'hazard sites within the distance of %s km',
                                asset_block, self.rc.best_maximum_distance)
         if not self.epsilons:
-            self._make_epsilons(hazard_outputs)
+            self.init_epsilons(hazard_outputs)
         getters = []
         for ho in hazard_outputs:
             getter = gettercls(ho, assets, site_ids)
