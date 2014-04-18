@@ -116,11 +116,9 @@ class RiskCalculator(base.Calculator):
                 raise ValueError("""Problems in calculator configuration:
                                  %s""" % error)
 
-    def task_arg_gen(self):
+    def execute(self):
         """
-        Generator function for creating the arguments for each task.
-
-        It is responsible for the distribution strategy. It divides
+        Method responsible for the distribution strategy. It divides
         the considered exposure into chunks of homogeneous assets
         (i.e. having the same taxonomy).
 
@@ -132,27 +130,18 @@ class RiskCalculator(base.Calculator):
             3. the outputdict to be populated
             4. the specific calculator parameter set
         """
-        def update_dict(acc, builder):
-            acc[builder.taxonomy] = builder
-            logs.LOG.progress('Built builder for %s', builder.taxonomy)
-            return acc
-
-        getter_builders = tasks.map_reduce(
-            make_getter_builder,
-            [(self.job.id, taxonomy) for taxonomy in self.taxonomies],
-            update_dict, {})  # a dictionary {taxonomy: builder}
-
         outputdict = writers.combine_builders(
             [builder(self) for builder in self.output_builders])
 
         # NB: the block size dependency has been removed
         block_size = 100
-
+        results = []  # celery AsyncResults, unless OQ_NO_DISTRIBUTE is set
         haz_outs = self.rc.hazard_outputs()
         epsilon_nbytes = 0  # number of epsilons * number of bytes per float
+        task_no = 0
         for taxonomy, assets_nr in zip(self.taxonomies, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
-            builder = getter_builders[taxonomy]
+            builder = hazard_getters.GetterBuilder(taxonomy, self.rc)
             builder.init_epsilons(haz_outs)
             epsilon_nbytes += sum(
                 eps.nbytes for eps in builder.epsilons.itervalues())
@@ -164,10 +153,20 @@ class RiskCalculator(base.Calculator):
                     rm = risk_model.copy(
                         getters=builder.make_getters(
                             self.getter_class, haz_outs, assets))
-                yield self.job.id, rm, outputdict, self.calculator_parameters
+                task_no += 1
+                logs.LOG.info('Sending %s task #%d',
+                              self.core_calc_task.__name__, task_no)
+                res = tasks.submit(
+                    self.core_calc_task,
+                    self.job.id, rm, outputdict, self.calculator_parameters)
+                results.append(res)
         if epsilon_nbytes:
             logs.LOG.info('Allocating %dM for the epsilons',
                           epsilon_nbytes / 1024 / 1024)
+
+        self.initialize_percent(self.core_calc_task, results)
+        tasks.aggregate_results(
+            results, lambda acc, res: self.task_completed(res), None)
 
     def _get_outputs_for_export(self):
         """
