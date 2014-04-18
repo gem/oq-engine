@@ -25,6 +25,7 @@ import traceback
 import psutil
 
 from celery.task.sets import TaskSet
+from celery.result import ResultSet
 from celery.app import current_app
 from celery.task import task
 
@@ -154,32 +155,64 @@ def map_reduce(task, task_args, agg, acc):
                 raise RuntimeError(result)
             acc = agg(acc, result)
     else:
-        backend = current_app().backend
-        unpik = 0
-        job_id = task_args[0][0]
-        taskname = task.__name__
-        mon = LightMonitor('unpickling %s' % taskname, job_id, task)
         to_send = 0
         pickled_args = []
         for args in task_args:
             piks = pickle_sequence(args)
-            pickled_args.append(piks)
             to_send += sum(len(p) for p in piks)
+            pickled_args.append(piks)
         logs.LOG.info('Sending %dM', to_send / ONE_MB)
-        taskset = TaskSet(tasks=map(task.subtask, pickled_args))
-        for task_id, result_dict in taskset.apply_async().iter_native():
-            check_mem_usage()  # log a warning if too much memory is used
-            result_pik = result_dict['result']
-            with mon:
-                result, exctype = result_pik.unpickle()
-            if exctype:
-                raise RuntimeError(result)
-            unpik += len(result_pik)
-            acc = agg(acc, result)
-            del backend._cache[task_id]  # work around a celery bug
-        logs.LOG.info('Unpickled %dM of received data in %s seconds',
-                      unpik / ONE_MB, mon.duration)
+        rset = TaskSet(tasks=map(task.subtask, pickled_args)).apply_async()
+        acc = aggregate_result_set(rset, agg, acc)
     return acc
+
+
+def aggregate_result_set(rset, agg, acc):
+    """
+    Loop on a set of celery AsyncResults and update the accumulator
+    by using the aggregation function.
+
+    :param rset: a :class:`celery.result.ResultSet` instance
+    :param agg: the aggregation function, (acc, val) -> new acc
+    :param acc: the initial value of the accumulator
+    :returns: the final value of the accumulator
+    """
+    backend = current_app().backend
+    for task_id, result_dict in rset.iter_native():
+        check_mem_usage()  # log a warning if too much memory is used
+        result_pik = result_dict['result']
+        result, exctype = result_pik.unpickle()  # this is always negligible
+        if exctype:
+            raise RuntimeError(result)
+        acc = agg(acc, result)
+        del backend._cache[task_id]  # work around a celery bug
+    return acc
+
+
+def aggregate_results(results, agg, acc):
+    """
+    Loop on a set of results and update the accumulator
+    by using the aggregation function.
+
+    :param results: a list of results
+    :param agg: the aggregation function, (acc, val) -> new acc
+    :param acc: the initial value of the accumulator
+    :returns: the final value of the accumulator
+    """
+    if no_distribute():
+        return reduce(agg, results, acc)
+    return aggregate_result_set(ResultSet(results), agg, acc)
+
+
+def submit(oqtask, *args):
+    """
+    Submit an oqtask with the given arguments to celery and return
+    an AsyncResult. If the variable OQ_NO_DISTRIBUTE is set, the
+    task function is run in process and the result is returned.
+    """
+    if no_distribute():
+        return oqtask.task_func(*args)
+    return oqtask.delay(*pickle_sequence(args))
 
 
 # used to implement BaseCalculator.parallelize, which takes in account
