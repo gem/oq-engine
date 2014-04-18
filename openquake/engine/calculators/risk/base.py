@@ -33,19 +33,34 @@ from openquake.risklib.workflows import RiskModel
 
 
 @tasks.oqtask
-def make_getter_builder(job_id, taxonomy):
+def compute_taxonomy(job_id, calc, builder, haz_outs, outputdict, risk_model,
+                     assets_nr, block_size):
     """
-    Performs a heavy geospatial query associating each asset in
-    the exposure model to the closest hazard site (if any).
+    """
+    arglist = []
+    with calc.monitor("building epsilons"):
+        builder.init_epsilons(haz_outs)
+        epsilon_nbytes = sum(
+            eps.nbytes for eps in builder.epsilons.itervalues())
+        logs.LOG.info('Allocated %dM for the epsilons of taxonomy %s',
+                      epsilon_nbytes / 1024 / 1024, builder.taxonomy)
 
-    :returns:
-        a :class:
-        `openquake.engine.calculators.risk.hazard_getters.GetterBuilder`
-        instance, containing the associations.
-    """
-    rc = models.OqJob.objects.get(pk=job_id).risk_calculation
-    gb = hazard_getters.GetterBuilder(taxonomy, rc)
-    return gb
+    for offset in range(0, assets_nr, block_size):
+        with calc.monitor("getting asset chunks"):
+            assets = models.ExposureData.objects.get_asset_chunk(
+                calc.rc, builder.taxonomy, offset, block_size)
+        with calc.monitor("building getters"):
+            rm = risk_model.copy(
+                getters=builder.make_getters(
+                    calc.getter_class, haz_outs, assets))
+        arglist.append(
+            (calc.core_calc_task, calc.job.id,
+             rm, outputdict, calc.calculator_parameters))
+
+    calc.parallelize(
+        calc.core_calc_task, arglist, calc.task_completed)
+
+    return epsilon_nbytes
 
 
 class RiskCalculator(base.Calculator):
@@ -135,40 +150,24 @@ class RiskCalculator(base.Calculator):
         outputdict = writers.combine_builders(
             [builder(self) for builder in self.output_builders])
 
-        # NB: the block size dependency has been removed
-        block_size = 100
+        block_size = 100  # NB: the block size dependency has been removed
         results = []  # celery AsyncResults, unless OQ_NO_DISTRIBUTE is set
         haz_outs = self.rc.hazard_outputs()
-        epsilon_nbytes = 0  # number of epsilons * number of bytes per float
+
         for taxonomy, assets_nr in zip(self.taxonomies, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
             with self.monitor("associating asset->site"):
                 builder = hazard_getters.GetterBuilder(taxonomy, self.rc)
-            with self.monitor("building epsilons"):
-                builder.init_epsilons(haz_outs)
-            epsilon_nbytes += sum(
-                eps.nbytes for eps in builder.epsilons.itervalues())
-            for offset in range(0, assets_nr, block_size):
-                with self.monitor("getting asset chunks"):
-                    assets = models.ExposureData.objects.get_asset_chunk(
-                        self.rc, taxonomy, offset, block_size)
-                with self.monitor("building getters"):
-                    rm = risk_model.copy(
-                        getters=builder.make_getters(
-                            self.getter_class, haz_outs, assets))
-                # submitting task
-                res = tasks.submit(
-                    self.core_calc_task,
-                    self.job.id, rm, outputdict, self.calculator_parameters)
-                results.append(res)
-        if epsilon_nbytes:
-            logs.LOG.info('Allocated %dM for the epsilons',
-                          epsilon_nbytes / 1024 / 1024)
+            # submitting task
+            res = tasks.submit(
+                compute_taxonomy, self.job.id, self, builder, haz_outs,
+                outputdict, risk_model, assets_nr, block_size)
+            results.append(res)
 
-        # aggregating task results
-        self.initialize_percent(self.core_calc_task, results)
+        # aggregating compute_taxonomy results
+        self.initialize_percent(compute_taxonomy, results)
         tasks.aggregate_results(
-            results, lambda acc, res: self.task_completed(res), None)
+            results, lambda acc, res: self.log_percent(), None)
 
     def _get_outputs_for_export(self):
         """
