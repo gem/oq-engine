@@ -26,12 +26,12 @@ from openquake.engine.calculators.risk.base import RiskCalculator
 from openquake.engine.tests.utils.helpers import get_data_path
 
 
-class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
+class HazardCurveGetterTestCase(unittest.TestCase):
 
     hazard_demo = get_data_path('simple_fault_demo_hazard/job.ini')
     risk_demo = get_data_path('classical_psha_based_risk/job.ini')
     hazard_output_type = 'curve'
-    getter_class = hazard_getters.HazardCurveGetterPerAsset
+    getter_class = hazard_getters.HazardCurveGetter
     taxonomy = 'VF'
     imt = 'PGA'
 
@@ -72,7 +72,7 @@ class HazardCurveGetterPerAssetTestCase(unittest.TestCase):
              [(0.1, 0.1), (0.2, 0.2), (0.3, 0.3)]], values)
 
 
-class GroundMotionValuesGetterTestCase(HazardCurveGetterPerAssetTestCase):
+class GroundMotionValuesGetterTestCase(HazardCurveGetterTestCase):
 
     hazard_demo = get_data_path('event_based_hazard/job.ini')
     risk_demo = get_data_path('event_based_risk/job.ini')
