@@ -213,7 +213,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
     output_builders = [writers.LossCurveMapBuilder,
                        writers.ConditionalLossFractionBuilder]
 
-    getter_class = hazard_getters.HazardCurveGetterPerAsset
+    getter_class = hazard_getters.HazardCurveGetter
 
     def get_workflow(self, vulnerability_functions):
         return workflows.Classical(
