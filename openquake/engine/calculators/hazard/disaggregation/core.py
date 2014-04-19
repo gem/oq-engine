@@ -40,7 +40,7 @@ BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
 def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
-                       gsim_by_rlz, imtls, poes, truncation_level,
+                       rlzs, gsim_by_rlz, imtls, poes, truncation_level,
                        n_epsilons):
     # returns a BinData instance
     sitecol = SiteCollection([site])
@@ -73,7 +73,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
 
                 pne_dict = {}
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
-                for rlz, gsim in gsim_by_rlz.items():
+                for rlz, gsim in zip(rlzs, gsim_by_rlz):
                     with make_ctxt:
                         sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
                     for imt_str, imls in imtls.iteritems():
@@ -207,6 +207,7 @@ def compute_disagg(job_id, sitecol, sources, lt_model, gsim_by_rlz,
     mon = LightMonitor('disagg', job_id, compute_disagg)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
     trt_names = tuple(lt_model.get_tectonic_region_types())
+    rlzs = list(lt_model)
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
 
     for site in sitecol:
@@ -229,7 +230,7 @@ def compute_disagg(job_id, sitecol, sources, lt_model, gsim_by_rlz,
                 'collecting bins', job_id, compute_disagg):
             bdata = _collect_bins_data(
                 mon, trt_num, source_ruptures, site, curves_dict[site.id],
-                gsim_by_rlz, hc.intensity_measure_types_and_levels,
+                rlzs, gsim_by_rlz, hc.intensity_measure_types_and_levels,
                 hc.poes_disagg, hc.truncation_level,
                 hc.num_epsilon_bins)
 
@@ -238,7 +239,7 @@ def compute_disagg(job_id, sitecol, sources, lt_model, gsim_by_rlz,
 
         for poe in hc.poes_disagg:
             for imt in hc.intensity_measure_types_and_levels:
-                for rlz in gsim_by_rlz:
+                for rlz in rlzs:
 
                     # extract the probabilities of non-exceedance for the
                     # given realization, disaggregation PoE, and IMT
