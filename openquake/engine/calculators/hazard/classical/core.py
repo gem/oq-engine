@@ -155,8 +155,9 @@ def compute_hazard_curves(
     sitemesh = sitecol.mesh
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
-    curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
-                             for imt in imts))
+    sorted_imts = sorted(imts)
+    curves = dict((rlz, [numpy.ones([total_sites, len(imts[imt])])
+                         for imt in sorted_imts])
                   for rlz in gsim_by_rlz)
     if hc.poes_disagg:  # doing disaggregation
         bbs = [BoundingBox(lt_model.id, site_id) for site_id in sitecol.sids]
@@ -191,11 +192,11 @@ def compute_hazard_curves(
                 with make_ctxt_mon:
                     sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
                 with calc_poes_mon:
-                    for imt in imts:
+                    for i, imt in enumerate(sorted_imts):
                         poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                              hc.truncation_level)
                         pno = rupture.get_probability_no_exceedance(poes)
-                        curv[imt] *= r_sites.expand(pno, placeholder=1)
+                        curv[i] *= r_sites.expand(pno, placeholder=1)
 
         logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
                       job_id, source.source_id, source.__class__.__name__,
@@ -207,8 +208,7 @@ def compute_hazard_curves(
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    curve_dict = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
-                             for imt in sorted(imts)])
+    curve_dict = dict((rlz, [0 if (c == 1.0).all() else 1. - c for c in curv])
                       for rlz, curv in curves.iteritems())
     return curve_dict, bbs
 
