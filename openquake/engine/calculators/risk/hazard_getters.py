@@ -21,6 +21,9 @@ Hazard getters for Risk calculators.
 A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
+import itertools
+import operator
+
 import numpy
 
 from openquake.hazardlib.imt import from_string
@@ -130,21 +133,32 @@ class GroundMotionValuesGetter(HazardGetter):
     rupture_ids = None  # set by the GetterBuilder
     epsilons = None  # set by the GetterBuilder
 
-    def _get_gmv_dict(self, site_id, imt_type, sa_period, sa_damping):
+    def _get_gmv_dicts(self, imt_type, sa_period, sa_damping):
         """
         :returns: a dictionary {rupture_id: gmv} for the given site and IMT
         """
-        gmvs = []
-        ruptures = []
-        for gmf in models.GmfData.objects.filter(
-                gmf=self.hazard_output.output_container,
-                site=site_id, imt=imt_type, sa_period=sa_period,
-                sa_damping=sa_damping):  # ordered by task_no
-            gmvs.extend(gmf.gmvs)
-            ruptures.extend(gmf.rupture_ids)
-        if not gmvs:
-            logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
-        return dict(zip(ruptures, gmvs))
+        gmf_id = self.hazard_output.output_container.id
+        if sa_period:
+            imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
+        else:
+            imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
+        gmv_dicts = []
+        cursor = models.getcursor('job_init')
+        cursor.execute('select site_id, task_no, rupture_ids, gmvs from '
+                       'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
+                       'and {} order by site_id, task_no'.format(imt_query),
+                       (gmf_id, tuple(self.site_ids),
+                        imt_type, sa_period, sa_damping))
+        for site, group in itertools.groupby(cursor, operator.itemgetter(0)):
+            gmvs = []
+            ruptures = []
+            for site_id, task_no, rupture_ids, gmvs in group:
+                gmvs.extend(gmvs)
+                ruptures.extend(rupture_ids)
+            gmv_dicts.append(dict(itertools.izip(ruptures, gmvs)))
+        assert len(gmv_dicts) == len(self.site_ids), (
+            len(gmv_dicts), len(self.site_ids))  # make sure sites are not lost
+        return gmv_dicts
 
     def get_data(self, imt):
         """
@@ -154,9 +168,9 @@ class GroundMotionValuesGetter(HazardGetter):
         :returns: a list of N arrays with R elements each.
         """
         imt_type, sa_period, sa_damping = from_string(imt)
+        gmv_dicts = self._get_gmv_dicts(imt_type, sa_period, sa_damping)
         all_gmvs = []
-        for site_id in self.site_ids:
-            gmv = self._get_gmv_dict(site_id, imt_type, sa_period, sa_damping)
+        for site_id, gmv in zip(self.site_ids, gmv_dicts):
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
         return all_gmvs
@@ -170,20 +184,6 @@ class ScenarioGetter(HazardGetter):
     rupture_ids = []  # there are no ruptures on the db
     epsilons = None  # set by the GetterBuilder
 
-    def _get_gmvs(self, site_id, imt_type, sa_period, sa_damping):
-        """
-        :returns: gmvs for the given site and IMT
-        """
-        gmvs = []
-        for gmf in models.GmfData.objects.filter(
-                gmf=self.hazard_output.output_container,
-                site=site_id, imt=imt_type, sa_period=sa_period,
-                sa_damping=sa_damping):  # ordered by task_no
-            gmvs.extend(gmf.gmvs)
-            if not gmvs:
-                logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
-        return gmvs
-
     def get_data(self, imt):
         """
         Extracts the GMFs for the given imt from the hazard output.
@@ -192,11 +192,26 @@ class ScenarioGetter(HazardGetter):
         :returns: a list of N arrays with R elements each.
         """
         imt_type, sa_period, sa_damping = from_string(imt)
-        all_gmvs = []
-        for site_id in self.site_ids:
-            gmvs = self._get_gmvs(site_id, imt_type, sa_period, sa_damping)
-            all_gmvs.append(gmvs)
-        return all_gmvs
+        gmf_id = self.hazard_output.output_container.id
+        if sa_period:
+            imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
+        else:
+            imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
+        gmv_arrays = []
+        cursor = models.getcursor('job_init')
+        cursor.execute('select site_id, task_no, gmvs from '
+                       'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
+                       'and {} order by site_id, task_no'.format(imt_query),
+                       (gmf_id, tuple(self.site_ids),
+                        imt_type, sa_period, sa_damping))
+        for site, group in itertools.groupby(cursor, operator.itemgetter(0)):
+            gmvs = []
+            for site_id, task_no, gmvs_ in group:
+                gmvs.extend(gmvs_)
+            gmv_arrays.append(numpy.array(gmvs, dtype=float))
+        assert len(gmv_arrays) == len(self.site_ids), (
+            len(gmv_arrays), len(self.site_ids))  # sites must not be lost
+        return gmv_arrays
 
 
 class GetterBuilder(object):
