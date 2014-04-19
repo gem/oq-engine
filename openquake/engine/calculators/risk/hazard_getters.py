@@ -133,7 +133,7 @@ class GroundMotionValuesGetter(HazardGetter):
     rupture_ids = None  # set by the GetterBuilder
     epsilons = None  # set by the GetterBuilder
 
-    def _get_gmv_dicts(self, imt_type, sa_period, sa_damping):
+    def _get_gmv_dict(self, imt_type, sa_period, sa_damping):
         """
         :returns: a dictionary {rupture_id: gmv} for the given site and IMT
         """
@@ -142,23 +142,21 @@ class GroundMotionValuesGetter(HazardGetter):
             imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
         else:
             imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
-        gmv_dicts = []
+        gmv_dict = {}
         cursor = models.getcursor('job_init')
         cursor.execute('select site_id, task_no, rupture_ids, gmvs from '
                        'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
                        'and {} order by site_id, task_no'.format(imt_query),
                        (gmf_id, tuple(self.site_ids),
                         imt_type, sa_period, sa_damping))
-        for site, group in itertools.groupby(cursor, operator.itemgetter(0)):
+        for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
             gmvs = []
             ruptures = []
             for site_id, task_no, rupture_ids, gmvs in group:
                 gmvs.extend(gmvs)
                 ruptures.extend(rupture_ids)
-            gmv_dicts.append(dict(itertools.izip(ruptures, gmvs)))
-        assert len(gmv_dicts) == len(self.site_ids), (
-            len(gmv_dicts), len(self.site_ids))  # make sure sites are not lost
-        return gmv_dicts
+            gmv_dict[sid] = dict(itertools.izip(ruptures, gmvs))
+        return gmv_dict
 
     def get_data(self, imt):
         """
@@ -168,9 +166,12 @@ class GroundMotionValuesGetter(HazardGetter):
         :returns: a list of N arrays with R elements each.
         """
         imt_type, sa_period, sa_damping = from_string(imt)
-        gmv_dicts = self._get_gmv_dicts(imt_type, sa_period, sa_damping)
+        gmv_dict = self._get_gmv_dict(imt_type, sa_period, sa_damping)
         all_gmvs = []
-        for site_id, gmv in zip(self.site_ids, gmv_dicts):
+        for site_id in self.site_ids:
+            gmv = gmv_dict.get(site_id, {})
+            if not gmv:
+                logs.LOG.info('No data for site_id=%d, imt=%s', site_id, imt)
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
         return all_gmvs
