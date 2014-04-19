@@ -2239,6 +2239,7 @@ class LtRealization(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
+        ordering = ['ordinal']
 
 
 ## Tables in the 'riskr' schema.
