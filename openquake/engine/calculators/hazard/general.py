@@ -196,9 +196,8 @@ class BaseHazardCalculator(base.Calculator):
             gsim_dicts = [ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path)
                           for rlz in lt_model]
             for trt in lt_model.get_tectonic_region_types():
-                yield lt_model, trt, collections.OrderedDict(
-                    (rlz, gsim_dict[trt])
-                    for rlz, gsim_dict in zip(lt_model, gsim_dicts))
+                yield lt_model, trt, [
+                    gsim_dict[trt] for gsim_dict in gsim_dicts]
 
     def _get_realizations(self):
         """

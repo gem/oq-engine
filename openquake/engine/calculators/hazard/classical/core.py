@@ -146,7 +146,7 @@ def compute_hazard_curves(
     :param lt_model:
         a :class:`openquake.engine.db.LtSourceModel` instance
     :param gsim_by_rlz:
-        a dictionary of gsims, one for each realization
+        a list of GSIMs, one for each realization
     :param int task_no:
         the ordinal number of the current task
     """
@@ -156,9 +156,9 @@ def compute_hazard_curves(
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
     sorted_imts = sorted(imts)
-    curves = dict((rlz, [numpy.ones([total_sites, len(imts[imt])])
-                         for imt in sorted_imts])
-                  for rlz in gsim_by_rlz)
+    curves = [
+        [numpy.ones([total_sites, len(imts[imt])]) for imt in sorted_imts]
+        for _ in gsim_by_rlz]
     if hc.poes_disagg:  # doing disaggregation
         bbs = [BoundingBox(lt_model.id, site_id) for site_id in sitecol.sids]
     else:
@@ -187,8 +187,7 @@ def compute_hazard_curves(
                         bb.update([dist], [point.longitude], [point.latitude])
 
             # compute probabilities for all realizations
-            for rlz, curv in curves.iteritems():
-                gsim = gsim_by_rlz[rlz]
+            for gsim, curv in zip(gsim_by_rlz, curves):
                 with make_ctxt_mon:
                     sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
                 with calc_poes_mon:
@@ -208,9 +207,9 @@ def compute_hazard_curves(
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    curve_dict = dict((rlz, [0 if (c == 1.0).all() else 1. - c for c in curv])
-                      for rlz, curv in curves.iteritems())
-    return curve_dict, bbs
+    curves = [[0 if (c == 1.0).all() else 1. - c for c in curv]
+              for curv in curves]
+    return lt_model, curves, bbs
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -261,7 +260,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 for lt_model in lt_models)
 
     @EnginePerformanceMonitor.monitor
-    def task_completed(self, (result, bbs)):
+    def task_completed(self, (lt_model, curves, bbs)):
         """
         This is used to incrementally update hazard curve results by combining
         an initial value with some new results. (Each set of new results is
@@ -275,7 +274,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             shape as self.curves_by_rlz[rlz][j] where rlz is the realization
             and j is the IMT ordinal.
         """
-        for rlz, curves_by_imt in result.iteritems():
+        for rlz, curves_by_imt in zip(lt_model, curves):
             for j, curves in enumerate(curves_by_imt):
                 # j is the IMT index
                 self.curves_by_rlz[rlz][j] = 1. - (
