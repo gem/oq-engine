@@ -115,12 +115,11 @@ class HazardCurveGetter(HazardGetter):
         WHERE hazard_curve_id = %s AND location = %s
         """
         all_curves = []
-        for asset, site_id in zip(self.assets, self.site_ids):
-            site = models.HazardSite.objects.get(pk=site_id)
-            cursor.execute(query, (oc.id, 'SRID=4326; ' + site.location.wkt))
+        for site_id in self.site_ids:
+            location = models.HazardSite.objects.get(pk=site_id).location
+            cursor.execute(query, (oc.id, 'SRID=4326; ' + location.wkt))
             poes = cursor.fetchall()[0][0]
-            curve = zip(imls, poes)
-            all_curves.append(curve)
+            all_curves.append(zip(imls, poes))
         return all_curves
 
 
@@ -156,7 +155,7 @@ class GroundMotionValuesGetter(HazardGetter):
         """
         imt_type, sa_period, sa_damping = from_string(imt)
         all_gmvs = []
-        for asset, site_id in zip(self.assets, self.site_ids):
+        for site_id in self.site_ids:
             gmv = self._get_gmv_dict(site_id, imt_type, sa_period, sa_damping)
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
@@ -194,7 +193,7 @@ class ScenarioGetter(HazardGetter):
         """
         imt_type, sa_period, sa_damping = from_string(imt)
         all_gmvs = []
-        for asset, site_id in zip(self.assets, self.site_ids):
+        for site_id in self.site_ids:
             gmvs = self._get_gmvs(site_id, imt_type, sa_period, sa_damping)
             all_gmvs.append(gmvs)
         return all_gmvs
