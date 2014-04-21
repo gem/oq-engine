@@ -48,8 +48,11 @@ class MasterKilled(KeyboardInterrupt):
             msg = 'This should never happen'
         raise cls(msg)
 
-signal.signal(signal.SIGTERM, MasterKilled.handle_signal)
-signal.signal(signal.SIGABRT, MasterKilled.handle_signal)
+try:
+    signal.signal(signal.SIGTERM, MasterKilled.handle_signal)
+    signal.signal(signal.SIGABRT, MasterKilled.handle_signal)
+except:
+    pass
 
 
 class CeleryNodeMonitor(object):
