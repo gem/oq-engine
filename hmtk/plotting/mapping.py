@@ -148,7 +148,7 @@ class HMTKBaseMap(object):
                               edgecolor='k')
         if self.title:
             plt.title(self.title, fontsize=16)
-        parallels = np.arange(0., 90., 2.)
+        parallels = np.arange(-90., 90., 2.)
         meridians = np.arange(0., 360., 2.)
 
         # Build Map
@@ -198,10 +198,22 @@ class HMTKBaseMap(object):
         # Magnitudes bins and minimum marrker size
         #min_mag = np.min(catalogue.data['magnitude'])
         #max_mag = np.max(catalogue.data['magnitude'])
-        min_loc = np.where(np.array([symb[0] for symb in DEFAULT_SYMBOLOGY]) <
-                           np.min(catalogue.data['magnitude']))[0][-1]
-        max_loc = np.where(np.array([symb[1] for symb in DEFAULT_SYMBOLOGY]) >
-                           np.max(catalogue.data['magnitude']))[0][1]
+        con_min = np.where(np.array([symb[0] for symb in DEFAULT_SYMBOLOGY]) < 
+                           np.min(catalogue.data['magnitude']))[0]
+        con_max = np.where(np.array([symb[1] for symb in DEFAULT_SYMBOLOGY]) >
+                           np.max(catalogue.data['magnitude']))[0]
+        if len(con_min) == 1:
+            min_loc = con_min[0]
+        else:
+            min_loc = con_min[-1] 
+        if len(con_max) == 1:
+            max_loc = con_max[0]
+        else:
+            max_loc = con_max[1]
+        #min_loc = np.where(np.array([symb[0] for symb in DEFAULT_SYMBOLOGY]) <
+        #                   np.min(catalogue.data['magnitude']))[0][-1]
+        #max_loc = np.where(np.array([symb[1] for symb in DEFAULT_SYMBOLOGY]) >
+        #                   np.max(catalogue.data['magnitude']))[0][1]
         symbology = DEFAULT_SYMBOLOGY[min_loc:max_loc]
         legend_list = []
         leg_handles = []
