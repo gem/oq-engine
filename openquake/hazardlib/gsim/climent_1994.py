@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013 GEM Foundation
+# Copyright (C) 2014 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -38,8 +38,10 @@ class ClimentEtAl1994(GMPE):
     In this implementation:
     Spectral acceleration (SA) values are obtained from PSV ones using
     the following formula ::
+    
         SA = [PSV * (2 * pi/ T)]/ratio(SA_larger/SA_geo_mean)
         StdDev.TOTAL=StdDev.TOTAL/sd_ratio(SA_larger/SA_geo_mean)
+    
     The ratio() and sd_ratio() from Beyer and Bommer(2006)
     """
     #: Supported tectonic region type is active shallow crust and/or
