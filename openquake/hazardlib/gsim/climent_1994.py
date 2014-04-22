@@ -108,15 +108,10 @@ class ClimentEtAl1994(GMPE):
         """
         Compute term 3 and 4 in equation 1 page 1.
         """
-
-        if dists.rhypo <= 6.056877878:
-            # fixing the distance in the near field
-            dists.rhypo = 6.056877878
-        else:
-            # otherwise
-            dists.rhypo = dists.rhypo
-
-        return C['c3'] * np.log(dists.rhypo) + C['c4'] * dists.rhypo
+        cutoff = 6.056877878
+        rhypo = dists.rhypo.copy()
+        rhypo[rhypo <= cutoff] = cutoff
+        return C['c3'] * np.log(rhypo) + C['c4'] * rhypo
 
     def _get_site_amplification(self, sites, imt, C):
         """
