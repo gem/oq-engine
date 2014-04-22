@@ -37,11 +37,11 @@ class ClimentEtAl1994(GMPE):
     for the largest component of horizontal ground motion.
     In this implementation:
     Spectral acceleration (SA) values are obtained from PSV ones using
-    the following formula ::
-    
+    the following formula :
+
         SA = [PSV * (2 * pi/ T)]/ratio(SA_larger/SA_geo_mean)
         StdDev.TOTAL=StdDev.TOTAL/sd_ratio(SA_larger/SA_geo_mean)
-    
+
     The ratio() and sd_ratio() from Beyer and Bommer(2006)
     """
     #: Supported tectonic region type is active shallow crust and/or
