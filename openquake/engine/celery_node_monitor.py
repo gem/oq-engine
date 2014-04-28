@@ -60,9 +60,9 @@ class MasterKilled(KeyboardInterrupt):
         if they were not registered before.
         """
         if not cls.registered_handlers:  # called only once
-            cls.registered_handlers = True
             signal.signal(signal.SIGTERM, cls.handle_signal)
             signal.signal(signal.SIGABRT, cls.handle_signal)
+            cls.registered_handlers = True
 
 
 class CeleryNodeMonitor(object):
