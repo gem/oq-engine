@@ -144,7 +144,7 @@ class GroundMotionValuesGetter(HazardGetter):
             imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
         gmv_dict = {}
         cursor = models.getcursor('job_init')
-        cursor.execute('select site_id, task_no, rupture_ids, gmvs from '
+        cursor.execute('select site_id, rupture_ids, gmvs from '
                        'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
                        'and {} order by site_id, task_no'.format(imt_query),
                        (gmf_id, tuple(self.site_ids),
@@ -152,7 +152,7 @@ class GroundMotionValuesGetter(HazardGetter):
         for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
             gmvs = []
             ruptures = []
-            for site_id, task_no, rupture_ids, gmvs in group:
+            for site_id, rupture_ids, gmvs in group:
                 gmvs.extend(gmvs)
                 ruptures.extend(rupture_ids)
             gmv_dict[sid] = dict(itertools.izip(ruptures, gmvs))
@@ -200,18 +200,18 @@ class ScenarioGetter(HazardGetter):
             imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
         gmv_arrays = []
         cursor = models.getcursor('job_init')
-        cursor.execute('select site_id, task_no, gmvs from '
+        cursor.execute('select site_id, gmvs from '
                        'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
                        'and {} order by site_id, task_no'.format(imt_query),
                        (gmf_id, tuple(self.site_ids),
                         imt_type, sa_period, sa_damping))
         for site, group in itertools.groupby(cursor, operator.itemgetter(0)):
             gmvs = []
-            for site_id, task_no, gmvs_ in group:
+            for site_id, gmvs_ in group:
                 gmvs.extend(gmvs_)
             gmv_arrays.append(numpy.array(gmvs, dtype=float))
         assert len(gmv_arrays) == len(self.site_ids), (
-            len(gmv_arrays), len(self.site_ids))  # sites must not be lost
+            len(gmv_arrays), len(self.site_ids))  # sites cannot be lost
         return gmv_arrays
 
 
@@ -275,10 +275,10 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             self.epsilons[0] = make_epsilons(
                 zeros, self.rc.master_seed, self.rc.asset_correlation)
 
-        for epsilons in self.epsilons.itervalues():
+        for scid, epsilons in self.epsilons.iteritems():
             logs.LOG.info('Allocated epsilon matrix with %s elements '
-                          'for taxonomy %s', epsilons.shape,
-                          self.taxonomy)
+                          'for taxonomy %s, SESCollection %d', epsilons.shape,
+                          self.taxonomy, scid)
 
     def _indices_asset_site(self, asset_block):
         """
