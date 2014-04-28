@@ -24,12 +24,17 @@ import threading
 
 import celery.task.control
 
+from openquake.engine import logs
+from openquake.engine.utils import config, general
+
 
 class MasterKilled(KeyboardInterrupt):
     """
     Exception raised when a job is killed manually or aborted
     by the `openquake.engine.engine.CeleryNodeMonitor`.
     """
+    registered_handlers = False  # set when the signal handlers are registered
+
     @classmethod
     def handle_signal(cls, signum, _stack):
         """
@@ -48,8 +53,16 @@ class MasterKilled(KeyboardInterrupt):
             msg = 'This should never happen'
         raise cls(msg)
 
-signal.signal(signal.SIGTERM, MasterKilled.handle_signal)
-signal.signal(signal.SIGABRT, MasterKilled.handle_signal)
+    @classmethod
+    def register_handlers(cls):
+        """
+        Register the signal handlers for SIGTERM and SIGABRT
+        if they were not registered before.
+        """
+        if not cls.registered_handlers:  # called only once
+            signal.signal(signal.SIGTERM, cls.handle_signal)
+            signal.signal(signal.SIGABRT, cls.handle_signal)
+            cls.registered_handlers = True
 
 
 class CeleryNodeMonitor(object):
@@ -71,11 +84,12 @@ class CeleryNodeMonitor(object):
         self.job_running = True
         self.live_nodes = None  # set of live worker nodes
         self.th = None
+        MasterKilled.register_handlers()
 
     def __enter__(self):
         if self.no_distribute:
             return self  # do nothing
-        self.live_nodes = set(celery.task.control.inspect().ping() or {})
+        self.live_nodes = self.ping()
         if not self.live_nodes:
             print >> sys.stderr, "No live compute nodes, aborting calculation"
             sys.exit(2)
@@ -88,17 +102,28 @@ class CeleryNodeMonitor(object):
         if self.th:
             self.th.join()
 
+    def ping(self):
+        """
+        Ping the celery nodes by using .interval as timeout parameter
+        """
+        celery_inspect = celery.task.control.inspect()
+        return set(celery_inspect.ping(timeout=self.interval) or {})
+
     def check_nodes(self):
         """
         Check that the expected celery nodes are all up. The loop
         continues until the main thread keeps running.
         """
         while self.job_is_running(sleep=self.interval):
-            live_nodes = set(celery.task.control.inspect().ping() or {})
+            live_nodes = self.ping()
             if live_nodes < self.live_nodes:
-                print >> sys.stderr, 'Cluster nodes not accessible: %s' % (
-                    self.live_nodes - live_nodes)
-                os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
+                dead_nodes = list(self.live_nodes - live_nodes)
+                logs.LOG.critical(
+                    'Cluster nodes not accessible: %s', dead_nodes)
+                terminate = general.str2bool(
+                    config.get('celery', 'terminate_job_when_celery_is_down'))
+                if terminate:
+                    os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
 
     def job_is_running(self, sleep):
         """
