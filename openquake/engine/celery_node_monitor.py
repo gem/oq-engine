@@ -89,7 +89,7 @@ class CeleryNodeMonitor(object):
     def __enter__(self):
         if self.no_distribute:
             return self  # do nothing
-        self.live_nodes = self.ping()
+        self.live_nodes = self.ping(timeout=1)
         if not self.live_nodes:
             print >> sys.stderr, "No live compute nodes, aborting calculation"
             sys.exit(2)
@@ -102,12 +102,12 @@ class CeleryNodeMonitor(object):
         if self.th:
             self.th.join()
 
-    def ping(self):
+    def ping(self, timeout):
         """
         Ping the celery nodes by using .interval as timeout parameter
         """
-        celery_inspect = celery.task.control.inspect()
-        return set(celery_inspect.ping(timeout=self.interval) or {})
+        celery_inspect = celery.task.control.inspect(timeout=timeout)
+        return set(celery_inspect.ping() or {})
 
     def check_nodes(self):
         """
@@ -115,7 +115,7 @@ class CeleryNodeMonitor(object):
         continues until the main thread keeps running.
         """
         while self.job_is_running(sleep=self.interval):
-            live_nodes = self.ping()
+            live_nodes = self.ping(timeout=self.interval)
             if live_nodes < self.live_nodes:
                 dead_nodes = list(self.live_nodes - live_nodes)
                 logs.LOG.critical(
