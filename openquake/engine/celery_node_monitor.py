@@ -30,6 +30,8 @@ class MasterKilled(KeyboardInterrupt):
     Exception raised when a job is killed manually or aborted
     by the `openquake.engine.engine.CeleryNodeMonitor`.
     """
+    registered_handlers = False  # set when the signal handlers are registered
+
     @classmethod
     def handle_signal(cls, signum, _stack):
         """
@@ -48,11 +50,16 @@ class MasterKilled(KeyboardInterrupt):
             msg = 'This should never happen'
         raise cls(msg)
 
-try:
-    signal.signal(signal.SIGTERM, MasterKilled.handle_signal)
-    signal.signal(signal.SIGABRT, MasterKilled.handle_signal)
-except:
-    pass
+    @classmethod
+    def register_handlers(cls):
+        """
+        Register the signal handlers for SIGTERM and SIGABRT
+        if they were not registered before.
+        """
+        if not cls.registered_handlers:  # called only once
+            cls.registered_handlers = True
+            signal.signal(signal.SIGTERM, cls.handle_signal)
+            signal.signal(signal.SIGABRT, cls.handle_signal)
 
 
 class CeleryNodeMonitor(object):
@@ -74,6 +81,7 @@ class CeleryNodeMonitor(object):
         self.job_running = True
         self.live_nodes = None  # set of live worker nodes
         self.th = None
+        MasterKilled.register_handlers()
 
     def __enter__(self):
         if self.no_distribute:
