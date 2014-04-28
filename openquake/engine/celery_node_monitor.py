@@ -24,6 +24,9 @@ import threading
 
 import celery.task.control
 
+from openquake.engine import logs
+from openquake.engine.utils import config, general
+
 
 class MasterKilled(KeyboardInterrupt):
     """
@@ -107,9 +110,13 @@ class CeleryNodeMonitor(object):
         while self.job_is_running(sleep=self.interval):
             live_nodes = set(celery.task.control.inspect().ping() or {})
             if live_nodes < self.live_nodes:
-                print >> sys.stderr, 'Cluster nodes not accessible: %s' % (
-                    self.live_nodes - live_nodes)
-                os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
+                dead_nodes = list(self.live_nodes - live_nodes)
+                logs.LOG.critical(
+                    'Cluster nodes not accessible: %s', dead_nodes)
+                terminate = general.str2bool(
+                    config.get('celery', 'terminate_job_when_celery_is_down'))
+                if terminate:
+                    os.kill(os.getpid(), signal.SIGABRT)  # commit suicide
 
     def job_is_running(self, sleep):
         """
