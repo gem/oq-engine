@@ -44,10 +44,10 @@ def make_epsilons(asset_count, num_ruptures, seed, correlation,
     :param float correlation: the correlation coefficient
     :param str epsilons_management: specify how to compute the epsilon matrix
 
-    If epsilons_management is 'correct', generate the full epsilon matrix;
+    If epsilons_management is 'full', generate the full epsilon matrix;
     if it is 'fast' generate a vector of epsilons.
     """
-    if epsilons_management == 'correct':
+    if epsilons_management == 'full':
         # generate the full epsilon matrix
         zeros = numpy.zeros((asset_count, num_ruptures))
         return scientific.make_epsilons(zeros, seed, correlation)
@@ -309,7 +309,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             nbytes += max(n, r) * n * BYTES_PER_FLOAT
         return nbytes
 
-    def init_epsilons(self, hazard_outputs, epsilons_management):
+    def init_epsilons(self, hazard_outputs, epsilons_management='full'):
         """
         :param hazard_outputs: the outputs of a hazard calculation
 
@@ -335,7 +335,8 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             self.rupture_ids[0] = []
             self.epsilons[0] = make_epsilons(
                 len(self.asset_ids), self.hc.number_of_ground_motion_fields,
-                self.rc.master_seed, self.rc.asset_correlation)
+                self.rc.master_seed, self.rc.asset_correlation,
+                epsilons_management)
 
     def _indices_asset_site(self, asset_block):
         """
