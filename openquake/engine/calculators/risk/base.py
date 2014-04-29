@@ -105,15 +105,17 @@ class RiskCalculator(base.Calculator):
                       sum(self.asset_counts), len(self.taxonomies))
 
         self.haz_outs = self.rc.hazard_outputs()
+        self.eps_man = config.get('risk', 'epsilons_management')
         epsilon_nbytes = 0  # number of epsilons * number of bytes per float
         self.builders = []
         for taxonomy, counts in zip(self.taxonomies, self.asset_counts):
             logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
             with self.monitor("associating asset->site"):
-                builder = hazard_getters.GetterBuilder(taxonomy, self.rc)
+                builder = hazard_getters.GetterBuilder(
+                    taxonomy, self.rc, self.eps_man)
             epsilon_nbytes += builder.calc_nbytes(self.haz_outs)
             self.builders.append(builder)
-        self.eps_man = config.get('risk', 'epsilons_management')
+
         if epsilon_nbytes:
             epsilons_mb = epsilon_nbytes / 1024 / 1024
             logs.LOG.info('Will allocate %dM for the epsilons', epsilons_mb)
@@ -149,7 +151,7 @@ class RiskCalculator(base.Calculator):
                 self.taxonomies, self.builders, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
             with self.monitor("building epsilons"):
-                builder.init_epsilons(self.haz_outs, self.eps_man)
+                builder.init_epsilons(self.haz_outs)
             for offset in range(0, assets_nr, block_size):
                 with self.monitor("getting asset chunks"):
                     assets = models.ExposureData.objects.get_asset_chunk(
