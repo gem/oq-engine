@@ -22,6 +22,8 @@ import numpy
 
 from nose.plugins.attrib import attr
 
+from django.contrib.gis.db import models as djm
+
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -316,6 +318,12 @@ class PrepGeometryTestCase(unittest.TestCase):
         }
 
         self.assertEqual(expected, models._prep_geometry(the_input))
+
+
+class FloatFieldTestCase(unittest.TestCase):
+    def test_truncate_small_numbers(self):
+        # workaround a postgres error "out of range for type double precision"
+        self.assertEqual(djm.FloatField().get_prep_value(1e-301), 0)
 
 
 class GetSiteCollectionTestCase(unittest.TestCase):
