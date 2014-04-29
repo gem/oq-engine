@@ -20,6 +20,7 @@ Base RiskCalculator class.
 """
 
 import collections
+import psutil
 
 from openquake.engine import logs, export
 from openquake.engine.db import models
@@ -28,8 +29,13 @@ from openquake.engine.calculators.risk import \
     writers, validation, loaders, hazard_getters
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor
-
 from openquake.risklib.workflows import RiskModel
+
+MEMORY_ERROR = '''Building the epsilons would require %dM, i.e. a lot
+compared to the memory which is available right now (%dM). Please
+increase the free memory or reduce the number of sites, realizations,
+intensity measure types, intensity levels or use a different
+epsilon_mode.'''
 
 
 class RiskCalculator(base.Calculator):
@@ -85,21 +91,36 @@ class RiskCalculator(base.Calculator):
                     for t, count in self.taxonomies_asset_count.items()
                     if t in self.risk_models)
 
-        # taxonomies ordered by asset counts
-        self.asset_counts, self.taxonomies = zip(*sorted(
-            (c, t) for (t, c) in self.taxonomies_asset_count.iteritems()))
-
-        logs.LOG.info('Considering %d assets of %d distinct taxonomies',
-                      sum(self.asset_counts), len(self.taxonomies))
-        for taxonomy, counts in zip(self.taxonomies, self.asset_counts):
-            logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
-
         for validator_class in self.validators:
             validator = validator_class(self)
             error = validator.get_error()
             if error:
                 raise ValueError("""Problems in calculator configuration:
                                  %s""" % error)
+
+        # taxonomies ordered by asset counts
+        self.asset_counts, self.taxonomies = zip(*sorted(
+            (c, t) for (t, c) in self.taxonomies_asset_count.iteritems()))
+        logs.LOG.info('Considering %d assets of %d distinct taxonomies',
+                      sum(self.asset_counts), len(self.taxonomies))
+
+        self.haz_outs = self.rc.hazard_outputs()
+        epsilon_nbytes = 0  # number of epsilons * number of bytes per float
+        self.builders = []
+        for taxonomy, counts in zip(self.taxonomies, self.asset_counts):
+            logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
+            with self.monitor("associating asset->site"):
+                builder = hazard_getters.GetterBuilder(taxonomy, self.rc)
+            epsilon_nbytes += builder.calc_nbytes(self.haz_outs)
+            self.builders.append(builder)
+        if epsilon_nbytes:
+            epsilons_mb = epsilon_nbytes / 1024 / 1024
+            logs.LOG.info('Will allocate %dM for the epsilons', epsilons_mb)
+            phymem = psutil.phymem_usage()
+            available_memory = (1 - phymem.percent / 100) * phymem.total
+            available_mb = available_memory / 1024 / 1024
+            if epsilon_nbytes > available_memory / 4:
+                raise MemoryError(MEMORY_ERROR % (epsilons_mb, available_mb))
 
     @EnginePerformanceMonitor.monitor
     def execute(self):
@@ -122,16 +143,11 @@ class RiskCalculator(base.Calculator):
         # NB: the block size dependency has been removed
         block_size = 100
         results = []  # celery AsyncResults, unless OQ_NO_DISTRIBUTE is set
-        haz_outs = self.rc.hazard_outputs()
-        epsilon_nbytes = 0  # number of epsilons * number of bytes per float
-        for taxonomy, assets_nr in zip(self.taxonomies, self.asset_counts):
+        for taxonomy, builder, assets_nr in zip(
+                self.taxonomies, self.builders, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
-            with self.monitor("associating asset->site"):
-                builder = hazard_getters.GetterBuilder(taxonomy, self.rc)
             with self.monitor("building epsilons"):
-                builder.init_epsilons(haz_outs)
-            epsilon_nbytes += sum(
-                eps.nbytes for eps in builder.epsilons.itervalues())
+                builder.init_epsilons(self.haz_outs)
             for offset in range(0, assets_nr, block_size):
                 with self.monitor("getting asset chunks"):
                     assets = models.ExposureData.objects.get_asset_chunk(
@@ -139,15 +155,12 @@ class RiskCalculator(base.Calculator):
                 with self.monitor("building getters"):
                     rm = risk_model.copy(
                         getters=builder.make_getters(
-                            self.getter_class, haz_outs, assets))
+                            self.getter_class, self.haz_outs, assets))
                 # submitting task
                 res = tasks.submit(
                     self.core_calc_task,
                     self.job.id, rm, outputdict, self.calculator_parameters)
                 results.append(res)
-        if epsilon_nbytes:
-            logs.LOG.info('Allocated %dM for the epsilons',
-                          epsilon_nbytes / 1024 / 1024)
 
         # aggregating task results
         self.initialize_percent(self.core_calc_task, results)
