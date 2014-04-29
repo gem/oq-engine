@@ -27,7 +27,7 @@ from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, loaders, hazard_getters
-from openquake.engine.utils import tasks
+from openquake.engine.utils import tasks, config
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.risklib.workflows import RiskModel
 
@@ -35,7 +35,7 @@ MEMORY_ERROR = '''Building the epsilons would require %dM, i.e. a lot
 compared to the memory which is available right now (%dM). Please
 increase the free memory or reduce the number of sites, realizations,
 intensity measure types, intensity levels or use a different
-epsilon_mode.'''
+epsilons_management.'''
 
 
 class RiskCalculator(base.Calculator):
@@ -113,13 +113,15 @@ class RiskCalculator(base.Calculator):
                 builder = hazard_getters.GetterBuilder(taxonomy, self.rc)
             epsilon_nbytes += builder.calc_nbytes(self.haz_outs)
             self.builders.append(builder)
+        self.eps_man = config.get('risk', 'epsilons_management')
         if epsilon_nbytes:
             epsilons_mb = epsilon_nbytes / 1024 / 1024
             logs.LOG.info('Will allocate %dM for the epsilons', epsilons_mb)
             phymem = psutil.phymem_usage()
             available_memory = (1 - phymem.percent / 100) * phymem.total
             available_mb = available_memory / 1024 / 1024
-            if epsilon_nbytes > available_memory / 4:
+            if self.eps_man == 'correct' and \
+                    epsilon_nbytes > available_memory / 4:
                 raise MemoryError(MEMORY_ERROR % (epsilons_mb, available_mb))
 
     @EnginePerformanceMonitor.monitor
@@ -147,7 +149,7 @@ class RiskCalculator(base.Calculator):
                 self.taxonomies, self.builders, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
             with self.monitor("building epsilons"):
-                builder.init_epsilons(self.haz_outs)
+                builder.init_epsilons(self.haz_outs, self.eps_man)
             for offset in range(0, assets_nr, block_size):
                 with self.monitor("getting asset chunks"):
                     assets = models.ExposureData.objects.get_asset_chunk(
