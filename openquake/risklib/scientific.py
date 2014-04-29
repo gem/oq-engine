@@ -111,6 +111,8 @@ class VulnerabilityFunction(object):
         :param epsilons:
            matrix of floats N x R
         """
+        assert len(epsilons) == len(ground_motion_values), (
+            len(epsilons), len(ground_motion_values))
         vulnerability_function = copy.copy(self)
         vulnerability_function.set_distribution(epsilons)
         return utils.numpy_map(
@@ -236,7 +238,6 @@ class VulnerabilityFunction(object):
 
         # apply uncertainty
         covs = self._cov_for(imls)
-
         ret[idxs] = self.distribution.sample(means, covs, covs * imls)
 
         return ret
@@ -434,9 +435,10 @@ class LogNormalDistribution(Distribution):
                              "before you can use it")
         epsilons = self.epsilons[self.epsilon_idx]
         self.epsilon_idx += 1
+        if isinstance(epsilons, (numpy.ndarray, list, tuple)):
+            epsilons = epsilons[0:len(covs)]
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
-        return (means / numpy.sqrt(1 + covs ** 2) *
-                numpy.exp(epsilons[0:len(covs)] * sigma))
+        return means / numpy.sqrt(1 + covs ** 2) * numpy.exp(epsilons * sigma)
 
     def survival(self, loss_ratio, mean, stddev):
         # scipy does not handle correctly the limit case stddev = 0.
