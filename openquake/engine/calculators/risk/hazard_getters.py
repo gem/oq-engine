@@ -260,9 +260,10 @@ class GetterBuilder(object):
     Warning: instantiating a GetterBuilder performs a potentially
     expensive geospatial query.
     """
-    def __init__(self, taxonomy, rc):
+    def __init__(self, taxonomy, rc, epsilons_management='full'):
         self.taxonomy = taxonomy
         self.rc = rc
+        self.epsilons_management = epsilons_management
         self.hc = rc.get_hazard_calculation()
         max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = models.getcursor('job_init')
@@ -309,7 +310,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             nbytes += max(n, r) * n * BYTES_PER_FLOAT
         return nbytes
 
-    def init_epsilons(self, hazard_outputs, epsilons_management='full'):
+    def init_epsilons(self, hazard_outputs):
         """
         :param hazard_outputs: the outputs of a hazard calculation
 
@@ -330,13 +331,13 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 self.epsilons[scid] = make_epsilons(
                     len(self.asset_ids), len(self.rupture_ids[scid]),
                     self.rc.master_seed, self.rc.asset_correlation,
-                    epsilons_management)
+                    self.epsilons_management)
         elif self.hc.calculation_mode == 'scenario':
             self.rupture_ids[0] = []
             self.epsilons[0] = make_epsilons(
                 len(self.asset_ids), self.hc.number_of_ground_motion_fields,
                 self.rc.master_seed, self.rc.asset_correlation,
-                epsilons_management)
+                self.epsilons_management)
 
     def _indices_asset_site(self, asset_block):
         """
