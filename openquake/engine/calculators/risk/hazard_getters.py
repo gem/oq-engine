@@ -32,6 +32,8 @@ from openquake.risklib.scientific import make_epsilons
 from openquake.engine import logs
 from openquake.engine.db import models
 
+BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
+
 
 class HazardGetter(object):
     """
@@ -248,6 +250,34 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         self.asset_ids, self.site_ids = zip(*cursor.fetchall())
         self.rupture_ids = {}
         self.epsilons = {}
+        self.epsilons_shape = {}
+
+    def calc_nbytes(self, hazard_outputs):
+        """
+        :param hazard_outputs: the outputs of a hazard calculation
+        :returns: the number of bytes to be allocated for the epsilons matrices
+
+        If the hazard_outputs come from an event based or scenario computation,
+        populate the .epsilons_shape dictionary.
+        """
+        num_assets = len(self.asset_ids)
+        if self.hc.calculation_mode == 'event_based':
+            lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
+                               for ho in hazard_outputs)
+            for lt_model_id in lt_model_ids:
+                ses_coll = models.SESCollection.objects.get(
+                    lt_model=lt_model_id)
+                self.epsilons_shape[ses_coll.id] = (
+                    num_assets, ses_coll.get_ruptures().count())
+        elif self.hc.calculation_mode == 'scenario':
+                self.epsilons_shape[0] = (
+                    num_assets, self.hc.number_of_ground_motion_fields)
+        nbytes = 0
+        for (n, r) in self.epsilons_shape.values():
+            # the max(n, r) is taken because if n > r then the limiting
+            # factor is the size of the correlation matrix, i.e. n
+            nbytes += max(n, r) * n * BYTES_PER_FLOAT
+        return nbytes
 
     def init_epsilons(self, hazard_outputs):
         """
@@ -256,6 +286,8 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         If the hazard_outputs come from an event based or scenario computation,
         populate the .epsilons and the .rupture_ids dictionaries.
         """
+        if not self.epsilons_shape:
+            self.calc_nbytes(hazard_outputs)
         if self.hc.calculation_mode == 'event_based':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
@@ -274,11 +306,6 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             self.rupture_ids[0] = []
             self.epsilons[0] = make_epsilons(
                 zeros, self.rc.master_seed, self.rc.asset_correlation)
-
-        for scid, epsilons in self.epsilons.iteritems():
-            logs.LOG.info('Allocated epsilon matrix with %s elements '
-                          'for taxonomy %s, SESCollection %d', epsilons.shape,
-                          self.taxonomy, scid)
 
     def _indices_asset_site(self, asset_block):
         """
