@@ -44,7 +44,7 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
-from openquake.engine.utils import config, tasks
+from openquake.engine.utils import config
 from openquake.engine.utils.general import block_splitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
 

@@ -212,9 +212,7 @@ def submit(oqtask, *args):
     if no_distribute():
         return oqtask.task_func(*args)
     piks = pickle_sequence(args)
-    to_send = sum(len(p) for p in piks)
-    logs.LOG.info('Sending %s with %dM of data',
-                  oqtask.__name__, to_send / ONE_MB)
+    # to_send = sum(len(p) for p in piks)
     check_mem_usage()  # log a warning if too much memory is used
     return oqtask.delay(*piks)
 
