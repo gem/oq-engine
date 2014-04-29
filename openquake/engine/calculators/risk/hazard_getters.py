@@ -27,12 +27,42 @@ import operator
 import numpy
 
 from openquake.hazardlib.imt import from_string
-from openquake.risklib.scientific import make_epsilons
+from openquake.risklib import scientific
 
 from openquake.engine import logs
 from openquake.engine.db import models
 
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
+
+
+def make_epsilons(asset_count, num_ruptures, seed, correlation,
+                  epsilons_management):
+    """
+    :param int asset_count: the number of assets
+    :param int num_ruptures: the number of ruptures
+    :param int seed: a random seed
+    :param float correlation: the correlation coefficient
+    :param str epsilons_management: specify how to compute the epsilon matrix
+
+    If epsilons_management is 'correct', generate the full epsilon matrix;
+    if it is 'fast' generate a vector of epsilons.
+    """
+    if epsilons_management == 'correct':
+        # generate the full epsilon matrix
+        zeros = numpy.zeros((asset_count, num_ruptures))
+        return scientific.make_epsilons(zeros, seed, correlation)
+    elif epsilons_management == 'fast':
+        # use a single epsilon for all realizations
+        means_vector = numpy.zeros(asset_count)
+        covariance_matrix = (
+            numpy.ones((asset_count, asset_count)) * correlation +
+            numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
+        eps = numpy.random.multivariate_normal(
+            means_vector, covariance_matrix, 1).reshape(-1)
+        return eps
+    else:
+        raise RuntimeError('Wrong parameter epsilons_management '
+                           'in openquake.cfg: %r' % epsilons_management)
 
 
 class HazardGetter(object):
@@ -279,7 +309,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             nbytes += max(n, r) * n * BYTES_PER_FLOAT
         return nbytes
 
-    def init_epsilons(self, hazard_outputs):
+    def init_epsilons(self, hazard_outputs, epsilons_management):
         """
         :param hazard_outputs: the outputs of a hazard calculation
 
@@ -295,17 +325,17 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 ses_coll = models.SESCollection.objects.get(
                     lt_model=lt_model_id)
                 scid = ses_coll.id
-                self.rupture_ids[scid] = rupture_ids = ses_coll.get_ruptures(
+                self.rupture_ids[scid] = ses_coll.get_ruptures(
                     ).values_list('id', flat=True)
-                zeros = numpy.zeros((len(self.asset_ids), len(rupture_ids)))
                 self.epsilons[scid] = make_epsilons(
-                    zeros, self.rc.master_seed, self.rc.asset_correlation)
+                    len(self.asset_ids), len(self.rupture_ids[scid]),
+                    self.rc.master_seed, self.rc.asset_correlation,
+                    epsilons_management)
         elif self.hc.calculation_mode == 'scenario':
-            zeros = numpy.zeros((len(self.asset_ids),
-                                 self.hc.number_of_ground_motion_fields))
             self.rupture_ids[0] = []
             self.epsilons[0] = make_epsilons(
-                zeros, self.rc.master_seed, self.rc.asset_correlation)
+                len(self.asset_ids), self.hc.number_of_ground_motion_fields,
+                self.rc.master_seed, self.rc.asset_correlation)
 
     def _indices_asset_site(self, asset_block):
         """
