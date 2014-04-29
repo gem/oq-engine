@@ -298,11 +298,17 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
             for lt_model_id in lt_model_ids:
                 ses_coll = models.SESCollection.objects.get(
                     lt_model=lt_model_id)
-                self.epsilons_shape[ses_coll.id] = (
-                    num_assets, ses_coll.get_ruptures().count())
+                if self.epsilons_management == 'full':
+                    samples = ses_coll.get_ruptures().count()
+                else:
+                    samples = 1
+                self.epsilons_shape[ses_coll.id] = (num_assets, samples)
         elif self.hc.calculation_mode == 'scenario':
-                self.epsilons_shape[0] = (
-                    num_assets, self.hc.number_of_ground_motion_fields)
+                if self.epsilons_management == 'full':
+                    samples = self.hc.number_of_ground_motion_fields
+                else:
+                    samples = 1
+                self.epsilons_shape[0] = (num_assets, samples)
         nbytes = 0
         for (n, r) in self.epsilons_shape.values():
             # the max(n, r) is taken because if n > r then the limiting

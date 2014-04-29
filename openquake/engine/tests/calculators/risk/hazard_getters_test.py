@@ -46,7 +46,7 @@ class HazardCurveGetterTestCase(unittest.TestCase):
         self.job.save()
         calc.pre_execute()
 
-        builder = hazard_getters.GetterBuilder(
+        self.builder = hazard_getters.GetterBuilder(
             self.taxonomy, self.job.risk_calculation)
 
         self.assets = models.ExposureData.objects.filter(
@@ -54,8 +54,12 @@ class HazardCurveGetterTestCase(unittest.TestCase):
             'asset_ref').filter(taxonomy=self.taxonomy)
 
         ho = self.job.risk_calculation.hazard_output
-        [self.getter] = builder.make_getters(
+        self.nbytes = self.builder.calc_nbytes([ho])
+        [self.getter] = self.builder.make_getters(
             self.getter_class, [ho], self.assets)
+
+    def test_nbytes(self):
+        self.assertEqual(self.nbytes, 0)
 
     def test_is_pickleable(self):
         pickle.dumps(self.getter)  # raises an error if not
@@ -80,6 +84,11 @@ class GroundMotionValuesGetterTestCase(HazardCurveGetterTestCase):
     getter_class = hazard_getters.GroundMotionValuesGetter
     taxonomy = 'RM'
 
+    def test_nbytes(self):
+        # 1 asset * 3 ruptures
+        self.assertEqual(self.builder.epsilons_shape.values(), [(1, 3)])
+        self.assertEqual(self.nbytes, 24)
+
     def test_call(self):
         # the exposure model in this example has two assets of taxonomy RM
         # (a1 and a3); the asset a3 has no hazard data within the
@@ -100,10 +109,15 @@ class ScenarioGetterTestCase(GroundMotionValuesGetterTestCase):
     getter_class = hazard_getters.ScenarioGetter
     taxonomy = 'RM'
 
+    def test_nbytes(self):
+        # 10 realizations * 1 asset
+        self.assertEqual(self.builder.epsilons_shape, {0: (1, 10)})
+        self.assertEqual(self.nbytes, 80)
+
     def test_call(self):
         # the exposure model in this example has two assets of taxonomy RM
         # (a1 and a3) but the asset a3 has no hazard data within the
-        # maximum distance; there are three realizations
+        # maximum distance; there are 10 realizations
         a1, a3 = self.assets
         self.assertEqual(self.getter.assets, [a1])
 
