@@ -128,6 +128,20 @@ SourceRuptureSites = collections.namedtuple(
     'source rupture sites')
 
 
+############## Fix FloatField underflow error ##################
+# http://stackoverflow.com/questions/9556586/floating-point-numbers-of-python-float-and-postgresql-double-precision
+
+def _get_prep_value(self, value):
+    if value is None:
+        return None
+    val = float(value)
+    if val < 1E-300:
+        return 0.
+    return val
+
+djm.FloatField.get_prep_value = _get_prep_value
+
+
 def cost_type(loss_type):
     if loss_type == "fatalities":
         return "occupants"
