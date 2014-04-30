@@ -15,6 +15,8 @@ class ImportGMFScenarioTestCase(unittest.TestCase):
         fileobj = open(os.path.join(repodir, 'examples', 'gmf-scenario.xml'))
         out = import_gmf_scenario.import_gmf_scenario(fileobj)
         n = models.GmfData.objects.filter(gmf__output=out).count()
+        assert_equal(
+            out.oq_job.hazard_calculation.number_of_ground_motion_fields, n)
         assert_equal(n, 9)  # 9 rows entered
         assert_equal(out.oq_job.hazard_calculation.description,
                      'Scenario importer, file gmf-scenario.xml')
