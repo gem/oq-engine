@@ -53,13 +53,8 @@ def make_epsilons(asset_count, num_ruptures, seed, correlation,
         return scientific.make_epsilons(zeros, seed, correlation)
     elif epsilons_management == 'fast':
         # use a single epsilon for all realizations
-        means_vector = numpy.zeros(asset_count)
-        covariance_matrix = (
-            numpy.ones((asset_count, asset_count)) * correlation +
-            numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
-        eps = numpy.random.multivariate_normal(
-            means_vector, covariance_matrix, 1).reshape(-1)
-        return eps
+        zeros = numpy.zeros((asset_count, 1))
+        return scientific.make_epsilons(zeros, seed, correlation).reshape(-1)
     else:
         raise RuntimeError('Wrong parameter epsilons_management '
                            'in openquake.cfg: %r' % epsilons_management)
@@ -291,7 +286,9 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
     def calc_nbytes(self, hazard_outputs):
         """
         :param hazard_outputs: the outputs of a hazard calculation
-        :returns: the number of bytes to be allocated for the epsilons matrices
+        :returns: the number of bytes to be allocated (can be
+                  much less if there is no correlation and the 'fast'
+                  epsilons management is enabled).
 
         If the hazard_outputs come from an event based or scenario computation,
         populate the .epsilons_shape dictionary.
