@@ -35,6 +35,10 @@ from openquake.engine.db import models
 BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
 
 
+class AssetSiteAssociationError(Exception):
+    pass
+
+
 def make_epsilons(asset_count, num_ruptures, seed, correlation,
                   epsilons_management):
     """
@@ -394,9 +398,10 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         """
         indices, assets, site_ids = self._indices_asset_site(asset_block)
         if not indices:
-            raise RuntimeError('Could not associated any asset in %s to '
-                               'hazard sites within the distance of %s km',
-                               asset_block, self.rc.best_maximum_distance)
+            raise AssetSiteAssociationError(
+                'Could not associated any asset in %s to '
+                'hazard sites within the distance of %s km'
+                % (asset_block, self.rc.best_maximum_distance))
         if not self.epsilons:
             self.init_epsilons(hazard_outputs)
         getters = []

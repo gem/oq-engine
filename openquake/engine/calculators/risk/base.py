@@ -162,10 +162,14 @@ class RiskCalculator(base.Calculator):
                     assets = models.ExposureData.objects.get_asset_chunk(
                         self.rc, taxonomy, offset, block_size)
                 with self.monitor("building getters"):
-                    rm = risk_model.copy(
-                        getters=builder.make_getters(
-                            self.getter_class, self.haz_outs, assets))
+                    try:
+                        getters = builder.make_getters(
+                            self.getter_class, self.haz_outs, assets)
+                    except hazard_getters.AssetSiteAssociationError as err:
+                        logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
+                        continue
                 # submitting task
+                rm = risk_model.copy(getters=getters)
                 res = tasks.submit(
                     self.core_calc_task,
                     self.job.id, rm, outputdict, self.calculator_parameters)
