@@ -31,11 +31,12 @@ from openquake.engine.utils import tasks, config
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.risklib.workflows import RiskModel
 
-MEMORY_ERROR = '''Building the epsilons would require %dM, i.e. a lot
-compared to the memory which is available right now (%dM). Please
+MEMORY_ERROR = '''Running the calculation will require approximately %dM,
+i.e. more than the memory which is available right now (%dM). Please
 increase the free memory or reduce the number of sites, realizations,
-intensity measure types, intensity levels or use a different
-epsilons_management.'''
+intensity measure types, intensity levels. Alternatively you can
+set epsilons_management=fast in openquake.cfg. It this is not enough,
+you can set asset_correlation=0 to avoid building the correlation matrix.'''
 
 
 class RiskCalculator(base.Calculator):
@@ -106,26 +107,29 @@ class RiskCalculator(base.Calculator):
 
         self.haz_outs = self.rc.hazard_outputs()
         self.eps_man = config.get('risk', 'epsilons_management')
-        epsilon_nbytes = 0  # number of epsilons * number of bytes per float
+        nbytes = 0  # number of epsilons * number of bytes per float
         self.builders = []
         for taxonomy, counts in zip(self.taxonomies, self.asset_counts):
             logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
             with self.monitor("associating asset->site"):
                 builder = hazard_getters.GetterBuilder(
                     taxonomy, self.rc, self.eps_man)
-            epsilon_nbytes += builder.calc_nbytes(self.haz_outs)
+            nbytes += builder.calc_nbytes(self.haz_outs)
             self.builders.append(builder)
 
-        if epsilon_nbytes:
-            epsilons_mb = epsilon_nbytes / 1024 / 1024
-            logs.LOG.info('epsilons_management=%s: will allocate %dM',
-                          self.eps_man, epsilons_mb)
+        if nbytes:
+            estimate_mb = nbytes / 1024 / 1024 * 4
+            if self.eps_man == 'fast' and self.rc.asset_correlation == 0:
+                pass  # using much less memory than the estimate, don't log
+            else:
+                logs.LOG.info('epsilons_management=%s: '
+                              'you should need less than %dM (rough estimate)',
+                              self.eps_man, estimate_mb)
             phymem = psutil.phymem_usage()
             available_memory = (1 - phymem.percent / 100) * phymem.total
             available_mb = available_memory / 1024 / 1024
-            if self.eps_man == 'correct' and \
-                    epsilon_nbytes > available_memory / 4:
-                raise MemoryError(MEMORY_ERROR % (epsilons_mb, available_mb))
+            if self.eps_man == 'full' and nbytes * 4 > available_memory:
+                raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
 
     @EnginePerformanceMonitor.monitor
     def execute(self):
