@@ -118,7 +118,8 @@ class RiskCalculator(base.Calculator):
 
         if epsilon_nbytes:
             epsilons_mb = epsilon_nbytes / 1024 / 1024
-            logs.LOG.info('Will allocate %dM for the epsilons', epsilons_mb)
+            logs.LOG.info('epsilons_management=%s: will allocate %dM',
+                          self.eps_man, epsilons_mb)
             phymem = psutil.phymem_usage()
             available_memory = (1 - phymem.percent / 100) * phymem.total
             available_mb = available_memory / 1024 / 1024
