@@ -404,6 +404,8 @@ def make_epsilons(matrix, seed, correlation):
         numpy.random.seed(seed)
     asset_count = len(matrix)
     samples = len(matrix[0])
+    if not correlation:  # avoid building the covariance matrix
+        return numpy.random.normal(size=(samples, asset_count)).transpose()
     means_vector = numpy.zeros(asset_count)
     covariance_matrix = (
         numpy.ones((asset_count, asset_count)) * correlation +
