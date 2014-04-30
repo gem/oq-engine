@@ -309,6 +309,9 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 else:
                     samples = 1
                 self.epsilons_shape[0] = (num_assets, samples)
+        if self.epsilons_management == 'fast' and self.epsilons_shape:
+            # size of the correlation matrix
+            return num_assets * num_assets * BYTES_PER_FLOAT
         nbytes = 0
         for (n, r) in self.epsilons_shape.values():
             # the max(n, r) is taken because if n > r then the limiting
