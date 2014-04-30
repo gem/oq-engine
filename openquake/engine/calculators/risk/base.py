@@ -35,8 +35,9 @@ MEMORY_ERROR = '''Running the calculation will require approximately %dM,
 i.e. more than the memory which is available right now (%dM). Please
 increase the free memory or reduce the number of sites, realizations,
 intensity measure types, intensity levels. Alternatively you can
-set epsilons_management=fast in openquake.cfg. It this is not enough,
-you can set asset_correlation=0 to avoid building the correlation matrix.'''
+set epsilons_management=fast in openquake.cfg. It the correlation is
+nonzero, consider setting asset_correlation=0 to avoid building
+the correlation matrix.'''
 
 
 class RiskCalculator(base.Calculator):
@@ -166,6 +167,7 @@ class RiskCalculator(base.Calculator):
                         getters = builder.make_getters(
                             self.getter_class, self.haz_outs, assets)
                     except hazard_getters.AssetSiteAssociationError as err:
+                        # TODO: add a test for this corner case
                         logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
                         continue
                 # submitting task
