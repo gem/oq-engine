@@ -216,6 +216,7 @@ class ScenarioGetter(HazardGetter):
 
     rupture_ids = []  # there are no ruptures on the db
     epsilons = None  # set by the GetterBuilder
+    num_samples = None  # set by the GetterBuilder
 
     def get_data(self, imt):
         """
@@ -230,21 +231,25 @@ class ScenarioGetter(HazardGetter):
             imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
         else:
             imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
-        gmv_arrays = []
         cursor = models.getcursor('job_init')
-        cursor.execute('select site_id, gmvs from '
-                       'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
-                       'and {} order by site_id, task_no'.format(imt_query),
-                       (gmf_id, tuple(self.site_ids),
-                        imt_type, sa_period, sa_damping))
-        for site, group in itertools.groupby(cursor, operator.itemgetter(0)):
+        templ = ('select site_id, gmvs from '
+                 'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
+                 'and {} order by site_id, task_no'.format(imt_query))
+        args = (gmf_id, tuple(set(self.site_ids)),
+                imt_type, sa_period, sa_damping)
+        cursor.execute(templ, args)
+
+        gmvs_dict = {}  # site_id -> gmvs array
+        for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
             gmvs = []
             for site_id, gmvs_ in group:
                 gmvs.extend(gmvs_)
-            gmv_arrays.append(numpy.array(gmvs, dtype=float))
-        assert len(gmv_arrays) == len(self.site_ids), (
-            len(gmv_arrays), len(self.site_ids))  # sites cannot be lost
-        return gmv_arrays
+            gmvs_dict[sid] = numpy.array(gmvs, dtype=float)
+        # TODO: add the test for the case where there is no data
+        # for the given site and vector of zeros is returned
+        return [gmvs_dict[sid] if sid in gmvs_dict
+                else numpy.zeros(self.num_samples, dtype=float)
+                for sid in self.site_ids]
 
 
 class GetterBuilder(object):
@@ -403,6 +408,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 getter.rupture_ids = self.rupture_ids[ses_coll_id]
                 getter.epsilons = self.epsilons[ses_coll_id][indices]
             elif self.hc.calculation_mode == 'scenario':
+                getter.num_samples = self.epsilons_shape[0][1]
                 getter.epsilons = self.epsilons[0][indices]
             getters.append(getter)
         return getters

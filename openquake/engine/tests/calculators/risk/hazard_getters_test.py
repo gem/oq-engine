@@ -111,7 +111,7 @@ class ScenarioGetterTestCase(GroundMotionValuesGetterTestCase):
 
     def test_nbytes(self):
         # 10 realizations * 1 asset
-        self.assertEqual(self.builder.epsilons_shape, {0: (1, 10)})
+        self.assertEqual(self.getter.num_samples, 10)
         self.assertEqual(self.nbytes, 80)
 
     def test_call(self):
