@@ -2707,6 +2707,13 @@ class EventLoss(djm.Model):
     def __iter__(self):
         return iter(self.eventlossdata_set.all().order_by('-aggregate_loss'))
 
+    def to_csv_str(self):
+        """
+        Convert EventLoss into a CSV with fields rupture_tag, aggregate_loss
+        """
+        return '\n'.join('%s,%s' % (self.rupture.tag, self.aggregate_loss)
+                         for data in self)
+
     @property
     def output_hash(self):
         """
