@@ -132,8 +132,7 @@ class RiskCalculator(base.Calculator):
             if self.eps_man == 'full' and nbytes * 4 > available_memory:
                 raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
 
-    @EnginePerformanceMonitor.monitor
-    def execute(self):
+    def task_arg_gen(self):
         """
         Method responsible for the distribution strategy. It divides
         the considered exposure into chunks of homogeneous assets
@@ -152,7 +151,6 @@ class RiskCalculator(base.Calculator):
 
         # NB: the block size dependency has been removed
         block_size = 100
-        results = []  # celery AsyncResults, unless OQ_NO_DISTRIBUTE is set
         for taxonomy, builder, assets_nr in zip(
                 self.taxonomies, self.builders, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
@@ -172,15 +170,7 @@ class RiskCalculator(base.Calculator):
                         continue
                 # submitting task
                 rm = risk_model.copy(getters=getters)
-                res = tasks.submit(
-                    self.core_calc_task,
-                    self.job.id, rm, outputdict, self.calculator_parameters)
-                results.append(res)
-
-        # aggregating task results
-        self.initialize_percent(self.core_calc_task, results)
-        tasks.aggregate_results(
-            results, lambda acc, res: self.task_completed(res), None)
+                yield self.job.id, rm, outputdict, self.calculator_parameters
 
     def _get_outputs_for_export(self):
         """
