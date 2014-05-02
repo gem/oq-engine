@@ -188,35 +188,6 @@ def aggregate_result_set(rset, agg, acc):
     return acc
 
 
-def aggregate_results(results, agg, acc):
-    """
-    Loop on a set of results and update the accumulator
-    by using the aggregation function.
-
-    :param results: a list of results
-    :param agg: the aggregation function, (acc, val) -> new acc
-    :param acc: the initial value of the accumulator
-    :returns: the final value of the accumulator
-    """
-    if no_distribute():
-        return reduce(agg, results, acc)
-    return aggregate_result_set(ResultSet(results), agg, acc)
-
-
-def submit(oqtask, *args):
-    """
-    Submit an oqtask with the given arguments to celery and return
-    an AsyncResult. If the variable OQ_NO_DISTRIBUTE is set, the
-    task function is run in process and the result is returned.
-    """
-    if no_distribute():
-        return oqtask.task_func(*args)
-    piks = pickle_sequence(args)
-    # to_send = sum(len(p) for p in piks)
-    check_mem_usage()  # log a warning if too much memory is used
-    return oqtask.delay(*piks)
-
-
 # used to implement BaseCalculator.parallelize, which takes in account
 # the `concurrent_task` concept to avoid filling the Celery queue
 def parallelize(task, task_args, side_effect=lambda val: None):
