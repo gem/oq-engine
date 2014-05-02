@@ -27,8 +27,7 @@ from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, loaders, hazard_getters
-from openquake.engine.utils import tasks, config
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.utils import config
 from openquake.risklib.workflows import RiskModel
 
 MEMORY_ERROR = '''Running the calculation will require approximately %dM,
@@ -151,6 +150,7 @@ class RiskCalculator(base.Calculator):
 
         # NB: the block size dependency has been removed
         block_size = 100
+        task_no = 0
         for taxonomy, builder, assets_nr in zip(
                 self.taxonomies, self.builders, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
@@ -169,6 +169,8 @@ class RiskCalculator(base.Calculator):
                         logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
                         continue
                 # submitting task
+                task_no += 1
+                logs.LOG.info('Built task #%d', task_no)
                 rm = risk_model.copy(getters=getters)
                 yield self.job.id, rm, outputdict, self.calculator_parameters
 
