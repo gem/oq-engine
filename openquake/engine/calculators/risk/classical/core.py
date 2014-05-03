@@ -50,20 +50,12 @@ def classical(job_id, risk_model, outputdict, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for loss_type in risk_model.loss_types:
-            do_classical(
-                risk_model, loss_type,
-                outputdict.with_args(loss_type=loss_type),
-                params, monitor)
+        do_classical(risk_model, outputdict, params, monitor)
 
 
-def do_classical(risk_model, loss_type, outputdict, params, monitor):
+def do_classical(risk_model, outputdict, params, monitor):
     """
     See `classical` for a description of the parameters.
-
-    :param str loss_type:
-      the type of losses we are considering
-
     :param monitor:
       a context manager for logging/profiling purposes
 
@@ -71,21 +63,23 @@ def do_classical(risk_model, loss_type, outputdict, params, monitor):
     loss fractions. Then if the number of units are bigger than 1, we
     compute mean and quantile artifacts.
     """
-    outputs = risk_model.compute_outputs(
-        loss_type, monitor.copy('getting data'))
-
-    stats = risk_model.compute_stats(
-        outputs, params.quantiles, post_processing)
-
-    with monitor.copy('saving risk'):
-        for out in outputs:
-            save_individual_outputs(
-                outputdict.with_args(hazard_output_id=out.hid),
-                out.output, params)
-
-        if stats is not None:
-            save_statistical_output(
-                outputdict.with_args(hazard_output_id=None), stats, params)
+    outputs_per_loss_type = risk_model.compute_outputs(
+        monitor.copy('getting data'))
+    stats_per_loss_type = risk_model.compute_stats(
+        outputs_per_loss_type, params.quantiles, post_processing)
+    for loss_type, outputs in outputs_per_loss_type.iteritems():
+        stats = stats_per_loss_type[loss_type]
+        with monitor.copy('saving risk'):
+            for out in outputs:
+                save_individual_outputs(
+                    outputdict.with_args(
+                        loss_type=loss_type, hazard_output_id=out.hid),
+                    out.output, params)
+            if stats is not None:
+                save_statistical_output(
+                    outputdict.with_args(
+                        loss_type=loss_type, hazard_output_id=None),
+                    stats, params)
 
 
 def save_individual_outputs(outputdict, outs, params):
