@@ -53,25 +53,20 @@ def classical_bcr(job_id, risk_model, outputdict, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for loss_type in risk_model.loss_types:
-            risk_model.loss_type = loss_type
-            do_classical_bcr(
-                risk_model, loss_type,
-                outputdict.with_args(loss_type=loss_type),
-                monitor)
+        do_classical_bcr(risk_model, outputdict, monitor)
 
 
-def do_classical_bcr(risk_model, loss_type, outputdict, monitor):
-    outputs = risk_model.compute_outputs(
-        loss_type, monitor.copy('getting hazard'))
-
-    with monitor.copy('writing results'):
-        for out in outputs:
-            outputdict.write(
-                risk_model.workflow.assets,
-                out.output,
-                output_type="bcr_distribution",
-                hazard_output_id=out.hid)
+def do_classical_bcr(risk_model, outputdict, monitor):
+    out = risk_model.compute_outputs(monitor.copy('getting hazard'))
+    for loss_type, outputs in out.iteritems():
+        outputdict = outputdict.with_args(loss_type=loss_type)
+        with monitor.copy('writing results'):
+            for out in outputs:
+                outputdict.write(
+                    risk_model.workflow.assets,
+                    out.output,
+                    output_type="bcr_distribution",
+                    hazard_output_id=out.hid)
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
