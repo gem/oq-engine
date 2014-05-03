@@ -192,16 +192,15 @@ class Classical(object):
 
     def __call__(self, loss_type, assets, hazard_curves):
         """
+        :param str loss_type:
+            the loss type considered
+        :param assets:
+            assets is an iterator over N
+            :class:`openquake.risklib.workflows.Asset` instances
+        :param hazard_curves:
+            curves is an iterator over hazard curves (numpy array shaped 2xR).
         :returns:
             a :class:`openquake.risklib.workflows.Classical.Output` instance.
-
-        :param str loss_type: the loss type considered
-
-        :param assets:
-           assets is an iterator over N
-           :class:`openquake.risklib.workflows.Asset` instances
-        :param hazard_curves:
-           curves is an iterator over hazard curves (numpy array shaped 2xR).
         """
         curves = self.curves[loss_type](hazard_curves)
         average_losses = numpy.array([scientific.average_loss(losses, poes)
@@ -229,9 +228,6 @@ class Classical(object):
 
     def statistics(self, all_outputs, quantiles, post_processing):
         """
-        :returns:
-            a :class:`openquake.risklib.workflows.Classical.StatisticalOutput`
-            instance holding statistical outputs (e.g. mean loss curves).
         :param quantiles:
             quantile levels used to compute quantile outputs
         :param post_processing:
@@ -239,6 +235,9 @@ class Classical(object):
             #mean_curve(curves, weights)
             #weighted_quantile_curve(curves, weights, quantile)
             #quantile_curve(curves, quantile)
+        :returns:
+            a :class:`openquake.risklib.workflows.Classical.StatisticalOutput`
+            instance holding statistical outputs (e.g. mean loss curves).
         """
         if len(all_outputs) == 1:  # single realization
             return
@@ -292,7 +291,15 @@ class Classical(object):
 
     def compute_all_outputs(self, getters, loss_type, getter_monitor):
         """
-        :returns: a number of outputs equal to the number of realizations
+        :param getters:
+            a list of hazard getters, i.e. objects with a .get_date(imt) method
+        :param str loss_type:
+            a string identifying the loss type we are considering
+        :getter_monitor:
+            a context manager monitoring the time and resources
+            spent the in the computation
+        :returns:
+            a number of outputs equal to the number of realizations
         """
         all_outputs = []
         imt = self.vulnerability_functions[loss_type].imt
@@ -457,7 +464,15 @@ class ProbabilisticEventBased(object):
 
     def compute_all_outputs(self, getters, loss_type, getter_monitor):
         """
-        :returns: a number of outputs equal to the number of realizations
+        :param getters:
+            a list of hazard getters, i.e. objects with a .get_date(imt) method
+        :param str loss_type:
+            a string identifying the loss type we are considering
+        :param getter_monitor:
+            a context manager monitoring the time and resources
+            spent the in the computation
+        :returns:
+            a number of outputs equal to the number of realizations
         """
         all_outputs = []
         imt = self.vulnerability_functions[loss_type].imt
@@ -684,7 +699,7 @@ class RiskModel(object):
     """
     Container for the attributes taxonomy, workflow and getters.
     The last one can be set after instantiation, but before calling
-    compute_outputs_and_stats.
+    compute_outputs.
     """
     def __init__(self, taxonomy, workflow, getters=None):
         self.taxonomy = taxonomy
@@ -693,33 +708,59 @@ class RiskModel(object):
 
     @property
     def loss_types(self):
+        """
+        The list of loss types in the underlying vulnerability functions,
+        in lexicographic order
+        """
         return sorted(self.workflow.vulnerability_functions)
 
     @property
     def vulnerability_functions(self):
+        """
+        The list of the underlying vulnerability functions, in order
+        """
         return [self.workflow.vulnerability_functions[lt]
                 for lt in self.loss_types]
 
     def copy(self, **kw):
+        """
+        A copy of the risk model, with different attributes
+
+        :param kw: a dictionary of attributes to set
+        """
         new = self.__class__(self.taxonomy, self.workflow, self.getters)
         vars(new).update(kw)
         return new
 
-    def compute_outputs(self, loss_type, getter_monitor):
-        return self.workflow.compute_all_outputs(
-            self.getters, loss_type, getter_monitor)
+    def compute_outputs(self, getter_monitor):
+        """
+        :param getter_monitor:
+            a context manager monitoring the time and resources
+            spent the in the computation
+        :returns:
+            a dictionary with the outputs corresponding to the
+            hazard realizations, keyed by the loss type
+        """
+        return dict((loss_type, self.workflow.compute_all_outputs(
+                    self.getters, loss_type, getter_monitor))
+                    for loss_type in self.loss_types)
 
     def compute_stats(self, outputs, quantiles, post_processing):
-        return self.workflow.statistics(outputs, quantiles, post_processing)
-
-    # not used right now
-    def compute_outputs_and_stats(
-            self, quantiles, post_processing, getter_monitor):
-        outputs = {}
-        stats = {}
-        for loss_type in self.loss_types:
-            outputs[loss_type] = self.workflow.compute_all_outputs(
-                self.getters, loss_type, getter_monitor)
-            stats[loss_type] = self.workflow.statistics(
-                outputs[loss_type], quantiles, post_processing)
-        return outputs, stats
+        """
+        :param outputs:
+            output returned by compute_outputs for a given loss type
+        :param quantiles:
+            quantile levels used to compute quantile outputs
+        :param post_processing:
+            an object implementing the following protocol:
+            #mean_curve(curves, weights)
+            #weighted_quantile_curve(curves, weights, quantile)
+            #quantile_curve(curves, quantile)
+        :returns:
+            a dictionary with the stats corresponding to the
+            hazard realizations, keyed by the loss type.
+            If there is a single realization, the stats are None.
+        """
+        return dict((loss_type, self.workflow.statistics(
+                    outputs[loss_type], quantiles, post_processing))
+                    for loss_type in outputs)
