@@ -1279,10 +1279,8 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm': sm},
             '/base', validate=False)
-        self.assert_branchset_equal(lt.root_branchset,
-            'sourceModel', {},
-            [('b1', '1.0', 'sm')]
-        )
+        self.assert_branchset_equal(
+            lt.root_branchset, 'sourceModel', {}, [('b1', '1.0', 'sm')])
 
 
 class GMPELogicTreeTestCase(unittest.TestCase):
@@ -1293,7 +1291,7 @@ class GMPELogicTreeTestCase(unittest.TestCase):
             self.assertNotEqual(len(branchset.branches), 0)
             trt = branchset.filters['applyToTectonicRegionType']
             actual_result[trt] = [
-                (branch.branch_id, str(branch.weight), type(branch.value))
+                (branch.branch_id, str(branch.weight), branch.value)
                 for branch in branchset.branches
             ]
             next_branchset = branchset.branches[0].child_branchset
@@ -1302,7 +1300,7 @@ class GMPELogicTreeTestCase(unittest.TestCase):
             branchset = next_branchset
             self.assertTrue(trt in result)
             self.assertEqual(actual_result[trt], result[trt])
-        self.assertEqual(set(actual_result.keys()), set(result.keys()))
+        self.assertEqual(set(actual_result), set(result))
         self.assertEqual(actual_result, result)
 
     def test(self):
@@ -1843,17 +1841,14 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
         from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
         gmpes = self.proc.parse_gmpe_logictree_path(['b2', 'b3'])
-        self.assertIsInstance(gmpes.pop('Active Shallow Crust'),
-                              ChiouYoungs2008)
-        self.assertIsInstance(gmpes.pop('Subduction Interface'),
-                              SadighEtAl1997)
+        self.assertIs(gmpes.pop('Active Shallow Crust'), ChiouYoungs2008)
+        self.assertIs(gmpes.pop('Subduction Interface'),
+                      SadighEtAl1997)
         self.assertEqual(gmpes, {})
 
         gmpes = self.proc.parse_gmpe_logictree_path(['b1', 'b3'])
-        self.assertIsInstance(gmpes.pop('Active Shallow Crust'),
-                              SadighEtAl1997)
-        self.assertIsInstance(gmpes.pop('Subduction Interface'),
-                              SadighEtAl1997)
+        self.assertIs(gmpes.pop('Active Shallow Crust'), SadighEtAl1997)
+        self.assertIs(gmpes.pop('Subduction Interface'), SadighEtAl1997)
         self.assertEqual(gmpes, {})
 
 
