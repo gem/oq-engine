@@ -129,6 +129,23 @@ class BoundingBox(object):
                 and self.south is not None)
 
 
+def _calc_pnos(gsim, r_sites, rupture, imts, truncation_level,
+               make_ctxt_mon, calc_poes_mon):
+    # compute the probabilities of no exceedence for each IMT
+    # for the given gsim and rupture; returns a list of pairs
+    # [(imt, pnos), ...]
+    with make_ctxt_mon:
+        sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+    out = []
+    with calc_poes_mon:
+        for imt in imts:
+            poes = gsim.get_poes(
+                sctx, rctx, dctx, imt, imts[imt], truncation_level)
+            pnos = rupture.get_probability_no_exceedance(poes)
+            out.append((imt, r_sites.expand(pnos, placeholder=1)))
+    return out
+
+
 @tasks.oqtask
 def compute_hazard_curves(
         job_id, sitecol, sources, lt_model, gsim_by_rlz, task_no):
@@ -186,16 +203,17 @@ def compute_hazard_curves(
                         bb.update([dist], [point.longitude], [point.latitude])
 
             # compute probabilities for all realizations
+            pno_cache = {}  # cache for the probabilities of no exceedence
+            # this is effective when several realizations share the same
+            # GSIM
             for rlz, curv in curves.iteritems():
                 gsim = gsim_by_rlz[rlz]
-                with make_ctxt_mon:
-                    sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                with calc_poes_mon:
-                    for imt in imts:
-                        poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                             hc.truncation_level)
-                        pno = rupture.get_probability_no_exceedance(poes)
-                        curv[imt] *= r_sites.expand(pno, placeholder=1)
+                if gsim not in pno_cache:
+                    pno_cache[gsim] = _calc_pnos(
+                        gsim(), r_sites, rupture, imts, hc.truncation_level,
+                        make_ctxt_mon, calc_poes_mon)
+                for imt, pnos in pno_cache[gsim]:
+                    curv[imt] *= pnos
 
         logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
                       job_id, source.source_id, source.__class__.__name__,
