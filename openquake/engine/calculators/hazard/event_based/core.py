@@ -236,12 +236,13 @@ class GmfCollector(object):
         :param seed:
             an integer to be used as stochastic seed
         """
+        # NB: cache for gsims not implemented yet
         for rlz, gsim in self.gsim_by_rlz.items():
             gmf_calc_kwargs = {
                 'rupture': rupture,
                 'sites': r_sites,
                 'imts': self.imts,
-                'gsim': gsim,
+                'gsim': gsim(),
                 'truncation_level': self.params['truncation_level'],
                 'realizations': DEFAULT_GMF_REALIZATIONS,
                 'correlation_model': self.params['correl_model'],

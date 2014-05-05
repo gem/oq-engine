@@ -73,7 +73,9 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
 
                 pne_dict = {}
                 # a dictionary rlz.id, poe, imt_str -> prob_no_exceed
-                for rlz, gsim in gsim_by_rlz.items():
+                for rlz, gsim_cls in gsim_by_rlz.items():
+                    # NB: cache for gsims not implemented yet
+                    gsim = gsim_cls()
                     with make_ctxt:
                         sctx, rctx, dctx = gsim.make_contexts(sitecol, rupture)
                     for imt_str, imls in imtls.iteritems():
