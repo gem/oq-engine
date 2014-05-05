@@ -118,7 +118,7 @@ class RiskCalculator(base.Calculator):
             self.builders.append(builder)
 
         if nbytes:
-            estimate_mb = nbytes / 1024 / 1024 * 4
+            estimate_mb = nbytes / 1024 / 1024 * 2
             if self.eps_man == 'fast' and self.rc.asset_correlation == 0:
                 pass  # using much less memory than the estimate, don't log
             else:
@@ -128,7 +128,7 @@ class RiskCalculator(base.Calculator):
             phymem = psutil.phymem_usage()
             available_memory = (1 - phymem.percent / 100) * phymem.total
             available_mb = available_memory / 1024 / 1024
-            if self.eps_man == 'full' and nbytes * 4 > available_memory:
+            if self.eps_man == 'full' and nbytes * 2 > available_memory:
                 raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
 
     def task_arg_gen(self):
