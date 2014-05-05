@@ -119,6 +119,8 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
         else:
             std -= 0.518
 
+        # only the 'total' standard deviation is supported, therefore the
+        # std is always the same for all types
         stddevs = [std for _ in stddev_types]
 
         return stddevs
