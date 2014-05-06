@@ -78,9 +78,9 @@ def compute_ses_and_gmfs(
     :param sitecol:
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param src_seeds:
-        list of pairs (source, seed)
+        List of pairs (source, seed)
     :params gsim_by_rlz:
-        list of GSIMs, one for each realization
+        dictionary of GSIM
     :param task_no:
         an ordinal so that GMV can be collected in a reproducible order
     """
@@ -95,7 +95,7 @@ def compute_ses_and_gmfs(
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
 
-    gmfcollector = GmfCollector(params, imts, lt_model, gsim_by_rlz)
+    gmfcollector = GmfCollector(params, imts, gsim_by_rlz)
 
     filter_sites_mon = LightMonitor(
         'filtering sites', job_id, compute_ses_and_gmfs)
@@ -202,21 +202,18 @@ class GmfCollector(object):
     """
     A class to compute and save ground motion fields.
     """
-    def __init__(self, params, imts, lt_model, gsim_by_rlz):
+    def __init__(self, params, imts, gsim_by_rlz):
         """
         :param params:
             a dictionary of parameters with keys
             correl_model, truncation_level, maximum_distance
         :param imts:
             a list of hazardlib intensity measure types
-        :param lt_model:
-            the logic tree source model
         :param gsim_by_rlz:
-            a list of GSIM instances
+            a dictionary rlz -> GSIM instance
         """
         self.params = params
         self.imts = imts
-        self.lt_model = lt_model
         self.gsim_by_rlz = gsim_by_rlz
         # NB: I tried to use a single dictionary
         # {site_id: [(gmv, rupt_id),...]} but it took a lot more memory (MS)
@@ -239,12 +236,13 @@ class GmfCollector(object):
         :param seed:
             an integer to be used as stochastic seed
         """
-        for rlz, gsim in zip(self.lt_model, self.gsim_by_rlz):
+        # NB: cache for gsims not implemented yet
+        for rlz, gsim in self.gsim_by_rlz.items():
             gmf_calc_kwargs = {
                 'rupture': rupture,
                 'sites': r_sites,
                 'imts': self.imts,
-                'gsim': gsim,
+                'gsim': gsim(),
                 'truncation_level': self.params['truncation_level'],
                 'realizations': DEFAULT_GMF_REALIZATIONS,
                 'correlation_model': self.params['correl_model'],

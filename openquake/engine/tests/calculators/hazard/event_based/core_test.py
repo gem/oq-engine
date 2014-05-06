@@ -82,7 +82,7 @@ class GmfCollectorTestCase(unittest.TestCase):
         hc.maximum_distance = 200.
 
         trt = 'Subduction Interface'
-        gsim = get_available_gsims()['AkkarBommer2010']()
+        gsim = get_available_gsims()['AkkarBommer2010']
         num_sites = 5
         site_coll = make_site_coll(-78, 15.5, num_sites)
         params = dict(truncation_level=3,
