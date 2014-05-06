@@ -129,6 +129,23 @@ class BoundingBox(object):
                 and self.south is not None)
 
 
+def _calc_pnos(gsim, r_sites, rupture, imts, truncation_level,
+               make_ctxt_mon, calc_poes_mon):
+    # compute the probabilities of no exceedence for each IMT
+    # for the given gsim and rupture; returns a list of pairs
+    # [(imt, pnos), ...]
+    with make_ctxt_mon:
+        sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
+    out = []
+    with calc_poes_mon:
+        for imt in imts:
+            poes = gsim.get_poes(
+                sctx, rctx, dctx, imt, imts[imt], truncation_level)
+            pnos = rupture.get_probability_no_exceedance(poes)
+            out.append((imt, r_sites.expand(pnos, placeholder=1)))
+    return out
+
+
 @tasks.oqtask
 def compute_hazard_curves(
         job_id, sitecol, sources, lt_model, gsim_by_rlz, task_no):
@@ -146,7 +163,7 @@ def compute_hazard_curves(
     :param lt_model:
         a :class:`openquake.engine.db.LtSourceModel` instance
     :param gsim_by_rlz:
-        a list of GSIMs, one for each realization
+        a dictionary of gsims, one for each realization
     :param int task_no:
         the ordinal number of the current task
     """
@@ -155,10 +172,9 @@ def compute_hazard_curves(
     sitemesh = sitecol.mesh
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
-    sorted_imts = sorted(imts)
-    curves = [
-        [numpy.ones([total_sites, len(imts[imt])]) for imt in sorted_imts]
-        for _ in gsim_by_rlz]
+    curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
+                             for imt in imts))
+                  for rlz in gsim_by_rlz)
     if hc.poes_disagg:  # doing disaggregation
         bbs = [BoundingBox(lt_model.id, site_id) for site_id in sitecol.sids]
     else:
@@ -187,15 +203,17 @@ def compute_hazard_curves(
                         bb.update([dist], [point.longitude], [point.latitude])
 
             # compute probabilities for all realizations
-            for gsim, curv in zip(gsim_by_rlz, curves):
-                with make_ctxt_mon:
-                    sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-                with calc_poes_mon:
-                    for i, imt in enumerate(sorted_imts):
-                        poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                             hc.truncation_level)
-                        pno = rupture.get_probability_no_exceedance(poes)
-                        curv[i] *= r_sites.expand(pno, placeholder=1)
+            pno_cache = {}  # cache for the probabilities of no exceedence
+            # this is effective when several realizations share the same
+            # GSIM
+            for rlz, curv in curves.iteritems():
+                gsim = gsim_by_rlz[rlz]
+                if gsim not in pno_cache:
+                    pno_cache[gsim] = _calc_pnos(
+                        gsim(), r_sites, rupture, imts, hc.truncation_level,
+                        make_ctxt_mon, calc_poes_mon)
+                for imt, pnos in pno_cache[gsim]:
+                    curv[imt] *= pnos
 
         logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
                       job_id, source.source_id, source.__class__.__name__,
@@ -207,9 +225,10 @@ def compute_hazard_curves(
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    curves = [[0 if (c == 1.0).all() else 1. - c for c in curv]
-              for curv in curves]
-    return lt_model, curves, bbs
+    curve_dict = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
+                             for imt in sorted(imts)])
+                      for rlz, curv in curves.iteritems())
+    return curve_dict, bbs
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -260,7 +279,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 for lt_model in lt_models)
 
     @EnginePerformanceMonitor.monitor
-    def task_completed(self, (lt_model, curves, bbs)):
+    def task_completed(self, (result, bbs)):
         """
         This is used to incrementally update hazard curve results by combining
         an initial value with some new results. (Each set of new results is
@@ -274,7 +293,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             shape as self.curves_by_rlz[rlz][j] where rlz is the realization
             and j is the IMT ordinal.
         """
-        for rlz, curves_by_imt in zip(lt_model, curves):
+        for rlz, curves_by_imt in result.iteritems():
             for j, curves in enumerate(curves_by_imt):
                 # j is the IMT index
                 self.curves_by_rlz[rlz][j] = 1. - (
