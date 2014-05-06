@@ -135,6 +135,20 @@ SourceRuptureSites = collections.namedtuple(
     'source rupture sites')
 
 
+############## Fix FloatField underflow error ##################
+# http://stackoverflow.com/questions/9556586/floating-point-numbers-of-python-float-and-postgresql-double-precision
+
+def _get_prep_value(self, value):
+    if value is None:
+        return None
+    val = float(value)
+    if val < 1E-300:
+        return 0.
+    return val
+
+djm.FloatField.get_prep_value = _get_prep_value
+
+
 def required_imts(risk_models):
     """
     Get all the intensity measure types required by `risk_models`
@@ -1891,7 +1905,7 @@ class Gmf(djm.Model):
         for ses_coll in SESCollection.objects.filter(
                 output__oq_job=self.output.oq_job):
             for ses in ses_coll:
-                query = """
+                query = """\
         SELECT imt, sa_period, sa_damping, tag,
                array_agg(gmv) AS gmvs,
                array_agg(ST_X(location::geometry)) AS xs,
@@ -1900,11 +1914,13 @@ class Gmf(djm.Model):
              unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
            FROM hzrdr.gmf_data, hzrdi.hazard_site
             WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
-           AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y
-        WHERE x.rupture_id = y.id AND y.ses_id=%d
+           AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y,
+           hzrdr.probabilistic_rupture AS z
+        WHERE x.rupture_id = y.id AND y.rupture_id=z.id
+        AND y.ses_id=%d AND z.ses_collection_id=%d
         GROUP BY imt, sa_period, sa_damping, tag
         ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (hc.id, self.id, ses.ordinal)
+        """ % (hc.id, self.id, ses.ordinal, ses_coll.id)
                 with transaction.commit_on_success(using='job_init'):
                     curs = getcursor('job_init')
                     curs.execute(query)
