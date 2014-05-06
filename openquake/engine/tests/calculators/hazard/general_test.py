@@ -121,43 +121,6 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         self.assertEqual(sm2, res2)
 
 
-class ImtsToHazardlibTestCase(unittest.TestCase):
-    """
-    Tests for
-    :func:`openquake.engine.calculators.hazard.general.im_dict_to_hazardlib`.
-    """
-
-    def test_im_dict_to_hazardlib(self):
-        imts_in = {
-            'PGA': [1, 2],
-            'PGV': [2, 3],
-            'PGD': [3, 4],
-            'SA(0.1)': [0.1, 0.2],
-            'SA(0.025)': [0.2, 0.3],
-            'IA': [0.3, 0.4],
-            'RSD': [0.4, 0.5],
-            'MMI': [0.5, 0.6],
-        }
-
-        expected = {
-            openquake.hazardlib.imt.PGA(): [1, 2],
-            openquake.hazardlib.imt.PGV(): [2, 3],
-            openquake.hazardlib.imt.PGD(): [3, 4],
-            openquake.hazardlib.imt.SA(0.1): [0.1, 0.2],
-            openquake.hazardlib.imt.SA(0.025): [0.2, 0.3],
-            openquake.hazardlib.imt.IA(): [0.3, 0.4],
-            openquake.hazardlib.imt.RSD(): [0.4, 0.5],
-            openquake.hazardlib.imt.MMI(): [0.5, 0.6],
-        }
-
-        actual = general.im_dict_to_hazardlib(imts_in)
-        self.assertEqual(len(expected), len(actual))
-
-        for exp_imt, exp_imls in expected.items():
-            act_imls = actual[exp_imt]
-            self.assertEqual(exp_imls, act_imls)
-
-
 class ParseRiskModelsTestCase(unittest.TestCase):
     def test(self):
         # check that if risk models are provided, then the ``points to
