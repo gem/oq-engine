@@ -252,6 +252,9 @@ def run_calc(request, job_type):
         raise exctype(einfo)
     else:
         job_file, temp_dir = einfo
+    hazard_output_id = None if hazard_output_id == "" else hazard_output_id
+    hazard_calculation_id = (None if hazard_calculation_id == "" else
+                             hazard_calculation_id)
     job, _fut = submit_job(job_file, temp_dir, request.POST['database'],
                            callback_url, foreign_calc_id,
                            hazard_output_id, hazard_calculation_id)
