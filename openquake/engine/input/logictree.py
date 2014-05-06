@@ -227,34 +227,28 @@ class BranchSet(object):
         Apply filters to ``source`` and return ``True`` if uncertainty should
         be applied to it.
         """
+        ohs = openquake.hazardlib.source
         for key, value in self.filters.items():
             if key == 'applyToTectonicRegionType':
                 if value != source.tectonic_region_type:
                     return False
             elif key == 'applyToSourceType':
                 if value == 'area':
-                    if not isinstance(source,
-                                      openquake.hazardlib.source.AreaSource):
+                    if not isinstance(source, ohs.AreaSource):
                         return False
                 elif value == 'point':
                     # area source extends point source
-                    if (not isinstance(
-                            source, openquake.hazardlib.source.PointSource)
-                        or isinstance(
-                            source, openquake.hazardlib.source.AreaSource)):
+                    if (not isinstance(source, ohs.PointSource)
+                            or isinstance(source, ohs.AreaSource)):
                         return False
                 elif value == 'simpleFault':
-                    if not isinstance(
-                        source, openquake.hazardlib.source.SimpleFaultSource):
+                    if not isinstance(source, ohs.SimpleFaultSource):
                         return False
                 elif value == 'complexFault':
-                    if not isinstance(
-                        source, openquake.hazardlib.source.ComplexFaultSource):
+                    if not isinstance(source, ohs.ComplexFaultSource):
                         return False
                 elif value == 'characteristicFault':
-                    if not isinstance(
-                        source,
-                        openquake.hazardlib.source.CharacteristicFaultSource):
+                    if not isinstance(source, ohs.CharacteristicFaultSource):
                         return False
                 else:
                     raise AssertionError('unknown source type %r' % value)
@@ -978,7 +972,7 @@ class GMPELogicTree(BaseLogicTree):
 
         Convert gmpe import path to a gmpe object.
         """
-        return GSIM[classname]()
+        return GSIM[classname]
 
     def validate_uncertainty_value(self, node, branchset, value):
         """
