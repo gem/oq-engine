@@ -11,6 +11,7 @@ Built-in GSIMs
 
 .. toctree::
 
+    abrahamson_silva_1997
     abrahamson_silva_2008
     akkar_2013
     akkar_2014
