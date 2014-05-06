@@ -20,6 +20,8 @@
 
 import os
 import random
+import operator
+import itertools
 import collections
 
 from openquake.hazardlib import correlation
@@ -59,6 +61,18 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
+
+
+def distinct_gsims(rlz_gsim_dicts, trt):
+    """
+    Yield distinct GSIM instances with an attribute .rlz_ids, i.e. the list
+    of realizations associated to the given gsim.
+    """
+    lst = sorted((gsim_dict[trt], rlz) for rlz, gsim_dict in rlz_gsim_dicts)
+    for gsim_cls, group in itertools.groupby(lst, key=operator.itemgetter(0)):
+        gsim = gsim_cls()
+        gsim.rlz_ids = [rlz.id for (_, rlz) in group]
+        yield gsim
 
 
 def store_site_model(job, site_model_source):
@@ -179,26 +193,19 @@ class BaseHazardCalculator(base.Calculator):
         """
         task_no = 0
         sitecol = self.hc.site_collection
-        for lt_model, trt, gsim_by_rlz in self.gen_gsim_by_trt():
-            ltpath = tuple(lt_model.sm_lt_path)
-            for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                yield (self.job.id, sitecol, block, lt_model,
-                       gsim_by_rlz, task_no)
-                task_no += 1
-
-    def gen_gsim_by_trt(self):
-        """
-        Yield triples (lt_model, trt, gsim_by_rlz) for all models
-        """
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_model in models.LtSourceModel.objects.filter(
                 hazard_calculation=self.hc):
-            gsim_dicts = [ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path)
-                          for rlz in lt_model]
+            ltpath = tuple(lt_model.sm_lt_path)
+            rlz_gsim_dicts = [
+                (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
+                for rlz in lt_model]
             for trt in lt_model.get_tectonic_region_types():
-                yield lt_model, trt, collections.OrderedDict(
-                    (rlz, gsim_dict[trt])
-                    for rlz, gsim_dict in zip(lt_model, gsim_dicts))
+                gsims = list(distinct_gsims(rlz_gsim_dicts, trt))
+                for block in self.source_blocks_per_ltpath[ltpath, trt]:
+                    yield (self.job.id, sitecol, block, lt_model,
+                           gsims, task_no)
+                    task_no += 1
 
     def _get_realizations(self):
         """

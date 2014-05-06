@@ -19,7 +19,6 @@ Core functionality for the classical PSHA hazard calculator.
 import time
 import operator
 import itertools
-import collections
 
 import numpy
 
@@ -148,7 +147,7 @@ def _calc_pnos(gsim, r_sites, rupture, imts, truncation_level,
 
 @tasks.oqtask
 def compute_hazard_curves(
-        job_id, sitecol, sources, lt_model, gsim_by_rlz, task_no):
+        job_id, sitecol, sources, lt_model, gsims, task_no):
     """
     This task computes R2 * I hazard curves (each one is a
     numpy array of S * L floats) from the given source_ruptures
@@ -172,9 +171,9 @@ def compute_hazard_curves(
     sitemesh = sitecol.mesh
     imts = general.im_dict_to_hazardlib(
         hc.intensity_measure_types_and_levels)
-    curves = dict((rlz, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
-                             for imt in imts))
-                  for rlz in gsim_by_rlz)
+    curves = dict((gsim, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
+                              for imt in imts))
+                  for gsim in gsims)
     if hc.poes_disagg:  # doing disaggregation
         bbs = [BoundingBox(lt_model.id, site_id) for site_id in sitecol.sids]
     else:
@@ -203,16 +202,10 @@ def compute_hazard_curves(
                         bb.update([dist], [point.longitude], [point.latitude])
 
             # compute probabilities for all realizations
-            pno_cache = {}  # cache for the probabilities of no exceedence
-            # this is effective when several realizations share the same
-            # GSIM
-            for rlz, curv in curves.iteritems():
-                gsim = gsim_by_rlz[rlz]
-                if gsim not in pno_cache:
-                    pno_cache[gsim] = _calc_pnos(
-                        gsim(), r_sites, rupture, imts, hc.truncation_level,
-                        make_ctxt_mon, calc_poes_mon)
-                for imt, pnos in pno_cache[gsim]:
+            for gsim, curv in curves.iteritems():
+                for imt, pnos in _calc_pnos(
+                        gsim, r_sites, rupture, imts, hc.truncation_level,
+                        make_ctxt_mon, calc_poes_mon):
                     curv[imt] *= pnos
 
         logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
@@ -225,9 +218,9 @@ def compute_hazard_curves(
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    curve_dict = dict((rlz, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
-                             for imt in sorted(imts)])
-                      for rlz, curv in curves.iteritems())
+    curve_dict = dict((gsim, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
+                              for imt in sorted(imts)])
+                      for gsim, curv in curves.iteritems())
     return curve_dict, bbs
 
 
@@ -262,9 +255,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         logs.LOG.info('Considering %d realization(s), %d IMT(s), %d level(s) '
                       'and %d sites, total %d', n_rlz, len(self.imtls),
                       n_levels, n_sites, total)
-        self.curves_by_rlz = collections.OrderedDict(
-            (rlz, [numpy.zeros((n_sites, len(self.imtls[imt])))
-                   for imt in sorted(self.imtls)])
+        self.curves_by_rlz = dict(
+            (rlz.id, [numpy.zeros((n_sites, len(self.imtls[imt])))
+                      for imt in sorted(self.imtls)])
             for rlz in realizations)
         lt_models = models.LtSourceModel.objects.filter(
             hazard_calculation=self.hc)
@@ -290,14 +283,15 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             A dictionary rlz -> curves_by_imt where curves_by_imt is a
             list of 2-D numpy arrays representing the new results which need
             to be combined with the current value. These should be the same
-            shape as self.curves_by_rlz[rlz][j] where rlz is the realization
+            shape as self.curves_by_rlz[rlz_id][j] where rlz is the realization
             and j is the IMT ordinal.
         """
-        for rlz, curves_by_imt in result.iteritems():
-            for j, curves in enumerate(curves_by_imt):
-                # j is the IMT index
-                self.curves_by_rlz[rlz][j] = 1. - (
-                    1. - self.curves_by_rlz[rlz][j]) * (1. - curves)
+        for gsim, curves_by_imt in result.iteritems():
+            for rlz_id in gsim.rlz_ids:
+                for j, curves in enumerate(curves_by_imt):
+                    # j is the IMT index
+                    self.curves_by_rlz[rlz_id][j] = 1. - (
+                        1. - self.curves_by_rlz[rlz_id][j]) * (1. - curves)
         if self.hc.poes_disagg:
             for bb in bbs:
                 self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
@@ -312,12 +306,14 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         curve results.
         """
         imtls = self.hc.intensity_measure_types_and_levels
-        for rlz, curves_by_imt in self.curves_by_rlz.iteritems():
+        for rlz_id, curves_by_imt in sorted(self.curves_by_rlz.iteritems()):
+            rlz = models.LtRealization.objects.get(pk=rlz_id)
+
             # create a new `HazardCurve` 'container' record for each
             # realization (virtual container for multiple imts)
             models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
-                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                    self.job, "hc-multi-imt-rlz-%s" % rlz_id,
                     "hazard_curve_multi"),
                 lt_realization=rlz,
                 imt=None,
@@ -331,7 +327,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 # save output
                 hco = models.Output.objects.create(
                     oq_job=self.job,
-                    display_name="Hazard Curve rlz-%s" % rlz.id,
+                    display_name="Hazard Curve rlz-%s" % rlz_id,
                     output_type='hazard_curve',
                 )
 
