@@ -60,7 +60,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 
 @tasks.oqtask
 def compute_ses_and_gmfs(
-        job_id, sitecol, src_seeds, lt_model, gsim_by_rlz, task_no):
+        job_id, sitecol, src_seeds, lt_model, gsims, task_no):
     """
     Celery task for the stochastic event set calculator.
 
@@ -79,8 +79,8 @@ def compute_ses_and_gmfs(
         a :class:`openquake.hazardlib.site.SiteCollection` instance
     :param src_seeds:
         List of pairs (source, seed)
-    :params gsim_by_rlz:
-        dictionary of GSIM
+    :params gsims:
+        list of distinct GSIM instances
     :param task_no:
         an ordinal so that GMV can be collected in a reproducible order
     """
@@ -95,7 +95,7 @@ def compute_ses_and_gmfs(
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
 
-    gmfcollector = GmfCollector(params, imts, gsim_by_rlz)
+    gmfcollector = GmfCollector(params, imts, gsims)
 
     filter_sites_mon = LightMonitor(
         'filtering sites', job_id, compute_ses_and_gmfs)
@@ -202,7 +202,7 @@ class GmfCollector(object):
     """
     A class to compute and save ground motion fields.
     """
-    def __init__(self, params, imts, gsim_by_rlz):
+    def __init__(self, params, imts, gsims):
         """
         :param params:
             a dictionary of parameters with keys
@@ -210,11 +210,11 @@ class GmfCollector(object):
         :param imts:
             a list of hazardlib intensity measure types
         :param gsim_by_rlz:
-            a dictionary rlz -> GSIM instance
+            a list of distinct GSIM instances
         """
         self.params = params
         self.imts = imts
-        self.gsim_by_rlz = gsim_by_rlz
+        self.gsims = gsims
         # NB: I tried to use a single dictionary
         # {site_id: [(gmv, rupt_id),...]} but it took a lot more memory (MS)
         self.gmvs_per_site = collections.defaultdict(list)
@@ -237,12 +237,12 @@ class GmfCollector(object):
             an integer to be used as stochastic seed
         """
         # NB: cache for gsims not implemented yet
-        for rlz, gsim in self.gsim_by_rlz.items():
+        for gsim in self.gsims:
             gmf_calc_kwargs = {
                 'rupture': rupture,
                 'sites': r_sites,
                 'imts': self.imts,
-                'gsim': gsim(),
+                'gsim': gsim,
                 'truncation_level': self.params['truncation_level'],
                 'realizations': DEFAULT_GMF_REALIZATIONS,
                 'correlation_model': self.params['correl_model'],
@@ -256,9 +256,11 @@ class GmfCollector(object):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
-                        self.gmvs_per_site[rlz, imt, site_id].append(gmv)
-                        self.ruptures_per_site[rlz, imt, site_id].append(
-                            rupture_id)
+                        for rlz_id in gsim.rlz_ids:
+                            self.gmvs_per_site[
+                                rlz_id, imt, site_id].append(gmv)
+                            self.ruptures_per_site[
+                                rlz_id, imt, site_id].append(rupture_id)
 
     @transaction.commit_on_success(using='job_init')
     def save_gmfs(self, task_no):
@@ -268,7 +270,8 @@ class GmfCollector(object):
         :param task_no:
             The ordinal of the task which generated the current GMFs to save
         """
-        for rlz, imt, site_id in self.gmvs_per_site:
+        for rlz_id, imt, site_id in self.gmvs_per_site:
+            rlz = models.LtRealization.objects.get(pk=rlz_id)
             imt_name, sa_period, sa_damping = imt
             inserter.add(models.GmfData(
                 gmf=models.Gmf.objects.get(lt_realization=rlz),
@@ -277,8 +280,8 @@ class GmfCollector(object):
                 sa_period=sa_period,
                 sa_damping=sa_damping,
                 site_id=site_id,
-                gmvs=self.gmvs_per_site[rlz, imt, site_id],
-                rupture_ids=self.ruptures_per_site[rlz, imt, site_id]))
+                gmvs=self.gmvs_per_site[rlz_id, imt, site_id],
+                rupture_ids=self.ruptures_per_site[rlz_id, imt, site_id]))
         inserter.flush()
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
@@ -301,11 +304,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         hc = self.hc
         rnd = random.Random()
         rnd.seed(hc.random_seed)
-        for job_id, sitecol, block, lt_model, gsim_by_rlz, task_no in \
+        for job_id, sitecol, block, lt_model, gsims, task_no in \
                 super(EventBasedHazardCalculator, self).task_arg_gen():
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in block]  # source, seed pairs
-            yield job_id, sitecol, ss, lt_model, gsim_by_rlz, task_no
+            yield job_id, sitecol, ss, lt_model, gsims, task_no
 
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
