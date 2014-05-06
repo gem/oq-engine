@@ -28,16 +28,16 @@ class GarciaEtAl2005SSlabTestCase(BaseGSIMTestCase):
     # provided by Daniel Garcia
 
     def test_mean(self):
-        self.check('GA05/GA05SSLab_MEAN.csv', max_discrep_percentage=0.2)
+        self.check('GA05/GA05SSlab_MEAN.csv', max_discrep_percentage=0.2)
 
     def test_std_total(self):
-        self.check('GA05/GA05SSLab_STD_TOTAL.csv', max_discrep_percentage=0.1)
+        self.check('GA05/GA05SSlab_STD_TOTAL.csv', max_discrep_percentage=0.1)
 
     def test_std_intra(self):
-        self.check('GA05/GA05SSLab_STD_INTRA.csv', max_discrep_percentage=0.1)
+        self.check('GA05/GA05SSlab_STD_INTRA.csv', max_discrep_percentage=0.1)
 
     def test_std_inter(self):
-        self.check('GA05/GA05SSLab_STD_INTER.csv', max_discrep_percentage=0.1)
+        self.check('GA05/GA05SSlab_STD_INTER.csv', max_discrep_percentage=0.1)
 
 
 class GarciaEtAl2005SSlabVertTestCase(BaseGSIMTestCase):
@@ -47,13 +47,13 @@ class GarciaEtAl2005SSlabVertTestCase(BaseGSIMTestCase):
     # provided by Daniel Garcia
 
     def test_mean(self):
-        self.check('GA05/GA05SSLabV_MEAN.csv', max_discrep_percentage=0.2)
+        self.check('GA05/GA05SSlabV_MEAN.csv', max_discrep_percentage=0.2)
 
     def test_std_total(self):
-        self.check('GA05/GA05SSLabV_STD_TOTAL.csv', max_discrep_percentage=0.1)
+        self.check('GA05/GA05SSlabV_STD_TOTAL.csv', max_discrep_percentage=0.1)
 
     def test_std_intra(self):
-        self.check('GA05/GA05SSLabV_STD_INTRA.csv', max_discrep_percentage=0.1)
+        self.check('GA05/GA05SSlabV_STD_INTRA.csv', max_discrep_percentage=0.1)
 
     def test_std_inter(self):
-        self.check('GA05/GA05SSLabV_STD_INTER.csv', max_discrep_percentage=0.1)
+        self.check('GA05/GA05SSlabV_STD_INTER.csv', max_discrep_percentage=0.1)
