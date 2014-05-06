@@ -128,21 +128,19 @@ class BoundingBox(object):
                 and self.south is not None)
 
 
-def _calc_pnos(gsim, r_sites, rupture, imts, truncation_level,
+def _calc_pnos(gsim, r_sites, rupture, imts, imls, truncation_level,
                make_ctxt_mon, calc_poes_mon):
     # compute the probabilities of no exceedence for each IMT
     # for the given gsim and rupture; returns a list of pairs
     # [(imt, pnos), ...]
     with make_ctxt_mon:
         sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
-    out = []
     with calc_poes_mon:
-        for imt in imts:
+        for imt, levels in zip(imts, imls):
             poes = gsim.get_poes(
-                sctx, rctx, dctx, imt, imts[imt], truncation_level)
+                sctx, rctx, dctx, imt, levels, truncation_level)
             pnos = rupture.get_probability_no_exceedance(poes)
-            out.append((imt, r_sites.expand(pnos, placeholder=1)))
-    return out
+            yield r_sites.expand(pnos, placeholder=1)
 
 
 @tasks.oqtask
@@ -169,10 +167,12 @@ def compute_hazard_curves(
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     total_sites = len(sitecol)
     sitemesh = sitecol.mesh
-    imts = general.im_dict_to_hazardlib(
-        hc.intensity_measure_types_and_levels)
-    curves = dict((gsim, dict((imt, numpy.ones([total_sites, len(imts[imt])]))
-                              for imt in imts))
+    sorted_imts = sorted(hc.intensity_measure_types_and_levels)
+    sorted_imls = [hc.intensity_measure_types_and_levels[imt]
+                   for imt in sorted_imts]
+    sorted_imts = map(from_string, sorted_imts)
+    curves = dict((gsim, [numpy.ones([total_sites, len(levels)])
+                          for levels in sorted_imls])
                   for gsim in gsims)
     if hc.poes_disagg:  # doing disaggregation
         bbs = [BoundingBox(lt_model.id, site_id) for site_id in sitecol.sids]
@@ -203,10 +203,10 @@ def compute_hazard_curves(
 
             # compute probabilities for all realizations
             for gsim, curv in curves.iteritems():
-                for imt, pnos in _calc_pnos(
-                        gsim, r_sites, rupture, imts, hc.truncation_level,
-                        make_ctxt_mon, calc_poes_mon):
-                    curv[imt] *= pnos
+                for i, pnos in enumerate(_calc_pnos(
+                        gsim, r_sites, rupture, sorted_imts, sorted_imls,
+                        hc.truncation_level, make_ctxt_mon, calc_poes_mon)):
+                    curv[i] *= pnos
 
         logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
                       job_id, source.source_id, source.__class__.__name__,
@@ -218,8 +218,7 @@ def compute_hazard_curves(
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    curve_dict = dict((gsim, [0 if (curv[imt] == 1.0).all() else 1. - curv[imt]
-                              for imt in sorted(imts)])
+    curve_dict = dict((gsim, [0 if (c == 1.0).all() else 1. - c for c in curv])
                       for gsim, curv in curves.iteritems())
     return curve_dict, bbs
 

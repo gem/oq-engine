@@ -97,22 +97,6 @@ def store_site_model(job, site_model_source):
     return writer.CacheInserter.saveall(data)
 
 
-def im_dict_to_hazardlib(im_dict):
-    """
-    Given the dict of intensity measure types and levels, convert them to a
-    dict with the same values, except create :mod:`mhlib.imt` objects for the
-    new keys.
-
-    :returns:
-        A dict of intensity measure level lists, keyed by an IMT object. See
-        :mod:`openquake.hazardlib.imt` for more information.
-    """
-    # TODO: file a bug about  SA periods in hazardlib imts.
-    # Why are values of 0.0 not allowed? Technically SA(0.0) means PGA, but
-    # there must be a reason why we can't do this.
-    return dict((from_string(imt), imls) for imt, imls in im_dict.items())
-
-
 def get_correl_model(hc):
     """
     Helper function for constructing the appropriate correlation model.
