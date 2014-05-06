@@ -190,6 +190,8 @@ def _collect_bins_data(sources, site, imt, iml, gsims,
             msg %= (source.source_id, err.message)
             raise etype, msg, tb
 
+    print 'Max distance:', max(dists)
+
     mags = numpy.array(mags, float)
     dists = numpy.array(dists, float)
     lons = numpy.array(lons, float)
