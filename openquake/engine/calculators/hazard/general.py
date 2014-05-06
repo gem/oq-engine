@@ -63,16 +63,22 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
-def distinct_gsims(rlz_gsim_dicts, trt):
+def assoc_gsims_rlzs(rlz_gsim_dicts, trt):
     """
-    Yield distinct GSIM instances with an attribute .rlz_ids, i.e. the list
-    of realizations associated to the given gsim.
+    :param rlz_gsim_dicts:
+        a list of pairs (rlz, gsim_dict) where gsim_dict is a
+        dictionary {trt: gsim}
+    :returns:
+        a list of distinct GSIM instances with an attribute .rlz_ids,
+        containing the list of realizations associated to the given gsim
     """
     lst = sorted((gsim_dict[trt], rlz) for rlz, gsim_dict in rlz_gsim_dicts)
+    gsims = []
     for gsim_cls, group in itertools.groupby(lst, key=operator.itemgetter(0)):
         gsim = gsim_cls()
         gsim.rlz_ids = [rlz.id for (_, rlz) in group]
-        yield gsim
+        gsims.append(gsim)
+    return gsims
 
 
 def store_site_model(job, site_model_source):
@@ -185,7 +191,12 @@ class BaseHazardCalculator(base.Calculator):
                 (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
                 for rlz in lt_model]
             for trt in lt_model.get_tectonic_region_types():
-                gsims = list(distinct_gsims(rlz_gsim_dicts, trt))
+                # for a given trt, different realizations may correspond
+                # to the same GSIM: we estract the distinct gsims
+                gsims = assoc_gsims_rlzs(rlz_gsim_dicts, trt)
+                logs.LOG.info(
+                    'Considering %d/%d gsims for sm_lt_path=%s, TRT=%s',
+                    len(gsims), len(rlz_gsim_dicts), lt_model.sm_lt_path, trt)
                 for block in self.source_blocks_per_ltpath[ltpath, trt]:
                     yield (self.job.id, sitecol, block, lt_model,
                            gsims, task_no)
