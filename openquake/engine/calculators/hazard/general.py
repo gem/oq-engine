@@ -20,6 +20,8 @@
 
 import os
 import random
+import operator
+import itertools
 import collections
 
 from openquake.hazardlib import correlation
@@ -61,6 +63,24 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
+def assoc_gsims_rlzs(rlz_gsim_dicts, trt):
+    """
+    :param rlz_gsim_dicts:
+        a list of pairs (rlz, gsim_dict) where gsim_dict is a
+        dictionary {trt: gsim}
+    :returns:
+        a list of distinct GSIM instances with an attribute .rlz_ids,
+        containing the list of realizations associated to the given gsim
+    """
+    lst = sorted((gsim_dict[trt], rlz) for rlz, gsim_dict in rlz_gsim_dicts)
+    gsims = []
+    for gsim_cls, group in itertools.groupby(lst, key=operator.itemgetter(0)):
+        gsim = gsim_cls()
+        gsim.rlz_ids = [rlz.id for (_, rlz) in group]
+        gsims.append(gsim)
+    return gsims
+
+
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -81,22 +101,6 @@ def store_site_model(job, site_model_source):
                              job_id=job.id)
             for node in parser.parse()]
     return writer.CacheInserter.saveall(data)
-
-
-def im_dict_to_hazardlib(im_dict):
-    """
-    Given the dict of intensity measure types and levels, convert them to a
-    dict with the same values, except create :mod:`mhlib.imt` objects for the
-    new keys.
-
-    :returns:
-        A dict of intensity measure level lists, keyed by an IMT object. See
-        :mod:`openquake.hazardlib.imt` for more information.
-    """
-    # TODO: file a bug about  SA periods in hazardlib imts.
-    # Why are values of 0.0 not allowed? Technically SA(0.0) means PGA, but
-    # there must be a reason why we can't do this.
-    return dict((from_string(imt), imls) for imt, imls in im_dict.items())
 
 
 def get_correl_model(hc):
@@ -179,25 +183,24 @@ class BaseHazardCalculator(base.Calculator):
         """
         task_no = 0
         sitecol = self.hc.site_collection
-        for lt_model, trt, gsim_by_rlz in self.gen_gsim_by_trt():
-            ltpath = tuple(lt_model.sm_lt_path)
-            for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                yield (self.job.id, sitecol, block, lt_model,
-                       gsim_by_rlz, task_no)
-                task_no += 1
-
-    def gen_gsim_by_trt(self):
-        """
-        Yield triples (lt_model, trt, gsim_by_rlz) for all models
-        """
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_model in models.LtSourceModel.objects.filter(
                 hazard_calculation=self.hc):
-            gsim_dicts = [ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path)
-                          for rlz in lt_model]
+            ltpath = tuple(lt_model.sm_lt_path)
+            rlz_gsim_dicts = [
+                (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
+                for rlz in lt_model]
             for trt in lt_model.get_tectonic_region_types():
-                yield lt_model, trt, [
-                    gsim_dict[trt] for gsim_dict in gsim_dicts]
+                # for a given trt, different realizations may correspond
+                # to the same GSIM: we estract the distinct gsims
+                gsims = assoc_gsims_rlzs(rlz_gsim_dicts, trt)
+                logs.LOG.info(
+                    'Considering %d/%d gsims for sm_lt_path=%s, TRT=%s',
+                    len(gsims), len(rlz_gsim_dicts), lt_model.sm_lt_path, trt)
+                for block in self.source_blocks_per_ltpath[ltpath, trt]:
+                    yield (self.job.id, sitecol, block, lt_model,
+                           gsims, task_no)
+                    task_no += 1
 
     def _get_realizations(self):
         """
