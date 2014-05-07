@@ -220,7 +220,8 @@ def compute_hazard_curves(
     # big arrays of zeros (MS)
     curve_dict = dict((gsim, [0 if (c == 1.0).all() else 1. - c for c in curv])
                       for gsim, curv in curves.iteritems())
-    return curve_dict, bbs
+    trt = source.tectonic_region_type
+    return curve_dict, lt_model.id, trt, bbs
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -254,24 +255,26 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         logs.LOG.info('Considering %d realization(s), %d IMT(s), %d level(s) '
                       'and %d sites, total %d', n_rlz, len(self.imtls),
                       n_levels, n_sites, total)
-        self.curves_by_rlz = dict(
-            (rlz.id, [numpy.zeros((n_sites, len(self.imtls[imt])))
-                      for imt in sorted(self.imtls)])
-            for rlz in realizations)
-        lt_models = models.LtSourceModel.objects.filter(
-            hazard_calculation=self.hc)
+        self.curves = {}
+        for lt_model_id, trt in self.gsims:
+            for gsim in self.gsims[lt_model_id, trt]:
+                self.curves[lt_model_id, trt, gsim.id] = [
+                    numpy.zeros((n_sites, len(self.imtls[imt])))
+                    for imt in sorted(self.imtls)]
 
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
         if self.hc.poes_disagg:
+            lt_models = models.LtSourceModel.objects.filter(
+                hazard_calculation=self.hc)
             self.bb_dict = dict(
                 ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
                 for site in self.hc.site_collection
                 for lt_model in lt_models)
 
     @EnginePerformanceMonitor.monitor
-    def task_completed(self, (result, bbs)):
+    def task_completed(self, (result, lt_model_id, trt, bbs)):
         """
         This is used to incrementally update hazard curve results by combining
         an initial value with some new results. (Each set of new results is
@@ -282,15 +285,15 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             A dictionary rlz -> curves_by_imt where curves_by_imt is a
             list of 2-D numpy arrays representing the new results which need
             to be combined with the current value. These should be the same
-            shape as self.curves_by_rlz[rlz_id][j] where rlz is the realization
+            shape as self.curves[gsim][j] where gsim is the GSIM name
             and j is the IMT ordinal.
         """
         for gsim, curves_by_imt in result.iteritems():
-            for rlz_id in gsim.rlz_ids:
-                for j, curves in enumerate(curves_by_imt):
-                    # j is the IMT index
-                    self.curves_by_rlz[rlz_id][j] = 1. - (
-                        1. - self.curves_by_rlz[rlz_id][j]) * (1. - curves)
+            key = lt_model_id, trt, gsim.id
+            for j, curves in enumerate(curves_by_imt):
+                # j is the IMT index
+                self.curves[key][j] = 1. - (
+                    1. - self.curves[key][j]) * (1. - curves)
         if self.hc.poes_disagg:
             for bb in bbs:
                 self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
@@ -305,8 +308,10 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         curve results.
         """
         imtls = self.hc.intensity_measure_types_and_levels
-        for rlz_id, curves_by_imt in sorted(self.curves_by_rlz.iteritems()):
-            rlz = models.LtRealization.objects.get(pk=rlz_id)
+        for (lt_model_id, trt, gsim_id), curves_by_imt in sorted(
+                self.curves.iteritems()):
+            for rlz_id in general.all_gsims[gsim_id].rlz_ids:
+                rlz = models.LtRealization.objects.get(pk=rlz_id)
 
             # create a new `HazardCurve` 'container' record for each
             # realization (virtual container for multiple imts)
@@ -352,7 +357,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                         location='POINT(%s %s)' % (p.longitude, p.latitude),
                         weight=rlz.weight)
                     for p, poes in zip(points, curves)])
-        del self.curves_by_rlz  # save memory for the post_processing phase
+        del self.curves  # save memory for the post_processing phase
 
     post_execute = save_hazard_curves
 
