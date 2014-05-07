@@ -24,35 +24,36 @@ import numpy
 from openquake.nrmllib.hazard.parsers import RuptureModelParser
 
 # HAZARDLIB
-from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.calc import ground_motion_fields
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.utils import tasks
+from openquake.engine.utils import tasks, general
 from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
-from openquake.engine.utils.general import block_splitter
 from openquake.engine.performance import EnginePerformanceMonitor
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
 @tasks.oqtask
-def gmfs(job_id, sites, rupture, gmf_id, task_seed, realizations, task_no):
+def gmfs(job_id, seeds, sites, rupture, gmf_id, task_no):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
     """
-    numpy.random.seed(task_seed)
-    gmf_dict = compute_gmfs(job_id, sites, rupture, gmf_id, realizations)
-    with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
-        save_gmf(gmf_id, gmf_dict, sites, task_no)
+    for task_seed in seeds:
+        numpy.random.seed(task_seed)
+        with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
+            # TODO: add filtering on maximum_distance
+            gmf_dict = compute_gmfs(job_id, sites, rupture, gmf_id)
+        with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
+            save_gmf(gmf_id, gmf_dict, sites, task_no)
 
 
-def compute_gmfs(job_id, sites, rupture, gmf_id, realizations):
+def compute_gmfs(job_id, sites, rupture, gmf_id):
     """
     Compute ground motion fields and store them in the db.
 
@@ -72,12 +73,10 @@ def compute_gmfs(job_id, sites, rupture, gmf_id, realizations):
     imts = [from_string(x) for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     correlation_model = haz_general.get_correl_model(hc)
-
-    with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
-        return ground_motion_fields(
-            rupture, sites, imts, gsim,
-            hc.truncation_level, realizations=realizations,
-            correlation_model=correlation_model)
+    return ground_motion_fields(
+        rupture, sites, imts, gsim,
+        hc.truncation_level, realizations=1,
+        correlation_model=correlation_model)
 
 
 @transaction.commit_on_success(using='job_init')
@@ -158,27 +157,19 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # create an associated gmf record
         self.gmf = models.Gmf.objects.create(output=output)
 
-    def _get_realizations(self):
-        return range(self.hc.number_of_ground_motion_fields)
-
     def task_arg_gen(self):
         """
-        Loop through realizations and sources to generate a sequence of
-        task arg tuples. Each tuple of args applies to a single task.
-
-        Yielded results are 6-uples of the form (job_id,
-        sites, rupture_id, gmf_id, task_seed, realizations, task_no)
-        (task_seed will be used to seed numpy for temporal occurence sampling).
+        Yield a tuple of the form (job_id, sites, rupture_id, gmf_id,
+        task_seed, num_realizations). `task_seed` will be used to seed
+        numpy for temporal occurence sampling. Only a single task
+        will be generated which is fine since the computation is fast
+        anyway.
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-        # TODO: fix the block size dependency
-        # (https://bugs.launchpad.net/oq-engine/+bug/1225287)
-        # then self.block_split can be used, consistently with the
-        # other calculators
-        blocks = block_splitter(self.hc.site_collection, 1000)
-        for task_no, sites in enumerate(blocks):
-            task_seed = rnd.randint(0, models.MAX_SINT_32)
-            yield (self.job.id, SiteCollection(sites),
-                   self.rupture, self.gmf.id, task_seed,
-                   self.hc.number_of_ground_motion_fields, task_no)
+        seeds = [rnd.randint(0, models.MAX_SINT_32)
+                 for _ in xrange(self.hc.number_of_ground_motion_fields)]
+        ss = general.SequenceSplitter(self.concurrent_tasks())
+        for task_no, block in enumerate(ss.split(seeds)):
+            yield (self.job.id, block, self.hc.site_collection,
+                   self.rupture, self.gmf.id, task_no)
