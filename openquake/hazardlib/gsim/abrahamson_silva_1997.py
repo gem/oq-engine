@@ -203,7 +203,8 @@ class AbrahamsonSilva1997(GMPE):
         """
         Compute f4 term (eq. 7, 8, and 9, page 106)
         """
-        fhw_m, fhw_r = 0, 0
+        fhw_m = 0
+        fhw_r = np.zeros_like(rrup)
 
         if mag <= 5.5:
             fhw_m = 0
@@ -212,16 +213,14 @@ class AbrahamsonSilva1997(GMPE):
         else:
             fhw_m = 1
 
-        if rrup <= 4:
-            fhw_r = 0
-        elif 4 < rrup <= 8:
-            fhw_r = C['a9'] * (rrup - 4.) / 4.
-        elif 8 < rrup <= 18:
-            fhw_r = C['a9']
-        elif 18 < rrup <= 24:
-            fhw_r = C['a9'] * (1 - (rrup - 18.) / 7.)
-        else:
-            fhw_r = 0
+        idx = (rrup > 4) & (rrup <= 8)
+        fhw_r[idx] = C['a9'] * (rrup[idx] - 4.) / 4.
+
+        idx = (rrup > 8) & (rrup <=18)
+        fhw_r[idx] = C['a9']
+
+        idx = (rrup > 18) & (rrup <= 24)
+        fhw_r[idx] = C['a9'] * (1 - (rrup[idx] - 18.) / 7.)
 
         return fhw_m * fhw_r
 
