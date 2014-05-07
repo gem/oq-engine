@@ -50,9 +50,6 @@ from openquake.engine.utils import config
 from openquake.engine.utils.general import block_splitter, ceil
 from openquake.engine.performance import EnginePerformanceMonitor
 
-# this is needed to avoid running out of memory
-MAX_BLOCK_SIZE = 1000
-
 #: Maximum number of hazard curves to cache, for selects or inserts
 CURVE_CACHE_SIZE = 100000
 
@@ -147,22 +144,6 @@ class BaseHazardCalculator(base.Calculator):
         :class:`~openquake.engine.db.models.HazardCalculation`.
         """
         return self.job.hazard_calculation
-
-    # NB: this method will be replaces SequenceSplitter.split sooner or later
-    def block_split(self, items, max_block_size=MAX_BLOCK_SIZE):
-        """
-        Split the given items in blocks, depending on the parameter
-        concurrent tasks. Notice that in order to save memory there
-        is a maximum block size of %d items.
-
-        :param list items: the items to split in blocks
-        """ % MAX_BLOCK_SIZE
-        assert len(items) > 0, 'No items in %s' % items
-        num_rlzs = len(self._get_realizations())
-        bs = min(ceil(len(items), ceil(self.concurrent_tasks(), num_rlzs)),
-                 max_block_size)
-        logs.LOG.warn('Using block size=%d', bs)
-        return block_splitter(items, bs)
 
     def concurrent_tasks(self):
         """
