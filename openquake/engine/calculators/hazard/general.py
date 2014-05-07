@@ -62,6 +62,9 @@ POES_PARAM_NAME = "POES"
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
 
+gsim_counter = itertools.count(1)
+all_gsims = {}
+
 
 def assoc_gsims_rlzs(rlz_gsim_dicts, trt):
     """
@@ -76,8 +79,10 @@ def assoc_gsims_rlzs(rlz_gsim_dicts, trt):
     gsims = []
     for gsim_cls, group in itertools.groupby(lst, key=operator.itemgetter(0)):
         gsim = gsim_cls()
+        gsim.id = gsim_counter.next()  # to be used as key in dictionaries
         gsim.rlz_ids = [rlz.id for (_, rlz) in group]
         gsims.append(gsim)
+        all_gsims[gsim.id] = gsim
     return gsims
 
 
@@ -181,26 +186,14 @@ class BaseHazardCalculator(base.Calculator):
 
         Override this in subclasses as necessary.
         """
-        task_no = 0
         sitecol = self.hc.site_collection
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        for lt_model in models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc):
+        for task_no, (lt_model_id, trt) in enumerate(self.gsims):
+            lt_model = models.LtSourceModel.objects.get(pk=lt_model_id)
             ltpath = tuple(lt_model.sm_lt_path)
-            rlz_gsim_dicts = [
-                (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
-                for rlz in lt_model]
-            for trt in lt_model.get_tectonic_region_types():
-                # for a given trt, different realizations may correspond
-                # to the same GSIM: we estract the distinct gsims
-                gsims = assoc_gsims_rlzs(rlz_gsim_dicts, trt)
-                logs.LOG.info(
-                    'Considering %d/%d gsims for sm_lt_path=%s, TRT=%s',
-                    len(gsims), len(rlz_gsim_dicts), lt_model.sm_lt_path, trt)
-                for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                    yield (self.job.id, sitecol, block, lt_model,
-                           gsims, task_no)
-                    task_no += 1
+            gsims = self.gsims[lt_model_id, trt]
+            for block in self.source_blocks_per_ltpath[ltpath, trt]:
+                yield (self.job.id, sitecol, block, lt_model,
+                       gsims, task_no)
 
     def _get_realizations(self):
         """
@@ -386,33 +379,45 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        rlzs_per_ltpath = collections.OrderedDict()
+        hc = self.job.hazard_calculation
+        ltp = logictree.LogicTreeProcessor.from_hc(hc)
         if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
             # random sampling of paths
-            self._initialize_realizations_montecarlo(rlzs_per_ltpath)
+            rlzs_per_ltpath = self._initialize_realizations_montecarlo(ltp)
         else:
             # full paths enumeration
-            self._initialize_realizations_enumeration(rlzs_per_ltpath)
+            rlzs_per_ltpath = self._initialize_realizations_enumeration(ltp)
 
         ordinal = 0
         lt_models = models.LtSourceModel.objects.filter(
             hazard_calculation=self.hc)
-        for lt_model, (ltpath, path_infos) in zip(
-                lt_models, rlzs_per_ltpath.iteritems()):
+        self.gsims = collections.OrderedDict()  # {lt_model_id: gsims}
+        for lt_model, path_infos in zip(
+                lt_models, rlzs_per_ltpath.itervalues()):
+            rlz_gsim_dicts = []
             for seed, weight, sm_lt_path, gsim_lt_path in path_infos:
-                models.LtRealization.objects.create(
+                rlz = models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=gsim_lt_path,
                     seed=seed, weight=weight, ordinal=ordinal)
+                rlz_gsim_dicts.append(
+                    (rlz, ltp.parse_gmpe_logictree_path(gsim_lt_path)))
                 ordinal += 1
+            for trt in lt_model.get_tectonic_region_types():
+                # for a given trt, different realizations may correspond
+                # to the same GSIM: we estract the distinct gsims
+                self.gsims[lt_model.id, trt] = gsims = assoc_gsims_rlzs(
+                    rlz_gsim_dicts, trt)
+                logs.LOG.info(
+                    'Considering %d/%d gsims for sm_lt_path=%s, TRT=%s',
+                    len(gsims), len(rlz_gsim_dicts), lt_model.sm_lt_path, trt)
 
-    def _initialize_realizations_enumeration(self, rlzs_per_ltpath):
+    def _initialize_realizations_enumeration(self, ltp):
         """
         Perform full paths enumeration of logic trees and populate
         lt_realization table.
         """
-        hc = self.job.hazard_calculation
-        ltp = logictree.LogicTreeProcessor.from_hc(hc)
         seed = None
+        rlzs_per_ltpath = collections.OrderedDict()
         for i, path_info in enumerate(ltp.enumerate_paths()):
             data = (seed, ) + path_info[1:]
             ltpath = tuple(path_info[2])  # source model logic tree path
@@ -421,7 +426,9 @@ class BaseHazardCalculator(base.Calculator):
             else:
                 rlzs_per_ltpath[ltpath].append(data)
 
-    def _initialize_realizations_montecarlo(self, rlzs_per_ltpath):
+        return rlzs_per_ltpath
+
+    def _initialize_realizations_montecarlo(self, ltp):
         """
         Perform random sampling of both logic trees and populate lt_realization
         table.
@@ -432,8 +439,7 @@ class BaseHazardCalculator(base.Calculator):
         seed = self.hc.random_seed
         rnd.seed(seed)
 
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-
+        rlzs_per_ltpath = collections.OrderedDict()
         # The first realization gets the seed we specified in the config file.
         for i in xrange(self.hc.number_of_logic_tree_samples):
             # Sample source model logic tree branch paths:
@@ -456,6 +462,7 @@ class BaseHazardCalculator(base.Calculator):
             # update the seed for the next realization
             seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
             rnd.seed(seed)
+        return rlzs_per_ltpath
 
     def _get_outputs_for_export(self):
         """
