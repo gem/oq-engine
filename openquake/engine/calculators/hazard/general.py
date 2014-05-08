@@ -20,8 +20,6 @@
 
 import os
 import random
-import operator
-import itertools
 import collections
 
 from openquake.hazardlib import correlation
