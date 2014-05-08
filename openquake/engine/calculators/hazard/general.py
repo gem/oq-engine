@@ -169,11 +169,7 @@ class BaseHazardCalculator(base.Calculator):
         for task_no, trt_model in enumerate(trt_models):
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
-            # determine the distinct gsims
-            gsimset = set(art.gsim for art in 
-                          models.AssocLtRlzTrtModel.objects.filter(
-                              trt_model=trt_model))
-            gsims = [logictree.GSIM[gsim]() for gsim in sorted(gsimset)]
+            gsims = [logictree.GSIM[gsim]() for trt_model.gsims]
             for block in self.source_blocks_per_ltpath[ltpath, trt]:
                 yield (self.job.id, sitecol, block, trt_model.id,
                        gsims, task_no)
@@ -388,6 +384,12 @@ class BaseHazardCalculator(base.Calculator):
                     gsim = gsim_dict[trt_model.tectonic_region_type]
                     models.AssocLtRlzTrtModel.objects.create(
                         rlz=rlz, trt_model=trt_model, gsim=gsim)
+        for trt_model in trt_models:
+            gsimset = set(art.gsim for art in
+                          models.AssocLtRlzTrtModel.objects.filter(
+                              trt_model=trt_model))
+            trt_model.gsims = sorted(gsimset)
+            trt_model.save()
 
     def _initialize_realizations_enumeration(self, ltp):
         """
