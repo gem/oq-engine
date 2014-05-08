@@ -256,12 +256,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         logs.LOG.info('Considering %d realization(s), %d IMT(s), %d level(s) '
                       'and %d sites, total %d', n_rlz, len(self.imtls),
                       n_levels, n_sites, total)
-        # a dict {rlz_id: array of n_imts matrices nsites * n_levels}
-        self.curves = dict(
-            (rlz.id, numpy.array([
-                numpy.zeros((n_sites, len(self.imtls[imt])))
-                for imt in sorted(self.imtls)]))
-            for rlz in self._get_realizations())
+        self.curves = {}  # {trt_model_id, gsim: curves_by_imt}
 
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
@@ -289,15 +284,31 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             shape as self.curves[tr_model_id, gsim][j] where gsim is the
             GSIM name and j is the IMT ordinal.
         """
-        rlzs = models.TrtModel.objects.get(pk=trt_model_id).get_rlzs_by_gsim()
-        for gsim, curves in result.iteritems():
-            for rlz in rlzs[gsim.__class__.__name__]:
-                self.curves[rlz.id] = 1. - (
-                    1. - self.curves[rlz.id]) * (1. - curves)
+        for gsim_obj, curves in result.iteritems():
+            gsim = gsim_obj.__class__.__name__
+            self.curves[trt_model_id, gsim] = 1. - (
+                1. - self.curves.get((trt_model_id, gsim), 0)) * (1. - curves)
         if self.hc.poes_disagg:
             for bb in bbs:
                 self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
         self.log_percent()
+
+    def build_curves_by_rlz(self):
+        """
+        Build a dictionary with the curves by realization id
+        """
+        all_rlzs = {}  # dictionary {trt_model_id: {gsim: rlzs}}
+        for trt_model in models.TrtModel.objects.filter(
+                lt_model__hazard_calculation=self.hc):
+            all_rlzs[trt_model.id] = trt_model.get_rlzs_by_gsim()
+        curves_by_rlz = {}
+        for trt_model_id, gsim in list(self.curves):
+            for rlz in all_rlzs[trt_model_id][gsim]:
+                curves_by_rlz[rlz.id] = 1. - (
+                    1. - curves_by_rlz.get(rlz.id, 0)) * (
+                    1. - self.curves[trt_model_id, gsim])
+            del self.curves[trt_model_id, gsim]  # save memory
+        return curves_by_rlz
 
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)
@@ -308,9 +319,10 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         curve results.
         """
         imtls = self.hc.intensity_measure_types_and_levels
-        for rlz_id in sorted(self.curves):
-            curves_by_imt = self.curves[rlz_id]
-            del self.curves[rlz_id]  # save memory
+        curves_by_rlz = self.build_curves_by_rlz()
+        for rlz_id in sorted(curves_by_rlz):
+            curves_by_imt = curves_by_rlz[rlz_id]
+            #del curves_by_rlz[rlz_id]  # save memory
             rlz = models.LtRealization.objects.get(pk=rlz_id)
 
             # create a new `HazardCurve` 'container' record for each
