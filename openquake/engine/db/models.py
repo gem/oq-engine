@@ -2234,6 +2234,28 @@ class TrtModel(djm.Model):
     max_mag = djm.FloatField(null=False)
     gsims = fields.CharArrayField(null=True)
 
+    def get_realizations(self, gsim_name):
+        """
+        Return the realizations associated to the current TrtModel and
+        the given GSIM.
+
+        :param str gsim_name: name of a GSIM class
+        """
+        assert gsim_name in self.gsims, gsim_name
+        for art in AssocLtRlzTrtModel.objects.filter(
+                trt_model=self.id, gsim=gsim_name):
+            yield art.rlz
+
+    def get_rlzs_by_gsim(self):
+        """
+        Return the realizations associated to the current TrtModel
+        as a dictionary {gsim_name: [rlz, ...]}
+        """
+        rlzs = dict(
+            (gsim, list(self.get_realizations(gsim)))
+            for gsim in self.gsims)
+        return rlzs
+
     class Meta:
         db_table = 'hzrdr\".\"trt_model'
         ordering = ['tectonic_region_type', 'num_sources']
@@ -2243,8 +2265,8 @@ class AssocLtRlzTrtModel(djm.Model):
     """
     Associations between logic tree realizations and TrtModels
     """
-    rlz =  djm.ForeignKey('LtRealization')
-    trt_model =  djm.ForeignKey('TrtModel')
+    rlz = djm.ForeignKey('LtRealization')
+    trt_model = djm.ForeignKey('TrtModel')
     gsim = djm.TextField(null=False)
 
     class Meta:
