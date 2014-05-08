@@ -383,7 +383,7 @@ class BaseHazardCalculator(base.Calculator):
                     # populate the associations rlz <-> trt_model
                     gsim = gsim_dict[trt_model.tectonic_region_type]
                     models.AssocLtRlzTrtModel.objects.create(
-                        rlz=rlz, trt_model=trt_model, gsim=gsim)
+                        rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
         for trt_model in models.TrtModel.objects.filter(
                 lt_model__hazard_calculation=self.hc):
             gsimset = set(art.gsim for art in
