@@ -131,6 +131,9 @@ class SadighEtAl1997(GMPE):
         else:
             c1 = self.COEFFS_SOIL_IMT_INDEPENDENT['c1ss']
             c6 = C['c6ss']
+        # clip mag if greater than 8.5. This is to avoid
+        # ValueError: negative number cannot be raised to a fractional power
+        mag = 8.5 if mag > 8.5 else mag
         return (c1 + c2 * mag + c6 + C['c7'] * ((8.5 - mag) ** 2.5)
                 - c3 * numpy.log(rrup + c4 * numpy.exp(c5 * mag)))
 
@@ -144,6 +147,9 @@ class SadighEtAl1997(GMPE):
             C = self.COEFFS_ROCK_LOWMAG[imt]
         else:
             C = self.COEFFS_ROCK_HIMAG[imt]
+        # clip mag if greater than 8.5. This is to avoid
+        # ValueError: negative number cannot be raised to a fractional power
+        mag = 8.5 if mag > 8.5 else mag
         mean = (
             C['c1'] + C['c2'] * mag + C['c3'] * ((8.5 - mag) ** 2.5)
             + C['c4'] * numpy.log(rrup + numpy.exp(C['c5'] + C['c6'] * mag))
