@@ -11,6 +11,7 @@ Built-in GSIMs
 
 .. toctree::
 
+    abrahamson_silva_1997
     abrahamson_silva_2008
     akkar_2013
     akkar_2014
@@ -26,6 +27,7 @@ Built-in GSIMs
     boore_atkinson_2008
     boore_atkinson_2011
     campbell_2003
+    campbell_bozorgnia_2003
     campbell_bozorgnia_2008
     cauzzi_faccioli_2008
     chiou_youngs_2008
