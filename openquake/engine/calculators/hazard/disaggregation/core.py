@@ -40,7 +40,7 @@ BinData = namedtuple('BinData', 'mags, dists, lons, lats, trts, pnes')
 
 
 def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
-                       gsims, imtls, poes, truncation_level,
+                       trt_model_id, gsims, imtls, poes, truncation_level,
                        n_epsilons):
     # returns a BinData instance
     sitecol = SiteCollection([site])
@@ -54,7 +54,8 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
     calc_dist = mon.copy('calc distances')
     make_ctxt = mon.copy('making contexts')
     disagg_poe = mon.copy('disaggregate_poe')
-
+    trt_model = models.TrtModel.objects.get(pk=trt_model_id)
+    rlzs = trt_model.get_rlzs_by_gsim()
     for source, ruptures in source_ruptures:
         try:
             tect_reg = trt_num[source.tectonic_region_type]
@@ -79,8 +80,8 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
                     for imt_str, imls in imtls.iteritems():
                         imt = from_string(imt_str)
                         imls = numpy.array(imls[::-1])
-                        for rlz_id in gsim.rlz_ids:
-                            curve_poes = curves[rlz_id, imt_str].poes[::-1]
+                        for rlz in rlzs[gsim.__class__.__name__]:
+                            curve_poes = curves[rlz.id, imt_str].poes[::-1]
                             for poe in poes:
                                 iml = numpy.interp(poe, curve_poes, imls)
                                 # compute probability of exceeding iml given
@@ -94,7 +95,7 @@ def _collect_bins_data(mon, trt_num, source_ruptures, site, curves,
                                             truncation_level, n_epsilons)
                                 pne = rupture.get_probability_no_exceedance(
                                     poes_given_rup_eps)
-                                pne_dict[rlz_id, poe, imt_str] = (iml, pne)
+                                pne_dict[rlz.id, poe, imt_str] = (iml, pne)
 
                 pnes.append(pne_dict)
         except Exception as err:
@@ -180,7 +181,7 @@ def save_disagg_result(job_id, site_id, bin_edges, trt_names, matrix,
 
 
 @tasks.oqtask
-def compute_disagg(job_id, sitecol, sources, lt_model, gsims,
+def compute_disagg(job_id, sitecol, sources, trt_model_id, gsims,
                    trt_num, curves_dict, bin_edges):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -207,13 +208,16 @@ def compute_disagg(job_id, sitecol, sources, lt_model, gsims,
     """
     mon = LightMonitor('disagg', job_id, compute_disagg)
     hc = models.OqJob.objects.get(id=job_id).hazard_calculation
-    trt_names = tuple(lt_model.get_tectonic_region_types())
+    trt_model = models.TrtModel.objects.get(pk=trt_model_id)
+    lt_model_id = trt_model.lt_model.id
+    rlzs = trt_model.get_rlzs_by_gsim()
+    trt_names = tuple(trt_model.lt_model.get_tectonic_region_types())
     result = {}  # site.id, rlz.id, poe, imt, iml, trt_names -> array
 
     for site in sitecol:
         # edges as wanted by disagg._arrange_data_in_bins
         try:
-            edges = bin_edges[lt_model.id, site.id]
+            edges = bin_edges[lt_model_id, site.id]
         except KeyError:
             # bin_edges for a given site are missing if the site is far away
             continue
@@ -230,7 +234,7 @@ def compute_disagg(job_id, sitecol, sources, lt_model, gsims,
                 'collecting bins', job_id, compute_disagg):
             bdata = _collect_bins_data(
                 mon, trt_num, source_ruptures, site, curves_dict[site.id],
-                gsims, hc.intensity_measure_types_and_levels,
+                trt_model_id, gsims, hc.intensity_measure_types_and_levels,
                 hc.poes_disagg, hc.truncation_level,
                 hc.num_epsilon_bins)
 
@@ -240,10 +244,10 @@ def compute_disagg(job_id, sitecol, sources, lt_model, gsims,
         for poe in hc.poes_disagg:
             for imt in hc.intensity_measure_types_and_levels:
                 for gsim in gsims:
-                    for rlz_id in gsim.rlz_ids:
+                    for rlz in rlzs[gsim.__class__.__name__]:
                         # extract the probabilities of non-exceedance for the
                         # given realization, disaggregation PoE, and IMT
-                        iml_pne_pairs = [pne[rlz_id, poe, imt]
+                        iml_pne_pairs = [pne[rlz.id, poe, imt]
                                          for pne in bdata.pnes]
                         iml = iml_pne_pairs[0][0]
                         probs = numpy.array(
@@ -256,7 +260,7 @@ def compute_disagg(job_id, sitecol, sources, lt_model, gsims,
                         # call disagg._arrange_data_in_bins
                         with EnginePerformanceMonitor(
                                 'arranging bins', job_id, compute_disagg):
-                            key = (site.id, rlz_id, poe, imt, iml, trt_names)
+                            key = (site.id, rlz.id, poe, imt, iml, trt_names)
                             matrix = disagg._arrange_data_in_bins(
                                 bins, edges + (trt_names,))
                             result[key] = numpy.array(
@@ -316,9 +320,10 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         curves_dict = dict((site.id, self.get_curves(site))
                            for site in self.hc.site_collection)
 
-        for job_id, sitecol, srcs, lt_model, gsim_by_rlz, task_no in \
+        for job_id, sitecol, srcs, trt_model_id, gsims, task_no in \
                 self.task_arg_gen():
 
+            lt_model = models.TrtModel.objects.get(pk=trt_model_id).lt_model
             trt_num = dict((trt, i) for i, trt in enumerate(
                            lt_model.get_tectonic_region_types()))
             infos = list(models.TrtModel.objects.filter(
@@ -356,8 +361,8 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            arglist.append((self.job.id, sitecol, srcs, lt_model, gsim_by_rlz,
-                            trt_num, curves_dict, self.bin_edges))
+            arglist.append((self.job.id, sitecol, srcs, trt_model_id,
+                            gsims, trt_num, curves_dict, self.bin_edges))
 
         self.initialize_percent(compute_disagg, arglist)
         res = tasks.map_reduce(compute_disagg, arglist, self.agg_result, {})
