@@ -165,7 +165,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         sitecol = self.hc.site_collection
         trt_models = models.TrtModel.objects.filter(
-            lt_model__hazard_calculation=self.hc):
+            lt_model__hazard_calculation=self.hc)
         for task_no, trt_model in enumerate(trt_models):
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
@@ -382,7 +382,8 @@ class BaseHazardCalculator(base.Calculator):
                     seed=seed, weight=weight, ordinal=ordinal)
                 gsim_dict = ltp.parse_gmpe_logictree_path(gsim_lt_path)
                 ordinal += 1
-                for trt_model in lt_model.trt_model_set:
+                for trt_model in models.TrtModel.objects.filter(
+                        lt_model=lt_model):
                     # populate the associations rlz <-> trt_model
                     gsim = gsim_dict[trt_model.tectonic_region_type]
                     models.AssocLtRlzTrtModel.objects.create(
