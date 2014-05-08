@@ -171,9 +171,9 @@ def compute_hazard_curves(
     sorted_imls = [hc.intensity_measure_types_and_levels[imt]
                    for imt in sorted_imts]
     sorted_imts = map(from_string, sorted_imts)
-    curves = dict((gsim, [numpy.ones([total_sites, len(levels)])
-                          for levels in sorted_imls])
-                  for gsim in gsims)
+    curves = dict(
+        (gsim, [numpy.ones([total_sites, len(ls)]) for ls in sorted_imls])
+        for gsim in gsims)
     if hc.poes_disagg:  # doing disaggregation
         lt_model_id = models.TrtModel.objects.get(pk=trt_model_id).lt_model.id
         bbs = [BoundingBox(lt_model_id, site_id) for site_id in sitecol.sids]
@@ -219,8 +219,9 @@ def compute_hazard_curves(
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    curve_dict = dict((gsim, [0 if (c == 1.0).all() else 1. - c for c in curv])
-                      for gsim, curv in curves.iteritems())
+    curve_dict = dict(
+        (gsim, numpy.array([0 if (c == 1.0).all() else 1. - c for c in curv]))
+        for gsim, curv in curves.iteritems())
     return curve_dict, trt_model_id, bbs
 
 
@@ -255,9 +256,11 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         logs.LOG.info('Considering %d realization(s), %d IMT(s), %d level(s) '
                       'and %d sites, total %d', n_rlz, len(self.imtls),
                       n_levels, n_sites, total)
+        # a dict {rlz_id: array of n_imts matrices nsites * n_levels}
         self.curves = dict(
-            (rlz.id, [numpy.zeros((n_sites, len(self.imtls[imt])))
-                      for imt in sorted(self.imtls)])
+            (rlz.id, numpy.array([
+                numpy.zeros((n_sites, len(self.imtls[imt])))
+                for imt in sorted(self.imtls)]))
             for rlz in self._get_realizations())
 
         # a dictionary with the bounding boxes for earch source
@@ -287,12 +290,10 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             GSIM name and j is the IMT ordinal.
         """
         rlzs = models.TrtModel.objects.get(pk=trt_model_id).get_rlzs_by_gsim()
-        for gsim, curves_by_imt in result.iteritems():
+        for gsim, curves in result.iteritems():
             for rlz in rlzs[gsim.__class__.__name__]:
-                for j, curves in enumerate(curves_by_imt):
-                    # j is the IMT index
-                    self.curves[rlz.id][j] = 1. - (
-                        1. - self.curves[rlz.id][j]) * (1. - curves)
+                self.curves[rlz.id] = 1. - (
+                    1. - self.curves[rlz.id]) * (1. - curves)
         if self.hc.poes_disagg:
             for bb in bbs:
                 self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
