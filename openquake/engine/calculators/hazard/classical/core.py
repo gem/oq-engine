@@ -318,7 +318,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             for art in models.AssocLtRlzTrtModel.objects.filter(
                     trt_model=trt_model_id, gsim=gsim):
                 rlz_id = art.rlz.id
-        
+
                 # create a new `HazardCurve` 'container' record for each
                 # realization (virtual container for multiple imts)
                 models.HazardCurve.objects.create(
@@ -356,12 +356,11 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                     points = self.hc.points_to_compute()
                     logs.LOG.info('saving %d hazard curves for %s, imt=%s',
                                   len(points), hco, imt)
-                    writer.CacheInserter.saveall([
-                        models.HazardCurveData(
-                            hazard_curve=haz_curve,
-                            poes=list(poes),
-                            location='POINT(%s %s)' % (p.longitude, p.latitude),
-                            weight=rlz.weight)
+                    writer.CacheInserter.saveall([models.HazardCurveData(
+                        hazard_curve=haz_curve,
+                        poes=list(poes),
+                        location='POINT(%s %s)' % (p.longitude, p.latitude),
+                        weight=art.rlz.weight)
                         for p, poes in zip(points, curves)])
 
     post_execute = save_hazard_curves
