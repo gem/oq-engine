@@ -321,7 +321,7 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
 
             trt_num = dict((trt, i) for i, trt in enumerate(
                            lt_model.get_tectonic_region_types()))
-            infos = list(models.LtModelInfo.objects.filter(
+            infos = list(models.TrtModel.objects.filter(
                          lt_model=lt_model))
 
             max_mag = max(i.max_mag for i in infos)
