@@ -257,7 +257,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                       n_levels, n_sites, total)
         self.curves = {}
         for trt_model in models.TrtModel.objects.filter(
-                lt_model__hazard_calclation=self.hc):
+                lt_model__hazard_calculation=self.hc):
             for gsim in trt_model.gsims:
                 self.curves[trt_model_id, gsim] = [
                     numpy.zeros((n_sites, len(self.imtls[imt])))

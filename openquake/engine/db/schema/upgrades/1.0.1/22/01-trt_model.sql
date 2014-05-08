@@ -1,4 +1,5 @@
 ALTER TABLE hzrdr.lt_model_info RENAME TO trt_model;
+ALTER TABLE hzrdr.trt_model ADD COLUMN gsims TEXT[];
 
 CREATE TABLE hzrdr.assoc_lt_rlz_trt_model(
 id SERIAL,

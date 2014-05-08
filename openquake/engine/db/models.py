@@ -2232,6 +2232,7 @@ class TrtModel(djm.Model):
     num_ruptures = djm.IntegerField(null=False)
     min_mag = djm.FloatField(null=False)
     max_mag = djm.FloatField(null=False)
+    gsims = fields.CharArrayField(null=True)
 
     class Meta:
         db_table = 'hzrdr\".\"trt_model'

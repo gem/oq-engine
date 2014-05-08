@@ -529,7 +529,8 @@ CREATE TABLE hzrdr.trt_model (
    num_sources INTEGER NOT NULL,
    num_ruptures INTEGER NOT NULL,
    min_mag FLOAT NOT NULL,
-   max_mag FLOAT NOT NULL
+   max_mag FLOAT NOT NULL,
+   gsims TEXT[]
 ) TABLESPACE hzrdr_ts;
 
 -- associations logic tree realizations <-> trt_models
