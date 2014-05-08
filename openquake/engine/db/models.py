@@ -2201,14 +2201,14 @@ class LtSourceModel(djm.Model):
         Return the number of sources in the model.
         """
         return sum(info.num_sources for info in
-                   LtModelInfo.objects.filter(lt_model=self))
+                   TrtModel.objects.filter(lt_model=self))
 
     def get_tectonic_region_types(self):
         """
         Return the tectonic region types in the model,
         ordered by number of sources.
         """
-        return LtModelInfo.objects.filter(
+        return TrtModel.objects.filter(
             lt_model=self).values_list(
             'tectonic_region_type', flat=True)
 
@@ -2222,9 +2222,9 @@ class LtSourceModel(djm.Model):
         return iter(LtRealization.objects.filter(lt_model=self))
 
 
-class LtModelInfo(djm.Model):
+class TrtModel(djm.Model):
     """
-    Information about a source model content
+    Source submodel containing sources of the same tectonic region type.
     """
     lt_model = djm.ForeignKey('LtSourceModel')
     tectonic_region_type = djm.TextField(null=False)
@@ -2234,8 +2234,21 @@ class LtModelInfo(djm.Model):
     max_mag = djm.FloatField(null=False)
 
     class Meta:
-        db_table = 'hzrdr\".\"lt_model_info'
+        db_table = 'hzrdr\".\"trt_model'
         ordering = ['tectonic_region_type', 'num_sources']
+
+
+class AssocLtRlzTrtModel(djm.Model):
+    """
+    Associations between logic tree realizations and TrtModels
+    """
+    rlz =  djm.ForeignKey('LtRealization')
+    trt_model =  djm.ForeignKey('TrtModel')
+    gsim = djm.TextField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"assoc_lt_rlz_trt_model'
+        ordering = ['id']
 
 
 class LtRealization(djm.Model):

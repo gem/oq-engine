@@ -522,7 +522,7 @@ CREATE TABLE hzrdr.lt_source_model (
 ) TABLESPACE hzrdr_ts;
 
 -- logic tree source model infos
-CREATE TABLE hzrdr.lt_model_info (
+CREATE TABLE hzrdr.trt_model (
    id SERIAL PRIMARY KEY,
    lt_model_id INTEGER NOT NULL, -- fk to lt_source_model
    tectonic_region_type TEXT NOT NULL,
@@ -531,6 +531,13 @@ CREATE TABLE hzrdr.lt_model_info (
    min_mag FLOAT NOT NULL,
    max_mag FLOAT NOT NULL
 ) TABLESPACE hzrdr_ts;
+
+-- associations logic tree realizations <-> trt_models
+CREATE TABLE hzrdr.assoc_lt_rlz_trt_model(
+id SERIAL,
+rlz_id INTEGER NOT NULL,
+trt_model_id INTEGER NOT NULL,
+gsim TEXT NOT NULL);
 
 -- keep track of logic tree realization progress for a given calculation
 CREATE TABLE hzrdr.lt_realization (
@@ -960,11 +967,25 @@ FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
 
--- hzrdr.lt_model_info -> hzrdr.lt_source_model FK
-ALTER TABLE hzrdr.lt_model_info
-ADD CONSTRAINT hzrdr_lt_model_info_lt_source_model_fk
+-- hzrdr.trt_model -> hzrdr.lt_source_model FK
+ALTER TABLE hzrdr.trt_model
+ADD CONSTRAINT hzrdr_trt_model_lt_source_model_fk
 FOREIGN KEY (lt_model_id)
 REFERENCES hzrdr.lt_source_model(id)
+ON DELETE CASCADE;
+
+-- hzrdr.assoc_lt_rlz_trt_model -> hzrdr.lt_realization FK
+ALTER TABLE hzrdr.assoc_lt_rlz_trt_model
+ADD CONSTRAINT hzrdr_assoc_lt_rlz_trt_model_fk1
+FOREIGN KEY (rlz_id)
+REFERENCES hzrdr.lt_realization(id)
+ON DELETE CASCADE;
+
+-- hzrdr.assoc_lt_rlz_trt_model -> hzrdr.trt_model FK
+ALTER TABLE hzrdr.assoc_lt_rlz_trt_model
+ADD CONSTRAINT hzrdr_trt_model_lt_source_model_fk2
+FOREIGN KEY (trt_model_id)
+REFERENCES hzrdr.trt_model(id)
 ON DELETE CASCADE;
 
 -- hzrdr.lt_realization -> hzrdr.lt_source_model FK
