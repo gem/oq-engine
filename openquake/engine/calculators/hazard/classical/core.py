@@ -252,6 +252,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
                        ) / float(len(self.imtls))
         n_sites = len(self.hc.site_collection)
+        self.zero = numpy.array([numpy.zeros((n_sites, len(self.imtls[imt])))
+                                 for imt in sorted(self.imtls)])
+        self.one = 1. - self.zero
         total = n_rlz * len(self.imtls) * n_levels * n_sites
         logs.LOG.info('Considering %d realization(s), %d IMT(s), %d level(s) '
                       'and %d sites, total %d', n_rlz, len(self.imtls),
@@ -286,8 +289,19 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         """
         for gsim_obj, curves in result.iteritems():
             gsim = gsim_obj.__class__.__name__
-            self.curves[trt_model_id, gsim] = 1. - (
-                1. - self.curves.get((trt_model_id, gsim), 0)) * (1. - curves)
+
+            # add a test like Yufang computation testing the broadcast
+            if (curves == 0).all():
+                self.curves[trt_model_id, gsim] = self.one - (
+                    self.one - self.curves.get(
+                        (trt_model_id, gsim), self.zero)
+                    )
+            else:
+                self.curves[trt_model_id, gsim] = self.one - (
+                    self.one - self.curves.get(
+                        (trt_model_id, gsim), self.zero)
+                    ) * (self.one - curves)
+
         if self.hc.poes_disagg:
             for bb in bbs:
                 self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
@@ -295,7 +309,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
     def build_curves_by_rlz(self):
         """
-        Build a dictionary with the curves by realization id
+        Build a dictionary with the curves keyed by realization id
         """
         all_rlzs = {}  # dictionary {trt_model_id: {gsim: rlzs}}
         for trt_model in models.TrtModel.objects.filter(
@@ -305,7 +319,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         for trt_model_id, gsim in list(self.curves):
             for rlz in all_rlzs[trt_model_id][gsim]:
                 curves_by_rlz[rlz.id] = 1. - (
-                    1. - curves_by_rlz.get(rlz.id, 0)) * (
+                    1. - curves_by_rlz.get(rlz.id, self.zero)) * (
                     1. - self.curves[trt_model_id, gsim])
             del self.curves[trt_model_id, gsim]  # save memory
         return curves_by_rlz
