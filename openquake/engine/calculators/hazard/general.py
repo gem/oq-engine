@@ -169,7 +169,7 @@ class BaseHazardCalculator(base.Calculator):
         for task_no, trt_model in enumerate(trt_models):
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
-            gsims = [logictree.GSIM[gsim]() for trt_model.gsims]
+            gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
             for block in self.source_blocks_per_ltpath[ltpath, trt]:
                 yield (self.job.id, sitecol, block, trt_model.id,
                        gsims, task_no)
@@ -384,7 +384,8 @@ class BaseHazardCalculator(base.Calculator):
                     gsim = gsim_dict[trt_model.tectonic_region_type]
                     models.AssocLtRlzTrtModel.objects.create(
                         rlz=rlz, trt_model=trt_model, gsim=gsim)
-        for trt_model in trt_models:
+        for trt_model in models.TrtModel.objects.filter(
+                lt_model__hazard_calculation=self.hc):
             gsimset = set(art.gsim for art in
                           models.AssocLtRlzTrtModel.objects.filter(
                               trt_model=trt_model))
