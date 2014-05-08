@@ -62,29 +62,6 @@ POES_PARAM_NAME = "POES"
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
 
-gsim_counter = itertools.count(1)
-all_gsims = {}
-
-
-def assoc_gsims_rlzs(rlz_gsim_dicts, trt):
-    """
-    :param rlz_gsim_dicts:
-        a list of pairs (rlz, gsim_dict) where gsim_dict is a
-        dictionary {trt: gsim}
-    :returns:
-        a list of distinct GSIM instances with an attribute .rlz_ids,
-        containing the list of realizations associated to the given gsim
-    """
-    lst = sorted((gsim_dict[trt], rlz) for rlz, gsim_dict in rlz_gsim_dicts)
-    gsims = []
-    for gsim_cls, group in itertools.groupby(lst, key=operator.itemgetter(0)):
-        gsim = gsim_cls()
-        gsim.id = gsim_counter.next()  # to be used as key in dictionaries
-        gsim.rlz_ids = [rlz.id for (_, rlz) in group]
-        gsims.append(gsim)
-        all_gsims[gsim.id] = gsim
-    return gsims
-
 
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
@@ -187,12 +164,18 @@ class BaseHazardCalculator(base.Calculator):
         Override this in subclasses as necessary.
         """
         sitecol = self.hc.site_collection
-        for task_no, (lt_model_id, trt) in enumerate(self.gsims):
-            lt_model = models.LtSourceModel.objects.get(pk=lt_model_id)
-            ltpath = tuple(lt_model.sm_lt_path)
-            gsims = self.gsims[lt_model_id, trt]
+        trt_models = models.TrtModel.objects.filter(
+            lt_model__hazard_calculation=self.hc):
+        for task_no, trt_model in enumerate(trt_models):
+            ltpath = tuple(trt_model.lt_model.sm_lt_path)
+            trt = trt_model.tectonic_region_type
+            # determine the distinct gsims
+            gsimset = set(art.gsim for art in 
+                          models.AssocLtRlzTrtModel.objects.filter(
+                              trt_model=trt_model))
+            gsims = [logictree.GSIM[gsim]() for gsim in sorted(gsimset)]
             for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                yield (self.job.id, sitecol, block, lt_model,
+                yield (self.job.id, sitecol, block, trt_model.id,
                        gsims, task_no)
 
     def _get_realizations(self):
@@ -265,9 +248,9 @@ class BaseHazardCalculator(base.Calculator):
                     logs.LOG.debug('%s, block %d: %d source(s), weight %s',
                                    trt, i, len(block), block.weight)
 
-            # save LtModelInfo objects for each tectonic region type
+            # save TrtModel objects for each tectonic region type
             for trt in source_collector.sorted_trts():
-                models.LtModelInfo.objects.create(
+                models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
                     num_sources=len(source_collector.source_weights[trt]),
@@ -391,25 +374,19 @@ class BaseHazardCalculator(base.Calculator):
         ordinal = 0
         lt_models = models.LtSourceModel.objects.filter(
             hazard_calculation=self.hc)
-        self.gsims = collections.OrderedDict()  # {lt_model_id: gsims}
         for lt_model, path_infos in zip(
                 lt_models, rlzs_per_ltpath.itervalues()):
-            rlz_gsim_dicts = []
             for seed, weight, sm_lt_path, gsim_lt_path in path_infos:
                 rlz = models.LtRealization.objects.create(
                     lt_model=lt_model, gsim_lt_path=gsim_lt_path,
                     seed=seed, weight=weight, ordinal=ordinal)
-                rlz_gsim_dicts.append(
-                    (rlz, ltp.parse_gmpe_logictree_path(gsim_lt_path)))
+                gsim_dict = ltp.parse_gmpe_logictree_path(gsim_lt_path)
                 ordinal += 1
-            for trt in lt_model.get_tectonic_region_types():
-                # for a given trt, different realizations may correspond
-                # to the same GSIM: we estract the distinct gsims
-                self.gsims[lt_model.id, trt] = gsims = assoc_gsims_rlzs(
-                    rlz_gsim_dicts, trt)
-                logs.LOG.info(
-                    'Considering %d/%d gsims for sm_lt_path=%s, TRT=%s',
-                    len(gsims), len(rlz_gsim_dicts), lt_model.sm_lt_path, trt)
+                for trt_model in lt_model.trt_model_set:
+                    # populate the associations rlz <-> trt_model
+                    gsim = gsim_dict[trt_model.tectonic_region_type]
+                    models.AssocLtRlzTrtModel.objects.create(
+                        rlz=rlz, trt_model=trt_model, gsim=gsim)
 
     def _initialize_realizations_enumeration(self, ltp):
         """
