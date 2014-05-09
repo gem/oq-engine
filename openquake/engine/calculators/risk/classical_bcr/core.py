@@ -38,8 +38,8 @@ def classical_bcr(job_id, risk_model, outputdict, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param list risk_models:
-      A list of :class:`openquake.risklib.workflows.CalculationUnit`
+    :param risk_model:
+      A :class:`openquake.risklib.workflows.RiskModel` instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
