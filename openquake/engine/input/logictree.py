@@ -16,8 +16,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Logic tree parser, verifier and processor. See specs
-at https://blueprints.launchpad.net/openquake/+spec/openquake-logic-tree-module
+Logic tree parser, verifier and processor. See specs at
+https://blueprints.launchpad.net/openquake-old/+spec/openquake-logic-tree-module
 """
 
 import abc
@@ -32,9 +32,11 @@ import openquake.nrmllib
 import openquake.hazardlib
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
-from openquake.engine.db import models
-
-
+#: Minimum value for a seed number
+MIN_SINT_32 = -(2 ** 31)
+#: Maximum value for a seed number
+MAX_SINT_32 = (2 ** 31) - 1
+#: dictionary of GSIM classes available in hazardlib
 GSIM = openquake.hazardlib.gsim.get_available_gsims()
 
 
@@ -907,7 +909,7 @@ class SourceModelLogicTree(BaseLogicTree):
             # random sampling of the source model logic tree
             for i in xrange(number_of_logic_tree_samples):
                 # sample source model logic tree branch paths
-                seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
+                seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
                 sm_filename, sm_lt_path = self.sample_path(seed)
                 yield sm_filename, None, sm_lt_path
                 rnd.seed(seed)  # update the seed
