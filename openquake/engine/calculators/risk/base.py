@@ -166,6 +166,7 @@ class RiskCalculator(base.Calculator):
                             self.getter_class, self.haz_outs, assets)
                     except hazard_getters.AssetSiteAssociationError as err:
                         # TODO: add a test for this corner case
+                        # https://bugs.launchpad.net/oq-engine/+bug/1317796
                         logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
                         continue
                 # submitting task
