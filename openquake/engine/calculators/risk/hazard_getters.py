@@ -121,7 +121,7 @@ class HazardCurveGetter(HazardGetter):
 
     def get_data(self, imt):
         """
-        Extracts the hazard curves for the given imt from the hazard output.
+        Extracts the hazard curves for the given `imt` from the hazard output.
 
         :param str imt: Intensity Measure Type
         :returns: a list of N curves, each one being a list of pairs (iml, poe)
@@ -191,7 +191,7 @@ class GroundMotionValuesGetter(HazardGetter):
 
     def get_data(self, imt):
         """
-        Extracts the GMFs for the given imt from the hazard output.
+        Extracts the GMFs for the given `imt` from the hazard output.
 
         :param str imt: Intensity Measure Type
         :returns: a list of N arrays with R elements each.
@@ -219,7 +219,7 @@ class ScenarioGetter(HazardGetter):
 
     def get_data(self, imt):
         """
-        Extracts the GMFs for the given imt from the hazard output.
+        Extracts the GMFs for the given `imt` from the hazard output.
 
         :param str imt: Intensity Measure Type
         :returns: a list of N arrays with R elements each.
