@@ -42,8 +42,8 @@ def event_based(job_id, risk_model, outputdict, params):
 
     :param job_id: the id of the current
         :class:`openquake.engine.db.models.OqJob`
-    :param dict risk_models:
-      A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
+    :param risk_model:
+      A :class:`openquake.risklib.workflows.RiskModel` instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
