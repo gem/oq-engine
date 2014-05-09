@@ -1750,24 +1750,30 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
     def setUp(self):
+        # this is an example with number_of_logic_tree_samples = 1
         cfg = helpers.get_data_path('classical_job.ini')
         job = helpers.get_job(cfg)
-
         self.proc = logictree.LogicTreeProcessor.from_hc(
             job.hazard_calculation)
 
     def test_sample_source_model(self):
-        sm_name, branch_ids = self.proc.sample_source_model_logictree(42)
-        self.assertEqual(['b1', 'b3', 'b7'], branch_ids)
+        [(sm_name, weight, branch_ids)] = self.proc.source_model_lt.\
+            enum_name_weight_paths()
         self.assertEqual(sm_name, 'example-source-model.xml')
+        self.assertIsNone(weight)
+        self.assertEqual(['b1', 'b5', 'b8'], branch_ids)
 
     def test_sample_gmpe(self):
-        branch_ids = self.proc.sample_gmpe_logictree(random_seed=124)
+        [(gmpe_cls, weight, branch_ids)] = self.proc.gmpe_lt.\
+            enum_name_weight_paths()
+        self.assertEqual(gmpe_cls.__name__, 'ChiouYoungs2008')
+        self.assertIsNone(weight)
         self.assertEqual(['b2', 'b3'], branch_ids)
-        branch_ids = self.proc.sample_gmpe_logictree(random_seed=123)
-        self.assertEqual(['b1', 'b3'], branch_ids)
 
     def test_enumerate_paths(self):
+        # testing full enumeration
+        self.proc.source_model_lt.num_samples = 0
+        self.proc.gmpe_lt.num_samples = 0
         paths = self.proc.enumerate_paths()
         ae = self.assertEqual
         ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
@@ -1875,7 +1881,8 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
             branch = nextbranch
         assert list(path) == []
 
-        sm_path, branch_ids = proc.sample_source_model_logictree(0)
+        [(sm_path, weight, branch_ids)] = proc.source_model_lt.\
+            enum_name_weight_paths()
         self.assertEqual(expected_branch_ids, branch_ids)
         modify_source = proc.parse_source_model_logictree_path(branch_ids)
 
