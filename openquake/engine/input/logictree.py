@@ -32,8 +32,6 @@ import openquake.nrmllib
 import openquake.hazardlib
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
-from openquake.engine.db import models
-
 
 GSIM = openquake.hazardlib.gsim.get_available_gsims()
 
@@ -358,9 +356,12 @@ class BaseLogicTree(object):
                 file=openquake.nrmllib.nrml_schema_file())
         return cls._xmlschema
 
-    def __init__(self, content, basepath, filename, validate=True):
+    def __init__(self, content, basepath, filename, validate=True,
+                 seed=0, num_samples=0):
         self.basepath = basepath
         self.filename = filename
+        self.seed = seed
+        self.num_samples = num_samples
         parser = etree.XMLParser(schema=self.get_xmlschema())
         self.branches = {}
         self.open_ends = set()
@@ -530,13 +531,12 @@ class BaseLogicTree(object):
             the root branchset for this tree.
         """
 
-    def sample_path(self, random_seed):
+    def sample_path(self, rnd):
         """
         Return the model name and a list of branch ids.
 
-        :param int seed: the seed used for the sampling
+        :param int random_seed: the seed used for the sampling
         """
-        rnd = random.Random(random_seed)
         branchset = self.root_branchset
         branch_ids = []
         while branchset is not None:
@@ -545,6 +545,25 @@ class BaseLogicTree(object):
             branchset = branch.child_branchset
         modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
         return modelname, branch_ids
+
+    def enum_name_weight_paths(self):
+        """
+        Yield triples (name, weight, paths). Notice that
+        weight is not None only when the number_of_logic_tree_samples
+        is 0. In that case a full enumeration is performed, otherwise
+        a random sampling is performed.
+        """
+        if self.num_samples:
+            # random sampling of the logic tree
+            rnd = random.Random(self.seed)
+            for _ in xrange(self.num_samples):
+                name, sm_lt_path = self.sample_path(rnd)
+                yield name, None, sm_lt_path
+        else:  # full enumeration
+            for weight, smlt_path in self.root_branchset.enumerate_paths():
+                name = smlt_path[0].value
+                smlt_branch_ids = [branch.branch_id for branch in smlt_path]
+                yield name, weight, smlt_branch_ids
 
     @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
@@ -892,31 +911,6 @@ class SourceModelLogicTree(BaseLogicTree):
             smlt_branch_ids = [branch.branch_id for branch in smlt_path]
             yield sm_name, smlt_branch_ids
 
-    def get_sm_weight_paths(
-            self, number_of_logic_tree_samples, rnd):
-        """
-        Yield triples (source_model_name, weight, path). Notice that
-        weight is not None only when the number_of_logic_tree_samples
-        is 0. In that case a full enumeration is performed and the
-        random object is ignored.
-
-        :param int number_of_logic_tree_samples: number of samples (or 0)
-        :param rnd: a :class:`random.Random` instance (or None)
-        """
-        if number_of_logic_tree_samples:
-            # random sampling of the source model logic tree
-            for i in xrange(number_of_logic_tree_samples):
-                # sample source model logic tree branch paths
-                seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
-                sm_filename, sm_lt_path = self.sample_path(seed)
-                yield sm_filename, None, sm_lt_path
-                rnd.seed(seed)  # update the seed
-        else:  # full enumeration
-            for weight, smlt_path in self.root_branchset.enumerate_paths():
-                sm_name = smlt_path[0].value
-                smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield sm_name, weight, smlt_branch_ids
-
     def make_apply_uncertainties(self, branch_ids):
         """
         Parse the path through the source model logic tree and return
@@ -1075,39 +1069,27 @@ class LogicTreeProcessor(object):
     :param str gmpelt_content:
         the content of the gmpe logic tree
     """
-    def __init__(self, smlt_content, gmpelt_content):
+    def __init__(self, smlt_content, gmpelt_content,
+                 smlt_seed=0, gmpe_seed=0, smlt_rlzs=0, gmpe_rlzs=0):
         self.source_model_lt = SourceModelLogicTree(
-            smlt_content, basepath=None, filename=None, validate=False)
+            smlt_content, basepath=None, filename=None, validate=False,
+            seed=smlt_seed, num_samples=smlt_rlzs)
         self.gmpe_lt = GMPELogicTree(
             tectonic_region_types=[], content=gmpelt_content,
-            basepath=None, filename=None, validate=False)
+            basepath=None, filename=None, validate=False,
+            seed=gmpe_seed, num_samples=gmpe_rlzs)
 
     @classmethod
     def from_hc(cls, hc):
+        """
+        :param hc: a HazardCalculation instance
+        :returns: a LogicTreeProcessor instance
+        """
+        seed = hc.random_seed
+        samples = hc.number_of_logic_tree_samples
         return cls(file(hc.inputs['source_model_logic_tree']).read(),
-                   file(hc.inputs['gsim_logic_tree']).read())
-
-    def sample_source_model_logictree(self, random_seed):
-        """
-        Perform a Monte-Carlo sampling of source model logic tree.
-
-        :param random_seed:
-            An integer random seed value to initialize random generator
-            before doing random sampling.
-        :return:
-            Tuple of two items: first is the name of the source model
-            to load (as it appears in the source model logic tree)
-            and second is a list of the branchIDs (strings) which indicate
-            the complete path taken through the logic tree for this sample.
-        """
-        return self.source_model_lt.sample_path(random_seed)
-
-    def sample_gmpe_logictree(self, random_seed):
-        """
-        Same as :meth:`sample_source_model_logictree`, but for GMPE logic tree
-        and returns only path (list of branch ids).
-        """
-        return self.gmpe_lt.sample_path(random_seed)[1]
+                   file(hc.inputs['gsim_logic_tree']).read(),
+                   seed, seed, samples, samples)
 
     def enumerate_paths(self):
         """
@@ -1122,19 +1104,15 @@ class LogicTreeProcessor(object):
             #. List of source-model logic tree branch ids.
             #. List of GMPE logic tree branch ids.
         """
-        smlt_paths_gen = self.source_model_lt.root_branchset.enumerate_paths
-        gmpelt_paths_gen = self.gmpe_lt.root_branchset.enumerate_paths
-
-        for smlt_path_weight, smlt_path in smlt_paths_gen():
-            for gmpelt_path_weight, gmpelt_path in gmpelt_paths_gen():
-                weight = smlt_path_weight * gmpelt_path_weight
-                sm_name = smlt_path[0].value
-
-                smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                gmpelt_branch_ids = [
-                    branch.branch_id for branch in gmpelt_path]
-
-                yield sm_name, weight, smlt_branch_ids, gmpelt_branch_ids
+        smlt_paths_gen = self.source_model_lt.enum_name_weight_paths
+        gmpelt_paths_gen = self.gmpe_lt.enum_name_weight_paths
+        for smlt_name, smlt_weight, smlt_paths in smlt_paths_gen():
+            for gmpe_name, gmpe_weight, gmpe_paths in gmpelt_paths_gen():
+                if smlt_weight is None or gmpe_weight is None:
+                    weight = None
+                else:
+                    weight = smlt_weight * gmpe_weight
+                yield smlt_name, weight, smlt_paths, gmpe_paths
 
     def parse_source_model_logictree_path(self, branch_ids):
         """

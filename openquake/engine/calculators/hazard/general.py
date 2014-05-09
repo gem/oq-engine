@@ -386,76 +386,23 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        rlzs_per_ltpath = collections.OrderedDict()
-        if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
-            # random sampling of paths
-            self._initialize_realizations_montecarlo(rlzs_per_ltpath)
-        else:
-            # full paths enumeration
-            self._initialize_realizations_enumeration(rlzs_per_ltpath)
-
-        ordinal = 0
-        lt_models = models.LtSourceModel.objects.filter(
-            hazard_calculation=self.hc)
-        for lt_model, (ltpath, path_infos) in zip(
-                lt_models, rlzs_per_ltpath.iteritems()):
-            for seed, weight, sm_lt_path, gsim_lt_path in path_infos:
-                models.LtRealization.objects.create(
-                    lt_model=lt_model, gsim_lt_path=gsim_lt_path,
-                    seed=seed, weight=weight, ordinal=ordinal)
-                ordinal += 1
-
-    def _initialize_realizations_enumeration(self, rlzs_per_ltpath):
-        """
-        Perform full paths enumeration of logic trees and populate
-        lt_realization table.
-        """
-        hc = self.job.hazard_calculation
-        ltp = logictree.LogicTreeProcessor.from_hc(hc)
-        seed = None
-        for i, path_info in enumerate(ltp.enumerate_paths()):
-            data = (seed, ) + path_info[1:]
-            ltpath = tuple(path_info[2])  # source model logic tree path
-            if not ltpath in rlzs_per_ltpath:
-                rlzs_per_ltpath[ltpath] = [data]
-            else:
-                rlzs_per_ltpath[ltpath].append(data)
-
-    def _initialize_realizations_montecarlo(self, rlzs_per_ltpath):
-        """
-        Perform random sampling of both logic trees and populate lt_realization
-        table.
-        """
-        # Each realization will have two seeds:
-        # One for source model logic tree, one for GSIM logic tree.
-        rnd = random.Random()
-        seed = self.hc.random_seed
-        rnd.seed(seed)
-
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
 
-        # The first realization gets the seed we specified in the config file.
-        for i in xrange(self.hc.number_of_logic_tree_samples):
-            # Sample source model logic tree branch paths:
-            source_model_filename, sm_lt_path = (
-                ltp.sample_source_model_logictree(
-                    rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)))
-
-            # Sample GSIM logic tree branch paths:
-            gsim_lt_path = ltp.sample_gmpe_logictree(
-                rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
-
-            # Populate rlzs_per_ltpath
-            data = seed, None, sm_lt_path, gsim_lt_path
-            ltpath = tuple(sm_lt_path)
-            if not ltpath in rlzs_per_ltpath:
-                rlzs_per_ltpath[ltpath] = [data]
+        ordinal = 0
+        sm_data = ltp.source_model_lt.enum_name_weight_paths()
+        gs_data = ltp.gmpe_lt.enum_name_weight_paths()
+        for (_, smlt_weight, sm_lt_path), (_, gsim_weight, gsim_lt_path) in \
+                zip(sm_data, gs_data):
+            lt_model = models.LtSourceModel.objects.get(
+                hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
+            if smlt_weight is None or gsim_weight is None:
+                weight = None
             else:
-                rlzs_per_ltpath[ltpath].append(data)
-
-            # update the seed for the next realization
-            seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
-            rnd.seed(seed)
+                weight = smlt_weight * gsim_weight
+            models.LtRealization.objects.create(
+                lt_model=lt_model, gsim_lt_path=gsim_lt_path,
+                weight=weight, ordinal=ordinal)
+            ordinal += 1
 
     def _get_outputs_for_export(self):
         """
