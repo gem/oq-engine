@@ -1433,6 +1433,20 @@ class HazardCurve(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
 
+    def build_data(self, curves_by_trt_model_gsim):
+        """
+        Build on the fly the hazard curves for the current realization
+        """
+        if self.imt:
+            # build_data cannot be called from real curves
+            raise TypeError('%r is not a multicurve', self)
+
+        curves = 0
+        for art in AssocLtRlzTrtModel.objects.filter(rlz=self.lt_realization):
+            pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]
+            curves = 1. - (1. - curves) * pnes
+        return curves
+
     @property
     def imt_long(self):
         """
@@ -2292,16 +2306,6 @@ class LtRealization(djm.Model):
         source model
         """
         return self.lt_model.sm_lt_path
-
-    def build_curves(self, curves_by_trt_model_gsim):
-        """
-        Build on the fly the hazard curves for the current realization
-        """
-        curves = 0
-        for art in AssocLtRlzTrtModel.objects.filter(rlz=self):
-            pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]
-            curves = 1. - (1. - curves) * pnes
-        return curves
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
