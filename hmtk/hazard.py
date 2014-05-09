@@ -210,9 +210,6 @@ class HMTKHazardCurve(object):
         num_sites = self.sites.total_sites
         poe_set = OrderedDict([(imt, np.ones([num_sites, len(self.imts[imt])]))
                               for imt in self.imts])
-        #for key in self.imts.keys():
-        #    poe_set[key] = np.ones([num_sites, len(self.imts[key])],
-        #                            dtype=float)
         return poe_set
 
     def calculate_hazard(self, num_workers=DEFAULT_WORKERS,
