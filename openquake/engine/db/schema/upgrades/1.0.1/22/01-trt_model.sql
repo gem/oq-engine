@@ -18,9 +18,6 @@ ALTER TABLE hzrdr.assoc_lt_rlz_trt_model OWNER TO oq_admin;
 GRANT SELECT, INSERT ON hzrdr.assoc_lt_rlz_trt_model TO oq_job_init;
 GRANT USAGE ON hzrdr.assoc_lt_rlz_trt_model_id_seq TO oq_job_init;
 
--- index on  (trt_model_id, gsim)
-CREATE INDEX hzrdr_assoc_lt_rlz_trt_model_gsim_idx
-ON hzrdr.assoc_lt_rlz_trt_model (trt_model_id, gsim);
 
 -- hzrdr.assoc_lt_rlz_trt_model -> hzrdr.lt_realization FK
 ALTER TABLE hzrdr.assoc_lt_rlz_trt_model
