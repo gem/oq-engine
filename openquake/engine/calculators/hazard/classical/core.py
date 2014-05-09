@@ -309,19 +309,20 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         curve results.
         """
         imtls = self.hc.intensity_measure_types_and_levels
-        for rlz in self._get_realizations():
-            with self.monitor('building curves per realization'):
-                curves_by_imt = rlz.build_curves(self.curves)
+        points = self.hc.points_to_compute()
 
+        for rlz in self._get_realizations():
             # create a new `HazardCurve` 'container' record for each
             # realization (virtual container for multiple imts)
-            models.HazardCurve.objects.create(
+            haz_curve_container = models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
                     self.job, "hc-multi-imt-rlz-%s" % rlz.id,
                     "hazard_curve_multi"),
                 lt_realization=rlz,
-                imt=None,
                 investigation_time=self.hc.investigation_time)
+
+            with self.monitor('building curves per realization'):
+                curves_by_imt = haz_curve_container.build_data(self.curves)
 
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
@@ -347,7 +348,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 )
 
                 # save hazard_curve_data
-                points = self.hc.points_to_compute()
                 logs.LOG.info('saving %d hazard curves for %s, imt=%s',
                               len(points), hco, imt)
                 writer.CacheInserter.saveall([models.HazardCurveData(
@@ -356,6 +356,8 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                     location='POINT(%s %s)' % (p.longitude, p.latitude),
                     weight=rlz.weight)
                     for p, poes in zip(points, curves)])
+
+        self.curves = {}  # save memory for the post-processing phase
 
     post_execute = save_hazard_curves
 
