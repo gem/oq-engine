@@ -161,7 +161,7 @@ class ConvertIncremental(MFDConverter):
         """
 
         """
-        assert isinstance(mag_freq_dist, models.IncrementalMFD):
+        assert isinstance(mag_freq_dist, models.IncrementalMFD)
         return mfd.evenly_discretized.EvenlyDiscretizedMFD(
             min_mag=mag_freq_dist.min_mag,
             bin_width=mag_freq_dist.bin_width,
@@ -171,8 +171,10 @@ class ConvertIncremental(MFDConverter):
 MFD_MAP = {'TruncatedGRMFD': ConvertTruncGR(),
            'EvenlyDiscretizedMFD': ConvertIncremental()}
 
+MFD_TOHAZLIB_MAP = {'TGRMFD': ConvertTruncGR(),
+                    'IncrementalMFD': ConvertIncremental()}
 # Accepted MFD name lists
-ACCEPTED_MFD = ['TGRMFD', 'IncrementalMFD']
+ACCEPTED_MFD = MFD_TOHAZLIB_MAP.keys()
 
 
 def render_mfd(mag_freq_dist):
@@ -186,18 +188,26 @@ def render_mfd(mag_freq_dist):
         return mag_freq_dist
 
     if not mfd_name in MFD_MAP.keys():
-        raise ValueError('Magnitude frequency distribution %s not supported',
-                         mfd_name)
+        raise ValueError('Magnitude frequency distribution %s not supported'
+                         % mfd_name)
     return MFD_MAP[mfd_name].convert(mag_freq_dist)
 
 
 def mfd_to_hazardlib(mag_freq_dist):
     """
-
+    Returns the MFD in an openquake.hazardlib supported format
     """
-    if isinstance(mag_freq_dist, BaseMFD):
+    mfd_name = mag_freq_dist.__class__.__name__
+    if isinstance(mag_freq_dist, mfd.base.BaseMFD):
+        # Already a valid OQ hazardlib class
         return mag_freq_dist
-    elif isinstance(mag_freq_dist, models.
+    elif mfd_name in ACCEPTED_MFD:
+        # Convert from nrmllib class to OQ-hazardlib
+        return MFD_TOHAZLIB_MAP[mfd_name].to_hazardlib(mag_freq_dist)
+    else:
+        raise ValueError('Magnitude frequency distribution %s not supported'
+                         % mfd_name)
+
 
 def render_aspect_ratio(aspect_ratio, use_default=False):
     '''
@@ -251,7 +261,8 @@ def render_mag_scale_rel(mag_scale_rel, use_default=False):
 
 def mag_scale_rel_to_hazardlib(mag_scale_rel, use_default=False):
     """
-
+    Returns the magnitude scaling relation in a format readable by
+    openquake.hazardlib
     """
     if isinstance(mag_scale_rel, BaseMSR):
         return mag_scale_rel
@@ -260,7 +271,7 @@ def mag_scale_rel_to_hazardlib(mag_scale_rel, use_default=False):
             raise ValueError('Magnitude scaling relation %s not supported!'
                              % mag_scale_rel)
         else:
-            return SCALE_RELS[mag_scale_rel]
+            return SCALE_RELS[mag_scale_rel]()
     else:
         if use_default:
             # Returns the Wells and Coppersmith string
@@ -326,7 +337,7 @@ def npd_to_pmf(nodal_plane_dist, use_default=False):
     elif isinstance(nodal_plane_dist, list):
         npd_list = []
         for npd in nodal_plane_dist:
-            assert isinstance(npd, models.NodalPlane):
+            assert isinstance(npd, models.NodalPlane)
             npd_list.append((npd.probability,
                              NodalPlane(npd.strike, npd.dip, npd.rake)))
         return PMF(npd_list)
@@ -361,7 +372,7 @@ def render_hdd(hypo_depth_dist, use_default=False):
         return output_hdd
     else:
         if use_default:
-            # Default to a single hypocentral dwpth of 1.0
+            # Default to a single hypocentral depth of 1.0
             return [models.HypocentralDepth(Decimal('1.0'), 10.)]
         else:
             raise ValueError('Hypocentral depth distribution not defined!')

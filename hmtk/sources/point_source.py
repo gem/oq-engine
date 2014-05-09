@@ -294,7 +294,7 @@ class mtkPointSource(object):
     def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
         """
         Converts the point source model into an instance of the :class:
-        openquake.hazardlib.source
+        openquake.hazardlib.source.point_source.PointSource
 
         :param bool use_defaults:
             If set to true, will use put in default values for magitude
@@ -308,7 +308,7 @@ class mtkPointSource(object):
             self.trt,
             conv.mfd_to_hazardlib(self.mfd),
             mesh_spacing,
-            conv.render_mag_scale_rel(self.mag_scale_rel, use_defaults),
+            conv.mag_scale_rel_to_hazardlib(self.mag_scale_rel, use_defaults),
             conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
             tom,
             self.upper_depth,

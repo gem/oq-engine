@@ -57,10 +57,16 @@ import warnings
 import numpy as np
 from openquake.nrmllib import models
 from openquake.hazardlib.geo import point, polygon
+from openquake.hazardlib.source.area import AreaSource
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
+from openquake.hazardlib.scalerel.wc1994 import WC1994
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
 
+TOM = PoissonTOM(50.0)
 SOURCE_ATTRIBUTES = ['mfd', 'name', 'geometry', 'nodal_plane_dist', 'typology',
                      'upper_depth', 'catalogue', 'rupt_aspect_ratio',
                      'lower_depth', 'id', 'hypo_depth_dist', 'mag_scale_rel',
@@ -258,6 +264,34 @@ class TestAreaSource(unittest.TestCase):
         self.assertAlmostEqual(test_source.mfd.b_val,
                                expected_source.mfd.b_val)
 
+    def test_create_oqhazardlib_source(self):
+        """
+        """
+        # Define a complete source
+        area_geom = polygon.Polygon([point.Point(10., 10.),
+                                     point.Point(12., 10.),
+                                     point.Point(12., 8.),
+                                     point.Point(10., 8.)])
+        self.area_source = mtkAreaSource('001',
+            'A Point Source',
+            trt='Active Shallow Crust',
+            geometry = area_geom,
+            upper_depth = 0.,
+            lower_depth = 20.,
+            mag_scale_rel=None,
+            rupt_aspect_ratio=1.0,
+            mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
+            nodal_plane_dist=None,
+            hypo_depth_dist=None)
+        test_source = self.area_source.create_oqhazardlib_source(TOM, 1.0,
+                                                                 10.0, True)
+        self.assertIsInstance(test_source, AreaSource)
+        self.assertIsInstance(test_source.mfd, TruncatedGRMFD)
+        self.assertAlmostEqual(test_source.mfd.b_val, 1.0)
+        self.assertIsInstance(test_source.nodal_plane_distribution, PMF)
+        self.assertIsInstance(test_source.hypocenter_distribution, PMF)
+        self.assertIsInstance(test_source.magnitude_scaling_relationship,
+                              WC1994)
 
     def tearDown(self):
         warnings.resetwarnings()

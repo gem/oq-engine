@@ -58,9 +58,16 @@ import numpy as np
 from openquake.nrmllib import models
 from openquake.hazardlib.geo import point, line
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.source.simple_fault import SimpleFaultSource
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.scalerel.wc1994 import WC1994
+from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
+
+TOM = PoissonTOM(50.0)
 
 SOURCE_ATTRIBUTES = ['mfd', 'name', 'geometry', 'rake', 'fault_trace',
                      'typology', 'upper_depth', 'catalogue',
@@ -273,6 +280,32 @@ class TestSimpleFaultSource(unittest.TestCase):
                              expected_source.geometry.__dict__)
         self.assertAlmostEqual(test_source.mfd.b_val,
                                expected_source.mfd.b_val)
+
+    def test_create_oqhazardlib_source(self):
+        """
+        Tests to ensure the hazardlib source is created
+        """
+        trace = line.Line([point.Point(10., 10.), point.Point(11., 10.)])
+        self.fault_source = mtkSimpleFaultSource('001',
+            'A Fault Source',
+            trt='Active Shallow Crust',
+            geometry = None,
+            dip = 90.,
+            upper_depth = 0.,
+            lower_depth = 20.,
+            mag_scale_rel=None,
+            rupt_aspect_ratio=1.0,
+            mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
+            rake=0.)
+        self.fault_source.create_geometry(trace, 90., 0., 20., 1.0)
+        test_source = self.fault_source.create_oqhazardlib_source(TOM,
+                                                                  2.0,
+                                                                  True)
+        self.assertIsInstance(test_source, SimpleFaultSource)
+        self.assertIsInstance(test_source.mfd, TruncatedGRMFD)
+        self.assertAlmostEqual(test_source.mfd.b_val, 1.0)
+        self.assertIsInstance(test_source.magnitude_scaling_relationship,
+                              WC1994)
 
     def tearDown(self):
         warnings.resetwarnings()

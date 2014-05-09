@@ -53,7 +53,10 @@ general class to describe a set of seismogenic sources
 
 from openquake.nrmllib import models
 from openquake.nrmllib.hazard.writers import SourceModelXMLWriter
-
+from hmtk.sources.point_source import mtkPointSource
+from hmtk.sources.area_source import mtkAreaSource
+from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
+from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 
 class mtkSourceModel(object):
     '''
@@ -108,3 +111,39 @@ class mtkSourceModel(object):
 
         writer = SourceModelXMLWriter(filename)
         writer.serialize(output_model)
+
+    def convert_to_oqhazardlib(self, tom, simple_mesh_spacing=1.0,
+            complex_mesh_spacing=2.0, area_discretisation=10.0,
+            use_defaults=False):
+        """
+        Converts the source model to an iterator of sources of :class:
+        openquake.hazardlib.source.base.BaseSeismicSource
+        """
+        oq_source_model = []
+        for source in self.sources:
+            if isinstance(source, mtkAreaSource):
+                oq_source_model.append(source.create_oqhazardlib_source(
+                    tom,
+                    simple_mesh_spacing,
+                    area_discretisation,
+                    use_defaults))
+            elif isinstance(source, mtkPointSource):
+                oq_source_model.append(source.create_oqhazardlib_source(
+                    tom,
+                    simple_mesh_spacing,
+                    use_defaults))
+            elif isinstance(source, mtkSimpleFaultSource):
+                oq_source_model.append(source.create_oqhazardlib_source(
+                    tom,
+                    simple_mesh_spacing,
+                    use_defaults))
+            elif isinstance(source, mtkComplexFaultSource):
+                oq_source_model.append(source.create_oqhazardlib_source(
+                    tom,
+                    complex_mesh_spacing,
+                    use_defaults))
+            else:
+                raise ValueError('Source type not recognised!')
+        return oq_source_model
+
+

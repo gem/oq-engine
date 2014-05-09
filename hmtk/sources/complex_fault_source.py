@@ -59,6 +59,7 @@ from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
+from openquake.hazardlib.source.complex_fault import ComplexFaultSource
 import hmtk.sources.source_conversion_utils as conv
 
 
@@ -248,3 +249,21 @@ class mtkComplexFaultSource(object):
             conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
             conv.render_mfd(self.mfd),
             self.rake)
+
+    def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
+        """
+        Creates an instance of the source model as :class:
+        openquake.hazardlib.source.complex_fault.ComplexFaultSource
+        """
+        return ComplexFaultSource(
+            self.id,
+            self.name,
+            self.trt,
+            conv.mfd_to_hazardlib(self.mfd),
+            mesh_spacing,
+            conv.mag_scale_rel_to_hazardlib(self.mag_scale_rel, use_defaults),
+            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
+            tom,
+            self.fault_edges,
+            self.rake)
+

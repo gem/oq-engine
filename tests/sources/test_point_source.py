@@ -58,10 +58,17 @@ import numpy as np
 from copy import deepcopy
 from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
+from openquake.hazardlib.scalerel.wc1994 import WC1994
 from hmtk.sources.point_source import mtkPointSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
 
+
+TOM = PoissonTOM(50.0)
 SOURCE_ATTRIBUTES = ['mfd', 'name', 'geometry', 'nodal_plane_dist', 'typology',
                      'upper_depth', 'catalogue', 'rupt_aspect_ratio',
                      'lower_depth', 'id', 'hypo_depth_dist', 'mag_scale_rel',
@@ -321,7 +328,31 @@ class TestPointSource(unittest.TestCase):
         self.assertAlmostEqual(test_source.mfd.b_val,
                                expected_source.mfd.b_val)
 
-
+    def test_create_oq_hazardlib_point_source(self):
+        """
+        Tests the function to create a point source model
+        """
+        self.point_source = mtkPointSource('001',
+            'A Point Source',
+            trt='Active Shallow Crust',
+            geometry = Point(10., 10.),
+            upper_depth = 0.,
+            lower_depth = 20.,
+            mag_scale_rel=None,
+            rupt_aspect_ratio=1.0,
+            mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
+            nodal_plane_dist=None,
+            hypo_depth_dist=None)
+        test_source = self.point_source.create_oqhazardlib_source(TOM,
+                                                                  2.0,
+                                                                  True)
+        self.assertIsInstance(test_source, PointSource)
+        self.assertIsInstance(test_source.mfd, TruncatedGRMFD)
+        self.assertAlmostEqual(test_source.mfd.b_val, 1.0)
+        self.assertIsInstance(test_source.nodal_plane_distribution, PMF)
+        self.assertIsInstance(test_source.hypocenter_distribution, PMF)
+        self.assertIsInstance(test_source.magnitude_scaling_relationship,
+                              WC1994)
 
     def tearDown(self):
         warnings.resetwarnings()
