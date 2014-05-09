@@ -1436,11 +1436,15 @@ class HazardCurve(djm.Model):
     def build_data(self, curves_by_trt_model_gsim):
         """
         Build on the fly the hazard curves for the current realization
+        by looking at the associations stored in the database table
+        `hzrdr.assoc_lt_rlz_trt_model`.
         """
         if self.imt:
             # build_data cannot be called from real curves
             raise TypeError('%r is not a multicurve', self)
 
+        # fixed a realization, there are T associations where T is the
+        # number of TrtModels
         curves = 0
         for art in AssocLtRlzTrtModel.objects.filter(rlz=self.lt_realization):
             pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]

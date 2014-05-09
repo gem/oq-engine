@@ -65,10 +65,6 @@ CREATE INDEX hzrdr_disagg_result_location_idx on hzrdr.disagg_result using gist(
 -- lt_realization
 CREATE INDEX hzrdr_lt_model_hazard_calculation_id_idx on hzrdr.lt_source_model(hazard_calculation_id);
 
--- assoc_lt_rlz_trt_model
-CREATE INDEX hzrdr_assoc_lt_rlz_trt_model_gsim_idx
-ON hzrdr.assoc_lt_rlz_trt_model (trt_model_id, gsim);
-
 -- gmf_data
 CREATE INDEX hzrdr_gmf_data_idx on hzrdr.gmf_data(site_id);
 CREATE INDEX hzrdr_gmf_imt_idx on hzrdr.gmf_data(imt);
