@@ -128,19 +128,19 @@ class BoundingBox(object):
                 and self.south is not None)
 
 
-def _calc_pnos(gsim, r_sites, rupture, imts, imls, truncation_level,
+def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
                make_ctxt_mon, calc_poes_mon):
     # compute the probabilities of no exceedence for each IMT
     # for the given gsim and rupture; returns a list of pairs
-    # [(imt, pnos), ...]
+    # [(imt, pnes), ...]
     with make_ctxt_mon:
         sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
     with calc_poes_mon:
         for imt, levels in zip(imts, imls):
             poes = gsim.get_poes(
                 sctx, rctx, dctx, imt, levels, truncation_level)
-            pnos = rupture.get_probability_no_exceedance(poes)
-            yield r_sites.expand(pnos, placeholder=1)
+            pnes = rupture.get_probability_no_exceedance(poes)
+            yield r_sites.expand(pnes, placeholder=1)
 
 
 @tasks.oqtask
@@ -204,10 +204,10 @@ def compute_hazard_curves(
 
             # compute probabilities for all realizations
             for gsim, curv in curves.iteritems():
-                for i, pnos in enumerate(_calc_pnos(
+                for i, pnes in enumerate(_calc_pnes(
                         gsim, r_sites, rupture, sorted_imts, sorted_imls,
                         hc.truncation_level, make_ctxt_mon, calc_poes_mon)):
-                    curv[i] *= pnos
+                    curv[i] *= pnes
 
         logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
                       job_id, source.source_id, source.__class__.__name__,
@@ -254,7 +254,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         n_sites = len(self.hc.site_collection)
         self.zero = numpy.array([numpy.zeros((n_sites, len(self.imtls[imt])))
                                  for imt in sorted(self.imtls)])
-        self.one = 1. - self.zero
         total = n_rlz * len(self.imtls) * n_levels * n_sites
         logs.LOG.info('Considering %d realization(s), %d IMT(s), %d level(s) '
                       'and %d sites, total %d', n_rlz, len(self.imtls),
@@ -287,42 +286,19 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             shape as self.curves[tr_model_id, gsim][j] where gsim is the
             GSIM name and j is the IMT ordinal.
         """
-        for gsim_obj, curves in result.iteritems():
+        for gsim_obj, probs in result.iteritems():
             gsim = gsim_obj.__class__.__name__
 
-            # add a test like Yufang computation testing the broadcast
-            if (curves == 0).all():
-                self.curves[trt_model_id, gsim] = self.one - (
-                    self.one - self.curves.get(
-                        (trt_model_id, gsim), self.zero)
-                    )
-            else:
-                self.curves[trt_model_id, gsim] = self.one - (
-                    self.one - self.curves.get(
-                        (trt_model_id, gsim), self.zero)
-                    ) * (self.one - curves)
+            # TODO: add a test like Yufang computation testing the broadcast
+            # add a test with different imls lenghts
+            pnes = 1 if (probs == 0).all() else 1 - probs
+            self.curves[trt_model_id, gsim] = 1 - (
+                1 - self.curves.get((trt_model_id, gsim), self.zero)) * pnes
 
         if self.hc.poes_disagg:
             for bb in bbs:
                 self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
         self.log_percent()
-
-    def build_curves_by_rlz(self):
-        """
-        Build a dictionary with the curves keyed by realization id
-        """
-        all_rlzs = {}  # dictionary {trt_model_id: {gsim: rlzs}}
-        for trt_model in models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.hc):
-            all_rlzs[trt_model.id] = trt_model.get_rlzs_by_gsim()
-        curves_by_rlz = {}
-        for trt_model_id, gsim in list(self.curves):
-            for rlz in all_rlzs[trt_model_id][gsim]:
-                curves_by_rlz[rlz.id] = 1. - (
-                    1. - curves_by_rlz.get(rlz.id, self.zero)) * (
-                    1. - self.curves[trt_model_id, gsim])
-            del self.curves[trt_model_id, gsim]  # save memory
-        return curves_by_rlz
 
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)
@@ -333,17 +309,15 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         curve results.
         """
         imtls = self.hc.intensity_measure_types_and_levels
-        curves_by_rlz = self.build_curves_by_rlz()
-        for rlz_id in sorted(curves_by_rlz):
-            curves_by_imt = curves_by_rlz[rlz_id]
-            #del curves_by_rlz[rlz_id]  # save memory
-            rlz = models.LtRealization.objects.get(pk=rlz_id)
+        for rlz in self._get_realizations():
+            with self.monitor('building curves per realization'):
+                curves_by_imt = rlz.build_curves(self.curves)
 
             # create a new `HazardCurve` 'container' record for each
             # realization (virtual container for multiple imts)
             models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
-                    self.job, "hc-multi-imt-rlz-%s" % rlz_id,
+                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
                     "hazard_curve_multi"),
                 lt_realization=rlz,
                 imt=None,

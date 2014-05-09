@@ -2287,7 +2287,21 @@ class LtRealization(djm.Model):
 
     @property
     def sm_lt_path(self):
+        """
+        The source model logic tree path extracted from the underlying
+        source model
+        """
         return self.lt_model.sm_lt_path
+
+    def build_curves(self, curves_by_trt_model_gsim):
+        """
+        Build on the fly the hazard curves for the current realization
+        """
+        curves = 0
+        for art in AssocLtRlzTrtModel.objects.filter(rlz=self):
+            pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]
+            curves = 1. - (1. - curves) * pnes
+        return curves
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
