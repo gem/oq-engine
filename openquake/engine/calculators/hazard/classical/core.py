@@ -170,11 +170,23 @@ def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
     with make_ctxt_mon:
         sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
     with calc_poes_mon:
-        for imt, levels in zip(imts, imls):
+        for imt, levels in itertools.izip(imts, imls):
             poes = gsim.get_poes(
                 sctx, rctx, dctx, imt, levels, truncation_level)
             pnes = rupture.get_probability_no_exceedance(poes)
             yield r_sites.expand(pnes, placeholder=1)
+
+
+def all_equal(obj, value):
+    """
+    :param obj: a numpy array or something else
+    :param value: a numeric value
+    :returns: a boolean
+    """
+    if isinstance(obj, numpy.ndarray):
+        return (obj == value).all()
+    else:
+        return obj == value
 
 
 @tasks.oqtask
@@ -205,9 +217,8 @@ def compute_hazard_curves(
     sorted_imls = [hc.intensity_measure_types_and_levels[imt]
                    for imt in sorted_imts]
     sorted_imts = map(from_string, sorted_imts)
-    curves = dict(
-        (gsim, [numpy.ones([total_sites, len(ls)]) for ls in sorted_imls])
-        for gsim in gsims)
+    curves = [[numpy.ones([total_sites, len(ls)]) for ls in sorted_imls]
+              for gsim in gsims]
     if hc.poes_disagg:  # doing disaggregation
         lt_model_id = models.TrtModel.objects.get(pk=trt_model_id).lt_model.id
         bbs = [BoundingBox(lt_model_id, site_id) for site_id in sitecol.sids]
@@ -231,13 +242,14 @@ def compute_hazard_curves(
             if hc.poes_disagg:  # doing disaggregation
                 jb_dists = rupture.surface.get_joyner_boore_distance(sitemesh)
                 closest_points = rupture.surface.get_closest_points(sitemesh)
-                for bb, dist, point in zip(bbs, jb_dists, closest_points):
+                for bb, dist, point in itertools.izip(
+                        bbs, jb_dists, closest_points):
                     if dist < hc.maximum_distance:
                         # ruptures too far away are ignored
                         bb.update([dist], [point.longitude], [point.latitude])
 
             # compute probabilities for all realizations
-            for gsim, curv in curves.iteritems():
+            for gsim, curv in itertools.izip(gsims, curves):
                 for i, pnes in enumerate(_calc_pnes(
                         gsim, r_sites, rupture, sorted_imts, sorted_imls,
                         hc.truncation_level, make_ctxt_mon, calc_poes_mon)):
@@ -253,10 +265,8 @@ def compute_hazard_curves(
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    curve_dict = dict(
-        (gsim, numpy.array([0 if (c == 1.0).all() else 1. - c for c in curv]))
-        for gsim, curv in curves.iteritems())
-    return curve_dict, trt_model_id, bbs
+    cs = [[0 if all_equal(c, 1) else 1. - c for c in curv] for curv in curves]
+    return zip(gsims, cs), trt_model_id, bbs
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -320,12 +330,13 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             shape as self.curves[tr_model_id, gsim][j] where gsim is the
             GSIM name and j is the IMT ordinal.
         """
-        for gsim_obj, probs in result.iteritems():
+        for gsim_obj, probs in result:
             gsim = gsim_obj.__class__.__name__
-
+            # probabilities of no exceedence per IMT
+            pnes = numpy.array([1 if all_equal(p, 0) else 1 - p
+                                for p in probs])
             # TODO: add a test like Yufang computation testing the broadcast
             # add a test with different imls lenghts
-            pnes = 1 if (probs == 0).all() else 1 - probs
             self.curves[trt_model_id, gsim] = 1 - (
                 1 - self.curves.get((trt_model_id, gsim), self.zero)) * pnes
 
