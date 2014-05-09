@@ -36,7 +36,7 @@ def scenario(job_id, risk_model, outputdict, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
+    :param list risk_models:
       A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing

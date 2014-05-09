@@ -48,7 +48,7 @@ def make_epsilons(asset_count, num_ruptures, seed, correlation,
     :param float correlation: the correlation coefficient
     :param str epsilons_management: specify how to compute the epsilon matrix
 
-    If epsilons_management is 'full', generate the full epsilon matrix;
+    If `epsilons_management` is 'full', generate the full epsilon matrix;
     if it is 'fast' generate a vector of epsilons.
     """
     if epsilons_management == 'full':
