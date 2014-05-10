@@ -368,6 +368,8 @@ class BaseHazardCalculator(base.Calculator):
         ordinal = 0
         lt_models = models.LtSourceModel.objects.filter(
             hazard_calculation=self.hc)
+        # NB: the ordering of lt_models and rlzs_per_ltpath.itervalues()
+        # must match; it works because LtSourceModel has an ordinal field
         for lt_model, path_infos in zip(
                 lt_models, rlzs_per_ltpath.itervalues()):
             for seed, weight, sm_lt_path, gsim_lt_path in path_infos:
