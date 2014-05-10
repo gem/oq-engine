@@ -2214,6 +2214,7 @@ class LtSourceModel(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"lt_source_model'
+        ordering = ['ordinal']
 
     def __iter__(self):
         """
