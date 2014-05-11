@@ -50,9 +50,8 @@ class TestCaseWithAJob(unittest.TestCase):
                 hazard_calculation=self.job.hazard_calculation,
                 ordinal=i, sm_lt_path=[i])
             models.LtRealization(
-                lt_model=lt_model,
-                ordinal=i, seed=None, weight=1 / (i + 1),
-                gsim_lt_path=[i]).save()
+                lt_model=lt_model, ordinal=i,
+                weight=1 / (i + 1), gsim_lt_path=[i]).save()
 
 
 class OutputManagerTestCase(TestCaseWithAJob):
