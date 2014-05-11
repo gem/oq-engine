@@ -19,7 +19,6 @@
 """Common code for the hazard calculators."""
 
 import os
-import random
 import operator
 import itertools
 import collections
@@ -237,15 +236,10 @@ class BaseHazardCalculator(base.Calculator):
         smlt_file = self.hc.inputs['source_model_logic_tree']
         self.smlt = logictree.SourceModelLogicTree(
             file(smlt_file).read(), self.hc.base_path, smlt_file)
-        sm_paths = list(self.smlt.get_sm_paths())
+        sm_paths = list(self.smlt.enum_name_weight_paths())
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
-
-        # here we are doing a full enumeration of the source model logic tree;
-        # this is not bad since for very large source models there are
-        # typically very few realizations; moreover, the filtering will remove
-        # most of the sources, so the memory occupation is typically low
         lt_models = []
-        for i, (sm, path) in enumerate(sm_paths):
+        for i, (sm, weight, path) in enumerate(sm_paths):
             smpath = tuple(path)
             fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(

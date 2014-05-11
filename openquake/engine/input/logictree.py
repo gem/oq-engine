@@ -901,16 +901,6 @@ class SourceModelLogicTree(BaseLogicTree):
                 parent.remove(prev)
                 prev = node.getprevious()
 
-    def get_sm_paths(self):
-        """
-        Yield pairs (sm_name, sm_lt_path) from the full enumeration of
-        a source model logic tree.
-        """
-        for _weight, smlt_path in self.root_branchset.enumerate_paths():
-            sm_name = smlt_path[0].value
-            smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-            yield sm_name, smlt_branch_ids
-
     def make_apply_uncertainties(self, branch_ids):
         """
         Parse the path through the source model logic tree and return
