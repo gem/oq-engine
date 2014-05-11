@@ -387,22 +387,13 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing realizations")
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-
-        ordinal = 0
-        sm_data = ltp.source_model_lt.enum_name_weight_paths()
-        gs_data = ltp.gmpe_lt.enum_name_weight_paths()
-        for (_, smlt_weight, sm_lt_path), (_, gsim_weight, gsim_lt_path) in \
-                zip(sm_data, gs_data):
+        for ordinal, (_sm_name, weight, smlt_paths, gmpe_paths) in \
+                enumerate(ltp.enumerate_paths()):
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
-            if smlt_weight is None or gsim_weight is None:
-                weight = None
-            else:
-                weight = smlt_weight * gsim_weight
+                hazard_calculation=self.hc, sm_lt_path=smlt_paths)
             models.LtRealization.objects.create(
-                lt_model=lt_model, gsim_lt_path=gsim_lt_path,
+                lt_model=lt_model, gsim_lt_path=gmpe_paths,
                 weight=weight, ordinal=ordinal)
-            ordinal += 1
 
     def _get_outputs_for_export(self):
         """
