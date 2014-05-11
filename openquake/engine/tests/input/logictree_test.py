@@ -594,7 +594,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         error = 'applyToBranches must reference only branches ' \
                 'from previous branching level'
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
 
     def test_gmpe_uncertainty(self):
         lt = _make_nrml("""\
@@ -626,7 +626,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         error = 'uncertainty of type "gmpeModel" is not allowed ' \
                 'in source model logic tree'
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
 
     def test_filters_on_first_branching_level(self):
         filters = ('applyToSources="src01"',
@@ -653,7 +653,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             self.assertEqual(exc.lineno, 4)
             error = 'filters are not allowed on source model uncertainty'
             self.assertEqual(exc.message, error,
-                            "wrong exception message: %s" % exc.message)
+                             "wrong exception message: %s" % exc.message)
 
     def test_referencing_nonexistent_source(self):
         lt = _make_nrml("""\
@@ -685,7 +685,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.lineno, 14)
         error = "source with id 'bzzz' is not defined in source models"
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
 
     def test_referencing_nonexistent_tectonic_region_type(self):
         lt = _make_nrml("""\
@@ -718,7 +718,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         error = "source models don't define sources of " \
                 "tectonic region type 'Volcanic'"
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
 
     def test_referencing_nonexistent_source_type(self):
         lt = _make_nrml("""\
@@ -750,7 +750,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.lineno, 14)
         error = "source models don't define sources of type 'complexFault'"
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
 
     def test_more_than_one_filters_on_one_branchset(self):
         lt = _make_nrml("""\
@@ -784,7 +784,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.lineno, 16)
         error = 'only one filter is allowed per branchset'
         self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
 
     def test_wrong_filter_on_absolute_uncertainties(self):
         uncertainties_and_values = [('abGRAbsolute', '123 45'),
@@ -962,7 +962,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
             error = 'branch sets in gmpe logic tree must define only ' \
                     '"applyToTectonicRegionType" filter'
             self.assertEqual(exc.message, error,
-                            "wrong exception message: %s" % exc.message)
+                             "wrong exception message: %s" % exc.message)
 
     def test_unused_tectonic_region_type(self):
         gmpe = _make_nrml("""\
@@ -1136,13 +1136,12 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
             validate=False)
         self.assert_branchset_equal(lt.root_branchset,
-            'sourceModel', {},
-            [('b1', '1.0', 'sm',
-                ('maxMagGRRelative', {},
-                    [('b2', '0.6', +123),
-                     ('b3', '0.4', -123)])
-            )]
-        )
+                                    'sourceModel', {},
+                                    [('b1', '1.0', 'sm',
+                                      ('maxMagGRRelative', {},
+                                       [('b2', '0.6', +123),
+                                        ('b3', '0.4', -123)])
+                                      )])
 
     def test_filters(self):
         source_model_logic_tree = _make_nrml("""\
@@ -1176,14 +1175,14 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         lt = _TestableSourceModelLogicTree(
             'lt', {'lt': source_model_logic_tree, 'sm': sm}, '/base',
             validate=False)
-        self.assert_branchset_equal(lt.root_branchset,
+        self.assert_branchset_equal(
+            lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', 'sm',
-                ('abGRAbsolute', {'applyToSources': ['src01']},
-                    [('b2', '0.9', (100, 500)),
-                     ('b3', '0.1', (-1.23, +0.1))])
-            )]
-        )
+              ('abGRAbsolute', {'applyToSources': ['src01']},
+               [('b2', '0.9', (100, 500)),
+                ('b3', '0.1', (-1.23, +0.1))])
+              )])
 
     def test_apply_to_branches(self):
         source_model_logic_tree = _make_nrml("""\
@@ -1231,22 +1230,23 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             'lt', {'lt': source_model_logic_tree,
                    'sm1': sm, 'sm2': sm, 'sm3': sm},
             '/base', validate=False)
-        self.assert_branchset_equal(lt.root_branchset,
+        self.assert_branchset_equal(
+            lt.root_branchset,
             'sourceModel', {},
             [('sb1', '0.6', 'sm1',
-                ('bGRRelative', {},
-                    [('b2', '1.0', +1)]
-                )),
+              ('bGRRelative', {},
+               [('b2', '1.0', +1)]
+               )),
              ('sb2', '0.3', 'sm2',
-                 ('maxMagGRAbsolute', {'applyToSources': ['src01']},
-                    [('b3', '1.0', -3)]
-                )),
+              ('maxMagGRAbsolute', {'applyToSources': ['src01']},
+               [('b3', '1.0', -3)]
+               )),
              ('sb3', '0.1', 'sm3',
-                ('bGRRelative', {},
-                    [('b2', '1.0', +1)]
-                ))
-            ]
-        )
+              ('bGRRelative', {},
+               [('b2', '1.0', +1)]
+               ))
+             ]
+            )
         sb1, sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.child_branchset is sb3.child_branchset)
 
@@ -1753,18 +1753,20 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         # this is an example with number_of_logic_tree_samples = 1
         cfg = helpers.get_data_path('classical_job.ini')
         job = helpers.get_job(cfg)
-        self.proc = logictree.LogicTreeProcessor.from_hc(
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(
+            job.hazard_calculation)
+        self.gmpe_lt = logictree.GMPELogicTree.from_hc(
             job.hazard_calculation)
 
     def test_sample_source_model(self):
-        [(sm_name, weight, branch_ids)] = self.proc.source_model_lt.\
+        [(sm_name, weight, branch_ids)] = self.source_model_lt.\
             enum_name_weight_paths()
         self.assertEqual(sm_name, 'example-source-model.xml')
         self.assertIsNone(weight)
         self.assertEqual(['b1', 'b5', 'b8'], branch_ids)
 
     def test_sample_gmpe(self):
-        [(gmpe_cls, weight, branch_ids)] = self.proc.gmpe_lt.\
+        [(gmpe_cls, weight, branch_ids)] = self.gmpe_lt.\
             enum_name_weight_paths()
         self.assertEqual(gmpe_cls.__name__, 'ChiouYoungs2008')
         self.assertIsNone(weight)
@@ -1772,9 +1774,9 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 
     def test_enumerate_paths(self):
         # testing full enumeration
-        self.proc.source_model_lt.num_samples = 0
-        self.proc.gmpe_lt.num_samples = 0
-        paths = self.proc.enumerate_paths()
+        self.source_model_lt.num_samples = 0
+        self.gmpe_lt.num_samples = 0
+        paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
         ae = self.assertEqual
         ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
                           ['b1', 'b3', 'b6'], ['b1', 'b3']))
@@ -1826,19 +1828,23 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
             self.uncertainties_applied.append(fingerprint)
         self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
         logictree.BranchSet.apply_uncertainty = apply_uncertainty
-        self.proc = logictree.LogicTreeProcessor.from_hc(
+
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(
+            job.hazard_calculation)
+        self.gmpe_lt = logictree.GMPELogicTree.from_hc(
             job.hazard_calculation)
 
     def tearDown(self):
         logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
 
     def test_parse_source_model_logictree_path(self):
-        self.proc.parse_source_model_logictree_path(['b1', 'b5', 'b8'])(None)
+        make_apply_un = self.source_model_lt.make_apply_uncertainties
+        make_apply_un(['b1', 'b5', 'b8'])(None)
         self.assertEqual(self.uncertainties_applied,
                          [('maxMagGRRelative', -0.2),
                           ('bGRRelative', -0.1)])
         del self.uncertainties_applied[:]
-        self.proc.parse_source_model_logictree_path(['b1', 'b3', 'b6'])(None)
+        make_apply_un(['b1', 'b3', 'b6'])(None)
         self.assertEqual(self.uncertainties_applied,
                          [('maxMagGRRelative', 0.2),
                           ('bGRRelative', 0.1)])
@@ -1846,13 +1852,13 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
     def test_parse_gmpe_model_logictree_path(self):
         from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
         from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
-        gmpes = self.proc.parse_gmpe_logictree_path(['b2', 'b3'])
+        gmpes = self.gmpe_lt.make_trt_to_gsim(['b2', 'b3'])
         self.assertIs(gmpes.pop('Active Shallow Crust'), ChiouYoungs2008)
         self.assertIs(gmpes.pop('Subduction Interface'),
                       SadighEtAl1997)
         self.assertEqual(gmpes, {})
 
-        gmpes = self.proc.parse_gmpe_logictree_path(['b1', 'b3'])
+        gmpes = self.gmpe_lt.make_trt_to_gsim(['b1', 'b3'])
         self.assertIs(gmpes.pop('Active Shallow Crust'), SadighEtAl1997)
         self.assertIs(gmpes.pop('Subduction Interface'), SadighEtAl1997)
         self.assertEqual(gmpes, {})
@@ -1868,11 +1874,11 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
         nrml_to_hazardlib = NrmlHazardlibConverter(job.hazard_calculation)
         base_path = job.hazard_calculation.base_path
 
-        proc = logictree.LogicTreeProcessor.from_hc(
+        source_model_lt = logictree.SourceModelLogicTree.from_hc(
             job.hazard_calculation)
 
-        [branch] = proc.source_model_lt.root_branchset.branches
-        all_branches = proc.source_model_lt.branches
+        [branch] = source_model_lt.root_branchset.branches
+        all_branches = source_model_lt.branches
         path = iter(path)
         while branch.child_branchset is not None:
             nextbranch = all_branches[next(path)]
@@ -1881,10 +1887,10 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
             branch = nextbranch
         assert list(path) == []
 
-        [(sm_path, weight, branch_ids)] = proc.source_model_lt.\
+        [(sm_path, weight, branch_ids)] = source_model_lt. \
             enum_name_weight_paths()
         self.assertEqual(expected_branch_ids, branch_ids)
-        modify_source = proc.parse_source_model_logictree_path(branch_ids)
+        modify_source = source_model_lt.make_apply_uncertainties(branch_ids)
 
         expected_result_path = os.path.join(base_path, expected_result)
         e_nrml_sources = SourceModelParser(expected_result_path).parse()
