@@ -1093,7 +1093,8 @@ class LogicTreeProcessor(object):
 
     def enumerate_paths(self):
         """
-        Generate all the possible paths through both logic trees.
+        Generate the possible paths through both logic trees. If
+        num_samples is nonzero, samples are taken.
 
         :returns:
             Generator of four items:
@@ -1106,13 +1107,22 @@ class LogicTreeProcessor(object):
         """
         smlt_paths_gen = self.source_model_lt.enum_name_weight_paths
         gmpelt_paths_gen = self.gmpe_lt.enum_name_weight_paths
-        for smlt_name, smlt_weight, smlt_paths in smlt_paths_gen():
-            for gmpe_name, gmpe_weight, gmpe_paths in gmpelt_paths_gen():
+        if self.source_model_lt.num_samples:  # sampling
+            for (name, smlt_weight, smlt_paths), (_, gmpe_weight, gmpe_paths) \
+                    in zip(smlt_paths_gen(), gmpelt_paths_gen()):
                 if smlt_weight is None or gmpe_weight is None:
                     weight = None
                 else:
                     weight = smlt_weight * gmpe_weight
-                yield smlt_name, weight, smlt_paths, gmpe_paths
+                yield name, weight, smlt_paths, gmpe_paths
+        else:  # full enumeration
+            for smlt_name, smlt_weight, smlt_paths in smlt_paths_gen():
+                for gmpe_name, gmpe_weight, gmpe_paths in gmpelt_paths_gen():
+                    if smlt_weight is None or gmpe_weight is None:
+                        weight = None
+                    else:
+                        weight = smlt_weight * gmpe_weight
+                    yield smlt_name, weight, smlt_paths, gmpe_paths
 
     def parse_source_model_logictree_path(self, branch_ids):
         """
