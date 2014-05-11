@@ -185,8 +185,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             job = helpers.run_job(self.cfg)
         hc = job.hazard_calculation
-        [(rlz1, rlz2)] = models.LtSourceModel.objects.filter(
-            hazard_calculation=hc.id)
+        [rlz1, rlz2] = models.LtRealization.objects.filter(
+            lt_model__hazard_calculation=hc.id)
 
         # check that the parameters are read correctly from the files
         self.assertEqual(hc.ses_per_logic_tree_path, 5)
@@ -246,7 +246,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for args in arg_gen:  # args is (job_id, sitecol, src_seed_pairs, ...)
+            for args in arg_gen:
+                # args is (job_id, sitecol, src_seed_pairs, ...)
                 for src, seed in args[2]:
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
