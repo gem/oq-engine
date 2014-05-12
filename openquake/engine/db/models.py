@@ -2300,7 +2300,6 @@ class LtRealization(djm.Model):
 
     lt_model = djm.ForeignKey('LtSourceModel')
     ordinal = djm.IntegerField()
-    seed = djm.IntegerField()
     weight = djm.DecimalField(decimal_places=100, max_digits=101)
     gsim_lt_path = fields.CharArrayField()
 

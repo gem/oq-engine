@@ -169,7 +169,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(1, len(outputs))
 
         # With this job configuration, we have 2 logic tree realizations
-        # for the GMPEs
         [lt_model] = models.LtSourceModel.objects.filter(hazard_calculation=hc)
         self.assertEqual(2, len(list(lt_model)))
 
@@ -186,8 +185,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             job = helpers.run_job(self.cfg)
         hc = job.hazard_calculation
-        [(rlz1, rlz2)] = models.LtSourceModel.objects.filter(
-            hazard_calculation=hc.id)
+        [rlz1, rlz2] = models.LtRealization.objects.filter(
+            lt_model__hazard_calculation=hc.id)
 
         # check that the parameters are read correctly from the files
         self.assertEqual(hc.ses_per_logic_tree_path, 5)
@@ -205,8 +204,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         num_gmf2 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz2).count()
 
-        # with concurrent_tasks=64, this test generates 17 tasks, but
-        # only 15 gives nonzero contribution
+        # with concurrent_tasks=64, this test generates several tasks, but
+        # only 15 give nonzero contributions
         self.assertEqual(num_gmf1, 242 * 15)
         self.assertEqual(num_gmf2, 242 * 15)
 
@@ -223,13 +222,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(20, maps.count())
 
     def test_task_arg_gen(self):
-        hc = self.job.hazard_calculation
         self.calc.pre_execute()
-
-        # create the ses collection
-        lt_model = models.LtSourceModel.objects.get(hazard_calculation=hc)
-        self.calc.initialize_ses_db_records(lt_model)
-
         # this is also testing the splitting of fault sources
         expected = [  # source_id, seed
             ('3-0', 540589706),
@@ -247,7 +240,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for args in arg_gen:  # args is (job_id, sitecol, src_seed_pairs, ...)
+            for args in arg_gen:
+                # args is (job_id, sitecol, src_seed_pairs, ...)
                 for src, seed in args[2]:
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
