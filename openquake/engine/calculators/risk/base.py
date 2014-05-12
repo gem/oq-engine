@@ -30,13 +30,13 @@ from openquake.engine.calculators.risk import \
 from openquake.engine.utils import config
 from openquake.risklib.workflows import RiskModel
 
-MEMORY_ERROR = '''Running the calculation will require approximately %dM,
-i.e. more than the memory which is available right now (%dM). Please
-increase the free memory or reduce the number of sites, realizations,
-intensity measure types, intensity levels. Alternatively you can
-set epsilons_management=fast in openquake.cfg. It the correlation is
-nonzero, consider setting asset_correlation=0 to avoid building
-the correlation matrix.'''
+MEMORY_ERROR = '''Running the calculation will require approximately
+%dM, i.e. more than the memory which is available right now (%dM).
+Please increase the free memory or apply a stringent region
+constraint to reduce the number of assets. Alternatively you can set
+epsilons_management=fast in openquake.cfg. It the correlation is
+nonzero, consider setting asset_correlation=0 to avoid building the
+correlation matrix.'''
 
 
 class RiskCalculator(base.Calculator):
