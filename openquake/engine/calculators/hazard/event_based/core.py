@@ -60,7 +60,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 
 @tasks.oqtask
 def compute_ses_and_gmfs(
-        job_id, sitecol, src_seeds, lt_model, gsims, task_no):
+        job_id, sitecol, src_seeds, trt_model_id, gsims, task_no):
     """
     Celery task for the stochastic event set calculator.
 
@@ -84,8 +84,9 @@ def compute_ses_and_gmfs(
     :param task_no:
         an ordinal so that GMV can be collected in a reproducible order
     """
-    # NB: all realizations in gsim_by_rlz correspond to the same source model
-    ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
+    # NB: all realizations in gsims correspond to the same source model
+    trt_model = models.TrtModel.objects.get(pk=trt_model_id)
+    ses_coll = models.SESCollection.objects.get(lt_model=trt_model.lt_model)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = list(ses_coll)
@@ -95,7 +96,8 @@ def compute_ses_and_gmfs(
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
 
-    gmfcollector = GmfCollector(params, imts, gsims)
+    gmfcollector = GmfCollector(
+        params, imts, gsims, trt_model.get_rlzs_by_gsim())
 
     filter_sites_mon = LightMonitor(
         'filtering sites', job_id, compute_ses_and_gmfs)
@@ -202,19 +204,22 @@ class GmfCollector(object):
     """
     A class to compute and save ground motion fields.
     """
-    def __init__(self, params, imts, gsims):
+    def __init__(self, params, imts, gsims, rlzs):
         """
         :param params:
             a dictionary of parameters with keys
             correl_model, truncation_level, maximum_distance
         :param imts:
             a list of hazardlib intensity measure types
-        :param gsim_by_rlz:
+        :param gsims:
             a list of distinct GSIM instances
+        :param rlzs:
+            a dictionary returning the realizations per GSIM string
         """
         self.params = params
         self.imts = imts
         self.gsims = gsims
+        self.rlzs = rlzs
         # NB: I tried to use a single dictionary
         # {site_id: [(gmv, rupt_id),...]} but it took a lot more memory (MS)
         self.gmvs_per_site = collections.defaultdict(list)
@@ -236,7 +241,6 @@ class GmfCollector(object):
         :param seed:
             an integer to be used as stochastic seed
         """
-        # NB: cache for gsims not implemented yet
         for gsim in self.gsims:
             gmf_calc_kwargs = {
                 'rupture': rupture,
@@ -256,11 +260,11 @@ class GmfCollector(object):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
-                        for rlz_id in gsim.rlz_ids:
+                        for rlz in self.rlzs[gsim.__class__.__name__]:
                             self.gmvs_per_site[
-                                rlz_id, imt, site_id].append(gmv)
+                                rlz.id, imt, site_id].append(gmv)
                             self.ruptures_per_site[
-                                rlz_id, imt, site_id].append(rupture_id)
+                                rlz.id, imt, site_id].append(rupture_id)
 
     @transaction.commit_on_success(using='job_init')
     def save_gmfs(self, task_no):
