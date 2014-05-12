@@ -409,11 +409,6 @@ class ProbabilisticEventBased(object):
     def __call__(self, loss_type, assets, ground_motion_values, epsilons,
                  event_ids):
         """
-        :returns:
-            a
-            :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
-            instance.
-
         :param str loss_type: the loss type considered
 
         :param assets:
@@ -428,6 +423,11 @@ class ProbabilisticEventBased(object):
 
         :param event_ids:
            a numpy array of R event ID (integer)
+
+        :returns:
+            a
+            :class:`openquake.risklib.workflows.ProbabilisticEventBased.Output`
+            instance.
         """
         loss_matrix = self.vulnerability_functions[loss_type].apply_to(
             ground_motion_values, epsilons)
