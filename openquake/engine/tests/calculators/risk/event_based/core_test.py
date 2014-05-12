@@ -32,8 +32,9 @@ class EventBasedRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
 
         self.calculator = event_based.EventBasedRiskCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
-        self.calculator.pre_execute()
         self.job.is_running = True
+        self.job.save()
+        self.calculator.pre_execute()
         self.job.status = 'executing'
         self.job.save()
 
