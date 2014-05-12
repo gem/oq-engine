@@ -67,7 +67,6 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         actual_data = self.actual_data(job)
 
         # assert actual_data, 'Got no actual data!'
-
         for i, actual in enumerate(actual_data):
             numpy.testing.assert_allclose(
                 expected_data[i], actual,
@@ -83,9 +82,10 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
         result_dir = tempfile.mkdtemp()
 
         try:
+            haz_job = self.get_hazard_job()
             job = self.run_risk(
                 self._test_path('job_risk.ini'),
-                self.hazard_id(self.get_hazard_job()))
+                self.hazard_id(haz_job))
 
             self.check_outputs(job)
 

@@ -74,6 +74,7 @@ def import_gmf_scenario(fileobj):
         for line in fileobj:
             rows.append(line.split('\t'))
     import_rows(hc, gmf_coll, rows)
+    hc.number_of_ground_motion_fields = len(rows)
     hc.save()  # update intensity_measure_types_and_levels
     job.hazard_calculation = hc
     job.duration = time.time() - t0
