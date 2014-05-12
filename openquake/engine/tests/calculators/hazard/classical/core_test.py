@@ -45,7 +45,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_sources(self):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
-        # after splitting/grouping the source model contains 22 blocks
+        # after splitting/grouping the source model contains 21 blocks
         blocks = self.calc.source_blocks_per_ltpath[
             ('b1',), 'Active Shallow Crust']
         self.assertEqual(21, len(blocks))
@@ -113,12 +113,10 @@ store_site_model'
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr1.ordinal)
-        self.assertEqual(23, ltr1.seed)
         self.assertEqual(['b1'], ltr1.sm_lt_path)
         self.assertEqual(['b1'], ltr1.gsim_lt_path)
 
         self.assertEqual(1, ltr2.ordinal)
-        self.assertEqual(1685488378, ltr2.seed)
         self.assertEqual(['b1'], ltr2.sm_lt_path)
         self.assertEqual(['b1'], ltr2.gsim_lt_path)
 
@@ -137,7 +135,6 @@ store_site_model'
 
         # Check each ltr contents, just to be thorough.
         self.assertEqual(0, ltr.ordinal)
-        self.assertEqual(None, ltr.seed)
         self.assertEqual(['b1'], ltr.sm_lt_path)
         self.assertEqual(['b1'], ltr.gsim_lt_path)
 
