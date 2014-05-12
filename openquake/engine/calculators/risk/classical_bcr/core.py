@@ -28,7 +28,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical_bcr(job_id, units, outputdict, _params):
+def classical_bcr(job_id, risk_model, outputdict, _params):
     """
     Celery task for the BCR risk calculator based on the classical
     calculator.
@@ -38,8 +38,8 @@ def classical_bcr(job_id, units, outputdict, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
-      A list of :class:`openquake.risklib.workflows.CalculationUnit`
+    :param risk_model:
+      A :class:`openquake.risklib.workflows.RiskModel` instance
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `BCRDistribution`)
@@ -53,23 +53,20 @@ def classical_bcr(job_id, units, outputdict, _params):
     # Do the job in other functions, such that it can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        for loss_type, workflow, getters in units:
-            do_classical_bcr(
-                loss_type, workflow, getters,
-                outputdict.with_args(loss_type=loss_type), monitor)
+        do_classical_bcr(risk_model, outputdict, monitor)
 
 
-def do_classical_bcr(loss_type, workflow, getters, outputdict, monitor):
-    outputs = workflow.compute_all_outputs(
-        getters, loss_type, monitor.copy('getting hazard'))
-
-    with monitor.copy('writing results'):
-        for out in outputs:
-            outputdict.write(
-                workflow.assets,
-                out.output,
-                output_type="bcr_distribution",
-                hazard_output_id=out.hid)
+def do_classical_bcr(risk_model, outputdict, monitor):
+    out = risk_model.compute_outputs(monitor.copy('getting hazard'))
+    for loss_type, outputs in out.iteritems():
+        outputdict = outputdict.with_args(loss_type=loss_type)
+        with monitor.copy('writing results'):
+            for out in outputs:
+                outputdict.write(
+                    risk_model.workflow.assets,
+                    out.output,
+                    output_type="bcr_distribution",
+                    hazard_output_id=out.hid)
 
 
 class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
@@ -88,34 +85,16 @@ class ClassicalBCRRiskCalculator(classical.ClassicalRiskCalculator):
 
     output_builders = [writers.BCRMapBuilder]
 
-    def __init__(self, job):
-        super(ClassicalBCRRiskCalculator, self).__init__(job)
-        self.risk_models_retrofitted = None
+    getter_class = hazard_getters.HazardCurveGetter
 
-    def calculation_unit(self, loss_type, assets):
-        taxonomy = assets[0].taxonomy
-        model_orig = self.risk_models[taxonomy][loss_type]
-        model_retro = self.risk_models_retrofitted[taxonomy][loss_type]
-        max_dist = self.rc.best_maximum_distance
-        return (
-            loss_type,
-            workflows.ClassicalBCR(
-                model_orig.vulnerability_function,
-                model_retro.vulnerability_function,
-                self.rc.lrem_steps_per_interval,
-                self.rc.interest_rate,
-                self.rc.asset_life_expectancy),
-            [hazard_getters.BCRGetter(
-                hazard_getters.HazardCurveGetterPerAsset(
-                    ho, assets, max_dist, model_orig.imt),
-                hazard_getters.HazardCurveGetterPerAsset(
-                    ho, assets, max_dist, model_retro.imt))
-             for ho in self.rc.hazard_outputs()])
+    bcr = True
 
-    def pre_execute(self):
+    def get_workflow(self, vf_orig, vf_retro):
         """
-        Store both the risk model for the original asset configuration
-        and the risk model for the retrofitted one.
+        Set the attributes .workflow and .getters
         """
-        super(ClassicalBCRRiskCalculator, self).pre_execute()
-        self.risk_models_retrofitted = self.get_risk_models(retrofitted=True)
+        return workflows.ClassicalBCR(
+            vf_orig, vf_retro,
+            self.rc.lrem_steps_per_interval,
+            self.rc.interest_rate,
+            self.rc.asset_life_expectancy)
