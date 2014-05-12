@@ -149,14 +149,17 @@ def compare_hazard_curve_with_csv(
         reader = csv.reader(f, delimiter=csv_delimiter)
         expected_data = [map(float, row) for row in reader]
 
-    numpy.testing.assert_allclose(expected_data, data, rtol=rtol)
-    # to debug the test, in case it breaks, comment the assert and
-    # uncomment the following, lines then compare the expected file with
-    # the file generated from the computed data and stored in /tmp:
-    # import os
-    # tmp = os.path.join('/tmp', os.path.basename(csv_name))
-    # print 'saving', tmp
-    # print >> open(tmp, 'w'), '\n'.join(' '.join(map(str, r)) for r in data)
+    try:
+        numpy.testing.assert_allclose(expected_data, data, rtol=rtol)
+    except:
+        # to debug the test, in case it breaks, comment the assert and
+        # uncomment the following, lines then compare the expected file with
+        # the file generated from the computed data and stored in /tmp:
+        #import os
+        #tmp = os.path.join('/tmp', os.path.basename(csv_name))
+        #print 'saving', tmp
+        #print >>open(tmp, 'w'), '\n'.join(' '.join(map(str, r)) for r in data)
+        raise
 
 aac = lambda a, b: numpy.testing.assert_allclose(a, b, atol=1e-5)
 
