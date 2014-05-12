@@ -546,7 +546,7 @@ class BaseLogicTree(object):
         modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
         return modelname, branch_ids
 
-    def enum_name_weight_paths(self):
+    def gen_value_weight_path(self):
         """
         Yield triples (name, weight, paths). Notice that
         weight is not None only when the number_of_logic_tree_samples
@@ -928,7 +928,7 @@ class SourceModelLogicTree(BaseLogicTree):
         """
         branchset = self.root_branchset
         branchsets_and_uncertainties = []
-        branch_ids = branch_ids[::-1]
+        branch_ids = list(branch_ids[::-1])
 
         while branchset is not None:
             branch = branchset.get_branch_by_id(branch_ids.pop(-1))
@@ -1107,8 +1107,8 @@ def enumerate_paths(source_model_lt, gmpe_lt):
         #. List of source-model logic tree branch ids.
         #. List of GMPE logic tree branch ids.
     """
-    smlt_paths_gen = source_model_lt.enum_name_weight_paths
-    gmpelt_paths_gen = gmpe_lt.enum_name_weight_paths
+    smlt_paths_gen = source_model_lt.gen_value_weight_path
+    gmpelt_paths_gen = gmpe_lt.gen_value_weight_path
     sm_ordinal = 0
     if source_model_lt.num_samples:  # sampling
         for (_, smlt_weight, smlt_paths), (_, gmpe_weight, gmpe_paths) \
