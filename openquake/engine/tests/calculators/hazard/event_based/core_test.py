@@ -92,23 +92,24 @@ class GmfCollectorTestCase(unittest.TestCase):
         rup_id, rup_seed = 42, 44
         rup = FakeRupture(rup_id, trt)
         pga = PGA()
-        rlz_id = 1
-        gsim.rlz_ids = [rlz_id]
-        coll = core.GmfCollector(params, [pga], [gsim])
+        rlz = mock.Mock()
+        rlz.id = 1
+        rlzs = dict(AkkarBommer2010=[rlz])
+        coll = core.GmfCollector(params, [pga], [gsim], rlzs)
         coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
-            (rlz_id, pga, 0): [rup_id],
-            (rlz_id, pga, 1): [rup_id],
-            (rlz_id, pga, 2): [rup_id],
-            (rlz_id, pga, 3): [rup_id],
-            (rlz_id, pga, 4): [rup_id],
+            (rlz.id, pga, 0): [rup_id],
+            (rlz.id, pga, 1): [rup_id],
+            (rlz.id, pga, 2): [rup_id],
+            (rlz.id, pga, 3): [rup_id],
+            (rlz.id, pga, 4): [rup_id],
         }
         expected_gmvs = {
-            (rlz_id, pga, 0): [0.1027847118266612],
-            (rlz_id, pga, 1): [0.02726361912605336],
-            (rlz_id, pga, 2): [0.0862595971325641],
-            (rlz_id, pga, 3): [0.04727148908077005],
-            (rlz_id, pga, 4): [0.04750575818347277],
+            (rlz.id, pga, 0): [0.1027847118266612],
+            (rlz.id, pga, 1): [0.02726361912605336],
+            (rlz.id, pga, 2): [0.0862595971325641],
+            (rlz.id, pga, 3): [0.04727148908077005],
+            (rlz.id, pga, 4): [0.04750575818347277],
         }
         numpy.testing.assert_equal(coll.ruptures_per_site, expected_rups)
         for i, gmvs in expected_gmvs.iteritems():
