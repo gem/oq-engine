@@ -458,7 +458,7 @@ def create_gmf(hazard_job, rlz=None):
     rlz = rlz or models.LtRealization.objects.create(
         lt_model=models.LtSourceModel.objects.create(
             hazard_calculation=hc, ordinal=0, sm_lt_path="test_sm"),
-        ordinal=0, seed=1, weight=None, gsim_lt_path="test_gsim")
+        ordinal=0, weight=None, gsim_lt_path="test_gsim")
 
     gmf = models.Gmf.objects.create(
         output=models.Output.objects.create_output(
@@ -596,7 +596,7 @@ def get_fake_risk_job(risk_cfg, hazard_cfg, output_type="curve",
         ordinal=1, sm_lt_path="test_sm")
 
     rlz = models.LtRealization.objects.create(
-        lt_model=lt_model, ordinal=1, seed=1, weight=None,
+        lt_model=lt_model, ordinal=1, weight=None,
         gsim_lt_path="test_gsim")
 
     if output_type == "curve":
