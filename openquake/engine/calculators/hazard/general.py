@@ -182,12 +182,11 @@ class BaseHazardCalculator(base.Calculator):
         """
         task_no = 0
         sitecol = self.hc.site_collection
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
         for lt_model in models.LtSourceModel.objects.filter(
                 hazard_calculation=self.hc):
             ltpath = tuple(lt_model.sm_lt_path)
             rlz_gsim_dicts = [
-                (rlz, ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path))
+                (rlz, self.gmpe_lt.make_trt_to_gsim(rlz.gsim_lt_path))
                 for rlz in lt_model]
             for trt in lt_model.get_tectonic_region_types():
                 # for a given trt, different realizations may correspond
@@ -233,12 +232,8 @@ class BaseHazardCalculator(base.Calculator):
             a list with the number of sources for each source model
         """
         logs.LOG.progress("initializing sources")
-        smlt_file = self.hc.inputs['source_model_logic_tree']
-        self.smlt = logictree.SourceModelLogicTree(
-            file(smlt_file).read(), self.hc.base_path, smlt_file,
-            seed=self.hc.random_seed,
-            num_samples=self.hc.number_of_logic_tree_samples)
-        sm_paths = distinct(self.smlt.enum_name_weight_paths())
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
+        sm_paths = distinct(self.source_model_lt.enum_name_weight_paths())
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
         lt_models = []
         for i, (sm, weight, smpath) in enumerate(sm_paths):
@@ -246,7 +241,7 @@ class BaseHazardCalculator(base.Calculator):
             source_collector = source.parse_source_model_smart(
                 fname,
                 self.hc.sites_affected_by,
-                self.smlt.make_apply_uncertainties(list(smpath)),
+                self.source_model_lt.make_apply_uncertainties(list(smpath)),
                 self.hc)
             if not source_collector.source_weights:
                 raise RuntimeError(
@@ -381,9 +376,10 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        for ordinal, (sm_ordinal, weight, smlt_paths, gmpe_paths) in \
-                enumerate(ltp.enumerate_paths()):
+        self.gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc)
+        paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
+        for ordinal, (sm_ordinal, weight, smlt_paths, gmpe_paths) in enumerate(
+                paths):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.hc, sm_lt_path=smlt_paths)
             models.LtRealization.objects.create(
