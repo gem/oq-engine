@@ -23,22 +23,29 @@ import mock
 from openquake.engine.calculators.risk import validation
 from openquake.engine.db import models
 
+from openquake.risklib.workflows import RiskModel
+
 
 class HazardIMTTestCase(unittest.TestCase):
     def test_get_error(self):
+        vf1 = mock.Mock()
+        vf1.imt = 'PGA'
+        vf2 = mock.Mock()
+        vf2.imt = 'PGV'
         calc = mock.Mock()
+        workflow = mock.Mock()
+        workflow.vulnerability_functions = dict(
+            structural=vf1, nonstructural=vf2)
         calc.risk_models = {
-            'tax1': {
-                'loss1': models.RiskModel('imt1', None, None)},
-            'tax2': {
-                'loss2': models.RiskModel('imt2', None, None)}}
-        calc.hc.get_imts = mock.Mock(return_value=['imt1', 'imt2'])
+            'tax1': RiskModel('tax1', workflow),
+            'tax2': RiskModel('tax2', workflow)}
+        calc.hc.get_imts = mock.Mock(return_value=['PGA', 'PGV'])
         val = validation.HazardIMT(calc)
 
         self.assertIsNone(val.get_error())
-        calc.hc.get_imts = mock.Mock(return_value=['imt1'])
-        self.assertEqual(("There is no hazard output for: imt2. "
-                          "The available IMTs are: imt1."), val.get_error())
+        calc.hc.get_imts = mock.Mock(return_value=['PGA'])
+        self.assertEqual(("There is no hazard output for: PGV. "
+                          "The available IMTs are: PGA."), val.get_error())
 
 
 class EmptyExposureTestCase(unittest.TestCase):
@@ -82,13 +89,14 @@ class ExposureLossTypesTestCase(unittest.TestCase):
         calc = mock.Mock()
         val = validation.ExposureLossTypes(calc)
 
-        calc.risk_models = {'RM': {'loss_type': mock.Mock()}}
+        calc.loss_types = models.LOSS_TYPES
+        calc.risk_models = {'RM': mock.Mock()}
 
         calc.rc.exposure_model.supports_loss_type = mock.Mock(
             return_value=False)
 
         self.assertEqual(("Invalid exposure "
-                          "for computing loss type loss_type. "),
+                          "for computing loss type structural. "),
                          val.get_error())
 
         calc.rc.exposure_model.supports_loss_type = mock.Mock(
