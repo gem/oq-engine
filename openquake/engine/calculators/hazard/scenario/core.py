@@ -91,8 +91,9 @@ def save_gmf(gmf_id, gmf_dict, sites, task_no):
     :param sites:
         An :class:`openquake.hazardlib.site.SiteCollection` object
     """
-    inserter = writer.CacheInserter(models.GmfData, 100)
-    # NB: GmfData may contain large arrays and the cache may become large
+    inserter = writer.CacheInserter(models.GmfData, 10000)
+    # insert GmfData in blocks of 10,000 sites
+    # NB: GmfData contains arrays of lenght 1
 
     for imt, gmfs_ in gmf_dict.iteritems():
         # ``gmfs`` comes in as a numpy.matrix
