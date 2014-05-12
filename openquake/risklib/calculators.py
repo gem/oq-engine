@@ -70,20 +70,6 @@ def EventBasedLossCurve(time_span, tses, curve_resolution):
             time_span=time_span, tses=tses))
 
 
-def Damage(fragility_functions):
-    """
-    :param fragility_functions:
-       an iterator over callables used as fragility functions. E.g.
-       a :class:`openquake.risklib.scientific.FragilityFunctionContinuous`
-       instance
-    """
-    return functools.partial(
-        utils.numpy_map,
-        functools.partial(
-            scientific.scenario_damage,
-            fragility_functions))
-
-
 class LossMap(object):
     def __init__(self, poes):
         self.poes = poes or []

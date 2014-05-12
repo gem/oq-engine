@@ -81,9 +81,11 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
     COVS_TOO_SHORT = [0.3, 0.1, 0.3, 0.0, 0.3]
     COVS_TOO_LONG = [0.3, 0.1, 0.3, 0.0, 0.3, 10, 11]
 
+    IMT = 'PGA'
+
     def setUp(self):
         self.test_func = scientific.VulnerabilityFunction(
-            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_GOOD, "LN")
+            self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
 
         epsilons = scientific.make_epsilons(
             numpy.zeros((1, 1)), seed=3, correlation=0)
@@ -97,16 +99,16 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         #     - IML list ordered improperly
         self.assertRaises(
             AssertionError, scientific.VulnerabilityFunction,
-            self.IMLS_BAD, self.LOSS_RATIOS_GOOD, self.COVS_GOOD, "LN")
+            self.IMT, self.IMLS_BAD, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
 
         self.assertRaises(
             AssertionError, scientific.VulnerabilityFunction,
-            self.IMLS_DUPE, self.LOSS_RATIOS_GOOD, self.COVS_GOOD, "LN")
+            self.IMT, self.IMLS_DUPE, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
 
         self.assertRaises(
             AssertionError, scientific.VulnerabilityFunction,
-            self.IMLS_BAD_ORDER, self.LOSS_RATIOS_GOOD,
-            self.COVS_GOOD, "LN")
+            self.IMT, self.IMLS_BAD_ORDER, self.LOSS_RATIOS_GOOD,
+            self.COVS_GOOD)
 
     def test_vuln_func_constructor_raises_on_bad_cov(self):
         # This test attempts to invoke AssertionErrors by passing 3 different
@@ -116,17 +118,17 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         #     - CoV list which is longer than the IML list
         self.assertRaises(
             AssertionError, scientific.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_BAD, "LN")
+            self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_BAD)
 
         self.assertRaises(
             AssertionError, scientific.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
-            self.COVS_TOO_SHORT, "LN")
+            self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
+            self.COVS_TOO_SHORT)
 
         self.assertRaises(
             AssertionError, scientific.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
-            self.COVS_TOO_LONG, "LN")
+            self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
+            self.COVS_TOO_LONG)
 
     def test_vuln_func_constructor_raises_on_bad_loss_ratios(self):
         # This test attempts to invoke AssertionErrors by passing 3 different
@@ -136,24 +138,25 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         #     - loss ratio list which is longer than the IML list
         self.assertRaises(
             AssertionError, scientific.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_BAD, self.COVS_GOOD, "LN")
+            self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_BAD, self.COVS_GOOD)
 
         self.assertRaises(
             AssertionError, scientific.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_TOO_SHORT,
-            self.COVS_GOOD, "LN")
+            self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_TOO_SHORT,
+            self.COVS_GOOD)
 
         self.assertRaises(
             AssertionError, scientific.VulnerabilityFunction,
-            self.IMLS_GOOD, self.LOSS_RATIOS_TOO_LONG, self.COVS_GOOD,
-            "LN")
+            self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_TOO_LONG,
+            self.COVS_GOOD)
 
     def test_loss_ratio_interp_many_values(self):
         expected_lrs = numpy.array([0.0161928, 0.07685701,
                                     4.64095499])
         test_input = [0.005, 0.006, 0.0269]
 
-        numpy.testing.assert_allclose(expected_lrs, self.test_func(test_input))
+        numpy.testing.assert_allclose(
+            expected_lrs, self.test_func._apply(test_input))
 
     def test_loss_ratio_interp_many_values_clipped(self):
         # Given a list of IML values (abscissae), test for proper interpolation
@@ -163,7 +166,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         expected_lrs = numpy.array([0.0, 0.07685701, 4.64095499])
         test_input = [0.00049, 0.006, 2.7]
 
-        numpy.testing.assert_allclose(expected_lrs, self.test_func(test_input))
+        numpy.testing.assert_allclose(
+            expected_lrs, self.test_func._apply(test_input))
 
     def test_cov_interp_many_values(self):
         expected_covs = numpy.array([0.3, 0.2, 10])
@@ -188,10 +192,9 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # a ValueError.
         with self.assertRaises(ValueError) as ar:
             scientific.VulnerabilityFunction(
-                self.IMLS_GOOD,
+                self.IMT, self.IMLS_GOOD,
                 [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
                 [0.001, 0.002, 0.003, 0.004, 0.005, 0.006],
-                "LN"
             )
         expected_error = (
             'It is not valid to define a loss ratio = 0.0 with a corresponding'
@@ -206,6 +209,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # this LR are 0.
         # If LR = 0 and CoV = 0, the PoE will be 0.
         curve = scientific.VulnerabilityFunction(
+            self.IMT,
             [0.1, 0.2, 0.3, 0.45, 0.6],  # IMLs
             [0.0, 0.1, 0.2, 0.4, 1.2],   # loss ratios
             [0.0, 0.0, 0.3, 0.2, 0.1],   # CoVs
@@ -277,11 +281,13 @@ class LogNormalDistributionTestCase(unittest.TestCase):
 
 
 class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
+    IMT = 'PGA'
+
     def setUp(self):
         self.v1 = scientific.VulnerabilityFunction(
-            [0, 1], [0.5, 0.7], [0, 0], "LN")
+            self.IMT, [0, 1], [0.5, 0.7], [0, 0], "LN")
         self.v2 = scientific.VulnerabilityFunction(
-            [0, 1, 2], [0.25, 0.5, 0.75], [0, 0, 0], "LN")
+            self.IMT, [0, 1, 2], [0.25, 0.5, 0.75], [0, 0, 0], "LN")
 
     def test_split_single_interval_with_no_steps_between(self):
         numpy.testing.assert_allclose(
@@ -313,7 +319,8 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
 
     def test__evenly_spaced_loss_ratios(self):
         vf = scientific.VulnerabilityFunction(
-            [0, 1, 2, 3, 4], [0.0, 0.1, 0.2, 0.4, 1.2], [0, 0, 0, 0, 0], "LN")
+            self.IMT, [0, 1, 2, 3, 4], [0.0, 0.1, 0.2, 0.4, 1.2],
+            [0, 0, 0, 0, 0])
 
         es_lrs = vf.mean_loss_ratios_with_steps(5)
         expected = [0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
@@ -325,7 +332,7 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
         # We expect a 0.0 to be prepended to the LRs before spacing them
 
         vf = scientific.VulnerabilityFunction(
-            [1, 2, 3, 4], [0.1, 0.2, 0.4, 1.2], [0, 0, 0, 0], "LN")
+            self.IMT, [1, 2, 3, 4], [0.1, 0.2, 0.4, 1.2], [0, 0, 0, 0])
         es_lrs = vf.mean_loss_ratios_with_steps(5)
         expected = [0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18,
                     0.2, 0.24000000000000002, 0.28, 0.32, 0.36, 0.4, 0.56,
@@ -334,14 +341,14 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
 
     def test__evenly_spaced_loss_ratios_append_1(self):
         vf = scientific.VulnerabilityFunction(
-            [0, 1], [0.0, 0.5], [0, 0], "LN")
+            self.IMT, [0, 1], [0.0, 0.5], [0, 0])
         es_lrs = vf.mean_loss_ratios_with_steps(2)
         expected = [0.0, 0.25, 0.5, 0.75, 1.0]
         numpy.testing.assert_allclose(es_lrs, expected)
 
     def test_strictly_increasing(self):
         vf = scientific.VulnerabilityFunction(
-            [0, 1, 2, 3], [0.0, 0.5, 0.5, 1], [0, 0, 3, 4], "LN")
+            self.IMT, [0, 1, 2, 3], [0.0, 0.5, 0.5, 1], [0, 0, 3, 4])
         vfs = vf.strictly_increasing()
 
         numpy.testing.assert_allclose([0, 1, 3], vfs.imls)
@@ -351,7 +358,7 @@ class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):
 
     def test_pickle(self):
         vf = scientific.VulnerabilityFunction(
-            [0, 1, 2, 3], [0.0, 0.5, 0.5, 1], [0, 0, 3, 4], "LN")
+            self.IMT, [0, 1, 2, 3], [0.0, 0.5, 0.5, 1], [0, 0, 3, 4])
         pickle.loads(pickle.dumps(vf))
 
 

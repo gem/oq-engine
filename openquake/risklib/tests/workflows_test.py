@@ -27,6 +27,8 @@ from openquake.risklib import workflows
 
 
 class ClassicalTest(unittest.TestCase):
+    loss_type = 'structural'
+
     def setUp(self):
         self.patch1 = mock.patch('openquake.risklib.workflows.calculators')
         self.calcs = self.patch1.start()
@@ -37,7 +39,7 @@ class ClassicalTest(unittest.TestCase):
         average_loss = self.patch2.start()
         average_loss.return_value = 3
 
-        self.vf = mock.MagicMock()
+        self.vf = {self.loss_type: mock.MagicMock()}
         self.poes = [0.1, 0.2]
         self.poes_disagg = [0.1, 0.2, 0.3]
         self.workflow = workflows.Classical(
@@ -45,21 +47,22 @@ class ClassicalTest(unittest.TestCase):
         self.workflow.maps.poes = self.poes
         self.workflow.fractions = lambda curves: numpy.empty((len(curves), 3))
         self.workflow.fractions.poes = self.poes_disagg
-        self.workflow.curves.return_value = numpy.empty((4, 2, 10))
+        self.workflow.curves[self.loss_type].return_value = numpy.empty(
+            (4, 2, 10))
 
     def tearDown(self):
         self.patch1.stop()
         self.patch2.stop()
 
     def test_call(self):
-        assets = [workflows.Asset(dict(structural=10))]
+        assets = [workflows.Asset({self.loss_type: 10})]
         curves = [mock.Mock()]
-        output = self.workflow("structural", assets, curves)
+        output = self.workflow(self.loss_type, assets, curves)
 
         self.assertEqual(assets, output.assets)
 
         self.assertEqual(
-            [((self.vf, 3), {})],
+            [((self.vf[self.loss_type], 3), {})],
             self.calcs.ClassicalLossCurve.call_args_list)
 
         numpy.testing.assert_allclose(
@@ -92,6 +95,8 @@ class ClassicalTest(unittest.TestCase):
 
 
 class ProbabilisticEventBasedTest(unittest.TestCase):
+    loss_type = 'structural'
+
     def setUp(self):
         self.patch1 = mock.patch('openquake.risklib.workflows.calculators')
         self.calcs = self.patch1.start()
@@ -105,10 +110,10 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
         std = self.patch3.start()
         std.return_value = 0.1
 
-        self.vf = mock.MagicMock()
+        self.vf = {self.loss_type: mock.MagicMock()}
         self.poes = [0.1, 0.2]
         self.workflow = workflows.ProbabilisticEventBased(
-            self.vf, 1, 0.75, 50, 1000, 20, self.poes, True)
+            self.vf, 50, 1000, 20, self.poes, True)
         self.workflow.maps.poes = self.poes
         self.workflow.curves = mock.Mock(return_value=numpy.empty((3, 2, 20)))
 
@@ -122,10 +127,10 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
                                   dict(structural=0.1),
                                   dict(structural=0.8))]
         gmf = mock.Mock()
-        self.workflow.vulnerability_function.apply_to.return_value = \
-            numpy.empty((1, 1))
+        vf = self.workflow.vulnerability_functions[self.loss_type]
+        vf.apply_to.return_value = numpy.empty((1, 1))
 
-        output = self.workflow("structural", assets, gmf, mock.Mock(), [1])
+        output = self.workflow(self.loss_type, assets, gmf, mock.Mock(), [1])
 
         self.assertEqual(assets, output.assets)
 
@@ -188,15 +193,19 @@ class ProbabilisticEventBasedTest(unittest.TestCase):
 
 
 class ClassicalBCRTest(unittest.TestCase):
+    loss_type = 'structural'
+
     def setUp(self):
         self.patch = mock.patch('openquake.risklib.workflows.calculators')
         self.calcs = self.patch.start()
-        self.vf = mock.MagicMock()
-        self.vf_retro = mock.MagicMock()
+        self.vf = {self.loss_type: mock.MagicMock()}
+        self.vf_retro = {self.loss_type: mock.MagicMock()}
         self.workflow = workflows.ClassicalBCR(
             self.vf, self.vf_retro, 3, 0.1, 30)
-        self.workflow.curves_orig.return_value = numpy.empty((4, 2, 10))
-        self.workflow.curves_retro.return_value = numpy.empty((4, 2, 10))
+        self.workflow.curves_orig[self.loss_type].return_value = numpy.empty(
+            (4, 2, 10))
+        self.workflow.curves_retro[self.loss_type].return_value = numpy.empty(
+            (4, 2, 10))
 
     def tearDown(self):
         self.patch.stop()
@@ -206,29 +215,32 @@ class ClassicalBCRTest(unittest.TestCase):
                                   retrofitting_values=dict(structural=10))]
         curves = [mock.Mock()]
         curves_retro = [mock.Mock()]
-        self.workflow("structural", assets, (curves, curves_retro))
+        self.workflow(self.loss_type, assets, (curves, curves_retro))
 
         self.assertEqual(
-            [((self.vf, 3), {}), ((self.vf_retro, 3), {})],
+            [((self.vf[self.loss_type], 3), {}),
+             ((self.vf_retro[self.loss_type], 3), {})],
             self.calcs.ClassicalLossCurve.call_args_list)
 
 
 class ScenarioTestCase(unittest.TestCase):
+    loss_type = 'structural'
+
     def test_call(self):
         vf = mock.MagicMock()
-        calc = workflows.Scenario(vf, 0, 0, True)
+        calc = workflows.Scenario(vf, True)
 
         assets = [workflows.Asset(
             dict(structural=10),
             deductibles=dict(structural=0.1),
             insurance_limits=dict(structural=0.8))] * 4
 
-        calc.vulnerability_function.apply_to = mock.Mock(
+        calc.vulnerability_functions[self.loss_type].apply_to = mock.Mock(
             return_value=numpy.empty((4, 2)))
 
         (_assets, loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = \
-            calc("structural", assets, mock.Mock(), mock.Mock())
+            calc(self.loss_type, assets, mock.Mock(), mock.Mock(), None)
 
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)
@@ -237,17 +249,29 @@ class ScenarioTestCase(unittest.TestCase):
 
     def test_call_no_insured(self):
         vf = mock.MagicMock()
-        calc = workflows.Scenario(vf, 0, 0, False)
+        calc = workflows.Scenario(vf, False)
 
         assets = [workflows.Asset(dict(structural=10))] * 4
-        calc.vulnerability_function.apply_to = mock.Mock(
-            return_value=numpy.empty((4, 2)))
+        vf = calc.vulnerability_functions[self.loss_type]
+        vf.apply_to = mock.Mock(return_value=numpy.empty((4, 2)))
 
         (assets, loss_ratio_matrix, aggregate_losses,
          insured_loss_matrix, insured_losses) = (
-            calc("structural", assets, mock.Mock(), mock.Mock()))
+            calc(self.loss_type, assets, mock.Mock(), mock.Mock(), None))
 
         self.assertEqual((4, 2), loss_ratio_matrix.shape)
         self.assertEqual((2,), aggregate_losses.shape)
         self.assertIsNone(insured_loss_matrix)
         self.assertIsNone(insured_losses)
+
+
+class DamageTest(unittest.TestCase):
+    def test_generator(self):
+        with mock.patch('openquake.risklib.scientific.scenario_damage') as m:
+            fragility_functions = mock.Mock()
+            calc = workflows.Damage(dict(damage=fragility_functions))
+            calc([1, 2, 3])
+            self.assertEqual([((fragility_functions, 1,), dict()),
+                              ((fragility_functions, 2,), dict()),
+                              ((fragility_functions, 3,), dict())],
+                             m.call_args_list)

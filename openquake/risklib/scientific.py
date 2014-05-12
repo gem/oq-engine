@@ -45,8 +45,11 @@ DEFAULT_CURVE_RESOLUTION = 50
 
 class VulnerabilityFunction(object):
     # FIXME (lp). Provide description
-    def __init__(self, imls, mean_loss_ratios, covs=None, distribution="LN"):
+    def __init__(self, imt, imls, mean_loss_ratios, covs=None,
+                 distribution="LN"):
         """
+        :param str imt: Intensity Measure Type as a string
+
         :param list imls: Intensity Measure Levels for the
             vulnerability function. All values must be >= 0.0, values
             must be arranged in ascending order with no duplicates
@@ -62,6 +65,7 @@ class VulnerabilityFunction(object):
         """
         self._check_vulnerability_data(
             imls, mean_loss_ratios, covs, distribution)
+        self.imt = imt
         self.imls = numpy.array(imls)
         self.mean_loss_ratios = numpy.array(mean_loss_ratios)
 
@@ -107,9 +111,12 @@ class VulnerabilityFunction(object):
         :param epsilons:
            matrix of floats N x R
         """
+        assert len(epsilons) == len(ground_motion_values), (
+            len(epsilons), len(ground_motion_values))
         vulnerability_function = copy.copy(self)
         vulnerability_function.set_distribution(epsilons)
-        return utils.numpy_map(vulnerability_function, ground_motion_values)
+        return utils.numpy_map(
+            vulnerability_function._apply, ground_motion_values)
 
     @utils.memoized
     def strictly_increasing(self):
@@ -131,7 +138,8 @@ class VulnerabilityFunction(object):
                 covs.append(self.covs[i])
                 previous_mlr = mlr
 
-        return self.__class__(imls, mlrs, covs, self.distribution_name)
+        return self.__class__(
+            self.imt, imls, mlrs, covs, self.distribution_name)
 
     def mean_loss_ratios_with_steps(self, steps):
         """
@@ -179,14 +187,15 @@ class VulnerabilityFunction(object):
                 [self.imls[-1], self.imls[0], lambda x: x]))
 
     def __getstate__(self):
-        return (self.imls, self.mean_loss_ratios,
+        return (self.imt, self.imls, self.mean_loss_ratios,
                 self.covs, self.distribution_name)
 
-    def __setstate__(self, (imls, mean_loss_ratios, covs, distribution_name)):
-        self.imls = imls
-        self.mean_loss_ratios = mean_loss_ratios
-        self.covs = covs
-        self.distribution_name = distribution_name
+    def __setstate__(self, state):
+        self.imt = state[0]
+        self.imls = state[1]
+        self.mean_loss_ratios = state[2]
+        self.covs = state[3]
+        self.distribution_name = state[4]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
@@ -198,7 +207,7 @@ class VulnerabilityFunction(object):
         assert covs is None or all(x >= 0.0 for x in covs)
         assert distribution in ["LN", "BT"]
 
-    def __call__(self, imls):
+    def _apply(self, imls):
         """
         Given IML values, interpolate the corresponding loss ratio
         value(s) on the curve.
@@ -229,7 +238,6 @@ class VulnerabilityFunction(object):
 
         # apply uncertainty
         covs = self._cov_for(imls)
-
         ret[idxs] = self.distribution.sample(means, covs, covs * imls)
 
         return ret
@@ -396,6 +404,8 @@ def make_epsilons(matrix, seed, correlation):
         numpy.random.seed(seed)
     asset_count = len(matrix)
     samples = len(matrix[0])
+    if not correlation:  # avoid building the covariance matrix
+        return numpy.random.normal(size=(samples, asset_count)).transpose()
     means_vector = numpy.zeros(asset_count)
     covariance_matrix = (
         numpy.ones((asset_count, asset_count)) * correlation +
@@ -427,9 +437,10 @@ class LogNormalDistribution(Distribution):
                              "before you can use it")
         epsilons = self.epsilons[self.epsilon_idx]
         self.epsilon_idx += 1
+        if isinstance(epsilons, (numpy.ndarray, list, tuple)):
+            epsilons = epsilons[0:len(covs)]
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
-        return (means / numpy.sqrt(1 + covs ** 2) *
-                numpy.exp(epsilons[0:len(covs)] * sigma))
+        return means / numpy.sqrt(1 + covs ** 2) * numpy.exp(epsilons * sigma)
 
     def survival(self, loss_ratio, mean, stddev):
         # scipy does not handle correctly the limit case stddev = 0.

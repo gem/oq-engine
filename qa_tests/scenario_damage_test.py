@@ -17,7 +17,7 @@
 
 import unittest
 import numpy
-from openquake.risklib import scientific, calculators
+from openquake.risklib import scientific, workflows
 
 
 # FIXME(lp) remove this. it is just using the default args
@@ -57,9 +57,9 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
             'RM': [scientific.FragilityFunctionContinuous(0.25, 0.08),
                    scientific.FragilityFunctionContinuous(0.40, 0.12)]}
 
-        calculator_rm = calculators.Damage(fragility_model['RM'])
+        calculator_rm = workflows.Damage(dict(damage=fragility_model['RM']))
 
-        calculator_rc = calculators.Damage(fragility_model['RC'])
+        calculator_rc = workflows.Damage(dict(damage=fragility_model['RC']))
 
         [asset_output_a1] = calculator_rm([self.hazard['a1']])
 
@@ -106,7 +106,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
                 scientific.FragilityFunctionDiscrete(
                     [0.1, 0.2, 0.3, 0.5], [0.0003, 0.05, 0.40, 0.86])]}
 
-        calculator_rm = calculators.Damage(fragility_model['RM'])
+        calculator_rm = workflows.Damage(dict(damage=fragility_model['RM']))
 
         [asset_output_a1] = calculator_rm([self.hazard['a1']])
 
@@ -122,7 +122,7 @@ class ScenarioDamageRiskTestCase(unittest.TestCase):
 
         rm = asset_output_a1 * 3000 + asset_output_a3 * 1000
 
-        calculator_rc = calculators.Damage(fragility_model['RC'])
+        calculator_rc = workflows.Damage(dict(damage=fragility_model['RC']))
         [asset_output_a2] = calculator_rc([self.hazard['a2']])
 
         expected_means = [344.90849228, 747.62412976, 907.46737796]

@@ -72,6 +72,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
         self.vulnerability_function1 = scientific.VulnerabilityFunction(
+            'PGA',
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
             [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7],
             [0.0] * 8, "LN")
@@ -81,17 +82,18 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             4, 4, 4, 4, 2, 1, 1, 1, 1, 1, 1, 1,
         ])
 
-        self.vulnerability_function2 = scientific.VulnerabilityFunction([
-            0.0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36,
-            0.4, 0.44, 0.48, 0.53, 0.57, 0.61, 0.65, 0.69, 0.73, 0.77, 0.81,
-            0.85, 0.89, 0.93, 0.97, 1.01, 1.05, 1.09, 1.13, 1.17, 1.21, 1.25,
-            1.29, 1.33, 1.37, 1.41, 1.45, 1.49, 1.54, 1.58, 1.62, 1.66, 1.7,
-            1.74, 1.78, 1.82, 1.86, 1.9, 1.94, 1.98, 2.02, 2.06, 2.1, 2.14,
-            2.18, 2.22, 2.26, 2.3, 2.34, 2.38, 2.42, 2.46, 2.51, 2.55, 2.59,
-            2.63, 2.67, 2.71, 2.75, 2.79, 2.83, 2.87, 2.91, 2.95, 2.99, 3.03,
-            3.07, 3.11, 3.15, 3.19, 3.23, 3.27, 3.31, 3.35, 3.39, 3.43, 3.47,
-            3.52, 3.56, 3.6, 3.64, 3.68, 3.72, 3.76, 3.8, 3.84, 3.88, 3.92,
-            3.96, 4.0],
+        self.vulnerability_function2 = scientific.VulnerabilityFunction(
+            'PGA',
+            [0.0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36,
+             0.4, 0.44, 0.48, 0.53, 0.57, 0.61, 0.65, 0.69, 0.73, 0.77, 0.81,
+             0.85, 0.89, 0.93, 0.97, 1.01, 1.05, 1.09, 1.13, 1.17, 1.21, 1.25,
+             1.29, 1.33, 1.37, 1.41, 1.45, 1.49, 1.54, 1.58, 1.62, 1.66, 1.7,
+             1.74, 1.78, 1.82, 1.86, 1.9, 1.94, 1.98, 2.02, 2.06, 2.1, 2.14,
+             2.18, 2.22, 2.26, 2.3, 2.34, 2.38, 2.42, 2.46, 2.51, 2.55, 2.59,
+             2.63, 2.67, 2.71, 2.75, 2.79, 2.83, 2.87, 2.91, 2.95, 2.99, 3.03,
+             3.07, 3.11, 3.15, 3.19, 3.23, 3.27, 3.31, 3.35, 3.39, 3.43, 3.47,
+             3.52, 3.56, 3.6, 3.64, 3.68, 3.72, 3.76, 3.8, 3.84, 3.88, 3.92,
+             3.96, 4.0],
             [0.0, 0.0, 0.0, 0.01, 0.04, 0.07, 0.11, 0.15, 0.2,
              0.25, 0.3, 0.35, 0.39, 0.43, 0.47, 0.51, 0.55, 0.58, 0.61, 0.64,
              0.67, 0.69, 0.71, 0.73, 0.75, 0.77, 0.79, 0.8, 0.81, 0.83, 0.84,
@@ -140,7 +142,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.1109), "TSES": 200, "TimeSpan": 50}
 
     def test_an_empty_gmf_produces_an_empty_set(self):
-        self.assertEqual(0, self.vulnerability_function1([]).size)
+        self.assertEqual(0, self.vulnerability_function1._apply([]).size)
 
     def test_sampling_lr_gmf_inside_range_vulnimls(self):
         """
@@ -149,6 +151,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
 
         vf = scientific.VulnerabilityFunction(
+            'PGA',
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
@@ -162,8 +165,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
         ])
 
-        vf.distribution.epsilons = EPSILONS
-        ratios = vf(gmf)
+        vf.set_distribution(EPSILONS)
+        ratios = vf._apply(gmf)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
 
@@ -175,6 +178,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
 
         vuln_function = scientific.VulnerabilityFunction(
+            'PGA',
             [0.10, 0.30, 0.50, 1.00], [0.05, 0.10, 0.15, 0.30],
             [0.30, 0.30, 0.20, 0.20], "LN")
 
@@ -187,7 +191,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             numpy.array([0.0, 0.3176, 0.4049, 0.0902,
                          0.2793, 0.0636, 0.0932, 0.2472,
                          0.0, 0.3020]),
-            vuln_function(gmfs), atol=0.0, rtol=0.01)
+            vuln_function._apply(gmfs), atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         """
@@ -200,7 +204,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
         vuln_function = scientific.VulnerabilityFunction(
-            imls, loss_ratios, covs, "LN")
+            'PGA', imls, loss_ratios, covs, "LN")
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
@@ -209,7 +213,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
                          0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-            vuln_function(gmfs), atol=0.0, rtol=0.01)
+            vuln_function._apply(gmfs), atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -228,12 +232,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # min IML in this case is 0.01
         numpy.testing.assert_allclose(
             numpy.array([0.0, 0.0, 0.0]),
-            self.vulnerability_function1([0.0001, 0.0002, 0.0003]))
+            self.vulnerability_function1._apply([0.0001, 0.0002, 0.0003]))
 
         # max IML in this case is 0.52
         numpy.testing.assert_allclose(
             numpy.array([0.700, 0.700]),
-            self.vulnerability_function1([0.525, 0.530]))
+            self.vulnerability_function1._apply([0.525, 0.530]))
 
     def test_loss_ratios_computation_using_gmfs(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -322,7 +326,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # the length of the result is the length of the gmf
         numpy.testing.assert_allclose(
             expected_loss_ratios,
-            self.vulnerability_function1(GMF))
+            self.vulnerability_function1._apply(GMF))
 
     def test_zero_curve(self):
         expected = [0.] * 100

@@ -27,7 +27,7 @@ from openquake.risklib import calculators
 
 class ClassicalLossCurveTest(unittest.TestCase):
     def setUp(self):
-        vf = VulnerabilityFunction([0.4, 0.7], [0.1, 0.9])
+        vf = VulnerabilityFunction('PGA', [0.4, 0.7], [0.1, 0.9])
         self.calc = calculators.ClassicalLossCurve(vf, steps=3)
         self.hazard_imls = numpy.linspace(0, 1, 10)
 
@@ -130,19 +130,6 @@ class EventBasedLossCurveTest(unittest.TestCase):
         numpy.testing.assert_almost_equal([1, 1, 1, 1, 0], poes1)
 
         numpy.testing.assert_almost_equal([1, 1, 1, 1, 0], poes2)
-
-
-class DamageTest(unittest.TestCase):
-    def test_generator(self):
-        with mock.patch('openquake.risklib.scientific.scenario_damage') as m:
-            fragility_functions = mock.Mock()
-            calc = calculators.Damage(fragility_functions)
-            calc([1, 2, 3])
-
-            self.assertEqual([((fragility_functions, 1,), dict()),
-                              ((fragility_functions, 2,), dict()),
-                              ((fragility_functions, 3,), dict())],
-                             m.call_args_list)
 
 
 class LossMapTest(unittest.TestCase):
@@ -277,11 +264,11 @@ class AssetStatisticsTestCase(unittest.TestCase):
 
                 (mean_curves, mean_average_losses, mean_maps,
                  quantile_curves, quantile_average_losses, quantile_maps) = (
-                     calculators.exposure_statistics(loss_curves,
-                                                     numpy.empty(poe_nr),
-                                                     numpy.empty(asset_nr),
-                                                     numpy.empty(quantile_nr),
-                                                     mock.Mock()))
+                    calculators.exposure_statistics(loss_curves,
+                                                    numpy.empty(poe_nr),
+                                                    numpy.empty(asset_nr),
+                                                    numpy.empty(quantile_nr),
+                                                    mock.Mock()))
 
                 self.assertEqual((asset_nr, 2, resolution), mean_curves.shape)
                 self.assertEqual((asset_nr, ), mean_average_losses.shape)
