@@ -545,14 +545,8 @@ CREATE TABLE hzrdr.lt_realization (
     id SERIAL PRIMARY KEY,
     lt_model_id INTEGER NOT NULL, -- fk hzrdr.lt_mode.id
     ordinal INTEGER NOT NULL,
-    -- random seed number, used only for monte-carlo sampling of logic trees
-    seed INTEGER,
-    -- path weight, used only for full paths enumeration
-    weight NUMERIC CONSTRAINT seed_weight_xor
-        CHECK ((seed IS NULL AND weight IS NOT NULL)
-               OR (seed IS NOT NULL AND weight IS NULL)),
-    -- A list of the logic tree branchIDs
-    gsim_lt_path VARCHAR[] NOT NULL
+    weight NUMERIC, -- path weight, used only for full paths enumeration
+    gsim_lt_path VARCHAR[] NOT NULL -- list of the logic tree branchIDs
 ) TABLESPACE hzrdr_ts;
 
 

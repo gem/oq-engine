@@ -19,7 +19,6 @@
 """Common code for the hazard calculators."""
 
 import os
-import random
 import collections
 
 from openquake.hazardlib import correlation
@@ -45,7 +44,7 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter, ceil
+from openquake.engine.utils.general import block_splitter, ceil, distinct
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -204,24 +203,16 @@ class BaseHazardCalculator(base.Calculator):
             a list with the number of sources for each source model
         """
         logs.LOG.progress("initializing sources")
-        smlt_file = self.hc.inputs['source_model_logic_tree']
-        self.smlt = logictree.SourceModelLogicTree(
-            file(smlt_file).read(), self.hc.base_path, smlt_file)
-        sm_paths = list(self.smlt.get_sm_paths())
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
+        sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
-
-        # here we are doing a full enumeration of the source model logic tree;
-        # this is not bad since for very large source models there are
-        # typically very few realizations; moreover, the filtering will remove
-        # most of the sources, so the memory occupation is typically low
         lt_models = []
-        for i, (sm, path) in enumerate(sm_paths):
-            smpath = tuple(path)
+        for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(
                 fname,
                 self.hc.sites_affected_by,
-                self.smlt.make_apply_uncertainties(path),
+                self.source_model_lt.make_apply_uncertainties(smpath),
                 self.hc)
             if not source_collector.source_weights:
                 raise RuntimeError(
@@ -230,13 +221,13 @@ class BaseHazardCalculator(base.Calculator):
                     (fname, self.hc.maximum_distance))
 
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.hc, ordinal=i, sm_lt_path=smpath)
+                hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
             lt_models.append(lt_model)
             for trt, blocks in source_collector.split_blocks(nblocks):
                 self.source_blocks_per_ltpath[smpath, trt] = blocks
                 n = sum(len(block) for block in blocks)
                 logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
-                              n, sm, path, trt)
+                              n, sm, smpath, trt)
                 logs.LOG.info('Splitting in %d blocks', len(blocks))
                 for i, block in enumerate(blocks, 1):
                     logs.LOG.debug('%s, block %d: %d source(s), weight %s',
@@ -356,34 +347,22 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        hc = self.job.hazard_calculation
-        ltp = logictree.LogicTreeProcessor.from_hc(hc)
-        if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
-            # random sampling of paths
-            rlzs_per_ltpath = self._initialize_realizations_montecarlo(ltp)
-        else:
-            # full paths enumeration
-            rlzs_per_ltpath = self._initialize_realizations_enumeration(ltp)
-
-        ordinal = 0
-        lt_models = models.LtSourceModel.objects.filter(
-            hazard_calculation=self.hc)
-        # NB: the ordering of lt_models and rlzs_per_ltpath.itervalues()
-        # must match; it works because LtSourceModel has an ordinal field
-        for lt_model, path_infos in zip(
-                lt_models, rlzs_per_ltpath.itervalues()):
-            for seed, weight, sm_lt_path, gsim_lt_path in path_infos:
-                rlz = models.LtRealization.objects.create(
-                    lt_model=lt_model, gsim_lt_path=gsim_lt_path,
-                    seed=seed, weight=weight, ordinal=ordinal)
-                gsim_dict = ltp.parse_gmpe_logictree_path(gsim_lt_path)
-                ordinal += 1
-                for trt_model in models.TrtModel.objects.filter(
-                        lt_model=lt_model):
-                    # populate the associations rlz <-> trt_model
-                    gsim = gsim_dict[trt_model.tectonic_region_type]
-                    models.AssocLtRlzTrtModel.objects.create(
-                        rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
+        self.gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc)
+        paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
+        for ordinal, (sm_ordinal, weight, sm_lt_path, gmpe_path) in enumerate(
+                paths):
+            lt_model = models.LtSourceModel.objects.get(
+                hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
+            rlz = models.LtRealization.objects.create(
+                lt_model=lt_model, gsim_lt_path=gmpe_path,
+                weight=weight, ordinal=ordinal)
+            gsim_dict = self.gmpe_lt.make_trt_to_gsim(gmpe_path)
+            for trt_model in models.TrtModel.objects.filter(
+                    lt_model=lt_model):
+                # populate the associations rlz <-> trt_model
+                gsim = gsim_dict[trt_model.tectonic_region_type]
+                models.AssocLtRlzTrtModel.objects.create(
+                    rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
         for trt_model in models.TrtModel.objects.filter(
                 lt_model__hazard_calculation=self.hc):
             gsimset = set(art.gsim for art in
@@ -391,59 +370,6 @@ class BaseHazardCalculator(base.Calculator):
                               trt_model=trt_model))
             trt_model.gsims = sorted(gsimset)
             trt_model.save()
-
-    def _initialize_realizations_enumeration(self, ltp):
-        """
-        Perform full paths enumeration of logic trees and populate
-        lt_realization table.
-        """
-        seed = None
-        rlzs_per_ltpath = collections.OrderedDict()
-        for i, path_info in enumerate(ltp.enumerate_paths()):
-            data = (seed, ) + path_info[1:]
-            ltpath = tuple(path_info[2])  # source model logic tree path
-            if not ltpath in rlzs_per_ltpath:
-                rlzs_per_ltpath[ltpath] = [data]
-            else:
-                rlzs_per_ltpath[ltpath].append(data)
-
-        return rlzs_per_ltpath
-
-    def _initialize_realizations_montecarlo(self, ltp):
-        """
-        Perform random sampling of both logic trees and populate lt_realization
-        table.
-        """
-        # Each realization will have two seeds:
-        # One for source model logic tree, one for GSIM logic tree.
-        rnd = random.Random()
-        seed = self.hc.random_seed
-        rnd.seed(seed)
-
-        rlzs_per_ltpath = collections.OrderedDict()
-        # The first realization gets the seed we specified in the config file.
-        for i in xrange(self.hc.number_of_logic_tree_samples):
-            # Sample source model logic tree branch paths:
-            source_model_filename, sm_lt_path = (
-                ltp.sample_source_model_logictree(
-                    rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)))
-
-            # Sample GSIM logic tree branch paths:
-            gsim_lt_path = ltp.sample_gmpe_logictree(
-                rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
-
-            # Populate rlzs_per_ltpath
-            data = seed, None, sm_lt_path, gsim_lt_path
-            ltpath = tuple(sm_lt_path)
-            if not ltpath in rlzs_per_ltpath:
-                rlzs_per_ltpath[ltpath] = [data]
-            else:
-                rlzs_per_ltpath[ltpath].append(data)
-
-            # update the seed for the next realization
-            seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
-            rnd.seed(seed)
-        return rlzs_per_ltpath
 
     def _get_outputs_for_export(self):
         """
