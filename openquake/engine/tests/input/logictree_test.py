@@ -1776,41 +1776,41 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.proc.gmpe_lt.num_samples = 0
         paths = self.proc.enumerate_paths()
         ae = self.assertEqual
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+        ae(paths.next(), (0, Decimal('0.02'),
                           ['b1', 'b3', 'b6'], ['b1', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+        ae(paths.next(), (0, Decimal('0.02'),
                           ['b1', 'b3', 'b6'], ['b2', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+        ae(paths.next(), (1, Decimal('0.06'),
                           ['b1', 'b3', 'b7'], ['b1', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+        ae(paths.next(), (1, Decimal('0.06'),
                           ['b1', 'b3', 'b7'], ['b2', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+        ae(paths.next(), (2, Decimal('0.02'),
                           ['b1', 'b3', 'b8'], ['b1', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+        ae(paths.next(), (2, Decimal('0.02'),
                           ['b1', 'b3', 'b8'], ['b2', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+        ae(paths.next(), (3, Decimal('0.06'),
                           ['b1', 'b4', 'b6'], ['b1', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+        ae(paths.next(), (3, Decimal('0.06'),
                           ['b1', 'b4', 'b6'], ['b2', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.18'),
+        ae(paths.next(), (4, Decimal('0.18'),
                           ['b1', 'b4', 'b7'], ['b1', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.18'),
+        ae(paths.next(), (4, Decimal('0.18'),
                           ['b1', 'b4', 'b7'], ['b2', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+        ae(paths.next(), (5, Decimal('0.06'),
                           ['b1', 'b4', 'b8'], ['b1', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+        ae(paths.next(), (5, Decimal('0.06'),
                           ['b1', 'b4', 'b8'], ['b2', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+        ae(paths.next(), (6, Decimal('0.02'),
                           ['b1', 'b5', 'b6'], ['b1', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+        ae(paths.next(), (6, Decimal('0.02'),
                           ['b1', 'b5', 'b6'], ['b2', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+        ae(paths.next(), (7, Decimal('0.06'),
                           ['b1', 'b5', 'b7'], ['b1', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.06'),
+        ae(paths.next(), (7, Decimal('0.06'),
                           ['b1', 'b5', 'b7'], ['b2', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+        ae(paths.next(), (8, Decimal('0.02'),
                           ['b1', 'b5', 'b8'], ['b1', 'b3']))
-        ae(paths.next(), ('example-source-model.xml', Decimal('0.02'),
+        ae(paths.next(), (8, Decimal('0.02'),
                           ['b1', 'b5', 'b8'], ['b2', 'b3']))
         self.assertRaises(StopIteration, paths.next)
 
