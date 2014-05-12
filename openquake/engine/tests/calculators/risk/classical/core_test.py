@@ -25,16 +25,14 @@ class ClassicalRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
     """
     def setUp(self):
         super(ClassicalRiskCalculatorTestCase, self).setUp()
-
         self.calculator = classical.ClassicalRiskCalculator(self.job)
 
     def test_complete_workflow(self):
         # Test the complete risk classical calculation workflow and test
         # for the presence of the outputs
-
-        self.calculator.pre_execute()
-
         self.job.is_running = True
+        self.job.save()
+        self.calculator.pre_execute()
         self.job.status = 'executing'
         self.job.save()
         self.calculator.execute()
