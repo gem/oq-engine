@@ -467,7 +467,7 @@ _pkgtest_innervm_run () {
             echo \"Running demo in \$demo_dir\"
             openquake --run-hazard job_hazard.ini -l info
             calculation_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
-            openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id
+            openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id -l info
             cd -
         done"
     fi

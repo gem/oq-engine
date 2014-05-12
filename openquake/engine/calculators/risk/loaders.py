@@ -26,7 +26,7 @@ from openquake.risklib import scientific
 
 from openquake.nrmllib.risk import parsers
 from openquake.engine.input.exposure import ExposureDBWriter
-from openquake.engine.db.models import RiskModel, DmgState
+from openquake.engine.db.models import DmgState
 
 
 def exposure(job, exposure_model_input):
@@ -45,12 +45,11 @@ def vulnerability(vulnerability_file):
     :param vulnerability_file:
         the pathname to a vulnerability file
     :returns:
-        an assoc list between taxonomies and `RiskModel` instances
+        a dictionary {taxonomy: (imt, vulnerability_function)}
     :raises:
         * `ValueError` if validation of any vulnerability function fails
     """
-    vfs = dict()
-
+    vfs = {}
     for record in parsers.VulnerabilityModelParser(vulnerability_file):
         taxonomy = record['ID']
         imt = record['IMT']
@@ -62,30 +61,20 @@ def vulnerability(vulnerability_file):
             raise ValueError("Error creating vulnerability function for "
                              "taxonomy %s. A taxonomy can not "
                              "be associated with "
-                             "different vulnerability functions" % (
-                             taxonomy))
-
+                             "different vulnerability functions" % taxonomy)
         try:
-            vfs[taxonomy] = RiskModel(
-                imt,
-                scientific.VulnerabilityFunction(
-                    record['IML'],
-                    loss_ratios,
-                    covs,
-                    distribution),
-                None)
+            vfs[taxonomy] = scientific.VulnerabilityFunction(
+                imt, record['IML'], loss_ratios, covs, distribution)
         except ValueError, err:
-            msg = (
-                "Invalid vulnerability function with ID '%s': %s"
-                % (taxonomy, err.message)
-            )
+            msg = "Invalid vulnerability function with ID '%s': %s" % (
+                taxonomy, err.message)
             raise ValueError(msg)
 
-    return vfs.items()
+    return vfs
 
 
 def fragility(risk_calculation, fragility_input):
-    damage_states, risk_models = _parse_fragility(fragility_input)
+    damage_states, data = _parse_fragility(fragility_input)
 
     for lsi, dstate in enumerate(damage_states):
         DmgState.objects.get_or_create(
@@ -93,7 +82,16 @@ def fragility(risk_calculation, fragility_input):
     damage_state_ids = [d.id for d in DmgState.objects.filter(
         risk_calculation=risk_calculation).order_by('lsi')]
 
-    return risk_models, damage_state_ids
+    return data, damage_state_ids
+
+
+class List(list):
+    """
+    Class to store lists of objects with common attributes
+    """
+    def __init__(self, elements, **attrs):
+        list.__init__(self, elements)
+        vars(self).update(attrs)
 
 
 def _parse_fragility(content):
@@ -127,6 +125,7 @@ def _parse_fragility(content):
             fragility_functions[taxonomy] = [
                 scientific.FragilityFunctionContinuous(*mean_stddev)
                 for mean_stddev in params]
-    risk_models = dict((tax, dict(damage=RiskModel(tax_imt[tax], None, ffs)))
-                       for tax, ffs in fragility_functions.items())
-    return damage_states, risk_models
+
+    data = [(tax, dict(damage=List(ffs, imt=tax_imt[tax])))
+            for tax, ffs in fragility_functions.items()]
+    return damage_states, data

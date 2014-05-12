@@ -34,9 +34,9 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
 
         self.calculator = scenario.ScenarioRiskCalculator(self.job)
         models.JobStats.objects.create(oq_job=self.job)
-        self.calculator.pre_execute()
-
         self.job.is_running = True
+        self.job.save()
+        self.calculator.pre_execute()
         self.job.status = 'executing'
         self.job.save()
 

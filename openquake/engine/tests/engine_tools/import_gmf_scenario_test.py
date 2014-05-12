@@ -14,9 +14,12 @@ class ImportGMFScenarioTestCase(unittest.TestCase):
         repodir = os.path.dirname(os.path.dirname(nrmllib.__path__[0]))
         fileobj = open(os.path.join(repodir, 'examples', 'gmf-scenario.xml'))
         out = import_gmf_scenario.import_gmf_scenario(fileobj)
+        hc = out.oq_job.hazard_calculation
         n = models.GmfData.objects.filter(gmf__output=out).count()
+        assert_equal(hc.calculation_mode, 'scenario')
+        assert_equal(hc.number_of_ground_motion_fields, n)
         assert_equal(n, 9)  # 9 rows entered
-        assert_equal(out.oq_job.hazard_calculation.description,
+        assert_equal(hc.description,
                      'Scenario importer, file gmf-scenario.xml')
 
     # test that a tab-separated file can be imported
