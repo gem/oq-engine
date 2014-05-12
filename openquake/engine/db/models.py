@@ -122,13 +122,6 @@ VULNERABILITY_TYPE_CHOICES = [choice[0]
                               if choice[0].endswith('vulnerability')]
 
 
-#: Hold both a Vulnerability function or a fragility function set and
-#: the IMT associated to it
-RiskModel = collections.namedtuple(
-    'RiskModel',
-    'imt vulnerability_function fragility_functions')
-
-
 #: The output of HazardCalculation.gen_ruptures
 SourceRuptureSites = collections.namedtuple(
     'SourceRuptureSites',
@@ -147,22 +140,6 @@ def _get_prep_value(self, value):
     return val
 
 djm.FloatField.get_prep_value = _get_prep_value
-
-
-def required_imts(risk_models):
-    """
-    Get all the intensity measure types required by `risk_models`
-
-    A nested dict taxonomy -> loss_type -> `RiskModel` instance
-
-    :returns: a set with all the required imts
-    """
-    risk_models = sum([d.values() for d in risk_models.values()], [])
-    return set([m.imt for m in risk_models])
-
-
-def loss_types(risk_models):
-    return set(sum([d.keys() for d in risk_models.values()], []))
 
 
 def cost_type(loss_type):
@@ -1566,6 +1543,10 @@ class SESCollection(djm.Model):
         """
         return self.output.oq_job.hazard_calculation.ses_per_logic_tree_path
 
+    def get_ruptures(self):
+        """Return the SESRuptures associated to self"""
+        return SESRupture.objects.filter(rupture__ses_collection=self)
+
     @property
     def sm_lt_path(self):
         """
@@ -2214,6 +2195,7 @@ class LtSourceModel(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"lt_source_model'
+        ordering = ['ordinal']
 
     def __iter__(self):
         """
@@ -2725,6 +2707,13 @@ class EventLoss(djm.Model):
 
     def __iter__(self):
         return iter(self.eventlossdata_set.all().order_by('-aggregate_loss'))
+
+    def to_csv_str(self):
+        """
+        Convert EventLoss into a CSV with fields rupture_tag, aggregate_loss
+        """
+        return '\n'.join('%s,%s' % (self.rupture.tag, self.aggregate_loss)
+                         for data in self)
 
     @property
     def output_hash(self):
