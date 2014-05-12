@@ -39,60 +39,64 @@ class EventBasedRiskCase2TestCase(risk.BaseRiskQATestCase):
         return job
 
     def actual_data(self, job):
-        return ([curve.poes
+        data = ([curve.poes
                 for curve in models.LossCurveData.objects.filter(
                     loss_curve__output__oq_job=job,
                     loss_curve__aggregate=False,
                     loss_curve__insured=False).order_by('asset_ref')] +
                 [curve.loss_ratios
-                for curve in models.LossCurveData.objects.filter(
-                    loss_curve__output__oq_job=job,
-                    loss_curve__aggregate=False,
-                    loss_curve__insured=False).order_by('asset_ref')] +
+                 for curve in models.LossCurveData.objects.filter(
+                     loss_curve__output__oq_job=job,
+                     loss_curve__aggregate=False,
+                     loss_curve__insured=False).order_by('asset_ref')] +
                 [curve.losses
-                for curve in models.AggregateLossCurveData.objects.filter(
-                    loss_curve__output__oq_job=job,
-                    loss_curve__aggregate=True,
-                    loss_curve__insured=False)] +
+                 for curve in models.AggregateLossCurveData.objects.filter(
+                     loss_curve__output__oq_job=job,
+                     loss_curve__aggregate=True,
+                     loss_curve__insured=False)] +
                 [[el.aggregate_loss
                  for el in models.EventLossData.objects.filter(
-                event_loss__output__oq_job=job).order_by(
-                    '-aggregate_loss')[0:10]]] +
+                     event_loss__output__oq_job=job).order_by(
+                     '-aggregate_loss')[0:10]]] +
                 list(
                     models.LossFraction.objects.get(
                         variable="coordinate",
                         output__oq_job=job).iteritems())[0][1].values())
+        return data
 
     def expected_data(self):
+        poes_1 = [0.999996627985, 0.999849266925, 0.550671035883,
+                  0.329679953964, 0.329679953964, 0.181269246922,
+                  0.181269246922, 0.181269246922, 0.0]
+        poes_2 = [0.999998484856, 0.999998484856, 0.999917275934,
+                  0.993262053001, 0.925726421786, 0.834701111778,
+                  0.698805788088, 0.550671035883, 0.0]
+        poes_3 = [0.999997239227, 0.999997239227, 0.997521247823,
+                  0.834701111778, 0.698805788088, 0.451188363906,
+                  0.329679953964, 0.181269246922, 0.0]
+        losses_1 = [0.0, 0.0110999061875, 0.0221998123751, 0.0332997185626,
+                    0.0443996247501, 0.0554995309376, 0.0665994371252,
+                    0.0776993433127, 0.0887992495002]
+        losses_2 = [0.0, 0.00197070366487, 0.00394140732973, 0.0059121109946,
+                    0.00788281465947, 0.00985351832434, 0.0118242219892,
+                    0.0137949256541, 0.0157656293189]
+        losses_3 = [0.0, 0.00627183973737, 0.0125436794747, 0.0188155192121,
+                    0.0250873589495, 0.0313591986868, 0.0376310384242,
+                    0.0439028781616, 0.0501747178989]
+        expected_aggregate_losses = [
+            0.0, 41.5569324154, 83.1138648309, 124.670797246, 166.227729662,
+            207.784662077, 249.341594493, 290.898526908, 332.455459323]
 
-        poes_1 = [0.99999663, 0.99989896, 0.55067104, 0.32967995, 0.32967995,
-                  0.18126925, 0.18126925, 0.18126925, 0.]
-        poes_2 = [0.99999848, 0.99999848, 0.99987659, 0.99326205, 0.92572642,
-                  0.83470111, 0.75340304, 0.55067104, 0.]
-        poes_3 = [ 0.99999724, 0.99999724, 0.99752125, 0.83470111, 0.69880579,
-                   0.55067104, 0.32967995, 0.18126925, 0.]
+        expected_event_loss_table = [
+            332.455459323, 221.05497273, 164.077337072, 118.399426421,
+            115.406897066, 108.925518713, 104.67570929, 104.295934513,
+            96.7416846911, 94.4460331092]
 
-        losses_1 = [0., 0.01103294, 0.02206588, 0.03309883, 0.04413177,
-                    0.05516471, 0.06619765, 0.07723059, 0.08826354]
-
-        losses_2 = [0., 0.00197485, 0.00394969, 0.00592454, 0.00789938,
-                    0.00987423, 0.01184907, 0.01382392, 0.01579877]
-
-        losses_3 = [0., 0.00627624, 0.01255247, 0.01882871, 0.02510495,
-                    0.03138118, 0.03765742, 0.04393365, 0.05020989]
-
-        expected_aggregate_losses = [0., 41.41612985, 82.8322597, 124.24838954,
-                                     165.66451939, 207.08064924, 248.49677909,
-                                     289.91290894, 331.32903879]
-
-        expected_event_loss_table = [331.32903879, 221.56606968, 163.03223466,
-                                     117.41787935, 115.83607453,  108.22215086,
-                                     106.1758451, 105.35853998, 97.05754656,
-                                     94.89922324]
+        loss_fraction = [2847.6635362969, 1.0]
 
         return [poes_1, poes_2, poes_3, losses_1, losses_2, losses_3,
                 expected_aggregate_losses, expected_event_loss_table,
-                [2.84407157e+03, 1.00000000e+00]]
+                loss_fraction]
 
     def actual_xml_outputs(self, job):
         """
