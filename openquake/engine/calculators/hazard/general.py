@@ -46,7 +46,7 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter, ceil
+from openquake.engine.utils.general import block_splitter, ceil, distinct
 from openquake.engine.performance import EnginePerformanceMonitor
 
 # this is needed to avoid running out of memory
@@ -235,17 +235,18 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         smlt_file = self.hc.inputs['source_model_logic_tree']
         self.smlt = logictree.SourceModelLogicTree(
-            file(smlt_file).read(), self.hc.base_path, smlt_file)
-        sm_paths = list(self.smlt.enum_name_weight_paths())
+            file(smlt_file).read(), self.hc.base_path, smlt_file,
+            seed=self.hc.random_seed,
+            num_samples=self.hc.number_of_logic_tree_samples)
+        sm_paths = distinct(self.smlt.enum_name_weight_paths())
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
         lt_models = []
-        for i, (sm, weight, path) in enumerate(sm_paths):
-            smpath = tuple(path)
+        for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(
                 fname,
                 self.hc.sites_affected_by,
-                self.smlt.make_apply_uncertainties(path),
+                self.smlt.make_apply_uncertainties(list(smpath)),
                 self.hc)
             if not source_collector.source_weights:
                 raise RuntimeError(
@@ -254,13 +255,13 @@ class BaseHazardCalculator(base.Calculator):
                     (fname, self.hc.maximum_distance))
 
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.hc, ordinal=i, sm_lt_path=smpath)
+                hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
             lt_models.append(lt_model)
             for trt, blocks in source_collector.split_blocks(nblocks):
                 self.source_blocks_per_ltpath[smpath, trt] = blocks
                 n = sum(len(block) for block in blocks)
                 logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
-                              n, sm, path, trt)
+                              n, sm, smpath, trt)
                 logs.LOG.info('Splitting in %d blocks', len(blocks))
                 for i, block in enumerate(blocks, 1):
                     logs.LOG.debug('%s, block %d: %d source(s), weight %s',
@@ -381,7 +382,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing realizations")
         ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        for ordinal, (_sm_name, weight, smlt_paths, gmpe_paths) in \
+        for ordinal, (sm_ordinal, weight, smlt_paths, gmpe_paths) in \
                 enumerate(ltp.enumerate_paths()):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.hc, sm_lt_path=smlt_paths)

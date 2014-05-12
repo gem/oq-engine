@@ -558,12 +558,12 @@ class BaseLogicTree(object):
             rnd = random.Random(self.seed)
             for _ in xrange(self.num_samples):
                 name, sm_lt_path = self.sample_path(rnd)
-                yield name, None, sm_lt_path
+                yield name, None, tuple(sm_lt_path)
         else:  # full enumeration
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield name, weight, smlt_branch_ids
+                yield name, weight, tuple(smlt_branch_ids)
 
     @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
@@ -1097,22 +1097,25 @@ class LogicTreeProcessor(object):
         """
         smlt_paths_gen = self.source_model_lt.enum_name_weight_paths
         gmpelt_paths_gen = self.gmpe_lt.enum_name_weight_paths
+        sm_ordinal = 0
         if self.source_model_lt.num_samples:  # sampling
-            for (name, smlt_weight, smlt_paths), (_, gmpe_weight, gmpe_paths) \
+            for (_, smlt_weight, smlt_paths), (_, gmpe_weight, gmpe_paths) \
                     in zip(smlt_paths_gen(), gmpelt_paths_gen()):
                 if smlt_weight is None or gmpe_weight is None:
                     weight = None
                 else:
                     weight = smlt_weight * gmpe_weight
-                yield name, weight, smlt_paths, gmpe_paths
+                yield sm_ordinal, weight, smlt_paths, gmpe_paths
+                sm_ordinal += 1
         else:  # full enumeration
-            for smlt_name, smlt_weight, smlt_paths in smlt_paths_gen():
-                for gmpe_name, gmpe_weight, gmpe_paths in gmpelt_paths_gen():
+            for _, smlt_weight, smlt_paths in smlt_paths_gen():
+                for _, gmpe_weight, gmpe_paths in gmpelt_paths_gen():
                     if smlt_weight is None or gmpe_weight is None:
                         weight = None
                     else:
                         weight = smlt_weight * gmpe_weight
-                    yield smlt_name, weight, smlt_paths, gmpe_paths
+                    yield sm_ordinal, weight, smlt_paths, gmpe_paths
+                sm_ordinal += 1
 
     def parse_source_model_logictree_path(self, branch_ids):
         """
