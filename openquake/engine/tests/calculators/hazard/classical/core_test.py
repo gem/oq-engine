@@ -45,7 +45,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_sources(self):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
-        # after splitting/grouping the source model contains 22 blocks
+        # after splitting/grouping the source model contains 21 blocks
         blocks = self.calc.source_blocks_per_ltpath[
             ('b1',), 'Active Shallow Crust']
         self.assertEqual(21, len(blocks))
