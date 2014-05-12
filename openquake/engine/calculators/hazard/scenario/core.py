@@ -33,7 +33,7 @@ from openquake.engine.utils import tasks, general
 from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
-from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.performance import LightMonitor
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
@@ -44,74 +44,37 @@ def gmfs(job_id, seeds, sites, rupture, gmf_id, task_no):
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
     """
-    for task_seed in seeds:
-        numpy.random.seed(task_seed)
-        with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
-            # TODO: add filtering on maximum_distance
-            gmf_dict = compute_gmfs(job_id, sites, rupture, gmf_id)
-        with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
-            save_gmf(gmf_id, gmf_dict, sites, task_no)
-
-
-def compute_gmfs(job_id, sites, rupture, gmf_id):
-    """
-    Compute ground motion fields and store them in the db.
-
-    :param job_id:
-        ID of the currently running job.
-    :param sites:
-        The subset of the full SiteCollection scanned by this task
-    :param rupture:
-        The hazardlib rupture from which we will generate
-        ground motion fields.
-    :param gmf_id:
-        the id of a :class:`openquake.engine.db.models.Gmf` record
-    :param realizations:
-        Number of realizations to create.
-    """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     imts = [from_string(x) for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     correlation_model = haz_general.get_correl_model(hc)
-    return ground_motion_fields(
-        rupture, sites, imts, gsim,
-        hc.truncation_level, realizations=1,
-        correlation_model=correlation_model)
-
-
-@transaction.commit_on_success(using='job_init')
-def save_gmf(gmf_id, gmf_dict, sites, task_no):
-    """
-    Helper method to save computed GMF data to the database.
-
-    :param int gmf_id:
-        the id of a :class:`openquake.engine.db.models.Gmf` record
-    :param dict gmf_dict:
-        The GMF results during the calculation
-    :param sites:
-        An :class:`openquake.hazardlib.site.SiteCollection` object
-    """
+    computing_mon = LightMonitor('computing gmfs', job_id, gmfs)
+    saving_mon = LightMonitor('saving gmfs', job_id, gmfs)
     inserter = writer.CacheInserter(models.GmfData, 10000)
     # insert GmfData in blocks of 10,000 sites
     # NB: GmfData contains arrays of lenght 1
-
-    for imt, gmfs_ in gmf_dict.iteritems():
-        # ``gmfs`` comes in as a numpy.matrix
-        # we want it is an array; it handles subscripting
-        # in the way that we want
-        gmfarray = numpy.array(gmfs_)
-        imt_name, sa_period, sa_damping = imt
-        for i, site in enumerate(sites):
-            inserter.add(models.GmfData(
-                gmf_id=gmf_id,
-                task_no=task_no,
-                imt=imt_name,
-                sa_period=sa_period,
-                sa_damping=sa_damping,
-                site_id=site.id,
-                rupture_ids=None,
-                gmvs=gmfarray[i].tolist()))
-
+    for task_seed in seeds:
+        numpy.random.seed(task_seed)
+        with computing_mon:  # TODO: add filtering on maximum_distance
+            gmf_dict = ground_motion_fields(
+                rupture, sites, imts, gsim,
+                hc.truncation_level, realizations=1,
+                correlation_model=correlation_model)
+        with saving_mon:
+            for imt, gmfarray in gmf_dict.iteritems():
+                imt_name, sa_period, sa_damping = imt
+                for site, gmv in zip(sites, gmfarray.reshape(-1)):
+                    inserter.add(models.GmfData(
+                        gmf_id=gmf_id,
+                        task_no=task_no,
+                        imt=imt_name,
+                        sa_period=sa_period,
+                        sa_damping=sa_damping,
+                        site_id=site.id,
+                        rupture_ids=None,
+                        gmvs=[gmv]))
+    computing_mon.flush()
+    saving_mon.flush()
     inserter.flush()
 
 

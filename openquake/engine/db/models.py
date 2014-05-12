@@ -2029,11 +2029,12 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
     else:
         imts = [from_string(imt)]
     for imt, sa_period, sa_damping in imts:
-        for gmf in GmfData.objects.filter(
-                gmf=coll, imt=imt,
-                sa_period=sa_period, sa_damping=sa_damping).\
-                order_by('site'):
-            yield sort(gmf.gmvs)
+        data = GmfData.objects.filter(
+            gmf=coll, imt=imt, sa_period=sa_period,
+            sa_damping=sa_damping).order_by('site', 'task_no')
+        for site, group in itertools.groupby(
+                data, key=operator.attrgetter('site')):
+            yield sort(sum([gmf.gmvs for gmf in group], []))
 
 
 def get_gmfs_scenario(output, imt=None):
@@ -2059,11 +2060,14 @@ def get_gmfs_scenario(output, imt=None):
         imts = [from_string(imt)]
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfData.objects.filter(
-                gmf=coll, imt=imt,
-                sa_period=sa_period, sa_damping=sa_damping):
-            for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
-                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.site.location))
+        data = GmfData.objects.filter(
+            gmf=coll, imt=imt, sa_period=sa_period,
+            sa_damping=sa_damping).order_by('site', 'task_no')
+        for site, group in itertools.groupby(
+                data, key=operator.attrgetter('site')):
+            gmvs = sum([gmf.gmvs for gmf in group], [])
+            for i, gmv in enumerate(gmvs):  # i is the realization index
+                nodes[i].append(_GroundMotionFieldNode(gmv, site.location))
         for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
                 imt=imt,
