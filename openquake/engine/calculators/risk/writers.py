@@ -359,6 +359,7 @@ class OutputDict(dict):
             statistics=statistics,
             variable=variable,
             insured=insured)
+
         assert super(OutputDict, self).get(
             key, None) is None, "OutputDict can not be updated"
 
@@ -389,11 +390,10 @@ def combine_builders(builders):
 
     a_builder = builders[0]
 
-    loss_types = models.loss_types(a_builder.calc.risk_models)
     hazard_outputs = a_builder.calc.rc.hazard_outputs()
 
     for builder in builders:
-        for loss_type in loss_types:
+        for loss_type in a_builder.calc.loss_types:
 
             if len(hazard_outputs) > 1:
                 outputs.extend(builder.statistical_outputs(loss_type))
