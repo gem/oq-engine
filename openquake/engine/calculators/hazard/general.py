@@ -19,8 +19,6 @@
 """Common code for the hazard calculators."""
 
 import os
-import operator
-import itertools
 import collections
 
 from openquake.hazardlib import correlation
@@ -60,24 +58,6 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
-
-
-def assoc_gsims_rlzs(rlz_gsim_dicts, trt):
-    """
-    :param rlz_gsim_dicts:
-        a list of pairs (rlz, gsim_dict) where gsim_dict is a
-        dictionary {trt: gsim}
-    :returns:
-        a list of distinct GSIM instances with an attribute .rlz_ids,
-        containing the list of realizations associated to the given gsim
-    """
-    lst = sorted((gsim_dict[trt], rlz) for rlz, gsim_dict in rlz_gsim_dicts)
-    gsims = []
-    for gsim_cls, group in itertools.groupby(lst, key=operator.itemgetter(0)):
-        gsim = gsim_cls()
-        gsim.rlz_ids = [rlz.id for (_, rlz) in group]
-        gsims.append(gsim)
-    return gsims
 
 
 def store_site_model(job, site_model_source):
@@ -180,25 +160,16 @@ class BaseHazardCalculator(base.Calculator):
 
         Override this in subclasses as necessary.
         """
-        task_no = 0
         sitecol = self.hc.site_collection
-        for lt_model in models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc):
-            ltpath = tuple(lt_model.sm_lt_path)
-            rlz_gsim_dicts = [
-                (rlz, self.gmpe_lt.make_trt_to_gsim(rlz.gsim_lt_path))
-                for rlz in lt_model]
-            for trt in lt_model.get_tectonic_region_types():
-                # for a given trt, different realizations may correspond
-                # to the same GSIM: we estract the distinct gsims
-                gsims = assoc_gsims_rlzs(rlz_gsim_dicts, trt)
-                logs.LOG.info(
-                    'Considering %d/%d gsims for sm_lt_path=%s, TRT=%s',
-                    len(gsims), len(rlz_gsim_dicts), lt_model.sm_lt_path, trt)
-                for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                    yield (self.job.id, sitecol, block, lt_model,
-                           gsims, task_no)
-                    task_no += 1
+        trt_models = models.TrtModel.objects.filter(
+            lt_model__hazard_calculation=self.hc)
+        for task_no, trt_model in enumerate(trt_models):
+            ltpath = tuple(trt_model.lt_model.sm_lt_path)
+            trt = trt_model.tectonic_region_type
+            gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
+            for block in self.source_blocks_per_ltpath[ltpath, trt]:
+                yield (self.job.id, sitecol, block, trt_model.id,
+                       gsims, task_no)
 
     def _get_realizations(self):
         """
@@ -262,9 +233,9 @@ class BaseHazardCalculator(base.Calculator):
                     logs.LOG.debug('%s, block %d: %d source(s), weight %s',
                                    trt, i, len(block), block.weight)
 
-            # save LtModelInfo objects for each tectonic region type
+            # save TrtModel objects for each tectonic region type
             for trt in source_collector.sorted_trts():
-                models.LtModelInfo.objects.create(
+                models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
                     num_sources=len(source_collector.source_weights[trt]),
@@ -378,13 +349,27 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing realizations")
         self.gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc)
         paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
-        for ordinal, (sm_ordinal, weight, smlt_paths, gmpe_paths) in enumerate(
+        for ordinal, (sm_ordinal, weight, sm_lt_path, gmpe_path) in enumerate(
                 paths):
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.hc, sm_lt_path=smlt_paths)
-            models.LtRealization.objects.create(
-                lt_model=lt_model, gsim_lt_path=gmpe_paths,
+                hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
+            rlz = models.LtRealization.objects.create(
+                lt_model=lt_model, gsim_lt_path=gmpe_path,
                 weight=weight, ordinal=ordinal)
+            gsim_dict = self.gmpe_lt.make_trt_to_gsim(gmpe_path)
+            for trt_model in models.TrtModel.objects.filter(
+                    lt_model=lt_model):
+                # populate the associations rlz <-> trt_model
+                gsim = gsim_dict[trt_model.tectonic_region_type]
+                models.AssocLtRlzTrtModel.objects.create(
+                    rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
+        for trt_model in models.TrtModel.objects.filter(
+                lt_model__hazard_calculation=self.hc):
+            gsimset = set(art.gsim for art in
+                          models.AssocLtRlzTrtModel.objects.filter(
+                              trt_model=trt_model))
+            trt_model.gsims = sorted(gsimset)
+            trt_model.save()
 
     def _get_outputs_for_export(self):
         """
