@@ -1760,14 +1760,14 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 
     def test_sample_source_model(self):
         [(sm_name, weight, branch_ids)] = self.source_model_lt.\
-            enum_name_weight_paths()
+            gen_value_weight_path()
         self.assertEqual(sm_name, 'example-source-model.xml')
         self.assertIsNone(weight)
         self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
 
     def test_sample_gmpe(self):
         [(gmpe_cls, weight, branch_ids)] = self.gmpe_lt.\
-            enum_name_weight_paths()
+            gen_value_weight_path()
         self.assertEqual(gmpe_cls.__name__, 'ChiouYoungs2008')
         self.assertIsNone(weight)
         self.assertEqual(('b2', 'b3'), branch_ids)
@@ -1888,7 +1888,7 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
         assert list(path) == []
 
         [(sm_path, weight, branch_ids)] = source_model_lt. \
-            enum_name_weight_paths()
+            gen_value_weight_path()
         branch_ids = list(branch_ids)
         self.assertEqual(expected_branch_ids, branch_ids)
         modify_source = source_model_lt.make_apply_uncertainties(branch_ids)

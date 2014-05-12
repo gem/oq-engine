@@ -233,7 +233,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
-        sm_paths = distinct(self.source_model_lt.enum_name_weight_paths())
+        sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
         lt_models = []
         for i, (sm, weight, smpath) in enumerate(sm_paths):
@@ -241,7 +241,7 @@ class BaseHazardCalculator(base.Calculator):
             source_collector = source.parse_source_model_smart(
                 fname,
                 self.hc.sites_affected_by,
-                self.source_model_lt.make_apply_uncertainties(list(smpath)),
+                self.source_model_lt.make_apply_uncertainties(smpath),
                 self.hc)
             if not source_collector.source_weights:
                 raise RuntimeError(
