@@ -653,6 +653,17 @@ class SourceModelLogicTree(BaseLogicTree):
     SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault',
                     'characteristicFault')
 
+    @classmethod
+    def from_hc(cls, hc):
+        """
+        Returns a SourceModelLogicTree instance from a HazardCalculation
+        """
+        fname = hc.inputs['source_model_logic_tree']
+        content = file(fname).read()
+        return cls(
+            content, hc.base_path, fname, validate=False,
+            seed=hc.random_seed, num_samples=hc.number_of_logic_tree_samples)
+
     def __init__(self, *args, **kwargs):
         self.source_ids = set()
         self.tectonic_region_types = set()
@@ -945,10 +956,42 @@ class GMPELogicTree(BaseLogicTree):
     #: Base GMPE class (all valid GMPEs must extend it).
     BASE_GMPE = GroundShakingIntensityModel
 
+    @classmethod
+    def from_hc(cls, hc):
+        """
+        Return a GMPELogicTree instance from a HazardCalculation
+        """
+        fname = hc.inputs['gsim_logic_tree']
+        content = file(fname).read()
+        return cls(
+            tectonic_region_types=[], content=content,
+            basepath=hc.base_path, filename=fname, validate=False,
+            seed=hc.random_seed, num_samples=hc.number_of_logic_tree_samples)
+
     def __init__(self, tectonic_region_types, *args, **kwargs):
         self.tectonic_region_types = frozenset(tectonic_region_types)
         self.defined_tectonic_region_types = set()
         super(GMPELogicTree, self).__init__(*args, **kwargs)
+
+    def make_trt_to_gsim(self, branch_ids):
+        """
+        :return:
+            Dictionary mapping tectonic region type names to instances
+            of hazardlib GSIM objects.
+        """
+        branchset = self.root_branchset
+        trt_to_gsim = {}
+        branch_ids = branch_ids[::-1]
+
+        while branchset is not None:
+            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
+            trt = branchset.filters['applyToTectonicRegionType']
+
+            assert trt not in trt_to_gsim
+            trt_to_gsim[trt] = branch.value
+            branchset = branch.child_branchset
+
+        return trt_to_gsim
 
     def parse_uncertainty_value(self, node, branchset, classname):
         """
@@ -1050,108 +1093,38 @@ class GMPELogicTree(BaseLogicTree):
             )
 
 
-class LogicTreeProcessor(object):
+def enumerate_paths(source_model_lt, gmpe_lt):
     """
-    Logic tree processor. High-level interface to dealing with logic trees
+    Generate the possible paths through both logic trees. If
+    number_of_logic_tree_samples is nonzero, samples are taken.
 
-    :param str smlt_content:
-        the content of the source model logic tree
-    :param str gmpelt_content:
-        the content of the gmpe logic tree
+    :returns:
+        Generator of four items:
+
+        #. Source model file name, as a string.
+        #. Path's weight (decimal between 0 and 1). Sum of all paths'
+           weights is equal to 1.
+        #. List of source-model logic tree branch ids.
+        #. List of GMPE logic tree branch ids.
     """
-    def __init__(self, smlt_content, gmpelt_content,
-                 smlt_seed=0, gmpe_seed=0, smlt_rlzs=0, gmpe_rlzs=0):
-        self.source_model_lt = SourceModelLogicTree(
-            smlt_content, basepath=None, filename=None, validate=False,
-            seed=smlt_seed, num_samples=smlt_rlzs)
-        self.gmpe_lt = GMPELogicTree(
-            tectonic_region_types=[], content=gmpelt_content,
-            basepath=None, filename=None, validate=False,
-            seed=gmpe_seed, num_samples=gmpe_rlzs)
-
-    @classmethod
-    def from_hc(cls, hc):
-        """
-        :param hc: a HazardCalculation instance
-        :returns: a LogicTreeProcessor instance
-        """
-        seed = hc.random_seed
-        samples = hc.number_of_logic_tree_samples
-        return cls(file(hc.inputs['source_model_logic_tree']).read(),
-                   file(hc.inputs['gsim_logic_tree']).read(),
-                   seed, seed, samples, samples)
-
-    def enumerate_paths(self):
-        """
-        Generate the possible paths through both logic trees. If
-        num_samples is nonzero, samples are taken.
-
-        :returns:
-            Generator of four items:
-
-            #. Source model file name, as a string.
-            #. Path's weight (decimal between 0 and 1). Sum of all paths'
-               weights is equal to 1.
-            #. List of source-model logic tree branch ids.
-            #. List of GMPE logic tree branch ids.
-        """
-        smlt_paths_gen = self.source_model_lt.enum_name_weight_paths
-        gmpelt_paths_gen = self.gmpe_lt.enum_name_weight_paths
-        sm_ordinal = 0
-        if self.source_model_lt.num_samples:  # sampling
-            for (_, smlt_weight, smlt_paths), (_, gmpe_weight, gmpe_paths) \
-                    in zip(smlt_paths_gen(), gmpelt_paths_gen()):
+    smlt_paths_gen = source_model_lt.enum_name_weight_paths
+    gmpelt_paths_gen = gmpe_lt.enum_name_weight_paths
+    sm_ordinal = 0
+    if source_model_lt.num_samples:  # sampling
+        for (_, smlt_weight, smlt_paths), (_, gmpe_weight, gmpe_paths) \
+                in zip(smlt_paths_gen(), gmpelt_paths_gen()):
+            if smlt_weight is None or gmpe_weight is None:
+                weight = None
+            else:
+                weight = smlt_weight * gmpe_weight
+            yield sm_ordinal, weight, smlt_paths, gmpe_paths
+            sm_ordinal += 1
+    else:  # full enumeration
+        for _, smlt_weight, smlt_paths in smlt_paths_gen():
+            for _, gmpe_weight, gmpe_paths in gmpelt_paths_gen():
                 if smlt_weight is None or gmpe_weight is None:
                     weight = None
                 else:
                     weight = smlt_weight * gmpe_weight
                 yield sm_ordinal, weight, smlt_paths, gmpe_paths
-                sm_ordinal += 1
-        else:  # full enumeration
-            for _, smlt_weight, smlt_paths in smlt_paths_gen():
-                for _, gmpe_weight, gmpe_paths in gmpelt_paths_gen():
-                    if smlt_weight is None or gmpe_weight is None:
-                        weight = None
-                    else:
-                        weight = smlt_weight * gmpe_weight
-                    yield sm_ordinal, weight, smlt_paths, gmpe_paths
-                sm_ordinal += 1
-
-    def parse_source_model_logictree_path(self, branch_ids):
-        """
-        Parse the path through the source model logic tree and return
-        "apply uncertainties" function.
-
-        :param branch_ids:
-            List of string identifiers of branches, representing the path
-            through source model logic tree.
-        :return:
-            Function to be applied to all the sources as they get read from
-            the database and converted to hazardlib representation. Function
-            takes one argument, that is the hazardlib source object, and
-            applies uncertainties to it in-place.
-        """
-        return self.source_model_lt.make_apply_uncertainties(branch_ids)
-
-    def parse_gmpe_logictree_path(self, branch_ids):
-        """
-        Same as :meth:`parse_source_model_logictree_path`, but for GMPE logic
-        tree.
-
-        :return:
-            Dictionary mapping tectonic region type names to instances
-            of hazardlib GSIM objects.
-        """
-        branchset = self.gmpe_lt.root_branchset
-        trt_to_gsim = {}
-        branch_ids = branch_ids[::-1]
-
-        while branchset is not None:
-            branch = branchset.get_branch_by_id(branch_ids.pop(-1))
-            trt = branchset.filters['applyToTectonicRegionType']
-
-            assert trt not in trt_to_gsim
-            trt_to_gsim[trt] = branch.value
-            branchset = branch.child_branchset
-
-        return trt_to_gsim
+            sm_ordinal += 1
