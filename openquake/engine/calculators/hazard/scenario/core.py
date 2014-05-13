@@ -50,12 +50,12 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
     realizations = 1  # one realization for each seed
     correlation_model = haz_general.get_correl_model(hc)
     # rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
-    # NB: the rupture filtering is disabled to avoid errors such as
+    # NB: the rupture filtering is disabled to avoid errors such as:
     # SimpleFaultSurface has no attribute 'filter_sites_by_distance_to_rupture
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
-    inserter = writer.CacheInserter(models.GmfData, 10000)
-    # insert GmfData in blocks of 10,000 sites
+    inserter = writer.CacheInserter(models.GmfData, 1000)
+    # insert GmfData in blocks of 1000 sites
 
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
         for task_seed in seeds:
@@ -64,9 +64,9 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
                 rupture, sitecol, imts, gsim,
                 hc.truncation_level, realizations, correlation_model)
             for imt in imts:
-                gmfarray = gmf_dict[imt].reshape(-1)
-                for site_id, gmv in zip(sitecol.sids, gmfarray):
-                    cache[site_id, imt].append(gmv)
+                for site_id, gmv in zip(sitecol.sids, gmf_dict[imt]):
+                    # float is needed below to convert 1x1 matrices
+                    cache[site_id, imt].append(float(gmv))
 
     with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
         for site_id, imt in cache:
@@ -78,7 +78,7 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
                     sa_period=imt[1],
                     sa_damping=imt[2],
                     site_id=site_id,
-                    rupture_ids=[task_seed],
+                    rupture_ids=None,
                     gmvs=cache[site_id, imt]))
         inserter.flush()
 
