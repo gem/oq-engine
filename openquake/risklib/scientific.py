@@ -199,7 +199,7 @@ class VulnerabilityFunction(object):
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
-        assert imls == sorted(set(imls))
+        assert imls == sorted(set(imls)), (imls, sorted(set(imls)))
         assert all(x >= 0.0 for x in imls)
         assert covs is None or len(covs) == len(imls)
         assert len(loss_ratios) == len(imls)
@@ -274,7 +274,7 @@ class VulnerabilityFunction(object):
             the IMLs (Intensity Measure Level) are taken from.
         :type vuln_function:
            :py:class:`openquake.risklib.vulnerability_function.\
-VulnerabilityFunction`
+           VulnerabilityFunction`
         """
         return ([max(0, self.imls[0] - ((self.imls[1] - self.imls[0]) / 2))] +
                 [numpy.mean(pair) for pair in utils.pairwise(self.imls)] +
