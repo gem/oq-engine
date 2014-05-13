@@ -1410,6 +1410,24 @@ class HazardCurve(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
 
+    def build_data(self, curves_by_trt_model_gsim):
+        """
+        Build on the fly the hazard curves for the current realization
+        by looking at the associations stored in the database table
+        `hzrdr.assoc_lt_rlz_trt_model`.
+        """
+        if self.imt:
+            # build_data cannot be called from real curves
+            raise TypeError('%r is not a multicurve', self)
+
+        # fixed a realization, there are T associations where T is the
+        # number of TrtModels
+        curves = 0
+        for art in AssocLtRlzTrtModel.objects.filter(rlz=self.lt_realization):
+            pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]
+            curves = 1. - (1. - curves) * pnes
+        return curves
+
     @property
     def imt_long(self):
         """
@@ -2186,14 +2204,14 @@ class LtSourceModel(djm.Model):
         Return the number of sources in the model.
         """
         return sum(info.num_sources for info in
-                   LtModelInfo.objects.filter(lt_model=self))
+                   TrtModel.objects.filter(lt_model=self))
 
     def get_tectonic_region_types(self):
         """
         Return the tectonic region types in the model,
         ordered by number of sources.
         """
-        return LtModelInfo.objects.filter(
+        return TrtModel.objects.filter(
             lt_model=self).values_list(
             'tectonic_region_type', flat=True)
 
@@ -2208,9 +2226,9 @@ class LtSourceModel(djm.Model):
         return iter(LtRealization.objects.filter(lt_model=self))
 
 
-class LtModelInfo(djm.Model):
+class TrtModel(djm.Model):
     """
-    Information about a source model content
+    Source submodel containing sources of the same tectonic region type.
     """
     lt_model = djm.ForeignKey('LtSourceModel')
     tectonic_region_type = djm.TextField(null=False)
@@ -2218,10 +2236,46 @@ class LtModelInfo(djm.Model):
     num_ruptures = djm.IntegerField(null=False)
     min_mag = djm.FloatField(null=False)
     max_mag = djm.FloatField(null=False)
+    gsims = fields.CharArrayField(null=True)
+
+    def get_realizations(self, gsim_name):
+        """
+        Return the realizations associated to the current TrtModel and
+        the given GSIM.
+
+        :param str gsim_name: name of a GSIM class
+        """
+        assert gsim_name in self.gsims, gsim_name
+        for art in AssocLtRlzTrtModel.objects.filter(
+                trt_model=self.id, gsim=gsim_name):
+            yield art.rlz
+
+    def get_rlzs_by_gsim(self):
+        """
+        Return the realizations associated to the current TrtModel
+        as a dictionary {gsim_name: [rlz, ...]}
+        """
+        rlzs = dict(
+            (gsim, list(self.get_realizations(gsim)))
+            for gsim in self.gsims)
+        return rlzs
 
     class Meta:
-        db_table = 'hzrdr\".\"lt_model_info'
+        db_table = 'hzrdr\".\"trt_model'
         ordering = ['tectonic_region_type', 'num_sources']
+
+
+class AssocLtRlzTrtModel(djm.Model):
+    """
+    Associations between logic tree realizations and TrtModels
+    """
+    rlz = djm.ForeignKey('LtRealization')
+    trt_model = djm.ForeignKey('TrtModel')
+    gsim = djm.TextField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"assoc_lt_rlz_trt_model'
+        ordering = ['id']
 
 
 class LtRealization(djm.Model):
@@ -2231,12 +2285,15 @@ class LtRealization(djm.Model):
 
     lt_model = djm.ForeignKey('LtSourceModel')
     ordinal = djm.IntegerField()
-    seed = djm.IntegerField()
     weight = djm.DecimalField(decimal_places=100, max_digits=101)
     gsim_lt_path = fields.CharArrayField()
 
     @property
     def sm_lt_path(self):
+        """
+        The source model logic tree path extracted from the underlying
+        source model
+        """
         return self.lt_model.sm_lt_path
 
     class Meta:
