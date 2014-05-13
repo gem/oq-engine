@@ -177,7 +177,7 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
             hazard_calculation=job.hazard_calculation, ordinal=0,
             sm_lt_path='foo')
         lt_rlz = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=0, seed=0, gsim_lt_path='bar')
+            lt_model=lt_model, ordinal=0, gsim_lt_path='bar')
         output = models.Output.objects.create(
             oq_job=job, display_name='test', output_type='ses')
         ses_coll = models.SESCollection.objects.create(
@@ -250,10 +250,10 @@ class GmfsPerSesTestCase(unittest.TestCase):
             hazard_calculation=job.hazard_calculation,
             ordinal=2, sm_lt_path="test_sm_2")
         rlz1 = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=1, seed=1, weight=None,
+            lt_model=lt_model, ordinal=1, weight=None,
             gsim_lt_path="test_gsim")
         rlz2 = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=2, seed=1, weight=None,
+            lt_model=lt_model, ordinal=2, weight=None,
             gsim_lt_path="test_gsim_2")
         ses_coll = models.SESCollection.objects.create(
             output=models.Output.objects.create_output(
