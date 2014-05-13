@@ -135,6 +135,7 @@ class Vulnerability(Converter):
                 tset.tableDiscreteVulnerabilityData,
                 ['vulnerabilitySetID', 'vulnerabilityFunctionID']):
             dvf = dvf_node[set_id, vf_id]
+            imt = dvs_node[(set_id,)].IML['IMT']
             coeffs = []
             ratios = []
             imls = []
@@ -145,7 +146,7 @@ class Vulnerability(Converter):
 
             # check that we can instantiate a VulnerabilityFunction in risklib
             scientific.VulnerabilityFunction(
-                map(float, imls), map(float, ratios), map(float, coeffs))
+                imt, map(float, imls), map(float, ratios), map(float, coeffs))
 
             dvf.lossRatio.text = ' '.join(ratios)
             dvf.coefficientsVariation.text = ' '.join(coeffs)
