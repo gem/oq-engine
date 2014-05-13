@@ -19,6 +19,7 @@ Functionality for exporting and serializing hazard curve calculation results.
 
 
 import os
+import csv
 import functools
 
 from collections import namedtuple
@@ -223,6 +224,25 @@ export_hazard_curve_xml = functools.partial(
 
 export_hazard_curve_geojson = functools.partial(
     _export_hazard_curve, export_type='geojson')
+
+
+@core.makedirsdeco
+def export_hazard_curve_csv(output, target):
+    """
+    Save a hazard curve (of a given IMT) as a .csv file in the format
+    (lon lat poe1 ... poeN), where the fields are space separated.
+    """
+    hc = models.HazardCurve.objects.get(output=output.id)
+    haz_calc_id = output.oq_job.hazard_calculation.id
+    dest = _get_result_export_dest(haz_calc_id, target, hc, file_ext='csv')
+    x_y_poes = models.HazardCurveData.objects.all_curves_simple(
+        filter_args=dict(hazard_curve=hc.id))
+    with open(dest, 'wb') as f:
+        writer = csv.writer(f, delimiter=' ')
+        for x, y, poes in sorted(x_y_poes):
+            writer.writerow([x, y] + poes)
+
+    return dest
 
 
 @core.makedirsdeco
