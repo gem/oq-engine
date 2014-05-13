@@ -333,10 +333,10 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         for gsim_obj, probs in result:
             gsim = gsim_obj.__class__.__name__
             # probabilities of no exceedence per IMT
-            pnes = numpy.array([1 if all_equal(p, 0) else 1 - p
-                                for p in probs])
+            pnes = numpy.array(
+                [1 - (zero if all_equal(prob, 0) else prob)
+                 for prob, zero in itertools.izip(probs, self.zero)])
             # TODO: add a test like Yufang computation testing the broadcast
-            # add a test with different imls lenghts
             self.curves[trt_model_id, gsim] = 1 - (
                 1 - self.curves.get((trt_model_id, gsim), self.zero)) * pnes
 
