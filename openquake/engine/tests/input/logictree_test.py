@@ -72,6 +72,9 @@ class _TestableGMPELogicTree(logictree.GMPELogicTree):
         super(_TestableGMPELogicTree, self).__init__(
             tectonic_region_types, content, basepath, filename, validate)
 
+    def skip_branchset_condition(self, attrs):
+        return False
+
     def __fail(self, *args, **kwargs):
         raise AssertionError("this method shouldn't be called")
 
@@ -183,7 +186,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         return exc
 
     def test_logictree_invalid_xml(self):
-        exc = self._assert_logic_tree_error(
+        self._assert_logic_tree_error(
             'broken_xml', {'broken_xml': "<?xml foo bar baz"}, 'basepath',
             logictree.ParsingError
         )
@@ -480,7 +483,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 15)
         self.assertEqual(exc.message, 'expected single float value',
-                        "wrong exception message: %s" % exc.message)
+                         "wrong exception message: %s" % exc.message)
 
     def test_source_model_invalid_xml(self):
         lt = _make_nrml("""\
@@ -498,7 +501,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         """)
         sm = """ololo"""
 
-        exc = self._assert_logic_tree_error(
+        self._assert_logic_tree_error(
             'lt', {'lt': lt, 'sm': sm}, 'base',
             logictree.ParsingError, exc_filename='sm')
 
@@ -1756,7 +1759,8 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(
             job.hazard_calculation)
         self.gmpe_lt = logictree.GMPELogicTree.from_hc(
-            job.hazard_calculation)
+            job.hazard_calculation,
+            ['Active Shallow Crust', 'Subduction Interface'])
 
     def test_sample_source_model(self):
         [(sm_name, weight, branch_ids)] = self.source_model_lt.\
@@ -1832,7 +1836,8 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(
             job.hazard_calculation)
         self.gmpe_lt = logictree.GMPELogicTree.from_hc(
-            job.hazard_calculation)
+            job.hazard_calculation,
+            ['Active Shallow Crust', 'Subduction Interface'])
 
     def tearDown(self):
         logictree.BranchSet.apply_uncertainty = self.original_apply_uncertainty
@@ -1854,8 +1859,7 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
         gmpes = self.gmpe_lt.make_trt_to_gsim(['b2', 'b3'])
         self.assertIs(gmpes.pop('Active Shallow Crust'), ChiouYoungs2008)
-        self.assertIs(gmpes.pop('Subduction Interface'),
-                      SadighEtAl1997)
+        self.assertIs(gmpes.pop('Subduction Interface'), SadighEtAl1997)
         self.assertEqual(gmpes, {})
 
         gmpes = self.gmpe_lt.make_trt_to_gsim(['b1', 'b3'])

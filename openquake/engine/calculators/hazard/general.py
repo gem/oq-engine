@@ -347,7 +347,12 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        self.gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc)
+        trts = set()
+        for lt_model in models.LtSourceModel.objects.filter(
+                hazard_calculation=self.hc):
+            trts.update(lt_model.get_tectonic_region_types())
+
+        self.gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc, trts)
         paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
         for ordinal, (sm_ordinal, weight, sm_lt_path, gmpe_path) in enumerate(
                 paths):
