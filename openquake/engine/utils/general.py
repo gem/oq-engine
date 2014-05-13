@@ -133,6 +133,19 @@ class MemoizeMutable:
         return self.memo[key]
 
 
+def distinct(keys):
+    """
+    Return the distinct keys in order.
+    """
+    known = set()
+    outlist = []
+    for key in keys:
+        if key not in known:
+            outlist.append(key)
+        known.add(key)
+    return outlist
+
+
 def str2bool(value):
     """Convert a string representation of a boolean value to a bool."""
     return value.lower() in ("true", "yes", "t", "1")

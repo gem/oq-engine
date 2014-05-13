@@ -92,23 +92,24 @@ class GmfCollectorTestCase(unittest.TestCase):
         rup_id, rup_seed = 42, 44
         rup = FakeRupture(rup_id, trt)
         pga = PGA()
-        rlz_id = 1
-        gsim.rlz_ids = [rlz_id]
-        coll = core.GmfCollector(params, [pga], [gsim])
+        rlz = mock.Mock()
+        rlz.id = 1
+        rlzs = dict(AkkarBommer2010=[rlz])
+        coll = core.GmfCollector(params, [pga], [gsim], rlzs)
         coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
-            (rlz_id, pga, 0): [rup_id],
-            (rlz_id, pga, 1): [rup_id],
-            (rlz_id, pga, 2): [rup_id],
-            (rlz_id, pga, 3): [rup_id],
-            (rlz_id, pga, 4): [rup_id],
+            (rlz.id, pga, 0): [rup_id],
+            (rlz.id, pga, 1): [rup_id],
+            (rlz.id, pga, 2): [rup_id],
+            (rlz.id, pga, 3): [rup_id],
+            (rlz.id, pga, 4): [rup_id],
         }
         expected_gmvs = {
-            (rlz_id, pga, 0): [0.1027847118266612],
-            (rlz_id, pga, 1): [0.02726361912605336],
-            (rlz_id, pga, 2): [0.0862595971325641],
-            (rlz_id, pga, 3): [0.04727148908077005],
-            (rlz_id, pga, 4): [0.04750575818347277],
+            (rlz.id, pga, 0): [0.1027847118266612],
+            (rlz.id, pga, 1): [0.02726361912605336],
+            (rlz.id, pga, 2): [0.0862595971325641],
+            (rlz.id, pga, 3): [0.04727148908077005],
+            (rlz.id, pga, 4): [0.04750575818347277],
         }
         numpy.testing.assert_equal(coll.ruptures_per_site, expected_rups)
         for i, gmvs in expected_gmvs.iteritems():
@@ -168,7 +169,6 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(1, len(outputs))
 
         # With this job configuration, we have 2 logic tree realizations
-        # for the GMPEs
         [lt_model] = models.LtSourceModel.objects.filter(hazard_calculation=hc)
         self.assertEqual(2, len(list(lt_model)))
 
@@ -185,8 +185,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             job = helpers.run_job(self.cfg)
         hc = job.hazard_calculation
-        [(rlz1, rlz2)] = models.LtSourceModel.objects.filter(
-            hazard_calculation=hc.id)
+        [rlz1, rlz2] = models.LtRealization.objects.filter(
+            lt_model__hazard_calculation=hc.id)
 
         # check that the parameters are read correctly from the files
         self.assertEqual(hc.ses_per_logic_tree_path, 5)
@@ -204,8 +204,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         num_gmf2 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz2).count()
 
-        # with concurrent_tasks=64, this test generates 17 tasks, but
-        # only 15 gives nonzero contribution
+        # with concurrent_tasks=64, this test generates several tasks, but
+        # only 15 give nonzero contributions
         self.assertEqual(num_gmf1, 242 * 15)
         self.assertEqual(num_gmf2, 242 * 15)
 
@@ -222,13 +222,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(20, maps.count())
 
     def test_task_arg_gen(self):
-        hc = self.job.hazard_calculation
         self.calc.pre_execute()
-
-        # create the ses collection
-        lt_model = models.LtSourceModel.objects.get(hazard_calculation=hc)
-        self.calc.initialize_ses_db_records(lt_model)
-
         # this is also testing the splitting of fault sources
         expected = [  # source_id, seed
             ('3-0', 540589706),
@@ -246,7 +240,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # utility to present the generated arguments in a nicer way
         def process_args(arg_gen):
-            for args in arg_gen:  # args is (job_id, sitecol, src_seed_pairs, ...)
+            for args in arg_gen:
+                # args is (job_id, sitecol, src_seed_pairs, ...)
                 for src, seed in args[2]:
                     if src.__class__.__name__ != 'PointSource':
                         yield src.source_id, seed
