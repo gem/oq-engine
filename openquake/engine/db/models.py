@@ -2023,7 +2023,21 @@ class GmfData(djm.Model):
         ordering = ['gmf', 'task_no']
 
 
-def get_gmvs_per_site(output, imt=None, sort=sorted):
+def _get_gmf(curs, gmf_id, imtype, sa_period, sa_damping):
+    # returns site_id, gmvs for the given gmf_id and imt
+    query = '''\
+    SELECT site_id, array_concat(gmvs ORDER BY task_no)
+    FROM hzrdr.gmf_data WHERE gmf_id=%s AND imt=%s {}
+    GROUP BY site_id ORDER BY site_id'''
+    if imtype == 'SA':
+        curs.execute(query.format('AND sa_period=%s AND sa_damping=%s'),
+                     (gmf_id, imtype, sa_period, sa_damping))
+    else:
+        curs.execute(query.format(''), (gmf_id, imtype))
+    return curs.fetchall()
+
+
+def get_gmvs_per_site(output, imt, sort=sorted):
     """
     Iterator for walking through all :class:`GmfData` objects associated
     to a given output. Notice that values for the same site are
@@ -2032,27 +2046,15 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
 
     :param output: instance of :class:`openquake.engine.db.models.Output`
 
-    :param string imt: a string with the IMT to extract; the default
-                       is None, all the IMT in the job.ini file are extracted
+    :param string imt: a string with the IMT to extract
 
     :param sort: callable used for sorting the list of ground motion values.
 
     :returns: a list of ground motion values per each site
     """
-    job = output.oq_job
-    hc = job.hazard_calculation
-    coll = output.gmf
-    if imt is None:
-        imts = [from_string(x) for x in hc.intensity_measure_types]
-    else:
-        imts = [from_string(imt)]
-    for imt, sa_period, sa_damping in imts:
-        data = GmfData.objects.filter(
-            gmf=coll, imt=imt, sa_period=sa_period,
-            sa_damping=sa_damping).order_by('site', 'task_no')
-        for site, group in itertools.groupby(
-                data, key=operator.attrgetter('site')):
-            yield sort(sum([gmf.gmvs for gmf in group], []))
+    curs = getcursor('job_init')
+    for site_id, gmvs in _get_gmf(curs, output.gmf.id, *from_string(imt)):
+        yield sort(gmvs)
 
 
 def get_gmfs_scenario(output, imt=None):
@@ -2069,22 +2071,18 @@ def get_gmfs_scenario(output, imt=None):
     :returns: an iterator over
               :class:`openquake.engine.db.models._GroundMotionField` instances
     """
-    job = output.oq_job
-    hc = job.hazard_calculation
-    coll = output.gmf
+    hc = output.oq_job.hazard_calculation
     if imt is None:
         imts = [from_string(x) for x in hc.intensity_measure_types]
     else:
         imts = [from_string(imt)]
+    curs = getcursor('job_init')
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        data = GmfData.objects.filter(
-            gmf=coll, imt=imt, sa_period=sa_period,
-            sa_damping=sa_damping).order_by('site', 'task_no')
-        for site, group in itertools.groupby(
-                data, key=operator.attrgetter('site')):
-            gmvs = sum([gmf.gmvs for gmf in group], [])
+        for site_id, gmvs in _get_gmf(
+                curs, output.gmf.id, imt, sa_period, sa_damping):
             for i, gmv in enumerate(gmvs):  # i is the realization index
+                site = HazardSite.objects.get(pk=site_id)
                 nodes[i].append(_GroundMotionFieldNode(gmv, site.location))
         for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
