@@ -17,14 +17,14 @@
 """
 Scenario calculator core functionality
 """
+import collections
 import random
-from django.db import transaction
 import numpy
 
 from openquake.nrmllib.hazard.parsers import RuptureModelParser
 
 # HAZARDLIB
-from openquake.hazardlib.calc import ground_motion_fields
+from openquake.hazardlib.calc import ground_motion_fields, filters
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
@@ -33,13 +33,13 @@ from openquake.engine.utils import tasks, general
 from openquake.engine.db import models
 from openquake.engine.input import source
 from openquake.engine import writer
-from openquake.engine.performance import LightMonitor
+from openquake.engine.performance import EnginePerformanceMonitor
 
 AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
 @tasks.oqtask
-def gmfs(job_id, seeds, sites, rupture, gmf_id, task_no):
+def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
     """
     A celery task wrapper function around :func:`compute_gmfs`.
     See :func:`compute_gmfs` for parameter definitions.
@@ -47,35 +47,40 @@ def gmfs(job_id, seeds, sites, rupture, gmf_id, task_no):
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     imts = [from_string(x) for x in hc.intensity_measure_types]
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
+    realizations = 1  # one realization for each seed
     correlation_model = haz_general.get_correl_model(hc)
-    computing_mon = LightMonitor('computing gmfs', job_id, gmfs)
-    saving_mon = LightMonitor('saving gmfs', job_id, gmfs)
+    # rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
+    # NB: the rupture filtering is disabled to avoid errors such as
+    # SimpleFaultSurface has no attribute 'filter_sites_by_distance_to_rupture
+
+    cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
     inserter = writer.CacheInserter(models.GmfData, 10000)
     # insert GmfData in blocks of 10,000 sites
-    # NB: GmfData contains arrays of lenght 1
-    for task_seed in seeds:
-        numpy.random.seed(task_seed)
-        with computing_mon:  # TODO: add filtering on maximum_distance
+
+    with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
+        for task_seed in seeds:
+            numpy.random.seed(task_seed)
             gmf_dict = ground_motion_fields(
-                rupture, sites, imts, gsim,
-                hc.truncation_level, realizations=1,
-                correlation_model=correlation_model)
-        with saving_mon:
-            for imt, gmfarray in gmf_dict.iteritems():
-                imt_name, sa_period, sa_damping = imt
-                for site, gmv in zip(sites, gmfarray.reshape(-1)):
-                    inserter.add(models.GmfData(
-                        gmf_id=gmf_id,
-                        task_no=task_no,
-                        imt=imt_name,
-                        sa_period=sa_period,
-                        sa_damping=sa_damping,
-                        site_id=site.id,
-                        rupture_ids=None,
-                        gmvs=[gmv]))
-    computing_mon.flush()
-    saving_mon.flush()
-    inserter.flush()
+                rupture, sitecol, imts, gsim,
+                hc.truncation_level, realizations, correlation_model)
+            for imt in imts:
+                gmfarray = gmf_dict[imt].reshape(-1)
+                for site_id, gmv in zip(sitecol.sids, gmfarray):
+                    cache[site_id, imt].append(gmv)
+
+    with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
+        for site_id, imt in cache:
+            inserter.add(
+                models.GmfData(
+                    gmf_id=gmf_id,
+                    task_no=task_no,
+                    imt=imt[0],
+                    sa_period=imt[1],
+                    sa_damping=imt[2],
+                    site_id=site_id,
+                    rupture_ids=[task_seed],
+                    gmvs=cache[site_id, imt]))
+        inserter.flush()
 
 
 class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
@@ -123,7 +128,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
     def task_arg_gen(self):
         """
-        Yield a tuple of the form (job_id, sites, rupture_id, gmf_id,
+        Yield a tuple of the form (job_id, sitecol, rupture_id, gmf_id,
         task_seed, num_realizations). `task_seed` will be used to seed
         numpy for temporal occurence sampling. Only a single task
         will be generated which is fine since the computation is fast
