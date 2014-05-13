@@ -381,6 +381,15 @@ class BaseLogicTree(object):
         self.root_branchset = None
         self.parse_tree(tree, validate)
 
+    def skip_branchset_condition(self, attrs):
+        """
+        Override in subclasses to skip a branchset depending on a
+        condition on its attributes.
+
+        :param attrs: a dictionary with the attributes of the branchset
+        """
+        return False
+
     def parse_tree(self, tree_node, validate):
         """
         Parse the whole tree and point ``root_branchset`` attribute
@@ -419,6 +428,8 @@ class BaseLogicTree(object):
         branchsets = branchinglevel_node.findall('{%s}logicTreeBranchSet' %
                                                  self.NRML)
         for number, branchset_node in enumerate(branchsets):
+            if self.skip_branchset_condition(branchset_node.attrib):
+                continue
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
@@ -961,14 +972,14 @@ class GMPELogicTree(BaseLogicTree):
     BASE_GMPE = GroundShakingIntensityModel
 
     @classmethod
-    def from_hc(cls, hc):
+    def from_hc(cls, hc, known_tectonic_region_types):
         """
         Return a GMPELogicTree instance from a HazardCalculation
         """
         fname = hc.inputs['gsim_logic_tree']
         content = file(fname).read()
         return cls(
-            tectonic_region_types=[], content=content,
+            tectonic_region_types=known_tectonic_region_types, content=content,
             basepath=hc.base_path, filename=fname, validate=False,
             seed=hc.random_seed, num_samples=hc.number_of_logic_tree_samples)
 
@@ -976,6 +987,16 @@ class GMPELogicTree(BaseLogicTree):
         self.tectonic_region_types = frozenset(tectonic_region_types)
         self.defined_tectonic_region_types = set()
         super(GMPELogicTree, self).__init__(*args, **kwargs)
+
+    def skip_branchset_condition(self, attrs):
+        """
+        Skip the branchset if it corresponds to an unknown tectonic
+        region type.
+
+        :param attrs: a dictionary with the attributes of the branchset
+        """
+        return (attrs['applyToTectonicRegionType']
+                not in self.tectonic_region_types)
 
     def make_trt_to_gsim(self, branch_ids):
         """
