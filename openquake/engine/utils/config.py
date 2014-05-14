@@ -35,7 +35,6 @@ OQDIR = os.path.dirname(os.path.dirname(openquake.engine.__path__[0]))
 OQ_CONFIG_FILE_VAR = "OQ_CONFIG_FILE"
 
 
-@general.singleton
 class Config(object):
     """
     Load the configuration, make each section available in a separate
