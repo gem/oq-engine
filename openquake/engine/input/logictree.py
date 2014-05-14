@@ -433,7 +433,7 @@ class BaseLogicTree(object):
             branchset = self.parse_branchset(branchset_node, depth, number,
                                              validate)
             self.parse_branches(branchset_node, branchset, validate)
-            if depth == 0 and number == 0:
+            if self.root_branchset is None:  # not set yet
                 self.root_branchset = branchset
             else:
                 self.apply_branchset(branchset_node, branchset)
