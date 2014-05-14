@@ -38,7 +38,7 @@ import collections
 import numpy.random
 
 from django.db import transaction
-from openquake.hazardlib.calc import gmf
+from openquake.hazardlib.calc import gmf, filters
 from openquake.hazardlib.imt import from_string
 
 from openquake.engine import logs, writer
@@ -144,9 +144,8 @@ def compute_ses_and_gmfs(
         # to call sample_number_of_occurrences() *before* the filtering
         for rup in ses_num_occ.keys():
             with filter_ruptures_mon:  # filtering ruptures
-                r_sites = rup.source_typology.\
-                    filter_sites_by_distance_to_rupture(
-                        rup, hc.maximum_distance, s_sites
+                r_sites = filters.filter_sites_by_distance_to_rupture(
+                    rup, hc.maximum_distance, s_sites
                     ) if hc.maximum_distance else s_sites
                 if r_sites is None:
                     # ignore ruptures which are far away
