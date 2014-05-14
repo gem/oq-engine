@@ -49,9 +49,7 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     realizations = 1  # one realization for each seed
     correlation_model = haz_general.get_correl_model(hc)
-    # rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
-    # NB: the rupture filtering is disabled to avoid errors such as:
-    # SimpleFaultSurface has no attribute 'filter_sites_by_distance_to_rupture
+    rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
     inserter = writer.CacheInserter(models.GmfData, 1000)
@@ -61,8 +59,8 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
         for task_seed in seeds:
             numpy.random.seed(task_seed)
             gmf_dict = ground_motion_fields(
-                rupture, sitecol, imts, gsim,
-                hc.truncation_level, realizations, correlation_model)
+                rupture, sitecol, imts, gsim, hc.truncation_level,
+                realizations, correlation_model, rup_filter)
             for imt in imts:
                 for site_id, gmv in zip(sitecol.sids, gmf_dict[imt]):
                     # float is needed below to convert 1x1 matrices
