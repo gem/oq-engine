@@ -332,8 +332,7 @@ celeryd_wait $GEM_MAXLOOP"
                  python-coverage xml --include=\"openquake/*\"
                 "
 
-        scp "${lxc_ip}:oq-engine/nosetests.xml" .
-        scp "${lxc_ip}:oq-engine/xunit-qa*.xml" .
+        scp "${lxc_ip}:oq-engine/xunit-*.xml" .
         scp "${lxc_ip}:oq-engine/coverage.xml" .
     else
         if [ -d $HOME/fake-data/oq-engine ]; then
