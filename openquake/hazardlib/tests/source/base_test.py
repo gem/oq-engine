@@ -22,6 +22,7 @@ from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import Polygon, Point, RectangularMesh
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import \
     Site, SiteCollection, FilteredSiteCollection
 from openquake.hazardlib.tom import PoissonTOM
@@ -143,7 +144,7 @@ class SeismicSourceFilterSitesByRuptureTestCase(_BaseSeismicSourceTestCase):
                 def get_joyner_boore_distance(cls, mesh):
                     return surface_mesh.get_joyner_boore_distance(mesh)
 
-        filtered = self.source_class.filter_sites_by_distance_to_rupture(
+        filtered = filters.filter_sites_by_distance_to_rupture(
             rupture=rupture, integration_distance=1.01, sites=self.sitecol
         )
         numpy.testing.assert_array_equal(filtered.indices,

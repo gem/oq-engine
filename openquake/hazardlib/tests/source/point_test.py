@@ -27,6 +27,7 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.geo import Point, PlanarSurface, NodalPlane, Polygon
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import \
     Site, SiteCollection, FilteredSiteCollection
 
@@ -618,7 +619,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         # the JB distances are [8.29156163, 5.05971598, 15.13297135,
         # 495.78630103, 496.89812309], so given that the integration
         # distance is 0 all sites are filtered out
-        filtered = PointSource.filter_sites_by_distance_to_rupture(
+        filtered = filters.filter_sites_by_distance_to_rupture(
             rup, integration_distance=0, sites=self.sitecol
         )
         self.assertIs(filtered, None)
@@ -628,7 +629,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         # the JB distance area [5.84700762, 6.8290327, 14.53519629,
         # 496.25926891, 497.37116174] so given that the integration
         # distance is 495 only the first 3 sites are kept
-        filtered = PointSource.filter_sites_by_distance_to_rupture(
+        filtered = filters.filter_sites_by_distance_to_rupture(
             rup, integration_distance=495, sites=self.sitecol
         )
         expected_filtered = SiteCollection(self.SITES[:3])
@@ -660,7 +661,7 @@ class PointSourceRuptureFilterTestCase(unittest.TestCase):
         # the JB distances are [47.0074159, 37.99716685, 40.7944923,
         #  476.2521365, 477.36015879]
         for int_dist in (0, 1, 10, 20, 37.99):
-            filtered = PointSource.filter_sites_by_distance_to_rupture(
+            filtered = filters.filter_sites_by_distance_to_rupture(
                 rup, integration_distance=int_dist, sites=self.sitecol
             )
             self.assertIs(filtered, None)

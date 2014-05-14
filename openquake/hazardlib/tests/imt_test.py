@@ -29,7 +29,7 @@ class BaseIMTTestCase(unittest.TestCase):
         self.assertEqual(getattr(self.TestIMT, '__slots__'), ())
         self.assertFalse(hasattr(self.TestIMT(1, 2), '__dict__'))
         imt = self.TestIMT(bar=2, foo=1)
-        self.assertEqual(str(imt), 'TestIMT(foo=1, bar=2)')
+        self.assertEqual(str(imt), 'TestIMT')
 
     def test_equality(self):
         self.assertTrue(self.TestIMT(1, 1) == self.TestIMT(1, 1))

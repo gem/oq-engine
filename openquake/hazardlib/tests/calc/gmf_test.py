@@ -16,15 +16,13 @@
 import unittest
 
 import numpy
-import scipy
 from numpy.testing import assert_allclose, assert_array_equal
 
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGV
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.calc.gmf import (
-    ground_motion_fields, ground_motion_field_with_residuals)
+from openquake.hazardlib.calc.gmf import ground_motion_fields
 from openquake.hazardlib.correlation import JB2009CorrelationModel
 
 
@@ -414,78 +412,3 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
         s1gmf, s2gmf = gmfs[self.imt1]
         numpy.testing.assert_array_equal(s2gmf, 0)
         numpy.testing.assert_array_almost_equal(s1gmf, 11.1852253)
-
-
-class GMFCalcWithResidualsTestCase(BaseGMFCalcTestCase):
-
-    def test_total_stddev_only(self):
-        truncation_level = None
-
-        numpy.random.seed(37)
-        distribution = scipy.stats.norm()
-        epsilons = distribution.rvs(size=len(self.sites_total))
-
-        intensity = ground_motion_field_with_residuals(
-            self.rupture, self.sites_total,
-            self.imt2,
-            self.total_stddev_gsim,
-            truncation_level,
-            total_residual_epsilons=epsilons)
-        assert_allclose((intensity[0].mean(), intensity[0].std()),
-                        [8.2101853, 3.4256517], rtol=4e-2)
-        assert_allclose((intensity[1].mean(), intensity[1].std()),
-                        [9.05092648, 4.3603691], rtol=4e-2)
-        assert_allclose((intensity[2].mean(), intensity[2].std()),
-                        [8.14012353, 3.3886777], rtol=4e-2)
-
-        assert_allclose((intensity[3].mean(), intensity[3].std()),
-                        [11.50308827, 9.22499337], rtol=4e-2)
-        assert_allclose((intensity[4].mean(), intensity[4].std()),
-                        [11.50308827, 9.22499337], rtol=4e-2)
-
-        assert_allclose((intensity[5].mean(), intensity[5].std()),
-                        [8.07006177, 3.35942342], rtol=4e-2)
-        assert_allclose((intensity[6].mean(), intensity[6].std()),
-                        [8.07006177, 3.35942342], rtol=4e-2)
-
-    def test_zero_truncation(self):
-        truncation_level = 0
-        self.gsim.expect_stddevs = False
-        intensity = ground_motion_field_with_residuals(
-            self.rupture, self.sites, self.imt1, self.gsim, truncation_level)
-        for i in xrange(7):
-            self.assertEqual(intensity[i].std(), 0)
-        self.assertEqual(intensity[0].mean(), self.mean1)
-        self.assertEqual(intensity[1].mean(), self.mean2)
-        self.assertEqual(intensity[2].mean(), self.mean3)
-        self.assertEqual(intensity[3].mean(), self.mean4567)
-        self.assertEqual(intensity[4].mean(), self.mean4567)
-        self.assertEqual(intensity[5].mean(), self.mean4567)
-        self.assertEqual(intensity[6].mean(), self.mean4567)
-
-    def test_with_intra_and_inter(self):
-        mean = 10
-        inter = 2
-        intra = 3
-        sites = SiteCollection([Site(Point(0, 0), mean, False, inter, intra)])
-
-        self.gsim.expect_same_sitecol = False
-
-        numpy.random.seed(37)
-        cormo = JB2009CorrelationModel(vs30_clustering=False)
-
-        distribution = scipy.stats.norm()
-        eps_intra = distribution.rvs(size=(1, 1))
-        eps_intra = numpy.array(
-            cormo.apply_correlation(sites, self.imt1, eps_intra))[0]
-
-        eps_inter = distribution.rvs(size=(1, 1))
-
-        gmf = ground_motion_field_with_residuals(
-            self.rupture, sites, self.imt1, self.gsim,
-            truncation_level=None,
-            intra_residual_epsilons=eps_intra,
-            inter_residual_epsilons=eps_inter
-        )
-
-        numpy.testing.assert_array_almost_equal(gmf, 11.1852253)
