@@ -426,7 +426,7 @@ class NrmlHazardlibConverter(object):
         rupture = HazardlibRupture(
             mag=src.magnitude, rake=src.rake,
             tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
-            surface=surface, source_typology=geo.SimpleFaultSurface)
+            surface=surface, source_typology=source.SimpleFaultSource)
 
         return rupture
 
@@ -460,7 +460,7 @@ class NrmlHazardlibConverter(object):
         rupture = HazardlibRupture(
             mag=src.magnitude, rake=src.rake,
             tectonic_region_type=None, hypocenter=geo.Point(*src.hypocenter),
-            surface=surface, source_typology=geo.ComplexFaultSurface)
+            surface=surface, source_typology=source.ComplexFaultSource)
 
         return rupture
 
