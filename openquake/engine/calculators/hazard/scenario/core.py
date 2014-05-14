@@ -134,9 +134,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-        seeds = [rnd.randint(0, models.MAX_SINT_32)
-                 for _ in xrange(self.hc.number_of_ground_motion_fields)]
+        all_seeds = [rnd.randint(0, models.MAX_SINT_32)
+                     for _ in xrange(self.hc.number_of_ground_motion_fields)]
         ss = general.SequenceSplitter(self.concurrent_tasks())
-        for task_no, block in enumerate(ss.split(seeds)):
-            yield (self.job.id, block, self.hc.site_collection,
+        for task_no, task_seeds in enumerate(ss.split(all_seeds)):
+            yield (self.job.id, task_seeds, self.hc.site_collection,
                    self.rupture, self.gmf.id, task_no)
