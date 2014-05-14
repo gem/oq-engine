@@ -42,6 +42,7 @@ from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import Site, SiteCollection
 
 from openquake.engine.db import fields
@@ -858,9 +859,8 @@ class HazardCalculation(djm.Model):
 
             for rupture in ruptures:
                 with filtruptures_mon:
-                    r_sites = rupture.source_typology.\
-                        filter_sites_by_distance_to_rupture(
-                            rupture, self.maximum_distance, s_sites
+                    r_sites = filters.filter_sites_by_distance_to_rupture(
+                        rupture, self.maximum_distance, s_sites
                         ) if self.maximum_distance else s_sites
                     if r_sites is None:
                         continue
