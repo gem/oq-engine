@@ -29,21 +29,24 @@ class ScenarioOccupantsQATestCase1(risk.FixtureBasedQATestCase):
     def actual_data(self, job):
         latest_loss_map = job.output_set.filter(
             output_type="loss_map", loss_map__loss_type="fatalities").latest(
-                'last_update').loss_map
+            'last_update').loss_map
         latest_aggregated = job.output_set.filter(
             output_type="aggregate_loss",
             aggregate_loss__loss_type="fatalities").latest(
-                'last_update').aggregate_loss
+            'last_update').aggregate_loss
 
-        return [(d.value, d.std_dev)
+        data = [(d.value, d.std_dev)
                 for d in latest_loss_map.lossmapdata_set.all().order_by(
-                'asset_ref')] + [
-                    (latest_aggregated.mean, latest_aggregated.std_dev)]
+                    'asset_ref')] + [
+            (latest_aggregated.mean, latest_aggregated.std_dev)]
+
+        return data
 
     def expected_data(self):
-        return [(0.40754604, 0.14661467),
-                (1.27516318,  0.91571143),
-                (1.4329613, 0.92721498)] + [(3.11983577,  1.10750248)]
+        return [(0.471915785, 0.07295834),
+                (1.5895092, 1.85708354),
+                (0.9215899, 0.4393920),
+                (2.983015, 1.8925195)]
 
 # For NIGHT:
 
