@@ -71,18 +71,12 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     :returns:
         Filtered :class:`~openquake.hazardlib.site.SiteCollection`.
 
-    This method is similar to :meth:`filter_sites_by_distance_to_source`,
-    the difference is that it should be implemented as a class method:
-    filtering should be done only on the basis of the rupture information.
-    The same notes about filtering criteria apply to this method. Site
+    This function is similar to :meth:`filter_sites_by_distance_to_source`.
+    The same notes about filtering criteria apply. Site
     should not be filtered out if it is not further than the integration
     distance from the rupture's surface projection along the great
     circle arc (this is known as Joyner-Boore distance, :meth:`
     openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`).
-
-    Base class implementation performs Joyner-Boore distance calculation
-    (:meth:`openquake.hazardlib.geo.surface.base.BaseQuadrilateralSurface.get_joyner_boore_distance`)
-    and filters out sites that are farther than ``integration_distance``.
     """
     jb_dist = rupture.surface.get_joyner_boore_distance(sites.mesh)
     return sites.filter(jb_dist <= integration_distance)
@@ -114,7 +108,7 @@ def rupture_site_distance_filter(integration_distance):
 
     :param integration_distance:
         Threshold distance in km, this value gets passed straight to
-        :meth:`openquake.hazardlib.calc.filters.filter_sites_by_distance_to_rupture`
+        :func:`openquake.hazardlib.calc.filters.filter_sites_by_distance_to_rupture`
         which is what is actually used for filtering.
     """
     def filter_func(ruptures_sites):
