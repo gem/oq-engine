@@ -29,13 +29,12 @@ class ScenarioHazardCase6TestCase(qa_utils.BaseQATestCase):
         job = self.run_hazard(cfg)
         [output] = export.core.get_outputs(job.id)
         gmfs = list(models.get_gmvs_per_site(output, 'PGA', sort=lambda x: x))
-        realizations = 1e5
+        realizations = 2e4
         first_value = 0.5
         second_value = 1.0
         gmfs_within_range_fst = qa_utils.count(first_value, gmfs[0], gmfs[1])
         gmfs_within_range_snd = qa_utils.count(second_value, gmfs[0], gmfs[1])
-
         self.assertAlmostEqual(gmfs_within_range_fst / realizations,
                                0.05, places=2)
         self.assertAlmostEqual(gmfs_within_range_snd / realizations,
-                               0.007, places=3)
+                               0.006, places=3)
