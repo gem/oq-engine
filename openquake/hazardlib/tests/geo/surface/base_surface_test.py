@@ -87,7 +87,6 @@ class GetJoynerBooreDistanceTestCase(unittest.TestCase):
         sites = Mesh.from_points_list([Point(0, 0), Point(0, 0, 20),
                                        Point(0.01, 0.03)])
         dists = surface.get_joyner_boore_distance(sites)
-        #import pdb; pdb.set_trace()
         expected_dists = [0] * 3
         self.assertTrue(numpy.allclose(dists, expected_dists))
 
