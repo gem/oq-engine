@@ -21,7 +21,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.surface.base import BaseQuadrilateralSurface
 
-from openquake.hazardlib.tests.geo.surface import _planar_test_data as test_data
+from openquake.hazardlib.tests.geo.surface import _planar_test_data
 
 
 class DummySurface(BaseQuadrilateralSurface):
@@ -46,33 +46,33 @@ class DummySurface(BaseQuadrilateralSurface):
 
 class GetMinDistanceTestCase(unittest.TestCase):
     def test_1(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_6_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_6_MESH)
         sites = Mesh.from_points_list([Point(0, 0)])
         self.assertAlmostEqual(8.01185807319,
                                surface.get_min_distance(sites)[0])
 
     def test_2(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_6_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_6_MESH)
         sites = Mesh.from_points_list([Point(-0.25, 0.25)])
         self.assertAlmostEqual(40.1213468,
                                surface.get_min_distance(sites)[0],
                                places=4)
 
     def test_3(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_2_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_2_MESH)
         sites = Mesh.from_points_list([Point(0, 0)])
         self.assertAlmostEqual(7.01186304977,
                                surface.get_min_distance(sites)[0])
 
     def test_4(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_2_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_2_MESH)
         sites = Mesh.from_points_list([Point(-0.3, 0.4)])
         self.assertAlmostEqual(55.6159556,
                                surface.get_min_distance(sites)[0],
                                places=4)
 
     def test_several_sites(self):
-        surface = DummySurface(test_data.TEST_7_RUPTURE_2_MESH)
+        surface = DummySurface(_planar_test_data.TEST_7_RUPTURE_2_MESH)
         sites = Mesh.from_points_list([Point(0, 0), Point(-0.3, 0.4)])
         dists = surface.get_min_distance(sites)
         expected_dists = [7.01186304977, 55.6159556]

@@ -231,8 +231,8 @@ class BaseQuadrilateralSurface(BaseSurface):
         <.base.BaseSurface.get_rx_distance>`
         for spec of input and result values.
 
-        The method extracts the top edge of the surface. For each point in mesh,
-        it then computes the Rx distance to each segment the top edge is made
+        The method extracts the top edge of the surface. For each point in mesh
+        it computes the Rx distance to each segment the top edge is made
         of. The calculation is done by calling the function
         :func:`openquake.hazardlib.geo.geodetic.distance_to_arc`. The final Rx
         distance matrix is then constructed by taking, for each point in mesh,
