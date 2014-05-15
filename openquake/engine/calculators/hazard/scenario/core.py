@@ -28,10 +28,12 @@ from openquake.hazardlib.calc import ground_motion_fields, filters
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
+from openquake.commonlib.general import SequenceSplitter
+from openquake.commonlib import source
+
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.utils import tasks, general
+from openquake.engine.utils import tasks
 from openquake.engine.db import models
-from openquake.engine.input import source
 from openquake.engine import writer
 from openquake.engine.performance import EnginePerformanceMonitor
 
@@ -143,7 +145,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         rnd.seed(self.hc.random_seed)
         all_seeds = [rnd.randint(0, models.MAX_SINT_32)
                      for _ in xrange(self.hc.number_of_ground_motion_fields)]
-        ss = general.SequenceSplitter(self.concurrent_tasks())
+        ss = SequenceSplitter(self.concurrent_tasks())
         for task_no, task_seeds in enumerate(ss.split(all_seeds)):
             yield (self.job.id, task_seeds, sites, self.rupture,
                    self.gmf.id, task_no)
