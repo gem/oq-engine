@@ -43,7 +43,7 @@ correlation matrix.'''
 
 
 @tasks.oqtask
-def spawn_tasks(job_id, calc, taxonomy, counts):
+def spawn_tasks(job_id, calc, taxonomy, counts, outputdict):
     """
     Spawn risk tasks and return an OqTaskManager instance
     """
@@ -66,9 +66,6 @@ def spawn_tasks(job_id, calc, taxonomy, counts):
         available_mb = available_memory / 1024 / 1024
         if calc.eps_man == 'full' and nbytes * 3 > available_memory:
             raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
-
-    outputdict = writers.combine_builders(
-        [ob(calc) for ob in calc.output_builders])
 
     task_no = 0
     name = calc.core_calc_task.__name__ + '[%s]' % taxonomy
@@ -173,8 +170,11 @@ class RiskCalculator(base.Calculator):
         the considered exposure into chunks of homogeneous assets
         (i.e. having the same taxonomy).
         """
+        outputdict = writers.combine_builders(
+            [ob(self) for ob in self.output_builders])
+
         arglist = [
-            (self.job.id, self, taxonomy, counts)
+            (self.job.id, self, taxonomy, counts, outputdict)
             for taxonomy, counts in self.taxonomies_asset_count.iteritems()]
 
         def agg(acc, otm):
