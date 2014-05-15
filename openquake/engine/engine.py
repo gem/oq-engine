@@ -325,7 +325,7 @@ def _collect_source_model_paths(smlt):
     return sorted(set(src_paths))
 
 
-# used by bin/openquake
+# used by bin/openquake and openquake.server.views
 def run_calc(job, log_level, log_file, exports, job_type):
     """
     Run a calculation.
@@ -357,10 +357,10 @@ def run_calc(job, log_level, log_file, exports, job_type):
     try:
         with job_stats(job):  # run the job
             logs.set_level(log_level)
-            _do_run_calc(job, exports, calculator, job_type)
+            _do_run_calc(calculator, exports, job_type)
     finally:
         logging.root.removeHandler(handler)
-    return job
+    return calculator
 
 
 def _switch_to_job_phase(job, job_type, status):
@@ -380,19 +380,21 @@ def _switch_to_job_phase(job, job_type, status):
     logs.LOG.progress("%s (%s)", status, job_type)
 
 
-def _do_run_calc(job, exports, calc, job_type):
+def _do_run_calc(calc, exports, job_type):
     """
     Step through all of the phases of a calculation, updating the job
     status at each phase.
 
-    :param job:
-        An :class:`~openquake.engine.db.models.OqJob` instance.
+    :param calc:
+        An :class:`~openquake.engine.calculators.base.Calculator` instance.
     :param list exports:
         a (potentially empty) list of export targets, currently only "xml" is
         supported
-    :returns:
-        The input job object when the calculation completes.
+    :param str job_type:
+        calculation type (hazard|risk)
     """
+    job = calc.job
+
     _switch_to_job_phase(job, job_type, "pre_executing")
     calc.pre_execute()
 
@@ -415,8 +417,6 @@ def _do_run_calc(job, exports, calc, job_type):
 
     _switch_to_job_phase(job, job_type, "complete")
     logs.LOG.debug("*> complete")
-
-    return job
 
 
 def del_haz_calc(hc_id):
@@ -556,24 +556,23 @@ def run_job(cfg_file, log_level, log_file, exports, hazard_output_id=None,
 
         # Instantiate the calculator and run the calculation.
         t0 = time.time()
-        completed_job = run_calc(
-            job, log_level, log_file, exports, 'hazard' if hazard else 'risk'
-        )
+        run_calc(
+            job, log_level, log_file, exports, 'hazard' if hazard else 'risk')
         duration = time.time() - t0
         if hazard:
-            if completed_job.status == 'complete':
-                print_results(completed_job.hazard_calculation.id,
+            if job.status == 'complete':
+                print_results(job.hazard_calculation.id,
                               duration, list_hazard_outputs)
             else:
                 sys.exit('Calculation %s failed' %
-                         completed_job.hazard_calculation.id)
+                         job.hazard_calculation.id)
         else:
-            if completed_job.status == 'complete':
-                print_results(completed_job.risk_calculation.id,
+            if job.status == 'complete':
+                print_results(job.risk_calculation.id,
                               duration, list_risk_outputs)
             else:
                 sys.exit('Calculation %s failed' %
-                         completed_job.risk_calculation.id)
+                         job.risk_calculation.id)
 
 
 @django_db.transaction.commit_on_success

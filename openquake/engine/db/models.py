@@ -42,6 +42,7 @@ from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import source, geo
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import Site, SiteCollection
 
 from openquake.engine.db import fields
@@ -126,6 +127,20 @@ VULNERABILITY_TYPE_CHOICES = [choice[0]
 SourceRuptureSites = collections.namedtuple(
     'SourceRuptureSites',
     'source rupture sites')
+
+
+############## Fix FloatField underflow error ##################
+# http://stackoverflow.com/questions/9556586/floating-point-numbers-of-python-float-and-postgresql-double-precision
+
+def _get_prep_value(self, value):
+    if value is None:
+        return None
+    val = float(value)
+    if val < 1E-300:
+        return 0.
+    return val
+
+djm.FloatField.get_prep_value = _get_prep_value
 
 
 def cost_type(loss_type):
@@ -844,9 +859,8 @@ class HazardCalculation(djm.Model):
 
             for rupture in ruptures:
                 with filtruptures_mon:
-                    r_sites = rupture.source_typology.\
-                        filter_sites_by_distance_to_rupture(
-                            rupture, self.maximum_distance, s_sites
+                    r_sites = filters.filter_sites_by_distance_to_rupture(
+                        rupture, self.maximum_distance, s_sites
                         ) if self.maximum_distance else s_sites
                     if r_sites is None:
                         continue
@@ -1396,6 +1410,24 @@ class HazardCurve(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
 
+    def build_data(self, curves_by_trt_model_gsim):
+        """
+        Build on the fly the hazard curves for the current realization
+        by looking at the associations stored in the database table
+        `hzrdr.assoc_lt_rlz_trt_model`.
+        """
+        if self.imt:
+            # build_data cannot be called from real curves
+            raise TypeError('%r is not a multicurve', self)
+
+        # fixed a realization, there are T associations where T is the
+        # number of TrtModels
+        curves = 0
+        for art in AssocLtRlzTrtModel.objects.filter(rlz=self.lt_realization):
+            pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]
+            curves = 1. - (1. - curves) * pnes
+        return curves
+
     @property
     def imt_long(self):
         """
@@ -1872,7 +1904,7 @@ class Gmf(djm.Model):
         for ses_coll in SESCollection.objects.filter(
                 output__oq_job=self.output.oq_job):
             for ses in ses_coll:
-                query = """
+                query = """\
         SELECT imt, sa_period, sa_damping, tag,
                array_agg(gmv) AS gmvs,
                array_agg(ST_X(location::geometry)) AS xs,
@@ -1881,11 +1913,13 @@ class Gmf(djm.Model):
              unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
            FROM hzrdr.gmf_data, hzrdi.hazard_site
             WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
-           AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y
-        WHERE x.rupture_id = y.id AND y.ses_id=%d
+           AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y,
+           hzrdr.probabilistic_rupture AS z
+        WHERE x.rupture_id = y.id AND y.rupture_id=z.id
+        AND y.ses_id=%d AND z.ses_collection_id=%d
         GROUP BY imt, sa_period, sa_damping, tag
         ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (hc.id, self.id, ses.ordinal)
+        """ % (hc.id, self.id, ses.ordinal, ses_coll.id)
                 with transaction.commit_on_success(using='job_init'):
                     curs = getcursor('job_init')
                     curs.execute(query)
@@ -1989,7 +2023,21 @@ class GmfData(djm.Model):
         ordering = ['gmf', 'task_no']
 
 
-def get_gmvs_per_site(output, imt=None, sort=sorted):
+def _get_gmf(curs, gmf_id, imtype, sa_period, sa_damping):
+    # returns site_id, gmvs for the given gmf_id and imt
+    query = '''\
+    SELECT site_id, array_concat(gmvs ORDER BY task_no)
+    FROM hzrdr.gmf_data WHERE gmf_id=%s AND imt=%s {}
+    GROUP BY site_id ORDER BY site_id'''
+    if imtype == 'SA':
+        curs.execute(query.format('AND sa_period=%s AND sa_damping=%s'),
+                     (gmf_id, imtype, sa_period, sa_damping))
+    else:
+        curs.execute(query.format(''), (gmf_id, imtype))
+    return curs.fetchall()
+
+
+def get_gmvs_per_site(output, imt, sort=sorted):
     """
     Iterator for walking through all :class:`GmfData` objects associated
     to a given output. Notice that values for the same site are
@@ -1998,26 +2046,15 @@ def get_gmvs_per_site(output, imt=None, sort=sorted):
 
     :param output: instance of :class:`openquake.engine.db.models.Output`
 
-    :param string imt: a string with the IMT to extract; the default
-                       is None, all the IMT in the job.ini file are extracted
+    :param string imt: a string with the IMT to extract
 
     :param sort: callable used for sorting the list of ground motion values.
 
     :returns: a list of ground motion values per each site
     """
-    job = output.oq_job
-    hc = job.hazard_calculation
-    coll = output.gmf
-    if imt is None:
-        imts = [from_string(x) for x in hc.intensity_measure_types]
-    else:
-        imts = [from_string(imt)]
-    for imt, sa_period, sa_damping in imts:
-        for gmf in GmfData.objects.filter(
-                gmf=coll, imt=imt,
-                sa_period=sa_period, sa_damping=sa_damping).\
-                order_by('site'):
-            yield sort(gmf.gmvs)
+    curs = getcursor('job_init')
+    for site_id, gmvs in _get_gmf(curs, output.gmf.id, *from_string(imt)):
+        yield sort(gmvs)
 
 
 def get_gmfs_scenario(output, imt=None):
@@ -2034,20 +2071,19 @@ def get_gmfs_scenario(output, imt=None):
     :returns: an iterator over
               :class:`openquake.engine.db.models._GroundMotionField` instances
     """
-    job = output.oq_job
-    hc = job.hazard_calculation
-    coll = output.gmf
+    hc = output.oq_job.hazard_calculation
     if imt is None:
         imts = [from_string(x) for x in hc.intensity_measure_types]
     else:
         imts = [from_string(imt)]
+    curs = getcursor('job_init')
     for imt, sa_period, sa_damping in imts:
         nodes = collections.defaultdict(list)  # realization -> gmf_nodes
-        for gmf in GmfData.objects.filter(
-                gmf=coll, imt=imt,
-                sa_period=sa_period, sa_damping=sa_damping):
-            for i, gmv in enumerate(gmf.gmvs):  # i is the realization index
-                nodes[i].append(_GroundMotionFieldNode(gmv, gmf.site.location))
+        for site_id, gmvs in _get_gmf(
+                curs, output.gmf.id, imt, sa_period, sa_damping):
+            for i, gmv in enumerate(gmvs):  # i is the realization index
+                site = HazardSite.objects.get(pk=site_id)
+                nodes[i].append(_GroundMotionFieldNode(gmv, site.location))
         for gmf_nodes in nodes.itervalues():
             yield _GroundMotionField(
                 imt=imt,
@@ -2166,19 +2202,20 @@ class LtSourceModel(djm.Model):
         Return the number of sources in the model.
         """
         return sum(info.num_sources for info in
-                   LtModelInfo.objects.filter(lt_model=self))
+                   TrtModel.objects.filter(lt_model=self))
 
     def get_tectonic_region_types(self):
         """
         Return the tectonic region types in the model,
         ordered by number of sources.
         """
-        return LtModelInfo.objects.filter(
+        return TrtModel.objects.filter(
             lt_model=self).values_list(
             'tectonic_region_type', flat=True)
 
     class Meta:
         db_table = 'hzrdr\".\"lt_source_model'
+        ordering = ['ordinal']
 
     def __iter__(self):
         """
@@ -2187,9 +2224,9 @@ class LtSourceModel(djm.Model):
         return iter(LtRealization.objects.filter(lt_model=self))
 
 
-class LtModelInfo(djm.Model):
+class TrtModel(djm.Model):
     """
-    Information about a source model content
+    Source submodel containing sources of the same tectonic region type.
     """
     lt_model = djm.ForeignKey('LtSourceModel')
     tectonic_region_type = djm.TextField(null=False)
@@ -2197,10 +2234,46 @@ class LtModelInfo(djm.Model):
     num_ruptures = djm.IntegerField(null=False)
     min_mag = djm.FloatField(null=False)
     max_mag = djm.FloatField(null=False)
+    gsims = fields.CharArrayField(null=True)
+
+    def get_realizations(self, gsim_name):
+        """
+        Return the realizations associated to the current TrtModel and
+        the given GSIM.
+
+        :param str gsim_name: name of a GSIM class
+        """
+        assert gsim_name in self.gsims, gsim_name
+        for art in AssocLtRlzTrtModel.objects.filter(
+                trt_model=self.id, gsim=gsim_name):
+            yield art.rlz
+
+    def get_rlzs_by_gsim(self):
+        """
+        Return the realizations associated to the current TrtModel
+        as a dictionary {gsim_name: [rlz, ...]}
+        """
+        rlzs = dict(
+            (gsim, list(self.get_realizations(gsim)))
+            for gsim in self.gsims)
+        return rlzs
 
     class Meta:
-        db_table = 'hzrdr\".\"lt_model_info'
+        db_table = 'hzrdr\".\"trt_model'
         ordering = ['tectonic_region_type', 'num_sources']
+
+
+class AssocLtRlzTrtModel(djm.Model):
+    """
+    Associations between logic tree realizations and TrtModels
+    """
+    rlz = djm.ForeignKey('LtRealization')
+    trt_model = djm.ForeignKey('TrtModel')
+    gsim = djm.TextField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"assoc_lt_rlz_trt_model'
+        ordering = ['id']
 
 
 class LtRealization(djm.Model):
@@ -2210,16 +2283,20 @@ class LtRealization(djm.Model):
 
     lt_model = djm.ForeignKey('LtSourceModel')
     ordinal = djm.IntegerField()
-    seed = djm.IntegerField()
     weight = djm.DecimalField(decimal_places=100, max_digits=101)
     gsim_lt_path = fields.CharArrayField()
 
     @property
     def sm_lt_path(self):
+        """
+        The source model logic tree path extracted from the underlying
+        source model
+        """
         return self.lt_model.sm_lt_path
 
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
+        ordering = ['ordinal']
 
 
 ## Tables in the 'riskr' schema.
@@ -2690,6 +2767,13 @@ class EventLoss(djm.Model):
 
     def __iter__(self):
         return iter(self.eventlossdata_set.all().order_by('-aggregate_loss'))
+
+    def to_csv_str(self):
+        """
+        Convert EventLoss into a CSV with fields rupture_tag, aggregate_loss
+        """
+        return '\n'.join('%s,%s' % (self.rupture.tag, self.aggregate_loss)
+                         for data in self)
 
     @property
     def output_hash(self):

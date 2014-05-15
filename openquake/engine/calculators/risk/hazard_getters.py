@@ -21,13 +21,47 @@ Hazard getters for Risk calculators.
 A HazardGetter is responsible fo getting hazard outputs needed by a risk
 calculation.
 """
+import itertools
+import operator
+
 import numpy
 
 from openquake.hazardlib.imt import from_string
-from openquake.risklib.scientific import make_epsilons
+from openquake.risklib import scientific
 
 from openquake.engine import logs
 from openquake.engine.db import models
+
+BYTES_PER_FLOAT = numpy.zeros(1, dtype=float).nbytes
+
+
+class AssetSiteAssociationError(Exception):
+    pass
+
+
+def make_epsilons(asset_count, num_ruptures, seed, correlation,
+                  epsilons_management):
+    """
+    :param int asset_count: the number of assets
+    :param int num_ruptures: the number of ruptures
+    :param int seed: a random seed
+    :param float correlation: the correlation coefficient
+    :param str epsilons_management: specify how to compute the epsilon matrix
+
+    If `epsilons_management` is 'full', generate the full epsilon matrix;
+    if it is 'fast' generate a vector of epsilons.
+    """
+    if epsilons_management == 'full':
+        # generate the full epsilon matrix
+        zeros = numpy.zeros((asset_count, num_ruptures))
+        return scientific.make_epsilons(zeros, seed, correlation)
+    elif epsilons_management == 'fast':
+        # use a single epsilon for all realizations
+        zeros = numpy.zeros((asset_count, 1))
+        return scientific.make_epsilons(zeros, seed, correlation).reshape(-1)
+    else:
+        raise RuntimeError('Wrong parameter epsilons_management '
+                           'in openquake.cfg: %r' % epsilons_management)
 
 
 class HazardGetter(object):
@@ -87,7 +121,7 @@ class HazardCurveGetter(HazardGetter):
 
     def get_data(self, imt):
         """
-        Extracts the hazard curves for the given imt from the hazard output.
+        Extracts the hazard curves for the given `imt` from the hazard output.
 
         :param str imt: Intensity Measure Type
         :returns: a list of N curves, each one being a list of pairs (iml, poe)
@@ -115,12 +149,11 @@ class HazardCurveGetter(HazardGetter):
         WHERE hazard_curve_id = %s AND location = %s
         """
         all_curves = []
-        for asset, site_id in zip(self.assets, self.site_ids):
-            site = models.HazardSite.objects.get(pk=site_id)
-            cursor.execute(query, (oc.id, 'SRID=4326; ' + site.location.wkt))
+        for site_id in self.site_ids:
+            location = models.HazardSite.objects.get(pk=site_id).location
+            cursor.execute(query, (oc.id, 'SRID=4326; ' + location.wkt))
             poes = cursor.fetchall()[0][0]
-            curve = zip(imls, poes)
-            all_curves.append(curve)
+            all_curves.append(zip(imls, poes))
         return all_curves
 
 
@@ -131,33 +164,45 @@ class GroundMotionValuesGetter(HazardGetter):
     rupture_ids = None  # set by the GetterBuilder
     epsilons = None  # set by the GetterBuilder
 
-    def _get_gmv_dict(self, site_id, imt_type, sa_period, sa_damping):
+    def _get_gmv_dict(self, imt_type, sa_period, sa_damping):
         """
         :returns: a dictionary {rupture_id: gmv} for the given site and IMT
         """
-        gmvs = []
-        ruptures = []
-        for gmf in models.GmfData.objects.filter(
-                gmf=self.hazard_output.output_container,
-                site=site_id, imt=imt_type, sa_period=sa_period,
-                sa_damping=sa_damping):  # ordered by task_no
-            gmvs.extend(gmf.gmvs)
-            ruptures.extend(gmf.rupture_ids)
-        if not gmvs:
-            logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
-        return dict(zip(ruptures, gmvs))
+        gmf_id = self.hazard_output.output_container.id
+        if sa_period:
+            imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
+        else:
+            imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
+        gmv_dict = {}
+        cursor = models.getcursor('job_init')
+        cursor.execute('select site_id, rupture_ids, gmvs from '
+                       'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
+                       'and {} order by site_id, task_no'.format(imt_query),
+                       (gmf_id, tuple(self.site_ids),
+                        imt_type, sa_period, sa_damping))
+        for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
+            gmvs = []
+            ruptures = []
+            for site_id, rupture_ids, gmvs in group:
+                gmvs.extend(gmvs)
+                ruptures.extend(rupture_ids)
+            gmv_dict[sid] = dict(itertools.izip(ruptures, gmvs))
+        return gmv_dict
 
     def get_data(self, imt):
         """
-        Extracts the GMFs for the given imt from the hazard output.
+        Extracts the GMFs for the given `imt` from the hazard output.
 
         :param str imt: Intensity Measure Type
         :returns: a list of N arrays with R elements each.
         """
         imt_type, sa_period, sa_damping = from_string(imt)
+        gmv_dict = self._get_gmv_dict(imt_type, sa_period, sa_damping)
         all_gmvs = []
-        for asset, site_id in zip(self.assets, self.site_ids):
-            gmv = self._get_gmv_dict(site_id, imt_type, sa_period, sa_damping)
+        for site_id in self.site_ids:
+            gmv = gmv_dict.get(site_id, {})
+            if not gmv:
+                logs.LOG.info('No data for site_id=%d, imt=%s', site_id, imt)
             array = numpy.array([gmv.get(r, 0.) for r in self.rupture_ids])
             all_gmvs.append(array)
         return all_gmvs
@@ -170,34 +215,40 @@ class ScenarioGetter(HazardGetter):
 
     rupture_ids = []  # there are no ruptures on the db
     epsilons = None  # set by the GetterBuilder
-
-    def _get_gmvs(self, site_id, imt_type, sa_period, sa_damping):
-        """
-        :returns: gmvs for the given site and IMT
-        """
-        gmvs = []
-        for gmf in models.GmfData.objects.filter(
-                gmf=self.hazard_output.output_container,
-                site=site_id, imt=imt_type, sa_period=sa_period,
-                sa_damping=sa_damping):  # ordered by task_no
-            gmvs.extend(gmf.gmvs)
-            if not gmvs:
-                logs.LOG.warn('No gmvs for site %s, IMT=%s', site_id, self.imt)
-        return gmvs
+    num_samples = None  # set by the GetterBuilder
 
     def get_data(self, imt):
         """
-        Extracts the GMFs for the given imt from the hazard output.
+        Extracts the GMFs for the given `imt` from the hazard output.
 
         :param str imt: Intensity Measure Type
         :returns: a list of N arrays with R elements each.
         """
         imt_type, sa_period, sa_damping = from_string(imt)
-        all_gmvs = []
-        for asset, site_id in zip(self.assets, self.site_ids):
-            gmvs = self._get_gmvs(site_id, imt_type, sa_period, sa_damping)
-            all_gmvs.append(gmvs)
-        return all_gmvs
+        gmf_id = self.hazard_output.output_container.id
+        if sa_period:
+            imt_query = 'imt=%s and sa_period=%s and sa_damping=%s'
+        else:
+            imt_query = 'imt=%s and sa_period is %s and sa_damping is %s'
+        cursor = models.getcursor('job_init')
+        templ = ('select site_id, gmvs from '
+                 'hzrdr.gmf_data where gmf_id=%s and site_id in %s '
+                 'and {} order by site_id, task_no'.format(imt_query))
+        args = (gmf_id, tuple(set(self.site_ids)),
+                imt_type, sa_period, sa_damping)
+        cursor.execute(templ, args)
+
+        gmvs_dict = {}  # site_id -> gmvs array
+        for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
+            gmvs = []
+            for site_id, gmvs_ in group:
+                gmvs.extend(gmvs_)
+            gmvs_dict[sid] = numpy.array(gmvs, dtype=float)
+        # TODO: add the test for the case where there is no data
+        # for the given site and vector of zeros is returned
+        return [gmvs_dict[sid] if sid in gmvs_dict
+                else numpy.zeros(self.num_samples, dtype=float)
+                for sid in self.site_ids]
 
 
 class GetterBuilder(object):
@@ -213,9 +264,10 @@ class GetterBuilder(object):
     Warning: instantiating a GetterBuilder performs a potentially
     expensive geospatial query.
     """
-    def __init__(self, taxonomy, rc):
+    def __init__(self, taxonomy, rc, epsilons_management='full'):
         self.taxonomy = taxonomy
         self.rc = rc
+        self.epsilons_management = epsilons_management
         self.hc = rc.get_hazard_calculation()
         max_dist = rc.best_maximum_distance * 1000  # km to meters
         cursor = models.getcursor('job_init')
@@ -233,6 +285,45 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         self.asset_ids, self.site_ids = zip(*cursor.fetchall())
         self.rupture_ids = {}
         self.epsilons = {}
+        self.epsilons_shape = {}
+
+    def calc_nbytes(self, hazard_outputs):
+        """
+        :param hazard_outputs: the outputs of a hazard calculation
+        :returns: the number of bytes to be allocated (can be
+                  much less if there is no correlation and the 'fast'
+                  epsilons management is enabled).
+
+        If the hazard_outputs come from an event based or scenario computation,
+        populate the .epsilons_shape dictionary.
+        """
+        num_assets = len(self.asset_ids)
+        if self.hc.calculation_mode == 'event_based':
+            lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
+                               for ho in hazard_outputs)
+            for lt_model_id in lt_model_ids:
+                ses_coll = models.SESCollection.objects.get(
+                    lt_model=lt_model_id)
+                if self.epsilons_management == 'full':
+                    samples = ses_coll.get_ruptures().count()
+                else:
+                    samples = 1
+                self.epsilons_shape[ses_coll.id] = (num_assets, samples)
+        elif self.hc.calculation_mode == 'scenario':
+                if self.epsilons_management == 'full':
+                    samples = self.hc.number_of_ground_motion_fields
+                else:
+                    samples = 1
+                self.epsilons_shape[0] = (num_assets, samples)
+        if self.epsilons_management == 'fast' and self.epsilons_shape:
+            # size of the correlation matrix
+            return num_assets * num_assets * BYTES_PER_FLOAT
+        nbytes = 0
+        for (n, r) in self.epsilons_shape.values():
+            # the max(n, r) is taken because if n > r then the limiting
+            # factor is the size of the correlation matrix, i.e. n
+            nbytes += max(n, r) * n * BYTES_PER_FLOAT
+        return nbytes
 
     def init_epsilons(self, hazard_outputs):
         """
@@ -241,6 +332,8 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         If the hazard_outputs come from an event based or scenario computation,
         populate the .epsilons and the .rupture_ids dictionaries.
         """
+        if not self.epsilons_shape:
+            self.calc_nbytes(hazard_outputs)
         if self.hc.calculation_mode == 'event_based':
             lt_model_ids = set(ho.output_container.lt_realization.lt_model.id
                                for ho in hazard_outputs)
@@ -248,22 +341,18 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 ses_coll = models.SESCollection.objects.get(
                     lt_model=lt_model_id)
                 scid = ses_coll.id
-                self.rupture_ids[scid] = rupture_ids = ses_coll.get_ruptures(
+                self.rupture_ids[scid] = ses_coll.get_ruptures(
                     ).values_list('id', flat=True)
-                zeros = numpy.zeros((len(self.asset_ids), len(rupture_ids)))
                 self.epsilons[scid] = make_epsilons(
-                    zeros, self.rc.master_seed, self.rc.asset_correlation)
+                    len(self.asset_ids), len(self.rupture_ids[scid]),
+                    self.rc.master_seed, self.rc.asset_correlation,
+                    self.epsilons_management)
         elif self.hc.calculation_mode == 'scenario':
-            zeros = numpy.zeros((len(self.asset_ids),
-                                 self.hc.number_of_ground_motion_fields))
             self.rupture_ids[0] = []
             self.epsilons[0] = make_epsilons(
-                zeros, self.rc.master_seed, self.rc.asset_correlation)
-
-        for epsilons in self.epsilons.itervalues():
-            logs.LOG.info('Allocated epsilon matrix with %s elements '
-                          'for taxonomy %s', epsilons.shape,
-                          self.taxonomy)
+                len(self.asset_ids), self.hc.number_of_ground_motion_fields,
+                self.rc.master_seed, self.rc.asset_correlation,
+                self.epsilons_management)
 
     def _indices_asset_site(self, asset_block):
         """
@@ -309,9 +398,10 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
         """
         indices, assets, site_ids = self._indices_asset_site(asset_block)
         if not indices:
-            raise RuntimeError('Could not associated any asset in %s to '
-                               'hazard sites within the distance of %s km',
-                               asset_block, self.rc.best_maximum_distance)
+            raise AssetSiteAssociationError(
+                'Could not associated any asset in %s to '
+                'hazard sites within the distance of %s km'
+                % (asset_block, self.rc.best_maximum_distance))
         if not self.epsilons:
             self.init_epsilons(hazard_outputs)
         getters = []
@@ -323,6 +413,7 @@ ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
                 getter.rupture_ids = self.rupture_ids[ses_coll_id]
                 getter.epsilons = self.epsilons[ses_coll_id][indices]
             elif self.hc.calculation_mode == 'scenario':
+                getter.num_samples = self.epsilons_shape[0][1]
                 getter.epsilons = self.epsilons[0][indices]
             getters.append(getter)
         return getters
