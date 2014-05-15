@@ -20,47 +20,23 @@ Base RiskCalculator class.
 """
 
 import collections
+import psutil
 
 from openquake.engine import logs, export
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
     writers, validation, loaders, hazard_getters
-from openquake.engine.utils import tasks
-from openquake.engine.performance import EnginePerformanceMonitor
-
+from openquake.engine.utils import config
 from openquake.risklib.workflows import RiskModel
 
-
-@tasks.oqtask
-def compute_taxonomy(job_id, calc, builder, haz_outs, outputdict, risk_model,
-                     assets_nr, block_size):
-    """
-    """
-    arglist = []
-    with calc.monitor("building epsilons"):
-        builder.init_epsilons(haz_outs)
-        epsilon_nbytes = sum(
-            eps.nbytes for eps in builder.epsilons.itervalues())
-        logs.LOG.info('Allocated %dM for the epsilons of taxonomy %s',
-                      epsilon_nbytes / 1024 / 1024, builder.taxonomy)
-
-    for offset in range(0, assets_nr, block_size):
-        with calc.monitor("getting asset chunks"):
-            assets = models.ExposureData.objects.get_asset_chunk(
-                calc.rc, builder.taxonomy, offset, block_size)
-        with calc.monitor("building getters"):
-            rm = risk_model.copy(
-                getters=builder.make_getters(
-                    calc.getter_class, haz_outs, assets))
-        arglist.append(
-            (calc.core_calc_task, calc.job.id,
-             rm, outputdict, calc.calculator_parameters))
-
-    calc.parallelize(
-        calc.core_calc_task, arglist, calc.task_completed)
-
-    return epsilon_nbytes
+MEMORY_ERROR = '''Running the calculation will require approximately
+%dM, i.e. more than the memory which is available right now (%dM).
+Please increase the free memory or apply a stringent region
+constraint to reduce the number of assets. Alternatively you can set
+epsilons_management=fast in openquake.cfg. It the correlation is
+nonzero, consider setting asset_correlation=0 to avoid building the
+correlation matrix.'''
 
 
 class RiskCalculator(base.Calculator):
@@ -116,15 +92,6 @@ class RiskCalculator(base.Calculator):
                     for t, count in self.taxonomies_asset_count.items()
                     if t in self.risk_models)
 
-        # taxonomies ordered by asset counts
-        self.asset_counts, self.taxonomies = zip(*sorted(
-            (c, t) for (t, c) in self.taxonomies_asset_count.iteritems()))
-
-        logs.LOG.info('Considering %d assets of %d distinct taxonomies',
-                      sum(self.asset_counts), len(self.taxonomies))
-        for taxonomy, counts in zip(self.taxonomies, self.asset_counts):
-            logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
-
         for validator_class in self.validators:
             validator = validator_class(self)
             error = validator.get_error()
@@ -132,8 +99,39 @@ class RiskCalculator(base.Calculator):
                 raise ValueError("""Problems in calculator configuration:
                                  %s""" % error)
 
-    @EnginePerformanceMonitor.monitor
-    def execute(self):
+        # taxonomies ordered by asset counts
+        self.asset_counts, self.taxonomies = zip(*sorted(
+            (c, t) for (t, c) in self.taxonomies_asset_count.iteritems()))
+        logs.LOG.info('Considering %d assets of %d distinct taxonomies',
+                      sum(self.asset_counts), len(self.taxonomies))
+
+        self.haz_outs = self.rc.hazard_outputs()
+        self.eps_man = config.get('risk', 'epsilons_management')
+        nbytes = 0  # number of epsilons * number of bytes per float
+        self.builders = []
+        for taxonomy, counts in zip(self.taxonomies, self.asset_counts):
+            logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
+            with self.monitor("associating asset->site"):
+                builder = hazard_getters.GetterBuilder(
+                    taxonomy, self.rc, self.eps_man)
+            nbytes += builder.calc_nbytes(self.haz_outs)
+            self.builders.append(builder)
+
+        if nbytes:
+            estimate_mb = nbytes / 1024 / 1024 * 3
+            if self.eps_man == 'fast' and self.rc.asset_correlation == 0:
+                pass  # using much less memory than the estimate, don't log
+            else:
+                logs.LOG.info('epsilons_management=%s: '
+                              'you should need less than %dM (rough estimate)',
+                              self.eps_man, estimate_mb)
+            phymem = psutil.phymem_usage()
+            available_memory = (1 - phymem.percent / 100) * phymem.total
+            available_mb = available_memory / 1024 / 1024
+            if self.eps_man == 'full' and nbytes * 3 > available_memory:
+                raise MemoryError(MEMORY_ERROR % (estimate_mb, available_mb))
+
+    def task_arg_gen(self):
         """
         Method responsible for the distribution strategy. It divides
         the considered exposure into chunks of homogeneous assets
@@ -150,24 +148,32 @@ class RiskCalculator(base.Calculator):
         outputdict = writers.combine_builders(
             [builder(self) for builder in self.output_builders])
 
-        block_size = 100  # NB: the block size dependency has been removed
-        results = []  # celery AsyncResults, unless OQ_NO_DISTRIBUTE is set
-        haz_outs = self.rc.hazard_outputs()
-
-        for taxonomy, assets_nr in zip(self.taxonomies, self.asset_counts):
+        # NB: the block size dependency has been removed
+        block_size = 100
+        task_no = 0
+        for taxonomy, builder, assets_nr in zip(
+                self.taxonomies, self.builders, self.asset_counts):
             risk_model = self.risk_models[taxonomy]
-            with self.monitor("associating asset->site"):
-                builder = hazard_getters.GetterBuilder(taxonomy, self.rc)
-            # submitting task
-            res = tasks.submit(
-                compute_taxonomy, self.job.id, self, builder, haz_outs,
-                outputdict, risk_model, assets_nr, block_size)
-            results.append(res)
-
-        # aggregating compute_taxonomy results
-        self.initialize_percent(compute_taxonomy, results)
-        tasks.aggregate_results(
-            results, lambda acc, res: self.log_percent(), None)
+            with self.monitor("building epsilons"):
+                builder.init_epsilons(self.haz_outs)
+            for offset in range(0, assets_nr, block_size):
+                with self.monitor("getting asset chunks"):
+                    assets = models.ExposureData.objects.get_asset_chunk(
+                        self.rc, taxonomy, offset, block_size)
+                with self.monitor("building getters"):
+                    try:
+                        getters = builder.make_getters(
+                            self.getter_class, self.haz_outs, assets)
+                    except hazard_getters.AssetSiteAssociationError as err:
+                        # TODO: add a test for this corner case
+                        # https://bugs.launchpad.net/oq-engine/+bug/1317796
+                        logs.LOG.warn('Taxonomy %s: %s', taxonomy, err)
+                        continue
+                # submitting task
+                task_no += 1
+                logs.LOG.info('Built task #%d', task_no)
+                rm = risk_model.copy(getters=getters)
+                yield self.job.id, rm, outputdict, self.calculator_parameters
 
     def _get_outputs_for_export(self):
         """

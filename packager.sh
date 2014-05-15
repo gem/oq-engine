@@ -313,8 +313,8 @@ celeryd_wait $GEM_MAXLOOP"
         # run tests (in this case we omit 'set -e' to be able to read all tests outputs)
         ssh $lxc_ip "export PYTHONPATH=\"\$PWD/oq-engine:\$PWD/oq-nrmllib:\$PWD/oq-hazardlib:\$PWD/oq-risklib\" ;
                  cd oq-engine
-                 nosetests -v --with-xunit --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
-                 nosetests -v --with-xunit --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
+                 nosetests -v --with-xunit --xunit-file=xunit-server.xml --with-coverage --cover-package=openquake.server --with-doctest openquake/server/tests/
+                 nosetests -v --with-xunit --xunit-file=xunit-engine.xml --with-coverage --cover-package=openquake.engine --with-doctest openquake/engine/tests/
 
                  # OQ Engine QA tests (splitted into multiple execution to track the performance)
                  nosetests  -a 'qa,hazard,classical' -v --with-xunit --xunit-file=xunit-qa-hazard-classical.xml
@@ -332,8 +332,7 @@ celeryd_wait $GEM_MAXLOOP"
                  python-coverage xml --include=\"openquake/*\"
                 "
 
-        scp "${lxc_ip}:oq-engine/nosetests.xml" .
-        scp "${lxc_ip}:oq-engine/xunit-qa*.xml" .
+        scp "${lxc_ip}:oq-engine/xunit-*.xml" .
         scp "${lxc_ip}:oq-engine/coverage.xml" .
     else
         if [ -d $HOME/fake-data/oq-engine ]; then
@@ -467,7 +466,7 @@ _pkgtest_innervm_run () {
             echo \"Running demo in \$demo_dir\"
             openquake --run-hazard job_hazard.ini -l info
             calculation_id=\$(openquake --list-hazard-calculations | tail -1 | awk '{print \$1}')
-            openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id
+            openquake --run-risk job_risk.ini --exports xml --hazard-calculation-id \$calculation_id -l info
             cd -
         done"
     fi

@@ -34,7 +34,7 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
         ping.return_value = {'node1': []}
         mon = CeleryNodeMonitor(no_distribute=False, interval=1)
         with mon, mock.patch('os.kill') as kill, \
-                mock.patch('sys.stderr') as stderr:
+                mock.patch('openquake.engine.logs.LOG') as log:
             time.sleep(1.1)
             ping.return_value = {}
             time.sleep(1)
@@ -45,7 +45,7 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
             pid, signum = kill.call_args[0]
             self.assertEqual(pid, os.getpid())
             self.assertEqual(signum, signal.SIGABRT)
-            self.assertTrue(stderr.write.called)
+            self.assertTrue(log.critical.called)
 
     def test_no_distribute(self):
         with CeleryNodeMonitor(no_distribute=True, interval=0.1):

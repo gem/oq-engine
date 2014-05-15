@@ -19,7 +19,6 @@
 """Common code for the hazard calculators."""
 
 import os
-import random
 import collections
 
 from openquake.hazardlib import correlation
@@ -44,12 +43,9 @@ from openquake.engine.calculators.post_processing import (
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
-from openquake.engine.utils import config, tasks
-from openquake.engine.utils.general import block_splitter, ceil
+from openquake.engine.utils import config
+from openquake.engine.utils.general import block_splitter, ceil, distinct
 from openquake.engine.performance import EnginePerformanceMonitor
-
-# this is needed to avoid running out of memory
-MAX_BLOCK_SIZE = 1000
 
 #: Maximum number of hazard curves to cache, for selects or inserts
 CURVE_CACHE_SIZE = 100000
@@ -81,22 +77,6 @@ def store_site_model(job, site_model_source):
                              job_id=job.id)
             for node in parser.parse()]
     return writer.CacheInserter.saveall(data)
-
-
-def im_dict_to_hazardlib(im_dict):
-    """
-    Given the dict of intensity measure types and levels, convert them to a
-    dict with the same values, except create :mod:`mhlib.imt` objects for the
-    new keys.
-
-    :returns:
-        A dict of intensity measure level lists, keyed by an IMT object. See
-        :mod:`openquake.hazardlib.imt` for more information.
-    """
-    # TODO: file a bug about  SA periods in hazardlib imts.
-    # Why are values of 0.0 not allowed? Technically SA(0.0) means PGA, but
-    # there must be a reason why we can't do this.
-    return dict((from_string(imt), imls) for imt, imls in im_dict.items())
 
 
 def get_correl_model(hc):
@@ -144,22 +124,6 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
-    # NB: this method will be replaces SequenceSplitter.split sooner or later
-    def block_split(self, items, max_block_size=MAX_BLOCK_SIZE):
-        """
-        Split the given items in blocks, depending on the parameter
-        concurrent tasks. Notice that in order to save memory there
-        is a maximum block size of %d items.
-
-        :param list items: the items to split in blocks
-        """ % MAX_BLOCK_SIZE
-        assert len(items) > 0, 'No items in %s' % items
-        num_rlzs = len(self._get_realizations())
-        bs = min(ceil(len(items), ceil(self.concurrent_tasks(), num_rlzs)),
-                 max_block_size)
-        logs.LOG.warn('Using block size=%d', bs)
-        return block_splitter(items, bs)
-
     def concurrent_tasks(self):
         """
         For hazard calculators, the number of tasks to be in queue
@@ -177,28 +141,16 @@ class BaseHazardCalculator(base.Calculator):
 
         Override this in subclasses as necessary.
         """
-        task_no = 0
         sitecol = self.hc.site_collection
-        for lt_model, trt, gsim_by_rlz in self.gen_gsim_by_trt():
-            ltpath = tuple(lt_model.sm_lt_path)
+        trt_models = models.TrtModel.objects.filter(
+            lt_model__hazard_calculation=self.hc)
+        for task_no, trt_model in enumerate(trt_models):
+            ltpath = tuple(trt_model.lt_model.sm_lt_path)
+            trt = trt_model.tectonic_region_type
+            gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
             for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                yield (self.job.id, sitecol, block, lt_model,
-                       gsim_by_rlz, task_no)
-                task_no += 1
-
-    def gen_gsim_by_trt(self):
-        """
-        Yield triples (lt_model, trt, gsim_by_rlz) for all models
-        """
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-        for lt_model in models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc):
-            gsim_dicts = [ltp.parse_gmpe_logictree_path(rlz.gsim_lt_path)
-                          for rlz in lt_model]
-            for trt in lt_model.get_tectonic_region_types():
-                yield lt_model, trt, collections.OrderedDict(
-                    (rlz, gsim_dict[trt])
-                    for rlz, gsim_dict in zip(lt_model, gsim_dicts))
+                yield (self.job.id, sitecol, block, trt_model.id,
+                       gsims, task_no)
 
     def _get_realizations(self):
         """
@@ -232,24 +184,16 @@ class BaseHazardCalculator(base.Calculator):
             a list with the number of sources for each source model
         """
         logs.LOG.progress("initializing sources")
-        smlt_file = self.hc.inputs['source_model_logic_tree']
-        self.smlt = logictree.SourceModelLogicTree(
-            file(smlt_file).read(), self.hc.base_path, smlt_file)
-        sm_paths = list(self.smlt.get_sm_paths())
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
+        sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
         nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
-
-        # here we are doing a full enumeration of the source model logic tree;
-        # this is not bad since for very large source models there are
-        # typically very few realizations; moreover, the filtering will remove
-        # most of the sources, so the memory occupation is typically low
         lt_models = []
-        for i, (sm, path) in enumerate(sm_paths):
-            smpath = tuple(path)
+        for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(
                 fname,
                 self.hc.sites_affected_by,
-                self.smlt.make_apply_uncertainties(path),
+                self.source_model_lt.make_apply_uncertainties(smpath),
                 self.hc)
             if not source_collector.source_weights:
                 raise RuntimeError(
@@ -258,21 +202,21 @@ class BaseHazardCalculator(base.Calculator):
                     (fname, self.hc.maximum_distance))
 
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.hc, ordinal=i, sm_lt_path=smpath)
+                hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
             lt_models.append(lt_model)
             for trt, blocks in source_collector.split_blocks(nblocks):
                 self.source_blocks_per_ltpath[smpath, trt] = blocks
                 n = sum(len(block) for block in blocks)
                 logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
-                              n, sm, path, trt)
+                              n, sm, smpath, trt)
                 logs.LOG.info('Splitting in %d blocks', len(blocks))
                 for i, block in enumerate(blocks, 1):
                     logs.LOG.debug('%s, block %d: %d source(s), weight %s',
                                    trt, i, len(block), block.weight)
 
-            # save LtModelInfo objects for each tectonic region type
+            # save TrtModel objects for each tectonic region type
             for trt in source_collector.sorted_trts():
-                models.LtModelInfo.objects.create(
+                models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
                     num_sources=len(source_collector.source_weights[trt]),
@@ -384,76 +328,34 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        rlzs_per_ltpath = collections.OrderedDict()
-        if self.job.hazard_calculation.number_of_logic_tree_samples > 0:
-            # random sampling of paths
-            self._initialize_realizations_montecarlo(rlzs_per_ltpath)
-        else:
-            # full paths enumeration
-            self._initialize_realizations_enumeration(rlzs_per_ltpath)
+        trts = set()
+        for lt_model in models.LtSourceModel.objects.filter(
+                hazard_calculation=self.hc):
+            trts.update(lt_model.get_tectonic_region_types())
 
-        ordinal = 0
-        lt_models = models.LtSourceModel.objects.filter(
-            hazard_calculation=self.hc)
-        for lt_model, (ltpath, path_infos) in zip(
-                lt_models, rlzs_per_ltpath.iteritems()):
-            for seed, weight, sm_lt_path, gsim_lt_path in path_infos:
-                models.LtRealization.objects.create(
-                    lt_model=lt_model, gsim_lt_path=gsim_lt_path,
-                    seed=seed, weight=weight, ordinal=ordinal)
-                ordinal += 1
-
-    def _initialize_realizations_enumeration(self, rlzs_per_ltpath):
-        """
-        Perform full paths enumeration of logic trees and populate
-        lt_realization table.
-        """
-        hc = self.job.hazard_calculation
-        ltp = logictree.LogicTreeProcessor.from_hc(hc)
-        seed = None
-        for i, path_info in enumerate(ltp.enumerate_paths()):
-            data = (seed, ) + path_info[1:]
-            ltpath = tuple(path_info[2])  # source model logic tree path
-            if not ltpath in rlzs_per_ltpath:
-                rlzs_per_ltpath[ltpath] = [data]
-            else:
-                rlzs_per_ltpath[ltpath].append(data)
-
-    def _initialize_realizations_montecarlo(self, rlzs_per_ltpath):
-        """
-        Perform random sampling of both logic trees and populate lt_realization
-        table.
-        """
-        # Each realization will have two seeds:
-        # One for source model logic tree, one for GSIM logic tree.
-        rnd = random.Random()
-        seed = self.hc.random_seed
-        rnd.seed(seed)
-
-        ltp = logictree.LogicTreeProcessor.from_hc(self.hc)
-
-        # The first realization gets the seed we specified in the config file.
-        for i in xrange(self.hc.number_of_logic_tree_samples):
-            # Sample source model logic tree branch paths:
-            source_model_filename, sm_lt_path = (
-                ltp.sample_source_model_logictree(
-                    rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)))
-
-            # Sample GSIM logic tree branch paths:
-            gsim_lt_path = ltp.sample_gmpe_logictree(
-                rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32))
-
-            # Populate rlzs_per_ltpath
-            data = seed, None, sm_lt_path, gsim_lt_path
-            ltpath = tuple(sm_lt_path)
-            if not ltpath in rlzs_per_ltpath:
-                rlzs_per_ltpath[ltpath] = [data]
-            else:
-                rlzs_per_ltpath[ltpath].append(data)
-
-            # update the seed for the next realization
-            seed = rnd.randint(models.MIN_SINT_32, models.MAX_SINT_32)
-            rnd.seed(seed)
+        self.gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc, trts)
+        paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
+        for ordinal, (sm_ordinal, weight, sm_lt_path, gmpe_path) in enumerate(
+                paths):
+            lt_model = models.LtSourceModel.objects.get(
+                hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
+            rlz = models.LtRealization.objects.create(
+                lt_model=lt_model, gsim_lt_path=gmpe_path,
+                weight=weight, ordinal=ordinal)
+            gsim_dict = self.gmpe_lt.make_trt_to_gsim(gmpe_path)
+            for trt_model in models.TrtModel.objects.filter(
+                    lt_model=lt_model):
+                # populate the associations rlz <-> trt_model
+                gsim = gsim_dict[trt_model.tectonic_region_type]
+                models.AssocLtRlzTrtModel.objects.create(
+                    rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
+        for trt_model in models.TrtModel.objects.filter(
+                lt_model__hazard_calculation=self.hc):
+            gsimset = set(art.gsim for art in
+                          models.AssocLtRlzTrtModel.objects.filter(
+                              trt_model=trt_model))
+            trt_model.gsims = sorted(gsimset)
+            trt_model.save()
 
     def _get_outputs_for_export(self):
         """
