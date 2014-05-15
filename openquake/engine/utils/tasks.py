@@ -183,10 +183,13 @@ class OqTaskManager(object):
 
     Progress report is built-in.
     """
-    def __init__(self, oqtask, progress):
+    def __init__(self, oqtask, progress, name=None, distribute=None):
         self.oqtask = oqtask
-        self.results = []
         self.progress = progress
+        self.name = name or oqtask.__name__
+        self.distribute = (not no_distribute() if distribute is None
+                           else distribute)
+        self.results = []
 
     def aggregate_results(self, agg, acc):
         """
@@ -199,7 +202,7 @@ class OqTaskManager(object):
         :returns: the final value of the accumulator
         """
         log_percent = log_percent_gen(
-            self.oqtask.__name__, len(self.results), self.progress)
+            self.name, len(self.results), self.progress)
         log_percent.next()
 
         def agg_and_percent(acc, val):
@@ -207,10 +210,10 @@ class OqTaskManager(object):
             log_percent.next()
             return res
 
-        if no_distribute():
-            return reduce(agg_and_percent, self.results, acc)
-        return aggregate_result_set(
-            ResultSet(self.results), agg_and_percent, acc)
+        if self.distribute:
+            return aggregate_result_set(
+                ResultSet(self.results), agg_and_percent, acc)
+        return reduce(agg_and_percent, self.results, acc)
 
     def submit(self, *args):
         """
@@ -218,15 +221,15 @@ class OqTaskManager(object):
         an AsyncResult. If the variable OQ_NO_DISTRIBUTE is set, the
         task function is run in process and the result is returned.
         """
-        if no_distribute():
-            res = self.oqtask.task_func(*args)
-        else:
+        if self.distribute:
             piks = pickle_sequence(args)
             to_send = sum(len(p) for p in piks)
             logs.LOG.info('Sending %s with %dM of data',
                           self.oqtask.__name__, to_send / ONE_MB)
             check_mem_usage()  # log a warning if too much memory is used
             res = self.oqtask.delay(*piks)
+        else:
+            res = self.oqtask.task_func(*args)
         self.results.append(res)
 
 
