@@ -41,6 +41,7 @@ try:
 except ImportError:
     pass
 
+from openquake.commonlib import source
 import openquake.engine
 
 from openquake.engine import __version__
@@ -48,7 +49,6 @@ from openquake.engine import engine
 from openquake.engine.db import models
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.export import risk as risk_export
-from openquake.engine.input import source
 from openquake.engine.tools.import_gmf_scenario import import_gmf_scenario
 from openquake.engine.tools.import_hazard_curves import import_hazard_curves
 from openquake.engine.tools import save_hazards, load_hazards

@@ -20,7 +20,6 @@
 Helper functions for our unit and smoke tests.
 """
 
-import collections
 import functools
 import logging
 import mock as mock_module
@@ -305,8 +304,8 @@ class ConfigTestCase(object):
         local_path = "%s/openquake.cfg" % os.path.abspath(config.OQDIR)
         if os.path.isfile("%s.test_bakk" % local_path):
             shutil.move("%s.test_bakk" % local_path, local_path)
-        config.Config().cfg.clear()
-        config.Config()._load_from_file()
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
 
     def prepare_config(self, section, data=None):
         """Set up a configuration with the given `max_mem` value."""
@@ -319,8 +318,8 @@ class ConfigTestCase(object):
             content = ""
         site_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
-        config.Config().cfg.clear()
-        config.Config()._load_from_file()
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
 
 
 def random_string(length=16):
@@ -329,98 +328,6 @@ def random_string(length=16):
     while len(result) < length:
         result += random.choice(string.letters + string.digits)
     return result
-
-
-def deep_eq(a, b, decimal=7, exclude=None):
-    """Deep compare two objects for equality by traversing __dict__ and
-    __slots__.
-
-    Caution: This function will exhaust generators.
-
-    :param decimal:
-        Desired precision (digits after the decimal point) for numerical
-        comparisons.
-
-    :param exclude: a list of attributes that will be excluded when
-    traversing objects
-
-    :returns:
-        Return `True` or `False` (to indicate if objects are equal) and a `str`
-        message. If the two objects are equal, the message is empty. If the two
-        objects are not equal, the message indicates which part of the
-        comparison failed.
-    """
-    exclude = exclude or []
-
-    try:
-        _deep_eq(a, b, decimal=decimal, exclude=exclude)
-    except AssertionError, err:
-        return False, err.message
-    return True, ''
-
-
-def _deep_eq(a, b, decimal, exclude=None):
-    """Do the actual deep comparison. If the two items up for comparison are
-    not equal, a :exception:`AssertionError` is raised (to
-    :function:`deep_eq`).
-    """
-
-    exclude = exclude or []
-
-    def _test_dict(a, b):
-        """Compare `dict` types recursively."""
-        assert len(a) == len(b), (
-            "Dicts %(a)s and %(b)s do not have the same length."
-            " Actual lengths: %(len_a)s and %(len_b)s") % dict(
-                a=a, b=b, len_a=len(a), len_b=len(b))
-
-        for key in a:
-            if not key in exclude:
-                _deep_eq(a[key], b[key], decimal)
-
-    def _test_seq(a, b):
-        """Compare `list` or `tuple` types recursively."""
-        assert len(a) == len(b), (
-            "Sequences %(a)s and %(b)s do not have the same length."
-            " Actual lengths: %(len_a)s and %(len_b)s") % \
-            dict(a=a, b=b, len_a=len(a), len_b=len(b))
-
-        for i, item in enumerate(a):
-            _deep_eq(item, b[i], decimal)
-
-    # lists or tuples
-    if isinstance(a, (list, tuple)):
-        _test_seq(a, b)
-    # dicts
-    elif isinstance(a, dict):
-        _test_dict(a, b)
-    # objects with a __dict__
-    elif hasattr(a, '__dict__'):
-        assert a.__class__ == b.__class__, (
-            "%s and %s are different classes") % (a.__class__, b.__class__)
-        _test_dict(a.__dict__, b.__dict__)
-    # iterables (not strings)
-    elif isinstance(a, collections.Iterable) and not isinstance(a, str):
-        # If there's a generator or another type of iterable, treat it as a
-        # `list`. NOTE: Generators will be exhausted if you do this.
-        _test_seq(list(a), list(b))
-    # objects with __slots__
-    elif hasattr(a, '__slots__'):
-        assert a.__class__ == b.__class__, (
-            "%s and %s are different classes") % (a.__class__, b.__class__)
-        assert a.__slots__ == b.__slots__, (
-            "slots %s and %s are not the same") % (a.__slots__, b.__slots__)
-        for slot in a.__slots__:
-            if not slot in exclude:
-                _deep_eq(getattr(a, slot), getattr(b, slot), decimal)
-    else:
-        # Objects must be primitives
-
-        # Are they numbers?
-        if isinstance(a, (int, long, float, complex)):
-            numpy.testing.assert_almost_equal(a, b, decimal=decimal)
-        else:
-            assert a == b, "%s != %s" % (a, b)
 
 
 def get_job(cfg, username="openquake", hazard_calculation_id=None,
