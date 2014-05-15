@@ -120,10 +120,11 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         :param task_result:
             A pair (fractions, taxonomy)
         """
+        acc = acc.copy()
         fractions, taxonomy = task_result
         if fractions is not None:
             if taxonomy not in acc:
-                self.acc[taxonomy] = numpy.zeros(fractions.shape)
+                acc[taxonomy] = numpy.zeros(fractions.shape)
             acc[taxonomy] += fractions
         return acc
 

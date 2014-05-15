@@ -107,7 +107,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.acc = ({}, {})  # aggregate_losses and insured_losses accumulators
 
     def agg_result(self, acc, task_result):
-        aggregate_losses_acc, insured_losses_acc = acc
+        aggregate_losses_acc, insured_losses_acc = acc[0].copy(), acc[1].copy()
         aggregate_losses_dict, insured_losses_dict = task_result
 
         for loss_type in self.loss_types:
