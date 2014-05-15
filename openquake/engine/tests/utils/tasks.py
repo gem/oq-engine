@@ -26,7 +26,7 @@ import traceback
 
 from celery.task import task
 
-from openquake.engine.utils.tasks import Pickled
+from openquake.engine.utils.tasks import Pickled, oqtask
 
 
 # mimic the behavior of oqtask
@@ -81,3 +81,9 @@ def failing_task(data):
 def reflect_data_to_be_processed(data):
     """Merely returns the data received."""
     return data
+
+
+@oqtask
+def fake_risk_task(job_id, risk_model, outputdict, params):
+    """Used in tests.calculators.risk.base"""
+    return {job_id: 1}
