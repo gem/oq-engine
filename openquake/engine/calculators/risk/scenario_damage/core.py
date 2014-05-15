@@ -41,7 +41,8 @@ def scenario_damage(job_id, risk_model, outputdict, params):
 
     :param int job_id:
       ID of the currently running job
-    :param list risk_models:
+    :param list units:
+      A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
