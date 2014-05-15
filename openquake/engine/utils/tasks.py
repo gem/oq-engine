@@ -233,7 +233,7 @@ class OqTaskManager(object):
         self.results.append(res)
 
 
-def map_reduce(task, task_args, agg, acc):
+def map_reduce(task, task_args, agg, acc, name=None, distribute=None):
     """
     Given a task and an iterable of positional arguments, apply the
     task function to the arguments in parallel and return an aggregate
@@ -258,7 +258,7 @@ def map_reduce(task, task_args, agg, acc):
     :param acc: the initial value of the accumulator
     :returns: the final value of the accumulator
     """
-    oqm = OqTaskManager(task, logs.LOG.progress)
+    oqm = OqTaskManager(task, logs.LOG.progress, name, distribute)
     for args in task_args:
         oqm.submit(*args)
     return oqm.aggregate_results(agg, acc)
