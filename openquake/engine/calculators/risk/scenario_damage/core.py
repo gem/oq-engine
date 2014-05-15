@@ -105,28 +105,27 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         # let's define a dictionary taxonomy -> fractions
         # updated in task_completed method when the fractions per taxonomy
         # becomes available, as computed by the workers
-        self.ddpt = {}
+        self.acc = {}
         self.damage_state_ids = None
 
     def get_workflow(self, fragility_functions):
         return workflows.Damage(fragility_functions)
 
-    def task_completed(self, task_result):
+    def agg_result(self, acc, task_result):
         """
-        Update the dictionary self.ddpt, i.e. aggregate the damage distribution
+        Update the dictionary acc, i.e. aggregate the damage distribution
         by taxonomy; called every time a block of assets is computed for each
         taxonomy. Fractions and taxonomy are extracted from task_result
 
         :param task_result:
             A pair (fractions, taxonomy)
         """
-        self.log_percent(task_result)
         fractions, taxonomy = task_result
-
         if fractions is not None:
-            if taxonomy not in self.ddpt:
-                self.ddpt[taxonomy] = numpy.zeros(fractions.shape)
-            self.ddpt[taxonomy] += fractions
+            if taxonomy not in acc:
+                self.acc[taxonomy] = numpy.zeros(fractions.shape)
+            acc[taxonomy] += fractions
+        return acc
 
     def post_process(self):
         """
@@ -141,13 +140,13 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
             self.job, "Collapse Map per Asset",
             "collapse_map")
 
-        if self.ddpt:
+        if self.acc:
             models.Output.objects.create_output(
                 self.job, "Damage Distribution per Taxonomy",
                 "dmg_dist_per_taxonomy")
 
         tot = None
-        for taxonomy, fractions in self.ddpt.iteritems():
+        for taxonomy, fractions in self.acc.iteritems():
             writers.damage_distribution_per_taxonomy(
                 fractions, self.damage_state_ids, taxonomy)
             if tot is None:  # only the first time
