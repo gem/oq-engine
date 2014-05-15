@@ -190,6 +190,7 @@ class OqTaskManager(object):
         self.distribute = (not no_distribute() if distribute is None
                            else distribute)
         self.results = []
+        self.sent = 0
 
     def aggregate_results(self, agg, acc):
         """
@@ -201,6 +202,7 @@ class OqTaskManager(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
+        logs.LOG.info('Sent %dM of data', self.sent / ONE_MB)
         log_percent = log_percent_gen(
             self.name, len(self.results), self.progress)
         log_percent.next()
@@ -223,9 +225,7 @@ class OqTaskManager(object):
         """
         if self.distribute:
             piks = pickle_sequence(args)
-            to_send = sum(len(p) for p in piks)
-            logs.LOG.info('Sending %s with %dM of data',
-                          self.oqtask.__name__, to_send / ONE_MB)
+            self.sent += sum(len(p) for p in piks)
             check_mem_usage()  # log a warning if too much memory is used
             res = self.oqtask.delay(*piks)
         else:
