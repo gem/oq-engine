@@ -45,7 +45,7 @@ correlation matrix.'''
 @tasks.oqtask
 def spawn_tasks(job_id, calc, taxonomy, counts):
     """
-    Spawn risk tasks and return the aggregated results.
+    Spawn risk tasks and return an OqTaskManager instance
     """
     logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
     with calc.monitor("associating asset->site"):
@@ -71,7 +71,8 @@ def spawn_tasks(job_id, calc, taxonomy, counts):
         [ob(calc) for ob in calc.output_builders])
 
     task_no = 0
-    oqm = tasks.OqTaskManager(calc.core_calc_task, logs.LOG.progress)
+    name = calc.core_calc_task.__name__ + '[%s]' % taxonomy
+    otm = tasks.OqTaskManager(calc.core_calc_task, logs.LOG.progress, name)
     with calc.monitor("building epsilons"):
         builder.init_epsilons(haz_outs)
     for offset in range(0, counts, BLOCK_SIZE):
@@ -91,9 +92,9 @@ def spawn_tasks(job_id, calc, taxonomy, counts):
         task_no += 1
         logs.LOG.info('Built task #%d for taxonomy %s', task_no, taxonomy)
         rm = calc.risk_models[taxonomy].copy(getters=getters)
-        oqm.submit(calc.job.id, rm, outputdict, calc.calculator_parameters)
+        otm.submit(calc.job.id, rm, outputdict, calc.calculator_parameters)
 
-    return oqm.aggregate_results(calc.agg_result, calc.acc)
+    return otm
 
 
 class RiskCalculator(base.Calculator):
@@ -175,8 +176,11 @@ class RiskCalculator(base.Calculator):
         arglist = [
             (self.job.id, self, taxonomy, counts)
             for taxonomy, counts in self.taxonomies_asset_count.iteritems()]
-        self.acc = tasks.map_reduce(
-            spawn_tasks, arglist, self.agg_result, self.acc)
+
+        def agg(acc, otm):
+            return otm.aggregate_results(self.agg_result, acc)
+
+        self.acc = tasks.map_reduce(spawn_tasks, arglist, agg, self.acc)
 
     def _get_outputs_for_export(self):
         """
