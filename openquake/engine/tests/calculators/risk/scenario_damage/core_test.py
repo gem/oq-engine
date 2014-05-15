@@ -50,7 +50,7 @@ FMParser = parsers.FragilityModelParser
 
 class FakeJob:
     class rc:
-        inputs = mock.Mock()
+        inputs = dict(fragility=mock.Mock())
     risk_calculation = rc
 
 
