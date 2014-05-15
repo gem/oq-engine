@@ -161,6 +161,10 @@ class RiskCalculator(base.Calculator):
                 raise ValueError("""Problems in calculator configuration:
                                  %s""" % error)
 
+        num_assets = sum(self.taxonomies_asset_count.itervalues())
+        num_taxonomies = len(self.taxonomies_asset_count)
+        logs.LOG.info('Considering %d assets of %d distinct taxonomies',
+                      num_assets, num_taxonomies)
         self.eps_man = config.get('risk', 'epsilons_management')
 
     @EnginePerformanceMonitor.monitor
