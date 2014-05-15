@@ -36,7 +36,7 @@ def scenario(job_id, risk_model, outputdict, _params):
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
+    :param list risk_models:
       A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
@@ -46,49 +46,43 @@ def scenario(job_id, risk_model, outputdict, _params):
       derived outputs
     """
     monitor = EnginePerformanceMonitor(None, job_id, scenario, tracing=True)
-
-    agg = dict()
-    insured = dict()
     with db.transaction.commit_on_success(using='job_init'):
-        for loss_type in risk_model.loss_types:
-            agg[loss_type], insured[loss_type] = do_scenario(
-                risk_model,
-                loss_type,
-                outputdict.with_args(
-                    loss_type=loss_type,
-                    output_type="loss_map"),
-                monitor)
-    return agg, insured
+        return do_scenario(risk_model, outputdict, monitor)
 
 
-def do_scenario(risk_model, loss_type, outputdict, monitor):
+def do_scenario(risk_model, outputdict, monitor):
     """
     See `scenario` for a description of the input parameters
     """
-    [output] = risk_model.compute_outputs(
-        loss_type, monitor.copy('getting data'))
+    out = risk_model.compute_outputs(monitor.copy('getting data'))
+    agg, ins = {}, {}
+    for loss_type, [output] in out.iteritems():
+        outputdict = outputdict.with_args(
+            loss_type=loss_type, output_type="loss_map")
 
-    (assets, loss_ratio_matrix, aggregate_losses,
-     insured_loss_matrix, insured_losses) = output.output
+        (assets, loss_ratio_matrix, aggregate_losses,
+         insured_loss_matrix, insured_losses) = output.output
+        agg[loss_type] = aggregate_losses
+        ins[loss_type] = insured_losses
 
-    with monitor.copy('saving risk outputs'):
-        outputdict.write(
-            assets,
-            loss_ratio_matrix.mean(axis=1),
-            loss_ratio_matrix.std(ddof=1, axis=1),
-            hazard_output_id=risk_model.getters[0].hid,
-            insured=False)
-
-        if insured_loss_matrix is not None:
+        with monitor.copy('saving risk outputs'):
             outputdict.write(
                 assets,
-                insured_loss_matrix.mean(axis=1),
-                insured_loss_matrix.std(ddof=1, axis=1),
-                itertools.cycle([True]),
+                loss_ratio_matrix.mean(axis=1),
+                loss_ratio_matrix.std(ddof=1, axis=1),
                 hazard_output_id=risk_model.getters[0].hid,
-                insured=True)
+                insured=False)
 
-    return aggregate_losses, insured_losses
+            if insured_loss_matrix is not None:
+                outputdict.write(
+                    assets,
+                    insured_loss_matrix.mean(axis=1),
+                    insured_loss_matrix.std(ddof=1, axis=1),
+                    itertools.cycle([True]),
+                    hazard_output_id=risk_model.getters[0].hid,
+                    insured=True)
+
+    return agg, ins
 
 
 class ScenarioRiskCalculator(base.RiskCalculator):

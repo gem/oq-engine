@@ -34,23 +34,24 @@ class ScenarioDamageRiskCase4TestCase(risk.FixtureBasedQATestCase):
     def actual_data(self, job):
         per_asset = models.DmgDistPerAsset.objects.filter(
             dmg_state__risk_calculation=job.risk_calculation).order_by(
-                'exposure_data', 'dmg_state')
+            'exposure_data', 'dmg_state')
         totals = models.DmgDistTotal.objects.filter(
             dmg_state__risk_calculation=job.risk_calculation).order_by(
-                'dmg_state')
-        return [[[m.mean, m.stddev] for m in per_asset],
+            'dmg_state')
+        data = [[[m.mean, m.stddev] for m in per_asset],
                 [[total.mean, total.stddev] for total in totals]]
+        return data
 
     def expected_data(self):
-        return [[[2831.39440276538, 272.496770998072],
-                 [161.947302372973, 249.774966981951],
-                 [6.65829486164962, 29.46078616569],
-                 [160.845510534195, 260.559970809904],
-                 [428.273449106381, 290.835857759211],
-                 [410.881040359423, 378.302327897718],
-                 [516.766483950188, 646.868485847065],
-                 [777.664421126009, 535.83594187711],
-                 [705.569094923804, 743.547507821238]],
-                [[3509.00639724976, 741.459174207617],
-                 [1367.88517260537, 666.080418405019],
-                 [1123.10843014487, 836.390985994778]]]
+        return [[[2839.99487945302, 260.107936318162],
+                 [154.207170037728, 240.669053166515],
+                 [5.79795050924058, 24.2361847686849],
+                 [162.093574777342, 262.704324187903],
+                 [436.941603707819, 294.180204333271],
+                 [400.964821514838, 376.14843653929],
+                 [506.964203111531, 645.131915664689],
+                 [774.865676844215, 535.513668479813],
+                 [718.170120044255, 744.033150727349]],
+                [[3509.0526573419, 736.44555857085],
+                 [1366.01445058976, 657.913617460034],
+                 [1124.93289206833, 838.747142746392]]]

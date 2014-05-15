@@ -22,6 +22,8 @@ import numpy
 
 from nose.plugins.attrib import attr
 
+from django.contrib.gis.db import models as djm
+
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -175,7 +177,7 @@ class ProbabilisticRuptureTestCase(unittest.TestCase):
             hazard_calculation=job.hazard_calculation, ordinal=0,
             sm_lt_path='foo')
         lt_rlz = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=0, seed=0, gsim_lt_path='bar')
+            lt_model=lt_model, ordinal=0, gsim_lt_path='bar')
         output = models.Output.objects.create(
             oq_job=job, display_name='test', output_type='ses')
         ses_coll = models.SESCollection.objects.create(
@@ -244,29 +246,39 @@ class GmfsPerSesTestCase(unittest.TestCase):
         lt_model = models.LtSourceModel.objects.create(
             hazard_calculation=job.hazard_calculation,
             ordinal=1, sm_lt_path="test_sm")
+        lt_model_2 = models.LtSourceModel.objects.create(
+            hazard_calculation=job.hazard_calculation,
+            ordinal=2, sm_lt_path="test_sm_2")
         rlz1 = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=1, seed=1, weight=None,
+            lt_model=lt_model, ordinal=1, weight=None,
             gsim_lt_path="test_gsim")
         rlz2 = models.LtRealization.objects.create(
-            lt_model=lt_model, ordinal=2, seed=1, weight=None,
+            lt_model=lt_model, ordinal=2, weight=None,
             gsim_lt_path="test_gsim_2")
         ses_coll = models.SESCollection.objects.create(
             output=models.Output.objects.create_output(
                 job, "Test SES Collection 1", "ses"),
-            lt_model=lt_model, ordinal=0)
+            lt_model=lt_model, ordinal=1)
+        # create a second SESCollection; this is to avoid regressions
+        # in models.Gmf.__iter__ which should yield a single
+        # GmfSet even if there are several SES collections
+        models.SESCollection.objects.create(
+            output=models.Output.objects.create_output(
+                job, "Test SES Collection 2", "ses"),
+            lt_model=lt_model_2, ordinal=2)
 
         gmf_data1 = helpers.create_gmf_data_records(job, rlz1, ses_coll)[0]
         points = [(15.3, 38.22), (15.7, 37.22),
                   (15.4, 38.09), (15.56, 38.1), (15.2, 38.2)]
         gmf_data2 = helpers.create_gmf_data_records(
             job, rlz2, ses_coll, points)[0]
-        cls.gmf_coll1 = gmf_data1.gmf
+        cls.gmf1 = gmf_data1.gmf  # a Gmf instance
         cls.ruptures1 = tuple(get_tags(gmf_data1))
         cls.ruptures2 = tuple(get_tags(gmf_data2))
         cls.investigation_time = job.hazard_calculation.investigation_time
 
     def test_branch_lt(self):
-        [gmfs] = self.gmf_coll1
+        [gmfset] = self.gmf1  # exhaust Gmf.__iter__
         expected = """\
 GMFsPerSES(investigation_time=%f, stochastic_event_set_id=1,
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
@@ -288,7 +300,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=%s
 <X= 15.56500, Y= 38.17000, GMV=0.3000000>
 <X= 15.71000, Y= 37.22500, GMV=0.3000000>))""" % (
             (self.investigation_time,) + self.ruptures1)
-        self.assertEqual(str(gmfs), expected)
+        self.assertEqual(str(gmfset), expected)
 
 
 class PrepGeometryTestCase(unittest.TestCase):
@@ -316,6 +328,12 @@ class PrepGeometryTestCase(unittest.TestCase):
         }
 
         self.assertEqual(expected, models._prep_geometry(the_input))
+
+
+class FloatFieldTestCase(unittest.TestCase):
+    def test_truncate_small_numbers(self):
+        # workaround a postgres error "out of range for type double precision"
+        self.assertEqual(djm.FloatField().get_prep_value(1e-301), 0)
 
 
 class GetSiteCollectionTestCase(unittest.TestCase):
