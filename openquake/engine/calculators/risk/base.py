@@ -43,7 +43,7 @@ correlation matrix.'''
 
 
 @tasks.oqtask
-def spawn_tasks(job_id, calc, taxonomy, counts, outputdict):
+def run_subtasks(job_id, calc, taxonomy, counts, outputdict):
     """
     Spawn risk tasks and return an OqTaskManager instance
     """
@@ -179,8 +179,8 @@ class RiskCalculator(base.Calculator):
 
         def agg(acc, otm):
             return otm.aggregate_results(self.agg_result, acc)
-
-        self.acc = tasks.map_reduce(spawn_tasks, arglist, agg, self.acc)
+        name = run_subtasks.__name__ + '[%s]' % self.core_calc_task.__name__
+        self.acc = tasks.map_reduce(run_subtasks, arglist, agg, self.acc, name)
 
     def _get_outputs_for_export(self):
         """
