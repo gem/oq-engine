@@ -45,7 +45,9 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
     See :func:`compute_gmfs` for parameter definitions.
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    imts = [from_string(x) for x in hc.intensity_measure_types]
+    # distinct is here to make sure that IMTs such as
+    # SA(0.8) and SA(0.80) are considered the same
+    imts = general.distinct(from_string(x) for x in hc.intensity_measure_types)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     realizations = 1  # one realization for each seed
     correlation_model = haz_general.get_correl_model(hc)
