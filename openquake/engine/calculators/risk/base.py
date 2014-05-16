@@ -176,18 +176,21 @@ class RiskCalculator(base.Calculator):
         the considered exposure into chunks of homogeneous assets
         (i.e. having the same taxonomy).
         """
-        outputdict = writers.combine_builders(
-            [ob(self) for ob in self.output_builders])
-
-        arglist = [
-            (self.job.id, self, taxonomy, counts, outputdict)
-            for taxonomy, counts in self.taxonomies_asset_count.iteritems()]
-
         def agg(acc, otm):
             return otm.aggregate_results(self.agg_result, acc)
         run = self.run_subtasks
         name = run.__name__ + '[%s]' % self.core_calc_task.__name__
-        self.acc = tasks.map_reduce(run, arglist, agg, self.acc, name)
+        self.acc = tasks.map_reduce(
+            run, self.task_arg_gen(), agg, self.acc, name)
+
+    def task_arg_gen(self):
+        """
+        Yields the argument to be submitted to run_subtasks
+        """
+        outputdict = writers.combine_builders(
+            [ob(self) for ob in self.output_builders])
+        for taxonomy, counts in self.taxonomies_asset_count.iteritems():
+            yield self.job.id, self, taxonomy, counts, outputdict
 
     def _get_outputs_for_export(self):
         """
