@@ -44,7 +44,8 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter, ceil, distinct
+from openquake.engine.utils.general import (
+    block_splitter, distinct, split_on_max_weight)
 from openquake.engine.performance import EnginePerformanceMonitor
 
 #: Maximum number of hazard curves to cache, for selects or inserts
@@ -55,6 +56,9 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
+
+# max weight used to build blocks of sources
+WEIGHT = 10000
 
 
 def store_site_model(job, site_model_source):
@@ -148,9 +152,17 @@ class BaseHazardCalculator(base.Calculator):
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
             gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
-            for block in self.source_blocks_per_ltpath[ltpath, trt]:
+            filtered = ((s, w) for s, w in self.sources_weights[trt_model.id]
+                        if self.hc.sites_affected_by(s))
+            num_sources = 0
+            for i, block in enumerate(split_on_max_weight(filtered, WEIGHT)):
+                num_sources += len(block)
                 yield (self.job.id, sitecol, block, trt_model.id,
                        gsims, task_no)
+
+            del self.sources_weights[trt_model.id]  # save memory
+            logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s',
+                          num_sources, ltpath, trt)
 
     def _get_realizations(self):
         """
@@ -186,13 +198,13 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
-        nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
         lt_models = []
+        self.sources_weights = {}
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(
                 fname,
-                self.hc.sites_affected_by,
+                lambda src: True,
                 self.source_model_lt.make_apply_uncertainties(smpath),
                 self.hc)
             if not source_collector.source_weights:
@@ -204,25 +216,18 @@ class BaseHazardCalculator(base.Calculator):
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
             lt_models.append(lt_model)
-            for trt, blocks in source_collector.split_blocks(nblocks):
-                self.source_blocks_per_ltpath[smpath, trt] = blocks
-                n = sum(len(block) for block in blocks)
-                logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
-                              n, sm, smpath, trt)
-                logs.LOG.info('Splitting in %d blocks', len(blocks))
-                for i, block in enumerate(blocks, 1):
-                    logs.LOG.debug('%s, block %d: %d source(s), weight %s',
-                                   trt, i, len(block), block.weight)
 
             # save TrtModel objects for each tectonic region type
             for trt in source_collector.sorted_trts():
-                models.TrtModel.objects.create(
+                sources_weights = source_collector.source_weights[trt]
+                trt_model = models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
-                    num_sources=len(source_collector.source_weights[trt]),
+                    num_sources=len(sources_weights),
                     num_ruptures=source_collector.num_ruptures[trt],
                     min_mag=source_collector.min_mag[trt],
                     max_mag=source_collector.max_mag[trt])
+                self.sources_weights[trt_model.id] = sources_weights
         return lt_models
 
     @EnginePerformanceMonitor.monitor
