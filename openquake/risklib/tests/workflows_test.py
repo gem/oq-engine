@@ -270,8 +270,5 @@ class DamageTest(unittest.TestCase):
         with mock.patch('openquake.risklib.scientific.scenario_damage') as m:
             fragility_functions = mock.Mock()
             calc = workflows.Damage(dict(damage=fragility_functions))
-            calc([1, 2, 3])
-            self.assertEqual([((fragility_functions, 1,), dict()),
-                              ((fragility_functions, 2,), dict()),
-                              ((fragility_functions, 3,), dict())],
-                             m.call_args_list)
+            calc([[1, 1], [2, 2], [3, 3]])
+            self.assertEqual(m.call_count, 6)  # called 3 x 2 times

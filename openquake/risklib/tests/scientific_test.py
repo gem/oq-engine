@@ -375,8 +375,8 @@ class FragilityFunctionTestCase(unittest.TestCase):
         ffns = [scientific.FragilityFunctionDiscrete(
             [0.1, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00])] * 2
 
-        self._close_to(scientific.scenario_damage(ffns, [0.7]),
-                       scientific.scenario_damage(ffns, [0.8]))
+        self._close_to(scientific.scenario_damage(ffns, 0.7),
+                       scientific.scenario_damage(ffns, 0.8))
 
     def test_dda_iml_below_range_damage_limit_defined(self):
         # corner case where we have a ground motion value
@@ -390,8 +390,8 @@ class FragilityFunctionTestCase(unittest.TestCase):
 
         ffns = [scientific.FragilityFunctionDiscrete(
             [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.05, 0.20, 0.50, 1.00], 0.5)] * 2
-        self._close_to([[1.0, 0.0, 0.0]],
-                       scientific.scenario_damage(ffns, [0.02]))
+        self._close_to([1.0, 0.0, 0.0],
+                       scientific.scenario_damage(ffns, 0.02))
 
     def test_gmv_between_no_damage_limit_and_first_iml(self):
         # corner case where we have a ground motion value
@@ -409,8 +409,8 @@ class FragilityFunctionTestCase(unittest.TestCase):
             scientific.FragilityFunctionDiscrete(
                 [0.05, 0.1, 0.3, 0.5, 0.7], [0, 0.00, 0.05, 0.20, 0.50], 0.05)]
 
-        self._close_to([[0.975, 0.025, 0.]],
-                       scientific.scenario_damage(ffs, [0.075]))
+        self._close_to([0.975, 0.025, 0.],
+                       scientific.scenario_damage(ffs, 0.075))
 
     def _close_to(self, expected, actual):
         numpy.testing.assert_allclose(actual, expected, atol=0.0, rtol=0.05)

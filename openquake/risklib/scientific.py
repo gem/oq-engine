@@ -518,20 +518,13 @@ def event_based(loss_values, tses, time_span,
 ##
 
 
-def scenario_damage(fragility_functions, gmvs):
+def scenario_damage(fragility_functions, gmv):
     """
-    Compute the damage state fractions for the given array of ground
-    motion values. Returns an NxM matrix where N is the number of
-    realizations and M is the numbers of damage states.
+    Compute the damage state fractions for the given ground motion value.
+    Return am array of M values where M is the numbers of damage states.
     """
-    return utils.numpy_map(
-        lambda gmv:
-        numpy.array(
-            list(pairwise_diff(
-                [1] +
-                [ff(gmv) for ff in fragility_functions] +
-                [0]))),
-        gmvs)
+    return pairwise_diff(
+        [1] + [ff(gmv) for ff in fragility_functions] + [0])
 
 
 ##
