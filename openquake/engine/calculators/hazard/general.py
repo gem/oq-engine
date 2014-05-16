@@ -152,15 +152,17 @@ class BaseHazardCalculator(base.Calculator):
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
             gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
-            filtered = ((s, w) for s, w in self.sources_weights[trt_model.id]
-                        if self.hc.sites_affected_by(s))
+            filtered = ((src, source.get_num_ruptures_weight(src)[1])
+                        for src in self.sources[trt_model.id]
+                        if self.hc.sites_affected_by(src))
             num_sources = 0
             for i, block in enumerate(split_on_max_weight(filtered, WEIGHT)):
-                num_sources += len(block)
-                yield (self.job.id, sitecol, block, trt_model.id,
-                       gsims, task_no)
+                if block:
+                    num_sources += len(block)
+                    yield (self.job.id, sitecol, block,
+                           trt_model.id, gsims, task_no)
 
-            del self.sources_weights[trt_model.id]  # save memory
+            del self.sources[trt_model.id]  # save memory
             logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s',
                           num_sources, ltpath, trt)
 
@@ -199,15 +201,13 @@ class BaseHazardCalculator(base.Calculator):
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
         lt_models = []
-        self.sources_weights = {}
+        self.sources = {}
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(
-                fname,
-                lambda src: True,
-                self.source_model_lt.make_apply_uncertainties(smpath),
+                fname, self.source_model_lt.make_apply_uncertainties(smpath),
                 self.hc)
-            if not source_collector.source_weights:
+            if not source_collector.sources:
                 raise RuntimeError(
                     'Could not find sources close to the sites in %s '
                     '(maximum_distance=%s km)' %
@@ -219,15 +219,15 @@ class BaseHazardCalculator(base.Calculator):
 
             # save TrtModel objects for each tectonic region type
             for trt in source_collector.sorted_trts():
-                sources_weights = source_collector.source_weights[trt]
+                sources = source_collector.sources[trt]
                 trt_model = models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
-                    num_sources=len(sources_weights),
+                    num_sources=len(sources),
                     num_ruptures=source_collector.num_ruptures[trt],
                     min_mag=source_collector.min_mag[trt],
                     max_mag=source_collector.max_mag[trt])
-                self.sources_weights[trt_model.id] = sources_weights
+                self.sources[trt_model.id] = sources
         return lt_models
 
     @EnginePerformanceMonitor.monitor
