@@ -226,6 +226,25 @@ class SequenceSplitter(object):
             yield ws
 
 
+def split_on_max_weight(sequence, max_weight):
+    """
+    """
+    ws = WeightedSequence()
+    for item, weight in sequence:
+        if weight <= 0:  # ignore items with 0 weight
+            continue
+        if ws.weight + weight > max_weight:
+            new_ws = WeightedSequence()
+            new_ws.append((item, weight))
+            if ws:
+                yield ws
+            ws = new_ws
+        else:
+            ws.append((item, weight))
+    if ws:
+        yield ws
+
+
 def block_splitter(data, block_size):
     """
     Given a sequence of objects and a ``block_size``, generate slices from the
