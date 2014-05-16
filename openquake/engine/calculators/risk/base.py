@@ -43,7 +43,7 @@ correlation matrix.'''
 
 
 @tasks.oqtask
-def run_subtasks(job_id, calc, taxonomy, counts, outputdict):
+def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
     """
     Spawn risk tasks and return an OqTaskManager instance
     """
@@ -88,8 +88,9 @@ def run_subtasks(job_id, calc, taxonomy, counts, outputdict):
         # submitting task
         task_no += 1
         logs.LOG.info('Built task #%d for taxonomy %s', task_no, taxonomy)
-        rm = calc.risk_models[taxonomy].copy(getters=getters)
-        otm.submit(calc.job.id, rm, outputdict, calc.calculator_parameters)
+        risk_model = calc.risk_models[taxonomy].copy(getters=getters)
+        otm.submit(calc.job.id, risk_model, outputdict,
+                   calc.calculator_parameters)
 
     return otm
 
@@ -115,6 +116,7 @@ class RiskCalculator(base.Calculator):
                   validation.NoRiskModels]
 
     bcr = False  # flag overridden in BCR calculators
+    run_subtasks = distribute_by_assets
 
     def __init__(self, job):
         super(RiskCalculator, self).__init__(job)
@@ -183,8 +185,9 @@ class RiskCalculator(base.Calculator):
 
         def agg(acc, otm):
             return otm.aggregate_results(self.agg_result, acc)
-        name = run_subtasks.__name__ + '[%s]' % self.core_calc_task.__name__
-        self.acc = tasks.map_reduce(run_subtasks, arglist, agg, self.acc, name)
+        run = self.run_subtasks
+        name = run.__name__ + '[%s]' % self.core_calc_task.__name__
+        self.acc = tasks.map_reduce(run, arglist, agg, self.acc, name)
 
     def _get_outputs_for_export(self):
         """
