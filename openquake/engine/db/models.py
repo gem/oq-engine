@@ -45,6 +45,7 @@ from openquake.hazardlib import source, geo
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import Site, SiteCollection
 
+from openquake.engine.utils.general import distinct
 from openquake.engine.db import fields
 from openquake.engine import writer
 
@@ -2073,7 +2074,7 @@ def get_gmfs_scenario(output, imt=None):
     """
     hc = output.oq_job.hazard_calculation
     if imt is None:
-        imts = [from_string(x) for x in hc.intensity_measure_types]
+        imts = distinct(from_string(x) for x in hc.intensity_measure_types)
     else:
         imts = [from_string(imt)]
     curs = getcursor('job_init')
