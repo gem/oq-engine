@@ -45,11 +45,12 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
     See :func:`compute_gmfs` for parameter definitions.
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    imts = [from_string(x) for x in hc.intensity_measure_types]
+    # distinct is here to make sure that IMTs such as
+    # SA(0.8) and SA(0.80) are considered the same
+    imts = general.distinct(from_string(x) for x in hc.intensity_measure_types)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     realizations = 1  # one realization for each seed
     correlation_model = haz_general.get_correl_model(hc)
-    rup_filter = filters.rupture_site_distance_filter(hc.maximum_distance)
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
     inserter = writer.CacheInserter(models.GmfData, 1000)
@@ -60,7 +61,7 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
             numpy.random.seed(task_seed)
             gmf_dict = ground_motion_fields(
                 rupture, sitecol, imts, gsim, hc.truncation_level,
-                realizations, correlation_model, rup_filter)
+                realizations, correlation_model)
             for imt in imts:
                 for site_id, gmv in zip(sitecol.sids, gmf_dict[imt]):
                     # float is needed below to convert 1x1 matrices
@@ -132,11 +133,19 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         will be generated which is fine since the computation is fast
         anyway.
         """
+        hc = self.hc
+        if hc.maximum_distance:
+            sites = filters.filter_sites_by_distance_to_rupture(
+                self.rupture, hc.maximum_distance, hc.site_collection)
+            if sites is None:
+                raise RuntimeError(
+                    'All sites where filtered out! '
+                    'maximum_distance=%s km' % hc.maximum_distance)
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-        seeds = [rnd.randint(0, models.MAX_SINT_32)
-                 for _ in xrange(self.hc.number_of_ground_motion_fields)]
+        all_seeds = [rnd.randint(0, models.MAX_SINT_32)
+                     for _ in xrange(self.hc.number_of_ground_motion_fields)]
         ss = general.SequenceSplitter(self.concurrent_tasks())
-        for task_no, block in enumerate(ss.split(seeds)):
-            yield (self.job.id, block, self.hc.site_collection,
-                   self.rupture, self.gmf.id, task_no)
+        for task_no, task_seeds in enumerate(ss.split(all_seeds)):
+            yield (self.job.id, task_seeds, sites, self.rupture,
+                   self.gmf.id, task_no)
