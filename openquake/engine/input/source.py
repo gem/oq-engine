@@ -55,13 +55,30 @@ class SourceCollector(object):
         trt = src.tectonic_region_type
         min_mag, max_mag = src.mfd.get_min_max_mag()
         self.sources[trt].append(src)
-        # self.num_ruptures[trt] += num_ruptures
         prev_min_mag = self.min_mag.get(trt)
         if prev_min_mag is None or min_mag < prev_min_mag:
             self.min_mag[trt] = min_mag
         prev_max_mag = self.max_mag.get(trt)
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag[trt] = max_mag
+
+    def gen_source_weight(self, trt, src_filter):
+        """
+        Yield all the sources of a given tectonic region type, together
+        with their weight. As side effects populate the dictionary
+        `.num_ruptures` and throw away the unfiltered sources in `.sources`.
+
+        :param trt: tectonic region type
+        :param src_filter: a filtering function on sources
+        """
+        srcs = []
+        for src in self.sources[trt]:
+            if src_filter(src) is not None:
+                ruptures, weight = get_num_ruptures_weight(src)
+                self.num_ruptures[trt] += ruptures
+                srcs.append(src)
+                yield src, weight
+        self.sources[trt] = srcs  # throw away unfiltered sources
 
     def sorted_trts(self):
         """
