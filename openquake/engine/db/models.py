@@ -49,9 +49,6 @@ from openquake.engine.utils.general import distinct
 from openquake.engine.db import fields
 from openquake.engine import writer
 
-# source prefiltering is enabled for #sites <= FILTERING_THRESHOLD
-FILTERING_THRESHOLD = 10000
-
 #: Kind of supported curve statistics
 STAT_CHOICES = (
     (u'mean', u'Mean'),
@@ -612,14 +609,6 @@ class HazardCalculation(djm.Model):
     _points_to_compute = None
 
     @property
-    def prefiltered(self):
-        """
-        Prefiltering is enabled when there are few sites (up to %d)
-        """ % FILTERING_THRESHOLD
-        return self.maximum_distance and \
-            len(self.site_collection) <= FILTERING_THRESHOLD
-
-    @property
     def vulnerability_models(self):
         return [self.inputs[vf_type]
                 for vf_type in VULNERABILITY_TYPE_CHOICES
@@ -821,18 +810,15 @@ class HazardCalculation(djm.Model):
 
     def sites_affected_by(self, src):
         """
-        If the maximum_distance is set and the prefiltering is on,
-        i.e. if the computation involves only few (<=%d) sites,
-        return the filtered subset of the site collection, otherwise
-        return the whole connection. NB: this method returns `None`
-        if the filtering does not find any site close to the source.
+        If the maximum_distance is set returns the filtered subset of
+        the site collection, otherwise return the whole connection.
+        NB: this method returns `None` if the filtering does not
+        find any site close to the source.
 
         :param src: the source object used for the filtering
-        """ % FILTERING_THRESHOLD
-        if self.prefiltered:
-            return src.filter_sites_by_distance_to_source(
-                self.maximum_distance, self.site_collection)
-        return self.site_collection
+        """
+        return src.filter_sites_by_distance_to_source(
+            self.maximum_distance, self.site_collection)
 
     def gen_ruptures(self, sources, monitor, site_coll):
         """
