@@ -104,38 +104,12 @@ class WeightedSequence(collections.MutableSequence):
                                        self._seq, self.weight)
 
 
-def singleton(cls):
-    """This class decorator facilitates the definition of singletons."""
-    instances = {}
-
-    def getinstance(*args, **kwargs):
-        """
-        Return an instance from the cache if present, create one otherwise.
-        """
-        if cls not in instances:
-            instances[cls] = cls(*args, **kwargs)
-        return instances[cls]
-    return getinstance
-
-
-# Memoize taken from the Python Cookbook that handles also unhashable types
-class MemoizeMutable:
-    """ This decorator enables method/function caching in memory """
-    def __init__(self, fun):
-        self.fun = fun
-        self.memo = {}
-
-    def __call__(self, *args, **kwds):
-        key = cPickle.dumps(args, 1) + cPickle.dumps(kwds, 1)
-        if not key in self.memo:
-            self.memo[key] = self.fun(*args, **kwds)
-
-        return self.memo[key]
-
-
 def distinct(keys):
     """
-    Return the distinct keys in order.
+    Return the distinct keys in order. For instance
+
+    >>> distinct([1, 2, 1])
+    [1, 2]
     """
     known = set()
     outlist = []
