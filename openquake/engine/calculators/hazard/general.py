@@ -135,15 +135,13 @@ class BaseHazardCalculator(base.Calculator):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
+    @EnginePerformanceMonitor.monitor
     def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
-
-        For this default implementation, yielded results are quartets
-        (job_id, sources, tom, gsim_by_rlz).
-
-        Override this in subclasses as necessary.
+        Yielded results are of the form
+        (job_id, site_collection, sources, trt_model_id, gsims, task_no).
         """
         sitecol = self.hc.site_collection
         trt_models = models.TrtModel.objects.filter(
@@ -152,9 +150,8 @@ class BaseHazardCalculator(base.Calculator):
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
             gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
-            filtered = ((src, source.get_num_ruptures_weight(src)[1])
-                        for src in self.sources[trt_model.id]
-                        if self.hc.sites_affected_by(src))
+            coll = self.collector[trt_model.lt_model.id]
+            filtered = coll.gen_source_weight(trt, self.hc.sites_affected_by)
             num_sources = 0
             for i, block in enumerate(split_on_max_weight(filtered, WEIGHT)):
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
@@ -163,6 +160,7 @@ class BaseHazardCalculator(base.Calculator):
             logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s',
                           num_sources, ltpath, trt)
             trt_model.num_sources = num_sources
+            trt_model.num_ruptures = coll.num_ruptures[trt]
             trt_model.save()
 
         # save job_stats
@@ -203,7 +201,7 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
-        self.sources = {}
+        self.collector = {}  # lt_model_id -> sources
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(
@@ -218,6 +216,7 @@ class BaseHazardCalculator(base.Calculator):
             # save LtSourceModel
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
+            self.collector[lt_model.id] = source_collector
             # save TrtModels for each tectonic region type
             for trt in source_collector.sorted_trts():
                 sources = source_collector.sources[trt]
@@ -228,7 +227,6 @@ class BaseHazardCalculator(base.Calculator):
                     num_ruptures=source_collector.num_ruptures[trt],
                     min_mag=source_collector.min_mag[trt],
                     max_mag=source_collector.max_mag[trt])
-                self.sources[trt_model.id] = sources
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -395,7 +393,7 @@ class BaseHazardCalculator(base.Calculator):
 
         Post-processing results will be stored directly into the database.
         """
-        del self.sources  # save memory
+        del self.collector  # save memory
 
         num_rlzs = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.hc).count()
