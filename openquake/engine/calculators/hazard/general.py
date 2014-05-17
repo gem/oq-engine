@@ -157,14 +157,20 @@ class BaseHazardCalculator(base.Calculator):
                         if self.hc.sites_affected_by(src))
             num_sources = 0
             for i, block in enumerate(split_on_max_weight(filtered, WEIGHT)):
-                if block:
-                    num_sources += len(block)
-                    yield (self.job.id, sitecol, block,
-                           trt_model.id, gsims, task_no)
+                yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
+                num_sources += len(block)
 
-            del self.sources[trt_model.id]  # save memory
             logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s',
                           num_sources, ltpath, trt)
+            trt_model.num_sources = num_sources
+            trt_model.save()
+
+        # save job_stats
+        js = models.JobStats.objects.get(oq_job=self.job)
+        js.num_sources = [model.get_num_sources()
+                          for model in models.LtSourceModel.objects.filter(
+                              hazard_calculation=self.hc)]
+        js.save()
 
     def _get_realizations(self):
         """
@@ -179,10 +185,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         self.parse_risk_models()
         self.initialize_site_model()
-        lt_models = self.initialize_sources()
-        js = models.JobStats.objects.get(oq_job=self.job)
-        js.num_sources = [model.get_num_sources() for model in lt_models]
-        js.save()
+        self.initialize_sources()
         self.initialize_realizations()
 
     @EnginePerformanceMonitor.monitor
@@ -200,7 +203,6 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
-        lt_models = []
         self.sources = {}
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
@@ -213,11 +215,10 @@ class BaseHazardCalculator(base.Calculator):
                     '(maximum_distance=%s km)' %
                     (fname, self.hc.maximum_distance))
 
+            # save LtSourceModel
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
-            lt_models.append(lt_model)
-
-            # save TrtModel objects for each tectonic region type
+            # save TrtModels for each tectonic region type
             for trt in source_collector.sorted_trts():
                 sources = source_collector.sources[trt]
                 trt_model = models.TrtModel.objects.create(
@@ -228,7 +229,6 @@ class BaseHazardCalculator(base.Calculator):
                     min_mag=source_collector.min_mag[trt],
                     max_mag=source_collector.max_mag[trt])
                 self.sources[trt_model.id] = sources
-        return lt_models
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -351,7 +351,9 @@ class BaseHazardCalculator(base.Calculator):
             for trt_model in models.TrtModel.objects.filter(
                     lt_model=lt_model):
                 # populate the associations rlz <-> trt_model
-                gsim = gsim_dict[trt_model.tectonic_region_type]
+                gsim = gsim_dict.get(trt_model.tectonic_region_type)
+                if gsim is None:
+                    continue
                 models.AssocLtRlzTrtModel.objects.create(
                     rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
         for trt_model in models.TrtModel.objects.filter(
@@ -393,6 +395,8 @@ class BaseHazardCalculator(base.Calculator):
 
         Post-processing results will be stored directly into the database.
         """
+        del self.sources  # save memory
+
         num_rlzs = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.hc).count()
 
