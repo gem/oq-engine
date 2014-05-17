@@ -21,6 +21,8 @@
 import os
 import collections
 
+import numpy
+
 from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
 
@@ -135,7 +137,6 @@ class BaseHazardCalculator(base.Calculator):
         """
         return int(config.get('hazard', 'concurrent_tasks'))
 
-    @EnginePerformanceMonitor.monitor
     def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
@@ -186,6 +187,27 @@ class BaseHazardCalculator(base.Calculator):
         self.initialize_sources()
         self.initialize_realizations()
 
+        # logging some info and setting self.imtls and self.zero
+        n_models = models.LtSourceModel.objects.filter(
+            hazard_calculation=self.hc).count()
+        logs.LOG.info('Found %d model(s)', n_models)
+
+        self.imtls = self.hc.intensity_measure_types_and_levels
+        if self.imtls:
+            n_rlz = models.LtRealization.objects.filter(
+                lt_model__hazard_calculation=self.hc).count()
+            n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
+                           ) / float(len(self.imtls))
+            n_sites = len(self.hc.site_collection)
+            self.zero = numpy.array(
+                [numpy.zeros((n_sites, len(self.imtls[imt])))
+                 for imt in sorted(self.imtls)])
+            total = n_rlz * len(self.imtls) * n_levels * n_sites
+            logs.LOG.info(
+                'Considering %d realization(s), %d IMT(s), '
+                '%d level(s) and %d sites, total %d', n_rlz,
+                len(self.imtls), n_levels, n_sites, total)
+
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
@@ -220,7 +242,7 @@ class BaseHazardCalculator(base.Calculator):
             # save TrtModels for each tectonic region type
             for trt in source_collector.sorted_trts():
                 sources = source_collector.sources[trt]
-                trt_model = models.TrtModel.objects.create(
+                models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
                     num_sources=len(sources),
