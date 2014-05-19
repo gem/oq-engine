@@ -282,7 +282,14 @@ AND ST_COVERS(ST_GeographyFromText(%s), exp.site)
 ORDER BY exp.id, ST_Distance(exp.site, hsite.location, false)
 """, (max_dist, self.hc.id, rc.exposure_model.id, taxonomy,
             rc.region_constraint.wkt))
-        self.asset_ids, self.site_ids = zip(*cursor.fetchall())
+        assets_sites = cursor.fetchall()
+        if not assets_sites:
+            raise AssetSiteAssociationError(
+                'Could not associated any asset of taxonomy %s to '
+                'hazard sites within the distance of %s km'
+                % (taxonomy, self.rc.best_maximum_distance))
+
+        self.asset_ids, self.site_ids = zip(*assets_sites)
         self.rupture_ids = {}
         self.epsilons = {}
         self.epsilons_shape = {}
