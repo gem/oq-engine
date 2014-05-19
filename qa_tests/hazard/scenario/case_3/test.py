@@ -30,7 +30,7 @@ class ScenarioHazardCase3TestCase(qa_utils.BaseQATestCase):
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
-        [output] = export.core.get_outputs(job.id)
+        [output] = export.core.get_outputs(job.id, 'gmf_scenario')
         actual = map(numpy.median, models.get_gmvs_per_site(output, 'PGA'))
         expected_medians_pga = [0.48155582, 0.21123045, 0.14484586]
         assert_almost_equal(actual, expected_medians_pga, decimal=2)
