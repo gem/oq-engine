@@ -1,5 +1,5 @@
-# oq-commonlib: Common libraries for OpenQuake software
-# Copyright (C) 2014 GEM Foundation
+# oq-commonlib: The Common Library
+# Copyright (C) 2013 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,6 +13,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+oq-commonlib FIXME: needs a description.
+
+Comments, suggestions and criticisms from the community are always
+very welcome.
+
+Copyright (C) 2014 GEM Foundation.
+"""
 import os
 import re
 import sys
@@ -23,7 +31,7 @@ def get_version():
     version_re = r"^__version__\s+=\s+['\"]([^'\"]*)['\"]"
     version = None
 
-    package_init = 'openquake/__init__.py'
+    package_init = 'openquake/commonlib/__init__.py'
     for line in open(package_init, 'r'):
         version_match = re.search(version_re, line, re.M)
         if version_match:
@@ -39,15 +47,16 @@ url = "http://github.com/gem/oq-commonlib"
 cd = os.path.dirname(os.path.join(__file__))
 
 setup(
-    name='oq-commonlib',
+    name='openquake.commonlib',
     version=version,
-    description="Common libraries for OpenQuake software",
+    description="oq-commonlib is FIXME",
     long_description=__doc__,
     url=url,
-    packages=find_packages(exclude=[]),
+    packages=find_packages(exclude=[
+        'tests', 'tests.*', 'qa_tests', 'qa_tests.*']),
     install_requires=[
-        'openquake.risklib',
-        'openquake.nrmllib',
+        'numpy',
+        'scipy'
     ],
     maintainer='GEM',
     maintainer_email='info@openquake.org',
@@ -60,11 +69,10 @@ setup(
         'Programming Language :: Python :: 2',
         'Topic :: Scientific/Engineering',
     ),
-    keywords="seismic risk",
+    keywords="seismic common",
     license="GNU AGPL v3",
     platforms=["any"],
-    scripts=[],
-    namespace_packages=[],
+    namespace_packages=['openquake'],
 
     zip_safe=False,
 )
