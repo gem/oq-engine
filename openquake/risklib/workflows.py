@@ -691,8 +691,17 @@ class Damage(object):
         self.vulnerability_functions = fragility_functions
 
     def __call__(self, gmfs):
+        """
+        :param gmfs: an array of N x R elements
+        :returns: an array of N x R x D elements
+
+        where N is the number of points, R the number of realizations
+        and D the number of damage states.
+        """
         ffs = self.vulnerability_functions['damage']
-        return [scientific.scenario_damage(ffs, gmvs) for gmvs in gmfs]
+        return numpy.array(
+            [[scientific.scenario_damage(ffs, gmv) for gmv in gmvs]
+             for gmvs in gmfs])
 
 
 class RiskModel(object):
