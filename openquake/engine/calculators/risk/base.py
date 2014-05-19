@@ -45,7 +45,18 @@ correlation matrix.'''
 @tasks.oqtask
 def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
     """
-    Spawn risk tasks and return an OqTaskManager instance
+    Spawn risk tasks and return an OqTaskManager instance.
+
+    :param job_id:
+        ID of the current risk job
+    :param calc:
+        :class:`openquake.engine.calculators.risk.base.RiskCalculator` instance
+    :param str taxonomy:
+        taxonomy of the current bunch of assets
+    :param int counts:
+        number of assets of the given taxonomy
+    :param outputdict:
+        :class:`openquake.engine.calculators.risk.writers.OutputDict` instance
     """
     logs.LOG.info('taxonomy=%s, assets=%d', taxonomy, counts)
     with calc.monitor("associating asset->site"):
