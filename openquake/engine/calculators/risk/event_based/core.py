@@ -299,16 +299,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
     def __init__(self, job):
         super(EventBasedRiskCalculator, self).__init__(job)
-        self.event_loss_tables = collections.defaultdict(collections.Counter)
+        # accumulator for the event loss tables
+        self.acc = collections.defaultdict(collections.Counter)
 
-    def task_completed(self, event_loss_tables):
+    def agg_result(self, acc, event_loss_tables):
         """
         Updates the event loss table
         """
-        self.log_percent(event_loss_tables)
-        for loss_type in self.loss_types:
-            task_loss_table = event_loss_tables[loss_type]
-            self.event_loss_tables[loss_type] += task_loss_table
+        return dict((loss_type, acc[loss_type] + event_loss_tables[loss_type])
+                    for loss_type in self.loss_types)
 
     def post_process(self):
         """
@@ -317,7 +316,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         with EnginePerformanceMonitor('post processing', self.job.id):
 
             time_span, tses = self.hazard_times()
-            for loss_type, event_loss_table in self.event_loss_tables.items():
+            for loss_type, event_loss_table in self.acc.items():
                 for hazard_output in self.rc.hazard_outputs():
 
                     event_loss = models.EventLoss.objects.create(
@@ -398,7 +397,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         Calculator specific parameters
         """
-
         return base.make_calc_params(
             conditional_loss_poes=self.rc.conditional_loss_poes or [],
             quantiles=self.rc.quantile_loss_curves or [],

@@ -315,11 +315,11 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         logs.LOG.info('%d epsilon bins from %s to %s', len(eps_edges) - 1,
                       min(eps_edges), max(eps_edges))
 
-        arglist = []
         self.bin_edges = {}
         curves_dict = dict((site.id, self.get_curves(site))
                            for site in self.hc.site_collection)
 
+        oqm = tasks.OqTaskManager(compute_disagg, logs.LOG.progress)
         for job_id, sitecol, srcs, trt_model_id, gsims, task_no in \
                 self.task_arg_gen():
 
@@ -361,11 +361,10 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
                 self.bin_edges[lt_model.id, site.id] = (
                     mag_edges, dist_edges, lon_edges, lat_edges, eps_edges)
 
-            arglist.append((self.job.id, sitecol, srcs, trt_model_id,
-                            gsims, trt_num, curves_dict, self.bin_edges))
+            oqm.submit(self.job.id, sitecol, srcs, trt_model_id,
+                       gsims, trt_num, curves_dict, self.bin_edges)
 
-        self.initialize_percent(compute_disagg, arglist)
-        res = tasks.map_reduce(compute_disagg, arglist, self.agg_result, {})
+        res = oqm.aggregate_results(self.agg_result, {})
         self.save_disagg_results(res)  # dictionary key -> probability array
 
     post_execute = full_disaggregation
@@ -381,7 +380,6 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         """
         for key, val in result.iteritems():
             acc[key] = 1. - (1. - acc.get(key, 0)) * (1. - val)
-        self.log_percent()
         return acc
 
     @EnginePerformanceMonitor.monitor
