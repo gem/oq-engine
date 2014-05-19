@@ -14,11 +14,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import mock
 
 from openquake.engine.tests.utils import helpers
 from openquake.engine.tests.utils.helpers import get_data_path
-from openquake.engine.calculators.risk import base
+from openquake.engine.calculators.risk import base, hazard_getters
+from openquake.engine.tests.utils.tasks import fake_risk_task
 from openquake.engine.db import models
 
 
@@ -31,6 +31,8 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
             get_data_path('classical_psha_based_risk/job.ini'),
             get_data_path('simple_fault_demo_hazard/job.ini'))
         models.JobStats.objects.create(oq_job=self.job)
+        self.job.is_running = True
+        self.job.save()
 
     @property
     def hazard_calculation(self):
@@ -38,16 +40,29 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         return self.job.risk_calculation.get_hazard_calculation()
 
 
+class FakeWorkflow:
+    """Fake Workflow class used in FakeRiskCalculator"""
+
+
 class FakeRiskCalculator(base.RiskCalculator):
     """
     Fake Risk Calculator. Used to test the base class
     """
-
-    celery_task = mock.Mock()
+    output_builders = []
+    getter_class = hazard_getters.GroundMotionValuesGetter
+    core_calc_task = fake_risk_task
 
     @property
     def calculation_parameters(self):
         return base.make_calc_params()
+
+    def agg_result(self, acc, res):
+        newacc = dict((key, acc.get(key, 0) + res[key]) for key in res)
+        return newacc
+
+    def get_workflow(self, vulnerability_functions):
+        FakeWorkflow.vulnerability_functions = vulnerability_functions
+        return FakeWorkflow()
 
 
 class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
@@ -55,7 +70,15 @@ class RiskCalculatorTestCase(BaseRiskCalculatorTestCase):
     Integration test for the base class supporting the risk
     calculators.
     """
-
     def setUp(self):
         super(RiskCalculatorTestCase, self).setUp()
         self.calculator = FakeRiskCalculator(self.job)
+
+    def test(self):
+        self.calculator.pre_execute()
+        # there are 2 assets and 1 taxonomy; will generate a supertask
+        # for the taxonomy and 1 subtask, for the two assets
+        self.assertEqual(self.calculator.taxonomies_asset_count, {'VF': 2})
+
+        self.calculator.execute()
+        self.assertEqual(self.calculator.acc, {self.job.id: 1})
