@@ -343,7 +343,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         if self.hc.poes_disagg:
             for bb in bbs:
                 self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-        self.log_percent()
 
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)
@@ -425,7 +424,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             self.parallelize(
                 post_proc.hazard_curves_to_hazard_map_task,
                 post_proc.hazard_curves_to_hazard_map_task_arg_gen(self.job),
-                self.log_percent)
+                lambda res: None)
 
         if self.hc.uniform_hazard_spectra:
             post_proc.do_uhs_post_proc(self.job)
