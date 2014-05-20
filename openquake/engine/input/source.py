@@ -30,24 +30,20 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
-from openquake.engine.utils.general import SequenceSplitter, ceil
-
-
-MAX_RUPTURES = 500  # if there are more ruptures, split the source
 
 
 class SourceCollector(object):
     """
-    A collection of four dictionaries source_weights, num_ruptures,
+    A collection of four dictionaries sources, num_ruptures,
     min_mag, max_mag keyed by the tectonic region type.
     """
     def __init__(self):
-        self.source_weights = collections.defaultdict(list)
+        self.sources = collections.defaultdict(list)
         self.num_ruptures = collections.defaultdict(int)
         self.min_mag = {}
         self.max_mag = {}
 
-    def update(self, src, num_ruptures, weight):
+    def update(self, src):
         """
         Update the dictionaries sources, num_ruptures, min_mag, max_mag
         according to the given source.
@@ -58,8 +54,7 @@ class SourceCollector(object):
         """
         trt = src.tectonic_region_type
         min_mag, max_mag = src.mfd.get_min_max_mag()
-        self.source_weights[trt].append((src, weight))
-        self.num_ruptures[trt] += num_ruptures
+        self.sources[trt].append(src)
         prev_min_mag = self.min_mag.get(trt)
         if prev_min_mag is None or min_mag < prev_min_mag:
             self.min_mag[trt] = min_mag
@@ -67,24 +62,30 @@ class SourceCollector(object):
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag[trt] = max_mag
 
-    def split_blocks(self, nblocks):
+    def gen_source_weight(self, trt, src_filter):
         """
-        Split the sources in blocks of similar weight. Yield tectonic
-        region type and blocks.
+        Yield all the sources of a given tectonic region type, together
+        with their weight. As side effects populate the dictionary
+        `.num_ruptures` and throw away the unfiltered sources in `.sources`.
 
-        :param int nblocks: the maximum number of blocks to generate
+        :param trt: tectonic region type
+        :param src_filter: a filtering function on sources
         """
-        # nblocks / number of tectonic region types
-        ss = SequenceSplitter(ceil(nblocks, len(self.source_weights)))
-        for trt, source_weights in self.source_weights.iteritems():
-            yield trt, ss.split_on_max_weight(source_weights)
+        srcs = []
+        for src in self.sources[trt]:
+            if src_filter(src) is not None:
+                ruptures, weight = get_num_ruptures_weight(src)
+                self.num_ruptures[trt] += ruptures
+                srcs.append(src)
+                yield src, weight
+        self.sources[trt] = srcs  # throw away unfiltered sources
 
     def sorted_trts(self):
         """
         Return the tectonic region types sorted per number of sources.
         """
         return [trt for (num, trt) in sorted(
-                (len(sw), trt) for (trt, sw) in self.source_weights.items())]
+                (len(sw), trt) for (trt, sw) in self.sources.items())]
 
 
 ## NB: this is a job for generic functions
@@ -604,19 +605,16 @@ def get_num_ruptures_weight(src):
     return num_ruptures, weight
 
 
-def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
+def parse_source_model_smart(fname, apply_uncertainties, hc):
     """
     Parse a NRML source model and return a SourceCollector instance.
     Notice that:
 
     1) uncertainties are applied first
-    2) the filter `is_relevant` is applied second
-    3) at the end area sources are splitted into point sources.
+    2) area sources are splitted into point sources.
 
     :param str fname:
         the full pathname of the source model file
-    :param is_relevant:
-         a filter function on sources
     :param apply_uncertainties:
         a function modifying the sources
     :param hc:
@@ -629,12 +627,6 @@ def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
         src = nrml_to_hazardlib(src_nrml)
         # the uncertainties must be applied to the original source
         apply_uncertainties(src)
-        if not is_relevant(src):
-            continue
-        num_ruptures, weight = get_num_ruptures_weight(src)
-        if num_ruptures > MAX_RUPTURES:
-            for s in split_source(src, hc.area_source_discretization):
-                source_collector.update(s, *get_num_ruptures_weight(s))
-        else:
-            source_collector.update(src, num_ruptures, weight)
+        for s in split_source(src, hc.area_source_discretization):
+            source_collector.update(s)
     return source_collector

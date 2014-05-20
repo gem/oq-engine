@@ -21,6 +21,8 @@
 import os
 import collections
 
+import numpy
+
 from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
 
@@ -44,7 +46,8 @@ from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
 from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter, ceil, distinct
+from openquake.engine.utils.general import (
+    block_splitter, distinct, split_on_max_weight)
 from openquake.engine.performance import EnginePerformanceMonitor
 
 #: Maximum number of hazard curves to cache, for selects or inserts
@@ -55,6 +58,9 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
+
+# max weight used to build blocks of sources
+WEIGHT = 10000
 
 
 def store_site_model(job, site_model_source):
@@ -135,11 +141,8 @@ class BaseHazardCalculator(base.Calculator):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
-
-        For this default implementation, yielded results are quartets
-        (job_id, sources, tom, gsim_by_rlz).
-
-        Override this in subclasses as necessary.
+        Yielded results are of the form
+        (job_id, site_collection, sources, trt_model_id, gsims, task_no).
         """
         sitecol = self.hc.site_collection
         trt_models = models.TrtModel.objects.filter(
@@ -148,9 +151,25 @@ class BaseHazardCalculator(base.Calculator):
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
             gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
-            for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                yield (self.job.id, sitecol, block, trt_model.id,
-                       gsims, task_no)
+            coll = self.collector[trt_model.lt_model.id]
+            filtered = coll.gen_source_weight(trt, self.hc.sites_affected_by)
+            num_sources = 0
+            for i, block in enumerate(split_on_max_weight(filtered, WEIGHT)):
+                yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
+                num_sources += len(block)
+
+            logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s',
+                          num_sources, ltpath, trt)
+            trt_model.num_sources = num_sources
+            trt_model.num_ruptures = coll.num_ruptures[trt]
+            trt_model.save()
+
+        # save job_stats
+        js = models.JobStats.objects.get(oq_job=self.job)
+        js.num_sources = [model.get_num_sources()
+                          for model in models.LtSourceModel.objects.filter(
+                              hazard_calculation=self.hc)]
+        js.save()
 
     def _get_realizations(self):
         """
@@ -165,11 +184,29 @@ class BaseHazardCalculator(base.Calculator):
         """
         self.parse_risk_models()
         self.initialize_site_model()
-        lt_models = self.initialize_sources()
-        js = models.JobStats.objects.get(oq_job=self.job)
-        js.num_sources = [model.get_num_sources() for model in lt_models]
-        js.save()
+        self.initialize_sources()
         self.initialize_realizations()
+
+        # logging some info and setting self.imtls and self.zero
+        n_models = models.LtSourceModel.objects.filter(
+            hazard_calculation=self.hc).count()
+        logs.LOG.info('Found %d model(s)', n_models)
+
+        self.imtls = self.hc.intensity_measure_types_and_levels
+        if self.imtls:
+            n_rlz = models.LtRealization.objects.filter(
+                lt_model__hazard_calculation=self.hc).count()
+            n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
+                           ) / float(len(self.imtls))
+            n_sites = len(self.hc.site_collection)
+            self.zero = numpy.array(
+                [numpy.zeros((n_sites, len(self.imtls[imt])))
+                 for imt in sorted(self.imtls)])
+            total = n_rlz * len(self.imtls) * n_levels * n_sites
+            logs.LOG.info(
+                'Considering %d realization(s), %d IMT(s), '
+                '%d level(s) and %d sites, total %d', n_rlz,
+                len(self.imtls), n_levels, n_sites, total)
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
@@ -186,44 +223,32 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
-        nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
-        lt_models = []
+        self.collector = {}  # lt_model_id -> sources
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(
-                fname,
-                self.hc.sites_affected_by,
-                self.source_model_lt.make_apply_uncertainties(smpath),
+                fname, self.source_model_lt.make_apply_uncertainties(smpath),
                 self.hc)
-            if not source_collector.source_weights:
+            if not source_collector.sources:
                 raise RuntimeError(
                     'Could not find sources close to the sites in %s '
                     '(maximum_distance=%s km)' %
                     (fname, self.hc.maximum_distance))
 
+            # save LtSourceModel
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
-            lt_models.append(lt_model)
-            for trt, blocks in source_collector.split_blocks(nblocks):
-                self.source_blocks_per_ltpath[smpath, trt] = blocks
-                n = sum(len(block) for block in blocks)
-                logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
-                              n, sm, smpath, trt)
-                logs.LOG.info('Splitting in %d blocks', len(blocks))
-                for i, block in enumerate(blocks, 1):
-                    logs.LOG.debug('%s, block %d: %d source(s), weight %s',
-                                   trt, i, len(block), block.weight)
-
-            # save TrtModel objects for each tectonic region type
+            self.collector[lt_model.id] = source_collector
+            # save TrtModels for each tectonic region type
             for trt in source_collector.sorted_trts():
+                sources = source_collector.sources[trt]
                 models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
-                    num_sources=len(source_collector.source_weights[trt]),
+                    num_sources=len(sources),
                     num_ruptures=source_collector.num_ruptures[trt],
                     min_mag=source_collector.min_mag[trt],
                     max_mag=source_collector.max_mag[trt])
-        return lt_models
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -346,7 +371,9 @@ class BaseHazardCalculator(base.Calculator):
             for trt_model in models.TrtModel.objects.filter(
                     lt_model=lt_model):
                 # populate the associations rlz <-> trt_model
-                gsim = gsim_dict[trt_model.tectonic_region_type]
+                gsim = gsim_dict.get(trt_model.tectonic_region_type)
+                if gsim is None:
+                    continue
                 models.AssocLtRlzTrtModel.objects.create(
                     rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
         for trt_model in models.TrtModel.objects.filter(
@@ -388,6 +415,8 @@ class BaseHazardCalculator(base.Calculator):
 
         Post-processing results will be stored directly into the database.
         """
+        del self.collector  # save memory
+
         num_rlzs = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.hc).count()
 
