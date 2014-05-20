@@ -24,7 +24,7 @@ from nose.plugins.attrib import attr
 from openquake.engine.calculators.hazard.classical import core
 from openquake.engine.db import models
 from openquake.engine.tests.utils import helpers
-from openquake.engine.utils.general import WeightedSequence
+from openquake.commonlib.general import WeightedSequence
 
 
 class ClassicalHazardCalculatorTestCase(unittest.TestCase):
