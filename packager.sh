@@ -11,7 +11,7 @@ set -x
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-commonlib"
-GEM_GIT_DEPS="oq-nrmllib oq-risklib"
+GEM_GIT_DEPS="oq-nrmllib oq-risklib oq-hazardlib"
 GEM_DEB_PACKAGE="python-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then
@@ -174,6 +174,15 @@ _devtest_innervm_run () {
     pkgs_list="$(deps_list debian/control)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
+    # build oq-hazardlib speedups and put in the right place
+    ssh $lxc_ip "set -e
+                 cd oq-hazardlib
+                 python ./setup.py build
+                 for i in \$(find build/ -name *.so); do
+                     o=\"\$(echo \"\$i\" | sed 's@^[^/]\+/[^/]\+/@@g')\"
+                     cp \$i \$o
+                 done"
+
     # TODO: version check
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh $lxc_ip "tar xv"
 
@@ -220,13 +229,30 @@ _pkgtest_innervm_run () {
     return
 }
 
-deps_list() {
-    local oldifs out_list i filename="$1"
 
-    oldifs="$IFS"
-    IFS=','
+#
+#  deps_list <listtype> <filename> - retrieve dependencies list from debian/control
+#                                    to be able to install them without the package
+#      listtype    inform deps_list which control lines use to get dependencies
+#      filename    control file used for input
+#
+deps_list() {
+    local old_ifs out_list skip i d listtype="$1" filename="$2"
+
     out_list=""
-    for i in $(cat "$filename" | grep "^\(Build-\)\?Depends:" | sed 's/^\(Build-\)\?Depends: //g' | tr '\n' ',' ) ; do
+    if [ "$listtype" = "all" ]; then
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:|Build-Depends:' | sed 's/^\(Build-\)\?Depends://g;s/^Recommends://g' | tr '\n' ',')"
+    elif [  "$listtype" = "deprec" ]; then
+        in_list="$(cat "$filename" | egrep '^Depends:|^Recommends:' | sed 's/^Depends://g;s/^Recommends://g' | tr '\n' ',')"
+    elif [  "$listtype" = "build" ]; then
+        in_list="$(cat "$filename" | egrep '^Depends:|^Build-Depends:' | sed 's/^\(Build-\)\?Depends://g' | tr '\n' ',')"
+    else
+        in_list="$(cat "$filename" | egrep "^Depends:" | sed 's/^Depends: //g')"
+    fi
+
+    old_ifs="$IFS"
+    IFS=','
+    for i in $in_list ; do
         item="$(echo "$i" |  sed 's/^ \+//g;s/ \+$//g')"
         pkg_name="$(echo "${item} " | cut -d ' ' -f 1)"
         pkg_vers="$(echo "${item} " | cut -d ' ' -f 2)"
@@ -234,18 +260,30 @@ deps_list() {
         if echo "$pkg_name" | grep -q "^\${" ; then
             continue
         fi
-        if [ "$out_list" == "" ]; then
+        skip=0
+        for d in $(echo "$GEM_GIT_DEPS" | sed 's/ /,/g'); do
+            if [ "$pkg_name" = "python-${d}" ]; then
+                skip=1
+                break
+            fi
+        done
+        if [ $skip -eq 1 ]; then
+            continue
+        fi
+
+        if [ "$out_list" = "" ]; then
             out_list="$pkg_name"
         else
             out_list="$out_list $pkg_name"
         fi
     done
-    IFS="$oldifs"
+    IFS="$old_ifs"
 
     echo "$out_list"
 
     return 0
 }
+
 
 _lxc_name_and_ip_get()
 {

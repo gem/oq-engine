@@ -8,13 +8,8 @@ Homepage: http://github.com/gem/oq-commonlib
 
 Package: python-oq-commonlib
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-scipy, python-numpy, python-lxml
-Description: FIXME Long description Natural hazards' Risk Markup Language
- (NRML) is a collection of
- XML schema definitions for modelling inputs and outputs for seismic hazard
- and risk analysis.
- NRML also includes a library of parsers and serializers for reading from and
- writing to NRML XML artifacts.
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-scipy, python-numpy, python-lxml, python-oq-nrmllib, python-oq-risklib, python-oq-hazardlib
+Description: common openquake libraries for both hazard and risk analysis.
 
 
 

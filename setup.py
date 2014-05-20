@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-oq-commonlib FIXME: needs a description.
+oq-commonlib: common openquake libraries for both hazard and risk analysis.
 
 Comments, suggestions and criticisms from the community are always
 very welcome.
@@ -49,11 +49,11 @@ cd = os.path.dirname(os.path.join(__file__))
 setup(
     name='openquake.commonlib',
     version=version,
-    description="oq-commonlib is FIXME",
+    description=("oq-commonlib: common openquake libraries "
+                 "for both hazard and risk analysis."),
     long_description=__doc__,
     url=url,
-    packages=find_packages(exclude=[
-        'tests', 'tests.*', 'qa_tests', 'qa_tests.*']),
+    packages=find_packages(),
     install_requires=[
         'numpy',
         'scipy'
