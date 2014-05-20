@@ -22,7 +22,6 @@ Utility functions of general interest.
 """
 
 import math
-import cPickle
 import collections
 
 import numpy
@@ -105,6 +104,7 @@ class WeightedSequence(collections.MutableSequence):
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
 
+
 def distinct(keys):
     """
     Return the distinct keys in order.
@@ -176,26 +176,44 @@ class SequenceSplitter(object):
         """
         return self.split_on_max_weight([(item, 1) for item in sequence])
 
-    def _split_on_max_weight(self, sequence):
+    def _split_on_max_weight(self, item_weight_pairs):
         # doing the real work here
-        total_weight = float(sum(item[1] for item in sequence))
+        total_weight = float(sum(item[1] for item in item_weight_pairs))
         self.max_weight = ceil(total_weight, self.num_blocks)
-        ws = WeightedSequence()
-        for item, weight in sequence:
-            if weight <= 0:  # ignore items with 0 weight
-                continue
-            ws_long = self.max_block_size and len(ws) > self.max_block_size
-            if (ws.weight + weight > self.max_weight or ws_long):
-                # would go above the max
-                new_ws = WeightedSequence()
-                new_ws.append((item, weight))
-                if ws:
-                    yield ws
-                ws = new_ws
-            else:
-                ws.append((item, weight))
-        if ws:
-            yield ws
+        return split_on_max_weight(item_weight_pairs, self.max_weight)
+
+
+def split_on_max_weight(item_weight_pairs, max_weight):
+    """
+    :param item_weight_pairs: an iterator of pairs (item, weight)
+    :param max_weight: the max weight to split on
+
+    Group together the pairs until the total weight exceeds the
+    `max_weight` and yield `WeightedSequence` instances. Items
+    with weight zero are ignored.
+
+    For instance
+
+     >>> pairs = [('A', 1), ('B', 2), ('C', 0), ('D', 4), ('E', 1)]
+     >>> list(split_on_max_weight(pairs, 3))
+     [<WeightedSequence ['A', 'B'], weight=3>,
+     <WeightedSequence ['D'], weight=4>,
+     <WeightedSequence ['E'], weight=1>]
+    """
+    ws = WeightedSequence()
+    for item, weight in item_weight_pairs:
+        if weight <= 0:  # ignore items with 0 weight
+            continue
+        if ws.weight + weight > max_weight:
+            new_ws = WeightedSequence()
+            new_ws.append((item, weight))
+            if ws:
+                yield ws
+            ws = new_ws
+        else:
+            ws.append((item, weight))
+    if ws:
+        yield ws
 
 
 def block_splitter(data, block_size):
