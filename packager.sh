@@ -171,7 +171,7 @@ _devtest_innervm_run () {
     IFS="$old_ifs"
 
     # extract dependencies for this package
-    pkgs_list="$(deps_list debian/control)"
+    pkgs_list="$(deps_list "all" debian/control)"
     ssh $lxc_ip "sudo apt-get install -y ${pkgs_list}"
 
     # build oq-hazardlib speedups and put in the right place
