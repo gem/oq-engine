@@ -53,7 +53,6 @@ CREATE INDEX hzrdr_uhs_data_uhs_id_idx on hzrdr.uhs_data(uhs_id);
 
 -- ses
 CREATE INDEX hzrdr_ses_collection_ouput_id_idx on hzrdr.ses_collection(output_id);
-CREATE INDEX hzrdr_ses_ses_collection_id_idx on hzrdr.ses(ses_collection_id);
 
 -- ses_rupture
 CREATE UNIQUE INDEX hzrdr_ses_rupture_tag_uniq_idx ON hzrdr.ses_rupture(rupture_id, tag);

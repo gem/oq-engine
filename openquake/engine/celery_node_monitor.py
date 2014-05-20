@@ -128,11 +128,11 @@ class CeleryNodeMonitor(object):
 
     def job_is_running(self, sleep):
         """
-        Check for 100 times during the sleep interval if the flag
+        Check for 10 times during the sleep interval if the flag
         self.job_running becomes false and then exit.
         """
-        for _ in range(100):
+        for _ in range(10):
             if not self.job_running:
                 break
-            time.sleep(sleep / 100.)
+            time.sleep(sleep / 10.)
         return self.job_running

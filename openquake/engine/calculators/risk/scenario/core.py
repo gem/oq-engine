@@ -104,34 +104,35 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
     def __init__(self, job):
         super(ScenarioRiskCalculator, self).__init__(job)
-        self.aggregate_losses = dict()
-        self.insured_losses = dict()
+        self.acc = ({}, {})  # aggregate_losses and insured_losses accumulators
 
-    def task_completed(self, task_result):
-        self.log_percent(task_result)
+    def agg_result(self, acc, task_result):
+        aggregate_losses_acc, insured_losses_acc = acc[0].copy(), acc[1].copy()
         aggregate_losses_dict, insured_losses_dict = task_result
 
         for loss_type in self.loss_types:
             aggregate_losses = aggregate_losses_dict.get(loss_type)
 
             if aggregate_losses is not None:
-                if self.aggregate_losses.get(loss_type) is None:
-                    self.aggregate_losses[loss_type] = (
+                if aggregate_losses_acc.get(loss_type) is None:
+                    aggregate_losses_acc[loss_type] = (
                         numpy.zeros(aggregate_losses.shape))
-                self.aggregate_losses[loss_type] += aggregate_losses
+                aggregate_losses_acc[loss_type] += aggregate_losses
 
         if self.rc.insured_losses:
             for loss_type in self.loss_types:
                 insured_losses = insured_losses_dict.get(
                     loss_type)
                 if insured_losses is not None:
-                    if self.insured_losses.get(loss_type) is None:
-                        self.insured_losses[loss_type] = numpy.zeros(
+                    if insured_losses_acc.get(loss_type) is None:
+                        insured_losses_acc[loss_type] = numpy.zeros(
                             insured_losses.shape)
-                    self.insured_losses[loss_type] += insured_losses
+                    insured_losses_acc[loss_type] += insured_losses
+        return aggregate_losses_acc, insured_losses_acc
 
     def post_process(self):
-        for loss_type, aggregate_losses in self.aggregate_losses.items():
+        aggregate_losses_acc, insured_losses_acc = self.acc
+        for loss_type, aggregate_losses in aggregate_losses_acc.items():
             with db.transaction.commit_on_success(using='job_init'):
                 models.AggregateLoss.objects.create(
                     output=models.Output.objects.create_output(
@@ -143,7 +144,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                     std_dev=numpy.std(aggregate_losses, ddof=1))
 
                 if self.rc.insured_losses:
-                    insured_losses = self.insured_losses[loss_type]
+                    insured_losses = insured_losses_acc[loss_type]
                     models.AggregateLoss.objects.create(
                         output=models.Output.objects.create_output(
                             self.job,

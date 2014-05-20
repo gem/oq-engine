@@ -31,7 +31,7 @@ class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
     def test(self):
         cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
         job = self.run_hazard(cfg)
-        [output] = export.core.get_outputs(job.id)
+        [output] = export.core.get_outputs(job.id, 'gmf_scenario')
 
         actual = map(numpy.median, models.get_gmvs_per_site(output, 'PGA'))
         expected_medians = [0.48155582, 0.21123045, 0.14484586]
@@ -43,7 +43,7 @@ class ScenarioHazardCase1TestCase(qa_utils.BaseQATestCase):
         try:
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             job = self.run_hazard(cfg)
-            [output] = export.core.get_outputs(job.id)
+            [output] = export.core.get_outputs(job.id, 'gmf_scenario')
             exported_file = export.hazard.export(
                 output.id, result_dir)
             expected = os.path.join(os.path.dirname(__file__), 'expected.xml')
