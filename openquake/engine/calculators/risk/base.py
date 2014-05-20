@@ -196,11 +196,14 @@ class RiskCalculator(base.Calculator):
 
     def task_arg_gen(self):
         """
-        Yields the argument to be submitted to run_subtasks
+        Yields the argument to be submitted to run_subtasks. Tasks with
+        fewer assets are submitted first.
         """
         outputdict = writers.combine_builders(
             [ob(self) for ob in self.output_builders])
-        for taxonomy, counts in self.taxonomies_asset_count.iteritems():
+        ct = sorted((counts, taxonomy) for taxonomy, counts
+                    in self.taxonomies_asset_count.iteritems())
+        for counts, taxonomy in ct:
             yield self.job.id, self, taxonomy, counts, outputdict
 
     def _get_outputs_for_export(self):
