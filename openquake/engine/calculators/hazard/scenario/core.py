@@ -115,15 +115,51 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         self.parse_risk_models()
         self.initialize_sources()
         self.initialize_site_model()
+        self.create_ruptures()
 
-        # create a record in the output table
+    def create_ruptures(self):
+        # check filtering
+        hc = self.hc
+        if hc.maximum_distance:
+            self.sites = filters.filter_sites_by_distance_to_rupture(
+                self.rupture, hc.maximum_distance, hc.site_collection)
+            if self.sites is None:
+                raise RuntimeError(
+                    'All sites where filtered out! '
+                    'maximum_distance=%s km' % hc.maximum_distance)
+
+        # create ses output
+        output = models.Output.objects.create(
+            oq_job=self.job,
+            display_name='SES Collection',
+            output_type='ses')
+        self.ses_coll = models.SESCollection.objects.create(
+            output=output, lt_model=None, ordinal=0)
+
+        # create gmf output
         output = models.Output.objects.create(
             oq_job=self.job,
             display_name="GMF",
             output_type="gmf_scenario")
-
-        # create an associated gmf record
         self.gmf = models.Gmf.objects.create(output=output)
+
+        # creating seeds
+        rnd = random.Random()
+        rnd.seed(self.hc.random_seed)
+        self.all_seeds = [
+            rnd.randint(0, models.MAX_SINT_32)
+            for _ in xrange(self.hc.number_of_ground_motion_fields)]
+
+        with self.monitor('saving ruptures'):
+            prob_rup = models.ProbabilisticRupture.create(
+                self.rupture, self.ses_coll)
+            inserter = writer.CacheInserter(models.SESRupture, 100000)
+            for ses_idx, seed in enumerate(self.all_seeds):
+                inserter.add(
+                    models.SESRupture(
+                        ses_id=1, rupture=prob_rup,
+                        tag='scenario-%010d' % ses_idx,  seed=seed))
+            inserter.flush()
 
     def task_arg_gen(self):
         """
@@ -133,19 +169,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         will be generated which is fine since the computation is fast
         anyway.
         """
-        hc = self.hc
-        if hc.maximum_distance:
-            sites = filters.filter_sites_by_distance_to_rupture(
-                self.rupture, hc.maximum_distance, hc.site_collection)
-            if sites is None:
-                raise RuntimeError(
-                    'All sites where filtered out! '
-                    'maximum_distance=%s km' % hc.maximum_distance)
-        rnd = random.Random()
-        rnd.seed(self.hc.random_seed)
-        all_seeds = [rnd.randint(0, models.MAX_SINT_32)
-                     for _ in xrange(self.hc.number_of_ground_motion_fields)]
         ss = general.SequenceSplitter(self.concurrent_tasks())
-        for task_no, task_seeds in enumerate(ss.split(all_seeds)):
-            yield (self.job.id, task_seeds, sites, self.rupture,
+        for task_no, task_seeds in enumerate(ss.split(self.all_seeds)):
+            yield (self.job.id, task_seeds, self.sites, self.rupture,
                    self.gmf.id, task_no)
