@@ -24,30 +24,6 @@ from openquake.engine.utils import tasks
 ROUTING_KEY_FMT = 'oq.job.%(job_id)s.tasks'
 
 
-def log_percent_gen(taskname, todo):
-    """
-    Generator factory. Each time the generator object is called
-    log a message if the percentage is bigger than the last one.
-    Yield the number of calls done at the current iteration.
-
-    :param str taskname:
-        the name of the task
-    :param int todo:
-        the number of times the generator object will be called
-    """
-    done = 1
-    prev_percent = 0
-    while done < todo:
-        percent = int(float(done) / todo * 100)
-        if percent > prev_percent:
-            logs.LOG.progress('%s %3d%%', taskname, percent)
-            prev_percent = percent
-        yield done
-        done += 1
-    logs.LOG.progress('%s 100%%', taskname)
-    yield done
-
-
 class Calculator(object):
     """
     Base class for all calculators.
@@ -96,8 +72,7 @@ class Calculator(object):
         apply the callable to the arguments in parallel. The order is not
         preserved.
 
-        Every time a task completes the method .task_completed() is called
-        which by default simply display the progress percentage.
+        Every time a task completes the method .task_completed() is called.
 
         :param task_func: a `celery` task callable
         :param task_args: an iterable over positional arguments
@@ -105,35 +80,19 @@ class Calculator(object):
         NB: if the environment variable OQ_NO_DISTRIBUTE is set the
         tasks are run sequentially in the current process.
         """
-        arglist = self.initialize_percent(task_func, task_arg_gen)
-        tasks.parallelize(task_func, arglist, task_completed)
-
-    def initialize_percent(self, task_func, task_arg_gen):
-        arglist = list(task_arg_gen)
-        taskname = task_func.__name__
-        num_tasks = len(arglist)
-        self._log_percent = log_percent_gen(taskname, num_tasks)
-        logs.LOG.progress('spawning %d tasks of kind %s', num_tasks, taskname)
-        return arglist
+        oqm = tasks.OqTaskManager(task_func, logs.LOG.progress)
+        for args in task_arg_gen:
+            oqm.submit(*args)
+        oqm.aggregate_results(lambda acc, val: task_completed(val), None)
 
     def task_completed(self, task_result):
         """
         Method called when a task is completed. It can be overridden
-        to aggregate the partial results of a computation. By default
-        it just calls the method .log_percent.
+        to aggregate the partial results of a computation.
 
         :param task_result: the result of the task
         """
-        self.log_percent(task_result)
-
-    def log_percent(self, task_result=None):
-        """
-        Log the progress percentage, if changed.
-        It is called at each task completion.
-
-        :param task_result: the result of the task (often None)
-        """
-        self._log_percent.next()
+        pass
 
     def pre_execute(self):
         """
