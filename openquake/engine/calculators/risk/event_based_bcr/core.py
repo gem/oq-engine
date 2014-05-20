@@ -101,8 +101,8 @@ class EventBasedBCRRiskCalculator(event_based.EventBasedRiskCalculator):
         No need to compute the aggregate loss curve in the BCR calculator.
         """
 
-    def task_completed(self, event_loss_tables):
+    def agg_result(self, acc, event_loss_tables):
         """
         No need to update event loss tables in the BCR calculator
         """
-        self.log_percent(event_loss_tables)
+        return acc
