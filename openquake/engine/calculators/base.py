@@ -58,14 +58,6 @@ class Calculator(object):
         """
         raise NotImplementedError
 
-    def concurrent_tasks(self):
-        """
-        Number of tasks to be in queue at any given time.
-
-        Subclasses must implement this.
-        """
-        raise NotImplementedError
-
     def parallelize(self, task_func, task_arg_gen, task_completed):
         """
         Given a callable and a task arg generator, build an argument list and
