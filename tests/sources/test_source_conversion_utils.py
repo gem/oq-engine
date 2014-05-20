@@ -145,6 +145,62 @@ class TestMFDConverters(unittest.TestCase):
                              'Magnitude frequency distribution BadInput not '
                              'supported')
 
+    def test_mfd_to_hazardlib_oq_hazardlib_tgr(self):
+        """
+        Tests that the conversion to hazardlib formulation for the TGRMFD case
+        """
+        output = conv.mfd_to_hazardlib(self.model_gr)
+        self.assertIsInstance(output, mfd.truncated_gr.TruncatedGRMFD)
+        self.assertAlmostEqual(output.b_val, self.model_gr.b_val)
+        self.assertAlmostEqual(output.bin_width, self.model_gr.bin_width)
+
+    def test_mfd_to_hazardlib_nrmllib_tgr(self):
+        """
+        Tests the conversion to hazardlib fomrulation for the 
+        models.TGRMFD case
+        """
+        output = conv.mfd_to_hazardlib(models.TGRMFD(3.0, 1.0, 4.5, 6.5))
+        self.assertIsInstance(output, mfd.truncated_gr.TruncatedGRMFD)
+        self.assertAlmostEqual(output.b_val, 1.0)
+        self.assertAlmostEqual(output.bin_width, 0.1)
+
+    def test_mfd_to_hazardlib_oq_hazardlib_ed(self):
+        """
+        Tests that the conversion to hazardlib formulation for the
+        EvenlyDiscretizedMFD case
+        """
+        output = conv.mfd_to_hazardlib(self.model_ed)
+        self.assertIsInstance(output,
+                              mfd.evenly_discretized.EvenlyDiscretizedMFD)
+        self.assertAlmostEqual(output.min_mag, self.model_gr.min_mag)
+        self.assertAlmostEqual(output.bin_width, self.model_gr.bin_width)
+
+    def test_mfd_to_hazardlib_nrmllib_ed(self):
+        """
+        Tests the conversion to hazardlib fomrulation for the 
+        models.IncrementalMFD case
+        """
+        output = conv.mfd_to_hazardlib(models.IncrementalMFD(4.5, 0.1, [6.5]))
+        self.assertIsInstance(output,
+                              mfd.evenly_discretized.EvenlyDiscretizedMFD)
+        self.assertAlmostEqual(output.min_mag, 4.5)
+        self.assertAlmostEqual(output.bin_width, 0.1)
+
+    def test_mfd_to_hazardlib_unsupported_class(self):
+        """
+        Tests the conversion to the hazardlib using an unsupported class
+        """
+        class BadInput(object):
+            def __init__(self):
+                return
+
+        with self.assertRaises(ValueError) as ae:
+            _ = conv.render_mfd(BadInput())
+            self.assertEqual(ae.exception.message,
+                             'Magnitude frequency distribution BadInput not '
+                             'supported')
+
+
 class TestRenderAspectRatio(unittest.TestCase):
     '''
     Tests the function to render the aspect ratio
@@ -213,6 +269,47 @@ class TestRenderMagScaleRel(unittest.TestCase):
             self.assertEqual(ae.exception.message,
                              'Magnitude Scaling Relation Not Defined!')
 
+class TestRenderMSRToHazardlib(unittest.TestCase):
+    """
+    Tests the function to render the msr to the oq-hazardlib instance
+    """
+    def setUp(self):
+        """
+        """
+        self.msr = WC1994()
+
+    def test_valid_msr_in_hazlib_format(self):
+        """
+        Tests the case when the input is already in hazardlib format
+        """
+        self.assertIsInstance(conv.mag_scale_rel_to_hazardlib(self.msr),
+                              WC1994)
+
+    def test_valid_msr_in_str_format(self):
+        """
+        Tests the case when the input is already in hazardlib format
+        """
+        self.assertIsInstance(conv.mag_scale_rel_to_hazardlib('WC1994'),
+                              WC1994)
+
+    def test_missing_value_with_default(self):
+        """
+        Tests the case when the attibute is missing but the use_defaults
+        option is selected
+        """
+        self.assertIsInstance(
+            conv.mag_scale_rel_to_hazardlib(None, use_default=True),
+            WC1994)
+
+    def test_missing_value_no_default(self):
+        '''
+        Tests the case when the attribute is missing and the use_defaults
+        option is not selected. Should raise ValueError
+        '''
+        with self.assertRaises(ValueError) as ae:
+            _ = conv.mag_scale_rel_to_hazardlib('rubbish')
+            self.assertEqual(ae.exception.message,
+                             'Magnitude Scaling Relation rubbish Defined!')
 
 
 class TestRenderNodalPlane(unittest.TestCase):
@@ -303,6 +400,71 @@ class TestRenderNodalPlane(unittest.TestCase):
                 'Nodal Plane distribution not defined')
 
 
+class TestNPDtoPMF(unittest.TestCase):
+    """
+    Tests the function to convert the nodal plane distribution to the :class:
+    openquake.hazardlib.pmf.PMF
+    """
+    def setUp(self):
+        """
+        """
+        self.npd_as_list = [models.NodalPlane(0.5, 0., 90., 0.),
+                            models.NodalPlane(0.5, 90., 90., 180.)]
+        self.npd_as_pmf = PMF([(0.5, NodalPlane(0., 90., 0.)),
+                               (0.5, NodalPlane(90., 90., 180.))])
+
+        self.npd_as_pmf_bad = PMF([(0.5, None),
+                                    (0.5, NodalPlane(90., 90., 180.))])
+
+    def test_class_as_pmf(self):
+        """
+        Tests the case when a PMF is already input
+        """
+        output = conv.npd_to_pmf(self.npd_as_pmf)
+        self.assertAlmostEqual(output.data[0][0], 0.5)
+        self.assertAlmostEqual(output.data[0][1].strike, 0.)
+        self.assertAlmostEqual(output.data[0][1].dip, 90.)
+        self.assertAlmostEqual(output.data[0][1].rake, 0.)
+        self.assertAlmostEqual(output.data[1][0], 0.5)
+        self.assertAlmostEqual(output.data[1][1].strike, 90.)
+        self.assertAlmostEqual(output.data[1][1].dip, 90.)
+        self.assertAlmostEqual(output.data[1][1].rake, 180.)
+
+    def test_class_as_list(self):
+        """
+        Tests the case when a PMF is already input
+        """
+        output = conv.npd_to_pmf(self.npd_as_list)
+        self.assertAlmostEqual(output.data[0][0], 0.5)
+        self.assertAlmostEqual(output.data[0][1].strike, 0.)
+        self.assertAlmostEqual(output.data[0][1].dip, 90.)
+        self.assertAlmostEqual(output.data[0][1].rake, 0.)
+        self.assertAlmostEqual(output.data[1][0], 0.5)
+        self.assertAlmostEqual(output.data[1][1].strike, 90.)
+        self.assertAlmostEqual(output.data[1][1].dip, 90.)
+        self.assertAlmostEqual(output.data[1][1].rake, 180.)
+
+    def test_default(self):
+        """
+        Tests the case when the default class is raised
+        """
+        output = conv.npd_to_pmf(None, True)
+        self.assertAlmostEqual(output.data[0][0], 1.0)
+        self.assertAlmostEqual(output.data[0][1].strike, 0.)
+        self.assertAlmostEqual(output.data[0][1].dip, 90.)
+        self.assertAlmostEqual(output.data[0][1].rake, 0.)
+
+    def test_render_nodal_planes_null(self):
+        '''
+        Tests the rendering of the nodal planes when no input is specified
+        and no defaults are permitted. Should raise ValueError
+        '''
+        with self.assertRaises(ValueError) as ae:
+            output = conv.npd_to_pmf(None)
+            self.assertEqual(ae.exception.message,
+                'Nodal Plane distribution not defined')
+
+
 class TestRenderHypoDepth(unittest.TestCase):
     '''
     Tests the rendering of the hypocentral depth distribution
@@ -365,6 +527,61 @@ class TestRenderHypoDepth(unittest.TestCase):
         '''
         with self.assertRaises(ValueError) as ae:
             output = conv.render_hdd(None)
+            self.assertEqual(ae.exception.message,
+                'Hypocentral depth distribution not defined!')
+
+
+class TestHDDtoHazardlib(unittest.TestCase):
+    """
+    Class to test the function hdd_to_pmf, which converts the hypocentral
+    distribution to the :class: openquake.hazardlib.pmf.PMF
+    """
+    def setUp(self):
+        """
+        """
+        self.depth_as_list = [models.HypocentralDepth(0.5, 5.),
+                              models.HypocentralDepth(0.5, 10.)]
+
+        self.depth_as_pmf = PMF([(0.5, 5.), (0.5, 10.)])
+
+    def test_input_as_pmf(self):
+        """
+        Tests the function when a valid PMF is input
+        """
+        output = conv.hdd_to_pmf(self.depth_as_pmf)
+        self.assertIsInstance(output, PMF)
+        self.assertAlmostEqual(output.data[0][0], 0.5)
+        self.assertAlmostEqual(output.data[0][1], 5.)
+        self.assertAlmostEqual(output.data[1][0], 0.5)
+        self.assertAlmostEqual(output.data[1][1], 10.)
+
+    def test_input_as_nrmllib(self):
+        """
+        Tests the function when a list of models.HypocentralDepth classes
+        are input
+        """
+        output = conv.hdd_to_pmf(self.depth_as_list)
+        self.assertIsInstance(output, PMF)
+        self.assertAlmostEqual(output.data[0][0], 0.5)
+        self.assertAlmostEqual(output.data[0][1], 5.)
+        self.assertAlmostEqual(output.data[1][0], 0.5)
+        self.assertAlmostEqual(output.data[1][1], 10.)
+
+    def test_default_input(self):
+        """
+        Tests the case when a default value is selected
+        """
+        output = conv.hdd_to_pmf(None, True)
+        self.assertIsInstance(output, PMF)
+        self.assertAlmostEqual(output.data[0][0], 1.0)
+        self.assertAlmostEqual(output.data[0][1], 10.0)
+
+    def test_bad_input(self):
+        """
+        Tests raises value error when no input and no defaults are selected
+        """
+        with self.assertRaises(ValueError) as ae:
+            output = conv.hdd_to_pmf(None)
             self.assertEqual(ae.exception.message,
                 'Hypocentral depth distribution not defined!')
 

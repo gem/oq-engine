@@ -59,6 +59,7 @@ from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.source.simple_fault import SimpleFaultSource
 import hmtk.sources.source_conversion_utils as conv
 
 
@@ -264,3 +265,29 @@ class mtkSimpleFaultSource(object):
             conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
             conv.render_mfd(self.mfd),
             self.rake)
+
+    def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
+        """
+        Returns an instance of the :class:
+        openquake.hazardlib.source.simple_fault.SimpleFaultSource
+        :param tom:
+             Temporal occurrance model
+        :param float mesh_spacing:
+             Mesh spacing
+        
+        """
+        return SimpleFaultSource(
+            self.id,
+            self.name,
+            self.trt,
+            conv.mfd_to_hazardlib(self.mfd),
+            mesh_spacing,
+            conv.mag_scale_rel_to_hazardlib(self.mag_scale_rel, use_defaults),
+            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
+            tom,
+            self.upper_depth,
+            self.lower_depth,
+            self.fault_trace,
+            self.dip,
+            self.rake)
+

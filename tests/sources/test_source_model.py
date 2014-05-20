@@ -53,10 +53,16 @@ Tests the construction and methods of the
 
 import os
 import unittest
+from openquake.hazardlib.tom import PoissonTOM
 from hmtk.parsers.source_model.nrml04_parser import nrmlSourceModelParser
 from hmtk.sources.source_model import mtkSourceModel
+from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.source.area import AreaSource
+from openquake.hazardlib.source.simple_fault import SimpleFaultSource
+from openquake.hazardlib.source.complex_fault import ComplexFaultSource
 from hmtk.sources.point_source import mtkPointSource
 
+TOM = PoissonTOM(1.0)
 
 BASE_PATH = os.path.join(os.path.dirname(__file__), 'test_source_files')
 
@@ -115,3 +121,33 @@ class TestSourceModel(unittest.TestCase):
             #self.assertDictEqual(orig_source.__dict__, test_source.__dict__)
         # Remove the test file
         os.system('rm ' + TEST_PATH)
+
+    def test_source_model_to_hazardlib_converter(self):
+        """
+        Tests the converter of a source model to an oq-hazardlib format
+        """
+        # Load a full source model
+        parser = nrmlSourceModelParser(MODEL_PATH)
+        source_model = parser.read_file(2.0)
+        oq_source_model = source_model.convert_to_oqhazardlib(TOM,
+                                                              1.0,
+                                                              10.0,
+                                                              10.0,
+                                                              True)
+        self.assertIsInstance(oq_source_model[0], AreaSource)
+        self.assertIsInstance(oq_source_model[1], AreaSource)
+        self.assertIsInstance(oq_source_model[2], PointSource)
+        self.assertIsInstance(oq_source_model[3], SimpleFaultSource)
+        self.assertIsInstance(oq_source_model[4], ComplexFaultSource)
+
+        source_model.sources[3] = 'Rubbish!'
+        with self.assertRaises(ValueError) as ver:
+            oq_source_model = source_model.convert_to_oqhazardlib(TOM,
+                                                                  1.0,
+                                                                  10.0,
+                                                                  10.0,
+                                                                  True)
+
+            self.assertEqual(ver.exception.message,
+                             'Source type not recognised!')
+

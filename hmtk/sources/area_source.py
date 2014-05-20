@@ -57,6 +57,7 @@ import numpy as np
 from openquake.nrmllib import models
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.polygon import Polygon
+from openquake.hazardlib.source.area import AreaSource
 import hmtk.sources.source_conversion_utils as conv
 
 
@@ -228,3 +229,32 @@ class mtkAreaSource(object):
             conv.render_mfd(self.mfd),
             conv.render_npd(self.nodal_plane_dist, use_defaults),
             conv.render_hdd(self.hypo_depth_dist, use_defaults))
+
+    def create_oqhazardlib_source(self, tom, mesh_spacing, area_discretisation,
+            use_defaults=False):
+        """
+        Converts the source model into an instance of the :class:
+        openquake.hazardlib.source.area.AreaSource
+        
+        :param tom:
+            Temporal Occurrence model as instance of :class:
+            openquake.hazardlib.tom.TOM
+        :param float mesh_spacing:
+            Mesh spacing
+        """
+        return AreaSource(
+            self.id,
+            self.name,
+            self.trt,
+            conv.mfd_to_hazardlib(self.mfd),
+            mesh_spacing,
+            conv.mag_scale_rel_to_hazardlib(self.mag_scale_rel, use_defaults),
+            conv.render_aspect_ratio(self.rupt_aspect_ratio, use_defaults),
+            tom,
+            self.upper_depth,
+            self.lower_depth,
+            conv.npd_to_pmf(self.nodal_plane_dist, use_defaults),
+            conv.hdd_to_pmf(self.hypo_depth_dist, use_defaults),
+            self.geometry,
+            area_discretisation)
+

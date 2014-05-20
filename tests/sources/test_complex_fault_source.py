@@ -58,9 +58,15 @@ import numpy as np
 from openquake.nrmllib import models
 from openquake.hazardlib.geo import point, line
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.source.complex_fault import ComplexFaultSource
+from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
+from openquake.hazardlib.scalerel.wc1994 import WC1994
 from hmtk.sources.complex_fault_source import mtkComplexFaultSource
 from hmtk.seismicity.catalogue import Catalogue
 from hmtk.seismicity.selector import CatalogueSelector
+
+TOM = PoissonTOM(50.0)
 
 SOURCE_ATTRIBUTES = ['fault_edges', 'mfd', 'name', 'geometry', 'rake',
                      'typology', 'upper_depth', 'catalogue',
@@ -243,6 +249,37 @@ class TestComplexFaultSource(unittest.TestCase):
         self.assertEqual(test_source.name, expected_source.name)
         self.assertAlmostEqual(test_source.mfd.b_val,
                                expected_source.mfd.b_val)
+
+
+
+    def test_create_oqhazardlib_complex_fault_source(self):
+        """
+        Tests the conversion of a point source to an instance of the :class:
+        openquake.hazardlib.source.complex_fault.ComplexFaultSource
+        """
+
+        # Define a complete source
+        complex_edges = [
+            line.Line([point.Point(10., 10., 0.), point.Point(11., 10., 0.)]),
+            line.Line([point.Point(10., 10., 20.), point.Point(11.5, 10., 21.)])
+            ]
+        self.fault_source = mtkComplexFaultSource('001',
+            'A Fault Source',
+            trt='Active Shallow Crust',
+            geometry = None,
+            mag_scale_rel=None,
+            rupt_aspect_ratio=1.0,
+            mfd=models.TGRMFD(a_val=3., b_val=1.0, min_mag=5.0, max_mag=8.0),
+            rake=0.)
+        self.fault_source.create_geometry(complex_edges, 2.0)
+        test_source = self.fault_source.create_oqhazardlib_source(TOM,
+                                                                  5.0,
+                                                                  True)
+        self.assertIsInstance(test_source, ComplexFaultSource)
+        self.assertIsInstance(test_source.mfd, TruncatedGRMFD)
+        self.assertAlmostEqual(test_source.mfd.b_val, 1.0)
+        self.assertIsInstance(test_source.magnitude_scaling_relationship,
+                              WC1994)
 
     def tearDown(self):
         warnings.resetwarnings()
