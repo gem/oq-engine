@@ -443,7 +443,7 @@ class ScenarioExportTestCase(BaseExportTestCase):
 
             outputs = export_core.get_outputs(job.id)
 
-            self.assertEqual(1, len(outputs))  # 1 GMF
+            self.assertEqual(2, len(outputs))  # 1 GMF, 1 SES
 
             gmf_outputs = outputs.filter(output_type='gmf_scenario')
             self.assertEqual(1, len(gmf_outputs))
