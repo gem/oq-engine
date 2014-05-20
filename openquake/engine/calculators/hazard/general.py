@@ -118,6 +118,7 @@ class BaseHazardCalculator(base.Calculator):
         super(BaseHazardCalculator, self).__init__(job)
         # a dictionary (sm_lt_path, trt) -> source blocks
         self.source_blocks_per_ltpath = collections.defaultdict(list)
+        self.source_max_weight = config.get('hazard', 'source_max_weight')
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
@@ -131,13 +132,6 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
-    def concurrent_tasks(self):
-        """
-        For hazard calculators, the number of tasks to be in queue
-        at any given time is specified in the configuration file.
-        """
-        return int(config.get('hazard', 'concurrent_tasks'))
-
     def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
@@ -148,7 +142,8 @@ class BaseHazardCalculator(base.Calculator):
         sitecol = self.hc.site_collection
         trt_models = models.TrtModel.objects.filter(
             lt_model__hazard_calculation=self.hc)
-        for task_no, trt_model in enumerate(trt_models):
+        task_no = 0
+        for trt_model in trt_models:
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
             gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
@@ -157,9 +152,11 @@ class BaseHazardCalculator(base.Calculator):
             # NB: the filtering of the sources by site is slow
             filtered = sc.gen_source_weight(trt, self.hc.sites_affected_by)
             num_sources = 0
-            for i, block in enumerate(split_on_max_weight(filtered, WEIGHT)):
+            for i, block in enumerate(split_on_max_weight(
+                    filtered, self.source_max_weight)):
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
                 num_sources += len(block)
+                task_no += 1
 
             logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s',
                           num_sources, ltpath, trt)
