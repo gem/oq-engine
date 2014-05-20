@@ -55,7 +55,7 @@ class ScenarioRiskCalculatorTestCase(base_test.BaseRiskCalculatorTestCase):
         self.assertEqual(1, models.LossMap.objects.filter(
                          output__oq_job=self.job).count())
 
-        # One Aggregagte Loss
+        # One Aggregate Loss
         self.assertEqual(1, models.AggregateLoss.objects.filter(
                          output__oq_job=self.job).count())
 

@@ -371,7 +371,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 self.parallelize(
                     post_processing.gmf_to_hazard_curve_task,
                     post_processing.gmf_to_hazard_curve_arg_gen(self.job),
-                    self.log_percent)
+                    lambda res: None)
 
             # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
             # has some value (not an empty list), do this additional
@@ -388,4 +388,4 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                         cls_post_proc.hazard_curves_to_hazard_map_task,
                         cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
                             self.job),
-                        self.log_percent)
+                        lambda res: None)
