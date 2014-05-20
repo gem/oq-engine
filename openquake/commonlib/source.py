@@ -28,9 +28,11 @@ from openquake.hazardlib import scalerel
 from openquake.hazardlib import source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
+
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
-from openquake.engine.utils.general import SequenceSplitter, ceil
+
+from openquake.commonlib.general import SequenceSplitter, ceil
 
 
 MAX_RUPTURES = 500  # if there are more ruptures, split the source

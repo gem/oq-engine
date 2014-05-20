@@ -40,9 +40,9 @@ class WeightedSequence(collections.MutableSequence):
 
         :param ws_list:
             a sequence of :class:
-            `openquake.engine.utils.general.WeightedSequence` instances
+            `openquake.commonlib.general.WeightedSequence` instances
         :returns:
-            a `openquake.engine.utils.general.WeightedSequence` instance
+            a `openquake.commonlib.general.WeightedSequence` instance
         """
         return sum(ws_list, cls())
 
@@ -165,14 +165,14 @@ class SequenceSplitter(object):
         """
         Try to split a sequence of pairs (item, weight) in ``num_blocks``
         blocks. Return a list of :class:
-        `openquake.engine.utils.general.WeightedSequence` objects.
+        `openquake.commonlib.general.WeightedSequence` objects.
         """
         return list(self._split_on_max_weight(item_weight_sequence))
 
     def split(self, sequence):
         """
         Split a sequence in ``num_blocks`` blocks. Return a list
-        of :class:`openquake.engine.utils.general.WeightedSequence` objects.
+        of :class:`openquake.commonlib.general.WeightedSequence` objects.
         """
         return self.split_on_max_weight([(item, 1) for item in sequence])
 

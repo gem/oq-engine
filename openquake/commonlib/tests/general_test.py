@@ -27,7 +27,7 @@ from openquake.commonlib.general import \
     block_splitter, SequenceSplitter
 
 class SequenceSplitterTestCase(unittest.TestCase):
-    """Tests for :function:`openquake.engine.utils.general.block_splitter`."""
+    """Tests for :function:`openquake.commonlib.general.block_splitter`."""
 
     DATA = range(10)
 
