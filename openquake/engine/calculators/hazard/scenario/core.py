@@ -115,7 +115,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         self.parse_risk_models()
         self.initialize_sources()
         self.initialize_site_model()
+        self.create_ruptures()
 
+    def create_ruptures(self):
         # check filtering
         hc = self.hc
         if hc.maximum_distance:
