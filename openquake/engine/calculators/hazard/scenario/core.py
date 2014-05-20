@@ -28,11 +28,12 @@ from openquake.hazardlib.calc import ground_motion_fields, filters
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
-from openquake.commonlib.general import SequenceSplitter
+from openquake.commonlib.general import block_splitter, distinct
+
 from openquake.commonlib import source
 
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.utils import tasks
+from openquake.engine.utils import tasks, config
 from openquake.engine.db import models
 from openquake.engine import writer
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -49,7 +50,7 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     # distinct is here to make sure that IMTs such as
     # SA(0.8) and SA(0.80) are considered the same
-    imts = general.distinct(from_string(x) for x in hc.intensity_measure_types)
+    imts = distinct(from_string(x) for x in hc.intensity_measure_types)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     realizations = 1  # one realization for each seed
     correlation_model = haz_general.get_correl_model(hc)
@@ -96,6 +97,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         super(ScenarioHazardCalculator, self).__init__(*args, **kwargs)
         self.gmf = None
         self.rupture = None
+        self.rupture_block_size = config.get('hazard', 'rupture_block_size')
 
     def initialize_sources(self):
         """
@@ -147,7 +149,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         rnd.seed(self.hc.random_seed)
         all_seeds = [rnd.randint(0, models.MAX_SINT_32)
                      for _ in xrange(self.hc.number_of_ground_motion_fields)]
-        ss = SequenceSplitter(self.concurrent_tasks())
-        for task_no, task_seeds in enumerate(ss.split(all_seeds)):
+        blocks_of_seeds = block_splitter(all_seeds, self.rupture_block_size)
+        for task_no, task_seeds in enumerate(blocks_of_seeds):
             yield (self.job.id, task_seeds, sites, self.rupture,
                    self.gmf.id, task_no)

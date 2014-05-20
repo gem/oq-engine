@@ -312,7 +312,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in block]  # source, seed pairs
             yield job_id, sitecol, ss, lt_model, gsims, task_no
-
+            print '***', task_no, block.weight, self.source_max_weight
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
 
