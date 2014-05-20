@@ -1527,7 +1527,7 @@ class SESCollection(djm.Model):
     """
     output = djm.OneToOneField('Output', related_name="ses")
     lt_model = djm.OneToOneField(
-        'LtSourceModel', related_name='ses_collection')
+        'LtSourceModel', related_name='ses_collection', null=True)
     ordinal = djm.IntegerField(null=False)
 
     class Meta:
@@ -1539,7 +1539,8 @@ class SESCollection(djm.Model):
         Iterator for walking through all child :class:`SES` objects.
         """
         hc = self.output.oq_job.hazard_calculation
-        for ordinal in xrange(1, hc.ses_per_logic_tree_path + 1):
+        n = hc.ses_per_logic_tree_path or 1  # scenario
+        for ordinal in xrange(1, n + 1):
             yield SES(self, ordinal)
 
     def __len__(self):
@@ -1557,6 +1558,8 @@ class SESCollection(djm.Model):
         """
         The source model logic tree path corresponding to the collection
         """
+        if self.lt_model is None:  # scenario
+            return ()
         return tuple(self.lt_model.sm_lt_path)
 
 
@@ -1585,6 +1588,7 @@ class SES(object):
         Iterator for walking through all child :class:`SESRupture` objects.
         """
         return SESRupture.objects.filter(
+            rupture__ses_collection=self.ses_collection.id,
             ses_id=self.ordinal).order_by('tag').iterator()
 
 
@@ -1722,7 +1726,7 @@ class ProbabilisticRupture(djm.Model):
             ses_collection=ses_collection,
             magnitude=rupture.mag,
             rake=rupture.rake,
-            tectonic_region_type=rupture.tectonic_region_type,
+            tectonic_region_type=rupture.tectonic_region_type or 'NA',
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
@@ -1841,6 +1845,16 @@ class SESRupture(djm.Model):
             rupt_occ)
         return cls.objects.create(
             rupture=prob_rupture, ses_id=ses.ordinal, tag=tag, seed=seed)
+
+    @property
+    def surface(self):
+        """The surface of the underlying rupture"""
+        return self.rupture.surface
+
+    @property
+    def hypocenter(self):
+        """The hypocenter of the underlying rupture"""
+        return self.rupture.hypocenter
 
 
 class _Point(object):

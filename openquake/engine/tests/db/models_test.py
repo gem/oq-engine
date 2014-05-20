@@ -363,7 +363,7 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         self.assertEqual(expected_len, len(site_coll.z1pt0))
         self.assertEqual(expected_len, len(site_coll.z2pt5))
 
-    def test_get_site_collection_with_reference_parameters(self):
+    def test_site_collection_and_ses_collection(self):
         cfg = helpers.get_data_path('scenario_hazard/job.ini')
         job = helpers.get_job(cfg, username=getpass.getuser())
         models.JobStats.objects.create(oq_job=job)
@@ -382,6 +382,33 @@ class GetSiteCollectionTestCase(unittest.TestCase):
         job_mesh = job.hazard_calculation.points_to_compute()
         self.assertTrue((job_mesh.lons == site_coll.mesh.lons).all())
         self.assertTrue((job_mesh.lats == site_coll.mesh.lats).all())
+
+        # test SESCollection
+        calc.initialize_sources()
+        calc.create_ruptures()
+        ses_coll = models.SESCollection.objects.get(
+            output__oq_job=job, output__output_type='ses')
+        expected_tags = [
+            'scenario-0000000000',
+            'scenario-0000000001',
+            'scenario-0000000002',
+            'scenario-0000000003',
+            'scenario-0000000004',
+            'scenario-0000000005',
+            'scenario-0000000006',
+            'scenario-0000000007',
+            'scenario-0000000008',
+            'scenario-0000000009',
+        ]
+        expected_seeds = [
+            511025145, 1168723362, 794472670, 1296908407, 1343724121,
+            140722153, 28278046, 1798451159, 556958504, 503221907]
+        for ses in ses_coll:  # there is a single ses
+            self.assertEqual(ses.ordinal, 1)
+            for ses_rup, tag, seed in zip(ses, expected_tags, expected_seeds):
+                self.assertEqual(ses_rup.ses_id, 1)
+                self.assertEqual(ses_rup.tag, tag)
+                self.assertEqual(ses_rup.seed, seed)
 
 
 class LossFractionTestCase(unittest.TestCase):

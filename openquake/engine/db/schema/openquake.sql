@@ -376,18 +376,7 @@ ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.ses_collection (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    lt_model_id INTEGER NOT NULL,
-    ordinal INTEGER NOT NULL
-) TABLESPACE hzrdr_ts;
-
--- Stochastic Event Set: A container for 1 or more ruptures associated with a
--- specific investigation time span.
-CREATE TABLE hzrdr.ses (
-    id SERIAL PRIMARY KEY,
-    ses_collection_id INTEGER NOT NULL,
-    investigation_time float NOT NULL,
-    -- Order number of this Stochastic Event Set in a series of SESs
-    -- (for a given logic tree realization).
+    lt_model_id INTEGER, -- can be null for scenario
     ordinal INTEGER NOT NULL
 ) TABLESPACE hzrdr_ts;
 
@@ -994,13 +983,6 @@ ALTER TABLE hzrdr.ses_collection
 ADD CONSTRAINT hzrdr_ses_collection_output_fk
 FOREIGN KEY (output_id)
 REFERENCES uiapi.output(id)
-ON DELETE CASCADE;
-
--- hzrdr.ses to hzrdr.ses_collection FK
-ALTER TABLE hzrdr.ses
-ADD CONSTRAINT hzrdr_ses_ses_collection_fk
-FOREIGN KEY (ses_collection_id)
-REFERENCES hzrdr.ses_collection(id)
 ON DELETE CASCADE;
 
 -- hzrdr.probabilistic_rupture to hzrdr.ses_collection FK
