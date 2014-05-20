@@ -14,19 +14,18 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 This is a regression test with the goal of avoiding the reintroduction
-of a dependence from the configuration parameter concurrent_tasks.
+of a dependence from the configuration parameter `source_max_weight`.
 We use a source model with 398 sources and a single SES.
 Due to the distance filtering only 7 sources are relevant, but some
 of them are area sources generating a lot of point sources.
-We test the independence from the parameter concurrent_tasks.
+We test the independence from the parameter `source_max_weight`
 """
 
 import os
 from nose.plugins.attrib import attr
 from qa_tests import _utils as qa_utils
 from openquake.engine.db import models
-from openquake.engine.calculators.hazard.event_based.core import \
-    EventBasedHazardCalculator
+from openquake.engine.utils import config
 
 
 class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
@@ -65,7 +64,7 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-245
 
     @attr('qa', 'hazard', 'event_based')
     def test_4(self):
-        tags_4, gmfs_4 = self.run_with_concurrent_tasks(4)
+        tags_4, gmfs_4 = self.run_with_max_weight(400)  # 29 tasks
         self.assertEqual(tags_4, self.expected_tags)
         if self.DEBUG:  # write the output on /tmp so you can diff it
             open('/tmp/4-got.txt', 'w').write(gmfs_4)
@@ -74,17 +73,15 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-245
 
     @attr('qa', 'hazard', 'event_based')
     def test_8(self):
-        tags_8, gmfs_8 = self.run_with_concurrent_tasks(8)
+        tags_8, gmfs_8 = self.run_with_max_weight(800)  # 15 tasks
         self.assertEqual(tags_8, self.expected_tags)
         if self.DEBUG:  # write the output on /tmp so you can diff it
             open('/tmp/8-got.txt', 'w').write(gmfs_8)
             open('/tmp/8-exp.txt', 'w').write(self.expected_gmfs)
         self.assertEqual(gmfs_8, self.expected_gmfs)
 
-    def run_with_concurrent_tasks(self, n):
-        orig = EventBasedHazardCalculator.concurrent_tasks.im_func
-        EventBasedHazardCalculator.concurrent_tasks = lambda self: n
-        try:
+    def run_with_max_weight(self, n):
+        with config.context('hazard', source_max_weight=n):
             cfg = os.path.join(os.path.dirname(__file__), 'job.ini')
             job = self.run_hazard(cfg)
             tags = models.SESRupture.objects.filter(
@@ -92,6 +89,4 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-245
                 ).values_list('tag', flat=True)
             # gets the GMFs for all the ruptures in the only existing SES
             [gmfs_per_ses] = list(models.Gmf.objects.get(output__oq_job=job))
-        finally:
-            EventBasedHazardCalculator.concurrent_tasks = orig
         return map(str, tags), str(gmfs_per_ses)
