@@ -33,7 +33,11 @@ from django.db import transaction
 from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
-from openquake.engine.input import source, exposure
+from openquake.commonlib import logictree, source
+from openquake.commonlib.general import (
+    block_splitter, distinct, split_on_max_weight)
+
+from openquake.engine.input import exposure
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
@@ -44,10 +48,7 @@ from openquake.engine.calculators.post_processing import (
 )
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
-from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import (
-    block_splitter, distinct, split_on_max_weight)
 from openquake.engine.performance import EnginePerformanceMonitor
 
 #: Maximum number of hazard curves to cache, for selects or inserts
@@ -151,8 +152,10 @@ class BaseHazardCalculator(base.Calculator):
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
             gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
-            coll = self.collector[trt_model.lt_model.id]
-            filtered = coll.gen_source_weight(trt, self.hc.sites_affected_by)
+            sc = self.source_collector[trt_model.lt_model.id]
+
+            # NB: the filtering of the sources by site is slow
+            filtered = sc.gen_source_weight(trt, self.hc.sites_affected_by)
             num_sources = 0
             for i, block in enumerate(split_on_max_weight(filtered, WEIGHT)):
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
@@ -161,7 +164,7 @@ class BaseHazardCalculator(base.Calculator):
             logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s',
                           num_sources, ltpath, trt)
             trt_model.num_sources = num_sources
-            trt_model.num_ruptures = coll.num_ruptures[trt]
+            trt_model.num_ruptures = sc.num_ruptures[trt]
             trt_model.save()
 
         # save job_stats
@@ -223,7 +226,7 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
-        self.collector = {}  # lt_model_id -> sources
+        self.source_collector = {}  # lt_model_id -> sources
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             source_collector = source.parse_source_model_smart(
@@ -238,7 +241,7 @@ class BaseHazardCalculator(base.Calculator):
             # save LtSourceModel
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
-            self.collector[lt_model.id] = source_collector
+            self.source_collector[lt_model.id] = source_collector
             # save TrtModels for each tectonic region type
             for trt in source_collector.sorted_trts():
                 sources = source_collector.sources[trt]
@@ -371,9 +374,7 @@ class BaseHazardCalculator(base.Calculator):
             for trt_model in models.TrtModel.objects.filter(
                     lt_model=lt_model):
                 # populate the associations rlz <-> trt_model
-                gsim = gsim_dict.get(trt_model.tectonic_region_type)
-                if gsim is None:
-                    continue
+                gsim = gsim_dict[trt_model.tectonic_region_type]
                 models.AssocLtRlzTrtModel.objects.create(
                     rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
         for trt_model in models.TrtModel.objects.filter(
@@ -415,7 +416,7 @@ class BaseHazardCalculator(base.Calculator):
 
         Post-processing results will be stored directly into the database.
         """
-        del self.collector  # save memory
+        del self.source_collector  # save memory
 
         num_rlzs = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.hc).count()
