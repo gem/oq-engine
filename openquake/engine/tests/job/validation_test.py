@@ -26,6 +26,8 @@ from openquake.engine.job import validation
 from openquake.engine.tests.utils import helpers
 from openquake.engine.tests.utils.helpers import get_data_path
 
+from openquake.commonlib.general import deep_eq
+
 
 VALID_IML_IMT = {
     "PGV": [0.005, 0.007, 0.0098],
@@ -209,7 +211,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         )
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_hazard_calculation_is_not_valid_region_only(self):
@@ -233,7 +235,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         )
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_hazard_calculation_is_not_valid_missing_grid_spacing(self):
@@ -248,7 +250,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         )
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_hazard_calculation_is_not_valid_sites_only(self):
@@ -268,7 +270,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
         )
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_hazard_calculation_is_not_valid_missing_export_dir(self):
@@ -284,7 +286,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             instance=self.hc, files=None, exports=['xml']
         )
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_classical_hc_hazard_maps_uhs_no_poes(self):
@@ -304,7 +306,7 @@ class ClassicalHazardFormTestCase(unittest.TestCase):
             instance=self.hc, files=None
         )
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_is_valid_warns(self):
@@ -387,7 +389,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
             instance=self.hc, files=None
         )
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_invalid_imts(self):
@@ -410,7 +412,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         )
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_hazard_curves_from_gmf_no_iml_imt(self):
@@ -431,7 +433,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         )
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_hazard_curves_from_gmf_invalid_iml_imt(self):
@@ -455,7 +457,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         )
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_is_valid_warns(self):
@@ -500,7 +502,7 @@ class EventBasedHazardFormTestCase(unittest.TestCase):
         form = validation.EventBasedHazardForm(instance=self.hc, files=None)
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
 
@@ -559,7 +561,7 @@ class DisaggHazardFormTestCase(unittest.TestCase):
         form = validation.DisaggHazardForm(instance=self.hc, files=None)
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
         # test with an empty `poes_disagg` list
@@ -568,7 +570,7 @@ class DisaggHazardFormTestCase(unittest.TestCase):
         expected_errors['poes_disagg'] = [(
             '`poes_disagg` must contain at least 1 value')]
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_invalid_disagg_calc_truncation_not_set(self):
@@ -593,7 +595,7 @@ class DisaggHazardFormTestCase(unittest.TestCase):
         form = validation.DisaggHazardForm(instance=self.hc, files=None)
 
         self.assertFalse(form.is_valid())
-        helpers.deep_eq(expected_errors, dict(form.errors))
+        deep_eq(expected_errors, dict(form.errors))
 
     def test_is_valid_warns(self):
         # `is_valid` should warn if we specify a `vulnerability_file` as well
@@ -655,7 +657,7 @@ openquake.hazardlib.gsim"],
         )
 
         self.assertFalse(form.is_valid())
-        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        equal, err = deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
     def test_is_valid_warns(self):
