@@ -45,10 +45,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_sources(self):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
-        # after splitting/grouping the source model contains 21 blocks
-        blocks = self.calc.source_blocks_per_ltpath[
-            ('b1',), 'Active Shallow Crust']
-        self.assertEqual(21, len(blocks))
+        [collector] = self.calc.collector.values()  # there is a single model
+        # after splitting and before filtering there are 694 sources
+        self.assertEqual(694, len(collector.sources.values()[0]))
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -85,14 +84,6 @@ store_site_model'
             # We should never try to store a site model in this case.
             self.assertEqual(0, store_sm_patch.call_count)
 
-    def _check_logic_tree_realization_source_blocks_per_ltpath(self, ltr):
-        # the logic tree for this sample calculation only contains a single
-        # source model
-        path = tuple(ltr.sm_lt_path)
-        sources = WeightedSequence.merge(
-            self.calc.source_blocks_per_ltpath[path, 'Active Shallow Crust'])
-        self.assertEqual(22, len(sources))
-
     def test_initialize_realizations_montecarlo(self):
         # We need initalize sources first (read logic trees, parse sources,
         # etc.)
@@ -120,9 +111,6 @@ store_site_model'
         self.assertEqual(['b1'], ltr2.sm_lt_path)
         self.assertEqual(['b1'], ltr2.gsim_lt_path)
 
-        for ltr in (ltr1, ltr2):
-            self._check_logic_tree_realization_source_blocks_per_ltpath(ltr)
-
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
@@ -137,8 +125,6 @@ store_site_model'
         self.assertEqual(0, ltr.ordinal)
         self.assertEqual(['b1'], ltr.sm_lt_path)
         self.assertEqual(['b1'], ltr.gsim_lt_path)
-
-        self._check_logic_tree_realization_source_blocks_per_ltpath(ltr)
 
     @attr('slow')
     def test_complete_calculation_workflow(self):
@@ -158,6 +144,10 @@ store_site_model'
         self.job.status = 'executing'
         self.job.save()
         self.calc.execute()
+
+        [collector] = self.calc.collector.values()  # there is a single model
+        # after filtering there are 74 sources
+        self.assertEqual(74, len(collector.sources.values()[0]))
 
         self.job.status = 'post_executing'
         self.job.save()

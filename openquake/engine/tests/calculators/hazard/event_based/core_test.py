@@ -195,7 +195,7 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 96)
+        self.assertEqual(num_ruptures, 94)
 
         # check that we generated the right number of rows in GmfData
         # 242 = 121 sites * 2 IMTs
@@ -204,10 +204,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         num_gmf2 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz2).count()
 
-        # with concurrent_tasks=64, this test generates several tasks, but
-        # only 15 give nonzero contributions
-        self.assertEqual(num_gmf1, 242 * 15)
-        self.assertEqual(num_gmf2, 242 * 15)
+        # with WEIGHT=10000 this test generates 2 tasks
+        self.assertEqual(num_gmf1, 242 * 2)
+        self.assertEqual(num_gmf2, 242 * 2)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
@@ -235,7 +234,16 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             ('3-7', 41871302),
             ('3-8', 930268948),
             ('3-9', 1920723121),
-            ('4', 1760832373),
+            ('4-0', 1760832373),
+            ('4-1', 736921862),
+            ('4-2', 754518695),
+            ('4-3', 1135503673),
+            ('4-4', 31299080),
+            ('4-5', 277795359),
+            ('4-6', 598901721),
+            ('4-7', 85073212),
+            ('4-8', 782936146),
+            ('4-9', 536916930)
         ]
 
         # utility to present the generated arguments in a nicer way
