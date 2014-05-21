@@ -202,7 +202,8 @@ class BaseHazardCalculator(base.Calculator):
                     (fname, self.hc.maximum_distance))
 
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
+                hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i,
+                sm_name=sm)
             lt_models.append(lt_model)
             for trt, blocks in source_collector.split_blocks(nblocks):
                 self.source_blocks_per_ltpath[smpath, trt] = blocks

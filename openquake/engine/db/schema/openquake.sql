@@ -402,7 +402,8 @@ CREATE TABLE hzrdr.ses_rupture (
     ses_id INTEGER NOT NULL,
     rupture_id INTEGER NOT NULL,  -- FK to probabilistic_rupture.id
     tag VARCHAR NOT NULL,
-    seed INTEGER NOT NULL
+    seed INTEGER NOT NULL,
+    site_indices INTEGER[];
 ) TABLESPACE hzrdr_ts;
 
 
@@ -507,7 +508,8 @@ CREATE TABLE hzrdr.lt_source_model (
    hazard_calculation_id INTEGER NOT NULL,
    ordinal INTEGER NOT NULL,
     -- A list of the logic tree branchIDs
-   sm_lt_path VARCHAR[] NOT NULL
+   sm_lt_path VARCHAR[] NOT NULL,
+   sm_name VARCHAR NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 -- logic tree source model infos
