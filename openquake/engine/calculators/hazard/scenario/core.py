@@ -152,7 +152,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
         with self.monitor('saving ruptures'):
             prob_rup = models.ProbabilisticRupture.create(
-                self.rupture, self.ses_coll)
+                self.rupture, self.ses_coll, self.sites)
             inserter = writer.CacheInserter(models.SESRupture, 100000)
             for ses_idx, seed in enumerate(self.all_seeds):
                 inserter.add(
