@@ -178,5 +178,6 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         ses_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection=self.ses_coll.id)
+        ss = SequenceSplitter(self.concurrent_tasks())
         for task_no, ruptures in enumerate(ss.split(ses_ruptures)):
             yield self.job.id, ruptures, self.sites, self.gmf.id, task_no
