@@ -28,7 +28,7 @@ from openquake.hazardlib.calc import ground_motion_fields, filters
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
-from openquake.commonlib.general import SequenceSplitter
+from openquake.commonlib.general import SequenceSplitter, distinct
 from openquake.commonlib import source
 
 from openquake.engine.calculators.hazard import general as haz_general
@@ -49,7 +49,7 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     # distinct is here to make sure that IMTs such as
     # SA(0.8) and SA(0.80) are considered the same
-    imts = general.distinct(from_string(x) for x in hc.intensity_measure_types)
+    imts = distinct(from_string(x) for x in hc.intensity_measure_types)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
     realizations = 1  # one realization for each seed
     correlation_model = haz_general.get_correl_model(hc)
