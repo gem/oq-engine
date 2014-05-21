@@ -106,7 +106,7 @@ def compute_ses_and_gmfs(
     filter_ruptures_mon = LightMonitor(
         'filtering ruptures', job_id, compute_ses_and_gmfs)
     save_ruptures_mon = LightMonitor(
-        'saving ses', job_id, compute_ses_and_gmfs)
+        'saving ruptures', job_id, compute_ses_and_gmfs)
     compute_gmfs_mon = LightMonitor(
         'computing gmfs', job_id, compute_ses_and_gmfs)
 
