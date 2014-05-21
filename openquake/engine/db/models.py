@@ -45,7 +45,7 @@ from openquake.hazardlib import source, geo
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.site import Site, SiteCollection
 
-from openquake.engine.utils.general import distinct
+from openquake.commonlib.general import distinct
 from openquake.engine.db import fields
 from openquake.engine import writer
 
