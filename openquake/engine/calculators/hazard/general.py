@@ -31,7 +31,10 @@ from django.db import transaction
 from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
-from openquake.engine.input import source, exposure
+from openquake.commonlib import logictree, source
+from openquake.commonlib.general import block_splitter, ceil, distinct
+
+from openquake.engine.input import exposure
 from openquake.engine import logs
 from openquake.engine import writer
 from openquake.engine.calculators import base
@@ -42,9 +45,7 @@ from openquake.engine.calculators.post_processing import (
 )
 from openquake.engine.export import core as export_core
 from openquake.engine.export import hazard as hazard_export
-from openquake.engine.input import logictree
 from openquake.engine.utils import config
-from openquake.engine.utils.general import block_splitter, ceil, distinct
 from openquake.engine.performance import EnginePerformanceMonitor
 
 #: Maximum number of hazard curves to cache, for selects or inserts

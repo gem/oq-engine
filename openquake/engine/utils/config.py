@@ -27,7 +27,7 @@ import pwd
 import sys
 
 import openquake.engine
-from openquake.engine.utils import general
+from openquake.commonlib.general import str2bool
 
 OQDIR = os.path.dirname(os.path.dirname(openquake.engine.__path__[0]))
 #: Environment variable name for specifying a custom openquake.cfg.
@@ -35,8 +35,8 @@ OQDIR = os.path.dirname(os.path.dirname(openquake.engine.__path__[0]))
 OQ_CONFIG_FILE_VAR = "OQ_CONFIG_FILE"
 
 
-@general.singleton
-class Config(object):
+# singleton
+class _Config(object):
     """
     Load the configuration, make each section available in a separate
     dict.
@@ -98,9 +98,12 @@ class Config(object):
         return any(os.path.exists(path) for path in self._get_paths())
 
 
+cfg = _Config()  # the only instance of _Config
+
+
 def get_section(section):
     """A dictionary of key/value pairs for the given `section` or `None`."""
-    return Config().get(section)
+    return cfg.get(section)
 
 
 def get(section, key):
@@ -111,14 +114,13 @@ def get(section, key):
 
 def abort_if_no_config_available():
     """Call sys.exit() if no openquake configuration file is readable."""
-    conf = Config()
-    if not conf.exists():
+    if not cfg.exists():
         msg = ('Could not find a configuration file in %s. '
                'Probably your are not in the right directory'
-               % conf._get_paths())
+               % cfg._get_paths())
         print msg
         sys.exit(2)
-    if not conf.is_readable():
+    if not cfg.is_readable():
         msg = (
             "\nYou are not authorized to read any of the OpenQuake "
             "configuration files.\n"
@@ -141,7 +143,7 @@ def flag_set(section, setting):
     setting = get(section, setting)
     if setting is None:
         return False
-    return general.str2bool(setting)
+    return str2bool(setting)
 
 
 def refresh():
@@ -151,4 +153,4 @@ def refresh():
     NOTE: Use with caution. Calling this during some phases of a calculation
     could cause undesirable side-effects.
     """
-    Config()._load_from_file()
+    cfg._load_from_file()
