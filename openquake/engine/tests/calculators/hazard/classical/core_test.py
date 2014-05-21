@@ -45,7 +45,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     def test_initialize_sources(self):
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
-        [collector] = self.calc.collector.values()  # there is a single model
+        # there is a single model
+        [collector] = self.calc.source_collector.values()
         # after splitting and before filtering there are 694 sources
         self.assertEqual(694, len(collector.sources.values()[0]))
 
@@ -145,7 +146,8 @@ store_site_model'
         self.job.save()
         self.calc.execute()
 
-        [collector] = self.calc.collector.values()  # there is a single model
+        # there is a single model
+        [collector] = self.calc.source_collector.values()
         # after filtering there are 74 sources
         self.assertEqual(74, len(collector.sources.values()[0]))
 
