@@ -50,7 +50,7 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import subprocess
-from openquake.engine.utils import general as general_utils
+from openquake.commonlib.general import str2bool
 
 
 def git_suffix():
@@ -69,8 +69,9 @@ def git_suffix():
         # with this fix we are missing the case where we are really in git
         # installation scenario but, for some reason, git not works properly
         # and not return the hash but it is an acceptable compromise
-        process = subprocess.Popen(['git', 'rev-parse', '--short', 'HEAD'],
-                                   stdout=subprocess.PIPE, stderr=FNULL)
+        process = subprocess.Popen(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            stdout=subprocess.PIPE, stderr=FNULL)
         output = process.communicate()[0]
         os.chdir(old_dir)
         return "-git" + output
@@ -111,7 +112,7 @@ def no_distribute():
     if nd is None:
         return False
     else:
-        return general_utils.str2bool(nd)
+        return str2bool(nd)
 
 
 def set_django_settings_module():

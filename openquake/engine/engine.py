@@ -38,7 +38,7 @@ from lxml import etree
 from openquake.engine import logs
 from openquake.engine.db import models
 from openquake.engine.job.validation import validate
-from openquake.engine.utils import config, get_calculator_class, general
+from openquake.engine.utils import config, get_calculator_class
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
 from openquake.engine.writer import CacheInserter
 from openquake.engine.settings import DATABASES
@@ -47,6 +47,8 @@ from openquake.engine.db.models import Performance
 from openquake import hazardlib
 from openquake import risklib
 from openquake import nrmllib
+
+from openquake.commonlib.general import str2bool
 
 
 INPUT_TYPES = dict(models.INPUT_TYPE_CHOICES)
@@ -58,8 +60,7 @@ LOG_FORMAT = ('[%(asctime)s %(calc_domain)s #%(calc_id)s %(hostname)s '
               '%(levelname)s %(processName)s/%(process)s %(name)s] '
               '%(message)s')
 
-TERMINATE = general.str2bool(
-    config.get('celery', 'terminate_workers_on_revoke'))
+TERMINATE = str2bool(config.get('celery', 'terminate_workers_on_revoke'))
 
 
 def cleanup_after_job(job, terminate):
