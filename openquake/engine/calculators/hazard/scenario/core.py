@@ -173,7 +173,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         will be generated which is fine since the computation is fast
         anyway.
         """
-        blocks_of_seeds = block_splitter(all_seeds, self.rupture_block_size)
+        blocks_of_seeds = block_splitter(
+            self.all_seeds, self.rupture_block_size)
         for task_no, task_seeds in enumerate(blocks_of_seeds):
             yield (self.job.id, task_seeds, self.sites, self.rupture,
                    self.gmf.id, task_no)
