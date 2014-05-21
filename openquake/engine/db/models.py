@@ -1784,6 +1784,10 @@ class ProbabilisticRupture(djm.Model):
     def dip(self):
         return self.surface.get_dip()
 
+    @property
+    def mag(self):
+        return self.magnitude
+
     def _validate_planar_surface(self):
         """
         A rupture's planar surface (existing only in the case of ruptures from
