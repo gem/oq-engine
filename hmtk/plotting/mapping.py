@@ -164,7 +164,7 @@ class HMTKBaseMap(object):
         self.m.drawmeridians(meridians, labels=[0, 0, 0, 1], fontsize=12)
         self.m.fillcontinents(color='wheat')
 
-    def savemap(self, filename, filetype='png', papertype=None):
+    def savemap(self, filename, filetype='png', papertype="a4"):
         """
         Save the figure
         """
