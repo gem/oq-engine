@@ -392,7 +392,8 @@ CREATE TABLE hzrdr.probabilistic_rupture (
     is_from_fault_source BOOLEAN NOT NULL,
     is_multi_surface BOOLEAN NOT NULL,
     surface BYTEA NOT NULL,
-    magnitude float NOT NULL
+    magnitude float NOT NULL,
+    site_indices INTEGER[]
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'probabilistic_rupture', 'hypocenter', 4326, 'POINT', 2);
 
@@ -507,7 +508,8 @@ CREATE TABLE hzrdr.lt_source_model (
    hazard_calculation_id INTEGER NOT NULL,
    ordinal INTEGER NOT NULL,
     -- A list of the logic tree branchIDs
-   sm_lt_path VARCHAR[] NOT NULL
+   sm_lt_path VARCHAR[] NOT NULL,
+   sm_name VARCHAR NOT NULL
 ) TABLESPACE hzrdr_ts;
 
 -- logic tree source model infos
