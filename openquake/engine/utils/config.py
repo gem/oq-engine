@@ -28,7 +28,6 @@ import sys
 from contextlib import contextmanager
 
 import openquake.engine
-from openquake.commonlib.general import str2bool
 
 OQDIR = os.path.dirname(os.path.dirname(openquake.engine.__path__[0]))
 #: Environment variable name for specifying a custom openquake.cfg.
@@ -163,7 +162,7 @@ def flag_set(section, setting):
     setting = get(section, setting)
     if setting is None:
         return False
-    return str2bool(setting)
+    return setting.lower() in ("true", "yes", "t", "1")
 
 
 def refresh():
