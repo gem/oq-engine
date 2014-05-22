@@ -61,6 +61,7 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
     inserter = writer.CacheInserter(models.GmfData, 1000)
     # insert GmfData in blocks of 1000 sites
 
+    # NB: ses_ruptures a non-empty list produced by the block_splitter
     rupture = ses_ruptures[0].rupture  # ProbabilisticRupture instance
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
         for ses_rup in ses_ruptures:
