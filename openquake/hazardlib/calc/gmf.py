@@ -28,7 +28,13 @@ class GmfComputer(object):
     """
     Given an earthquake rupture, the ground motion field computer computes
     ground shaking over a set of sites, by randomly sampling a ground
-    shaking intensity model.
+    shaking intensity model. The usage is
+
+       gmfcomputer = GmfComputer(rupture, r_sites, imts, gsim,
+                                 truncation_level, correlation_model)
+       gmf_dict1 = gmfcomputer.compute(seed1)
+       gmf_dict2 = gmfcomputer.compute(seed2)
+       ...
 
     :param openquake.hazardlib.source.rupture.Rupture rupture:
         Rupture to calculate ground motion fields radiated from.
