@@ -1719,12 +1719,13 @@ class ProbabilisticRupture(djm.Model):
     is_from_fault_source = djm.NullBooleanField(null=False)
     is_multi_surface = djm.NullBooleanField(null=False)
     surface = fields.PickleField(null=False)
+    site_indices = fields.IntArrayField(null=True)
 
     class Meta:
         db_table = 'hzrdr\".\"probabilistic_rupture'
 
     @classmethod
-    def create(cls, rupture, ses_collection):
+    def create(cls, rupture, ses_collection, site_indices=None):
         """
         Create a ProbabilisticRupture row on the database.
 
@@ -1732,6 +1733,8 @@ class ProbabilisticRupture(djm.Model):
             a hazardlib rupture
         :param ses_collection:
             a Stochastic Event Set Collection object
+        :param site_indices:
+            an array of indices for the site_collection
         """
         iffs = is_from_fault_source(rupture)
         ims = is_multi_surface(rupture)
@@ -1744,7 +1747,8 @@ class ProbabilisticRupture(djm.Model):
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
-            hypocenter=rupture.hypocenter.wkt2d)
+            hypocenter=rupture.hypocenter.wkt2d,
+            site_indices=site_indices)
 
     _geom = None
 
@@ -1779,6 +1783,10 @@ class ProbabilisticRupture(djm.Model):
     @property
     def dip(self):
         return self.surface.get_dip()
+
+    @property
+    def mag(self):
+        return self.magnitude
 
     def _validate_planar_surface(self):
         """
@@ -2211,6 +2219,7 @@ class LtSourceModel(djm.Model):
     hazard_calculation = djm.ForeignKey('HazardCalculation')
     ordinal = djm.IntegerField()
     sm_lt_path = fields.CharArrayField()
+    sm_name = djm.TextField(null=False)
 
     def get_num_sources(self):
         """
