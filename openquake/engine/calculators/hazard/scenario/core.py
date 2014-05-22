@@ -24,7 +24,8 @@ import numpy
 from openquake.nrmllib.hazard.parsers import RuptureModelParser
 
 # HAZARDLIB
-from openquake.hazardlib.calc import ground_motion_fields, filters
+from openquake.hazardlib.calc import filters
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
@@ -63,14 +64,13 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
 
     rupture = ses_ruptures[0].rupture  # ProbabilisticRupture instance
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
+        gmf = GmfComputer(rupture, sitecol, imts, gsim, hc.truncation_level,
+                          correlation_model)
         for ses_rup in ses_ruptures:
-            numpy.random.seed(ses_rup.seed)
-            gmf_dict = ground_motion_fields(
-                rupture, sitecol, imts, gsim, hc.truncation_level,
-                realizations, correlation_model)
+            gmf_dict = gmf.compute(ses_rup.seed)
             for imt in imts:
                 for site_id, gmv in zip(sitecol.sids, gmf_dict[imt]):
-                    # float is needed below to convert 1x1 matrices
+                    # float may be needed below to convert 1x1 matrices
                     cache[site_id, imt].append((float(gmv), ses_rup.id))
 
     with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
@@ -159,7 +159,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
 
         with self.monitor('saving ruptures'):
             prob_rup = models.ProbabilisticRupture.create(
-                self.rupture, self.ses_coll, self.sites.indices)
+                self.rupture, self.ses_coll)
             inserter = writer.CacheInserter(models.SESRupture, 100000)
             for ses_idx, seed in enumerate(all_seeds):
                 inserter.add(
