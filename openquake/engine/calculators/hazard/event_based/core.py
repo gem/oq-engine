@@ -50,10 +50,6 @@ from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
-#: Always 1 for the computation of ground motion fields in the event-based
-#: hazard calculator.
-DEFAULT_GMF_REALIZATIONS = 1
-
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
 
@@ -243,21 +239,12 @@ class GmfCollector(object):
             an integer to be used as stochastic seed
         """
         for gsim in self.gsims:
-            gmf_calc_kwargs = {
-                'rupture': rupture,
-                'sites': r_sites,
-                'imts': self.imts,
-                'gsim': gsim,
-                'truncation_level': self.params['truncation_level'],
-                'realizations': DEFAULT_GMF_REALIZATIONS,
-                'correlation_model': self.params['correl_model'],
-            }
-            numpy.random.seed(rupture_seed)
-            gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
-            for imt, gmf_1_realiz in gmf_dict.iteritems():
-                # since DEFAULT_GMF_REALIZATIONS is 1, gmf_1_realiz is a matrix
-                # with n_sites rows and 1 column
-                for site_id, gmv in zip(r_sites.sids, gmf_1_realiz):
+            computer = gmf.GmfComputer(rupture, r_sites, self.imts, gsim,
+                                       self.params['truncation_level'],
+                                       self.params['correl_model'])
+            gmf_dict = computer.compute(rupture_seed)
+            for imt, gmvs in gmf_dict.iteritems():
+                for site_id, gmv in zip(r_sites.sids, gmvs):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
