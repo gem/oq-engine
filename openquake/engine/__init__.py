@@ -107,7 +107,10 @@ def no_distribute():
         If the variable is undefined, it defaults to `False`.
     """
     nd = os.environ.get(NO_DISTRIBUTE_VAR)
-    return nd.lower() in ("true", "yes", "t", "1")
+    if nd:
+        return nd.lower() in ("true", "yes", "t", "1")
+    else:
+        return False
 
 
 def set_django_settings_module():
