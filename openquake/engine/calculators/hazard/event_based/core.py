@@ -50,10 +50,6 @@ from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
-#: Always 1 for the computation of ground motion fields in the event-based
-#: hazard calculator.
-DEFAULT_GMF_REALIZATIONS = 1
-
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
 
@@ -106,7 +102,7 @@ def compute_ses_and_gmfs(
     filter_ruptures_mon = LightMonitor(
         'filtering ruptures', job_id, compute_ses_and_gmfs)
     save_ruptures_mon = LightMonitor(
-        'saving ses', job_id, compute_ses_and_gmfs)
+        'saving ruptures', job_id, compute_ses_and_gmfs)
     compute_gmfs_mon = LightMonitor(
         'computing gmfs', job_id, compute_ses_and_gmfs)
 
@@ -156,8 +152,10 @@ def compute_ses_and_gmfs(
             with save_ruptures_mon:  # saving ses_ruptures
                 # using a django transaction make the saving faster
                 with transaction.commit_on_success(using='job_init'):
+                    indices = r_sites.indices if len(r_sites) < len(sitecol) \
+                        else None  # None means that nothing was filtered
                     prob_rup = models.ProbabilisticRupture.create(
-                        rup, ses_coll)
+                        rup, ses_coll, indices)
                     for ses, num_occurrences in ses_num_occ[rup]:
                         for occ_no in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
@@ -241,21 +239,12 @@ class GmfCollector(object):
             an integer to be used as stochastic seed
         """
         for gsim in self.gsims:
-            gmf_calc_kwargs = {
-                'rupture': rupture,
-                'sites': r_sites,
-                'imts': self.imts,
-                'gsim': gsim,
-                'truncation_level': self.params['truncation_level'],
-                'realizations': DEFAULT_GMF_REALIZATIONS,
-                'correlation_model': self.params['correl_model'],
-            }
-            numpy.random.seed(rupture_seed)
-            gmf_dict = gmf.ground_motion_fields(**gmf_calc_kwargs)
-            for imt, gmf_1_realiz in gmf_dict.iteritems():
-                # since DEFAULT_GMF_REALIZATIONS is 1, gmf_1_realiz is a matrix
-                # with n_sites rows and 1 column
-                for site_id, gmv in zip(r_sites.sids, gmf_1_realiz):
+            computer = gmf.GmfComputer(rupture, r_sites, self.imts, gsim,
+                                       self.params['truncation_level'],
+                                       self.params['correl_model'])
+            gmf_dict = computer.compute(rupture_seed)
+            for imt, gmvs in gmf_dict.iteritems():
+                for site_id, gmv in zip(r_sites.sids, gmvs):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
