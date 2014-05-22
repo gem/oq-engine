@@ -50,7 +50,6 @@ along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import subprocess
-from openquake.commonlib.general import str2bool
 
 
 def git_suffix():
@@ -108,11 +107,7 @@ def no_distribute():
         If the variable is undefined, it defaults to `False`.
     """
     nd = os.environ.get(NO_DISTRIBUTE_VAR)
-
-    if nd is None:
-        return False
-    else:
-        return str2bool(nd)
+    return nd.lower() in ("true", "yes", "t", "1")
 
 
 def set_django_settings_module():
