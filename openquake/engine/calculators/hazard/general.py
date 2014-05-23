@@ -19,6 +19,7 @@
 """Common code for the hazard calculators."""
 
 import os
+import itertools
 import collections
 
 from openquake.hazardlib import correlation
@@ -202,9 +203,11 @@ class BaseHazardCalculator(base.Calculator):
                     '(maximum_distance=%s km)' %
                     (fname, self.hc.maximum_distance))
 
+            self.source_model_lt.tectonic_region_types.update(
+                source_collector.source_weights)
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i,
-                sm_name=sm)
+                sm_name=sm, weight=weight)
             lt_models.append(lt_model)
             for trt, blocks in source_collector.split_blocks(nblocks):
                 self.source_blocks_per_ltpath[smpath, trt] = blocks
@@ -316,8 +319,6 @@ class BaseHazardCalculator(base.Calculator):
         if site_model_inp:
             store_site_model(self.job, site_model_inp)
 
-    # Silencing 'Too many local variables'
-    # pylint: disable=R0914
     @transaction.commit_on_success(using='job_init')
     def initialize_realizations(self):
         """
@@ -330,20 +331,38 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        trts = set()
-        for lt_model in models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc):
-            trts.update(lt_model.get_tectonic_region_types())
-
-        self.gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc, trts)
-        paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
-        for ordinal, (sm_ordinal, weight, sm_lt_path, gmpe_path) in enumerate(
-                paths):
+        if self.hc.number_of_logic_tree_samples:  # sampling
+            self.gmpe_lt = logictree.GMPELogicTree.from_hc(
+                self.hc, self.source_model_lt.tectonic_region_types)
+            all_paths = [[path] for path in
+                         self.gmpe_lt.gen_value_weight_path()]
+        else:  # full enumeration
+            # build the gmpe paths inside _initialize_realizations
+            all_paths = itertools.cycle([None])
+        idx = 0
+        for (sm, weight, sm_lt_path), gmpe_paths in zip(
+                self.source_model_lt.gen_value_weight_path(), all_paths):
             lt_model = models.LtSourceModel.objects.get(
-                hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
+                hazard_calculation=self.hc,
+                sm_lt_path=sm_lt_path)
+            self._initialize_realizations(idx, lt_model, gmpe_paths)
+            idx += 1
+
+    @transaction.commit_on_success(using='job_init')
+    def _initialize_realizations(self, idx, lt_model, gmpe_paths):
+        if gmpe_paths is None:
+            # called for full enumeration
+            self.gmpe_lt = logictree.GMPELogicTree.from_hc(
+                self.hc, lt_model.get_tectonic_region_types())
+            gmpe_paths = list(self.gmpe_lt.gen_value_weight_path())
+        rlz_ordinal = idx * len(gmpe_paths)
+        for _gmpe, weight, gmpe_path in gmpe_paths:
+            if lt_model.weight is not None and weight is not None:
+                weight = lt_model.weight * weight
             rlz = models.LtRealization.objects.create(
                 lt_model=lt_model, gsim_lt_path=gmpe_path,
-                weight=weight, ordinal=ordinal)
+                weight=weight, ordinal=rlz_ordinal)
+            rlz_ordinal += 1
             gsim_dict = self.gmpe_lt.make_trt_to_gsim(gmpe_path)
             for trt_model in models.TrtModel.objects.filter(
                     lt_model=lt_model):
@@ -351,8 +370,7 @@ class BaseHazardCalculator(base.Calculator):
                 gsim = gsim_dict[trt_model.tectonic_region_type]
                 models.AssocLtRlzTrtModel.objects.create(
                     rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
-        for trt_model in models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.hc):
+        for trt_model in models.TrtModel.objects.filter(lt_model=lt_model):
             gsimset = set(art.gsim for art in
                           models.AssocLtRlzTrtModel.objects.filter(
                               trt_model=trt_model))
