@@ -262,12 +262,13 @@ class GmfCollector(object):
         :param task_no:
             The ordinal of the task which generated the current GMFs to save
         """
+        rlzs = models.TrtModel.objects.get(
+            pk=self.trt_model_id).get_rlzs_by_gsim()
         for gsim_name, imt, site_id in self.gmvs_per_site:
-            for art in models.AssocLtRlzTrtModel.objects.filter(
-                    trt_model=self.trt_model_id, gsim=gsim_name):
+            for rlz in rlzs[gsim_name]:
                 imt_name, sa_period, sa_damping = imt
                 inserter.add(models.GmfData(
-                    gmf=models.Gmf.objects.get(lt_realization=art.rlz),
+                    gmf=models.Gmf.objects.get(lt_realization=rlz),
                     task_no=task_no,
                     imt=imt_name,
                     sa_period=sa_period,
