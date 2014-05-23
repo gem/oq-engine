@@ -59,50 +59,6 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.assertIsNone(weight)
         self.assertEqual(('b2', 'b3'), branch_ids)
 
-    def test_enumerate_paths(self):
-        # testing full enumeration
-        self.source_model_lt.num_samples = 0
-        self.gmpe_lt.num_samples = 0
-        paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
-        ae = self.assertEqual
-        ae(paths.next(), (0, Decimal('0.02'),
-                          ('b1', 'b3', 'b6'), ('b1', 'b3')))
-        ae(paths.next(), (0, Decimal('0.02'),
-                          ('b1', 'b3', 'b6'), ('b2', 'b3')))
-        ae(paths.next(), (1, Decimal('0.06'),
-                          ('b1', 'b3', 'b7'), ('b1', 'b3')))
-        ae(paths.next(), (1, Decimal('0.06'),
-                          ('b1', 'b3', 'b7'), ('b2', 'b3')))
-        ae(paths.next(), (2, Decimal('0.02'),
-                          ('b1', 'b3', 'b8'), ('b1', 'b3')))
-        ae(paths.next(), (2, Decimal('0.02'),
-                          ('b1', 'b3', 'b8'), ('b2', 'b3')))
-        ae(paths.next(), (3, Decimal('0.06'),
-                          ('b1', 'b4', 'b6'), ('b1', 'b3')))
-        ae(paths.next(), (3, Decimal('0.06'),
-                          ('b1', 'b4', 'b6'), ('b2', 'b3')))
-        ae(paths.next(), (4, Decimal('0.18'),
-                          ('b1', 'b4', 'b7'), ('b1', 'b3')))
-        ae(paths.next(), (4, Decimal('0.18'),
-                          ('b1', 'b4', 'b7'), ('b2', 'b3')))
-        ae(paths.next(), (5, Decimal('0.06'),
-                          ('b1', 'b4', 'b8'), ('b1', 'b3')))
-        ae(paths.next(), (5, Decimal('0.06'),
-                          ('b1', 'b4', 'b8'), ('b2', 'b3')))
-        ae(paths.next(), (6, Decimal('0.02'),
-                          ('b1', 'b5', 'b6'), ('b1', 'b3')))
-        ae(paths.next(), (6, Decimal('0.02'),
-                          ('b1', 'b5', 'b6'), ('b2', 'b3')))
-        ae(paths.next(), (7, Decimal('0.06'),
-                          ('b1', 'b5', 'b7'), ('b1', 'b3')))
-        ae(paths.next(), (7, Decimal('0.06'),
-                          ('b1', 'b5', 'b7'), ('b2', 'b3')))
-        ae(paths.next(), (8, Decimal('0.02'),
-                          ('b1', 'b5', 'b8'), ('b1', 'b3')))
-        ae(paths.next(), (8, Decimal('0.02'),
-                          ('b1', 'b5', 'b8'), ('b2', 'b3')))
-        self.assertRaises(StopIteration, paths.next)
-
 
 class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
     def setUp(self):
