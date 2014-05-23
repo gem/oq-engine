@@ -2220,6 +2220,7 @@ class LtSourceModel(djm.Model):
     ordinal = djm.IntegerField()
     sm_lt_path = fields.CharArrayField()
     sm_name = djm.TextField(null=False)
+    weight = djm.DecimalField(decimal_places=100, max_digits=101, null=True)
 
     def get_num_sources(self):
         """
