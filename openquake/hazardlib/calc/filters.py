@@ -72,7 +72,7 @@ def filter_sites_by_distance_to_rupture(rupture, integration_distance, sites):
     :returns:
         Filtered :class:`~openquake.hazardlib.site.SiteCollection`.
 
-    This function is similar to :meth:`filter_sites_by_distance_to_source`.
+    This function is similar to :meth:`openquake.hazardlib.source.base.BaseSeismicSource.filter_sites_by_distance_to_source`.
     The same notes about filtering criteria apply. Site
     should not be filtered out if it is not further than the integration
     distance from the rupture's surface projection along the great
