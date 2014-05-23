@@ -163,7 +163,7 @@ class BaseHazardCalculator(base.Calculator):
 
     def pre_execute(self):
         """
-        Initialize risk models, site model, sources and realizations
+        Initialize risk models, site model and sources
         """
         self.parse_risk_models()
         self.initialize_site_model()
@@ -171,6 +171,9 @@ class BaseHazardCalculator(base.Calculator):
         js = models.JobStats.objects.get(oq_job=self.job)
         js.num_sources = [model.get_num_sources() for model in lt_models]
         js.save()
+
+    def post_execute(self):
+        """Inizialize realizations"""
         self.initialize_realizations()
 
     @EnginePerformanceMonitor.monitor
@@ -221,13 +224,18 @@ class BaseHazardCalculator(base.Calculator):
 
             # save TrtModel objects for each tectonic region type
             for trt in source_collector.sorted_trts():
+                gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc, [trt])
+                gsims = distinct(
+                    gmpe_lt.make_trt_to_gsim(path)[trt].__name__
+                    for _, _, path in gmpe_lt.gen_value_weight_path())
                 models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
                     num_sources=len(source_collector.source_weights[trt]),
                     num_ruptures=source_collector.num_ruptures[trt],
                     min_mag=source_collector.min_mag[trt],
-                    max_mag=source_collector.max_mag[trt])
+                    max_mag=source_collector.max_mag[trt],
+                    gsims=gsims)
         return lt_models
 
     @EnginePerformanceMonitor.monitor
@@ -347,6 +355,8 @@ class BaseHazardCalculator(base.Calculator):
                 sm_lt_path=sm_lt_path)
             self._initialize_realizations(idx, lt_model, gmpe_paths)
             idx += 1
+        for rlz in self._get_realizations():
+            print rlz.id, rlz.sm_lt_path, rlz.gsim_lt_path, rlz.weight
 
     @transaction.commit_on_success(using='job_init')
     def _initialize_realizations(self, idx, lt_model, gmpe_paths):
@@ -367,9 +377,13 @@ class BaseHazardCalculator(base.Calculator):
             for trt_model in models.TrtModel.objects.filter(
                     lt_model=lt_model):
                 # populate the associations rlz <-> trt_model
-                gsim = gsim_dict[trt_model.tectonic_region_type]
-                models.AssocLtRlzTrtModel.objects.create(
-                    rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
+                gsim = gsim_dict.get(trt_model.tectonic_region_type)
+                if gsim:
+                    models.AssocLtRlzTrtModel.objects.create(
+                        rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
+                else:
+                    print 'Missing %s for rlz %s' % (
+                        trt_model.tectonic_region_type, gmpe_path)
         for trt_model in models.TrtModel.objects.filter(lt_model=lt_model):
             gsimset = set(art.gsim for art in
                           models.AssocLtRlzTrtModel.objects.filter(
