@@ -55,7 +55,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 
 
 @tasks.oqtask
-def compute_ses_and_gmfs(
+def compute_ruptures(
         job_id, sitecol, src_seeds, trt_model_id, gsims, task_no):
     """
     Celery task for the stochastic event set calculator.
@@ -92,19 +92,17 @@ def compute_ses_and_gmfs(
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
 
-    gmfcollector = GmfCollector(
-        params, imts, gsims, trt_model.id)
+    rupturecollector = RuptureCollector(
+        params, imts, gsims, trt_model.id, task_no)
 
     filter_sites_mon = LightMonitor(
-        'filtering sites', job_id, compute_ses_and_gmfs)
+        'filtering sites', job_id, compute_ruptures)
     generate_ruptures_mon = LightMonitor(
-        'generating ruptures', job_id, compute_ses_and_gmfs)
+        'generating ruptures', job_id, compute_ruptures)
     filter_ruptures_mon = LightMonitor(
-        'filtering ruptures', job_id, compute_ses_and_gmfs)
+        'filtering ruptures', job_id, compute_ruptures)
     save_ruptures_mon = LightMonitor(
-        'saving ruptures', job_id, compute_ses_and_gmfs)
-    compute_gmfs_mon = LightMonitor(
-        'computing gmfs', job_id, compute_ses_and_gmfs)
+        'saving ruptures', job_id, compute_ruptures)
 
     # Compute and save stochastic event sets
     rnd = random.Random()
@@ -164,11 +162,10 @@ def compute_ses_and_gmfs(
                                 rup.rup_no, occ_no, rup_seed)
                             ses_ruptures.append(ses_rup)
 
-            with compute_gmfs_mon:  # computing GMFs
-                if hc.ground_motion_fields:
-                    for ses_rup in ses_ruptures:
-                        gmfcollector.calc_gmf(
-                            r_sites, rup, ses_rup.id, ses_rup.seed)
+            if hc.ground_motion_fields:
+                for ses_rup in ses_ruptures:
+                    rupturecollector.collect(
+                        r_sites, rup, ses_rup.id, ses_rup.seed)
 
         # log calc_time per distinct rupture
         if ses_num_occ:
@@ -189,19 +186,15 @@ def compute_ses_and_gmfs(
     generate_ruptures_mon.flush()
     filter_ruptures_mon.flush()
     save_ruptures_mon.flush()
-    compute_gmfs_mon.flush()
 
-    if hc.ground_motion_fields:
-        with EnginePerformanceMonitor(
-                'saving gmfs', job_id, compute_ses_and_gmfs):
-            gmfcollector.save_gmfs(task_no)
+    return rupturecollector
 
 
-class GmfCollector(object):
+class RuptureCollector(object):
     """
-    A class to compute and save ground motion fields.
+    A class to store ruptures and then compute and save ground motion fields.
     """
-    def __init__(self, params, imts, gsims, trt_model_id):
+    def __init__(self, params, imts, gsims, trt_model_id, task_no=0):
         """
         :param params:
             a dictionary of parameters with keys
@@ -217,10 +210,18 @@ class GmfCollector(object):
         self.imts = imts
         self.gsims = gsims
         self.trt_model_id = trt_model_id
+        self.task_no = task_no
         # NB: I tried to use a single dictionary
         # {site_id: [(gmv, rupt_id),...]} but it took a lot more memory (MS)
         self.gmvs_per_site = collections.defaultdict(list)
         self.ruptures_per_site = collections.defaultdict(list)
+        self.rupture_data = []
+
+    def collect(self, r_sites, rupture, rupture_id, rupture_seed):
+        """
+        Collect rupture data.
+        """
+        self.rupture_data.append((r_sites, rupture, rupture_id, rupture_seed))
 
     def calc_gmf(self, r_sites, rupture, rupture_id, rupture_seed):
         """
@@ -254,13 +255,9 @@ class GmfCollector(object):
                         self.ruptures_per_site[
                             gsim_name, imt, site_id].append(rupture_id)
 
-    @transaction.commit_on_success(using='job_init')
-    def save_gmfs(self, task_no):
+    def save_gmfs(self):
         """
         Helper method to save the computed GMF data to the database.
-
-        :param task_no:
-            The ordinal of the task which generated the current GMFs to save
         """
         rlzs = models.TrtModel.objects.get(
             pk=self.trt_model_id).get_rlzs_by_gsim()
@@ -269,7 +266,7 @@ class GmfCollector(object):
                 imt_name, sa_period, sa_damping = imt
                 inserter.add(models.GmfData(
                     gmf=models.Gmf.objects.get(lt_realization=rlz),
-                    task_no=task_no,
+                    task_no=self.task_no,
                     imt=imt_name,
                     sa_period=sa_period,
                     sa_damping=sa_damping,
@@ -278,6 +275,7 @@ class GmfCollector(object):
                     rupture_ids=self.ruptures_per_site[gsim_name, imt, site_id]
                 ))
         inserter.flush()
+        self.rupture_data[:] = []
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
 
@@ -287,7 +285,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     Probabilistic Event-Based hazard calculator. Computes stochastic event sets
     and (optionally) ground motion fields.
     """
-    core_calc_task = compute_ses_and_gmfs
+    core_calc_task = compute_ruptures
 
     def task_arg_gen(self, _block_size=None):
         """
@@ -307,6 +305,22 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
+
+    def task_completed(self, rupturecollector):
+        """
+        If the parameter `ground_motion_fields` is set, compute and save
+        the GMFs from the ruptures generated by the given task and stored
+        in the `rupturecollector`.
+        """
+        if not self.hc.ground_motion_fields:
+            return  # do nothing
+        rupturecollector.imts = map(
+            from_string, self.hc.intensity_measure_types)
+        with self.monitor('computing gmfs'):
+            for rupture_data in rupturecollector.rupture_data:
+                rupturecollector.calc_gmf(*rupture_data)
+        with self.monitor('saving gmfs'):
+            rupturecollector.save_gmfs()
 
     def initialize_ses_db_records(self, lt_model):
         """
