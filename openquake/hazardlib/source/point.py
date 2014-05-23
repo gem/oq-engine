@@ -153,11 +153,14 @@ class PointSource(ParametricSeismicSource):
     def _iter_ruptures_at_location(self, temporal_occurrence_model, location,
                                    rate_scaling_factor=1):
         """
-        The common part of :meth:`iter_ruptures` shared between point source
+        The common part of :meth:
+        `openquake.hazardlib.source.point.Point.iter_ruptures`
+        shared between point source
         and :class:`~openquake.hazardlib.source.area.AreaSource`.
 
         :param temporal_occurrence_model:
-            The same object as given to :meth:`iter_ruptures`.
+            The same object as given to :meth:
+            `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
         :param location:
             A :class:`~openquake.hazardlib.geo.point.Point`
             object representing the hypocenter

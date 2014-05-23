@@ -34,22 +34,26 @@ class GmfComputer(object):
                                  truncation_level, correlation_model)
        gmf_dict1 = gmfcomputer.compute(seed1)
        gmf_dict2 = gmfcomputer.compute(seed2)
-       ...
 
-    :param `openquake.hazardlib.source.rupture.Rupture` rupture:
+    :param :class:`openquake.hazardlib.source.rupture.Rupture` rupture:
         Rupture to calculate ground motion fields radiated from.
+
     :param :class:`openquake.hazardlib.site.SiteCollection` sites:
         Sites of interest to calculate GMFs.
+
     :param imts:
         List of intensity measure type objects (see
         :mod:`openquake.hazardlib.imt`).
+
     :param gsim:
         Ground-shaking intensity model, instance of subclass of either
         :class:`~openquake.hazardlib.gsim.base.GMPE` or
         :class:`~openquake.hazardlib.gsim.base.IPE`.
+
     :param truncation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution, or ``None``.
+
     :param correlation_model:
         Instance of correlation model object. See
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which
