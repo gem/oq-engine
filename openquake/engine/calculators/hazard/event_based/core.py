@@ -320,6 +320,17 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
     def post_execute(self):
         super(EventBasedHazardCalculator, self).post_execute()
+        if not self.hc.ground_motion_fields:
+            return  # do nothing
+
+        # create a Gmf output for each realization
+        for rlz in self._get_realizations():
+            output = models.Output.objects.create(
+                oq_job=self.job,
+                display_name='GMF rlz-%s' % rlz.id,
+                output_type='gmf')
+            models.Gmf.objects.create(output=output, lt_realization=rlz)
+
         for rupt_collector in self.rupt_collectors:
             with self.monitor('computing gmfs'):
                 for rupture_data in rupt_collector.rupture_data:
@@ -346,14 +357,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_model=lt_model, ordinal=lt_model.ordinal)
-
-        for rlz in lt_model:
-            if self.job.hazard_calculation.ground_motion_fields:
-                output = models.Output.objects.create(
-                    oq_job=self.job,
-                    display_name='GMF rlz-%s' % rlz.id,
-                    output_type='gmf')
-                models.Gmf.objects.create(output=output, lt_realization=rlz)
 
         return ses_coll
 
