@@ -93,7 +93,7 @@ def compute_ses_and_gmfs(
         maximum_distance=hc.maximum_distance)
 
     gmfcollector = GmfCollector(
-        params, imts, gsims, trt_model.get_rlzs_by_gsim())
+        params, imts, gsims, trt_model.id)
 
     filter_sites_mon = LightMonitor(
         'filtering sites', job_id, compute_ses_and_gmfs)
@@ -201,7 +201,7 @@ class GmfCollector(object):
     """
     A class to compute and save ground motion fields.
     """
-    def __init__(self, params, imts, gsims, rlzs):
+    def __init__(self, params, imts, gsims, trt_model_id):
         """
         :param params:
             a dictionary of parameters with keys
@@ -210,13 +210,13 @@ class GmfCollector(object):
             a list of hazardlib intensity measure types
         :param gsims:
             a list of distinct GSIM instances
-        :param rlzs:
-            a dictionary returning the realizations per GSIM string
+        :param int trt_model_id:
+            the ID of a TRTModel instance
         """
         self.params = params
         self.imts = imts
         self.gsims = gsims
-        self.rlzs = rlzs
+        self.trt_model_id = trt_model_id
         # NB: I tried to use a single dictionary
         # {site_id: [(gmv, rupt_id),...]} but it took a lot more memory (MS)
         self.gmvs_per_site = collections.defaultdict(list)
@@ -239,6 +239,7 @@ class GmfCollector(object):
             an integer to be used as stochastic seed
         """
         for gsim in self.gsims:
+            gsim_name = gsim.__class__.__name__
             computer = gmf.GmfComputer(rupture, r_sites, self.imts, gsim,
                                        self.params['truncation_level'],
                                        self.params['correl_model'])
@@ -248,11 +249,10 @@ class GmfCollector(object):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
-                        for rlz in self.rlzs[gsim.__class__.__name__]:
-                            self.gmvs_per_site[
-                                rlz.id, imt, site_id].append(gmv)
-                            self.ruptures_per_site[
-                                rlz.id, imt, site_id].append(rupture_id)
+                        self.gmvs_per_site[
+                            gsim_name, imt, site_id].append(gmv)
+                        self.ruptures_per_site[
+                            gsim_name, imt, site_id].append(rupture_id)
 
     @transaction.commit_on_success(using='job_init')
     def save_gmfs(self, task_no):
@@ -262,18 +262,20 @@ class GmfCollector(object):
         :param task_no:
             The ordinal of the task which generated the current GMFs to save
         """
-        for rlz_id, imt, site_id in self.gmvs_per_site:
-            rlz = models.LtRealization.objects.get(pk=rlz_id)
-            imt_name, sa_period, sa_damping = imt
-            inserter.add(models.GmfData(
-                gmf=models.Gmf.objects.get(lt_realization=rlz),
-                task_no=task_no,
-                imt=imt_name,
-                sa_period=sa_period,
-                sa_damping=sa_damping,
-                site_id=site_id,
-                gmvs=self.gmvs_per_site[rlz_id, imt, site_id],
-                rupture_ids=self.ruptures_per_site[rlz_id, imt, site_id]))
+        for gsim_name, imt, site_id in self.gmvs_per_site:
+            for art in models.AssocLtRlzTrtModel.objects.filter(
+                    trt_model=self.trt_model_id, gsim=gsim_name):
+                imt_name, sa_period, sa_damping = imt
+                inserter.add(models.GmfData(
+                    gmf=models.Gmf.objects.get(lt_realization=art.rlz),
+                    task_no=task_no,
+                    imt=imt_name,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                    site_id=site_id,
+                    gmvs=self.gmvs_per_site[gsim_name, imt, site_id],
+                    rupture_ids=self.ruptures_per_site[gsim_name, imt, site_id]
+                ))
         inserter.flush()
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
