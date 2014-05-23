@@ -316,11 +316,16 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             return  # do nothing
         rupturecollector.imts = map(
             from_string, self.hc.intensity_measure_types)
-        with self.monitor('computing gmfs'):
-            for rupture_data in rupturecollector.rupture_data:
-                rupturecollector.calc_gmf(*rupture_data)
-        with self.monitor('saving gmfs'):
-            rupturecollector.save_gmfs()
+        self.rupt_collectors.append(rupturecollector)
+
+    def post_execute(self):
+        super(EventBasedHazardCalculator, self).post_execute()
+        for rupt_collector in self.rupt_collectors:
+            with self.monitor('computing gmfs'):
+                for rupture_data in rupt_collector.rupture_data:
+                    rupt_collector.calc_gmf(*rupture_data)
+            with self.monitor('saving gmfs'):
+                rupt_collector.save_gmfs()
 
     def initialize_ses_db_records(self, lt_model):
         """

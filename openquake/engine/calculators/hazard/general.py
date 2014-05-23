@@ -113,6 +113,7 @@ class BaseHazardCalculator(base.Calculator):
         super(BaseHazardCalculator, self).__init__(job)
         # a dictionary (sm_lt_path, trt) -> source blocks
         self.source_blocks_per_ltpath = collections.defaultdict(list)
+        self.rupt_collectors = []
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
@@ -367,29 +368,31 @@ class BaseHazardCalculator(base.Calculator):
             gmpe_paths = list(self.gmpe_lt.gen_value_weight_path())
         rlz_ordinal = idx * len(gmpe_paths)
         for _gmpe, weight, gmpe_path in gmpe_paths:
+            gsim_dict = self.gmpe_lt.make_trt_to_gsim(gmpe_path)
+            dic = {}
+            for trt_model in models.TrtModel.objects.filter(
+                    lt_model=lt_model):
+                gsim = gsim_dict.get(trt_model.tectonic_region_type)
+                if gsim:
+                    dic[trt_model.id] = gsim
+            if not dic:
+                continue
             if lt_model.weight is not None and weight is not None:
                 weight = lt_model.weight * weight
             rlz = models.LtRealization.objects.create(
                 lt_model=lt_model, gsim_lt_path=gmpe_path,
                 weight=weight, ordinal=rlz_ordinal)
             rlz_ordinal += 1
-            gsim_dict = self.gmpe_lt.make_trt_to_gsim(gmpe_path)
-            for trt_model in models.TrtModel.objects.filter(
-                    lt_model=lt_model):
+            for trt_model_id, gsim in dic.iteritems():
                 # populate the associations rlz <-> trt_model
-                gsim = gsim_dict.get(trt_model.tectonic_region_type)
-                if gsim:
-                    models.AssocLtRlzTrtModel.objects.create(
-                        rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
-                else:
-                    print 'Missing %s for rlz %s' % (
-                        trt_model.tectonic_region_type, gmpe_path)
-        for trt_model in models.TrtModel.objects.filter(lt_model=lt_model):
-            gsimset = set(art.gsim for art in
-                          models.AssocLtRlzTrtModel.objects.filter(
-                              trt_model=trt_model))
-            trt_model.gsims = sorted(gsimset)
-            trt_model.save()
+                models.AssocLtRlzTrtModel.objects.create(
+                    rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
+        #for trt_model in models.TrtModel.objects.filter(lt_model=lt_model):
+        #    gsimset = set(art.gsim for art in
+        #                  models.AssocLtRlzTrtModel.objects.filter(
+        #                      trt_model=trt_model))
+        #    trt_model.gsims = sorted(gsimset)
+        #    trt_model.save()
 
     def _get_outputs_for_export(self):
         """
