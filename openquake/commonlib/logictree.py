@@ -24,11 +24,15 @@ import abc
 import os
 import random
 import re
-
+import itertools
+import operator
+from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
 import openquake.nrmllib
+from openquake.nrmllib.node import node_from_xml
+
 import openquake.hazardlib
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
@@ -1116,3 +1120,80 @@ class GMPELogicTree(BaseLogicTree):
                 'only one branchset on each branching level is allowed '
                 'in gmpe logic tree'
             )
+
+
+BranchTuple = namedtuple('Branch', 'trt, id, gsim, weight')
+
+
+class GsimLogicTree(object):
+    """
+    """
+    def __init__(self, fname, trts, seed=0, num_samples=0):
+        self.fname = fname
+        self.trts = trts
+        self.seed = 0
+        self.num_samples = num_samples
+        self.branch_to_gsim = {}
+        self.branch_to_trt = {}
+        self.branches = sorted(self._parse_gmpe_lt())
+
+    def get_gsims(self, trt):
+        """
+        Yield the GSIMs associate to the given `trt`.
+
+        :param str trt: one of the tectonic region types
+        """
+        if trt not in self.trts:
+            raise ValueError('%s is not in the list of available tectonic '
+                             'region types %s' % (trt, self.trts))
+        for branch in self.branches:
+            if branch.trt == trt:
+                yield branch.gsim
+
+    def _parse_gmpe_lt(self):
+        nrml = node_from_xml(self.fname)
+        for branching_level in nrml.logicTree:
+            for branchset in branching_level:
+                trt = branchset['applyToTectonicRegionType']
+                if trt in self.trts:
+                    weights = []
+                    for branch in branchset:
+                        weight = Decimal(branch.uncertaintyWeight.text)
+                        weights.append(weight)
+                        branch_id = branch['branchID']
+                        gsim = branch.uncertaintyModel.text
+                        self.branch_to_gsim[branch_id] = gsim
+                        self.branch_to_trt[branch_id] = trt
+                        yield BranchTuple(trt, branch_id, gsim, weight)
+                    assert sum(weights) == 1, weights
+
+    def gen_value_weight_path(self):
+        """
+        """
+        groups = []
+        for trt, group in itertools.groupby(
+                self.branches, operator.attrgetter('trt')):
+            groups.append(list(group))
+        # with T tectonic region types there are T groups and T branches
+        if self.num_samples:
+            branches_iter = ([random.choice(group) for group in groups]
+                             for _ in xrange(self.num_samples))
+        else:
+            branches_iter = itertools.product(*groups)
+        for branches in branches_iter:
+            weight = 1
+            gsim_lt_path = []
+            gsims = []
+            for branch in branches:
+                weight *= branch.weight
+                gsim_lt_path.append(branch.id)
+                gsims.append(branch.gsim)
+            yield tuple(gsims), weight, tuple(gsim_lt_path)
+
+    def make_trt_to_gsim(self, branch_ids):
+        """
+        """
+        dic = {}
+        for branch_id in branch_ids:
+            dic[self.branch_to_trt[branch_id]] = self.branch_to_gsim[branch_id]
+        return dic
