@@ -258,6 +258,7 @@ class RuptureCollector(object):
         rlzs = models.TrtModel.objects.get(
             pk=self.trt_model_id).get_rlzs_by_gsim()
         for gsim_name, imt, site_id in self.gmvs_per_site:
+            assert rlzs[gsim_name], (self.trt_model_id, gsim_name)
             for rlz in rlzs[gsim_name]:
                 imt_name, sa_period, sa_damping = imt
                 inserter.add(models.GmfData(
@@ -324,7 +325,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 display_name='GMF rlz-%s' % rlz.id,
                 output_type='gmf')
             models.Gmf.objects.create(output=output, lt_realization=rlz)
-
         for rupt_collector in self.rupt_collectors:
             with self.monitor('computing gmfs'):
                 for rupture_data in rupt_collector.rupture_data:

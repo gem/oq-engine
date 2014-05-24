@@ -356,8 +356,6 @@ class BaseHazardCalculator(base.Calculator):
                 sm_lt_path=sm_lt_path)
             self._initialize_realizations(idx, lt_model, gmpe_paths)
             idx += 1
-        for rlz in self._get_realizations():
-            print rlz.id, rlz.sm_lt_path, rlz.gsim_lt_path, rlz.weight
 
     @transaction.commit_on_success(using='job_init')
     def _initialize_realizations(self, idx, lt_model, gmpe_paths):
@@ -386,13 +384,7 @@ class BaseHazardCalculator(base.Calculator):
             for trt_model_id, gsim in dic.iteritems():
                 # populate the associations rlz <-> trt_model
                 models.AssocLtRlzTrtModel.objects.create(
-                    rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
-        #for trt_model in models.TrtModel.objects.filter(lt_model=lt_model):
-        #    gsimset = set(art.gsim for art in
-        #                  models.AssocLtRlzTrtModel.objects.filter(
-        #                      trt_model=trt_model))
-        #    trt_model.gsims = sorted(gsimset)
-        #    trt_model.save()
+                    rlz=rlz, trt_model_id=trt_model_id, gsim=gsim.__name__)
 
     def _get_outputs_for_export(self):
         """
