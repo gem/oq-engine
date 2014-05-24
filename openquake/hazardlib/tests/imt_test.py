@@ -73,6 +73,12 @@ class BaseIMTTestCase(unittest.TestCase):
             imt_pik = cPickle.dumps(imt, cPickle.HIGHEST_PROTOCOL)
             self.assertEqual(cPickle.loads(imt_pik), imt)
 
+    def test_equivalent(self):
+        sa1 = imt_module.from_string('SA(0.1)')
+        sa2 = imt_module.from_string('SA(0.10)')
+        self.assertEqual(sa1, sa2)
+        self.assertEqual(set([sa1, sa2]), set([sa1]))
+
     def test_from_string(self):
         sa = imt_module.from_string('SA(0.1)')
         self.assertEqual(sa, ('SA', 0.1, 5.0))

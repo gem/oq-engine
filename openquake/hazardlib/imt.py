@@ -72,9 +72,6 @@ class _IMT(tuple):
             return 'SA(%s)' % self[1]
         return self[0]
 
-    def __hash__(self):
-        return hash(repr(self))
-
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__,
                            ', '.join('%s=%s' % (field, getattr(self, field))
