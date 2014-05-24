@@ -191,6 +191,19 @@ def compute_ruptures(
     return rupturecollector
 
 
+@tasks.oqtask
+def compute_and_save_gmfs(job_id, rupt_collector):
+    """
+    """
+    with EnginePerformanceMonitor(
+            'computing gmfs', job_id, compute_and_save_gmfs):
+        for rupture_data in rupt_collector.rupture_data:
+            rupt_collector.calc_gmf(*rupture_data)
+    with EnginePerformanceMonitor(
+            'saving gmfs', job_id, compute_and_save_gmfs):
+        rupt_collector.save_gmfs()
+
+
 class RuptureCollector(object):
     """
     A class to store ruptures and then compute and save ground motion fields.
@@ -325,12 +338,10 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 display_name='GMF rlz-%s' % rlz.id,
                 output_type='gmf')
             models.Gmf.objects.create(output=output, lt_realization=rlz)
+        otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
         for rupt_collector in self.rupt_collectors:
-            with self.monitor('computing gmfs'):
-                for rupture_data in rupt_collector.rupture_data:
-                    rupt_collector.calc_gmf(*rupture_data)
-            with self.monitor('saving gmfs'):
-                rupt_collector.save_gmfs()
+            otm.submit(self.job.id, rupt_collector)
+        otm.aggregate_results(lambda acc, x: None, None)
 
     def initialize_ses_db_records(self, lt_model):
         """
@@ -374,8 +385,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         curves.
         """
         if self.hc.hazard_curves_from_gmfs:
-            with EnginePerformanceMonitor('generating hazard curves',
-                                          self.job.id):
+            with self.monitor('generating hazard curves'):
                 self.parallelize(
                     post_processing.gmf_to_hazard_curve_task,
                     post_processing.gmf_to_hazard_curve_arg_gen(self.job),
@@ -385,13 +395,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             # has some value (not an empty list), do this additional
             # post-processing.
             if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-                with EnginePerformanceMonitor(
-                        'generating mean/quantile curves', self.job.id):
+                with self.monitor('generating mean/quantile curves'):
                     self.do_aggregate_post_proc()
 
             if self.hc.hazard_maps:
-                with EnginePerformanceMonitor(
-                        'generating hazard maps', self.job.id):
+                with self.monitor('generating hazard maps'):
                     self.parallelize(
                         cls_post_proc.hazard_curves_to_hazard_map_task,
                         cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
