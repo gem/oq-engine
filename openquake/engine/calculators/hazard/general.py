@@ -59,6 +59,17 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
+def make_gsim_lt(hc, trts):
+    """
+	Helper to instantiate a GsimLogicTree object from the logic tree file.
+
+    :param hc: `HazardCalculation` instance
+    :param trts: list of tectonic region type strings
+    """
+    fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
+    return logictree.GsimLogicTree(fname, trts)
+
+
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -225,10 +236,8 @@ class BaseHazardCalculator(base.Calculator):
 
             # save TrtModel objects for each tectonic region type
             for trt in source_collector.sorted_trts():
-                gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc, [trt])
-                gsims = distinct(
-                    gmpe_lt.make_trt_to_gsim(path)[trt].__name__
-                    for _, _, path in gmpe_lt.gen_value_weight_path())
+                gmpe_lt = make_gsim_lt(self.hc, [trt])
+                gsims = list(gmpe_lt.get_gsims(trt))
                 models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
@@ -341,7 +350,7 @@ class BaseHazardCalculator(base.Calculator):
         """
         logs.LOG.progress("initializing realizations")
         if self.hc.number_of_logic_tree_samples:  # sampling
-            self.gmpe_lt = logictree.GMPELogicTree.from_hc(
+            self.gmpe_lt = make_gsim_lt(
                 self.hc, self.source_model_lt.tectonic_region_types)
             all_paths = [[path] for path in
                          self.gmpe_lt.gen_value_weight_path()]
@@ -361,30 +370,22 @@ class BaseHazardCalculator(base.Calculator):
     def _initialize_realizations(self, idx, lt_model, gmpe_paths):
         if gmpe_paths is None:
             # called for full enumeration
-            self.gmpe_lt = logictree.GMPELogicTree.from_hc(
+            self.gmpe_lt = make_gsim_lt(
                 self.hc, lt_model.get_tectonic_region_types())
             gmpe_paths = list(self.gmpe_lt.gen_value_weight_path())
         rlz_ordinal = idx * len(gmpe_paths)
-        for _gmpe, weight, gmpe_path in gmpe_paths:
-            gsim_dict = self.gmpe_lt.make_trt_to_gsim(gmpe_path)
-            dic = {}
-            for trt_model in models.TrtModel.objects.filter(
-                    lt_model=lt_model):
-                gsim = gsim_dict.get(trt_model.tectonic_region_type)
-                if gsim:
-                    dic[trt_model.id] = gsim
-            if not dic:
-                continue
+        for gsims, weight, gmpe_path in gmpe_paths:
             if lt_model.weight is not None and weight is not None:
                 weight = lt_model.weight * weight
             rlz = models.LtRealization.objects.create(
                 lt_model=lt_model, gsim_lt_path=gmpe_path,
                 weight=weight, ordinal=rlz_ordinal)
             rlz_ordinal += 1
-            for trt_model_id, gsim in dic.iteritems():
+            for trt_model in lt_model.trtmodel_set.all():
                 # populate the associations rlz <-> trt_model
-                models.AssocLtRlzTrtModel.objects.create(
-                    rlz=rlz, trt_model_id=trt_model_id, gsim=gsim.__name__)
+                for gsim in gsims:
+                    models.AssocLtRlzTrtModel.objects.create(
+                        rlz=rlz, trt_model=trt_model, gsim=gsim)
 
     def _get_outputs_for_export(self):
         """
