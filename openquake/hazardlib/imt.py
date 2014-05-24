@@ -64,10 +64,16 @@ class _IMT(tuple):
     def __new__(cls, sa_period=None, sa_damping=None):
         return tuple.__new__(cls, (cls.__name__, sa_period, sa_damping))
 
+    def __getnewargs__(self):
+        return tuple(getattr(self, field) for field in self._fields)
+
     def __str__(self):
         if self[0] == 'SA':
             return 'SA(%s)' % self[1]
         return self[0]
+
+    def __hash__(self):
+        return hash(repr(self))
 
     def __repr__(self):
         return '%s(%s)' % (type(self).__name__,
