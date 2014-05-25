@@ -389,9 +389,10 @@ class BaseHazardCalculator(base.Calculator):
             rlz_ordinal += 1
             for trt_model in trt_models:
                 # populate the associations rlz <-> trt_model
-                for gsim in trt_model.gsims:
-                    models.AssocLtRlzTrtModel.objects.create(
-                        rlz=rlz, trt_model=trt_model, gsim=gsim)
+                gsim = self.gmpe_lt.get_gsim(
+                    gmpe_path, trt_model.tectonic_region_type)
+                models.AssocLtRlzTrtModel.objects.create(
+                    rlz=rlz, trt_model=trt_model, gsim=gsim)
 
     def _get_outputs_for_export(self):
         """
