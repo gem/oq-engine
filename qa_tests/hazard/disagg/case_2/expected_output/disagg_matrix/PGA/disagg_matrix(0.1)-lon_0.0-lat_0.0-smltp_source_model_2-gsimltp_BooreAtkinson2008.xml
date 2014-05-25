@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <disaggMatrices sourceModelTreePath="source_model_2" gsimTreePath="BooreAtkinson2008_YoungsEtAl1997SSlab" IMT="PGA" investigationTime="1.0" lon="0.0" lat="0.0" magBinEdges="5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4, 6.5" distBinEdges="0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0" lonBinEdges="-0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5" latBinEdges="-0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5" epsBinEdges="-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0" tectonicRegionTypes="Active Shallow Crust">
+  <disaggMatrices sourceModelTreePath="source_model_2" gsimTreePath="BooreAtkinson2008" IMT="PGA" investigationTime="1.0" lon="0.0" lat="0.0" magBinEdges="5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4, 6.5" distBinEdges="0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0" lonBinEdges="-0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5" latBinEdges="-0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5" epsBinEdges="-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0" tectonicRegionTypes="Active Shallow Crust">
     <disaggMatrix type="Mag" dims="15" poE="0.1" iml="0.005">
       <prob index="0" value="0.0198123815581"/>
       <prob index="1" value="0.0159138203167"/>
