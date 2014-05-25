@@ -1176,6 +1176,7 @@ class GsimLogicTree(object):
             groups.append(list(group))
         # with T tectonic region types there are T groups and T branches
         if self.num_samples:
+            random.seed(self.seed)
             branches_iter = ([random.choice(group) for group in groups]
                              for _ in xrange(self.num_samples))
         else:
