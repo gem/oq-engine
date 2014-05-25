@@ -2235,7 +2235,7 @@ class LtSourceModel(djm.Model):
         ordered by number of sources.
         """
         return TrtModel.objects.filter(
-            lt_model=self).values_list(
+            lt_model=self, num_ruptures__gt=0).values_list(
             'tectonic_region_type', flat=True)
 
     class Meta:
