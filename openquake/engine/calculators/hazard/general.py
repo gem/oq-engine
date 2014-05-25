@@ -356,7 +356,7 @@ class BaseHazardCalculator(base.Calculator):
             self.gmpe_lt = make_gsim_lt(
                 self.hc, self.source_model_lt.tectonic_region_types)
             all_paths = [[path] for path in
-                         self.gmpe_lt.gen_value_weight_path()]
+                         self.gmpe_lt.gen_path_weight()]
         else:  # full enumeration
             # build the gmpe paths inside _initialize_realizations
             all_paths = itertools.cycle([None])
@@ -378,9 +378,9 @@ class BaseHazardCalculator(base.Calculator):
             # called for full enumeration
             self.gmpe_lt = make_gsim_lt(
                 self.hc, lt_model.get_tectonic_region_types())
-            gmpe_paths = list(self.gmpe_lt.gen_value_weight_path())
+            gmpe_paths = list(self.gmpe_lt.gen_path_weight())
         rlz_ordinal = idx * len(gmpe_paths)
-        for _gsims, weight, gmpe_path in gmpe_paths:
+        for gmpe_path, weight in gmpe_paths:
             if lt_model.weight is not None and weight is not None:
                 weight = lt_model.weight * weight
             rlz = models.LtRealization.objects.create(
