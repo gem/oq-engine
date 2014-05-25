@@ -125,6 +125,7 @@ class BaseHazardCalculator(base.Calculator):
         # a dictionary (sm_lt_path, trt) -> source blocks
         self.source_blocks_per_ltpath = collections.defaultdict(list)
         self.rupt_collectors = []
+        self.num_ruptures = collections.defaultdict(float)
 
     def clean_up(self, *args, **kwargs):
         """Clean up dictionaries at the end"""
@@ -368,22 +369,25 @@ class BaseHazardCalculator(base.Calculator):
 
     @transaction.commit_on_success(using='job_init')
     def _initialize_realizations(self, idx, lt_model, gmpe_paths):
+        trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
+        if not trt_models:
+            return
         if gmpe_paths is None:
             # called for full enumeration
             self.gmpe_lt = make_gsim_lt(
                 self.hc, lt_model.get_tectonic_region_types())
             gmpe_paths = list(self.gmpe_lt.gen_value_weight_path())
         rlz_ordinal = idx * len(gmpe_paths)
-        for gsims, weight, gmpe_path in gmpe_paths:
+        for _gsims, weight, gmpe_path in gmpe_paths:
             if lt_model.weight is not None and weight is not None:
                 weight = lt_model.weight * weight
             rlz = models.LtRealization.objects.create(
                 lt_model=lt_model, gsim_lt_path=gmpe_path,
                 weight=weight, ordinal=rlz_ordinal)
             rlz_ordinal += 1
-            for trt_model in lt_model.trtmodel_set.all():
+            for trt_model in trt_models:
                 # populate the associations rlz <-> trt_model
-                for gsim in gsims:
+                for gsim in trt_model.gsims:
                     models.AssocLtRlzTrtModel.objects.create(
                         rlz=rlz, trt_model=trt_model, gsim=gsim)
 
