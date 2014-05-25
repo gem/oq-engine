@@ -165,6 +165,7 @@ def compute_ruptures(
 
             # collecting ses_ruptures
             for ses_rup in ses_ruptures:
+                rupturecollector.trts.add(src.tectonic_region_type)
                 rupturecollector.rupture_data.append(
                     (r_sites, rup, ses_rup.id, ses_rup.seed, ses_rup.tag))
 
@@ -229,6 +230,7 @@ class RuptureCollector(object):
         # {site_id: [(gmv, rupt_id),...]} but it took a lot more memory (MS)
         self.gmvs_per_site = collections.defaultdict(list)
         self.ruptures_per_site = collections.defaultdict(list)
+        self.trts = set()
         self.rupture_data = []
 
     def calc_gmf(
@@ -325,8 +327,15 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         if not self.hc.ground_motion_fields:
             return  # do nothing
         self.rupt_collectors.append(rupturecollector)
+        self.num_ruptures[rupturecollector.trt_model_id] += \
+            len(rupturecollector.rupture_data)
 
+    @EnginePerformanceMonitor.monitor
     def post_execute(self):
+        for trt_id, num_ruptures in self.num_ruptures.iteritems():
+            trt = models.TrtModel.objects.get(pk=trt_id)
+            trt.num_ruptures = num_ruptures
+            trt.save()
         super(EventBasedHazardCalculator, self).post_execute()
         if not self.hc.ground_motion_fields:
             return  # do nothing
