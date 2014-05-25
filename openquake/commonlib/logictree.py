@@ -1129,8 +1129,12 @@ class GsimLogicTree(object):
     """
     """
     def __init__(self, fname, trts, num_samples=0, seed=0):
+        if len(trts) > len(set(trts)):
+            raise ValueError(
+                'The given tectonic region types are not distinct: %s' %
+                ','.join(trts))
         self.fname = fname
-        self.trts = trts
+        self.trts = sorted(trts)
         self.seed = 0
         self.num_samples = num_samples
         self.branch_to_gsim = {}
@@ -1189,10 +1193,10 @@ class GsimLogicTree(object):
                 gsim_lt_path.append(branch.id)
             yield tuple(gsim_lt_path), None if self.num_samples else weight
 
-    def make_trt_to_gsim(self, branch_ids):
+    def get_gsim(self, path, trt):
         """
+        :param path: a GSIM path
+        :param str trt: a valid Tectonic Region Type
         """
-        dic = {}
-        for branch_id in branch_ids:
-            dic[self.branch_to_trt[branch_id]] = self.branch_to_gsim[branch_id]
-        return dic
+        trt_index = self.trts.index(trt)
+        return self.branch_to_gsim[path[trt_index]]
