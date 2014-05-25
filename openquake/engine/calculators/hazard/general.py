@@ -61,13 +61,14 @@ DILATION_ONE_METER = 1e-5
 
 def make_gsim_lt(hc, trts):
     """
-	Helper to instantiate a GsimLogicTree object from the logic tree file.
+    Helper to instantiate a GsimLogicTree object from the logic tree file.
 
     :param hc: `HazardCalculation` instance
     :param trts: list of tectonic region type strings
     """
     fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
-    return logictree.GsimLogicTree(fname, trts)
+    return logictree.GsimLogicTree(
+        fname, trts, hc.number_of_logic_tree_samples, hc.random_seed)
 
 
 def store_site_model(job, site_model_source):
@@ -186,8 +187,9 @@ class BaseHazardCalculator(base.Calculator):
         js.save()
 
     def post_execute(self):
-        """Inizialize realizations"""
-        self.initialize_realizations()
+        """Inizialize realizations, except for the scenario calculator"""
+        if self.hc.calculation_mode != 'scenario':
+            self.initialize_realizations()
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
