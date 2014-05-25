@@ -1128,7 +1128,7 @@ BranchTuple = namedtuple('Branch', 'trt, id, gsim, weight')
 class GsimLogicTree(object):
     """
     """
-    def __init__(self, fname, trts, seed=0, num_samples=0):
+    def __init__(self, fname, trts, num_samples=0, seed=0):
         self.fname = fname
         self.trts = trts
         self.seed = 0
@@ -1161,13 +1161,13 @@ class GsimLogicTree(object):
                         weight = Decimal(branch.uncertaintyWeight.text)
                         weights.append(weight)
                         branch_id = branch['branchID']
-                        gsim = branch.uncertaintyModel.text
+                        gsim = branch.uncertaintyModel.text.strip()
                         self.branch_to_gsim[branch_id] = gsim
                         self.branch_to_trt[branch_id] = trt
                         yield BranchTuple(trt, branch_id, gsim, weight)
                     assert sum(weights) == 1, weights
 
-    def gen_value_weight_path(self):
+    def gen_path_weight(self):
         """
         """
         groups = []
@@ -1184,12 +1184,10 @@ class GsimLogicTree(object):
         for branches in branches_iter:
             weight = 1
             gsim_lt_path = []
-            gsims = []
             for branch in branches:
                 weight *= branch.weight
                 gsim_lt_path.append(branch.id)
-                gsims.append(branch.gsim)
-            yield tuple(gsims), weight, tuple(gsim_lt_path)
+            yield tuple(gsim_lt_path), None if self.num_samples else weight
 
     def make_trt_to_gsim(self, branch_ids):
         """
