@@ -62,7 +62,7 @@ def make_gsim_lt(hc, trts):
     """
     Helper to instantiate a GsimLogicTree object from the logic tree file.
 
-    :param hc: `HazardCalculation` instance
+    :param hc: `openquake.engine.db.models.HazardCalculation` instance
     :param trts: list of tectonic region type strings
     """
     fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
