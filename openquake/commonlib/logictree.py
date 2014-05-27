@@ -1134,14 +1134,18 @@ BranchTuple = namedtuple('Branch', 'trt, id, gsim, weight')
 
 class GsimLogicTree(object):
     """
-    Iterable instances yielding `LtRealization` tuples.
+    A GsimLogicTree instance is an iterable yielding `LtRealization`
+    tuples with attributes `value`, `weight` and `lt_path`, where
+    `value` is a dictionary {trt: gsim}, `weight` is a number in the
+    interval 0..1 or None, in the case of sampling and `lt_path` is
+    a tuple with the branch ids of the given realization.
 
     :param str fname:
         full path of the gsim_logic_tree file
     :param trts:
         a sequence of distinct tectonic region types
     :param int num_samples:
-        the number of sampling to generate (if 0, performs full enumeration)
+        the number of sampling to generate (if 0, perform full enumeration)
     :param int seed:
         the random number seed, used only in sampling mode
     """
@@ -1158,6 +1162,7 @@ class GsimLogicTree(object):
         self.branches = sorted(self._parse_lt())
 
     def _parse_lt(self):
+        # do the parsing, called at instantiation time to populate gsims_by_trt
         nrml = node_from_xml(self.fname)
         for branching_level in nrml.logicTree:
             for branchset in branching_level:
@@ -1174,13 +1179,7 @@ class GsimLogicTree(object):
                     assert sum(weights) == 1, weights
 
     def __iter__(self):
-        """
-        Yield `~LtRealization` tuples with attributes `value`, `weight`
-        and `lt_path`, where `value` is a dictionary {trt: gsim},
-        `weight` is a number in the interval 0..1 (or None) and
-        `lt_path` is a tuple with the branch ids corresponding to the
-        given logic tree realization.
-        """
+        # yield realizations for both sampling and full enumeration
         groups = []
         for trt, group in itertools.groupby(
                 self.branches, operator.attrgetter('trt')):
