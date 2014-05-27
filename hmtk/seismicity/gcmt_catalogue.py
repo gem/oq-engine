@@ -83,6 +83,247 @@ class GCMTCentroid(object):
         self.date = source_time.date()
 
 
+class GCMTPrincipalAxes(object):
+    """
+    Class to represent the eigensystem of the tensor in terms of  T-, B- and P-
+    plunge and azimuth
+    """
+    def __init__(self):
+        """
+        """
+        self.t_axis = None
+        self.b_axis = None
+        self.p_axis = None
+        
+    def get_moment_tensor_from_principal_axes(self):
+        """
+        Retreives the moment tensor from the prinicpal axes
+        """
+        raise NotImplementedError('Moment tensor from principal axes not yet '
+                                  'implemented!')
+
+
+    def get_azimuthal_projection(self, height=1.0):
+        """
+        Returns the azimuthal projection of the tensor according to the
+        method of Frohlich (2001)
+        """
+        raise NotImplementedError('Get azimuthal projection not yet '
+                                  'implemented!')
+
+
+
+class GCMTMomentTensor(object):
+    """
+    Class to represent a moment tensor and its associated methods
+    """
+    def __init__(self, reference_frame=None):
+        """
+        """
+        self.tensor = None
+        self.tensor_sigma = None
+        self.exponent = None
+        self.eigenvalues = None
+        self.eigenvectors = None
+        if reference_frame:
+            self.ref_frame = reference_frame
+        else:
+            # Default to USE
+            self.ref_frame = 'USE'
+
+    def normalise_tensor(self):
+        """
+        Normalise the tensor by dividing it by its norm, defined such that
+        np.sqrt(X:X)
+        """
+        self.tensor, tensor_norm = utils.normalise_tensor(self.tensor)
+        return self.tensor / tensor_norm, tensor_norm
+
+    def _to_ned(self):
+        """
+        Switches the reference frame to NED
+        """
+        if self.ref_frame is 'USE':
+            # Rotate
+            return utils.use_to_ned(self.tensor), \
+                   utils.use_to_ned(self.tensor_sigma)
+        elif self.ref_frame is 'NED':
+            # Alreadt NED
+            return self.tensor, self.tensor_sigma
+        else:
+            raise ValueError('Reference frame %s not recognised - cannot '
+                             'transform to NED!' % self.ref_frame)
+
+    def _to_use(self):
+        """
+        Returns a tensor in the USE reference frame
+        """
+        if self.ref_frame is 'NED':
+            # Rotate
+            return utils.ned_to_use(self.tensor), \
+                   utils.ned_to_use(self.tensor_sigma)
+        elif self.ref_frame is 'USE':
+            # Already USE
+            return self.tensor, self.tensor_sigma
+        else:
+            raise ValueError('Reference frame %s not recognised - cannot '
+                             'transform to USE!' % self.ref_frame)
+
+    def _to_6component(self):
+        """
+        Returns the unique 6-components of the tensor in USE format
+        [Mrr, Mtt, Mpp, Mrt, Mrp, Mtp]
+        """
+        return utils.tensor_to_6component(self.tensor, self.ref_frame)
+
+    def eigendecompose(self, normalise=False):
+        """
+        Performs and eigendecomposition of the tensor and orders into 
+        descending eigenvalues
+        """
+        self.eigenvalues, self.eigenvectors = utils.eigendecompose(self.tensor,
+                                                                   normalise)
+        return self.eigenvalues, self.eigenvectors
+    
+    def get_nodal_planes(self):
+        """
+        Returns the nodal planes by eigendecomposition of the moment tensor
+        """
+        # Convert reference frame to NED
+        self.tensor, self.tensor_sigma = self._to_ned()
+        self.ref_frame = 'NED'
+        # Eigenvalue decomposition
+        # Tensor
+        _, evect = utils.eigendecompose(self.tensor)
+        # Rotation matrix
+        _, rot_vec = utils.eigendecompose(np.matrix([[0., 0., -1],
+                                                    [0., 0., 0.],
+                                                    [-1., 0., 0.]]))
+        rotation_matrix = (np.matrix(evect * rot_vec.T)).T
+        if  np.linalg.det(rotation_matrix) < 0.:
+            rotation_matrix *= -1.
+        flip_dc = np.matrix([[0., 0., -1.], 
+                             [0., -1., 0.],
+                             [-1., 0., 0.]])
+        rotation_matrices = sorted(
+            [rotation_matrix, flip_dc * rotation_matrix],
+            cmp=cmp_mat)
+        nodal_planes = GCMTNodalPlanes()
+        dip, strike, rake = [(180. / pi) * angle 
+            for angle in utils.matrix_to_euler(rotation_matrices[0])]
+        # 1st Nodal Plane
+        nodal_planes.nodal_plane_1 = {'strike': strike % 360,
+                                      'dip': dip,
+                                      'rake': -rake}
+
+        # 2nd Nodal Plane
+        dip, strike, rake = [(180. / pi) * angle 
+            for angle in utils.matrix_to_euler(rotation_matrices[1])]
+        nodal_planes.nodal_plane_2 = {'strike': strike % 360.,
+                                      'dip': dip,
+                                      'rake': -rake}
+        return nodal_planes
+
+    def get_principal_axes(self):
+        """
+        Uses the eigendecomposition to extract the principal axes from the 
+        moment tensor - returning an instance of the GCMTPrincipalAxes class
+        """
+        # Perform eigendecomposition - returns in order P, B, T
+        _ = self.eigendecompose(normalise=True)
+        principal_axes = GCMTPrincipalAxes()
+        # Eigenvalues
+        principal_axes.p_axis = {'eigenvalue': self.eigenvalues[0]}
+        principal_axes.b_axis = {'eigenvalue': self.eigenvalues[1]}
+        principal_axes.t_axis = {'eigenvalue': self.eigenvalues[2]}
+        # Eigen vectors
+        # 1) P axis
+        azim, plun = utils.get_azimuth_plunge(self.eigenvectors[:, 0], True)
+        principal_axes.p_axis['azimuth'] = azim
+        principal_axes.p_axis['plunge'] = plun
+        # 2) B axis
+        azim, plun = utils.get_azimuth_plunge(self.eigenvectors[:, 1], True)
+        principal_axes.b_axis['azimuth'] = azim
+        principal_axes.b_axis['plunge'] = plun
+        # 3) T axis
+        azim, plun = utils.get_azimuth_plunge(self.eigenvectors[:, 2], True)
+        principal_axes.t_axis['azimuth'] = azim
+        principal_axes.t_axis['plunge'] = plun
+        return principal_axes
+
+
+
+class GCMTEvent(object):
+    """
+    Class to represent full GCMT moment tensor in ndk format
+    """
+    def __init__(self):
+        """
+        """
+        self.identifier = None
+        self.hypocentre = None
+        self.centroid = None
+        self.magnitude = None
+        self.moment = None
+        self.metadata = {}
+        self.moment_tensor = None
+        self.nodal_planes = None
+        self.principal_axes = None
+        self.f_clvd = None
+        self.e_rel = None
+
+    def get_f_clvd(self):
+        """
+        Returns the statistic f_clvd: the signed ratio of the sizes of the 
+        intermediate and largest principal moments
+
+        f_clvd = -b_axis_eigenvalue / 
+                  max(|t_axis_eigenvalue|,|p_axis_eigenvalue|)
+        """
+        if not self.principal_axes:
+            # Principal axes not yet defined for moment tensor - raises error
+            raise ValueError('Principal Axes not defined!')
+        
+        denominator = np.max(np.array([
+            fabs(self.principal_axes.t_axis['eigenvalue']),
+            fabs(self.principal_axes.p_axis['eigenvalue'])
+            ]))
+        self.f_clvd = -self.principal_axes.b_axis['eigenvalue'] / denominator
+        return self.f_clvd
+
+    def get_relative_error(self):
+        """
+        Returns the relative error statistic (e_rel), defined by Frohlich &
+        Davis (1999):
+            e_rel = sqrt((U:U) / (M:M)) 
+        where M is the moment tensor, U is the uncertainty tensor and : is the
+        tensor dot product
+        """
+        if not self.moment_tensor:
+            raise ValueError('Moment tensor not defined!')
+
+        numer = np.tensordot(self.moment_tensor.tensor_sigma, 
+                             self.moment_tensor.tensor_sigma)
+
+        denom = np.tensordot(self.moment_tensor.tensor, 
+                             self.moment_tensor.tensor)
+        self.e_rel = sqrt(numer / denom)
+        return self.e_rel
+
+
+class GCMTNodalPlanes(object):
+    """
+    Class to represent the nodal plane distribution of the tensor
+    Each nodal plane is represented as a dictionary of the form:
+    {'strike':, 'dip':, 'rake':}
+    """
+    def __init__(self):
+        """
+        """
+        self.nodal_plane_1 = None
+        self.nodal_plane_2 = None
+
+
 class GCMTCatalogue(Catalogue):
     """
     Class to hold a catalogue of moment tensors

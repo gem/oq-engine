@@ -53,6 +53,7 @@ import csv
 import numpy as np
 from copy import deepcopy
 from hmtk.seismicity.catalogue import Catalogue
+from hmtk.seismicity.gcmt_catalogue import GCMTCatalogue
 from hmtk.parsers.catalogue.base import (
     BaseCatalogueParser, BaseCatalogueWriter)
 
@@ -65,7 +66,8 @@ class CsvCatalogueParser(BaseCatalogueParser):
         """
         """
         filedata = open(self.input_file, 'rU')
-        catalogue = Catalogue()
+        #catalogue = Catalogue()
+        catalogue = self._setup_catalogue()
         # Reading the data file
         data = csv.DictReader(filedata)
         # Parsing the data content
@@ -96,6 +98,12 @@ class CsvCatalogueParser(BaseCatalogueParser):
             catalogue.update_end_year()
         return catalogue
 
+    def _setup_catalogue(self):
+        """
+        Returns a blank catalogue instance
+        """
+        return Catalogue()
+
     def _header_check(self, input_keys, catalogue_keys):
         valid_key_list = []
         for element in input_keys:
@@ -125,6 +133,16 @@ class CsvCatalogueParser(BaseCatalogueParser):
         else:
             attribute_array = np.hstack([attribute_array, np.nan])
         return attribute_array
+
+
+class GCMTCsvCatalogueParser(CsvCatalogueParser):
+    """
+
+    """
+    def _setup_catalogue(self):
+        """
+        """
+        return GCMTCatalogue()
 
 
 class CsvCatalogueWriter(BaseCatalogueWriter):
@@ -206,7 +224,8 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
         return output_catalogue
 
 
-class CsvGCMTCatalogueWriter(BaseCatalogueWriter):
+class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
+
     '''
     Writes GCMT catalogue to csv file
     '''
