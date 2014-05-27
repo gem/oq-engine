@@ -125,9 +125,9 @@ store_site_model'
 
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_site_model()
-        self.calc.initialize_sources()
         # enumeration is triggered by zero value used as number of realizations
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
+        self.calc.initialize_sources()
         self.calc.initialize_realizations()
 
         [ltr] = models.LtRealization.objects.filter(
