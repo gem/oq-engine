@@ -277,7 +277,7 @@ class RuptureCollector(object):
             pk=self.trt_model_id).get_rlzs_by_gsim()
         for gsim_name, imt, site_id in self.gmvs_per_site:
             if not rlzs[gsim_name]:
-                logs.LOG.warn('No realizations for TrtModel=%d, GSIM=%d',
+                logs.LOG.warn('No realizations for TrtModel=%d, GSIM=%s',
                               self.trt_model_id, gsim_name)
             for rlz in rlzs[gsim_name]:
                 imt_name, sa_period, sa_damping = imt
