@@ -509,7 +509,8 @@ CREATE TABLE hzrdr.lt_source_model (
    ordinal INTEGER NOT NULL,
     -- A list of the logic tree branchIDs
    sm_lt_path VARCHAR[] NOT NULL,
-   sm_name VARCHAR NOT NULL
+   sm_name VARCHAR NOT NULL,
+   weight NUMERIC
 ) TABLESPACE hzrdr_ts;
 
 -- logic tree source model infos
