@@ -31,14 +31,13 @@ order by a.output_id;
 '''
 
 # this is an example with 4 realizations for source_model 1,
-# 1 realization for source model 2 and 0 realizations
-# for source model 3, i.e. a total of 5 realizations
+# 0 realization for source model 2 and 0 realizations
+# for source model 3, i.e. a total of 4 realizations
 EXPECTED_GMFS = [
-    (['b1_1'], 363, 0.00199170566738161, 0.00144512913080544),
-    (['b1_2'], 363, 0.00111575899610696, 0.00109450082421796),
-    (['b1_3'], 363, 0.00117661171359837, 0.00100375543117846),
-    (['b1_4'], 363, 0.00193367922840302, 0.00148667206555683),
-    (['b4_1'], 1900, 0.00435749544458869, 0.0100415828332556)]
+    (['b1_1'], 2, 0.002508579548775, 0.00126274496868308),
+    (['b1_2'], 2, 0.0009968459584405, 0.000610752894244364),
+    (['b1_3'], 2, 0.00174022255931, 0.000987838801570935),
+    (['b1_4'], 2, 0.002654602993195, 0.00140628294771318)]
 
 
 class EventBasedHazardCase5TestCase(qa_utils.BaseQATestCase):
