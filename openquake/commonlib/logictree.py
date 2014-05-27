@@ -1129,7 +1129,7 @@ class GMPELogicTree(BaseLogicTree):
             )
 
 
-BranchTuple = namedtuple('Branch', 'trt, id, gsim, weight')
+BranchTuple = namedtuple('Branch', 'id, uncertainty, weight, bset')
 
 
 class GsimLogicTree(object):
@@ -1142,47 +1142,53 @@ class GsimLogicTree(object):
 
     :param str fname:
         full path of the gsim_logic_tree file
-    :param trts:
+    :param str filter_name:
+        the string `"applyToTectonicRegionType"`
+    :param filter_keys:
         a sequence of distinct tectonic region types
     :param int num_samples:
         the number of sampling to generate (if 0, perform full enumeration)
     :param int seed:
         the random number seed, used only in sampling mode
     """
-    def __init__(self, fname, trts, num_samples=0, seed=0):
-        if len(trts) > len(set(trts)):
+    def __init__(self, fname, filter_name, filter_keys,
+                 num_samples=0, seed=0):
+        self.fname = fname
+        self.filter_name = filter_name
+        self.filter_keys = sorted(filter_keys)
+        self.num_samples = num_samples
+        self.seed = 0
+        assert filter_name == 'applyToTectonicRegionType'
+        if len(self.filter_keys) > len(set(self.filter_keys)):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
-                ','.join(trts))
-        self.fname = fname
-        self.trts = sorted(trts)
-        self.seed = 0
-        self.num_samples = num_samples
-        self.gsims_by_trt = collections.defaultdict(list)
+                ','.join(self.filter_keys))
+        self.values = collections.defaultdict(list)  # {fkey: uncertainties}
         self.branches = sorted(self._parse_lt())
 
     def _parse_lt(self):
-        # do the parsing, called at instantiation time to populate gsims_by_trt
+        # do the parsing, called at instantiation time to populate .values
         nrml = node_from_xml(self.fname)
         for branching_level in nrml.logicTree:
             for branchset in branching_level:
-                trt = branchset['applyToTectonicRegionType']
-                if trt in self.trts:
+                fkey = branchset[self.filter_name]
+                if fkey in self.filter_keys:
                     weights = []
                     for branch in branchset:
                         weight = Decimal(branch.uncertaintyWeight.text)
                         weights.append(weight)
                         branch_id = branch['branchID']
-                        gsim = branch.uncertaintyModel.text.strip()
-                        self.gsims_by_trt[trt].append(gsim)
-                        yield BranchTuple(trt, branch_id, gsim, weight)
+                        uncertainty = branch.uncertaintyModel.text.strip()
+                        self.values[fkey].append(uncertainty)
+                        yield BranchTuple(
+                            branch_id, uncertainty, weight, branchset)
                     assert sum(weights) == 1, weights
 
     def __iter__(self):
         # yield realizations for both sampling and full enumeration
         groups = []
-        for trt, group in itertools.groupby(
-                self.branches, operator.attrgetter('trt')):
+        for _branchset, group in itertools.groupby(
+                self.branches, operator.attrgetter('bset')):
             groups.append(list(group))
         # with T tectonic region types there are T groups and T branches
         if self.num_samples:
@@ -1193,13 +1199,11 @@ class GsimLogicTree(object):
             branches_iter = itertools.product(*groups)
         for branches in branches_iter:
             weight = 1
-            gsim_lt_path = []
-            gsim_by_trt = {}
-            for trt, branch in zip(self.trts, branches):
+            lt_path = []
+            value = {}
+            for fkey, branch in zip(self.filter_keys, branches):
                 weight *= branch.weight
-                gsim_lt_path.append(branch.id)
-                gsim_by_trt[trt] = branch.gsim
+                value[fkey] = branch.uncertainty
+                lt_path.append(branch.id)
             yield LtRealization(
-                gsim_by_trt,
-                None if self.num_samples else weight,
-                tuple(gsim_lt_path))
+                value, None if self.num_samples else weight, tuple(lt_path))
