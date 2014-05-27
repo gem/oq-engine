@@ -69,8 +69,15 @@ class BaseIMTTestCase(unittest.TestCase):
         self.assertNotEqual(hash(imt1), hash(imt2))
 
     def test_pickeable(self):
-        imt = imt_module.SA(0.2)
-        self.assertEqual(cPickle.loads(cPickle.dumps(imt)), imt)
+        for imt in (imt_module.PGA(), imt_module.SA(0.2)):
+            imt_pik = cPickle.dumps(imt, cPickle.HIGHEST_PROTOCOL)
+            self.assertEqual(cPickle.loads(imt_pik), imt)
+
+    def test_equivalent(self):
+        sa1 = imt_module.from_string('SA(0.1)')
+        sa2 = imt_module.from_string('SA(0.10)')
+        self.assertEqual(sa1, sa2)
+        self.assertEqual(set([sa1, sa2]), set([sa1]))
 
     def test_from_string(self):
         sa = imt_module.from_string('SA(0.1)')
