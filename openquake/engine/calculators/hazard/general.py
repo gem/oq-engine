@@ -67,7 +67,8 @@ def make_gsim_lt(hc, trts):
     """
     fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
     return logictree.GsimLogicTree(
-        fname, trts, hc.number_of_logic_tree_samples, hc.random_seed)
+        fname, 'applyToTectonicRegionType', trts,
+        hc.number_of_logic_tree_samples, hc.random_seed)
 
 
 def store_site_model(job, site_model_source):
@@ -238,7 +239,7 @@ class BaseHazardCalculator(base.Calculator):
 
             # save TrtModel objects for each tectonic region type
             trts = source_collector.sorted_trts()
-            gsims_by_trt = make_gsim_lt(self.hc, trts).gsims_by_trt
+            gsims_by_trt = make_gsim_lt(self.hc, trts).values
             for trt in trts:
                 models.TrtModel.objects.create(
                     lt_model=lt_model,
