@@ -18,6 +18,9 @@
 """
 Logic tree parser, verifier and processor. See specs at
 https://blueprints.launchpad.net/openquake-old/+spec/openquake-logic-tree-module
+
+A logic tree object must be iterable and yielding realizations, i.e. objects
+with attributes `value`, `weight` and `lt_path`.
 """
 
 import abc
@@ -25,6 +28,7 @@ import os
 import random
 import re
 import itertools
+import collections
 import operator
 from collections import namedtuple
 from decimal import Decimal
@@ -42,6 +46,9 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 #: dictionary of GSIM classes available in hazardlib
 GSIM = openquake.hazardlib.gsim.get_available_gsims()
+
+
+LtRealization = namedtuple('LtRealization', 'value, weight, lt_path')
 
 
 class LogicTreeError(Exception):
@@ -565,7 +572,7 @@ class BaseLogicTree(object):
         modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
         return modelname, branch_ids
 
-    def gen_value_weight_path(self):
+    def __iter__(self):
         """
         Yield triples (name, weight, paths). Notice that
         weight is not None only when the number_of_logic_tree_samples
@@ -582,7 +589,7 @@ class BaseLogicTree(object):
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield name, weight, tuple(smlt_branch_ids)
+                yield LtRealization(name, weight, tuple(smlt_branch_ids))
 
     @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
@@ -1127,6 +1134,16 @@ BranchTuple = namedtuple('Branch', 'trt, id, gsim, weight')
 
 class GsimLogicTree(object):
     """
+    Iterable instances yielding `LtRealization` tuples.
+
+    :param str fname:
+        full path of the gsim_logic_tree file
+    :param trts:
+        a sequence of distinct tectonic region types
+    :param int num_samples:
+        the number of sampling to generate (if 0, performs full enumeration)
+    :param int seed:
+        the random number seed, used only in sampling mode
     """
     def __init__(self, fname, trts, num_samples=0, seed=0):
         if len(trts) > len(set(trts)):
@@ -1137,24 +1154,10 @@ class GsimLogicTree(object):
         self.trts = sorted(trts)
         self.seed = 0
         self.num_samples = num_samples
-        self.branch_to_gsim = {}
-        self.branch_to_trt = {}
-        self.branches = sorted(self._parse_gmpe_lt())
+        self.gsims_by_trt = collections.defaultdict(list)
+        self.branches = sorted(self._parse_lt())
 
-    def get_gsims(self, trt):
-        """
-        Yield the GSIMs associate to the given `trt`.
-
-        :param str trt: one of the tectonic region types
-        """
-        if trt not in self.trts:
-            raise ValueError('%s is not in the list of available tectonic '
-                             'region types %s' % (trt, self.trts))
-        for branch in self.branches:
-            if branch.trt == trt:
-                yield branch.gsim
-
-    def _parse_gmpe_lt(self):
+    def _parse_lt(self):
         nrml = node_from_xml(self.fname)
         for branching_level in nrml.logicTree:
             for branchset in branching_level:
@@ -1166,13 +1169,17 @@ class GsimLogicTree(object):
                         weights.append(weight)
                         branch_id = branch['branchID']
                         gsim = branch.uncertaintyModel.text.strip()
-                        self.branch_to_gsim[branch_id] = gsim
-                        self.branch_to_trt[branch_id] = trt
+                        self.gsims_by_trt[trt].append(gsim)
                         yield BranchTuple(trt, branch_id, gsim, weight)
                     assert sum(weights) == 1, weights
 
-    def gen_path_weight(self):
+    def __iter__(self):
         """
+        Yield `~LtRealization` tuples with attributes `value`, `weight`
+        and `lt_path`, where `value` is a dictionary {trt: gsim},
+        `weight` is a number in the interval 0..1 (or None) and
+        `lt_path` is a tuple with the branch ids corresponding to the
+        given logic tree realization.
         """
         groups = []
         for trt, group in itertools.groupby(
@@ -1188,15 +1195,12 @@ class GsimLogicTree(object):
         for branches in branches_iter:
             weight = 1
             gsim_lt_path = []
-            for branch in branches:
+            gsim_by_trt = {}
+            for trt, branch in zip(self.trts, branches):
                 weight *= branch.weight
                 gsim_lt_path.append(branch.id)
-            yield tuple(gsim_lt_path), None if self.num_samples else weight
-
-    def get_gsim(self, path, trt):
-        """
-        :param path: a GSIM path
-        :param str trt: a valid Tectonic Region Type
-        """
-        trt_index = self.trts.index(trt)
-        return self.branch_to_gsim[path[trt_index]]
+                gsim_by_trt[trt] = branch.gsim
+            yield LtRealization(
+                gsim_by_trt,
+                None if self.num_samples else weight,
+                tuple(gsim_lt_path))
