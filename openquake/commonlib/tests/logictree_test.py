@@ -20,8 +20,6 @@ Tests for python logic tree processor.
 """
 
 import numpy
-import os
-import os.path
 import unittest
 
 from StringIO import StringIO
@@ -34,10 +32,8 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
-from openquake.nrmllib.parsers import SourceModelParser
 
 from openquake.commonlib import logictree
-from openquake.commonlib.source import NrmlHazardlibConverter
 
 
 class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
