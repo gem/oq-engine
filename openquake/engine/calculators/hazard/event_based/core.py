@@ -195,6 +195,10 @@ def compute_ruptures(
 @tasks.oqtask
 def compute_and_save_gmfs(job_id, rupt_collector):
     """
+    :param int job_id:
+        ID of the currently running job
+    :param rupt_collector:
+        an instance of `openquake.engine.calculators.hazard.event_based.core.RuptureCollector`
     """
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_and_save_gmfs):
