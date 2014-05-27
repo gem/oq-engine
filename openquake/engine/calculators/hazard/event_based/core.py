@@ -276,7 +276,9 @@ class RuptureCollector(object):
         rlzs = models.TrtModel.objects.get(
             pk=self.trt_model_id).get_rlzs_by_gsim()
         for gsim_name, imt, site_id in self.gmvs_per_site:
-            assert rlzs[gsim_name], (self.trt_model_id, gsim_name)
+            if not rlzs[gsim_name]:
+                logs.LOG.warn('No realizations for TrtModel=%d, GSIM=%d',
+                              self.trt_model_id, gsim_name)
             for rlz in rlzs[gsim_name]:
                 imt_name, sa_period, sa_damping = imt
                 inserter.add(models.GmfData(
