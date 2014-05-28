@@ -403,7 +403,12 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
         self.curves = {}  # save memory for the post-processing phase
 
-    post_execute = save_hazard_curves
+    def post_execute(self):
+        """
+        Generate the realizations and save the hazard curves
+        """
+        super(ClassicalHazardCalculator, self).post_execute()
+        self.save_hazard_curves()
 
     def post_process(self):
         """
