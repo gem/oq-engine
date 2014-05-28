@@ -22,22 +22,25 @@ from openquake.engine.db import models
 from qa_tests import _utils as qa_utils
 
 GET_GMF_OUTPUTS = '''
-select gsim_lt_path, n, avg, std from hzrdr.gmf_stats as a,
-hzrdr.lt_realization as b, hzrdr.gmf as c
-where lt_realization_id=b.id and gmf_id=c.id
-and a.output_id=c.output_id and a.output_id in
-(select id from uiapi.output where oq_job_id=%s and output_type='gmf')
-order by a.output_id;
+select gsim_lt_path, array_concat(gmvs order by site_id, task_no) as gmf
+from hzrdr.gmf_data as a, hzrdr.lt_realization as b, hzrdr.gmf as c
+where lt_realization_id=b.id and a.gmf_id=c.id and c.output_id in
+(select id from uiapi.output where oq_job_id=%d and output_type='gmf')
+group by gsim_lt_path, c.output_id, imt, sa_period, sa_damping
+order by c.output_id;
 '''
 
 # this is an example with 4 realizations for source_model 1,
 # 0 realization for source model 2 and 0 realizations
 # for source model 3, i.e. a total of 4 realizations
+# only two sites are affected by the ground motion shaking
 EXPECTED_GMFS = [
-    (['b1_1'], 2, 0.002508579548775, 0.00126274496868308),
-    (['b1_2'], 2, 0.0009968459584405, 0.000610752894244364),
-    (['b1_3'], 2, 0.00174022255931, 0.000987838801570935),
-    (['b1_4'], 2, 0.002654602993195, 0.00140628294771318)]
+    # (gsim_lt_path, gmf) pairs
+    (['b1_1'], [0.00340147507904, 0.00161568401851]),
+    (['b1_2'], [0.00142871347159, 0.000564978445291]),
+    (['b1_3'], [0.00243873007462, 0.001041715044]),
+    (['b1_4'], [0.00364899520179, 0.0016602107846])
+]
 
 
 class EventBasedHazardCase5TestCase(qa_utils.BaseQATestCase):
@@ -50,6 +53,7 @@ class EventBasedHazardCase5TestCase(qa_utils.BaseQATestCase):
         cursor.execute(GET_GMF_OUTPUTS % job.id)
         actual_gmfs = cursor.fetchall()
         self.assertEqual(len(actual_gmfs), len(EXPECTED_GMFS))
-        for a, e in zip(actual_gmfs, EXPECTED_GMFS):
-            self.assertEqual(a[0], e[0])
-            numpy.testing.assert_almost_equal(a[1:], e[1:])
+        for (actual_path, actual_gmf), (expected_path, expected_gmf) in zip(
+                actual_gmfs, EXPECTED_GMFS):
+            self.assertEqual(actual_path, expected_path)
+            numpy.testing.assert_almost_equal(actual_gmf, expected_gmf)
