@@ -18,17 +18,25 @@
 """
 Logic tree parser, verifier and processor. See specs at
 https://blueprints.launchpad.net/openquake-old/+spec/openquake-logic-tree-module
+
+A logic tree object must be iterable and yielding realizations, i.e. objects
+with attributes `value`, `weight` and `lt_path`.
 """
 
 import abc
 import os
 import random
 import re
-
+import itertools
+import collections
+import operator
+from collections import namedtuple
 from decimal import Decimal
 from lxml import etree
 
 import openquake.nrmllib
+from openquake.nrmllib.node import node_from_xml
+
 import openquake.hazardlib
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 
@@ -38,6 +46,9 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 #: dictionary of GSIM classes available in hazardlib
 GSIM = openquake.hazardlib.gsim.get_available_gsims()
+
+
+LtRealization = namedtuple('LtRealization', 'value, weight, lt_path')
 
 
 class LogicTreeError(Exception):
@@ -561,7 +572,7 @@ class BaseLogicTree(object):
         modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
         return modelname, branch_ids
 
-    def gen_value_weight_path(self):
+    def __iter__(self):
         """
         Yield triples (name, weight, paths). Notice that
         weight is not None only when the number_of_logic_tree_samples
@@ -578,7 +589,7 @@ class BaseLogicTree(object):
             for weight, smlt_path in self.root_branchset.enumerate_paths():
                 name = smlt_path[0].value
                 smlt_branch_ids = [branch.branch_id for branch in smlt_path]
-                yield name, weight, tuple(smlt_branch_ids)
+                yield LtRealization(name, weight, tuple(smlt_branch_ids))
 
     @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
@@ -1116,3 +1127,101 @@ class GMPELogicTree(BaseLogicTree):
                 'only one branchset on each branching level is allowed '
                 'in gmpe logic tree'
             )
+
+
+BranchTuple = namedtuple('Branch', 'id, uncertainty, weight, bset')
+
+
+class InvalidLogicTree(Exception):
+    pass
+
+
+class GsimLogicTree(object):
+    """
+    A GsimLogicTree instance is an iterable yielding `LtRealization`
+    tuples with attributes `value`, `weight` and `lt_path`, where
+    `value` is a dictionary {trt: gsim}, `weight` is a number in the
+    interval 0..1 or None, in the case of sampling and `lt_path` is
+    a tuple with the branch ids of the given realization.
+
+    :param str fname:
+        full path of the gsim_logic_tree file
+    :param str filter_name:
+        the string `"applyToTectonicRegionType"`
+    :param filter_keys:
+        a sequence of distinct tectonic region types
+    :param int num_samples:
+        the number of sampling to generate (if 0, perform full enumeration)
+    :param int seed:
+        the random number seed, used only in sampling mode
+    """
+    def __init__(self, fname, branchset_filter, filter_keys,
+                 num_samples=0, seed=0):
+        self.fname = fname
+        self.branchset_filter = branchset_filter
+        self.filter_keys = sorted(filter_keys)
+        self.num_samples = num_samples
+        self.seed = 0
+        assert branchset_filter == 'applyToTectonicRegionType'
+        if len(self.filter_keys) > len(set(self.filter_keys)):
+            raise ValueError(
+                'The given tectonic region types are not distinct: %s' %
+                ','.join(self.filter_keys))
+        self.values = collections.defaultdict(list)  # {fkey: uncertainties}
+        self.branches = sorted(self._parse_lt())
+        if filter_keys and not self.branches:
+            raise InvalidLogicTree(
+                'Could not find branches with attribute %r in %s' %
+                (self.branchset_filter, set(filter_keys)))
+
+    def _parse_lt(self):
+        # do the parsing, called at instantiation time to populate .values
+        fkeys = []
+        nrml = node_from_xml(self.fname)
+        for branching_level in nrml.logicTree:
+            for branchset in branching_level:
+                if branchset['uncertaintyType'] != 'gmpeModel':
+                    raise InvalidLogicTree(
+                        'only uncertainties of type '
+                        '"gmpeModel" are allowed in gmpe logic tree')
+                fkey = branchset.attrib.get(self.branchset_filter)
+                if fkey:
+                    fkeys.append(fkey)
+                if fkey in self.filter_keys:
+                    weights = []
+                    for branch in branchset:
+                        weight = Decimal(branch.uncertaintyWeight.text)
+                        weights.append(weight)
+                        branch_id = branch['branchID']
+                        uncertainty = branch.uncertaintyModel.text.strip()
+                        self.values[fkey].append(uncertainty)
+                        yield BranchTuple(
+                            branch_id, uncertainty, weight, branchset)
+                    assert sum(weights) == 1, weights
+        if len(fkeys) > len(set(fkeys)):
+            raise InvalidLogicTree('Found duplicated %s=%s' % (
+                self.branchset_filter, fkeys))
+
+    def __iter__(self):
+        # yield realizations for both sampling and full enumeration
+        groups = []
+        for _branchset, group in itertools.groupby(
+                self.branches, operator.attrgetter('bset')):
+            groups.append(list(group))
+        # with T tectonic region types there are T groups and T branches
+        if self.num_samples:
+            random.seed(self.seed)
+            branches_iter = ([random.choice(group) for group in groups]
+                             for _ in xrange(self.num_samples))
+        else:
+            branches_iter = itertools.product(*groups)
+        for branches in branches_iter:
+            weight = 1
+            lt_path = []
+            value = {}
+            for fkey, branch in zip(self.filter_keys, branches):
+                weight *= branch.weight
+                value[fkey] = branch.uncertainty
+                lt_path.append(branch.id)
+            yield LtRealization(
+                value, None if self.num_samples else weight, tuple(lt_path))
