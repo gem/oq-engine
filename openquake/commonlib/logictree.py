@@ -1131,6 +1131,9 @@ class GMPELogicTree(BaseLogicTree):
 
 BranchTuple = namedtuple('Branch', 'id, uncertainty, weight, bset')
 
+class InvalidLogicTree(Exception):
+    pass
+
 
 class GsimLogicTree(object):
     """
@@ -1151,27 +1154,37 @@ class GsimLogicTree(object):
     :param int seed:
         the random number seed, used only in sampling mode
     """
-    def __init__(self, fname, filter_name, filter_keys,
+    def __init__(self, fname, branchset_filter, filter_keys,
                  num_samples=0, seed=0):
         self.fname = fname
-        self.filter_name = filter_name
+        self.branchset_filter = branchset_filter
         self.filter_keys = sorted(filter_keys)
         self.num_samples = num_samples
         self.seed = 0
-        assert filter_name == 'applyToTectonicRegionType'
+        assert branchset_filter == 'applyToTectonicRegionType'
         if len(self.filter_keys) > len(set(self.filter_keys)):
             raise ValueError(
                 'The given tectonic region types are not distinct: %s' %
                 ','.join(self.filter_keys))
         self.values = collections.defaultdict(list)  # {fkey: uncertainties}
         self.branches = sorted(self._parse_lt())
+        if not self.branches:
+            raise InvalidLogicTree(
+                'Could not find branches with attribute %r in %s' %
+                (self.branchset_filter, set(filter_keys)))
 
     def _parse_lt(self):
         # do the parsing, called at instantiation time to populate .values
+        fkeys = []
         nrml = node_from_xml(self.fname)
         for branching_level in nrml.logicTree:
             for branchset in branching_level:
-                fkey = branchset[self.filter_name]
+                if branchset['uncertaintyType'] != 'gmpeModel':
+                    raise InvalidLogicTree('only uncertainties of type '
+                    '"gmpeModel" are allowed in gmpe logic tree')
+                fkey = branchset.attrib.get(self.branchset_filter)
+                if fkey:
+                    fkeys.append(fkey)
                 if fkey in self.filter_keys:
                     weights = []
                     for branch in branchset:
@@ -1183,6 +1196,9 @@ class GsimLogicTree(object):
                         yield BranchTuple(
                             branch_id, uncertainty, weight, branchset)
                     assert sum(weights) == 1, weights
+        if len(fkeys) > len(set(fkeys)):
+            raise InvalidLogicTree('Found duplicated %s=%s' % (
+                self.branchset_filter, fkeys))
 
     def __iter__(self):
         # yield realizations for both sampling and full enumeration
