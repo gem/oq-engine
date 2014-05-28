@@ -22,13 +22,13 @@ class DisaggHazardCase2TestCase(_utils.DisaggHazardTestCase):
     imts = ['PGA']
     fnames = '''\
 disagg_matrix(0.02)-lon_0.0-lat_0.0-smltp_source_model_1-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
-disagg_matrix(0.02)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
-disagg_matrix(0.02)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.02)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_BooreAtkinson2008.xml
+disagg_matrix(0.02)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_ChiouYoungs2008.xml
 disagg_matrix(0.02)-lon_-3.0-lat_-3.0-smltp_source_model_1-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
 disagg_matrix(0.02)-lon_-3.0-lat_-3.0-smltp_source_model_1-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
 disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_1-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
 disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_1-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
-disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
-disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml
+disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_BooreAtkinson2008.xml
+disagg_matrix(0.1)-lon_0.0-lat_0.0-smltp_source_model_2-gsimltp_ChiouYoungs2008.xml
 disagg_matrix(0.1)-lon_-3.0-lat_-3.0-smltp_source_model_1-gsimltp_BooreAtkinson2008_YoungsEtAl1997SSlab.xml
 disagg_matrix(0.1)-lon_-3.0-lat_-3.0-smltp_source_model_1-gsimltp_ChiouYoungs2008_YoungsEtAl1997SSlab.xml'''.split()
