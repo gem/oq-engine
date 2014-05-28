@@ -1,0 +1,1091 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel>
+    <pointSource id="101622" name="point" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>6.75 46.35</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>0.0001706092 0.0001127204 7.44736e-05 4.920422e-05 3.25089e-05 2.147842e-05 1.419065e-05 9.37567e-06 6.194444e-06 4.092629e-06 2.703973e-06 1.786497e-06 1.180327e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.7" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.25" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.05" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.2"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="101623" name="point" tectonicRegion="Active Shallow Crust">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>6.75 46.45</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>0.000126206 8.338348e-05 5.509092e-05 3.639821e-05 2.404806e-05 1.588839e-05 1.049736e-05 6.935535e-06 4.582263e-06 3.027471e-06 2.00023e-06 1.321539e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.7" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.25" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.05" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.2"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323839" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.25 55.15</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.102166e-06 1.388887e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323840" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.25 55.25</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.084119e-06 1.376964e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323891" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.35 54.75</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.197273e-06 1.451724e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323892" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.35 54.85</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.172699e-06 1.435488e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323893" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.35 54.95</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.149824e-06 1.420375e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323894" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.35 55.05</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.12861e-06 1.406359e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323895" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.35 55.15</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.108945e-06 1.393366e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323947" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.45 54.75</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.205088e-06 1.456887e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323948" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.45 54.85</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.180374e-06 1.440559e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323949" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.45 54.95</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.15737e-06 1.425361e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="323950" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.45 55.05</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.136036e-06 1.411265e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="324004" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.55 54.75</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.213353e-06 1.462348e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="324005" name="point" tectonicRegion="Shield">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>17.55 54.85</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.188517e-06 1.445939e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.5" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.4" strike="0.0" dip="90.0" rake="90.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="-90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="17.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330045" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.25 50.25</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>7.860476e-05 5.193365e-05 3.431222e-05 2.266986e-05 1.497783e-05 9.895753e-06 6.538059e-06 4.319653e-06 2.853966e-06 1.885597e-06 1.245802e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330046" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.35 50.15</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>6.28134e-05 4.15004e-05 2.741904e-05 1.811558e-05 1.196885e-05 7.907738e-06 5.224591e-06 3.451853e-06 2.280617e-06 1.506788e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330047" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.35 50.25</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>0.0001530053 0.0001010896 6.678924e-05 4.412721e-05 2.915456e-05 1.926223e-05 1.272643e-05 8.408267e-06 5.555287e-06 3.670342e-06 2.424971e-06 1.602162e-06 1.058538e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330048" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.35 50.35</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>0.0003264145 0.00021566 0.0001424851 9.413898e-05 6.219701e-05 4.109316e-05 2.714998e-05 1.793781e-05 1.18514e-05 7.83014e-06 5.173322e-06 3.41798e-06 2.258237e-06 1.492002e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330049" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.45 50.15</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>8.026031e-05 5.302746e-05 3.50349e-05 2.314733e-05 1.529329e-05 1.010417e-05 6.675762e-06 4.410632e-06 2.914076e-06 1.925311e-06 1.27204e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330050" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.45 50.25</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>0.000274254 0.0001811978 0.0001197162 7.909573e-05 5.225803e-05 3.452654e-05 2.281146e-05 1.507138e-05 9.957562e-06 6.578896e-06 4.346634e-06 2.871792e-06 1.897374e-06 1.253583e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330051" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.45 50.35</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>0.0009891445 0.0006535213 0.0004317772 0.0002852724 0.0001884776 0.0001245259 8.227346e-05 5.435753e-05 3.591367e-05 2.372792e-05 1.567688e-05 1.035761e-05 6.843208e-06 4.521263e-06 2.987169e-06 1.973603e-06 1.303946e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330052" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 50.15</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>7.658188e-05 5.059715e-05 3.34292e-05 2.208646e-05 1.459238e-05 9.641088e-06 6.369804e-06 4.208488e-06 2.78052e-06 1.837071e-06 1.213741e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330053" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 50.25</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>0.000224176 0.0001481116 9.785638e-05 6.465307e-05 4.271586e-05 2.822209e-05 1.864615e-05 1.231939e-05 8.139339e-06 5.377608e-06 3.55295e-06 2.347411e-06 1.550919e-06 1.024682e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330054" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 50.35</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>0.0004799096 0.0003170731 0.0002094881 0.0001384074 9.144489e-05 6.041704e-05 3.991714e-05 2.637299e-05 1.742446e-05 1.151223e-05 7.606055e-06 5.025271e-06 3.320163e-06 2.19361e-06 1.449304e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330055" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 50.25</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>0.0001050646 6.941549e-05 4.586236e-05 3.030096e-05 2.001964e-05 1.322685e-05 8.738892e-06 5.773729e-06 3.814665e-06 2.520324e-06 1.665162e-06 1.100161e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330056" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.45 49.55</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.178577e-05 7.78678e-06 5.144675e-06 3.399053e-06 2.245732e-06 1.48374e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330057" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.45 49.65</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.22706e-05 8.107106e-06 5.356312e-06 3.53888e-06 2.338115e-06 1.544777e-06 1.020624e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330058" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.45 49.75</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.321656e-05 8.732092e-06 5.769236e-06 3.811697e-06 2.518363e-06 1.663866e-06 1.099305e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330059" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.45 49.85</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.528382e-05 1.009792e-05 6.671631e-06 4.407903e-06 2.912273e-06 1.92412e-06 1.271253e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330060" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.45 49.95</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.03961e-05 1.347557e-05 8.903218e-06 5.882298e-06 3.886396e-06 2.567716e-06 1.696473e-06 1.120849e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330061" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.45 50.05</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>3.504207e-05 2.315207e-05 1.529642e-05 1.010624e-05 6.677129e-06 4.411535e-06 2.914673e-06 1.925705e-06 1.272301e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330062" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 49.45</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.142247e-05 7.546752e-06 4.986089e-06 3.294277e-06 2.176507e-06 1.438004e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330063" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 49.55</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.171774e-05 7.741837e-06 5.114981e-06 3.379435e-06 2.23277e-06 1.475177e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330064" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 49.65</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.221444e-05 8.070001e-06 5.331797e-06 3.522683e-06 2.327414e-06 1.537707e-06 1.015953e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330065" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 49.75</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.313512e-05 8.678286e-06 5.733687e-06 3.788209e-06 2.502845e-06 1.653613e-06 1.092531e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330066" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 49.85</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.512069e-05 9.990139e-06 6.600419e-06 4.360854e-06 2.881187e-06 1.903582e-06 1.257684e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330067" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 49.95</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.003975e-05 1.324013e-05 8.747668e-06 5.779527e-06 3.818495e-06 2.522855e-06 1.666834e-06 1.101266e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330068" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.55 50.05</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>3.414254e-05 2.255775e-05 1.490376e-05 9.846816e-06 6.505727e-06 4.298291e-06 2.839853e-06 1.876272e-06 1.239641e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330069" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 49.35</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.110023e-05 7.333848e-06 4.845426e-06 3.201341e-06 2.115105e-06 1.397436e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330070" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 49.45</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.128192e-05 7.45389e-06 4.924736e-06 3.253741e-06 2.149725e-06 1.420309e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330071" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 49.55</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.158644e-05 7.655086e-06 5.057665e-06 3.341566e-06 2.207751e-06 1.458647e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330072" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 49.65</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.206126e-05 7.968798e-06 5.264932e-06 3.478506e-06 2.298226e-06 1.518423e-06 1.003212e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330073" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 49.75</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.289649e-05 8.520625e-06 5.629521e-06 3.719388e-06 2.457375e-06 1.623572e-06 1.072683e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330074" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 49.85</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.463351e-05 9.668266e-06 6.38776e-06 4.220351e-06 2.788358e-06 1.84225e-06 1.217163e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330075" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 49.95</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.87271e-05 1.237287e-05 8.174677e-06 5.400955e-06 3.568376e-06 2.357602e-06 1.557652e-06 1.029131e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330076" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 50.05</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>2.923891e-05 1.931796e-05 1.276325e-05 8.432595e-06 5.57136e-06 3.680961e-06 2.431987e-06 1.606798e-06 1.061601e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330077" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.65 50.15</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>5.479431e-05 3.620224e-05 2.391859e-05 1.580285e-05 1.044084e-05 6.898195e-06 4.557592e-06 3.011171e-06 1.989461e-06 1.314424e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330078" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.75 49.25</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.084778e-05 7.167058e-06 4.735228e-06 3.128534e-06 2.067002e-06 1.365655e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330079" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.75 49.35</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.091884e-05 7.214009e-06 4.766249e-06 3.149029e-06 2.080543e-06 1.374601e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+    <pointSource id="330080" name="point" tectonicRegion="Volcanic">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>12.75 49.45</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <incrementalMFD minMag="4.6" binWidth="0.2">
+        <occurRates>1.110096e-05 7.334331e-06 4.845745e-06 3.201552e-06 2.115244e-06 1.397528e-06</occurRates>
+      </incrementalMFD>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="0.0" dip="90.0" rake="0.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="90.0" rake="90.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="10.0"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceModel>
+</nrml>

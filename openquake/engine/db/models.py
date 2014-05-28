@@ -2226,16 +2226,15 @@ class LtSourceModel(djm.Model):
         """
         Return the number of sources in the model.
         """
-        return sum(info.num_sources for info in
-                   TrtModel.objects.filter(lt_model=self))
+        return sum(info.num_sources for info in self.trtmodel_set.all())
 
     def get_tectonic_region_types(self):
         """
         Return the tectonic region types in the model,
         ordered by number of sources.
         """
-        return TrtModel.objects.filter(
-            lt_model=self).values_list(
+        return self.trtmodel_set.filter(
+            lt_model=self, num_ruptures__gt=0).values_list(
             'tectonic_region_type', flat=True)
 
     class Meta:
@@ -2246,7 +2245,7 @@ class LtSourceModel(djm.Model):
         """
         Yield the realizations corresponding to the given model
         """
-        return iter(LtRealization.objects.filter(lt_model=self))
+        return self.ltrealization_set.all()
 
 
 class TrtModel(djm.Model):
@@ -2278,10 +2277,10 @@ class TrtModel(djm.Model):
         Return the realizations associated to the current TrtModel
         as a dictionary {gsim_name: [rlz, ...]}
         """
-        rlzs = dict(
-            (gsim, list(self.get_realizations(gsim)))
-            for gsim in self.gsims)
-        return rlzs
+        dic = collections.defaultdict(list)
+        for art in AssocLtRlzTrtModel.objects.filter(trt_model=self.id):
+            dic[art.gsim].append(art.rlz)
+        return dic
 
     class Meta:
         db_table = 'hzrdr\".\"trt_model'

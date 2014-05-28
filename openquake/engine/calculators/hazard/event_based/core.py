@@ -55,7 +55,7 @@ inserter = writer.CacheInserter(models.GmfData, 1000)
 
 
 @tasks.oqtask
-def compute_ses_and_gmfs(
+def compute_ruptures(
         job_id, sitecol, src_seeds, trt_model_id, gsims, task_no):
     """
     Celery task for the stochastic event set calculator.
@@ -92,19 +92,17 @@ def compute_ses_and_gmfs(
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
 
-    gmfcollector = GmfCollector(
-        params, imts, gsims, trt_model.get_rlzs_by_gsim())
+    rupturecollector = RuptureCollector(
+        params, imts, gsims, trt_model.id, task_no)
 
     filter_sites_mon = LightMonitor(
-        'filtering sites', job_id, compute_ses_and_gmfs)
+        'filtering sites', job_id, compute_ruptures)
     generate_ruptures_mon = LightMonitor(
-        'generating ruptures', job_id, compute_ses_and_gmfs)
+        'generating ruptures', job_id, compute_ruptures)
     filter_ruptures_mon = LightMonitor(
-        'filtering ruptures', job_id, compute_ses_and_gmfs)
+        'filtering ruptures', job_id, compute_ruptures)
     save_ruptures_mon = LightMonitor(
-        'saving ruptures', job_id, compute_ses_and_gmfs)
-    compute_gmfs_mon = LightMonitor(
-        'computing gmfs', job_id, compute_ses_and_gmfs)
+        'saving ruptures', job_id, compute_ruptures)
 
     # Compute and save stochastic event sets
     rnd = random.Random()
@@ -148,8 +146,9 @@ def compute_ses_and_gmfs(
                     del ses_num_occ[rup]  # save memory
                     continue
 
+            # saving ses_ruptures
             ses_ruptures = []
-            with save_ruptures_mon:  # saving ses_ruptures
+            with save_ruptures_mon:
                 # using a django transaction make the saving faster
                 with transaction.commit_on_success(using='job_init'):
                     indices = r_sites.indices if len(r_sites) < len(sitecol) \
@@ -164,11 +163,11 @@ def compute_ses_and_gmfs(
                                 rup.rup_no, occ_no, rup_seed)
                             ses_ruptures.append(ses_rup)
 
-            with compute_gmfs_mon:  # computing GMFs
-                if hc.ground_motion_fields:
-                    for ses_rup in ses_ruptures:
-                        gmfcollector.calc_gmf(
-                            r_sites, rup, ses_rup.id, ses_rup.seed)
+            # collecting ses_ruptures
+            for ses_rup in ses_ruptures:
+                rupturecollector.trts.add(src.tectonic_region_type)
+                rupturecollector.rupture_data.append(
+                    (r_sites, rup, ses_rup.id, ses_rup.seed))
 
         # log calc_time per distinct rupture
         if ses_num_occ:
@@ -189,19 +188,32 @@ def compute_ses_and_gmfs(
     generate_ruptures_mon.flush()
     filter_ruptures_mon.flush()
     save_ruptures_mon.flush()
-    compute_gmfs_mon.flush()
 
-    if hc.ground_motion_fields:
-        with EnginePerformanceMonitor(
-                'saving gmfs', job_id, compute_ses_and_gmfs):
-            gmfcollector.save_gmfs(task_no)
+    return rupturecollector
 
 
-class GmfCollector(object):
+@tasks.oqtask
+def compute_and_save_gmfs(job_id, rupt_collector):
     """
-    A class to compute and save ground motion fields.
+    :param int job_id:
+        ID of the currently running job
+    :param rupt_collector:
+        an instance of `openquake.engine.calculators.hazard.event_based.core.RuptureCollector`
     """
-    def __init__(self, params, imts, gsims, rlzs):
+    with EnginePerformanceMonitor(
+            'computing gmfs', job_id, compute_and_save_gmfs):
+        for rupture_data in rupt_collector.rupture_data:
+            rupt_collector.calc_gmf(*rupture_data)
+    with EnginePerformanceMonitor(
+            'saving gmfs', job_id, compute_and_save_gmfs):
+        rupt_collector.save_gmfs()
+
+
+class RuptureCollector(object):
+    """
+    A class to store ruptures and then compute and save ground motion fields.
+    """
+    def __init__(self, params, imts, gsims, trt_model_id, task_no):
         """
         :param params:
             a dictionary of parameters with keys
@@ -210,17 +222,20 @@ class GmfCollector(object):
             a list of hazardlib intensity measure types
         :param gsims:
             a list of distinct GSIM instances
-        :param rlzs:
-            a dictionary returning the realizations per GSIM string
+        :param int trt_model_id:
+            the ID of a TRTModel instance
         """
         self.params = params
         self.imts = imts
         self.gsims = gsims
-        self.rlzs = rlzs
+        self.trt_model_id = trt_model_id
+        self.task_no = task_no
         # NB: I tried to use a single dictionary
         # {site_id: [(gmv, rupt_id),...]} but it took a lot more memory (MS)
         self.gmvs_per_site = collections.defaultdict(list)
         self.ruptures_per_site = collections.defaultdict(list)
+        self.trts = set()
+        self.rupture_data = []
 
     def calc_gmf(self, r_sites, rupture, rupture_id, rupture_seed):
         """
@@ -239,6 +254,7 @@ class GmfCollector(object):
             an integer to be used as stochastic seed
         """
         for gsim in self.gsims:
+            gsim_name = gsim.__class__.__name__
             computer = gmf.GmfComputer(rupture, r_sites, self.imts, gsim,
                                        self.params['truncation_level'],
                                        self.params['correl_model'])
@@ -248,33 +264,35 @@ class GmfCollector(object):
                     # convert a 1x1 matrix into a float
                     gmv = float(gmv)
                     if gmv:
-                        for rlz in self.rlzs[gsim.__class__.__name__]:
-                            self.gmvs_per_site[
-                                rlz.id, imt, site_id].append(gmv)
-                            self.ruptures_per_site[
-                                rlz.id, imt, site_id].append(rupture_id)
+                        self.gmvs_per_site[
+                            gsim_name, imt, site_id].append(gmv)
+                        self.ruptures_per_site[
+                            gsim_name, imt, site_id].append(rupture_id)
 
-    @transaction.commit_on_success(using='job_init')
-    def save_gmfs(self, task_no):
+    def save_gmfs(self):
         """
         Helper method to save the computed GMF data to the database.
-
-        :param task_no:
-            The ordinal of the task which generated the current GMFs to save
         """
-        for rlz_id, imt, site_id in self.gmvs_per_site:
-            rlz = models.LtRealization.objects.get(pk=rlz_id)
-            imt_name, sa_period, sa_damping = imt
-            inserter.add(models.GmfData(
-                gmf=models.Gmf.objects.get(lt_realization=rlz),
-                task_no=task_no,
-                imt=imt_name,
-                sa_period=sa_period,
-                sa_damping=sa_damping,
-                site_id=site_id,
-                gmvs=self.gmvs_per_site[rlz_id, imt, site_id],
-                rupture_ids=self.ruptures_per_site[rlz_id, imt, site_id]))
+        rlzs = models.TrtModel.objects.get(
+            pk=self.trt_model_id).get_rlzs_by_gsim()
+        for gsim_name, imt, site_id in self.gmvs_per_site:
+            if not rlzs[gsim_name]:
+                logs.LOG.warn('No realizations for TrtModel=%d, GSIM=%s',
+                              self.trt_model_id, gsim_name)
+            for rlz in rlzs[gsim_name]:
+                imt_name, sa_period, sa_damping = imt
+                inserter.add(models.GmfData(
+                    gmf=models.Gmf.objects.get(lt_realization=rlz),
+                    task_no=self.task_no,
+                    imt=imt_name,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                    site_id=site_id,
+                    gmvs=self.gmvs_per_site[gsim_name, imt, site_id],
+                    rupture_ids=self.ruptures_per_site[gsim_name, imt, site_id]
+                ))
         inserter.flush()
+        self.rupture_data[:] = []
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
 
@@ -284,7 +302,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
     Probabilistic Event-Based hazard calculator. Computes stochastic event sets
     and (optionally) ground motion fields.
     """
-    core_calc_task = compute_ses_and_gmfs
+    core_calc_task = compute_ruptures
 
     def task_arg_gen(self, _block_size=None):
         """
@@ -305,6 +323,43 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         # now the source_blocks_per_ltpath dictionary can be cleared
         self.source_blocks_per_ltpath.clear()
 
+    def task_completed(self, rupturecollector):
+        """
+        :param rupt_collector:
+            an instance of `openquake.engine.calculators.hazard.event_based.core.RuptureCollector`
+
+        If the parameter `ground_motion_fields` is set, compute and save
+        the GMFs from the ruptures generated by the given task and stored
+        in the `rupturecollector`.
+        """
+        if not self.hc.ground_motion_fields:
+            return  # do nothing
+        self.rupt_collectors.append(rupturecollector)
+        self.num_ruptures[rupturecollector.trt_model_id] += \
+            len(rupturecollector.rupture_data)
+
+    @EnginePerformanceMonitor.monitor
+    def post_execute(self):
+        for trt_id, num_ruptures in self.num_ruptures.iteritems():
+            trt = models.TrtModel.objects.get(pk=trt_id)
+            trt.num_ruptures = num_ruptures
+            trt.save()
+        super(EventBasedHazardCalculator, self).post_execute()
+        if not self.hc.ground_motion_fields:
+            return  # do nothing
+
+        # create a Gmf output for each realization
+        for rlz in self._get_realizations():
+            output = models.Output.objects.create(
+                oq_job=self.job,
+                display_name='GMF rlz-%s' % rlz.id,
+                output_type='gmf')
+            models.Gmf.objects.create(output=output, lt_realization=rlz)
+        otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
+        for rupt_collector in self.rupt_collectors:
+            otm.submit(self.job.id, rupt_collector)
+        otm.aggregate_results(lambda acc, x: None, None)
+
     def initialize_ses_db_records(self, lt_model):
         """
         Create :class:`~openquake.engine.db.models.Output`,
@@ -324,14 +379,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
         ses_coll = models.SESCollection.objects.create(
             output=output, lt_model=lt_model, ordinal=lt_model.ordinal)
-
-        for rlz in lt_model:
-            if self.job.hazard_calculation.ground_motion_fields:
-                output = models.Output.objects.create(
-                    oq_job=self.job,
-                    display_name='GMF rlz-%s' % rlz.id,
-                    output_type='gmf')
-                models.Gmf.objects.create(output=output, lt_realization=rlz)
 
         return ses_coll
 
@@ -355,8 +402,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         curves.
         """
         if self.hc.hazard_curves_from_gmfs:
-            with EnginePerformanceMonitor('generating hazard curves',
-                                          self.job.id):
+            with self.monitor('generating hazard curves'):
                 self.parallelize(
                     post_processing.gmf_to_hazard_curve_task,
                     post_processing.gmf_to_hazard_curve_arg_gen(self.job),
@@ -366,13 +412,11 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             # has some value (not an empty list), do this additional
             # post-processing.
             if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-                with EnginePerformanceMonitor(
-                        'generating mean/quantile curves', self.job.id):
+                with self.monitor('generating mean/quantile curves'):
                     self.do_aggregate_post_proc()
 
             if self.hc.hazard_maps:
-                with EnginePerformanceMonitor(
-                        'generating hazard maps', self.job.id):
+                with self.monitor('generating hazard maps'):
                     self.parallelize(
                         cls_post_proc.hazard_curves_to_hazard_map_task,
                         cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
