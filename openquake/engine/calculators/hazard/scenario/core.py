@@ -19,17 +19,16 @@ Scenario calculator core functionality
 """
 import collections
 import random
-import numpy
 
 from openquake.nrmllib.hazard.parsers import RuptureModelParser
 
 # HAZARDLIB
-from openquake.hazardlib.calc import ground_motion_fields, filters
+from openquake.hazardlib.calc import filters
+from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
 from openquake.commonlib.general import block_splitter, distinct
-
 from openquake.commonlib import source
 
 from openquake.engine.calculators.hazard import general as haz_general
@@ -42,36 +41,40 @@ AVAILABLE_GSIMS = openquake.hazardlib.gsim.get_available_gsims()
 
 
 @tasks.oqtask
-def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
+def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
     """
-    A celery task wrapper function around :func:`compute_gmfs`.
-    See :func:`compute_gmfs` for parameter definitions.
+    :param int job_id: the current job ID
+    :param ses_ruptures: a set of `SESRupture` instances
+    :param sitecol: a `SiteCollection` instance
+    :param int gmf_id: the ID of a `Gmf` instance
+    :param int task_no: the task number
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     # distinct is here to make sure that IMTs such as
     # SA(0.8) and SA(0.80) are considered the same
     imts = distinct(from_string(x) for x in hc.intensity_measure_types)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
-    realizations = 1  # one realization for each seed
     correlation_model = haz_general.get_correl_model(hc)
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
     inserter = writer.CacheInserter(models.GmfData, 1000)
     # insert GmfData in blocks of 1000 sites
 
+    # NB: ses_ruptures a non-empty list produced by the block_splitter
+    rupture = ses_ruptures[0].rupture  # ProbabilisticRupture instance
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
-        for task_seed in seeds:
-            numpy.random.seed(task_seed)
-            gmf_dict = ground_motion_fields(
-                rupture, sitecol, imts, gsim, hc.truncation_level,
-                realizations, correlation_model)
+        gmf = GmfComputer(rupture, sitecol, imts, gsim, hc.truncation_level,
+                          correlation_model)
+        for ses_rup in ses_ruptures:
+            gmf_dict = gmf.compute(ses_rup.seed)
             for imt in imts:
                 for site_id, gmv in zip(sitecol.sids, gmf_dict[imt]):
-                    # float is needed below to convert 1x1 matrices
-                    cache[site_id, imt].append(float(gmv))
+                    # float may be needed below to convert 1x1 matrices
+                    cache[site_id, imt].append((float(gmv), ses_rup.id))
 
     with EnginePerformanceMonitor('saving gmfs', job_id, gmfs):
-        for site_id, imt in cache:
+        for (site_id, imt), data in cache.iteritems():
+            gmvs, rup_ids = zip(*data)
             inserter.add(
                 models.GmfData(
                     gmf_id=gmf_id,
@@ -80,8 +83,8 @@ def gmfs(job_id, seeds, sitecol, rupture, gmf_id, task_no):
                     sa_period=imt[1],
                     sa_damping=imt[2],
                     site_id=site_id,
-                    rupture_ids=None,
-                    gmvs=cache[site_id, imt]))
+                    rupture_ids=rup_ids,
+                    gmvs=gmvs))
         inserter.flush()
 
 
@@ -150,7 +153,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         # creating seeds
         rnd = random.Random()
         rnd.seed(self.hc.random_seed)
-        self.all_seeds = [
+        all_seeds = [
             rnd.randint(0, models.MAX_SINT_32)
             for _ in xrange(self.hc.number_of_ground_motion_fields)]
 
@@ -158,7 +161,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             prob_rup = models.ProbabilisticRupture.create(
                 self.rupture, self.ses_coll)
             inserter = writer.CacheInserter(models.SESRupture, 100000)
-            for ses_idx, seed in enumerate(self.all_seeds):
+            for ses_idx, seed in enumerate(all_seeds):
                 inserter.add(
                     models.SESRupture(
                         ses_id=1, rupture=prob_rup,
@@ -173,8 +176,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         will be generated which is fine since the computation is fast
         anyway.
         """
-        blocks_of_seeds = block_splitter(
-            self.all_seeds, self.rupture_block_size)
-        for task_no, task_seeds in enumerate(blocks_of_seeds):
-            yield (self.job.id, task_seeds, self.sites, self.rupture,
-                   self.gmf.id, task_no)
+        ses_ruptures = models.SESRupture.objects.filter(
+            rupture__ses_collection=self.ses_coll.id)
+        for task_no, ruptures in enumerate(
+                ses_ruptures, self.rupture_block_size):
+            yield self.job.id, ruptures, self.sites, self.gmf.id, task_no

@@ -167,10 +167,10 @@ class InitializeSourcesTestCase(unittest.TestCase):
         cls.calc.initialize_site_model()
         assert len(hc.site_collection) == 2, len(hc.site_collection)
 
-    def test_unfiltered_sources(self):
+    def test_filtered_sources(self):
         self.calc.initialize_sources()
         m1, m2, m3 = models.LtSourceModel.objects.filter(
             hazard_calculation=self.calc.hc)
         self.assertEqual(
             [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
-            [2, 2, 2])
+            [1, 1, 1])

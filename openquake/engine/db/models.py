@@ -1705,12 +1705,13 @@ class ProbabilisticRupture(djm.Model):
     is_from_fault_source = djm.NullBooleanField(null=False)
     is_multi_surface = djm.NullBooleanField(null=False)
     surface = fields.PickleField(null=False)
+    site_indices = fields.IntArrayField(null=True)
 
     class Meta:
         db_table = 'hzrdr\".\"probabilistic_rupture'
 
     @classmethod
-    def create(cls, rupture, ses_collection):
+    def create(cls, rupture, ses_collection, site_indices=None):
         """
         Create a ProbabilisticRupture row on the database.
 
@@ -1718,6 +1719,8 @@ class ProbabilisticRupture(djm.Model):
             a hazardlib rupture
         :param ses_collection:
             a Stochastic Event Set Collection object
+        :param site_indices:
+            an array of indices for the site_collection
         """
         iffs = is_from_fault_source(rupture)
         ims = is_multi_surface(rupture)
@@ -1730,7 +1733,8 @@ class ProbabilisticRupture(djm.Model):
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
-            hypocenter=rupture.hypocenter.wkt2d)
+            hypocenter=rupture.hypocenter.wkt2d,
+            site_indices=site_indices)
 
     _geom = None
 
@@ -1765,6 +1769,10 @@ class ProbabilisticRupture(djm.Model):
     @property
     def dip(self):
         return self.surface.get_dip()
+
+    @property
+    def mag(self):
+        return self.magnitude
 
     def _validate_planar_surface(self):
         """
@@ -2197,21 +2205,22 @@ class LtSourceModel(djm.Model):
     hazard_calculation = djm.ForeignKey('HazardCalculation')
     ordinal = djm.IntegerField()
     sm_lt_path = fields.CharArrayField()
+    sm_name = djm.TextField(null=False)
+    weight = djm.DecimalField(decimal_places=100, max_digits=101, null=True)
 
     def get_num_sources(self):
         """
         Return the number of sources in the model.
         """
-        return sum(info.num_sources for info in
-                   TrtModel.objects.filter(lt_model=self))
+        return sum(info.num_sources for info in self.trtmodel_set.all())
 
     def get_tectonic_region_types(self):
         """
         Return the tectonic region types in the model,
         ordered by number of sources.
         """
-        return TrtModel.objects.filter(
-            lt_model=self).values_list(
+        return self.trtmodel_set.filter(
+            lt_model=self, num_ruptures__gt=0).values_list(
             'tectonic_region_type', flat=True)
 
     class Meta:
@@ -2222,7 +2231,7 @@ class LtSourceModel(djm.Model):
         """
         Yield the realizations corresponding to the given model
         """
-        return iter(LtRealization.objects.filter(lt_model=self))
+        return self.ltrealization_set.all()
 
 
 class TrtModel(djm.Model):
@@ -2254,10 +2263,10 @@ class TrtModel(djm.Model):
         Return the realizations associated to the current TrtModel
         as a dictionary {gsim_name: [rlz, ...]}
         """
-        rlzs = dict(
-            (gsim, list(self.get_realizations(gsim)))
-            for gsim in self.gsims)
-        return rlzs
+        dic = collections.defaultdict(list)
+        for art in AssocLtRlzTrtModel.objects.filter(trt_model=self.id):
+            dic[art.gsim].append(art.rlz)
+        return dic
 
     class Meta:
         db_table = 'hzrdr\".\"trt_model'
