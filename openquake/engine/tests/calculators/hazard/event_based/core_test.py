@@ -94,7 +94,8 @@ class RuptureCollectorTestCase(unittest.TestCase):
         pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
-        coll = core.RuptureCollector(params, [pga], [gsim], 1)
+        coll = core.RuptureCollector(
+            params, [pga], [gsim], trt_model_id=1, task_no=0)
         coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
             ('AkkarBommer2010', pga, 0): [rup_id],
