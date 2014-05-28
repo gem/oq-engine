@@ -122,7 +122,7 @@ class ParseNDKtoGCMT(object):
             max_years = []
             max_years = [cent.centroid.date.year for cent in self.catalogue.gcmts]
             self.catalogue.end_year = np.max(max_years)
-        self._to_hmtk(use_centroid)
+        self.to_hmtk(use_centroid)
         return self.catalogue
 
     def read_ndk_event(self, raw_data, id0):
@@ -164,7 +164,11 @@ class ParseNDKtoGCMT(object):
         
         return gcmt
 
-    def _to_hmtk(self, use_centroid):
+    def to_hmtk(self, use_centroid=True):
+        '''
+        Convert the content of the GCMT catalogue to a HMTK 
+        catalogue. 
+        '''
         
         self._preallocate_data_dict()
         for iloc, gcmt in enumerate(self.catalogue.gcmts):

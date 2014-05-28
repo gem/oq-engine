@@ -69,9 +69,9 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         """
         filename = os.path.join(self.BASE_DATA_PATH, 'test_gcmt_catalogue.txt')
         parser = ParseNDKtoGCMT(filename)
-        parserCent = ParseNDKtoGCMT(filename)
+        parser_cent = ParseNDKtoGCMT(filename)
         self.cat = parser.read_file()
-        self.catCent = parserCent.read_file(use_centroid='True')
+        self.cat_cent = parser_cent.read_file(use_centroid='True')
 
     def test_read_catalogue(self):
         """
@@ -118,12 +118,12 @@ class GCMTCatalogueParserTestCase(unittest.TestCase):
         """
         Check the data when chosing use_centroid=True is correct
         """
-        self.assertAlmostEqual(self.catCent.data['hour'][0], 19.)
-        self.assertAlmostEqual(self.catCent.data['minute'][0], 30.)
-        self.assertAlmostEqual(self.catCent.data['second'][0], 3.)
-        self.assertAlmostEqual(self.catCent.data['longitude'][0], -72.79)
-        self.assertAlmostEqual(self.catCent.data['latitude'][0], 18.58)
-        self.assertAlmostEqual(self.catCent.data['depth'][0], 12.0)
+        self.assertAlmostEqual(self.cat_cent.data['hour'][0], 19.)
+        self.assertAlmostEqual(self.cat_cent.data['minute'][0], 30.)
+        self.assertAlmostEqual(self.cat_cent.data['second'][0], 3.)
+        self.assertAlmostEqual(self.cat_cent.data['longitude'][0], -72.79)
+        self.assertAlmostEqual(self.cat_cent.data['latitude'][0], 18.58)
+        self.assertAlmostEqual(self.cat_cent.data['depth'][0], 12.0)
 
         
     def test_select_events_depth(self):
