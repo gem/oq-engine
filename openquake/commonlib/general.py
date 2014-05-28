@@ -138,51 +138,6 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-class SequenceSplitter(object):
-    """
-    A splitter object with methods .split (to split regular sequences)
-    and split_on_max_weight (to split sequences of pairs [(item, weight),...])
-    At initialization time you must pass a parameter num_blocks, i.e. the
-    number of blocks that should be generated. If you also pass a
-    max_block_size parameter, the grouping procedure will make sure
-    that the blocks never exceed it, so more blocks could be generated.
-    """
-    def __init__(self, num_blocks, max_block_size=None):
-        """
-        :param int num_blocks:
-            the suggested number of blocks to generate
-        :param int max_block_size:
-            if not None, the blocks cannot exceed this value, at the cost of
-            generating more blocks than specified in num_blocks.
-        """
-        assert num_blocks > 0, num_blocks
-        assert max_block_size is None or max_block_size >= 1, max_block_size
-        self.num_blocks = num_blocks
-        self.max_block_size = max_block_size
-        self.max_weight = None
-
-    def split_on_max_weight(self, item_weight_sequence):
-        """
-        Try to split a sequence of pairs (item, weight) in ``num_blocks``
-        blocks. Return a list of :class:
-        `openquake.commonlib.general.WeightedSequence` objects.
-        """
-        return list(self._split_on_max_weight(item_weight_sequence))
-
-    def split(self, sequence):
-        """
-        Split a sequence in ``num_blocks`` blocks. Return a list
-        of :class:`openquake.commonlib.general.WeightedSequence` objects.
-        """
-        return self.split_on_max_weight([(item, 1) for item in sequence])
-
-    def _split_on_max_weight(self, item_weight_pairs):
-        # doing the real work here
-        total_weight = float(sum(item[1] for item in item_weight_pairs))
-        self.max_weight = ceil(total_weight, self.num_blocks)
-        return split_on_max_weight(item_weight_pairs, self.max_weight)
-
-
 def split_on_max_weight(item_weight_pairs, max_weight):
     """
     :param item_weight_pairs: an iterator of pairs (item, weight)
@@ -335,4 +290,3 @@ def _deep_eq(a, b, decimal, exclude=None):
             numpy.testing.assert_almost_equal(a, b, decimal=decimal)
         else:
             assert a == b, "%s != %s" % (a, b)
-

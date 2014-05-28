@@ -21,15 +21,12 @@ from itertools import izip
 
 from shapely import wkt
 
-from openquake.hazardlib import geo
-from openquake.hazardlib import mfd
-from openquake.hazardlib import pmf
-from openquake.hazardlib import scalerel
-from openquake.hazardlib import source
+from openquake.hazardlib import geo, mfd, pmf, scalerel, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
+from openquake.commonlib.general import split_on_max_weight
 
 
 class SourceCollector(object):
@@ -80,7 +77,7 @@ class SourceCollector(object):
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag[trt] = max_mag
 
-    def gen_source_weight(self, trt, src_filter):
+    def _gen_source_weight(self, trt, src_filter):
         """
         Yield all the sources of a given tectonic region type, together
         with their weight. As side effects populate the dictionary
@@ -100,12 +97,21 @@ class SourceCollector(object):
                     yield ss, weight
         self.sources[trt] = srcs  # throw away unfiltered sources
 
+    def gen_blocks(self, trt, src_filter, max_weight):
+        """
+        :param trt: tectonic region type
+        :param src_filter: a filtering function on sources
+        :param max_weight: the limit used to collect the sources
+        """
+        return split_on_max_weight(
+            self._gen_source_weight(trt, src_filter), max_weight)
+
     def sorted_trts(self):
         """
         Return the tectonic region types sorted per number of sources.
         """
         return [trt for (num, trt) in sorted(
-                (len(sw), trt) for (trt, sw) in self.sources.items())]
+                (len(s), trt) for (trt, s) in self.sources.items())]
 
 
 ## NB: this is a job for generic functions
