@@ -631,7 +631,7 @@ class SubmitJobTestCase(unittest.TestCase):
         # the error here is to use a function instead of an oqtask
         p = mock.patch(
             'openquake.engine.calculators.hazard.event_based.core.'
-            'compute_ses_and_gmfs', lambda *args: None)
+            'compute_ruptures', lambda *args: None)
         with p:
             self.run_job('job.ini')
         args, kw = tasks.update_calculation.call_args

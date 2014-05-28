@@ -71,7 +71,7 @@ class FakeRupture(object):
         self.id = id
 
 
-class GmfCollectorTestCase(unittest.TestCase):
+class RuptureCollectorTestCase(unittest.TestCase):
     """Tests for the routines used by the event-based hazard calculator"""
 
     # test a case with 5 sites and 2 ruptures
@@ -94,22 +94,22 @@ class GmfCollectorTestCase(unittest.TestCase):
         pga = PGA()
         rlz = mock.Mock()
         rlz.id = 1
-        rlzs = dict(AkkarBommer2010=[rlz])
-        coll = core.GmfCollector(params, [pga], [gsim], rlzs)
+        coll = core.RuptureCollector(
+            params, [pga], [gsim], trt_model_id=1, task_no=0)
         coll.calc_gmf(site_coll, rup.rupture, rup.id, rup_seed)
         expected_rups = {
-            (rlz.id, pga, 0): [rup_id],
-            (rlz.id, pga, 1): [rup_id],
-            (rlz.id, pga, 2): [rup_id],
-            (rlz.id, pga, 3): [rup_id],
-            (rlz.id, pga, 4): [rup_id],
+            ('AkkarBommer2010', pga, 0): [rup_id],
+            ('AkkarBommer2010', pga, 1): [rup_id],
+            ('AkkarBommer2010', pga, 2): [rup_id],
+            ('AkkarBommer2010', pga, 3): [rup_id],
+            ('AkkarBommer2010', pga, 4): [rup_id],
         }
         expected_gmvs = {
-            (rlz.id, pga, 0): [0.1027847118266612],
-            (rlz.id, pga, 1): [0.02726361912605336],
-            (rlz.id, pga, 2): [0.0862595971325641],
-            (rlz.id, pga, 3): [0.04727148908077005],
-            (rlz.id, pga, 4): [0.04750575818347277],
+            ('AkkarBommer2010', pga, 0): [0.1027847118266612],
+            ('AkkarBommer2010', pga, 1): [0.02726361912605336],
+            ('AkkarBommer2010', pga, 2): [0.0862595971325641],
+            ('AkkarBommer2010', pga, 3): [0.04727148908077005],
+            ('AkkarBommer2010', pga, 4): [0.04750575818347277],
         }
         numpy.testing.assert_equal(coll.ruptures_per_site, expected_rups)
         for i, gmvs in expected_gmvs.iteritems():
@@ -168,11 +168,8 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # there is a single source model realization in this test
         self.assertEqual(1, len(outputs))
 
-        # With this job configuration, we have 2 logic tree realizations
-        [lt_model] = models.LtSourceModel.objects.filter(hazard_calculation=hc)
-        self.assertEqual(2, len(list(lt_model)))
-
-        ses_coll = models.SESCollection.objects.get(lt_model=lt_model)
+        ses_coll = models.SESCollection.objects.get(
+            lt_model__hazard_calculation=hc)
         self.assertEqual(hc.ses_per_logic_tree_path, len(ses_coll))
         for ses in ses_coll:
             # The only metadata in in the SES is investigation time.

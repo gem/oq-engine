@@ -31,8 +31,6 @@ from openquake.engine.tests.utils.helpers import ConfigTestCase
 from openquake.engine.tests.utils.helpers import patch
 from openquake.engine.tests.utils.helpers import touch
 
-cfg = config.cfg
-
 
 class ConfigTestCase(ConfigTestCase, unittest.TestCase):
     """Tests the behaviour of the utils.config.Config class."""
@@ -49,7 +47,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
         os.environ["OQ_SITE_CFG_PATH"] = "/a/b/c/d"
         self.assertEqual(
             ["/a/b/c/d", "%s/openquake.cfg" % config.OQDIR],
-            cfg._get_paths())
+            config.cfg._get_paths())
 
     def test_get_paths_with_local_env_var_set(self):
         # _get_paths() will honour the OQ_LOCAL_CFG_PATH
@@ -57,7 +55,7 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
         os.environ["OQ_LOCAL_CFG_PATH"] = "/e/f/g/h"
         self.assertEqual(
             ["/etc/openquake/openquake.cfg", "/e/f/g/h"],
-            cfg._get_paths())
+            config.cfg._get_paths())
 
     def test_get_paths_with_no_environ(self):
         # _get_paths() will return the hard-coded paths if the OQ_SITE_CFG_PATH
@@ -65,13 +63,13 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
         self.assertEqual(
             ["/etc/openquake/openquake.cfg",
              "%s/openquake.cfg" % config.OQDIR],
-            cfg._get_paths())
+            config.cfg._get_paths())
 
     def test_load_from_file_with_no_config_files(self):
         # In the absence of config files the `cfg` dict will be empty
-        cfg.cfg.clear()
-        cfg._load_from_file()
-        self.assertEqual([], cfg.cfg.keys())
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
+        self.assertEqual([], config.cfg.cfg.keys())
 
     def test_load_from_file_with_global(self):
         # The config data in the global file is loaded correctly
@@ -84,11 +82,11 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
             b=2'''
         site_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
-        cfg.cfg.clear()
-        cfg._load_from_file()
-        self.assertEqual(["A", "B"], sorted(cfg.cfg))
-        self.assertEqual({"a": "1", "b": "c"}, cfg.cfg.get("A"))
-        self.assertEqual({"b": "2"}, cfg.cfg.get("B"))
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
+        self.assertEqual(["A", "B"], sorted(config.cfg.cfg))
+        self.assertEqual({"a": "1", "b": "c"}, config.cfg.cfg.get("A"))
+        self.assertEqual({"b": "2"}, config.cfg.cfg.get("B"))
 
     def test_load_from_file_with_local(self):
         # The config data in the local file is loaded correctly
@@ -101,11 +99,11 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
             d=4'''
         local_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_LOCAL_CFG_PATH"] = local_path
-        cfg.cfg.clear()
-        cfg._load_from_file()
-        self.assertEqual(["C", "D"], sorted(cfg.cfg.keys()))
-        self.assertEqual({"c": "3", "d": "e"}, cfg.cfg.get("C"))
-        self.assertEqual({"d": "4"}, cfg.cfg.get("D"))
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
+        self.assertEqual(["C", "D"], sorted(config.cfg.cfg))
+        self.assertEqual({"c": "3", "d": "e"}, config.cfg.cfg.get("C"))
+        self.assertEqual({"d": "4"}, config.cfg.cfg.get("D"))
 
     def test_load_from_file_with_local_and_global(self):
         # The config data in the local and global files is loaded correctly
@@ -127,14 +125,14 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
             d=4'''
         local_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_LOCAL_CFG_PATH"] = local_path
-        cfg.cfg.clear()
-        cfg._load_from_file()
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
         self.assertEqual(["A", "B", "C", "D"],
-                         sorted(cfg.cfg.keys()))
-        self.assertEqual({"a": "1", "b": "c"}, cfg.cfg.get("A"))
-        self.assertEqual({"b": "2"}, cfg.cfg.get("B"))
-        self.assertEqual({"c": "3", "d": "e"}, cfg.cfg.get("C"))
-        self.assertEqual({"d": "4"}, cfg.cfg.get("D"))
+                         sorted(config.cfg.cfg))
+        self.assertEqual({"a": "1", "b": "c"}, config.cfg.cfg.get("A"))
+        self.assertEqual({"b": "2"}, config.cfg.cfg.get("B"))
+        self.assertEqual({"c": "3", "d": "e"}, config.cfg.cfg.get("C"))
+        self.assertEqual({"d": "4"}, config.cfg.cfg.get("D"))
 
     def test_load_from_file_with_local_overriding_global(self):
         # The config data in the local and global files is loaded correctly.
@@ -158,20 +156,20 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
             d=4'''
         local_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_LOCAL_CFG_PATH"] = local_path
-        cfg.cfg.clear()
-        cfg._load_from_file()
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
         self.assertEqual(["A", "B", "D"],
-                         sorted(cfg.cfg.keys()))
+                         sorted(config.cfg.cfg))
         self.assertEqual({"a": "2", "b": "c", "d": "e"},
-                         cfg.cfg.get("A"))
-        self.assertEqual({"b": "2"}, cfg.cfg.get("B"))
-        self.assertEqual({"c": "d-1", "d": "4"}, cfg.cfg.get("D"))
+                         config.cfg.cfg.get("A"))
+        self.assertEqual({"b": "2"}, config.cfg.cfg.get("B"))
+        self.assertEqual({"c": "d-1", "d": "4"}, config.cfg.cfg.get("D"))
 
     def test_get_with_unknown_section(self):
         # get() will return `None` for a section name that is not known
-        cfg.cfg.clear()
-        cfg._load_from_file()
-        self.assertTrue(cfg.get("Anything") is None)
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
+        self.assertTrue(config.cfg.get("Anything") is None)
 
     def test_get_with_known_section(self):
         # get() will correctly return configuration data for known sections
@@ -181,37 +179,37 @@ class ConfigTestCase(ConfigTestCase, unittest.TestCase):
             g=h'''
         site_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
-        cfg.cfg.clear()
-        cfg._load_from_file()
-        self.assertEqual({"f": "6", "g": "h"}, cfg.get("E"))
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
+        self.assertEqual({"f": "6", "g": "h"}, config.cfg.get("E"))
 
 
 class GetSectionTestCase(unittest.TestCase):
     """Tests the behaviour of utils.config.get_section()"""
 
     def tearDown(self):
-        cfg.cfg.clear()
-        cfg._load_from_file()
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
 
     def test_get_section_merely_calls_get_on_config_data_dict(self):
-        orig_method = cfg.get
+        orig_method = config.cfg.get
 
         def fake_get(section):
             self.assertEqual("f@k3", section)
             return {"this": "is", "so": "fake"}
 
-        cfg.get = fake_get
+        config.cfg.get = fake_get
         self.assertEqual({"this": "is", "so": "fake"},
                          config.get_section("f@k3"))
-        cfg.get = orig_method
+        config.cfg.get = orig_method
 
 
 class GetTestCase(unittest.TestCase):
     """Tests the behaviour of utils.config.get()"""
 
     def tearDown(self):
-        cfg.cfg.clear()
-        cfg._load_from_file()
+        config.cfg.cfg.clear()
+        config.cfg._load_from_file()
 
     def test_get_with_empty_section_data(self):
         # config.get() returns `None` if the section data dict is empty
@@ -254,21 +252,21 @@ class IsReadableTestCase(unittest.TestCase):
         # When no config file is present is_readable() returns `False`
         os.environ["OQ_SITE_CFG_PATH"] = "/this/does/not/exist.cfg"
         os.environ["OQ_LOCAL_CFG_PATH"] = "/nor/does/this.cfg"
-        self.assertFalse(cfg.is_readable())
+        self.assertFalse(config.cfg.is_readable())
 
     def test_is_readable_all_files_lack_permissions(self):
         # When we miss read permissions for all config files is_readable()
         # returns `False`
         os.environ["OQ_SITE_CFG_PATH"] = "/etc/sudoers"
         os.environ["OQ_LOCAL_CFG_PATH"] = "/etc/passwd-"
-        self.assertFalse(cfg.is_readable())
+        self.assertFalse(config.cfg.is_readable())
 
     def test_is_readable_one_plus_files_have_permissions(self):
         # When at least one config file is present and we have permission to
         # read it is_readable() returns `True`.
         os.environ["OQ_SITE_CFG_PATH"] = "/etc/passwd"
         os.environ["OQ_LOCAL_CFG_PATH"] = "/etc/passwd-"
-        self.assertTrue(cfg.is_readable())
+        self.assertTrue(config.cfg.is_readable())
 
 
 class FlagSetTestCase(ConfigTestCase, unittest.TestCase):
