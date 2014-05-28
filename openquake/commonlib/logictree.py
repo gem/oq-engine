@@ -1131,6 +1131,7 @@ class GMPELogicTree(BaseLogicTree):
 
 BranchTuple = namedtuple('Branch', 'id, uncertainty, weight, bset')
 
+
 class InvalidLogicTree(Exception):
     pass
 
@@ -1168,7 +1169,7 @@ class GsimLogicTree(object):
                 ','.join(self.filter_keys))
         self.values = collections.defaultdict(list)  # {fkey: uncertainties}
         self.branches = sorted(self._parse_lt())
-        if not self.branches:
+        if filter_keys and not self.branches:
             raise InvalidLogicTree(
                 'Could not find branches with attribute %r in %s' %
                 (self.branchset_filter, set(filter_keys)))
@@ -1180,8 +1181,9 @@ class GsimLogicTree(object):
         for branching_level in nrml.logicTree:
             for branchset in branching_level:
                 if branchset['uncertaintyType'] != 'gmpeModel':
-                    raise InvalidLogicTree('only uncertainties of type '
-                    '"gmpeModel" are allowed in gmpe logic tree')
+                    raise InvalidLogicTree(
+                        'only uncertainties of type '
+                        '"gmpeModel" are allowed in gmpe logic tree')
                 fkey = branchset.attrib.get(self.branchset_filter)
                 if fkey:
                     fkeys.append(fkey)
