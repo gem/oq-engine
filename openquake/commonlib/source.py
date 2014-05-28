@@ -34,14 +34,32 @@ from openquake.nrmllib.hazard import parsers as haz_parsers
 
 class SourceCollector(object):
     """
-    A collection of four dictionaries sources, num_ruptures,
+    Parse a NRML source model and return a SourceCollector instance.
+
+    :param str fname:
+        the full pathname of the source model file
+    :param apply_uncertainties:
+        a function modifying the sources
+    :param hc:
+        an object with attributes rupture_mesh_spacing,
+        width_of_mfd_bin, area_source_discretization, investigation_time
+
+    Populate four dictionaries sources, num_ruptures,
     min_mag, max_mag keyed by the tectonic region type.
     """
-    def __init__(self):
-        self.sources = collections.defaultdict(list)
-        self.num_ruptures = collections.defaultdict(int)
+    def __init__(self, fname, apply_uncertainties, hc):
+        self.fname = fname
+        self.apply_uncertainties = apply_uncertainties
+        self.hc = hc
+        self.sources = collections.defaultdict(list)  # trt -> sources
+        self.num_ruptures = collections.defaultdict(int)  # trt -> num
         self.min_mag = {}
         self.max_mag = {}
+        nrml_to_hazardlib = NrmlHazardlibConverter(hc)
+        for src_nrml in haz_parsers.SourceModelParser(fname).parse():
+            src = nrml_to_hazardlib(src_nrml)
+            apply_uncertainties(src)
+            self.update(src)
 
     def update(self, src):
         """
@@ -72,12 +90,14 @@ class SourceCollector(object):
         :param src_filter: a filtering function on sources
         """
         srcs = []
+        asd = self.hc.area_source_discretization
         for src in self.sources[trt]:
             if src_filter(src) is not None:
-                ruptures, weight = get_num_ruptures_weight(src)
-                self.num_ruptures[trt] += ruptures
-                srcs.append(src)
-                yield src, weight
+                for ss in split_source(src, asd):
+                    ruptures, weight = get_num_ruptures_weight(ss)
+                    self.num_ruptures[trt] += ruptures
+                    srcs.append(ss)
+                    yield ss, weight
         self.sources[trt] = srcs  # throw away unfiltered sources
 
     def sorted_trts(self):
@@ -603,31 +623,3 @@ def get_num_ruptures_weight(src):
     else:  # giving more than linear weight to other sources
         weight = num_ruptures ** 1.5
     return num_ruptures, weight
-
-
-def parse_source_model_smart(fname, apply_uncertainties, hc):
-    """
-    Parse a NRML source model and return a SourceCollector instance.
-    Notice that:
-
-    1) uncertainties are applied first
-    2) area sources are split into point sources
-    3) fault sources are split into smaller fault sources
-
-    :param str fname:
-        the full pathname of the source model file
-    :param apply_uncertainties:
-        a function modifying the sources
-    :param hc:
-        an object with attributes rupture_mesh_spacing,
-        width_of_mfd_bin, area_source_discretization, investigation_time
-    """
-    source_collector = SourceCollector()
-    nrml_to_hazardlib = NrmlHazardlibConverter(hc)
-    for src_nrml in haz_parsers.SourceModelParser(fname).parse():
-        src = nrml_to_hazardlib(src_nrml)
-        # the uncertainties must be applied to the original source
-        apply_uncertainties(src)
-        for s in split_source(src, hc.area_source_discretization):
-            source_collector.update(s)
-    return source_collector
