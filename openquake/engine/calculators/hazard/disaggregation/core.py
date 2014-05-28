@@ -307,7 +307,6 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         """
         Run the disaggregation phase after hazard curve finalization.
         """
-        super(DisaggHazardCalculator, self).post_execute()
         hc = self.hc
         tl = self.hc.truncation_level
         mag_bin_width = self.hc.mag_bin_width
@@ -367,7 +366,9 @@ class DisaggHazardCalculator(ClassicalHazardCalculator):
         res = oqm.aggregate_results(self.agg_result, {})
         self.save_disagg_results(res)  # dictionary key -> probability array
 
-    post_execute = full_disaggregation
+    def post_execute(self):
+        super(DisaggHazardCalculator, self).post_execute()
+        self.full_disaggregation()
 
     def agg_result(self, acc, result):
         """
