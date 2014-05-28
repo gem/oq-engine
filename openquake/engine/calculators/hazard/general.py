@@ -64,6 +64,19 @@ DILATION_ONE_METER = 1e-5
 WEIGHT = 10000
 
 
+def make_gsim_lt(hc, trts):
+    """
+    Helper to instantiate a GsimLogicTree object from the logic tree file.
+
+    :param hc: `openquake.engine.db.models.HazardCalculation` instance
+    :param trts: list of tectonic region type strings
+    """
+    fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
+    return logictree.GsimLogicTree(
+        fname, 'applyToTectonicRegionType', trts,
+        hc.number_of_logic_tree_samples, hc.random_seed)
+
+
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -116,13 +129,12 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary (sm_lt_path, trt) -> source blocks
-        self.source_blocks_per_ltpath = collections.defaultdict(list)
         self.source_max_weight = config.get('hazard', 'source_max_weight')
+        self.rupt_collectors = []
+        self.num_ruptures = collections.defaultdict(float)
 
     def clean_up(self, *args, **kwargs):
-        """Clean up dictionaries at the end"""
-        self.source_blocks_per_ltpath.clear()
+        pass
 
     @property
     def hc(self):
@@ -151,13 +163,12 @@ class BaseHazardCalculator(base.Calculator):
 
             # NB: the filtering of the sources by site is slow
             filtered = sc.gen_source_weight(trt, self.hc.sites_affected_by)
-            num_sources = 0
             for i, block in enumerate(split_on_max_weight(
                     filtered, self.source_max_weight)):
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
-                num_sources += len(block)
                 task_no += 1
 
+            num_sources = len(sc.sources[trt])
             logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s',
                           num_sources, ltpath, trt)
             trt_model.num_sources = num_sources
@@ -180,75 +191,61 @@ class BaseHazardCalculator(base.Calculator):
 
     def pre_execute(self):
         """
-        Initialize risk models, site model, sources and realizations
+        Initialize risk models, site model and sources
         """
         self.parse_risk_models()
         self.initialize_site_model()
         self.initialize_sources()
-        self.initialize_realizations()
 
-        # logging some info and setting self.imtls and self.zero
-        n_models = models.LtSourceModel.objects.filter(
-            hazard_calculation=self.hc).count()
-        logs.LOG.info('Found %d model(s)', n_models)
-
-        self.imtls = self.hc.intensity_measure_types_and_levels
-        if self.imtls:
-            n_rlz = models.LtRealization.objects.filter(
-                lt_model__hazard_calculation=self.hc).count()
-            n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
-                           ) / float(len(self.imtls))
-            n_sites = len(self.hc.site_collection)
-            self.zero = numpy.array(
-                [numpy.zeros((n_sites, len(self.imtls[imt])))
-                 for imt in sorted(self.imtls)])
-            total = n_rlz * len(self.imtls) * n_levels * n_sites
-            logs.LOG.info(
-                'Considering %d realization(s), %d IMT(s), '
-                '%d level(s) and %d sites, total %d', n_rlz,
-                len(self.imtls), n_levels, n_sites, total)
+    def post_execute(self):
+        """Inizialize realizations, except for the scenario calculator"""
+        if self.hc.calculation_mode != 'scenario':
+            self.initialize_realizations()
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
         Parse source models and validate source logic trees. It also
         filters the sources far away and apply uncertainties to the
-        relevant ones. As a side effect it populates the instance dictionary
-        `.source_blocks_per_ltpath`. Notice that sources are automatically
-        split.
+        relevant ones. Notice that sources are automatically split.
 
         :returns:
             a list with the number of sources for each source model
         """
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
-        sm_paths = distinct(self.source_model_lt.gen_value_weight_path())
+        sm_paths = distinct(self.source_model_lt)
         self.source_collector = {}  # lt_model_id -> sources
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
-            source_collector = source.parse_source_model_smart(
-                fname, self.source_model_lt.make_apply_uncertainties(smpath),
+            sc = source.SourceCollector(
+                fname,
+                self.source_model_lt.make_apply_uncertainties(smpath),
                 self.hc)
-            if not source_collector.sources:
+            if not sc.sources:
                 raise RuntimeError(
                     'Could not find sources close to the sites in %s '
                     '(maximum_distance=%s km)' %
                     (fname, self.hc.maximum_distance))
 
-            # save LtSourceModel
+            self.source_model_lt.tectonic_region_types.update(sc.sources)
             lt_model = models.LtSourceModel.objects.create(
-                hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i)
-            self.source_collector[lt_model.id] = source_collector
+                hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i,
+                sm_name=sm, weight=weight)
+            self.source_collector[lt_model.id] = sc
+
             # save TrtModels for each tectonic region type
-            for trt in source_collector.sorted_trts():
-                sources = source_collector.sources[trt]
+            trts = sc.sorted_trts()
+            gsims_by_trt = make_gsim_lt(self.hc, trts).values
+            for trt in trts:
                 models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
-                    num_sources=len(sources),
-                    num_ruptures=source_collector.num_ruptures[trt],
-                    min_mag=source_collector.min_mag[trt],
-                    max_mag=source_collector.max_mag[trt])
+                    num_sources=len(sc.sources),
+                    num_ruptures=sc.num_ruptures[trt],
+                    min_mag=sc.min_mag[trt],
+                    max_mag=sc.max_mag[trt],
+                    gsims=gsims_by_trt[trt])
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -339,9 +336,6 @@ class BaseHazardCalculator(base.Calculator):
         if site_model_inp:
             store_site_model(self.job, site_model_inp)
 
-    # Silencing 'Too many local variables'
-    # pylint: disable=R0914
-    @transaction.commit_on_success(using='job_init')
     def initialize_realizations(self):
         """
         Create records for the `hzrdr.lt_realization`.
@@ -353,34 +347,45 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        trts = set()
-        for lt_model in models.LtSourceModel.objects.filter(
-                hazard_calculation=self.hc):
-            trts.update(lt_model.get_tectonic_region_types())
+        if self.hc.number_of_logic_tree_samples:  # sampling
+            gsim_lt = iter(make_gsim_lt(
+                self.hc, self.source_model_lt.tectonic_region_types))
+            # build 1 gsim realization for each source model realization
 
-        self.gmpe_lt = logictree.GMPELogicTree.from_hc(self.hc, trts)
-        paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
-        for ordinal, (sm_ordinal, weight, sm_lt_path, gmpe_path) in enumerate(
-                paths):
+            def make_rlzs(lt_model):
+                return [gsim_lt.next()]
+        else:  # full enumeration
+            def make_rlzs(lt_model):
+                return list(
+                    make_gsim_lt(
+                        self.hc, lt_model.get_tectonic_region_types()))
+
+        for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
+            self._initialize_realizations(idx, lt_model, make_rlzs(lt_model))
+
+    @transaction.commit_on_success(using='job_init')
+    def _initialize_realizations(self, idx, lt_model, realizations):
+        # create the realizations for the given lt source model
+        trt_models = lt_model.trtmodel_set.filter(num_ruptures__gt=0)
+        if not trt_models:
+            return
+        rlz_ordinal = idx * len(realizations)
+        for gsim_by_trt, weight, lt_path in realizations:
+            if lt_model.weight is not None and weight is not None:
+                weight = lt_model.weight * weight
+            else:
+                weight = None
             rlz = models.LtRealization.objects.create(
-                lt_model=lt_model, gsim_lt_path=gmpe_path,
-                weight=weight, ordinal=ordinal)
-            gsim_dict = self.gmpe_lt.make_trt_to_gsim(gmpe_path)
-            for trt_model in models.TrtModel.objects.filter(
-                    lt_model=lt_model):
-                # populate the associations rlz <-> trt_model
-                gsim = gsim_dict[trt_model.tectonic_region_type]
+                lt_model=lt_model, gsim_lt_path=lt_path,
+                weight=weight, ordinal=rlz_ordinal)
+            rlz_ordinal += 1
+            for trt_model in trt_models:
+                # populate the association table rlz <-> trt_model
                 models.AssocLtRlzTrtModel.objects.create(
-                    rlz=rlz, trt_model=trt_model, gsim=gsim.__name__)
-        for trt_model in models.TrtModel.objects.filter(
-                lt_model__hazard_calculation=self.hc):
-            gsimset = set(art.gsim for art in
-                          models.AssocLtRlzTrtModel.objects.filter(
-                              trt_model=trt_model))
-            trt_model.gsims = sorted(gsimset)
-            trt_model.save()
+                    rlz=rlz, trt_model=trt_model,
+                    gsim=gsim_by_trt[trt_model.tectonic_region_type])
 
     def _get_outputs_for_export(self):
         """
