@@ -21,8 +21,6 @@
 import os
 import collections
 
-import numpy
-
 from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
 
@@ -59,9 +57,6 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
-
-# max weight used to build blocks of sources
-WEIGHT = 10000
 
 
 def make_gsim_lt(hc, trts):
@@ -133,9 +128,6 @@ class BaseHazardCalculator(base.Calculator):
         self.rupt_collectors = []
         self.num_ruptures = collections.defaultdict(float)
 
-    def clean_up(self, *args, **kwargs):
-        pass
-
     @property
     def hc(self):
         """
@@ -162,9 +154,9 @@ class BaseHazardCalculator(base.Calculator):
             sc = self.source_collector[trt_model.lt_model.id]
 
             # NB: the filtering of the sources by site is slow
-            filtered = sc.gen_source_weight(trt, self.hc.sites_affected_by)
-            for i, block in enumerate(split_on_max_weight(
-                    filtered, self.source_max_weight)):
+            source_blocks = sc.gen_blocks(trt, self.hc.sites_affected_by,
+                                          self.source_max_weight)
+            for block in source_blocks:
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
                 task_no += 1
 
@@ -180,6 +172,7 @@ class BaseHazardCalculator(base.Calculator):
         js.num_sources = [model.get_num_sources()
                           for model in models.LtSourceModel.objects.filter(
                               hazard_calculation=self.hc)]
+        js.num_sites = len(sitecol)
         js.save()
 
     def _get_realizations(self):
