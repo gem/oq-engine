@@ -23,13 +23,13 @@ import os
 import os.path
 import unittest
 
-from decimal import Decimal
-
 from openquake.nrmllib.parsers import SourceModelParser
 
 from openquake.commonlib import logictree
 from openquake.commonlib.source import NrmlHazardlibConverter
 from openquake.commonlib.general import deep_eq
+
+from openquake.engine.calculators.hazard.general import make_gsim_lt
 
 from openquake.engine.tests.utils import helpers
 
@@ -41,67 +41,23 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         job = helpers.get_job(cfg)
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(
             job.hazard_calculation)
-        self.gmpe_lt = logictree.GMPELogicTree.from_hc(
+        self.gmpe_lt = make_gsim_lt(
             job.hazard_calculation,
             ['Active Shallow Crust', 'Subduction Interface'])
 
     def test_sample_source_model(self):
-        [(sm_name, weight, branch_ids)] = self.source_model_lt.\
-            gen_value_weight_path()
+        [(sm_name, weight, branch_ids)] = self.source_model_lt
         self.assertEqual(sm_name, 'example-source-model.xml')
         self.assertIsNone(weight)
         self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
 
     def test_sample_gmpe(self):
-        [(gmpe_cls, weight, branch_ids)] = self.gmpe_lt.\
-            gen_value_weight_path()
-        self.assertEqual(gmpe_cls.__name__, 'ChiouYoungs2008')
+        [(value, weight, branch_ids)] = self.gmpe_lt
+        self.assertEqual(value,
+                         {'Subduction Interface': 'SadighEtAl1997',
+                          'Active Shallow Crust': 'ChiouYoungs2008'})
         self.assertIsNone(weight)
         self.assertEqual(('b2', 'b3'), branch_ids)
-
-    def test_enumerate_paths(self):
-        # testing full enumeration
-        self.source_model_lt.num_samples = 0
-        self.gmpe_lt.num_samples = 0
-        paths = logictree.enumerate_paths(self.source_model_lt, self.gmpe_lt)
-        ae = self.assertEqual
-        ae(paths.next(), (0, Decimal('0.02'),
-                          ('b1', 'b3', 'b6'), ('b1', 'b3')))
-        ae(paths.next(), (0, Decimal('0.02'),
-                          ('b1', 'b3', 'b6'), ('b2', 'b3')))
-        ae(paths.next(), (1, Decimal('0.06'),
-                          ('b1', 'b3', 'b7'), ('b1', 'b3')))
-        ae(paths.next(), (1, Decimal('0.06'),
-                          ('b1', 'b3', 'b7'), ('b2', 'b3')))
-        ae(paths.next(), (2, Decimal('0.02'),
-                          ('b1', 'b3', 'b8'), ('b1', 'b3')))
-        ae(paths.next(), (2, Decimal('0.02'),
-                          ('b1', 'b3', 'b8'), ('b2', 'b3')))
-        ae(paths.next(), (3, Decimal('0.06'),
-                          ('b1', 'b4', 'b6'), ('b1', 'b3')))
-        ae(paths.next(), (3, Decimal('0.06'),
-                          ('b1', 'b4', 'b6'), ('b2', 'b3')))
-        ae(paths.next(), (4, Decimal('0.18'),
-                          ('b1', 'b4', 'b7'), ('b1', 'b3')))
-        ae(paths.next(), (4, Decimal('0.18'),
-                          ('b1', 'b4', 'b7'), ('b2', 'b3')))
-        ae(paths.next(), (5, Decimal('0.06'),
-                          ('b1', 'b4', 'b8'), ('b1', 'b3')))
-        ae(paths.next(), (5, Decimal('0.06'),
-                          ('b1', 'b4', 'b8'), ('b2', 'b3')))
-        ae(paths.next(), (6, Decimal('0.02'),
-                          ('b1', 'b5', 'b6'), ('b1', 'b3')))
-        ae(paths.next(), (6, Decimal('0.02'),
-                          ('b1', 'b5', 'b6'), ('b2', 'b3')))
-        ae(paths.next(), (7, Decimal('0.06'),
-                          ('b1', 'b5', 'b7'), ('b1', 'b3')))
-        ae(paths.next(), (7, Decimal('0.06'),
-                          ('b1', 'b5', 'b7'), ('b2', 'b3')))
-        ae(paths.next(), (8, Decimal('0.02'),
-                          ('b1', 'b5', 'b8'), ('b1', 'b3')))
-        ae(paths.next(), (8, Decimal('0.02'),
-                          ('b1', 'b5', 'b8'), ('b2', 'b3')))
-        self.assertRaises(StopIteration, paths.next)
 
 
 class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
@@ -118,7 +74,7 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
 
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(
             job.hazard_calculation)
-        self.gmpe_lt = logictree.GMPELogicTree.from_hc(
+        self.gmpe_lt = make_gsim_lt(
             job.hazard_calculation,
             ['Active Shallow Crust', 'Subduction Interface'])
 
@@ -136,19 +92,6 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         self.assertEqual(self.uncertainties_applied,
                          [('maxMagGRRelative', 0.2),
                           ('bGRRelative', 0.1)])
-
-    def test_parse_gmpe_model_logictree_path(self):
-        from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
-        from openquake.hazardlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
-        gmpes = self.gmpe_lt.make_trt_to_gsim(['b2', 'b3'])
-        self.assertIs(gmpes.pop('Active Shallow Crust'), ChiouYoungs2008)
-        self.assertIs(gmpes.pop('Subduction Interface'), SadighEtAl1997)
-        self.assertEqual(gmpes, {})
-
-        gmpes = self.gmpe_lt.make_trt_to_gsim(['b1', 'b3'])
-        self.assertIs(gmpes.pop('Active Shallow Crust'), SadighEtAl1997)
-        self.assertIs(gmpes.pop('Subduction Interface'), SadighEtAl1997)
-        self.assertEqual(gmpes, {})
 
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
@@ -174,8 +117,7 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
             branch = nextbranch
         assert list(path) == []
 
-        [(sm_path, weight, branch_ids)] = source_model_lt. \
-            gen_value_weight_path()
+        [(sm_path, weight, branch_ids)] = source_model_lt
         branch_ids = list(branch_ids)
         self.assertEqual(expected_branch_ids, branch_ids)
         modify_source = source_model_lt.make_apply_uncertainties(branch_ids)

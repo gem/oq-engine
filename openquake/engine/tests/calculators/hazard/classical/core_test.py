@@ -24,7 +24,6 @@ from nose.plugins.attrib import attr
 from openquake.engine.calculators.hazard.classical import core
 from openquake.engine.db import models
 from openquake.engine.tests.utils import helpers
-from openquake.commonlib.general import WeightedSequence
 
 
 class ClassicalHazardCalculatorTestCase(unittest.TestCase):
@@ -47,8 +46,8 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.calc.initialize_sources()
         # there is a single model
         [collector] = self.calc.source_collector.values()
-        # after splitting and before filtering there are 694 sources
-        self.assertEqual(694, len(collector.sources.values()[0]))
+        # before filtering and splitting there are 118 sources
+        self.assertEqual(118, len(collector.sources.values()[0]))
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -86,7 +85,7 @@ store_site_model'
             self.assertEqual(0, store_sm_patch.call_count)
 
     def test_initialize_realizations_montecarlo(self):
-        # We need initalize sources first (read logic trees, parse sources,
+        # We need initialize sources first (read logic trees, parse sources,
         # etc.)
         self.calc.initialize_site_model()
         self.calc.initialize_sources()
@@ -96,6 +95,8 @@ store_site_model'
             lt_model__hazard_calculation=self.job.hazard_calculation.id)
         self.assertEqual(0, len(ltrs))
 
+        for args in self.calc.task_arg_gen():
+            pass
         self.calc.initialize_realizations()
 
         # We expect 2 logic tree realizations
@@ -114,9 +115,12 @@ store_site_model'
 
     def test_initialize_realizations_enumeration(self):
         self.calc.initialize_site_model()
-        self.calc.initialize_sources()
         # enumeration is triggered by zero value used as number of realizations
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
+        self.calc.initialize_sources()
+        for args in self.calc.task_arg_gen():
+            pass
+
         self.calc.initialize_realizations()
 
         [ltr] = models.LtRealization.objects.filter(
@@ -259,8 +263,6 @@ store_site_model'
 
         self.job.status = 'clean_up'
         self.job.save()
-        self.calc.clean_up()
-        self.assertEqual(0, len(self.calc.source_blocks_per_ltpath))
 
 
 def update_result_matrix(current, new):

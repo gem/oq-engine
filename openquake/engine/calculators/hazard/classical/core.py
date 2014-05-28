@@ -290,8 +290,17 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         `execute` phase.).
         """
         super(ClassicalHazardCalculator, self).pre_execute()
-        self.curves = {}  # {trt_model_id, gsim: curves_by_imt}
+        self.imtls = self.hc.intensity_measure_types_and_levels
+        n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
+                       ) / float(len(self.imtls))
+        n_sites = len(self.hc.site_collection)
+        self.zero = numpy.array([numpy.zeros((n_sites, len(self.imtls[imt])))
+                                 for imt in sorted(self.imtls)])
+        total = len(self.imtls) * n_levels * n_sites
+        logs.LOG.info('%d IMT(s), %d level(s) and %d sites, total %d',
+                      len(self.imtls), n_levels, n_sites, total)
 
+        self.curves = {}  # {trt_model_id, gsim: curves_by_imt}
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
@@ -391,7 +400,12 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
         self.curves = {}  # save memory for the post-processing phase
 
-    post_execute = save_hazard_curves
+    def post_execute(self):
+        """
+        Generate the realizations and save the hazard curves
+        """
+        super(ClassicalHazardCalculator, self).post_execute()
+        self.save_hazard_curves()
 
     def post_process(self):
         """
