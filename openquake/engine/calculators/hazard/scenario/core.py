@@ -179,5 +179,5 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         ses_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection=self.ses_coll.id)
         for task_no, ruptures in enumerate(
-                ses_ruptures, self.rupture_block_size):
+                block_splitter(ses_ruptures, self.rupture_block_size)):
             yield self.job.id, ruptures, self.sites, self.gmf.id, task_no
