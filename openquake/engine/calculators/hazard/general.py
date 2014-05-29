@@ -32,8 +32,7 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
-from openquake.commonlib.general import (
-    block_splitter, distinct, split_on_max_weight)
+from openquake.commonlib.general import block_splitter, distinct
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -155,7 +154,8 @@ class BaseHazardCalculator(base.Calculator):
 
             # NB: the filtering of the sources by site is slow
             source_blocks = sc.gen_blocks(trt, self.hc.sites_affected_by,
-                                          self.source_max_weight)
+                                          self.source_max_weight,
+                                          self.hc.area_source_discretization)
             for block in source_blocks:
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
                 task_no += 1
@@ -208,13 +208,18 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         sm_paths = distinct(self.source_model_lt)
+        nrml_to_hazardlib = source.NrmlHazardlibConverter(
+            self.hc.investigation_time,
+            self.hc.rupture_mesh_spacing,
+            self.hc.width_of_mfd_bin,
+            self.hc.area_source_discretization,
+        )
         self.source_collector = {}  # lt_model_id -> sources
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
-            sc = source.SourceCollector(
-                fname,
-                self.source_model_lt.make_apply_uncertainties(smpath),
-                self.hc)
+            apply_unc = self.source_model_lt.make_apply_uncertainties(smpath)
+            sc = source.SourceCollector.parse(
+                fname, nrml_to_hazardlib, apply_unc)
             if not sc.sources:
                 raise RuntimeError(
                     'Could not find sources close to the sites in %s '
