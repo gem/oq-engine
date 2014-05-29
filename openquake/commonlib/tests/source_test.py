@@ -57,7 +57,12 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         cls.rupture_mesh_spacing = 1  # km
         cls.width_of_mfd_bin = 1.  # for Truncated GR MFDs
         cls.area_source_discretization = 1.  # km
-        cls.nrml_to_hazardlib = source_input.NrmlHazardlibConverter(cls)
+        cls.nrml_to_hazardlib = source_input.NrmlHazardlibConverter(
+            investigation_time=50.,
+            rupture_mesh_spacing=1,  # km
+            width_of_mfd_bin=1.,  # for Truncated GR MFDs
+            area_source_discretization=1.,  # km
+        )
 
     @property
     def _expected_point(self):
