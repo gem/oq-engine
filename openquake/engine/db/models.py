@@ -1996,8 +1996,7 @@ class Gmf(djm.Model):
         """
         hc = self.output.oq_job.hazard_calculation
         correl_model = hc.get_correl_model()
-        gsims = [logictree.GSIM[art.gsim]() for art in
-                 AssocLtRlzTrtModel.objects.filter(rlz=self.lt_realization)]
+        gsims = self.lt_realization.get_gsim_instances()
         assert gsims, 'No GSIMs found for realization %d!' % \
             self.lt_realization.id  # look into hzdr.assoc_lt_rlz_trt_model
         imts = map(from_string, hc.intensity_measure_types)
@@ -2409,6 +2408,14 @@ class LtRealization(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"lt_realization'
         ordering = ['ordinal']
+
+    def get_gsim_instances(self):
+        """
+        Return the GSIM instances associated to the current realization
+        by looking at the association table.
+        """
+        return [logictree.GSIM[art.gsim]() for art in
+                AssocLtRlzTrtModel.objects.filter(rlz=self)]
 
 
 ## Tables in the 'riskr' schema.
