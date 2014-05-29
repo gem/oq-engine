@@ -17,6 +17,7 @@
 Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
+
 import numpy
 import scipy.stats
 
@@ -45,8 +46,8 @@ class GmfComputer(object):
         List of intensity measure type objects (see
         :mod:`openquake.hazardlib.imt`).
 
-    :param gsim:
-        Ground-shaking intensity model, instance of subclass of either
+    :param gsims:
+        Ground-shaking intensity models, instances of subclass of either
         :class:`~openquake.hazardlib.gsim.base.GMPE` or
         :class:`~openquake.hazardlib.gsim.base.IPE`.
 
@@ -60,28 +61,31 @@ class GmfComputer(object):
         case non-correlated ground motion fields are calculated.
         Correlation model is not used if ``truncation_level`` is zero.
     """
-    def __init__(self, rupture, sites, imts, gsim, truncation_level,
+    def __init__(self, rupture, sites, imts, gsims, truncation_level,
                  correlation_model=None):
+        assert sites and imts and gsims, (sites, imts, gsims)
         self.rupture = rupture
         self.sites = sites
         self.imts = imts
-        self.gsim = gsim
+        self.gsims = gsims
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
-        self.sctx, self.rctx, self.dctx = gsim.make_contexts(sites, rupture)
+        self.ctx = dict((gsim, gsim.make_contexts(sites, rupture))
+                        for gsim in gsims)
 
-    def _compute(self, seed, realizations):
+    def _compute(self, seed, gsim, realizations):
         # the method doing the real stuff; use compute instead
         if seed is not None:
             numpy.random.seed(seed)
         result = {}
+        sctx, rctx, dctx = self.ctx[gsim]
 
         if self.truncation_level == 0:
             assert self.correlation_model is None
             for imt in self.imts:
-                mean, _stddevs = self.gsim.get_mean_and_stddevs(
-                    self.sctx, self.rctx, self.dctx, imt, stddev_types=[])
-                mean = self.gsim.to_imt_unit_values(mean)
+                mean, _stddevs = gsim.get_mean_and_stddevs(
+                    sctx, rctx, dctx, imt, stddev_types=[])
+                mean = gsim.to_imt_unit_values(mean)
                 mean.shape += (1, )
                 mean = mean.repeat(realizations, axis=1)
                 result[imt] = mean
@@ -94,16 +98,16 @@ class GmfComputer(object):
                 - self.truncation_level, self.truncation_level)
 
         for imt in self.imts:
-            if self.gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == \
+            if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == \
                set([StdDev.TOTAL]):
                 # If the GSIM provides only total standard deviation, we need
-                # to compute only mean and total standard deviation at the sites
+                # to compute mean and total standard deviation at the sites
                 # of interest.
                 # In this case, we also assume no correlation model is used.
                 assert self.correlation_model is None
 
-                mean, [stddev_total] = self.gsim.get_mean_and_stddevs(
-                    self.sctx, self.rctx, self.dctx, imt, [StdDev.TOTAL]
+                mean, [stddev_total] = gsim.get_mean_and_stddevs(
+                    sctx, rctx, dctx, imt, [StdDev.TOTAL]
                 )
                 stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
                 mean = mean.reshape(mean.shape + (1, ))
@@ -111,11 +115,10 @@ class GmfComputer(object):
                 total_residual = stddev_total * distribution.rvs(
                     size=(len(self.sites), realizations)
                 )
-                gmf = self.gsim.to_imt_unit_values(mean + total_residual)
+                gmf = gsim.to_imt_unit_values(mean + total_residual)
             else:
-                mean, [stddev_inter, stddev_intra] = \
-                self.gsim.get_mean_and_stddevs(
-                    self.sctx, self.rctx, self.dctx, imt,
+                mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
+                    sctx, rctx, dctx, imt,
                     [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
                 )
                 stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
@@ -134,7 +137,7 @@ class GmfComputer(object):
                 inter_residual = stddev_inter * distribution.rvs(
                     size=realizations)
 
-                gmf = self.gsim.to_imt_unit_values(
+                gmf = gsim.to_imt_unit_values(
                     mean + intra_residual + inter_residual)
 
             result[imt] = gmf
@@ -153,8 +156,10 @@ class GmfComputer(object):
             ground shaking intensity for all sites in the collection.
         """
         # consider 1 realization, i.e. return column 0-th of the GMF arrays
-        return dict((imt, gmf[:, 0]) for imt, gmf in self._compute(
-            seed, realizations=1).iteritems())
+        return [dict(
+                (imt, gmf[:, 0]) for imt, gmf in self._compute(
+                    seed, gsim, realizations=1).iteritems())
+                for gsim in self.gsims]
 
 
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
@@ -214,8 +219,9 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                     for imt in imts)
     [(rupture, sites)] = ruptures_sites
 
-    result = GmfComputer(rupture, sites, imts, gsim, truncation_level,
-                         correlation_model)._compute(seed, realizations)
+    gc = GmfComputer(rupture, sites, imts, [gsim], truncation_level,
+                     correlation_model)
+    result = gc._compute(seed, gsim, realizations)
     for imt, gmf in result.iteritems():
         # makes sure the lenght of the arrays in output is the same as sites
         if rupture_site_filter is not filters.rupture_site_noop_filter:
