@@ -37,9 +37,8 @@ class EventBasedHazardTestCase(qa_utils.BaseQATestCase):
         'smlt=00|ses=0001|src=1-389|rup=002-01',
         'smlt=00|ses=0001|src=2-126|rup=001-01',
         'smlt=00|ses=0001|src=2-315|rup=002-01',
-        'smlt=00|ses=0001|src=24-29|rup=002-01',
         'smlt=00|ses=0001|src=2-52|rup=002-01',
-        'smlt=00|ses=0001|src=3-245|rup=001-01',
+        'smlt=00|ses=0001|src=3-255|rup=002-01'
     ]
     expected_gmfs = '''\
 GMFsPerSES(investigation_time=5.000000, stochastic_event_set_id=1,
@@ -52,15 +51,12 @@ GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-126
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-315|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0015655>
 <X=131.00000, Y= 40.10000, GMV=0.0016485>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=24-29|rup=002-01
-<X=131.00000, Y= 40.00000, GMV=0.0014012>
-<X=131.00000, Y= 40.10000, GMV=0.0018007>)
 GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=2-52|rup=002-01
 <X=131.00000, Y= 40.00000, GMV=0.0002431>
 <X=131.00000, Y= 40.10000, GMV=0.0001554>)
-GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-245|rup=001-01
-<X=131.00000, Y= 40.00000, GMV=0.0000697>
-<X=131.00000, Y= 40.10000, GMV=0.0001933>))'''
+GMF(imt=PGA sa_period=None sa_damping=None rupture_id=smlt=00|ses=0001|src=3-255|rup=002-01
+<X=131.00000, Y= 40.00000, GMV=0.0002826>
+<X=131.00000, Y= 40.10000, GMV=0.0004627>))'''
 
     @attr('qa', 'hazard', 'event_based')
     def test_4(self):
