@@ -220,11 +220,6 @@ class BaseHazardCalculator(base.Calculator):
             apply_unc = self.source_model_lt.make_apply_uncertainties(smpath)
             sc = source.SourceCollector.parse(
                 fname, nrml_to_hazardlib, apply_unc)
-            if not sc.sources:
-                raise RuntimeError(
-                    'Could not find sources close to the sites in %s '
-                    '(maximum_distance=%s km)' %
-                    (fname, self.hc.maximum_distance))
 
             self.source_model_lt.tectonic_region_types.update(sc.sources)
             lt_model = models.LtSourceModel.objects.create(
