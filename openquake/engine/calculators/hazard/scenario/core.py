@@ -19,7 +19,6 @@ Scenario calculator core functionality
 """
 import collections
 import random
-import numpy
 
 from openquake.nrmllib.hazard.parsers import RuptureModelParser
 
@@ -55,7 +54,6 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
     # SA(0.8) and SA(0.80) are considered the same
     imts = distinct(from_string(x) for x in hc.intensity_measure_types)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
-    realizations = 1  # one realization for each seed
     correlation_model = haz_general.get_correl_model(hc)
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
@@ -65,10 +63,10 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
     # NB: ses_ruptures a non-empty list produced by the block_splitter
     rupture = ses_ruptures[0].rupture  # ProbabilisticRupture instance
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
-        gmf = GmfComputer(rupture, sitecol, imts, gsim, hc.truncation_level,
+        gmf = GmfComputer(rupture, sitecol, imts, [gsim], hc.truncation_level,
                           correlation_model)
         for ses_rup in ses_ruptures:
-            gmf_dict = gmf.compute(ses_rup.seed)
+            [gmf_dict] = gmf.compute(ses_rup.seed)
             for imt in imts:
                 for site_id, gmv in zip(sitecol.sids, gmf_dict[imt]):
                     # float may be needed below to convert 1x1 matrices
