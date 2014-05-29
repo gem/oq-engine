@@ -201,7 +201,7 @@ def compute_and_save_gmfs(job_id, trt_model_id, rupture_data, task_no):
     """
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     params = dict(
-        correl_model=general.get_correl_model(hc),
+        correl_model=hc.get_correl_model(),
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
     imts = map(from_string, hc.intensity_measure_types)

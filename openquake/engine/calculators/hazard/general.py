@@ -21,7 +21,6 @@
 import os
 import collections
 
-from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
 
 # FIXME: one must import the engine before django to set DJANGO_SETTINGS_MODULE
@@ -91,28 +90,6 @@ def store_site_model(job, site_model_source):
                              job_id=job.id)
             for node in parser.parse()]
     return writer.CacheInserter.saveall(data)
-
-
-def get_correl_model(hc):
-    """
-    Helper function for constructing the appropriate correlation model.
-
-    :param hc:
-        A :class:`openquake.engine.db.models.HazardCalculation` instance.
-
-    :returns:
-        A correlation object. See :mod:`openquake.hazardlib.correlation` for
-        more info.
-    """
-    correl_model_cls = getattr(
-        correlation,
-        '%sCorrelationModel' % hc.ground_motion_correlation_model,
-        None)
-    if correl_model_cls is None:
-        # There's no correlation model for this calculation.
-        return None
-
-    return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
 class BaseHazardCalculator(base.Calculator):
