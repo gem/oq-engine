@@ -100,7 +100,7 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        self.source_max_weight = config.get('hazard', 'source_max_weight')
+        self.source_max_weight = int(config.get('hazard', 'source_max_weight'))
         self.rupt_collector = {}  # (trt_model_id, task_no) -> rupture_data
         self.num_ruptures = collections.defaultdict(float)
 
@@ -133,13 +133,16 @@ class BaseHazardCalculator(base.Calculator):
             source_blocks = sc.gen_blocks(trt, self.hc.sites_affected_by,
                                           self.source_max_weight,
                                           self.hc.area_source_discretization)
+            num_blocks = 0
             for block in source_blocks:
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
-                task_no += 1
+                num_blocks += 1
 
+            task_no += num_blocks
             num_sources = len(sc.sources[trt])
-            logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s',
-                          num_sources, ltpath, trt)
+            logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s, '
+                          'generated %d block(s)', num_sources, ltpath, trt,
+                          num_blocks)
             trt_model.num_sources = num_sources
             trt_model.num_ruptures = sc.num_ruptures[trt]
             trt_model.save()
@@ -197,11 +200,6 @@ class BaseHazardCalculator(base.Calculator):
             apply_unc = self.source_model_lt.make_apply_uncertainties(smpath)
             sc = source.SourceCollector.parse(
                 fname, nrml_to_hazardlib, apply_unc)
-            if not sc.sources:
-                raise RuntimeError(
-                    'Could not find sources close to the sites in %s '
-                    '(maximum_distance=%s km)' %
-                    (fname, self.hc.maximum_distance))
 
             self.source_model_lt.tectonic_region_types.update(sc.sources)
             lt_model = models.LtSourceModel.objects.create(
