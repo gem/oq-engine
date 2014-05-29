@@ -151,16 +151,17 @@ class GmfComputer(object):
         :param seed:
             the seed for the numpy random number generator
         :returns:
-            A list of dictionaries, one for each GSIM instance. Each
-            dictionary maps intensity measure type objects (same as in
-            parameter ``imts``) to numpy arrays of floats, representing
-            ground shaking intensity for all sites in the collection.
+            A dictionary (gsim_name, imt) -> ground motion values per each site
         """
-        # consider 1 realization, i.e. return column 0-th of the GMF arrays
-        return [dict(
-                (imt, gmf[:, 0]) for imt, gmf in self._compute(
-                    seed, gsim, realizations=1).iteritems())
-                for gsim in self.gsims]
+        gmf_by_gsim_imt = {}
+        for gsim in self.gsims:
+            gname = gsim.__class__.__name__
+            for imt, gmf in self._compute(
+                    seed, gsim, realizations=1).iteritems():
+                # consider 1 realization, i.e. return column 0-th of the gmf
+                gmf_by_gsim_imt[gname, imt] = \
+                    numpy.array(map(float, gmf[:, 0]), dtype=float)
+        return gmf_by_gsim_imt
 
 
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
