@@ -124,7 +124,7 @@ class BaseHazardCalculator(base.Calculator):
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
         self.source_max_weight = config.get('hazard', 'source_max_weight')
-        self.rupt_collectors = []
+        self.rupt_collector = {}  # (trt_model_id, task_no) -> rupture_data
         self.num_ruptures = collections.defaultdict(float)
 
     @property
