@@ -151,7 +151,8 @@ class GmfComputer(object):
         :param seed:
             the seed for the numpy random number generator
         :returns:
-            Dictionary mapping intensity measure type objects (same as in
+            A list of dictionaries, one for each GSIM instance. Each
+            dictionary maps intensity measure type objects (same as in
             parameter ``imts``) to numpy arrays of floats, representing
             ground shaking intensity for all sites in the collection.
         """
