@@ -253,12 +253,11 @@ class RuptureCollector(object):
         :param seed:
             an integer to be used as stochastic seed
         """
-        for gsim in self.gsims:
+        computer = gmf.GmfComputer(rupture, r_sites, self.imts, self.gsims,
+                                   self.params['truncation_level'],
+                                   self.params['correl_model'])
+        for gsim, gmf_dict in zip(self.gsims, computer.compute(rupture_seed)):
             gsim_name = gsim.__class__.__name__
-            computer = gmf.GmfComputer(rupture, r_sites, self.imts, gsim,
-                                       self.params['truncation_level'],
-                                       self.params['correl_model'])
-            gmf_dict = computer.compute(rupture_seed)
             for imt, gmvs in gmf_dict.iteritems():
                 for site_id, gmv in zip(r_sites.sids, gmvs):
                     # convert a 1x1 matrix into a float
