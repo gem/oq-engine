@@ -261,22 +261,17 @@ class GmfCalculator(object):
         :param seed:
             an integer to be used as stochastic seed
         """
-        for gsim in self.gsims:
-            gsim_name = gsim.__class__.__name__
-            computer = gmf.GmfComputer(rupture, r_sites, self.imts, gsim,
-                                       self.params['truncation_level'],
-                                       self.params['correl_model'])
-            for rupid, seed in rupid_seed_pairs:
-                gmf_dict = computer.compute(seed)
-                for imt, gmvs in gmf_dict.iteritems():
-                    for site_id, gmv in zip(r_sites.sids, gmvs):
-                        # convert a 1x1 matrix into a float
-                        gmv = float(gmv)
-                        if gmv:
-                            self.gmvs_per_site[
-                                gsim_name, imt, site_id].append(gmv)
-                            self.ruptures_per_site[
-                                gsim_name, imt, site_id].append(rupid)
+        computer = gmf.GmfComputer(rupture, r_sites, self.imts, self.gsims,
+                                   self.params['truncation_level'],
+                                   self.params['correl_model'])
+        for rupid, seed in rupid_seed_pairs:
+            for (gsim_name, imt), gmvs in computer.compute(seed).iteritems():
+                for site_id, gmv in zip(r_sites.sids, gmvs):
+                    if gmv:
+                        self.gmvs_per_site[
+                            gsim_name, imt, site_id].append(gmv)
+                        self.ruptures_per_site[
+                            gsim_name, imt, site_id].append(rupid)
 
     def save_gmfs(self, rlzs):
         """
@@ -334,8 +329,9 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         if not self.hc.ground_motion_fields:
             return  # do nothing
         rupture_data, trt_model_id, task_no = task_result
-        self.rupt_collector[trt_model_id, task_no] = rupture_data
-        self.num_ruptures[trt_model_id] += len(rupture_data)
+        if rupture_data:
+            self.rupt_collector[trt_model_id, task_no] = rupture_data
+            self.num_ruptures[trt_model_id] += len(rupture_data)
 
     @EnginePerformanceMonitor.monitor
     def post_execute(self):

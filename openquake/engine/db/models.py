@@ -2009,9 +2009,11 @@ class Gmf(djm.Model):
                     sites = hc.site_collection if rupture.site_indices is None\
                         else FilteredSiteCollection(
                             rupture.site_indices, hc.site_collection)
-                    for ses_rup, gmf_dict in calc_gmf(
-                            hc.truncation_level, correl_model, gsims, imts,
-                            sites, rupture, ses_ruptures):
+                    computer = calc.gmf.GmfComputer(
+                        rupture, sites, imts, gsims,
+                        hc.truncation_level, correl_model)
+                    for ses_rup in ses_ruptures:
+                        gmf_dict = computer.compute(ses_rup.seed)
                         for gsim, imt in gmf_dict:
                             gmvs = gmf_dict[gsim, imt]
                             im_type, sa_period, sa_damping = imt
@@ -2025,26 +2027,6 @@ class Gmf(djm.Model):
                                     ses_rup.tag, nodes))
                 if gmfset:
                     yield GmfSet(ses, gmfset)
-
-
-def calc_gmf(truncation_level, correl_model, gsims, imts, sites,
-             rupture, ses_ruptures):
-    """
-    Yields pairs (ses_rupture, {(gsim_str, imt_str): gmvs} for
-    each ses_rupture in the set associated to `rupture`.
-    """
-    computers = {gsim: calc.gmf.GmfComputer(
-                 rupture, sites, imts, gsim,
-                 truncation_level, correl_model)
-                 for gsim in gsims}
-    for ses_rup in ses_ruptures:
-        gmvs_per_gsim_imt = collections.defaultdict(dict)
-        for gsim, computer in computers.iteritems():
-            gsim_name = gsim.__class__.__name__
-            gmf_dict = computer.compute(ses_rup.seed)
-            for imt, gmvs in gmf_dict.iteritems():
-                gmvs_per_gsim_imt[gsim_name, imt] = map(float, gmvs)
-        yield ses_rup, gmvs_per_gsim_imt
 
 
 class GmfSet(object):
