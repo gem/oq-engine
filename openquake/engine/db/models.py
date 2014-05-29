@@ -34,18 +34,21 @@ from datetime import datetime
 import numpy
 from scipy import interpolate
 
-from django.db import transaction, connections
+from django.db import connections
 from django.core.exceptions import ObjectDoesNotExist
 
 from django.contrib.gis.db import models as djm
 from shapely import wkt
 
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import source, geo
+from openquake.hazardlib import source, geo, calc, correlation
 from openquake.hazardlib.calc import filters
-from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.site import (
+    Site, SiteCollection, FilteredSiteCollection)
 
 from openquake.commonlib.general import distinct
+from openquake.commonlib import logictree
+
 from openquake.engine.db import fields
 from openquake.engine import writer
 
@@ -620,6 +623,24 @@ class HazardCalculation(djm.Model):
         Get the site model filename for this calculation
         """
         return self.inputs.get('site_model')
+
+    def get_correl_model(self):
+        """
+        Helper function for constructing the appropriate correlation model.
+
+        :returns:
+            A correlation object. See :mod:`openquake.hazardlib.correlation`
+            for more info.
+        """
+        correl_model_cls = getattr(
+            correlation,
+            '%sCorrelationModel' % self.ground_motion_correlation_model,
+            None)
+        if correl_model_cls is None:
+            # There's no correlation model for this calculation.
+            return None
+
+        return correl_model_cls(**self.ground_motion_correlation_params)
 
     ## TODO: this could be implemented with a view, now that there is
     ## a site table
@@ -1244,6 +1265,7 @@ class Output(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"output'
+        ordering = ['id']
 
     def is_hazard_curve(self):
         return self.output_type in ['hazard_curve', 'hazard_curve_multi']
@@ -1882,7 +1904,7 @@ class Gmf(djm.Model):
     class Meta:
         db_table = 'hzrdr\".\"gmf'
 
-    # this part is tested in models_test:GmfsPerSesTestCase
+    # this part is tested in EventBasedExportTestCase
     def __iter__(self):
         """
         Get the ground motion fields per SES ("GMF set") for
@@ -1910,41 +1932,57 @@ class Gmf(djm.Model):
         If a SES does not generate any GMF, it is ignored.
         """
         hc = self.output.oq_job.hazard_calculation
+        correl_model = hc.get_correl_model()
+        gsims = [logictree.GSIM[art.gsim]() for art in
+                 AssocLtRlzTrtModel.objects.filter(rlz=self.lt_realization)]
+        assert gsims, 'No GSIMs found for realization %d!' % \
+            self.lt_realization.id  # look into hzdr.assoc_lt_rlz_trt_model
+        imts = map(from_string, hc.intensity_measure_types)
         for ses_coll in SESCollection.objects.filter(
                 output__oq_job=self.output.oq_job):
             for ses in ses_coll:
-                query = """\
-        SELECT imt, sa_period, sa_damping, tag,
-               array_agg(gmv) AS gmvs,
-               array_agg(ST_X(location::geometry)) AS xs,
-               array_agg(ST_Y(location::geometry)) AS ys
-        FROM (SELECT imt, sa_period, sa_damping,
-             unnest(rupture_ids) as rupture_id, location, unnest(gmvs) AS gmv
-           FROM hzrdr.gmf_data, hzrdi.hazard_site
-            WHERE site_id = hzrdi.hazard_site.id AND hazard_calculation_id=%s
-           AND gmf_id=%d) AS x, hzrdr.ses_rupture AS y,
-           hzrdr.probabilistic_rupture AS z
-        WHERE x.rupture_id = y.id AND y.rupture_id=z.id
-        AND y.ses_id=%d AND z.ses_collection_id=%d
-        GROUP BY imt, sa_period, sa_damping, tag
-        ORDER BY imt, sa_period, sa_damping, tag;
-        """ % (hc.id, self.id, ses.ordinal, ses_coll.id)
-                with transaction.commit_on_success(using='job_init'):
-                    curs = getcursor('job_init')
-                    curs.execute(query)
-                # a set of GMFs generate by the same SES, one per rupture
-                gmfset = []
-                for (imt, sa_period, sa_damping, rupture_tag, gmvs,
-                     xs, ys) in curs:
-                    # using a generator here saves a lot of memory
-                    nodes = (_GroundMotionFieldNode(gmv, _Point(x, y))
-                             for gmv, x, y in zip(gmvs, xs, ys))
-                    gmfset.append(
-                        _GroundMotionField(
-                            imt, sa_period, sa_damping, rupture_tag,
-                            nodes))
+                gmfset = []  # set of GMFs generate by the same SES
+                for rupture, ses_ruptures in itertools.groupby(
+                        ses, operator.attrgetter('rupture')):
+                    sites = hc.site_collection if rupture.site_indices is None\
+                        else FilteredSiteCollection(
+                            rupture.site_indices, hc.site_collection)
+                    for ses_rup, gmf_dict in calc_gmf(
+                            hc.truncation_level, correl_model, gsims, imts,
+                            sites, rupture, ses_ruptures):
+                        for gsim, imt in gmf_dict:
+                            gmvs = gmf_dict[gsim, imt]
+                            im_type, sa_period, sa_damping = imt
+                            # using a generator here saves a lot of memory
+                            nodes = (_GroundMotionFieldNode(gmv, _Point(x, y))
+                                     for gmv, x, y in
+                                     zip(gmvs, sites.lons, sites.lats))
+                            gmfset.append(
+                                _GroundMotionField(
+                                    im_type, sa_period, sa_damping,
+                                    ses_rup.tag, nodes))
                 if gmfset:
                     yield GmfSet(ses, gmfset)
+
+
+def calc_gmf(truncation_level, correl_model, gsims, imts, sites,
+             rupture, ses_ruptures):
+    """
+    Yields pairs (ses_rupture, {(gsim_str, imt_str): gmvs} for
+    each ses_rupture in the set associated to `rupture`.
+    """
+    computers = {gsim: calc.gmf.GmfComputer(
+                 rupture, sites, imts, gsim,
+                 truncation_level, correl_model)
+                 for gsim in gsims}
+    for ses_rup in ses_ruptures:
+        gmvs_per_gsim_imt = collections.defaultdict(dict)
+        for gsim, computer in computers.iteritems():
+            gsim_name = gsim.__class__.__name__
+            gmf_dict = computer.compute(ses_rup.seed)
+            for imt, gmvs in gmf_dict.iteritems():
+                gmvs_per_gsim_imt[gsim_name, imt] = map(float, gmvs)
+        yield ses_rup, gmvs_per_gsim_imt
 
 
 class GmfSet(object):
