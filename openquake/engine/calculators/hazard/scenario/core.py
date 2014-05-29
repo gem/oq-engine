@@ -54,7 +54,7 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
     # SA(0.8) and SA(0.80) are considered the same
     imts = distinct(from_string(x) for x in hc.intensity_measure_types)
     gsim = AVAILABLE_GSIMS[hc.gsim]()  # instantiate the GSIM class
-    correlation_model = haz_general.get_correl_model(hc)
+    correlation_model = hc.get_correl_model()
 
     cache = collections.defaultdict(list)  # {site_id, imt -> gmvs}
     inserter = writer.CacheInserter(models.GmfData, 1000)
