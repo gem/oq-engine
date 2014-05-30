@@ -112,12 +112,17 @@ class SourceCollector(object):
         """
         srcs = []
         for src in self.sources[trt]:
-            if src_filter(src) is not None:
+            sites = src_filter(src)
+            if sites is not None:
+                # distinguish PointSources from other sources
+                weight = 1 if isinstance(src, source.PointSource) else 10
+                # increase weight if the source affects more than 1000 sites
+                weight *= max(1, len(sites) / 1000.)
                 for ss in split_source(src, discr):
-                    ruptures, weight = get_num_ruptures_weight(ss)
-                    self.num_ruptures[trt] += ruptures
+                    num_ruptures = ss.count_ruptures()
+                    self.num_ruptures[trt] += num_ruptures
                     srcs.append(ss)
-                    yield ss, weight
+                    yield ss, weight * num_ruptures
         self.sources[trt] = srcs  # throw away unfiltered sources
 
     def gen_blocks(self, trt, src_filter, max_weight, discr):
@@ -644,24 +649,3 @@ def split_source(src, area_source_discretization):
             yield s
     else:  # characteristic sources are not split since they are small
         yield src
-
-
-def get_num_ruptures_weight(src):
-    """
-    Compute the weight of a source in a heuristic way. Various experiments show
-    that it should be a bit more than linear in the number of ruptures, except
-    for point sources.
-
-    :param src:
-        an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
-    :returns:
-        a pair (num_ruptures, weight)
-    """
-    num_ruptures = src.count_ruptures()
-    if isinstance(src, source.PointSource):
-        weight = num_ruptures
-    elif isinstance(src, source.CharacteristicFaultSource):
-        weight = num_ruptures * 50
-    else:  # giving more than linear weight to other sources
-        weight = num_ruptures ** 1.5
-    return num_ruptures, weight

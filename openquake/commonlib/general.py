@@ -45,9 +45,13 @@ class WeightedSequence(collections.MutableSequence):
         """
         return sum(ws_list, cls())
 
-    def __init__(self):
+    def __init__(self, seq=()):
+        """
+        param seq: a finite sequence of pairs (item, weight)
+        """
         self._seq = []
         self.weight = 0
+        self.extend(seq)
 
     def __getitem__(self, sliceobj):
         """
@@ -153,13 +157,15 @@ def split_on_max_weight(item_weight_pairs, max_weight):
      >>> list(split_on_max_weight(pairs, 3))
      [<WeightedSequence ['A', 'B'], weight=3>, <WeightedSequence ['D'], weight=4>, <WeightedSequence ['E'], weight=1>]
     """
-    ws = WeightedSequence()
+    ws = WeightedSequence([])
     for item, weight in item_weight_pairs:
-        if weight <= 0:  # ignore items with 0 weight
-            continue
-        if ws.weight + weight > max_weight:
-            new_ws = WeightedSequence()
-            new_ws.append((item, weight))
+        if weight < 0:  # error
+            raise ValueError('The item %r got a negative weight %s!' %
+                             (item, weight))
+        elif weight == 0:  # ignore items with 0 weight
+            pass
+        elif ws.weight + weight > max_weight:
+            new_ws = WeightedSequence([(item, weight)])
             if ws:
                 yield ws
             ws = new_ws
