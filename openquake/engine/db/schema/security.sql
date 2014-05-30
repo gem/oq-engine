@@ -116,7 +116,7 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job             TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_stats          TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.job_stats          TO oq_job_init;
 GRANT SELECT,INSERT,UPDATE ON uiapi.hazard_calculation TO oq_job_init;
-GRANT SELECT,INSERT        ON uiapi.risk_calculation   TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE ON uiapi.risk_calculation   TO oq_job_init;
 
 GRANT SELECT,INSERT,UPDATE ON uiapi.output             TO oq_job_init;
 GRANT SELECT,INSERT,DELETE ON uiapi.performance        TO oq_job_init;
