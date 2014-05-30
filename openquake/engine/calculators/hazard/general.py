@@ -136,9 +136,9 @@ class BaseHazardCalculator(base.Calculator):
             num_blocks = 0
             for block in source_blocks:
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
+                task_no += 1
                 num_blocks += 1
 
-            task_no += num_blocks
             num_sources = len(sc.sources[trt])
             logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s, '
                           'generated %d block(s)', num_sources, ltpath, trt,
