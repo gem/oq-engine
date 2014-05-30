@@ -64,12 +64,12 @@ class Pickled(object):
     :param obj: the object to pickle
     """
     def __init__(self, obj):
-        self.clsname = obj.__class__.__name__
+        self.objrepr = repr(obj)
         self.pik = cPickle.dumps(obj, cPickle.HIGHEST_PROTOCOL)
 
     def __repr__(self):
         """String representation of the pickled object"""
-        return '<Pickled %s %dK>' % (self.clsname, len(self) / 1024)
+        return '<Pickled %s %dK>' % (self.objrepr, len(self) / 1024)
 
     def __len__(self):
         """Length of the pickled bytestring"""

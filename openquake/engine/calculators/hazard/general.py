@@ -119,6 +119,12 @@ class BaseHazardCalculator(base.Calculator):
         Yielded results are of the form
         (job_id, site_collection, sources, trt_model_id, gsims, task_no).
         """
+        if self._task_args:
+            # the method was already called and the arguments generated
+            for args in self._task_args:
+                yield args
+            return
+
         sitecol = self.hc.site_collection
         trt_models = models.TrtModel.objects.filter(
             lt_model__hazard_calculation=self.hc)
@@ -135,7 +141,10 @@ class BaseHazardCalculator(base.Calculator):
                                           self.hc.area_source_discretization)
             num_blocks = 0
             for block in source_blocks:
-                yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
+                args = (self.job.id, sitecol, block,
+                        trt_model.id, gsims, task_no)
+                self._task_args.append(args)
+                yield args
                 task_no += 1
                 num_blocks += 1
 
@@ -336,7 +345,10 @@ class BaseHazardCalculator(base.Calculator):
         for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
-            self._initialize_realizations(idx, lt_model, make_rlzs(lt_model))
+            rlzs = make_rlzs(lt_model)
+            logs.LOG.info('Creating %d GMPE realization(s) for model %s, %s',
+                          len(rlzs), lt_model.sm_name, lt_model.sm_lt_path)
+            self._initialize_realizations(idx, lt_model, rlzs)
 
     @transaction.commit_on_success(using='job_init')
     def _initialize_realizations(self, idx, lt_model, realizations):
