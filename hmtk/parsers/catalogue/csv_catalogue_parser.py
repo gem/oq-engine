@@ -224,7 +224,6 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
 
 
 class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
-
     '''
     Writes GCMT catalogue to csv file
     '''
@@ -267,7 +266,7 @@ class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
             if cond:
                 output_catalogue.data[key] = []
         # Write the catalogue
-        for iloc in range(0, output_catalogue.get_number_tensors()):
+        for iloc in range(0, output_catalogue.get_number_events()):
             row_dict = {}
             for key in self.OUTPUT_LIST:
                 if len(output_catalogue.data[key]) > 0:

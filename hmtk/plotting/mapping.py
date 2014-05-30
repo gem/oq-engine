@@ -60,8 +60,8 @@ from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
 from hmtk.sources.area_source import mtkAreaSource
 from hmtk.sources.point_source import mtkPointSource
-#from obspy.imaging.beachball import Beach
-from hmtk.plotting.beachball import Beach
+from obspy.imaging.beachball import Beach
+#from hmtk.plotting.beachball import Beach
 from hmtk.sources.simple_fault_source import mtkSimpleFaultSource
 
 DEFAULT_SYMBOLOGY = [(-np.inf, 1., 'k.'), # M < 1
