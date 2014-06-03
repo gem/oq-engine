@@ -114,10 +114,7 @@ class SourceCollector(object):
         for src in self.sources[trt]:
             sites = src_filter(src)
             if sites is not None:
-                # distinguish PointSources from other sources
-                weight = 1 if isinstance(src, source.PointSource) else 10
-                # increase weight if the source affects more than 1000 sites
-                weight *= max(1, len(sites) / 1000.)
+                weight = 1. + len(sites) / 1000.
                 for ss in split_source(src, discr):
                     num_ruptures = ss.count_ruptures()
                     self.num_ruptures[trt] += num_ruptures
