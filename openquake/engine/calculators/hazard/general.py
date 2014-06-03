@@ -157,15 +157,17 @@ class BaseHazardCalculator(base.Calculator):
                                           self.source_max_weight,
                                           self.hc.area_source_discretization)
             num_blocks = 0
+            num_sources = 0
             for block in source_blocks:
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
                 num_blocks += 1
+                num_sources += len(block)
+                logs.LOG.progress('Filtered %d sources out of %d' %
+                                  sc.filtered_sources)
 
             task_no += num_blocks
-            num_sources = len(sc.sources[trt])
-            logs.LOG.info('Found %d relevant source(s) for %s, TRT=%s, '
-                          'generated %d block(s)', num_sources, ltpath, trt,
-                          num_blocks)
+            logs.LOG.progress('Generated %d block(s) for %s, TRT=%s',
+                              num_blocks, ltpath, trt)
             trt_model.num_sources = num_sources
             trt_model.num_ruptures = sc.num_ruptures[trt]
             trt_model.save()
