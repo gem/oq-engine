@@ -49,6 +49,8 @@ class SourceCollector(object):
         """
         :param str fname:
             the full pathname of the source model file
+        :param nrml_to_hazardlib:
+            :class:`openquake.commonlib.source.NrmlHazardlibConverter` instance
         :param apply_uncertainties:
             a function modifying the sources
         """
@@ -69,6 +71,7 @@ class SourceCollector(object):
         self.num_ruptures = ruptures_dict  # trt -> num
         self.min_mag = min_mag_dict
         self.max_mag = max_mag_dict
+        self.filtered_sources = (0, 0)  # (filtered, total)
 
     def split_by_trt(self):
         """
@@ -102,24 +105,25 @@ class SourceCollector(object):
             self.max_mag[trt] = max_mag
 
     def _gen_source_weight(self, trt, src_filter, discr):
-        """
-        Yield all the sources of a given tectonic region type, together
-        with their weight. As side effects populate the dictionary
-        `.num_ruptures` and throw away the unfiltered sources in `.sources`.
-
-        :param trt: tectonic region type
-        :param src_filter: a filtering function on sources
-        """
+        # yield all the sources of a given tectonic region type, together
+        # with their weight. As side effects populate the dictionary
+        # `.num_ruptures` and throw away the unfiltered sources in `.sources`.
         srcs = []
+        tot_sources = 0
         for src in self.sources[trt]:
             sites = src_filter(src)
             if sites is not None:
                 weight = 1. + len(sites) / 100.
                 for ss in split_source(src, discr):
+                    tot_sources += 1
                     num_ruptures = ss.count_ruptures()
                     self.num_ruptures[trt] += num_ruptures
                     srcs.append(ss)
                     yield ss, weight * num_ruptures
+                    self.filtered_sources = (len(srcs), tot_sources)
+            else:
+                tot_sources += 1
+
         self.sources[trt] = srcs  # throw away unfiltered sources
 
     def gen_blocks(self, trt, src_filter, max_weight, discr):
@@ -133,8 +137,11 @@ class SourceCollector(object):
         :param max_weight: the limit used to collect the sources
         :param discr: area source discretization
         """
+        n = len(self.sources[trt])
+        assert n, 'No sources for TRT=%s!' % trt
+        weight = max_weight * n / (n + 10000)
         return split_on_max_weight(
-            self._gen_source_weight(trt, src_filter, discr), max_weight)
+            self._gen_source_weight(trt, src_filter, discr), weight)
 
     def sorted_trts(self):
         """
