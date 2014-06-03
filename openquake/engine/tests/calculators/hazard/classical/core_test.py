@@ -96,7 +96,7 @@ store_site_model'
         self.assertEqual(0, len(ltrs))
 
         for args in self.calc.task_arg_gen():
-            pass
+            pass  # filter sources and save num_ruptures
         self.calc.initialize_realizations()
 
         # We expect 2 logic tree realizations
@@ -119,7 +119,7 @@ store_site_model'
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
         self.calc.initialize_sources()
         for args in self.calc.task_arg_gen():
-            pass
+            pass  # filter sources and save num_ruptures
 
         self.calc.initialize_realizations()
 
