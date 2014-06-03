@@ -63,12 +63,12 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
     # NB: ses_ruptures a non-empty list produced by the block_splitter
     rupture = ses_ruptures[0].rupture  # ProbabilisticRupture instance
     with EnginePerformanceMonitor('computing gmfs', job_id, gmfs):
-        gmf = GmfComputer(rupture, sitecol, imts, gsim, hc.truncation_level,
+        gmf = GmfComputer(rupture, sitecol, imts, [gsim], hc.truncation_level,
                           correlation_model)
         for ses_rup in ses_ruptures:
             gmf_dict = gmf.compute(ses_rup.seed)
-            for imt in imts:
-                for site_id, gmv in zip(sitecol.sids, gmf_dict[imt]):
+            for gname, imt in gmf_dict:
+                for site_id, gmv in zip(sitecol.sids, gmf_dict[gname, imt]):
                     # float may be needed below to convert 1x1 matrices
                     cache[site_id, imt].append((float(gmv), ses_rup.id))
 
