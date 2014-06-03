@@ -73,7 +73,9 @@ def do_event_based(risk_model, outputdict, params, monitor):
     stats_per_loss_type = risk_model.compute_stats(
         outputs_per_loss_type, params.quantiles, post_processing)
 
-    event_loss_table = {}  # (loss_type, out_id) -> loss
+    # NB: event_loss_table is a dictionary (loss_type, out_id) -> loss,
+    # out_id can be None, and it that case it stores the statistics
+    event_loss_table = {}
 
     # save outputs and stats and populate the event loss table
     for loss_type, outputs in outputs_per_loss_type.iteritems():
@@ -307,8 +309,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Updates the event loss table
         """
         newdict = acc.copy()
-        for key, counter in event_loss_table.iteritems():
-            newdict[key] = newdict[key] + counter
+        for (loss_type, out_id), counter in event_loss_table.iteritems():
+            newdict[loss_type, out_id] += counter
         return newdict
 
     def post_process(self):
