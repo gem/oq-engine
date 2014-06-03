@@ -253,21 +253,20 @@ class RuptureCollector(object):
         :param seed:
             an integer to be used as stochastic seed
         """
-        for gsim in self.gsims:
-            gsim_name = gsim.__class__.__name__
-            computer = gmf.GmfComputer(rupture, r_sites, self.imts, gsim,
-                                       self.params['truncation_level'],
-                                       self.params['correl_model'])
-            gmf_dict = computer.compute(rupture_seed)
-            for imt, gmvs in gmf_dict.iteritems():
-                for site_id, gmv in zip(r_sites.sids, gmvs):
-                    # convert a 1x1 matrix into a float
-                    gmv = float(gmv)
-                    if gmv:
-                        self.gmvs_per_site[
-                            gsim_name, imt, site_id].append(gmv)
-                        self.ruptures_per_site[
-                            gsim_name, imt, site_id].append(rupture_id)
+        computer = gmf.GmfComputer(rupture, r_sites, self.imts, self.gsims,
+                                   self.params['truncation_level'],
+                                   self.params['correl_model'])
+        gmf_dict = computer.compute(rupture_seed)
+        for gsim_name, imt in gmf_dict:
+            gmvs = gmf_dict[gsim_name, imt]
+            for site_id, gmv in zip(r_sites.sids, gmvs):
+                # convert a 1x1 matrix into a float
+                gmv = float(gmv)
+                if gmv:
+                    self.gmvs_per_site[
+                        gsim_name, imt, site_id].append(gmv)
+                    self.ruptures_per_site[
+                        gsim_name, imt, site_id].append(rupture_id)
 
     def save_gmfs(self):
         """
