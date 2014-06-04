@@ -193,22 +193,34 @@ def compute_ruptures(
 
 
 @tasks.oqtask
-def compute_and_save_gmfs(job_id, rupt_collector):
+def compute_and_save_gmfs(job_id, sids, rupt_collector):
     """
     :param int job_id:
         ID of the currently running job
+    :param sids:
+        numpy array of site IDs
     :param rupt_collector:
         an instance of `openquake.engine.calculators.hazard.event_based.core.RuptureCollector`
     """
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+
     with EnginePerformanceMonitor(
             'computing gmfs', job_id, compute_and_save_gmfs):
         for rupture_data in rupt_collector.rupture_data:
             rupt_collector.calc_gmf(*rupture_data)
+
     with EnginePerformanceMonitor(
             'saving gmfs', job_id, compute_and_save_gmfs):
         rupt_collector.save_gmfs()
 
+    if hc.hazard_curves_from_gmfs:
+        with EnginePerformanceMonitor(
+                'hazard curves from gmfs', job_id, compute_and_save_gmfs):
+            curves_by_gsim = rupt_collector.to_haz_curves(
+                sids, hc.investigation_time, hc.ses_per_logic_tree_path)
+            return curves_by_gsim, rupt_collector.trt_model_id, []
 
+            
 class RuptureCollector(object):
     """
     A class to store ruptures and then compute and save ground motion fields.
@@ -296,6 +308,26 @@ class RuptureCollector(object):
         self.ruptures_per_site.clear()
 
 
+    def to_haz_curves(self, sids, imls, invest_time, num_ses):
+        """
+        Convert the gmf into hazard curves (by gsim and imt)
+        """
+        gmf = collections.defaultdict(dict)
+        for (gsim, imt, site_id), gmvs in self.gmvs_per_site.iteritems():
+            gmf[gsim, imt][site_id] = post_processing.gmvs_to_haz_curve(
+                gmvs, imls, invest_time, num_ses * invest_time)
+
+        curves_by_gsim = []
+        for gsim in self.gsims:
+            curves_by_imt = []
+            for imt in self.imts:
+                curves_by_imt.append(numpy.array([gmf[gsim, imt].get(site_id, 0)
+                                                  for site_id in sids]))
+            curves_by_gsim.append((gsim, curves_by_imt))
+
+        return curves_by_gsim
+
+
 class EventBasedHazardCalculator(general.BaseHazardCalculator):
     """
     Probabilistic Event-Based hazard calculator. Computes stochastic event sets
@@ -355,8 +387,9 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 output_type='gmf')
             models.Gmf.objects.create(output=output, lt_realization=rlz)
         otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
+        sids = self.hc.site_collection.sids
         for rupt_collector in self.rupt_collectors:
-            otm.submit(self.job.id, rupt_collector)
+            otm.submit(self.job.id, sids, rupt_collector)
         otm.aggregate_results(lambda acc, x: None, None)
 
     def initialize_ses_db_records(self, lt_model):
