@@ -139,7 +139,7 @@ class SourceCollector(object):
         """
         n = len(self.sources[trt])
         assert n, 'No sources for TRT=%s!' % trt
-        weight = max_weight * n / (n + 10000)
+        weight = max_weight * n / (n + 20)
         return split_on_max_weight(
             self._gen_source_weight(trt, src_filter, discr), weight)
 

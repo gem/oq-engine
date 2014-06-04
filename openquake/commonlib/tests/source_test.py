@@ -19,6 +19,7 @@ import unittest
 
 from numpy.testing import assert_allclose
 
+from openquake.hazardlib import site
 from openquake.hazardlib import geo
 from openquake.hazardlib import mfd
 from openquake.hazardlib import pmf
@@ -511,3 +512,62 @@ class AreaToPointsTestCase(unittest.TestCase):
             actual[0].mfd.occurrence_rates,
             [1.10572802083e-05, 9.197044479166666e-06, 7.6497684375e-06,
              6.3627999999999995e-06, 5.292346875e-06])
+
+
+class SourceCollectorTestCase(unittest.TestCase):
+    SITES = [
+        site.Site(geo.Point(-121.0, 37.0), 0.1, True, 3, 4),
+        site.Site(geo.Point(-121.1, 37.0), 1, True, 3, 4),
+        site.Site(geo.Point(-121.0, -37.15), 2, True, 3, 4),
+        site.Site(geo.Point(-121.0, 37.49), 3, True, 3, 4),
+        site.Site(geo.Point(-121.0, -37.5), 4, True, 3, 4),
+    ]
+
+    def setUp(self):
+        self.nrml_to_hazardlib = source_input.NrmlHazardlibConverter(
+            investigation_time=50.,
+            rupture_mesh_spacing=1,  # km
+            width_of_mfd_bin=1.,  # for Truncated GR MFDs
+            area_source_discretization=1.)
+        self.sc = source_input.SourceCollector.parse(
+            MIXED_SRC_MODEL, self.nrml_to_hazardlib,
+            lambda src: None)
+        self.sitecol = site.SiteCollection(self.SITES)
+
+    def test_content(self):
+        self.assertEqual(self.sc.sorted_trts(),
+                         ['Stable Continental Crust', 'Subduction Interface',
+                          'Active Shallow Crust', 'Volcanic'])
+        self.assertEqual(self.sc.max_mag,
+                         {'Volcanic': 6.5, 'Subduction Interface': 6.5,
+                          'Stable Continental Crust': 6.5,
+                          'Active Shallow Crust': 6.95})
+        self.assertEqual(self.sc.min_mag,
+                         {'Volcanic': 5.0, 'Subduction Interface': 5.5,
+                          'Stable Continental Crust': 5.5,
+                          'Active Shallow Crust': 5.0})
+
+        source_ids = dict((trt, [s.source_id for s in self.sc.sources[trt]])
+                          for trt in self.sc.sorted_trts())
+        self.assertEqual(source_ids,
+                         {'Volcanic': ['5', '6', '7'],
+                          'Subduction Interface': ['4'],
+                          'Stable Continental Crust': ['2'],
+                          'Active Shallow Crust': ['1', '3']})
+        self.assertEqual(self.sc.num_ruptures,
+                         {})
+
+    def test_gen_blocks(self):
+        def src_filter(src):
+            if src.source_id in ('1', '5'):
+                return site.SiteCollection(self.SITES)
+
+        max_weight = 100
+        trt = 'Volcanic'
+        blocks = self.sc.gen_blocks(
+            trt, src_filter, max_weight,
+            self.nrml_to_hazardlib.area_source_discretization)
+        [seq] = list(blocks)
+        [src] = seq
+        self.assertEqual(src.source_id, '5')
+        self.assertEqual(seq.weight, 2.1)
