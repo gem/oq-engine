@@ -272,12 +272,10 @@ class RuptureCollector(object):
         """
         Helper method to save the computed GMF data to the database.
         """
+        # at saving time the realizations are available in the db
         rlzs = models.TrtModel.objects.get(
             pk=self.trt_model_id).get_rlzs_by_gsim()
         for gsim_name, imt, site_id in self.gmvs_per_site:
-            if not rlzs[gsim_name]:
-                logs.LOG.warn('No realizations for TrtModel=%d, GSIM=%s',
-                              self.trt_model_id, gsim_name)
             for rlz in rlzs[gsim_name]:
                 imt_name, sa_period, sa_damping = imt
                 inserter.add(models.GmfData(
@@ -318,9 +316,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             ss = [(src, rnd.randint(0, models.MAX_SINT_32))
                   for src in block]  # source, seed pairs
             yield job_id, sitecol, ss, lt_model, gsims, task_no
-
-        # now the source_blocks_per_ltpath dictionary can be cleared
-        self.source_blocks_per_ltpath.clear()
 
     def task_completed(self, rupturecollector):
         """

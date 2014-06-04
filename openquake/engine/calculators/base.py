@@ -58,14 +58,6 @@ class Calculator(object):
         """
         raise NotImplementedError
 
-    def concurrent_tasks(self):
-        """
-        Number of tasks to be in queue at any given time.
-
-        Subclasses must implement this.
-        """
-        raise NotImplementedError
-
     def parallelize(self, task_func, task_arg_gen, task_completed):
         """
         Given a callable and a task arg generator, build an argument list and
@@ -81,8 +73,9 @@ class Calculator(object):
         tasks are run sequentially in the current process.
         """
         oqm = tasks.OqTaskManager(task_func, logs.LOG.progress)
-        for args in task_arg_gen:
-            oqm.submit(*args)
+        with self.monitor('submitting %s' % task_func.__name__):
+            for args in task_arg_gen:
+                oqm.submit(*args)
         oqm.aggregate_results(lambda acc, val: task_completed(val), None)
 
     def task_completed(self, task_result):
