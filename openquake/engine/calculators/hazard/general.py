@@ -162,8 +162,8 @@ class BaseHazardCalculator(base.Calculator):
                 yield self.job.id, sitecol, block, trt_model.id, gsims, task_no
                 num_blocks += 1
                 num_sources += len(block)
-                logs.LOG.progress('Processing %d sources out of %d' %
-                                  sc.filtered_sources)
+                logs.LOG.info('Processing %d sources out of %d' %
+                              sc.filtered_sources)
 
             task_no += num_blocks
             logs.LOG.progress('Generated %d block(s) for %s, TRT=%s',
