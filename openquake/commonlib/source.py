@@ -21,35 +21,71 @@ from itertools import izip
 
 from shapely import wkt
 
-from openquake.hazardlib import geo
-from openquake.hazardlib import mfd
-from openquake.hazardlib import pmf
-from openquake.hazardlib import scalerel
-from openquake.hazardlib import source
+from openquake.hazardlib import geo, mfd, pmf, scalerel, source
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
-
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
-
-from openquake.commonlib.general import SequenceSplitter, ceil
-
-
-MAX_RUPTURES = 500  # if there are more ruptures, split the source
+from openquake.commonlib.general import split_on_max_weight
 
 
 class SourceCollector(object):
     """
-    A collection of four dictionaries source_weights, num_ruptures,
+    Parse a NRML source model and return a SourceCollector instance.
+
+    :param str fname:
+        the full pathname of the source model file
+    :param apply_uncertainties:
+        a function modifying the sources
+    :param hc:
+        an object with attributes rupture_mesh_spacing,
+        width_of_mfd_bin, area_source_discretization, investigation_time
+
+    Populate four dictionaries sources, num_ruptures,
     min_mag, max_mag keyed by the tectonic region type.
     """
-    def __init__(self):
-        self.source_weights = collections.defaultdict(list)
-        self.num_ruptures = collections.defaultdict(int)
-        self.min_mag = {}
-        self.max_mag = {}
+    @classmethod
+    def parse(cls, fname, nrml_to_hazardlib, apply_uncertainties):
+        """
+        :param str fname:
+            the full pathname of the source model file
+        :param nrml_to_hazardlib:
+            :class:`openquake.commonlib.source.NrmlHazardlibConverter` instance
+        :param apply_uncertainties:
+            a function modifying the sources
+        """
+        self = cls(collections.defaultdict(list),
+                   collections.defaultdict(int),
+                   {}, {})
+        self.fname = fname
+        for src_nrml in haz_parsers.SourceModelParser(fname).parse():
+            src = nrml_to_hazardlib(src_nrml)
+            apply_uncertainties(src)
+            self.update(src)
+        return self
 
-    def update(self, src, num_ruptures, weight):
+    def __init__(self, sources_dict, ruptures_dict, min_mag_dict, max_mag_dict,
+                 trt=None):
+        self.trt = trt
+        self.sources = sources_dict   # trt -> sources
+        self.num_ruptures = ruptures_dict  # trt -> num
+        self.min_mag = min_mag_dict
+        self.max_mag = max_mag_dict
+        self.filtered_sources = (0, 0)  # (filtered, total)
+
+    def split_by_trt(self):
+        """
+        Yields subcollectors, one for each tectonic region type
+        """
+        for trt in self.sorted_trts():
+            yield self.__class__(
+                {trt: self.sources[trt]},
+                {trt: self.num_ruptures[trt]},
+                {trt: self.min_mag[trt]},
+                {trt: self.max_mag[trt]},
+                trt)
+
+    def update(self, src):
         """
         Update the dictionaries sources, num_ruptures, min_mag, max_mag
         according to the given source.
@@ -60,8 +96,7 @@ class SourceCollector(object):
         """
         trt = src.tectonic_region_type
         min_mag, max_mag = src.mfd.get_min_max_mag()
-        self.source_weights[trt].append((src, weight))
-        self.num_ruptures[trt] += num_ruptures
+        self.sources[trt].append(src)
         prev_min_mag = self.min_mag.get(trt)
         if prev_min_mag is None or min_mag < prev_min_mag:
             self.min_mag[trt] = min_mag
@@ -69,41 +104,76 @@ class SourceCollector(object):
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag[trt] = max_mag
 
-    def split_blocks(self, nblocks):
-        """
-        Split the sources in blocks of similar weight. Yield tectonic
-        region type and blocks.
+    def _gen_source_weight(self, trt, src_filter, discr):
+        # yield all the sources of a given tectonic region type, together
+        # with their weight. As side effects populate the dictionary
+        # `.num_ruptures` and throw away the unfiltered sources in `.sources`.
+        srcs = []
+        tot_sources = 0
+        for src in self.sources[trt]:
+            sites = src_filter(src)
+            if sites is not None:
+                weight = 1. + len(sites) / 100.
+                for ss in split_source(src, discr):
+                    tot_sources += 1
+                    num_ruptures = ss.count_ruptures()
+                    self.num_ruptures[trt] += num_ruptures
+                    srcs.append(ss)
+                    yield ss, weight * num_ruptures
+                    self.filtered_sources = (len(srcs), tot_sources)
+            else:
+                tot_sources += 1
 
-        :param int nblocks: the maximum number of blocks to generate
+        self.sources[trt] = srcs  # throw away unfiltered sources
+
+    def gen_blocks(self, trt, src_filter, max_weight, discr):
         """
-        # nblocks / number of tectonic region types
-        ss = SequenceSplitter(ceil(nblocks, len(self.source_weights)))
-        for trt, source_weights in self.source_weights.iteritems():
-            yield trt, ss.split_on_max_weight(source_weights)
+        Filter the sources of the given tectonic region type,
+        split them and finally group them in blocks not exceeding
+        the maximum weight.
+
+        :param trt: tectonic region type
+        :param src_filter: a filtering function on sources
+        :param max_weight: the limit used to collect the sources
+        :param discr: area source discretization
+        """
+        n = len(self.sources[trt])
+        assert n, 'No sources for TRT=%s!' % trt
+        weight = max_weight * n / (n + 20)
+        return split_on_max_weight(
+            self._gen_source_weight(trt, src_filter, discr), weight)
 
     def sorted_trts(self):
         """
         Return the tectonic region types sorted per number of sources.
         """
         return [trt for (num, trt) in sorted(
-                (len(sw), trt) for (trt, sw) in self.source_weights.items())]
+                (len(s), trt) for (trt, s) in self.sources.items())]
 
 
 ## NB: this is a job for generic functions
 class NrmlHazardlibConverter(object):
     """
-    Converter from NRML objects to hazardlib objects
+    Converter from NRML objects to hazardlib objects. To be instantiated
+    with the following parameters:
+
+    :param float investigation_time:
+        investigation time parameter
+    :param float rupture_mesh_spacing:
+        rupture mesh spacing parameter
+    :param float width_of_mfd_bin:
+        width of mfd bin parameter
+    :param area_source_discretization:
+        area source discretization parameter
     """
-    def __init__(self, hc):
-        """
-        :param hc:
-            a HazardCalculation instance or in general any object with
-            attributes investigation_time, rupture_mesh_spacing,
-            area_source_discretization, width_of_mfd_bin
-        """
-        self.hc = hc
-        self.default_tom = PoissonTOM(hc.investigation_time) \
-            if hc.investigation_time else None  # None for scenario calculator
+    def __init__(self, investigation_time, rupture_mesh_spacing,
+                 width_of_mfd_bin, area_source_discretization):
+        self.investigation_time = investigation_time
+        self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.width_of_mfd_bin = width_of_mfd_bin
+        self.area_source_discretization = area_source_discretization
+        self.default_tom = PoissonTOM(investigation_time) \
+            if investigation_time else None  # None for scenario calculator
 
     def __call__(self, src):
         """
@@ -198,7 +268,7 @@ class NrmlHazardlibConverter(object):
             name=src.name,
             tectonic_region_type=src.trt,
             mfd=mf_dist,
-            rupture_mesh_spacing=self.hc.rupture_mesh_spacing,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
             rupture_aspect_ratio=src.rupt_aspect_ratio,
             upper_seismogenic_depth=src.geometry.upper_seismo_depth,
@@ -247,14 +317,14 @@ class NrmlHazardlibConverter(object):
             name=src.name,
             tectonic_region_type=src.trt,
             mfd=mf_dist,
-            rupture_mesh_spacing=self.hc.rupture_mesh_spacing,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
             rupture_aspect_ratio=src.rupt_aspect_ratio,
             upper_seismogenic_depth=src.geometry.upper_seismo_depth,
             lower_seismogenic_depth=src.geometry.lower_seismo_depth,
             nodal_plane_distribution=npd, hypocenter_distribution=hd,
             polygon=hazardlib_polygon,
-            area_discretization=self.hc.area_source_discretization,
+            area_discretization=self.area_source_discretization,
             temporal_occurrence_model=self.default_tom,
         )
 
@@ -282,7 +352,7 @@ class NrmlHazardlibConverter(object):
             name=src.name,
             tectonic_region_type=src.trt,
             mfd=mf_dist,
-            rupture_mesh_spacing=self.hc.rupture_mesh_spacing,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
             rupture_aspect_ratio=src.rupt_aspect_ratio,
             upper_seismogenic_depth=src.geometry.upper_seismo_depth,
@@ -326,7 +396,7 @@ class NrmlHazardlibConverter(object):
             name=src.name,
             tectonic_region_type=src.trt,
             mfd=mf_dist,
-            rupture_mesh_spacing=self.hc.rupture_mesh_spacing,
+            rupture_mesh_spacing=self.rupture_mesh_spacing,
             magnitude_scaling_relationship=msr,
             rupture_aspect_ratio=src.rupt_aspect_ratio,
             edges=edges,
@@ -366,7 +436,7 @@ class NrmlHazardlibConverter(object):
                 src.surface.upper_seismo_depth,
                 src.surface.lower_seismo_depth,
                 src.surface.dip,
-                self.hc.rupture_mesh_spacing,
+                self.rupture_mesh_spacing,
             )
         elif isinstance(src.surface, nrml_models.ComplexFaultGeometry):
             edges_wkt = []
@@ -382,13 +452,13 @@ class NrmlHazardlibConverter(object):
                 edges.append(line)
 
             surface = geo.ComplexFaultSurface.from_fault_data(
-                edges, self.hc.rupture_mesh_spacing)
+                edges, self.rupture_mesh_spacing)
         else:
             # A collection of planar surfaces
             planar_surfaces = []
             for planar_surface in src.surface:
                 kwargs = planar_surface.__dict__
-                kwargs.update(dict(mesh_spacing=self.hc.rupture_mesh_spacing))
+                kwargs.update(dict(mesh_spacing=self.rupture_mesh_spacing))
 
                 planar_surfaces.append(geo.PlanarSurface(**kwargs))
 
@@ -423,7 +493,7 @@ class NrmlHazardlibConverter(object):
 
         surface = geo.SimpleFaultSurface.from_fault_data(
             fault_trace, geom.upper_seismo_depth, geom.lower_seismo_depth,
-            geom.dip, self.hc.rupture_mesh_spacing)
+            geom.dip, self.rupture_mesh_spacing)
 
         rupture = HazardlibRupture(
             mag=src.magnitude, rake=src.rake,
@@ -457,7 +527,7 @@ class NrmlHazardlibConverter(object):
             edges.append(line)
 
         surface = geo.ComplexFaultSurface.from_fault_data(
-            edges, self.hc.rupture_mesh_spacing)
+            edges, self.rupture_mesh_spacing)
 
         rupture = HazardlibRupture(
             mag=src.magnitude, rake=src.rake,
@@ -476,7 +546,7 @@ class NrmlHazardlibConverter(object):
             The HazardLib representation of the MFD. See
             :mod:`openquake.hazardlib.mfd`.
         """
-        bin_width = self.hc.width_of_mfd_bin
+        bin_width = self.width_of_mfd_bin
         if isinstance(src_mfd, nrml_models.TGRMFD):
             assert bin_width is not None
             return mfd.TruncatedGRMFD(
@@ -583,60 +653,3 @@ def split_source(src, area_source_discretization):
             yield s
     else:  # characteristic sources are not split since they are small
         yield src
-
-
-def get_num_ruptures_weight(src):
-    """
-    Compute the weight of a source in a heuristic way. Various experiments show
-    that it should be a bit more than linear in the number of ruptures, except
-    for point sources.
-
-    :param src:
-        an instance of :class:`openquake.hazardlib.source.base.SeismicSource`
-    :returns:
-        a pair (num_ruptures, weight)
-    """
-    num_ruptures = src.count_ruptures()
-    if isinstance(src, source.PointSource):
-        weight = num_ruptures
-    elif isinstance(src, source.CharacteristicFaultSource):
-        weight = num_ruptures * 50
-    else:  # giving more than linear weight to other sources
-        weight = num_ruptures ** 1.5
-    return num_ruptures, weight
-
-
-def parse_source_model_smart(fname, is_relevant, apply_uncertainties, hc):
-    """
-    Parse a NRML source model and return a SourceCollector instance.
-    Notice that:
-
-    1) uncertainties are applied first
-    2) the filter `is_relevant` is applied second
-    3) at the end area sources are splitted into point sources.
-
-    :param str fname:
-        the full pathname of the source model file
-    :param is_relevant:
-         a filter function on sources
-    :param apply_uncertainties:
-        a function modifying the sources
-    :param hc:
-        an object with attributes rupture_mesh_spacing,
-        width_of_mfd_bin, area_source_discretization, investigation_time
-    """
-    source_collector = SourceCollector()
-    nrml_to_hazardlib = NrmlHazardlibConverter(hc)
-    for src_nrml in haz_parsers.SourceModelParser(fname).parse():
-        src = nrml_to_hazardlib(src_nrml)
-        # the uncertainties must be applied to the original source
-        apply_uncertainties(src)
-        if not is_relevant(src):
-            continue
-        num_ruptures, weight = get_num_ruptures_weight(src)
-        if num_ruptures > MAX_RUPTURES:
-            for s in split_source(src, hc.area_source_discretization):
-                source_collector.update(s, *get_num_ruptures_weight(s))
-        else:
-            source_collector.update(src, num_ruptures, weight)
-    return source_collector

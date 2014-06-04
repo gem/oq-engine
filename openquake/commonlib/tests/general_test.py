@@ -20,13 +20,12 @@
 Test related to code in openquake/utils/general.py
 """
 
-
 import unittest
 
-from openquake.commonlib.general import \
-    block_splitter, SequenceSplitter
+from openquake.commonlib.general import block_splitter, split_on_max_weight
 
-class SequenceSplitterTestCase(unittest.TestCase):
+
+class BlockSplitterTestCase(unittest.TestCase):
     """Tests for :function:`openquake.commonlib.general.block_splitter`."""
 
     DATA = range(10)
@@ -84,10 +83,8 @@ class SequenceSplitterTestCase(unittest.TestCase):
         actual = [x for x in block_splitter(data, 3)]
         self.assertEqual(expected, actual)
 
-    def test_weighted_block_splitter(self):
-        # try to generate 4 blocks
-        split_weight = SequenceSplitter(4).split_on_max_weight
-        blocks = split_weight(
+    def test_split_on_max_weight(self):
+        blocks = list(split_on_max_weight(
             [('a', 11), ('b', 10), ('c', 100), ('d', 15), ('e', 20),
-             ('f', 5), ('g', 30), ('h', 17), ('i', 25)])
+             ('f', 5), ('g', 30), ('h', 17), ('i', 25)], 50))
         self.assertEqual(repr(blocks), "[<WeightedSequence ['a', 'b'], weight=21>, <WeightedSequence ['c'], weight=100>, <WeightedSequence ['d', 'e', 'f'], weight=40>, <WeightedSequence ['g', 'h'], weight=47>, <WeightedSequence ['i'], weight=25>]")

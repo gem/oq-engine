@@ -22,7 +22,6 @@ Utility functions of general interest.
 """
 
 import math
-import cPickle
 import collections
 
 import numpy
@@ -46,9 +45,13 @@ class WeightedSequence(collections.MutableSequence):
         """
         return sum(ws_list, cls())
 
-    def __init__(self):
+    def __init__(self, seq=()):
+        """
+        param seq: a finite sequence of pairs (item, weight)
+        """
         self._seq = []
         self.weight = 0
+        self.extend(seq)
 
     def __getitem__(self, sliceobj):
         """
@@ -105,6 +108,7 @@ class WeightedSequence(collections.MutableSequence):
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
 
+
 def distinct(keys):
     """
     Return the distinct keys in order.
@@ -138,64 +142,37 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-class SequenceSplitter(object):
+def split_on_max_weight(item_weight_pairs, max_weight):
     """
-    A splitter object with methods .split (to split regular sequences)
-    and split_on_max_weight (to split sequences of pairs [(item, weight),...])
-    At initialization time you must pass a parameter num_blocks, i.e. the
-    number of blocks that should be generated. If you also pass a
-    max_block_size parameter, the grouping procedure will make sure
-    that the blocks never exceed it, so more blocks could be generated.
+    :param item_weight_pairs: an iterator of pairs (item, weight)
+    :param max_weight: the max weight to split on
+
+    Group together the pairs until the total weight exceeds the
+    `max_weight` and yield `WeightedSequence` instances. Items
+    with weight zero are ignored.
+
+    For instance
+
+     >>> pairs = [('A', 1), ('B', 2), ('C', 0), ('D', 4), ('E', 1)]
+     >>> list(split_on_max_weight(pairs, 3))
+     [<WeightedSequence ['A', 'B'], weight=3>, <WeightedSequence ['D'], weight=4>, <WeightedSequence ['E'], weight=1>]
     """
-    def __init__(self, num_blocks, max_block_size=None):
-        """
-        :param int num_blocks:
-            the suggested number of blocks to generate
-        :param int max_block_size:
-            if not None, the blocks cannot exceed this value, at the cost of
-            generating more blocks than specified in num_blocks.
-        """
-        assert num_blocks > 0, num_blocks
-        assert max_block_size is None or max_block_size >= 1, max_block_size
-        self.num_blocks = num_blocks
-        self.max_block_size = max_block_size
-        self.max_weight = None
-
-    def split_on_max_weight(self, item_weight_sequence):
-        """
-        Try to split a sequence of pairs (item, weight) in ``num_blocks``
-        blocks. Return a list of :class:
-        `openquake.commonlib.general.WeightedSequence` objects.
-        """
-        return list(self._split_on_max_weight(item_weight_sequence))
-
-    def split(self, sequence):
-        """
-        Split a sequence in ``num_blocks`` blocks. Return a list
-        of :class:`openquake.commonlib.general.WeightedSequence` objects.
-        """
-        return self.split_on_max_weight([(item, 1) for item in sequence])
-
-    def _split_on_max_weight(self, sequence):
-        # doing the real work here
-        total_weight = float(sum(item[1] for item in sequence))
-        self.max_weight = ceil(total_weight, self.num_blocks)
-        ws = WeightedSequence()
-        for item, weight in sequence:
-            if weight <= 0:  # ignore items with 0 weight
-                continue
-            ws_long = self.max_block_size and len(ws) > self.max_block_size
-            if (ws.weight + weight > self.max_weight or ws_long):
-                # would go above the max
-                new_ws = WeightedSequence()
-                new_ws.append((item, weight))
-                if ws:
-                    yield ws
-                ws = new_ws
-            else:
-                ws.append((item, weight))
-        if ws:
-            yield ws
+    ws = WeightedSequence([])
+    for item, weight in item_weight_pairs:
+        if weight < 0:  # error
+            raise ValueError('The item %r got a negative weight %s!' %
+                             (item, weight))
+        elif weight == 0:  # ignore items with 0 weight
+            pass
+        elif ws.weight + weight > max_weight:
+            new_ws = WeightedSequence([(item, weight)])
+            if ws:
+                yield ws
+            ws = new_ws
+        else:
+            ws.append((item, weight))
+    if ws:
+        yield ws
 
 
 def block_splitter(data, block_size):
@@ -319,4 +296,3 @@ def _deep_eq(a, b, decimal, exclude=None):
             numpy.testing.assert_almost_equal(a, b, decimal=decimal)
         else:
             assert a == b, "%s != %s" % (a, b)
-
