@@ -565,8 +565,9 @@ class SourceCollectorTestCase(unittest.TestCase):
         max_weight = 100
         trt = 'Volcanic'
         blocks = self.sc.gen_blocks(
-            trt, src_filter, max_weight,
-            self.nrml_to_hazardlib.area_source_discretization)
+            src_filter, max_weight,
+            self.nrml_to_hazardlib.area_source_discretization,
+            trt)
         [seq] = list(blocks)
         [src] = seq
         self.assertEqual(src.source_id, '5')

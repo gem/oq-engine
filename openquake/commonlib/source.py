@@ -45,14 +45,15 @@ class SourceCollector(object):
     min_mag, max_mag keyed by the tectonic region type.
     """
     @classmethod
-    def parse(cls, fname, nrml_to_hazardlib, apply_uncertainties):
+    def parse(cls, fname, nrml_to_hazardlib,
+              apply_uncertainties=lambda src: None):
         """
         :param str fname:
             the full pathname of the source model file
         :param nrml_to_hazardlib:
             :class:`openquake.commonlib.source.NrmlHazardlibConverter` instance
         :param apply_uncertainties:
-            a function modifying the sources
+            a function modifying the sources (or do nothing)
         """
         self = cls(collections.defaultdict(list),
                    collections.defaultdict(int),
@@ -73,17 +74,29 @@ class SourceCollector(object):
         self.max_mag = max_mag_dict
         self.filtered_sources = (0, 0)  # (filtered, total)
 
+    def get_sources(self, trt=None):
+        """
+        Return a list of sources for the given tectonic region type
+
+        :param str trt: tectonic region type
+        """
+        return self.sources[trt or self.trt]
+
     def split_by_trt(self):
         """
-        Yields subcollectors, one for each tectonic region type
+        Return subcollectors, one for each tectonic region type, in order
+        by number of sources.
         """
+        collectors = []
         for trt in self.sorted_trts():
-            yield self.__class__(
-                {trt: self.sources[trt]},
-                {trt: self.num_ruptures[trt]},
-                {trt: self.min_mag[trt]},
-                {trt: self.max_mag[trt]},
-                trt)
+            collectors.append(
+                self.__class__(
+                    {trt: self.sources[trt]},
+                    {trt: self.num_ruptures[trt]},
+                    {trt: self.min_mag[trt]},
+                    {trt: self.max_mag[trt]},
+                    trt))
+        return collectors
 
     def update(self, src):
         """
@@ -126,7 +139,7 @@ class SourceCollector(object):
 
         self.sources[trt] = srcs  # throw away unfiltered sources
 
-    def gen_blocks(self, trt, src_filter, max_weight, discr):
+    def gen_blocks(self, src_filter, max_weight, discr, trt=None):
         """
         Filter the sources of the given tectonic region type,
         split them and finally group them in blocks not exceeding
@@ -137,6 +150,7 @@ class SourceCollector(object):
         :param max_weight: the limit used to collect the sources
         :param discr: area source discretization
         """
+        trt = trt or self.trt
         n = len(self.sources[trt])
         assert n, 'No sources for TRT=%s!' % trt
         weight = max_weight * n / (n + 20)
@@ -149,6 +163,12 @@ class SourceCollector(object):
         """
         return [trt for (num, trt) in sorted(
                 (len(s), trt) for (trt, s) in self.sources.items())]
+
+    def __repr__(self):
+        trts = ', '.join(self.sorted_trts())
+        num_sources = sum(len(s) for s in self.sources.values())
+        return '<%s TRT=%s, %d sources>' % (self.__class__.__name__,
+                                            trts, num_sources)
 
 
 ## NB: this is a job for generic functions
