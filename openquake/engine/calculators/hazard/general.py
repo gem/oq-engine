@@ -156,8 +156,7 @@ class BaseHazardCalculator(base.Calculator):
             source_blocks = sc.gen_blocks(
                 self.hc.sites_affected_by,
                 self.source_max_weight,
-                self.hc.area_source_discretization,
-                trt)
+                self.hc.area_source_discretization)
             num_blocks = 0
             num_sources = 0
             for block in source_blocks:
