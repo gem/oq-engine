@@ -150,12 +150,14 @@ class BaseHazardCalculator(base.Calculator):
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
             trt = trt_model.tectonic_region_type
             gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
-            sc = self.source_collector[trt_model.lt_model.id]
+            sc = self.source_collector[trt_model.id]
 
             # NB: the filtering of the sources by site is slow
-            source_blocks = sc.gen_blocks(trt, self.hc.sites_affected_by,
-                                          self.source_max_weight,
-                                          self.hc.area_source_discretization)
+            source_blocks = sc.gen_blocks(
+                self.hc.sites_affected_by,
+                self.source_max_weight,
+                self.hc.area_source_discretization,
+                trt)
             num_blocks = 0
             num_sources = 0
             for block in source_blocks:
@@ -219,7 +221,7 @@ class BaseHazardCalculator(base.Calculator):
             self.hc.width_of_mfd_bin,
             self.hc.area_source_discretization,
         )
-        self.source_collector = {}  # lt_model_id -> sources
+        self.source_collector = {}  # trt_model_id -> sources
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
             apply_unc = self.source_model_lt.make_apply_uncertainties(smpath)
@@ -230,20 +232,21 @@ class BaseHazardCalculator(base.Calculator):
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i,
                 sm_name=sm, weight=weight)
-            self.source_collector[lt_model.id] = sc
 
             # save TrtModels for each tectonic region type
             trts = sc.sorted_trts()
             gsims_by_trt = make_gsim_lt(self.hc, trts).values
-            for trt in trts:
-                models.TrtModel.objects.create(
+            for subcollector in sc.split_by_trt():
+                trt = subcollector.trt
+                trt_model_id = models.TrtModel.objects.create(
                     lt_model=lt_model,
                     tectonic_region_type=trt,
                     num_sources=len(sc.sources),
                     num_ruptures=sc.num_ruptures[trt],
                     min_mag=sc.min_mag[trt],
                     max_mag=sc.max_mag[trt],
-                    gsims=gsims_by_trt[trt])
+                    gsims=gsims_by_trt[trt]).id
+                self.source_collector[trt_model_id] = subcollector
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
