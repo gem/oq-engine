@@ -177,18 +177,6 @@ def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
             yield r_sites.expand(pnes, placeholder=1)
 
 
-def all_equal(obj, value):
-    """
-    :param obj: a numpy array or something else
-    :param value: a numeric value
-    :returns: a boolean
-    """
-    if isinstance(obj, numpy.ndarray):
-        return (obj == value).all()
-    else:
-        return obj == value
-
-
 @tasks.oqtask
 def compute_hazard_curves(
         job_id, sitecol, sources, trt_model_id, gsims, task_no):
@@ -265,8 +253,11 @@ def compute_hazard_curves(
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    cs = [[0 if all_equal(c, 1) else 1. - c for c in curv] for curv in curves]
-    return zip(gsims, cs), trt_model_id, bbs
+    curves_by_gsim = [
+        (gsim.__class__.__name__,
+         [0 if general.all_equal(c, 1) else 1. - c for c in curv])
+        for gsim, curv in zip(gsims, curves)]
+    return curves_by_gsim, trt_model_id, bbs
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -314,35 +305,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
                 for site in self.hc.site_collection
                 for lt_model in lt_models)
-
-    @EnginePerformanceMonitor.monitor
-    def task_completed(self, (result, trt_model_id, bbs)):
-        """
-        This is used to incrementally update hazard curve results by combining
-        an initial value with some new results. (Each set of new results is
-        computed over only a subset of seismic sources defined in the
-        calculation model.)
-
-        :param task_result:
-            A dictionary rlz -> curves_by_imt where curves_by_imt is a
-            list of 2-D numpy arrays representing the new results which need
-            to be combined with the current value. These should be the same
-            shape as self.curves[tr_model_id, gsim][j] where gsim is the
-            GSIM name and j is the IMT ordinal.
-        """
-        for gsim_obj, probs in result:
-            gsim = gsim_obj.__class__.__name__
-            # probabilities of no exceedence per IMT
-            pnes = numpy.array(
-                [1 - (zero if all_equal(prob, 0) else prob)
-                 for prob, zero in itertools.izip(probs, self.zero)])
-            # TODO: add a test like Yufang computation testing the broadcast
-            self.curves[trt_model_id, gsim] = 1 - (
-                1 - self.curves.get((trt_model_id, gsim), self.zero)) * pnes
-
-        if self.hc.poes_disagg:
-            for bb in bbs:
-                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
     # this could be parallelized in the future, however in all the cases
     # I have seen until now, the serialized approach is fast enough (MS)
