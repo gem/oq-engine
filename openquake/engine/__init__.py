@@ -109,8 +109,6 @@ def no_distribute():
     nd = os.environ.get(NO_DISTRIBUTE_VAR)
     if nd:
         return nd.lower() in ("true", "yes", "t", "1")
-    else:
-        return False
 
 
 def set_django_settings_module():

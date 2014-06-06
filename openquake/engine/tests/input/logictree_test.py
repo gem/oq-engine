@@ -100,8 +100,12 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
     def _do_test(self, path, expected_result, expected_branch_ids):
         cfg = helpers.get_data_path(self.JOB_CONFIG)
         job = helpers.get_job(cfg)
-
-        nrml_to_hazardlib = NrmlHazardlibConverter(job.hazard_calculation)
+        hc = job.hazard_calculation
+        nrml_to_hazardlib = NrmlHazardlibConverter(
+            hc.investigation_time,
+            hc.rupture_mesh_spacing,
+            hc.width_of_mfd_bin,
+            hc.area_source_discretization)
         base_path = job.hazard_calculation.base_path
 
         source_model_lt = logictree.SourceModelLogicTree.from_hc(
