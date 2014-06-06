@@ -47,7 +47,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # there is a single model
         [collector] = self.calc.source_collector.values()
         # before filtering and splitting there are 118 sources
-        self.assertEqual(118, len(collector.sources.values()[0]))
+        self.assertEqual(118, len(collector.sources))
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -96,7 +96,7 @@ store_site_model'
         self.assertEqual(0, len(ltrs))
 
         for args in self.calc.task_arg_gen():
-            pass
+            pass  # filter sources and save num_ruptures
         self.calc.initialize_realizations()
 
         # We expect 2 logic tree realizations
@@ -119,7 +119,7 @@ store_site_model'
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
         self.calc.initialize_sources()
         for args in self.calc.task_arg_gen():
-            pass
+            pass  # filter sources and save num_ruptures
 
         self.calc.initialize_realizations()
 
@@ -153,7 +153,7 @@ store_site_model'
         # there is a single model
         [collector] = self.calc.source_collector.values()
         # after filtering there are 74 sources
-        self.assertEqual(74, len(collector.sources.values()[0]))
+        self.assertEqual(74, len(collector.sources))
 
         self.job.status = 'post_executing'
         self.job.save()
