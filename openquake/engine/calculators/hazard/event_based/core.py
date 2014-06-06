@@ -45,13 +45,48 @@ from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as cls_post_proc)
-from openquake.engine.calculators.hazard.event_based import post_processing
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
 from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
+
+
+def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
+    """
+    Given a set of ground motion values (``gmvs``) and intensity measure levels
+    (``imls``), compute hazard curve probabilities of exceedance.
+
+    :param gmvs:
+        A list of ground motion values, as floats.
+    :param imls:
+        A list of intensity measure levels, as floats.
+    :param float invest_time:
+        Investigation time, in years. It is with this time span that we compute
+        probabilities of exceedance.
+
+        Another way to put it is the following. When computing a hazard curve,
+        we want to answer the question: What is the probability of ground
+        motion meeting or exceeding the specified levels (``imls``) in a given
+        time span (``invest_time``).
+    :param float duration:
+        Time window during which GMFs occur. Another was to say it is, the
+        period of time over which we simulate ground motion occurrences.
+
+        NOTE: Duration is computed as the calculation investigation time
+        multiplied by the number of stochastic event sets.
+
+    :returns:
+        Numpy array of PoEs (probabilities of exceedence).
+    """
+    gmvs = numpy.array(gmvs)
+    # convert to numpy arrary and redimension so that it can be broadcast with
+    # the gmvs for computing PoE values
+    imls = numpy.array(imls).reshape((len(imls), 1))
+    num_exceeding = numpy.sum(gmvs >= imls, axis=1)
+    poes = 1 - numpy.exp(- (invest_time / duration) * num_exceeding)
+    return poes
 
 
 @tasks.oqtask
@@ -217,8 +252,12 @@ def compute_and_save_gmfs(job_id, sids, rupt_collector):
         with EnginePerformanceMonitor(
                 'hazard curves from gmfs', job_id, compute_and_save_gmfs):
             curves_by_gsim = rupt_collector.to_haz_curves(
-                sids, hc.investigation_time, hc.ses_per_logic_tree_path)
-            return curves_by_gsim, rupt_collector.trt_model_id, []
+                sids, hc.intensity_measure_types_and_levels,
+                hc.investigation_time, hc.ses_per_logic_tree_path)
+    else:
+        curves_by_gsim = []
+
+    return curves_by_gsim, rupt_collector.trt_model_id, []
 
 
 class RuptureCollector(object):
@@ -309,9 +348,9 @@ class RuptureCollector(object):
         """
         Convert the gmf into hazard curves (by gsim and imt)
         """
-        gmf = collections.defaultdict(dict)
+        gmf = collections.defaultdict(dict)  # (gsim, imt) > {site_id: poes}
         for (gsim, imt, site_id), gmvs in self.gmvs_per_site.iteritems():
-            gmf[gsim, imt][site_id] = post_processing.gmvs_to_haz_curve(
+            gmf[gsim, imt][site_id] = gmvs_to_haz_curve(
                 gmvs, imls, invest_time, num_ses * invest_time)
 
         curves_by_gsim = []
@@ -321,7 +360,7 @@ class RuptureCollector(object):
                 curves_by_imt.append(
                     numpy.array([gmf[gsim, imt].get(site_id, 0)
                                  for site_id in sids]))
-            curves_by_gsim.append((gsim, curves_by_imt))
+            curves_by_gsim.append((gsim.__class__.__name__, curves_by_imt))
 
         return curves_by_gsim
 
@@ -370,7 +409,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             trt = models.TrtModel.objects.get(pk=trt_id)
             trt.num_ruptures = num_ruptures
             trt.save()
-        super(EventBasedHazardCalculator, self).post_execute()
+        self.initialize_realizations()
         if not self.hc.ground_motion_fields:
             return  # do nothing
 
@@ -381,11 +420,17 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 display_name='GMF rlz-%s' % rlz.id,
                 output_type='gmf')
             models.Gmf.objects.create(output=output, lt_realization=rlz)
+
+        # generate the GMFs and optionally the hazard curves too
         otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
         sids = self.hc.site_collection.sids
         for rupt_collector in self.rupt_collectors:
             otm.submit(self.job.id, sids, rupt_collector)
-        otm.aggregate_results(lambda acc, x: None, None)
+        otm.aggregate_results(self.agg_curves, self.curves)
+
+        # now save the curves, if any
+        if self.curves:
+            self.save_hazard_curves()
 
     def initialize_ses_db_records(self, lt_model):
         """
@@ -428,24 +473,20 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         If requested, perform additional processing of GMFs to produce hazard
         curves.
         """
-        if self.hc.hazard_curves_from_gmfs:
-            with self.monitor('generating hazard curves'):
+        if not self.hc.hazard_curves_from_gmfs:
+            return
+
+        # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
+        # has some value (not an empty list), do this additional
+        # post-processing.
+        if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
+            with self.monitor('generating mean/quantile curves'):
+                self.do_aggregate_post_proc()
+
+        if self.hc.hazard_maps:
+            with self.monitor('generating hazard maps'):
                 self.parallelize(
-                    post_processing.gmf_to_hazard_curve_task,
-                    post_processing.gmf_to_hazard_curve_arg_gen(self.job),
+                    cls_post_proc.hazard_curves_to_hazard_map_task,
+                    cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
+                        self.job),
                     lambda res: None)
-
-            # If `mean_hazard_curves` is True and/or `quantile_hazard_curves`
-            # has some value (not an empty list), do this additional
-            # post-processing.
-            if self.hc.mean_hazard_curves or self.hc.quantile_hazard_curves:
-                with self.monitor('generating mean/quantile curves'):
-                    self.do_aggregate_post_proc()
-
-            if self.hc.hazard_maps:
-                with self.monitor('generating hazard maps'):
-                    self.parallelize(
-                        cls_post_proc.hazard_curves_to_hazard_map_task,
-                        cls_post_proc.hazard_curves_to_hazard_map_task_arg_gen(
-                            self.job),
-                        lambda res: None)
