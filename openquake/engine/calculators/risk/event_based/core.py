@@ -73,11 +73,12 @@ def do_event_based(risk_model, outputdict, params, monitor):
     stats_per_loss_type = risk_model.compute_stats(
         outputs_per_loss_type, params.quantiles, post_processing)
 
+    # NB: event_loss_table is a dictionary (loss_type, out_id) -> loss,
+    # out_id can be None, and it that case it stores the statistics
     event_loss_table = {}
 
     # save outputs and stats and populate the event loss table
     for loss_type, outputs in outputs_per_loss_type.iteritems():
-        stats = stats_per_loss_type[loss_type]
         for out in outputs:
             if params.sites_disagg:
                 with monitor.copy('disaggregating results'):
@@ -93,15 +94,16 @@ def do_event_based(risk_model, outputdict, params, monitor):
                                          loss_type=loss_type),
                     out.output, disagg_outputs, params)
 
+            event_loss_table[loss_type, out.hid] = out.output.event_loss_table
+
+        stats = stats_per_loss_type[loss_type]
         if stats is not None:
             with monitor.copy('saving risk statistics'):
                 save_statistical_output(
                     outputdict.with_args(
                         hazard_output_id=None, loss_type=loss_type),
                     stats, params)
-            event_loss_table[loss_type] = stats.event_loss_table
-        else:
-            event_loss_table[loss_type] = outputs[0].output.event_loss_table
+            event_loss_table[loss_type, None] = stats.event_loss_table
 
     return event_loss_table
 
@@ -302,12 +304,14 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         # accumulator for the event loss tables
         self.acc = collections.defaultdict(collections.Counter)
 
-    def agg_result(self, acc, event_loss_tables):
+    def agg_result(self, acc, event_loss_table):
         """
         Updates the event loss table
         """
-        return dict((loss_type, acc[loss_type] + event_loss_tables[loss_type])
-                    for loss_type in self.loss_types)
+        newdict = acc.copy()
+        for (loss_type, out_id), counter in event_loss_table.iteritems():
+            newdict[loss_type, out_id] += counter
+        return newdict
 
     def post_process(self):
         """
@@ -316,8 +320,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         with EnginePerformanceMonitor('post processing', self.job.id):
 
             time_span, tses = self.hazard_times()
-            for loss_type, event_loss_table in self.acc.items():
-                for hazard_output in self.rc.hazard_outputs():
+            for (loss_type, out_id), event_loss_table in self.acc.items():
+                if out_id:  # values for individual realizations
+                    hazard_output = models.Output.objects.get(pk=out_id)
 
                     event_loss = models.EventLoss.objects.create(
                         output=models.Output.objects.create_output(
