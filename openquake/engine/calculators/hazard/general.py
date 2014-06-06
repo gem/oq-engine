@@ -19,7 +19,10 @@
 """Common code for the hazard calculators."""
 
 import os
+import itertools
 import collections
+
+import numpy
 
 from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
@@ -115,6 +118,18 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
+def all_equal(obj, value):
+    """
+    :param obj: a numpy array or something else
+    :param value: a numeric value
+    :returns: a boolean
+    """
+    if isinstance(obj, numpy.ndarray):
+        return (obj == value).all()
+    else:
+        return obj == value
+
+
 class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
@@ -167,6 +182,37 @@ class BaseHazardCalculator(base.Calculator):
             for block in self.source_blocks_per_ltpath[ltpath, trt]:
                 yield (self.job.id, sitecol, block, trt_model.id,
                        gsims, task_no)
+
+    @EnginePerformanceMonitor.monitor
+    def task_completed(self, result):
+        """
+        This is used to incrementally update hazard curve results by combining
+        an initial value with some new results. (Each set of new results is
+        computed over only a subset of seismic sources defined in the
+        calculation model.)
+
+        :param result:
+            A triplet `(curves_by_gsim, trt_model_id, bbs)`.
+            `curves_by_gsim` is a list of pairs `(gsim, curves_by_imt)`
+            where `curves_by_imt` is a list of 2-D numpy arrays
+            representing the new results which need to be combined
+            with the current value. These should be the same shape as
+            `self.curves[tr_model_id, gsim][j]` where `gsim` is the GSIM
+            name and `j` is the IMT ordinal.
+        """
+        curves_by_gsim, trt_model_id, bbs = result
+        for gsim, probs in curves_by_gsim:
+            # probabilities of no exceedence per IMT
+            pnes = numpy.array(
+                [1 - (zero if all_equal(prob, 0) else prob)
+                 for prob, zero in itertools.izip(probs, self.zero)])
+            # TODO: add a test like Yufang computation testing the broadcast
+            self.curves[trt_model_id, gsim] = 1 - (
+                1 - self.curves.get((trt_model_id, gsim), self.zero)) * pnes
+
+        if self.hc.poes_disagg:
+            for bb in bbs:
+                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
 
     def _get_realizations(self):
         """
