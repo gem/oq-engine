@@ -35,7 +35,9 @@
 #
 
 # export PS4='+${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}: '
-# set -x
+if [ $GEM_SET_DEBUG ]; then
+    set -x
+fi
 set -e
 GEM_GIT_REPO="git://github.com/gem"
 GEM_GIT_PACKAGE="oq-engine"
