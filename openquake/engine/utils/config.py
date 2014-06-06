@@ -25,9 +25,9 @@ import ConfigParser
 import os
 import pwd
 import sys
+from contextlib import contextmanager
 
 import openquake.engine
-from openquake.commonlib.general import str2bool
 
 OQDIR = os.path.dirname(os.path.dirname(openquake.engine.__path__[0]))
 #: Environment variable name for specifying a custom openquake.cfg.
@@ -65,6 +65,10 @@ class _Config(object):
         """A dict with key/value pairs for the given `section` or `None`."""
         return self.cfg.get(name)
 
+    def set(self, name, dic):
+        """Set the dictionary for given section"""
+        self.cfg[name] = dic
+
     def _get_paths(self):
         """Return the paths for the global/local configuration files."""
         global_path = os.environ.get("OQ_SITE_CFG_PATH", self.GLOBAL_PATH)
@@ -99,6 +103,21 @@ class _Config(object):
 
 
 cfg = _Config()  # the only instance of _Config
+
+
+@contextmanager
+def context(section, **kw):
+    """
+    Context manager used to change the parameters of a configuration
+    section on the fly. For use in the tests.
+    """
+    section_dict = cfg.get(section)
+    orig = section_dict.copy()
+    try:
+        section_dict.update(kw)
+        yield
+    finally:
+        cfg.set(section, orig)
 
 
 def get_section(section):
@@ -143,7 +162,7 @@ def flag_set(section, setting):
     setting = get(section, setting)
     if setting is None:
         return False
-    return str2bool(setting)
+    return setting.lower() in ("true", "yes", "t", "1")
 
 
 def refresh():
