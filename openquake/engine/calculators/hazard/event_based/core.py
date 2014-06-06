@@ -53,6 +53,7 @@ from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 inserter = writer.CacheInserter(models.GmfData, 1000)
 
 
+# NB (MS): the approach used here will not work for non-poissonian models
 def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     """
     Given a set of ground motion values (``gmvs``) and intensity measure levels
