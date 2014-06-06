@@ -282,19 +282,16 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         """
         super(ClassicalHazardCalculator, self).pre_execute()
         self.imtls = self.hc.intensity_measure_types_and_levels
-        realizations = self._get_realizations()
-        n_rlz = len(realizations)
         n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
                        ) / float(len(self.imtls))
         n_sites = len(self.hc.site_collection)
         self.zero = numpy.array([numpy.zeros((n_sites, len(self.imtls[imt])))
                                  for imt in sorted(self.imtls)])
-        total = n_rlz * len(self.imtls) * n_levels * n_sites
-        logs.LOG.info('Considering %d realization(s), %d IMT(s), %d level(s) '
-                      'and %d sites, total %d', n_rlz, len(self.imtls),
-                      n_levels, n_sites, total)
-        self.curves = {}  # {trt_model_id, gsim: curves_by_imt}
+        total = len(self.imtls) * n_levels * n_sites
+        logs.LOG.info('%d IMT(s), %d level(s) and %d sites, total %d',
+                      len(self.imtls), n_levels, n_sites, total)
 
+        self.curves = {}  # {trt_model_id, gsim: curves_by_imt}
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
