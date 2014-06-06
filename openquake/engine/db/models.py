@@ -2370,7 +2370,9 @@ class TrtModel(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"trt_model'
-        ordering = ['tectonic_region_type', 'num_sources']
+        ordering = ['id']
+        # NB: the TrtModels are built in the right order, see
+        # BaseHazardCalculator.initialize_sources
 
 
 class AssocLtRlzTrtModel(djm.Model):

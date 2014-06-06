@@ -68,7 +68,7 @@ def gmfs(job_id, ses_ruptures, sitecol, gmf_id, task_no):
         gname = gsim.__class__.__name__
         for ses_rup in ses_ruptures:
             gmf_dict = gmf.compute(ses_rup.seed)
-            for imt in imts:
+            for gname, imt in gmf_dict:
                 for site_id, gmv in zip(sitecol.sids, gmf_dict[gname, imt]):
                     # float may be needed below to convert 1x1 matrices
                     cache[site_id, imt].append((gmv, ses_rup.id))
