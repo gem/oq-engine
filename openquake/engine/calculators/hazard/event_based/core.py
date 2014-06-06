@@ -267,11 +267,10 @@ class GmfCalculator(object):
         for rupid, seed in rupid_seed_pairs:
             for (gsim_name, imt), gmvs in computer.compute(seed).iteritems():
                 for site_id, gmv in zip(r_sites.sids, gmvs):
-                    if gmv:
-                        self.gmvs_per_site[
-                            gsim_name, imt, site_id].append(gmv)
-                        self.ruptures_per_site[
-                            gsim_name, imt, site_id].append(rupid)
+                    self.gmvs_per_site[
+                        gsim_name, imt, site_id].append(gmv)
+                    self.ruptures_per_site[
+                        gsim_name, imt, site_id].append(rupid)
 
     def save_gmfs(self, rlzs):
         """
