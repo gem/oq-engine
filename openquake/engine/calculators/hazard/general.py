@@ -510,7 +510,7 @@ class BaseHazardCalculator(base.Calculator):
                 # save output
                 hco = models.Output.objects.create(
                     oq_job=self.job,
-                    display_name="Hazard Curve rlz-%s" % rlz.id,
+                    display_name="Hazard Curve rlz-%s-%s" % (rlz.id, imt),
                     output_type='hazard_curve',
                 )
 
