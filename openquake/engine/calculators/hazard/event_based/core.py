@@ -220,7 +220,7 @@ def compute_and_save_gmfs(job_id, sids, rupt_collector):
                 sids, hc.investigation_time, hc.ses_per_logic_tree_path)
             return curves_by_gsim, rupt_collector.trt_model_id, []
 
-            
+
 class RuptureCollector(object):
     """
     A class to store ruptures and then compute and save ground motion fields.
@@ -307,7 +307,6 @@ class RuptureCollector(object):
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
 
-
     def to_haz_curves(self, sids, imls, invest_time, num_ses):
         """
         Convert the gmf into hazard curves (by gsim and imt)
@@ -321,8 +320,9 @@ class RuptureCollector(object):
         for gsim in self.gsims:
             curves_by_imt = []
             for imt in self.imts:
-                curves_by_imt.append(numpy.array([gmf[gsim, imt].get(site_id, 0)
-                                                  for site_id in sids]))
+                curves_by_imt.append(
+                    numpy.array([gmf[gsim, imt].get(site_id, 0)
+                                 for site_id in sids]))
             curves_by_gsim.append((gsim, curves_by_imt))
 
         return curves_by_gsim
