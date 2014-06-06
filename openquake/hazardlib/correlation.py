@@ -104,13 +104,25 @@ class JB2009CorrelationModel(BaseCorrelationModel):
         Parameters are the same as for
         :meth:`BaseCorrelationModel.get_lower_triangle_correlation_matrix`.
         """
+        distances = sites.mesh.get_distance_matrix()
+        return self._get_correlation_model(distances, imt)
+
+    def _get_correlation_model(self, distances, imt):
+        """
+        Returns the correlation model for a set of distances, given the
+        appropriate period
+
+        :param numpy.ndarray distances:
+            Distance matrix
+
+        :param float period:
+            Period of spectral acceleration
+        """
         if isinstance(imt, SA):
             period = imt.period
         else:
             assert isinstance(imt, PGA)
             period = 0
-
-        distances = sites.mesh.get_distance_matrix()
 
         # formulae are from page 1700
         if period < 1:
