@@ -100,9 +100,17 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        self.source_max_weight = int(config.get('hazard', 'source_max_weight'))
-        self.rupt_collector = {}  # (trt_model_id, task_no) -> rupture_data
-        self.num_ruptures = collections.defaultdict(float)
+
+        # two crucial parameters from openquake.cfg
+        self.source_max_weight = int(
+            config.get('hazard', 'source_max_weight'))
+        self.rupture_block_size = int(
+            config.get('hazard', 'rupture_block_size'))
+
+        # a dictionary trt_model_id -> rupture_data
+        self.rupt_collector = collections.defaultdict(list)
+        # a dictionary trt_model_id -> num_ruptures
+        self.num_ruptures = collections.defaultdict(int)
 
     @property
     def hc(self):
