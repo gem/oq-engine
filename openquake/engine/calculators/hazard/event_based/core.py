@@ -76,7 +76,8 @@ class RuptureData(object):
         self.rupture = rupture
         self.rupid_seed_pairs = rupid_seed_pairs
 
-    def get_weight(self):
+    @property
+    def weight(self):
         """
         The weight of a RuptureData object is the number of rupid_seed_pairs
         it contains, i.e. the number of GMFs it can generate.
@@ -94,6 +95,20 @@ class RuptureData(object):
             for (gsim_name, imt), gmvs in computer.compute(seed).iteritems():
                 for site_id, gmv in zip(self.r_sites.sids, gmvs):
                     yield gsim_name, imt, site_id, rupid, gmv
+
+
+def split(items, nblocks):
+    """
+    Produce blocks of items from a list of items, each one
+    with a `.weight` attribute. The number of produced blocks
+    will be close but not necessarily equal to `nblocks`.
+
+    :params items: a sequence of wighted items
+    :param nblocks: hint for the number of blocks to generate
+    """
+    pairs = [(item, item.weight) for item in items]
+    weight = sum(w for (_, w) in pairs) / nblocks
+    return split_on_max_weight(pairs, weight)
 
 
 @tasks.oqtask
@@ -382,8 +397,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         otm = tasks.OqTaskManager(compute_and_save_gmfs, logs.LOG.progress)
         task_no = 0
         for trt_model_id, rupture_data in self.rupt_collector.iteritems():
-            pairs = ((rd, rd.get_weight()) for rd in rupture_data)
-            for rdata in split_on_max_weight(pairs, self.rupture_block_size):
+            for rdata in split(rupture_data, 256):
+                logs.LOG.info('Sending task #%s', task_no + 1)
                 otm.submit(self.job.id, trt_model_id, rdata, task_no)
                 task_no += 1
         otm.aggregate_results(lambda acc, x: None, None)
