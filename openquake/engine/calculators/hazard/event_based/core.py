@@ -82,7 +82,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
         Numpy array of PoEs (probabilities of exceedence).
     """
     gmvs = numpy.array(gmvs)
-    # convert to numpy arrary and redimension so that it can be broadcast with
+    # convert to numpy array and redimension so that it can be broadcast with
     # the gmvs for computing PoE values
     imls = numpy.array(imls).reshape((len(imls), 1))
     num_exceeding = numpy.sum(gmvs >= imls, axis=1)
@@ -245,10 +245,6 @@ def compute_and_save_gmfs(job_id, sids, rupt_collector):
         for rupture_data in rupt_collector.rupture_data:
             rupt_collector.calc_gmf(*rupture_data)
 
-    with EnginePerformanceMonitor(
-            'saving gmfs', job_id, compute_and_save_gmfs):
-        rupt_collector.save_gmfs()
-
     if hc.hazard_curves_from_gmfs:
         with EnginePerformanceMonitor(
                 'hazard curves from gmfs', job_id, compute_and_save_gmfs):
@@ -257,6 +253,10 @@ def compute_and_save_gmfs(job_id, sids, rupt_collector):
                 hc.investigation_time, hc.ses_per_logic_tree_path)
     else:
         curves_by_gsim = []
+
+    with EnginePerformanceMonitor(
+            'saving gmfs', job_id, compute_and_save_gmfs):
+        rupt_collector.save_gmfs()
 
     return curves_by_gsim, rupt_collector.trt_model_id, []
 
@@ -310,10 +310,7 @@ class RuptureCollector(object):
                                    self.params['correl_model'])
         gmf_dict = computer.compute(rupture_seed)
         for gsim_name, imt in gmf_dict:
-            gmvs = gmf_dict[gsim_name, imt]
-            for site_id, gmv in zip(r_sites.sids, gmvs):
-                # convert a 1x1 matrix into a float
-                gmv = float(gmv)
+            for site_id, gmv in zip(r_sites.sids, gmf_dict[gsim_name, imt]):
                 if gmv:
                     self.gmvs_per_site[
                         gsim_name, imt, site_id].append(gmv)
@@ -352,8 +349,7 @@ class RuptureCollector(object):
         gmf = collections.defaultdict(dict)  # (gsim, imt) > {site_id: poes}
         for (gsim, imt, site_id), gmvs in self.gmvs_per_site.iteritems():
             gmf[gsim, imt][site_id] = gmvs_to_haz_curve(
-                gmvs, imls, invest_time, num_ses * invest_time)
-
+                gmvs, imls[str(imt)], invest_time, num_ses * invest_time)
         curves_by_gsim = []
         for gsim in self.gsims:
             curves_by_imt = []
@@ -362,7 +358,6 @@ class RuptureCollector(object):
                     numpy.array([gmf[gsim, imt].get(site_id, 0)
                                  for site_id in sids]))
             curves_by_gsim.append((gsim.__class__.__name__, curves_by_imt))
-
         return curves_by_gsim
 
 
