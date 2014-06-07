@@ -316,8 +316,8 @@ def export_gmf_xml(output, target):
     :returns:
         The same return value as defined by :func:`export`.
     """
-    gmf_coll = models.Gmf.objects.get(output=output.id)
-    lt_rlz = gmf_coll.lt_realization
+    gmf = models.Gmf.objects.get(output=output.id)
+    lt_rlz = gmf.lt_realization
     haz_calc = output.oq_job.hazard_calculation
 
     sm_lt_path = core.LT_PATH_JOIN_TOKEN.join(lt_rlz.sm_lt_path)
@@ -328,7 +328,7 @@ def export_gmf_xml(output, target):
     writer = writers.EventBasedGMFXMLWriter(
         dest, sm_lt_path, gsim_lt_path)
 
-    writer.serialize(gmf_coll)
+    writer.serialize(gmf)
 
     return dest
 
