@@ -87,7 +87,7 @@ def compute_ruptures(
     ses_coll = models.SESCollection.objects.get(lt_model=trt_model.lt_model)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
-    all_ses = list(ses_coll)
+    all_ses = range(hc.ses_per_logic_tree_path)
     rupture_data = []
 
     filter_sites_mon = LightMonitor(
@@ -121,11 +121,11 @@ def compute_ruptures(
         with generate_ruptures_mon:  # generating ruptures for the given source
             for rup_no, rup in enumerate(src.iter_ruptures(), 1):
                 rup.rup_no = rup_no
-                for ses in all_ses:
+                for ses_idx in all_ses:
                     numpy.random.seed(rnd.randint(0, models.MAX_SINT_32))
                     num_occurrences = rup.sample_number_of_occurrences()
                     if num_occurrences:
-                        ses_num_occ[rup].append((ses, num_occurrences))
+                        ses_num_occ[rup].append((ses_idx, num_occurrences))
                         total_ruptures += num_occurrences
 
         # NB: the number of occurrences is very low, << 1, so it is
@@ -150,11 +150,11 @@ def compute_ruptures(
                         else None  # None means that nothing was filtered
                     prob_rup = models.ProbabilisticRupture.create(
                         rup, ses_coll, indices)
-                    for ses, num_occurrences in ses_num_occ[rup]:
+                    for ses_idx, num_occurrences in ses_num_occ[rup]:
                         for occ_no in range(1, num_occurrences + 1):
                             rup_seed = rnd.randint(0, models.MAX_SINT_32)
                             ses_rup = models.SESRupture.create(
-                                prob_rup, ses, src.source_id,
+                                prob_rup, ses_idx, src.source_id,
                                 rup.rup_no, occ_no, rup_seed)
                             ses_ruptures.append(ses_rup)
 

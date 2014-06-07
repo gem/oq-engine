@@ -181,9 +181,8 @@ class BaseHazardCalculator(base.Calculator):
         self.initialize_sources()
 
     def post_execute(self):
-        """Inizialize realizations, except for the scenario calculator"""
-        if self.hc.calculation_mode != 'scenario':
-            self.initialize_realizations()
+        """Inizialize realizations"""
+        self.initialize_realizations()
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
