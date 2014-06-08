@@ -498,7 +498,11 @@ def list_hazard_outputs(hc_id):
     :param hc_id:
         ID of a hazard calculation.
     """
-    print_outputs_summary(get_outputs('hazard', hc_id))
+    outputs = get_outputs('hazard', hc_id)
+    hc = models.HazardCalculation.objects.get(pk=hc_id)
+    if hc.calculation_mode == 'scenario':  # ignore SES output
+        outputs = outputs.filter(output_type='gmf_scenario')
+    print_outputs_summary(outputs)
 
 
 def touch_log_file(log_file):
