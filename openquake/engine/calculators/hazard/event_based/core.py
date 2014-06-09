@@ -344,19 +344,25 @@ class RuptureCollector(object):
     def to_haz_curves(self, sids, imls, invest_time, num_ses):
         """
         Convert the gmf into hazard curves (by gsim and imt)
+
+        :param sids: database ids of the given sites
+        :param imls: dictionary {IMT: intensity measure levels}
+        :param invest_time: investigation time
+        :param num_ses: number of Stochastic Event Sets
         """
         gmf = collections.defaultdict(dict)  # (gsim, imt) > {site_id: poes}
         for (gsim, imt, site_id), gmvs in self.gmvs_per_site.iteritems():
             gmf[gsim, imt][site_id] = gmvs_to_haz_curve(
                 gmvs, imls[str(imt)], invest_time, num_ses * invest_time)
         curves_by_gsim = []
-        for gsim in self.gsims:
+        for gsim_obj in self.gsims:
+            gsim = gsim_obj.__class__.__name__
             curves_by_imt = []
             for imt in self.imts:
                 curves_by_imt.append(
                     numpy.array([gmf[gsim, imt].get(site_id, 0)
                                  for site_id in sids]))
-            curves_by_gsim.append((gsim.__class__.__name__, curves_by_imt))
+            curves_by_gsim.append((gsim, curves_by_imt))
         return curves_by_gsim
 
 
