@@ -1244,6 +1244,7 @@ class Output(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"output'
+        ordering = ['id']
 
     def is_hazard_curve(self):
         return self.output_type in ['hazard_curve', 'hazard_curve_multi']
