@@ -81,11 +81,10 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
     :returns:
         Numpy array of PoEs (probabilities of exceedence).
     """
-    gmvs = numpy.array(gmvs)
     # convert to numpy array and redimension so that it can be broadcast with
     # the gmvs for computing PoE values
     imls = numpy.array(imls).reshape((len(imls), 1))
-    num_exceeding = numpy.sum(gmvs >= imls, axis=1)
+    num_exceeding = numpy.sum(numpy.array(gmvs) >= imls, axis=1)
     poes = 1 - numpy.exp(- (invest_time / duration) * num_exceeding)
     return poes
 
