@@ -493,6 +493,8 @@ class BaseHazardCalculator(base.Calculator):
         for rlz in self._get_realizations():
             # create a new `HazardCurve` 'container' record for each
             # realization (virtual container for multiple imts)
+            # this is needed by the risk (see export.risk_test)
+            # even if there is a single IMT
             haz_curve_container = models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
                     self.job, "hc-multi-imt-rlz-%s" % rlz.id,
