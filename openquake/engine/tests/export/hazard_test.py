@@ -374,12 +374,7 @@ class EventBasedExportTestCase(BaseExportTestCase):
             outputs = export_core.get_outputs(job.id)
             # 2 GMFs, 1 SES,
             # ((2 imts * 2 realizations)
-            # + ((2 imts + 1 multi) * (1 mean + 3 quantiles))
-            # hazard curves,
-            # (2 poes * 2 imts * 2 realizations)
-            # + (2 poes * 2 imts * (1 mean + 3 quantiles)) hazard maps
-            # Total: 41
-            self.assertEqual(43, len(outputs))
+            self.assertEqual(45, len(outputs))
 
             #######
             # SESs:
