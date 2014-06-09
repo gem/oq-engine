@@ -206,9 +206,9 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
-        # ((2 IMTs * 2 real) + (2 IMTs * (1 mean + 2 quantiles))) = 10
-        # + 3 mean and quantiles multi-imt curves
-        self.assertEqual(13, curves.count())
+        # ((2 IMTs * 2 rlz) + (2 IMTs * (1 mean + 2 quantiles))) = 10
+        # + 6 multi-imt curves (3 quantiles + 1 mean + 2 rlz)
+        self.assertEqual(15, curves.count())
 
         # Finally, check for the correct number of hazard maps:
         maps = models.HazardMap.objects.filter(output__oq_job=job)
