@@ -285,7 +285,7 @@ class BaseHazardCalculator(base.Calculator):
                 sm_name=sm, weight=weight)
 
             # save TrtModels for each tectonic region type
-            gsims_by_trt = lt_model.make_gsim_lt().values
+            gsims_by_trt = lt_model.make_gsim_lt(trts).values
             for sc in source_collectors:
                 # NB: the source_collectors are ordered by number of sources
                 # and lexicographically, so the models are in the right order
@@ -402,11 +402,11 @@ class BaseHazardCalculator(base.Calculator):
         for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
-            gsim_lt = iter(lt_model.make_gsim_lt(self.hc.random_seed + idx))
+            lt = iter(lt_model.make_gsim_lt(seed=self.hc.random_seed + idx))
             if self.hc.number_of_logic_tree_samples:  # sampling
-                rlzs = [gsim_lt.next()]  # pick one gsim realization
+                rlzs = [lt.next()]  # pick one gsim realization
             else:  # full enumeration
-                rlzs = list(gsim_lt)  # pick all gsim realizations
+                rlzs = list(lt)  # pick all gsim realizations
             logs.LOG.info('Creating %d GMPE realization(s) for model %s, %s',
                           len(rlzs), lt_model.sm_name, lt_model.sm_lt_path)
             self._initialize_realizations(idx, lt_model, rlzs)
