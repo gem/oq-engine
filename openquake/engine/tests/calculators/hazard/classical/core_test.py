@@ -47,7 +47,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # there is a single model
         [collector] = self.calc.source_collector.values()
         # before filtering and splitting there are 118 sources
-        self.assertEqual(118, len(collector.sources.values()[0]))
+        self.assertEqual(118, len(collector.sources))
 
     @attr('slow')
     def test_initialize_site_model(self):
@@ -153,7 +153,7 @@ store_site_model'
         # there is a single model
         [collector] = self.calc.source_collector.values()
         # after filtering there are 74 sources
-        self.assertEqual(74, len(collector.sources.values()[0]))
+        self.assertEqual(74, len(collector.sources))
 
         self.job.status = 'post_executing'
         self.job.save()

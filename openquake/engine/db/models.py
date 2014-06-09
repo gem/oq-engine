@@ -1832,14 +1832,15 @@ class SESRupture(djm.Model):
         ordering = ['tag']
 
     @classmethod
-    def create(cls, prob_rupture, ses, source_id, rupt_no, rupt_occ, seed):
+    def create(cls, prob_rupture, ses_ordinal, source_id, rupt_no, rupt_occ,
+               seed):
         """
         Create a SESRupture row in the database.
 
         :param prob_rupture:
             :class:`openquake.engine.db.models.ProbabilisticRupture` instance
-        :param ses:
-            :class:`openquake.engine.db.models.SES` instance
+        :param int ses_ordinal:
+            ordinal for a :class:`openquake.engine.db.models.SES` instance
         :param str source_id:
             id of the source that generated the rupture
         :param rupt_no:
@@ -1850,10 +1851,10 @@ class SESRupture(djm.Model):
             a seed that will be used when computing the GMF from the rupture
         """
         tag = 'smlt=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
-            ses.ses_collection.ordinal, ses.ordinal, source_id, rupt_no,
-            rupt_occ)
+            prob_rupture.ses_collection.ordinal, ses_ordinal,
+            source_id, rupt_no, rupt_occ)
         return cls.objects.create(
-            rupture=prob_rupture, ses_id=ses.ordinal, tag=tag, seed=seed)
+            rupture=prob_rupture, ses_id=ses_ordinal, tag=tag, seed=seed)
 
     @property
     def surface(self):
@@ -2271,7 +2272,9 @@ class TrtModel(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"trt_model'
-        ordering = ['tectonic_region_type', 'num_sources']
+        ordering = ['id']
+        # NB: the TrtModels are built in the right order, see
+        # BaseHazardCalculator.initialize_sources
 
 
 class AssocLtRlzTrtModel(djm.Model):
