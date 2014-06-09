@@ -2329,18 +2329,21 @@ class LtSourceModel(djm.Model):
             lt_model=self, num_ruptures__gt=0).values_list(
             'tectonic_region_type', flat=True)
 
-    def make_gsim_lt(self, seed=None):
+    def make_gsim_lt(self, trts=(), seed=None):
         """
         Helper to instantiate a GsimLogicTree object from the logic tree file.
 
-        :param hc: `openquake.engine.db.models.HazardCalculation` instance
-        :param trts: list of tectonic region type strings
+        :param trts:
+            sequence of tectonic region types (if not given uses
+            .get_tectonic_region_types() extracting the relevant trts)
+        :param seed:
+            seed used for the sampling (if not given uses hc.random_seed)
         """
         hc = self.hazard_calculation
         fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
         return logictree.GsimLogicTree(
             fname, 'applyToTectonicRegionType',
-            self.get_tectonic_region_types(),
+            trts or self.get_tectonic_region_types(),
             hc.number_of_logic_tree_samples, seed or hc.random_seed)
 
     def __iter__(self):
