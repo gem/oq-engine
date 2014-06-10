@@ -4,6 +4,7 @@ import mock
 import signal
 import unittest
 from openquake.engine.celery_node_monitor import CeleryNodeMonitor
+from amqplib.client_0_8.exceptions import AMQPChannelException
 
 
 class CeleryNodeMonitorTestCase(unittest.TestCase):
@@ -46,6 +47,14 @@ class CeleryNodeMonitorTestCase(unittest.TestCase):
             self.assertEqual(pid, os.getpid())
             self.assertEqual(signum, signal.SIGABRT)
             self.assertTrue(log.critical.called)
+
+    def test_AMQPException(self):
+        ping = self.inspect().ping
+        ping.side_effect = AMQPChannelException(0, 'fake error', '')
+        mon = CeleryNodeMonitor(no_distribute=False, interval=1)
+        with mock.patch('openquake.engine.logs.LOG') as log:
+            mon.ping(timeout=0.1)
+            self.assertTrue(log.warn.called)
 
     def test_no_distribute(self):
         with CeleryNodeMonitor(no_distribute=True, interval=0.1):
