@@ -223,13 +223,17 @@ class BaseHazardCalculator(base.Calculator):
         """
         curves_by_gsim, trt_model_id, bbs = result
         for gsim, probs in curves_by_gsim:
+            pnes = []
             # probabilities of no exceedence per IMT
-            pnes = numpy.array(
-                [1 - (zero if all_equal(prob, 0) else prob)
-                 for prob, zero in itertools.izip(probs, self.zero)])
+            for prob, one in itertools.izip(probs, self.ones):
+                # prob is an array of n_sites * n_levels
+                pne = [one if all_equal(p, 0) else one - p for p in prob]
+                pnes.append(pne)
+
             # TODO: add a test like Yufang computation testing the broadcast
             acc[trt_model_id, gsim] = 1 - (
-                1 - acc.get((trt_model_id, gsim), self.zero)) * pnes
+                1 - acc.get((trt_model_id, gsim), self.zeros)
+                ) * numpy.array(pnes)
 
         if self.hc.poes_disagg:
             for bb in bbs:
@@ -256,9 +260,12 @@ class BaseHazardCalculator(base.Calculator):
             n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
                            ) / float(len(self.imtls))
             n_sites = len(self.hc.site_collection)
-            self.zero = numpy.array(
+            self.zeros = numpy.array(
                 [numpy.zeros((n_sites, len(self.imtls[imt])))
                  for imt in sorted(self.imtls)])
+            self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
+                         for imt in sorted(self.imtls)]
+
             total = len(self.imtls) * n_levels * n_sites
             logs.LOG.info('%d IMT(s), %d level(s) and %d sites, total %d',
                           len(self.imtls), n_levels, n_sites, total)
