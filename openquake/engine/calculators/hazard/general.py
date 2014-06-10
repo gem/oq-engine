@@ -124,10 +124,11 @@ def all_equal(obj, value):
     :param value: a numeric value
     :returns: a boolean
     """
-    if isinstance(obj, numpy.ndarray):
-        return (obj == value).all()
+    eq = (obj == value)
+    if isinstance(eq, numpy.ndarray):
+        return eq.all()
     else:
-        return obj == value
+        return eq
 
 
 class BaseHazardCalculator(base.Calculator):
