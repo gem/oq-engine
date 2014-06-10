@@ -591,11 +591,14 @@ class SESXMLWriter(object):
                 root, 'stochasticEventSetCollection')
             ses_container.set(SM_TREE_PATH, self.sm_lt_path)
             for ses in data:
+                ruptures = list(ses)
+                if not ruptures:  # empty SES, don't export it
+                    continue
                 ses_elem = etree.SubElement(
                     ses_container, 'stochasticEventSet')
                 ses_elem.set('id', str(ses.ordinal or 1))
                 ses_elem.set('investigationTime', str(ses.investigation_time))
-                for rupture in ses:
+                for rupture in ruptures:
                     rupture_to_element(rupture.rupture, rupture.tag, ses_elem)
 
             fh.write(etree.tostring(
