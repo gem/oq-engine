@@ -115,6 +115,10 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
             self.hc.area_source_discretization,
         )(nrml)
 
+    def initialize_realizations(self):
+        """There are no realizations for the scenario calculator"""
+        pass
+
     def pre_execute(self):
         """
         Do pre-execution work. At the moment, this work entails:
