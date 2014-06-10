@@ -595,10 +595,10 @@ def create_ses_ruptures(job, ses_collection, num):
         occurrence_rate=1,
         temporal_occurrence_model=PoissonTOM(10),
         source_typology=object())
-    ses = models.SES(ses_collection, ordinal=1)
+    ses_ordinal = 1
     seed = 42
     pr = models.ProbabilisticRupture.create(rupture, ses_collection)
-    return [models.SESRupture.create(pr, ses, 'test', 1, i, seed + i)
+    return [models.SESRupture.create(pr, ses_ordinal, 'test', 1, i, seed + i)
             for i in range(num)]
 
 
