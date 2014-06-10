@@ -523,39 +523,44 @@ class SourceCollectorTestCase(unittest.TestCase):
         site.Site(geo.Point(-121.0, -37.5), 4, True, 3, 4),
     ]
 
-    def setUp(self):
-        self.nrml_to_hazardlib = source_input.NrmlHazardlibConverter(
+    @classmethod
+    def setUpClass(cls):
+        cls.nrml_to_hazardlib = source_input.NrmlHazardlibConverter(
             investigation_time=50.,
             rupture_mesh_spacing=1,  # km
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
-        self.sc = source_input.SourceCollector.parse(
-            MIXED_SRC_MODEL, self.nrml_to_hazardlib,
-            lambda src: None)
-        self.sitecol = site.SiteCollection(self.SITES)
+        cls.source_collector = dict(
+            (sc.trt, sc) for sc in source_input.parse_source_model(
+                MIXED_SRC_MODEL, cls.nrml_to_hazardlib,
+                lambda src: None))
+        cls.sitecol = site.SiteCollection(cls.SITES)
+
+    def check(self, trt, attr, value):
+        sc = self.source_collector[trt]
+        self.assertEqual(getattr(sc, attr), value)
 
     def test_content(self):
-        self.assertEqual(self.sc.sorted_trts(),
-                         ['Stable Continental Crust', 'Subduction Interface',
-                          'Active Shallow Crust', 'Volcanic'])
-        self.assertEqual(self.sc.max_mag,
-                         {'Volcanic': 6.5, 'Subduction Interface': 6.5,
-                          'Stable Continental Crust': 6.5,
-                          'Active Shallow Crust': 6.95})
-        self.assertEqual(self.sc.min_mag,
-                         {'Volcanic': 5.0, 'Subduction Interface': 5.5,
-                          'Stable Continental Crust': 5.5,
-                          'Active Shallow Crust': 5.0})
+        trts = [sc.trt for sc in self.source_collector.itervalues()]
+        self.assertEqual(
+            trts,
+            ['Volcanic', 'Subduction Interface', 'Stable Continental Crust',
+             'Active Shallow Crust'])
 
-        source_ids = dict((trt, [s.source_id for s in self.sc.sources[trt]])
-                          for trt in self.sc.sorted_trts())
-        self.assertEqual(source_ids,
-                         {'Volcanic': ['5', '6', '7'],
-                          'Subduction Interface': ['4'],
-                          'Stable Continental Crust': ['2'],
-                          'Active Shallow Crust': ['1', '3']})
-        self.assertEqual(self.sc.num_ruptures,
-                         {})
+        self.check('Volcanic', 'max_mag', 6.5)
+        self.check('Subduction Interface', 'max_mag', 6.5)
+        self.check('Stable Continental Crust', 'max_mag', 6.5)
+        self.check('Active Shallow Crust', 'max_mag', 6.95)
+
+        self.check('Volcanic', 'min_mag', 5.0)
+        self.check('Subduction Interface', 'min_mag', 5.5)
+        self.check('Stable Continental Crust', 'min_mag', 5.5)
+        self.check('Active Shallow Crust', 'min_mag', 5.0)
+
+        self.check('Volcanic', 'num_ruptures', 0)
+        self.check('Subduction Interface', 'num_ruptures', 0)
+        self.check('Stable Continental Crust', 'num_ruptures', 0)
+        self.check('Active Shallow Crust', 'num_ruptures', 0)
 
     def test_gen_blocks(self):
         def src_filter(src):
@@ -563,11 +568,25 @@ class SourceCollectorTestCase(unittest.TestCase):
                 return site.SiteCollection(self.SITES)
 
         max_weight = 100
-        trt = 'Volcanic'
-        blocks = self.sc.gen_blocks(
-            trt, src_filter, max_weight,
+        sc = self.source_collector['Volcanic']
+        blocks = sc.gen_blocks(
+            src_filter, max_weight,
             self.nrml_to_hazardlib.area_source_discretization)
         [seq] = list(blocks)
         [src] = seq
         self.assertEqual(src.source_id, '5')
         self.assertEqual(seq.weight, 2.1)
+
+    def test_repr(self):
+        self.assertEqual(
+            repr(self.source_collector['Volcanic']),
+            '<SourceCollector TRT=Volcanic, 1 source(s)>')
+        self.assertEqual(
+            repr(self.source_collector['Stable Continental Crust']),
+            '<SourceCollector TRT=Stable Continental Crust, 1 source(s)>')
+        self.assertEqual(
+            repr(self.source_collector['Subduction Interface']),
+            '<SourceCollector TRT=Subduction Interface, 1 source(s)>')
+        self.assertEqual(
+            repr(self.source_collector['Active Shallow Crust']),
+            '<SourceCollector TRT=Active Shallow Crust, 2 source(s)>')
