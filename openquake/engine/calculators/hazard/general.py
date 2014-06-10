@@ -60,6 +60,13 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
+def _normalize(prob, zero):
+    # make sure that the elements of prob are matrices with n_levels elements,
+    # possibly all zeros; zero is a matrix of n_sites * n_levels zeros
+    return numpy.array(
+        [zero[0] if all_equal(p, 0) else p for p in prob], dtype=float)
+
+
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -88,10 +95,11 @@ def all_equal(obj, value):
     :param value: a numeric value
     :returns: a boolean
     """
-    if isinstance(obj, numpy.ndarray):
-        return (obj == value).all()
+    eq = (obj == value)
+    if isinstance(eq, numpy.ndarray):
+        return eq.all()
     else:
-        return obj == value
+        return eq
 
 
 class BaseHazardCalculator(base.Calculator):
@@ -204,13 +212,14 @@ class BaseHazardCalculator(base.Calculator):
         """
         curves_by_gsim, trt_model_id, bbs = result
         for gsim, probs in curves_by_gsim:
-            # probabilities of no exceedence per IMT
-            pnes = numpy.array(
-                [1 - (zero if all_equal(prob, 0) else prob)
-                 for prob, zero in itertools.izip(probs, self.zero)])
+            pnes = []
+            for prob, zero in itertools.izip(probs, self.zeros):
+                pnes.append(1 - _normalize(prob, zero))
+            pnes1 = numpy.array(pnes)
+            pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
+
             # TODO: add a test like Yufang computation testing the broadcast
-            acc[trt_model_id, gsim] = 1 - (
-                1 - acc.get((trt_model_id, gsim), self.zero)) * pnes
+            acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
         if self.hc.poes_disagg:
             for bb in bbs:
@@ -237,9 +246,12 @@ class BaseHazardCalculator(base.Calculator):
             n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
                            ) / float(len(self.imtls))
             n_sites = len(self.hc.site_collection)
-            self.zero = numpy.array(
+            self.zeros = numpy.array(
                 [numpy.zeros((n_sites, len(self.imtls[imt])))
                  for imt in sorted(self.imtls)])
+            self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
+                         for imt in sorted(self.imtls)]
+
             total = len(self.imtls) * n_levels * n_sites
             logs.LOG.info('%d IMT(s), %d level(s) and %d sites, total %d',
                           len(self.imtls), n_levels, n_sites, total)
@@ -469,6 +481,8 @@ class BaseHazardCalculator(base.Calculator):
         for rlz in self._get_realizations():
             # create a new `HazardCurve` 'container' record for each
             # realization (virtual container for multiple imts)
+            # this is needed by the risk (see export.risk_test)
+            # even if there is a single IMT
             haz_curve_container = models.HazardCurve.objects.create(
                 output=models.Output.objects.create_output(
                     self.job, "hc-multi-imt-rlz-%s" % rlz.id,
