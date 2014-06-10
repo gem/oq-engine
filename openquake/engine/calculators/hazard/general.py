@@ -61,6 +61,13 @@ POES_PARAM_NAME = "POES"
 DILATION_ONE_METER = 1e-5
 
 
+def _normalize(prob, zero):
+    # make sure that the elements of prob are matrices with n_levels elements,
+    # possibly all zeros; zero is a matrix of n_sites * n_levels zeros
+    return numpy.array(
+        [zero[0] if all_equal(p, 0) else p for p in prob], dtype=float)
+
+
 def make_gsim_lt(hc, trts):
     """
     Helper to instantiate a GsimLogicTree object from the logic tree file.
@@ -224,16 +231,13 @@ class BaseHazardCalculator(base.Calculator):
         curves_by_gsim, trt_model_id, bbs = result
         for gsim, probs in curves_by_gsim:
             pnes = []
-            # probabilities of no exceedence per IMT
-            for prob, one in itertools.izip(probs, self.ones):
-                # prob is an array of n_sites * n_levels
-                pne = [one if all_equal(p, 0) else one - p for p in prob]
-                pnes.append(pne)
+            for prob, zero in itertools.izip(probs, self.zeros):
+                pnes.append(1 - _normalize(prob, zero))
+            pnes1 = numpy.array(pnes)
+            pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
 
             # TODO: add a test like Yufang computation testing the broadcast
-            acc[trt_model_id, gsim] = 1 - (
-                1 - acc.get((trt_model_id, gsim), self.zeros)
-                ) * numpy.array(pnes)
+            acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
 
         if self.hc.poes_disagg:
             for bb in bbs:
