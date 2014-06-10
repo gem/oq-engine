@@ -34,6 +34,8 @@ from openquake.hazardlib.gsim import get_available_gsims
 from openquake.engine.db import models
 from openquake.engine.calculators.hazard.event_based import core
 
+from openquake.engine.tests.calculators.hazard.event_based \
+    import _pp_test_data as test_data
 from openquake.engine.tests.utils import helpers
 
 
@@ -252,3 +254,33 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)
+
+
+class GmvsToHazCurveTestCase(unittest.TestCase):
+    """
+    Tests for
+    :func:`openquake.engine.calculators.hazard.event_based.\
+post_processing.gmvs_to_haz_curve`.
+    """
+
+    def test_gmvs_to_haz_curve_site_1(self):
+        expected_poes = [0.63578, 0.39347, 0.07965]
+        imls = [0.01, 0.1, 0.2]
+        gmvs = test_data.SITE_1_GMVS
+        invest_time = 1.0  # years
+        duration = 1000.0  # years
+
+        actual_poes = core.gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
+        numpy.testing.assert_array_almost_equal(
+            expected_poes, actual_poes, decimal=6)
+
+    def test_gmvs_to_haz_curve_case_2(self):
+        expected_poes = [0.63578, 0.28609, 0.02664]
+        imls = [0.01, 0.1, 0.2]
+        gmvs = test_data.SITE_2_GMVS
+        invest_time = 1.0  # years
+        duration = 1000.0  # years
+
+        actual_poes = core.gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
+        numpy.testing.assert_array_almost_equal(
+            expected_poes, actual_poes, decimal=6)
