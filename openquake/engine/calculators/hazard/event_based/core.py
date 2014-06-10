@@ -121,7 +121,7 @@ def compute_ruptures(
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
-    imts = map(from_string, hc.intensity_measure_types)
+    imts = sorted(map(from_string, hc.intensity_measure_types))
     params = dict(
         correl_model=general.get_correl_model(hc),
         truncation_level=hc.truncation_level,
@@ -270,7 +270,7 @@ class RuptureCollector(object):
             a dictionary of parameters with keys
             correl_model, truncation_level, maximum_distance
         :param imts:
-            a list of hazardlib intensity measure types
+            an ordered list of hazardlib intensity measure types
         :param gsims:
             a list of distinct GSIM instances
         :param int trt_model_id:
@@ -341,19 +341,19 @@ class RuptureCollector(object):
         self.gmvs_per_site.clear()
         self.ruptures_per_site.clear()
 
-    def to_haz_curves(self, sids, imls, invest_time, num_ses):
+    def to_haz_curves(self, sids, imtls, invest_time, num_ses):
         """
         Convert the gmf into hazard curves (by gsim and imt)
 
         :param sids: database ids of the given sites
-        :param imls: dictionary {IMT: intensity measure levels}
+        :param imtls: dictionary {IMT: intensity measure levels}
         :param invest_time: investigation time
         :param num_ses: number of Stochastic Event Sets
         """
         gmf = collections.defaultdict(dict)  # (gsim, imt) > {site_id: poes}
         for (gsim, imt, site_id), gmvs in self.gmvs_per_site.iteritems():
             gmf[gsim, imt][site_id] = gmvs_to_haz_curve(
-                gmvs, imls[str(imt)], invest_time, num_ses * invest_time)
+                gmvs, imtls[str(imt)], invest_time, num_ses * invest_time)
         curves_by_gsim = []
         for gsim_obj in self.gsims:
             gsim = gsim_obj.__class__.__name__
