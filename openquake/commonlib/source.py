@@ -78,6 +78,10 @@ class SourceCollector(object):
         """
         Filter the sources with the given filtering function and
         returns a new SourceCollector instance.
+
+        :param src_filter:
+            a filter function taking a source and returning a
+            false value (or None) if the the source has to be discarded.
         """
         srcs = [src for src in self.sources
                 if src_filter(src)]
