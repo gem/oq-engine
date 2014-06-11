@@ -1179,6 +1179,9 @@ class GsimLogicTree(object):
         fkeys = []
         nrml = node_from_xml(self.fname)
         for branching_level in nrml.logicTree:
+            if len(branching_level) > 1:
+                raise InvalidLogicTree('Branchset %s has multiple branches'
+                                       % branching_level['branchingLevelID'])
             for branchset in branching_level:
                 if branchset['uncertaintyType'] != 'gmpeModel':
                     raise InvalidLogicTree(

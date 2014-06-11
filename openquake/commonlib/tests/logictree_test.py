@@ -1583,7 +1583,6 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             'only uncertainties of type "gmpeModel" are allowed in gmpe '
             'logic tree')
 
-    # is this an error?
     def test_two_branchsets_in_one_level(self):
         xml = _make_nrml("""\
         <logicTree logicTreeID="lt1">
@@ -1611,9 +1610,8 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTreeBranchingLevel>
         </logicTree>
         """)
-        rlzs = list(
-            self.parse_valid(xml, ['Volcanic', 'Subduction IntraSlab']))
-        self.assertEqual(len(rlzs), 1)  # shouldn't be 2? ask Damiano
+        self.parse_invalid(xml, logictree.InvalidLogicTree,
+                           'Branchset bl1 has multiple branches')
 
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\
