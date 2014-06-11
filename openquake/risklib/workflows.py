@@ -706,14 +706,11 @@ class Damage(object):
 
 class RiskModel(object):
     """
-    Container for the attributes taxonomy, workflow and getters.
-    The last one can be set after instantiation, but before calling
-    compute_outputs.
+    Container for the attributes taxonomy and workflow.
     """
-    def __init__(self, taxonomy, workflow, getters=None):
+    def __init__(self, taxonomy, workflow):
         self.taxonomy = taxonomy
         self.workflow = workflow
-        self.getters = getters
 
     @property
     def loss_types(self):
@@ -731,18 +728,10 @@ class RiskModel(object):
         return [self.workflow.vulnerability_functions[lt]
                 for lt in self.loss_types]
 
-    def copy(self, **kw):
+    def compute_outputs(self, getters, getter_monitor):
         """
-        A copy of the risk model, with different attributes
-
-        :param kw: a dictionary of attributes to set
-        """
-        new = self.__class__(self.taxonomy, self.workflow, self.getters)
-        vars(new).update(kw)
-        return new
-
-    def compute_outputs(self, getter_monitor):
-        """
+        :param getters:
+            a list of callable hazard getters
         :param getter_monitor:
             a context manager monitoring the time and resources
             spent the in the computation
@@ -751,7 +740,7 @@ class RiskModel(object):
             hazard realizations, keyed by the loss type
         """
         return dict((loss_type, self.workflow.compute_all_outputs(
-                    self.getters, loss_type, getter_monitor))
+                    getters, loss_type, getter_monitor))
                     for loss_type in self.loss_types)
 
     def compute_stats(self, outputs, quantiles, post_processing):
