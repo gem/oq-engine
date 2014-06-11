@@ -1660,3 +1660,12 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         fs_bg_model_rlzs = list(self.parse_valid(xml, fs_bg_model_trts))
         self.assertEqual(len(as_model_rlzs), 5 * 4 * 2 * 1)
         self.assertEqual(len(fs_bg_model_rlzs), 5 * 4)
+
+        count_shield = sum(1 for rlz in as_model_rlzs if 'Shield' in rlz.value)
+        self.assertEqual(count_shield, 16)
+        no_shield = sum(1 for rlz in fs_bg_model_rlzs if 'Shield' in rlz.value)
+        self.assertEqual(no_shield, 0)
+
+        count_ssc = sum(1 for rlz in fs_bg_model_rlzs
+                        if 'Stable Shallow Crust' in rlz.value)
+        self.assertEqual(count_ssc, 20)

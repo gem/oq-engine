@@ -1220,8 +1220,9 @@ class GsimLogicTree(object):
             lt_path = []
             value = {}
             for fkey, branch in zip(self.filter_keys, branches):
-                weight *= branch.weight
-                value[fkey] = branch.uncertainty
                 lt_path.append(branch.id)
+                weight *= branch.weight
+                if branch.uncertainty in self.values[fkey]:
+                    value[fkey] = branch.uncertainty
             yield LtRealization(
                 value, None if self.num_samples else weight, tuple(lt_path))
