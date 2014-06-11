@@ -1611,7 +1611,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(xml, logictree.InvalidLogicTree,
-                           'Branchset bl1 has multiple branches')
+                           'Branching level bl1 has multiple branchsets')
 
     def test_tectonic_region_type_used_twice(self):
         xml = _make_nrml("""\
