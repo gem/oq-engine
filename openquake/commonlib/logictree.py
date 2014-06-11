@@ -1205,8 +1205,11 @@ class GsimLogicTree(object):
     def __iter__(self):
         # yield realizations for both sampling and full enumeration
         groups = []
-        for _branchset, group in itertools.groupby(
+        filter_keys = []
+        # NB: branches are already sorted
+        for branchset, group in itertools.groupby(
                 self.branches, operator.attrgetter('bset')):
+            filter_keys.append(branchset[self.branchset_filter])
             groups.append(list(group))
         # with T tectonic region types there are T groups and T branches
         if self.num_samples:
@@ -1219,10 +1222,11 @@ class GsimLogicTree(object):
             weight = 1
             lt_path = []
             value = {}
-            for fkey, branch in zip(self.filter_keys, branches):
+            for fkey, branch in zip(filter_keys, branches):
                 lt_path.append(branch.id)
                 weight *= branch.weight
-                if branch.uncertainty in self.values[fkey]:
-                    value[fkey] = branch.uncertainty
+                assert (branch.uncertainty in self.values[fkey],
+                        branch.uncertainty)  # sanity check
+                value[fkey] = branch.uncertainty
             yield LtRealization(
                 value, None if self.num_samples else weight, tuple(lt_path))

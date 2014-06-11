@@ -1662,7 +1662,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(len(fs_bg_model_rlzs), 5 * 4)
 
         count_shield = sum(1 for rlz in as_model_rlzs if 'Shield' in rlz.value)
-        self.assertEqual(count_shield, 16)
+        self.assertEqual(count_shield, 40)
         no_shield = sum(1 for rlz in fs_bg_model_rlzs if 'Shield' in rlz.value)
         self.assertEqual(no_shield, 0)
 
