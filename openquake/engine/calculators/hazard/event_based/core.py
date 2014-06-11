@@ -79,7 +79,7 @@ def gmvs_to_haz_curve(gmvs, imls, invest_time, duration):
         multiplied by the number of stochastic event sets.
 
     :returns:
-        Numpy array of PoEs (probabilities of exceedence).
+        Numpy array of PoEs (probabilities of exceedance).
     """
     # convert to numpy array and redimension so that it can be broadcast with
     # the gmvs for computing PoE values
