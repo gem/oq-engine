@@ -1670,13 +1670,21 @@ class GsimLogicTreeTestCase(unittest.TestCase):
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
                         <uncertaintyModel>
-                            SadighEtAl1997
+                            SadighEtAl
                         </uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                        <uncertaintyWeight>0.49</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>
+                            ToroEtAl
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.51</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
             </logicTreeBranchingLevel>
         </logicTree>
         """)
-        rlzs = list(self.parse_valid(xml, ['Volcanic'], num_samples=3))
-        import pdb; pdb.set_trace()
+        r1, r2, r3 = list(self.parse_valid(xml, ['Volcanic'], num_samples=3))
+        self.assertEqual(r1.value['Volcanic'], 'ToroEtAl')
+        self.assertEqual(r2.value['Volcanic'], 'ToroEtAl')
+        self.assertEqual(r3.value['Volcanic'], 'SadighEtAl')
