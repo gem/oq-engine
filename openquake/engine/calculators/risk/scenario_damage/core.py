@@ -35,14 +35,16 @@ from openquake.engine.db import models
 
 
 @tasks.oqtask
-def scenario_damage(job_id, risk_model, outputdict, params):
+def scenario_damage(job_id, risk_model, getters, outputdict, params):
     """
     Celery task for the scenario damage risk calculator.
 
     :param int job_id:
       ID of the currently running job
-    :param list units:
-      A list of :class:`openquake.risklib.workflows.CalculationUnit` instances
+    :param risk_model:
+      A :class:`openquake.risklib.workflows.RiskModel` instance
+    :param getters:
+      A list of callable hazard getters
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (in this case only `LossMap`)
@@ -55,7 +57,7 @@ def scenario_damage(job_id, risk_model, outputdict, params):
     monitor = EnginePerformanceMonitor(
         None, job_id, scenario_damage, tracing=True)
     # in scenario damage calculation the only loss_type is 'damage'
-    [getter] = risk_model.getters
+    [getter] = getters
     [ffs] = risk_model.vulnerability_functions
 
     # and NO containes
