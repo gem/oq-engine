@@ -369,7 +369,6 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         self.num_ruptures[rupturecollector.trt_model_id] += \
             len(rupturecollector.rupture_data)
 
-    @EnginePerformanceMonitor.monitor
     def post_execute(self):
         for trt_id, num_ruptures in self.num_ruptures.iteritems():
             trt = models.TrtModel.objects.get(pk=trt_id)
