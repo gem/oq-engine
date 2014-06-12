@@ -16,7 +16,6 @@
 
 
 import unittest
-import openquake.hazardlib
 
 from openquake.hazardlib import geo as hazardlib_geo
 
@@ -168,24 +167,16 @@ class InitializeSourcesTestCase(unittest.TestCase):
         cls.calc.initialize_site_model()
         assert len(hc.site_collection) == 2, len(hc.site_collection)
 
-    def test_few_sites(self):
-        # site_collection is smaller than FILTERING_THRESHOLD:
-        # prefiltering is enabled and sources are filtered
-        m1, m2, m3 = self.calc.initialize_sources()
+    def test_filtering_sources(self):
+        self.calc.initialize_sources()
+        m1, m2, m3 = models.LtSourceModel.objects.filter(
+            hazard_calculation=self.calc.hc)
         self.assertEqual(
             [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
-            [1, 1, 1])  # 1 source instead of 2
+            [2, 2, 2])
 
-    def test_many_sites(self):
-        # site_collection is bigger than FILTERING_THRESHOLD:
-        # sources are not prefiltered
-        ft = models.FILTERING_THRESHOLD
-        try:
-            models.FILTERING_THRESHOLD = 0
-            m1, m2, m3 = self.calc.initialize_sources()
-            self.assertEqual(
-                [m1.get_num_sources(), m2.get_num_sources(),
-                 m3.get_num_sources()],
-                [2, 2, 2])  # the original 2 sources
-        finally:
-            models.FILTERING_THRESHOLD = ft
+        for args in self.calc.task_arg_gen():
+            pass  # now filtering the sources
+        self.assertEqual(
+            [m1.get_num_sources(), m2.get_num_sources(), m3.get_num_sources()],
+            [1, 1, 1])

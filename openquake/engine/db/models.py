@@ -49,9 +49,6 @@ from openquake.commonlib.general import distinct
 from openquake.engine.db import fields
 from openquake.engine import writer
 
-# source prefiltering is enabled for #sites <= FILTERING_THRESHOLD
-FILTERING_THRESHOLD = 10000
-
 #: Kind of supported curve statistics
 STAT_CHOICES = (
     (u'mean', u'Mean'),
@@ -209,6 +206,20 @@ def queryset_iter(queryset, chunk_size):
             yield chunk
             offset += chunk_size
 
+
+def build_curves(rlz, curves_by_trt_model_gsim):
+    """
+    Build on the fly the hazard curves for the current realization
+    by looking at the associations stored in the database table
+    `hzrdr.assoc_lt_rlz_trt_model`.
+    """
+    # fixed a realization, there are T associations where T is the
+    # number of TrtModels
+    curves = 0
+    for art in AssocLtRlzTrtModel.objects.filter(rlz=rlz):
+        pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]
+        curves = 1. - (1. - curves) * pnes
+    return curves
 
 ## Tables in the 'admin' schema.
 
@@ -612,14 +623,6 @@ class HazardCalculation(djm.Model):
     _points_to_compute = None
 
     @property
-    def prefiltered(self):
-        """
-        Prefiltering is enabled when there are few sites (up to %d)
-        """ % FILTERING_THRESHOLD
-        return self.maximum_distance and \
-            len(self.site_collection) <= FILTERING_THRESHOLD
-
-    @property
     def vulnerability_models(self):
         return [self.inputs[vf_type]
                 for vf_type in VULNERABILITY_TYPE_CHOICES
@@ -821,18 +824,15 @@ class HazardCalculation(djm.Model):
 
     def sites_affected_by(self, src):
         """
-        If the maximum_distance is set and the prefiltering is on,
-        i.e. if the computation involves only few (<=%d) sites,
-        return the filtered subset of the site collection, otherwise
-        return the whole connection. NB: this method returns `None`
-        if the filtering does not find any site close to the source.
+        If the maximum_distance is set returns the filtered subset of
+        the site collection, otherwise return the whole connection.
+        NB: this method returns `None` if the filtering does not
+        find any site close to the source.
 
         :param src: the source object used for the filtering
-        """ % FILTERING_THRESHOLD
-        if self.prefiltered:
-            return src.filter_sites_by_distance_to_source(
-                self.maximum_distance, self.site_collection)
-        return self.site_collection
+        """
+        return src.filter_sites_by_distance_to_source(
+            self.maximum_distance, self.site_collection)
 
     def gen_ruptures(self, sources, monitor, site_coll):
         """
@@ -1258,6 +1258,7 @@ class Output(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"output'
+        ordering = ['id']
 
     def is_hazard_curve(self):
         return self.output_type in ['hazard_curve', 'hazard_curve_multi']
@@ -1410,24 +1411,6 @@ class HazardCurve(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
-
-    def build_data(self, curves_by_trt_model_gsim):
-        """
-        Build on the fly the hazard curves for the current realization
-        by looking at the associations stored in the database table
-        `hzrdr.assoc_lt_rlz_trt_model`.
-        """
-        if self.imt:
-            # build_data cannot be called from real curves
-            raise TypeError('%r is not a multicurve', self)
-
-        # fixed a realization, there are T associations where T is the
-        # number of TrtModels
-        curves = 0
-        for art in AssocLtRlzTrtModel.objects.filter(rlz=self.lt_realization):
-            pnes = 1. - curves_by_trt_model_gsim[art.trt_model_id, art.gsim]
-            curves = 1. - (1. - curves) * pnes
-        return curves
 
     @property
     def imt_long(self):
@@ -1845,14 +1828,15 @@ class SESRupture(djm.Model):
         ordering = ['tag']
 
     @classmethod
-    def create(cls, prob_rupture, ses, source_id, rupt_no, rupt_occ, seed):
+    def create(cls, prob_rupture, ses_ordinal, source_id, rupt_no, rupt_occ,
+               seed):
         """
         Create a SESRupture row in the database.
 
         :param prob_rupture:
             :class:`openquake.engine.db.models.ProbabilisticRupture` instance
-        :param ses:
-            :class:`openquake.engine.db.models.SES` instance
+        :param int ses_ordinal:
+            ordinal for a :class:`openquake.engine.db.models.SES` instance
         :param str source_id:
             id of the source that generated the rupture
         :param rupt_no:
@@ -1863,10 +1847,10 @@ class SESRupture(djm.Model):
             a seed that will be used when computing the GMF from the rupture
         """
         tag = 'smlt=%02d|ses=%04d|src=%s|rup=%03d-%02d' % (
-            ses.ses_collection.ordinal, ses.ordinal, source_id, rupt_no,
-            rupt_occ)
+            prob_rupture.ses_collection.ordinal, ses_ordinal,
+            source_id, rupt_no, rupt_occ)
         return cls.objects.create(
-            rupture=prob_rupture, ses_id=ses.ordinal, tag=tag, seed=seed)
+            rupture=prob_rupture, ses_id=ses_ordinal, tag=tag, seed=seed)
 
     @property
     def surface(self):
@@ -2284,7 +2268,9 @@ class TrtModel(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"trt_model'
-        ordering = ['tectonic_region_type', 'num_sources']
+        ordering = ['id']
+        # NB: the TrtModels are built in the right order, see
+        # BaseHazardCalculator.initialize_sources
 
 
 class AssocLtRlzTrtModel(djm.Model):

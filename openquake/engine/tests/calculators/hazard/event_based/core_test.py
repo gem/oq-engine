@@ -34,6 +34,8 @@ from openquake.hazardlib.gsim import get_available_gsims
 from openquake.engine.db import models
 from openquake.engine.calculators.hazard.event_based import core
 
+from openquake.engine.tests.calculators.hazard.event_based \
+    import _pp_test_data as test_data
 from openquake.engine.tests.utils import helpers
 
 
@@ -192,25 +194,23 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # (this is fixed if the seeds are fixed correctly)
         num_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection__output__oq_job=job.id).count()
-        self.assertEqual(num_ruptures, 96)
+        self.assertEqual(num_ruptures, 94)
 
         # check that we generated the right number of rows in GmfData
         # 242 = 121 sites * 2 IMTs
         num_gmf1 = models.GmfData.objects.filter(
-            gmf__lt_realization=rlz1).count()
+            gmf__lt_realization=rlz1, task_no=0).count()
         num_gmf2 = models.GmfData.objects.filter(
-            gmf__lt_realization=rlz2).count()
+            gmf__lt_realization=rlz2, task_no=0).count()
 
-        # with concurrent_tasks=64, this test generates several tasks, but
-        # only 15 give nonzero contributions
-        self.assertEqual(num_gmf1, 242 * 15)
-        self.assertEqual(num_gmf2, 242 * 15)
+        self.assertEqual(num_gmf1, 242)
+        self.assertEqual(num_gmf2, 242)
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
-        # ((2 IMTs * 2 real) + (2 IMTs * (1 mean + 2 quantiles))) = 10
-        # + 3 mean and quantiles multi-imt curves
-        self.assertEqual(13, curves.count())
+        # ((2 IMTs * 2 rlz) + (2 IMTs * (1 mean + 2 quantiles))) = 10
+        # + 6 multi-imt curves (3 quantiles + 1 mean + 2 rlz)
+        self.assertEqual(15, curves.count())
 
         # Finally, check for the correct number of hazard maps:
         maps = models.HazardMap.objects.filter(output__oq_job=job)
@@ -232,7 +232,16 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
             ('3-7', 41871302),
             ('3-8', 930268948),
             ('3-9', 1920723121),
-            ('4', 1760832373),
+            ('4-0', 1760832373),
+            ('4-1', 736921862),
+            ('4-2', 754518695),
+            ('4-3', 1135503673),
+            ('4-4', 31299080),
+            ('4-5', 277795359),
+            ('4-6', 598901721),
+            ('4-7', 85073212),
+            ('4-8', 782936146),
+            ('4-9', 536916930)
         ]
 
         # utility to present the generated arguments in a nicer way
@@ -245,3 +254,33 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)
+
+
+class GmvsToHazCurveTestCase(unittest.TestCase):
+    """
+    Tests for
+    :func:`openquake.engine.calculators.hazard.event_based.\
+post_processing.gmvs_to_haz_curve`.
+    """
+
+    def test_gmvs_to_haz_curve_site_1(self):
+        expected_poes = [0.63578, 0.39347, 0.07965]
+        imls = [0.01, 0.1, 0.2]
+        gmvs = test_data.SITE_1_GMVS
+        invest_time = 1.0  # years
+        duration = 1000.0  # years
+
+        actual_poes = core.gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
+        numpy.testing.assert_array_almost_equal(
+            expected_poes, actual_poes, decimal=6)
+
+    def test_gmvs_to_haz_curve_case_2(self):
+        expected_poes = [0.63578, 0.28609, 0.02664]
+        imls = [0.01, 0.1, 0.2]
+        gmvs = test_data.SITE_2_GMVS
+        invest_time = 1.0  # years
+        duration = 1000.0  # years
+
+        actual_poes = core.gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
+        numpy.testing.assert_array_almost_equal(
+            expected_poes, actual_poes, decimal=6)

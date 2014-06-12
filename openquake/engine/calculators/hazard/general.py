@@ -19,7 +19,10 @@
 """Common code for the hazard calculators."""
 
 import os
+import itertools
 import collections
+
+import numpy
 
 from openquake.hazardlib import correlation
 from openquake.hazardlib.imt import from_string
@@ -32,7 +35,7 @@ from openquake.nrmllib import parsers as nrml_parsers
 from openquake.nrmllib.risk import parsers
 
 from openquake.commonlib import logictree, source
-from openquake.commonlib.general import block_splitter, ceil, distinct
+from openquake.commonlib.general import block_splitter, distinct
 
 from openquake.engine.input import exposure
 from openquake.engine import logs
@@ -56,6 +59,13 @@ POES_PARAM_NAME = "POES"
 # Dilation in decimal degrees (http://en.wikipedia.org/wiki/Decimal_degrees)
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
+
+
+def _normalize(prob, zero):
+    # make sure that the elements of prob are matrices with n_levels elements,
+    # possibly all zeros; zero is a matrix of n_sites * n_levels zeros
+    return numpy.array(
+        [zero[0] if all_equal(p, 0) else p for p in prob], dtype=float)
 
 
 def make_gsim_lt(hc, trts):
@@ -115,6 +125,19 @@ def get_correl_model(hc):
     return correl_model_cls(**hc.ground_motion_correlation_params)
 
 
+def all_equal(obj, value):
+    """
+    :param obj: a numpy array or something else
+    :param value: a numeric value
+    :returns: a boolean
+    """
+    eq = (obj == value)
+    if isinstance(eq, numpy.ndarray):
+        return eq.all()
+    else:
+        return eq
+
+
 class BaseHazardCalculator(base.Calculator):
     """
     Abstract base class for hazard calculators. Contains a bunch of common
@@ -123,14 +146,10 @@ class BaseHazardCalculator(base.Calculator):
 
     def __init__(self, job):
         super(BaseHazardCalculator, self).__init__(job)
-        # a dictionary (sm_lt_path, trt) -> source blocks
-        self.source_blocks_per_ltpath = collections.defaultdict(list)
+        self.source_max_weight = int(config.get('hazard', 'source_max_weight'))
         self.rupt_collectors = []
         self.num_ruptures = collections.defaultdict(float)
-
-    def clean_up(self, *args, **kwargs):
-        """Clean up dictionaries at the end"""
-        self.source_blocks_per_ltpath.clear()
+        self.curves = {}  # {trt_model_id, gsim: curves_by_imt}
 
     @property
     def hc(self):
@@ -140,33 +159,91 @@ class BaseHazardCalculator(base.Calculator):
         """
         return self.job.hazard_calculation
 
-    def concurrent_tasks(self):
-        """
-        For hazard calculators, the number of tasks to be in queue
-        at any given time is specified in the configuration file.
-        """
-        return int(config.get('hazard', 'concurrent_tasks'))
-
     def task_arg_gen(self):
         """
         Loop through realizations and sources to generate a sequence of
         task arg tuples. Each tuple of args applies to a single task.
-
-        For this default implementation, yielded results are quartets
-        (job_id, sources, tom, gsim_by_rlz).
-
-        Override this in subclasses as necessary.
+        Yielded results are of the form
+        (job_id, site_collection, sources, trt_model_id, gsims, task_no).
         """
         sitecol = self.hc.site_collection
-        trt_models = models.TrtModel.objects.filter(
-            lt_model__hazard_calculation=self.hc)
-        for task_no, trt_model in enumerate(trt_models):
+        task_no = 0
+        for trt_model_id in self.source_collector:
+            trt_model = models.TrtModel.objects.get(pk=trt_model_id)
+            sc = self.source_collector[trt_model_id]
             ltpath = tuple(trt_model.lt_model.sm_lt_path)
-            trt = trt_model.tectonic_region_type
             gsims = [logictree.GSIM[gsim]() for gsim in trt_model.gsims]
-            for block in self.source_blocks_per_ltpath[ltpath, trt]:
-                yield (self.job.id, sitecol, block, trt_model.id,
-                       gsims, task_no)
+
+            # NB: the filtering of the sources by site is slow
+            source_blocks = sc.gen_blocks(
+                self.hc.sites_affected_by,
+                self.source_max_weight,
+                self.hc.area_source_discretization)
+            num_blocks = 0
+            num_sources = 0
+            for block in source_blocks:
+                yield self.job.id, sitecol, block, trt_model_id, gsims, task_no
+                num_blocks += 1
+                num_sources += len(block)
+                logs.LOG.info('Processing %d sources out of %d' %
+                              sc.filtered_sources)
+
+            task_no += num_blocks
+            logs.LOG.progress('Generated %d block(s) for %s, TRT=%s',
+                              num_blocks, ltpath, sc.trt)
+            trt_model.num_sources = num_sources
+            trt_model.num_ruptures = sc.num_ruptures
+            trt_model.save()
+
+        # save job_stats
+        js = models.JobStats.objects.get(oq_job=self.job)
+        js.num_sources = [model.get_num_sources()
+                          for model in models.LtSourceModel.objects.filter(
+                              hazard_calculation=self.hc)]
+        js.num_sites = len(sitecol)
+        js.save()
+
+    def task_completed(self, result):
+        """
+        Simply call the method `agg_curves`
+        """
+        self.agg_curves(self.curves, result)
+
+    @EnginePerformanceMonitor.monitor
+    def agg_curves(self, acc, result):
+        """
+        This is used to incrementally update hazard curve results by combining
+        an initial value with some new results. (Each set of new results is
+        computed over only a subset of seismic sources defined in the
+        calculation model.)
+
+        :param acc:
+            A dictionary of curves
+        :param result:
+            A triplet `(curves_by_gsim, trt_model_id, bbs)`.
+            `curves_by_gsim` is a list of pairs `(gsim, curves_by_imt)`
+            where `curves_by_imt` is a list of 2-D numpy arrays
+            representing the new results which need to be combined
+            with the current value. These should be the same shape as
+            `acc[tr_model_id, gsim][j]` where `gsim` is the GSIM
+            name and `j` is the IMT ordinal.
+        """
+        curves_by_gsim, trt_model_id, bbs = result
+        for gsim, probs in curves_by_gsim:
+            pnes = []
+            for prob, zero in itertools.izip(probs, self.zeros):
+                pnes.append(1 - _normalize(prob, zero))
+            pnes1 = numpy.array(pnes)
+            pnes2 = 1 - acc.get((trt_model_id, gsim), self.zeros)
+
+            # TODO: add a test like Yufang computation testing the broadcast
+            acc[trt_model_id, gsim] = 1 - pnes1 * pnes2
+
+        if self.hc.poes_disagg:
+            for bb in bbs:
+                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
+
+        return acc
 
     def _get_realizations(self):
         """
@@ -181,24 +258,35 @@ class BaseHazardCalculator(base.Calculator):
         """
         self.parse_risk_models()
         self.initialize_site_model()
-        lt_models = self.initialize_sources()
-        js = models.JobStats.objects.get(oq_job=self.job)
-        js.num_sources = [model.get_num_sources() for model in lt_models]
-        js.save()
+        self.initialize_sources()
+        self.imtls = self.hc.intensity_measure_types_and_levels
+        if self.imtls:
+            n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
+                           ) / float(len(self.imtls))
+            n_sites = len(self.hc.site_collection)
+            self.zeros = numpy.array(
+                [numpy.zeros((n_sites, len(self.imtls[imt])))
+                 for imt in sorted(self.imtls)])
+            self.ones = [numpy.zeros(len(self.imtls[imt]), dtype=float)
+                         for imt in sorted(self.imtls)]
+
+            total = len(self.imtls) * n_levels * n_sites
+            logs.LOG.info('%d IMT(s), %d level(s) and %d sites, total %d',
+                          len(self.imtls), n_levels, n_sites, total)
 
     def post_execute(self):
-        """Inizialize realizations, except for the scenario calculator"""
-        if self.hc.calculation_mode != 'scenario':
-            self.initialize_realizations()
+        """Inizialize realizations"""
+        self.initialize_realizations()
+        if self.curves:
+            # must be called after the realizations are known
+            self.save_hazard_curves()
 
     @EnginePerformanceMonitor.monitor
     def initialize_sources(self):
         """
         Parse source models and validate source logic trees. It also
         filters the sources far away and apply uncertainties to the
-        relevant ones. As a side effect it populates the instance dictionary
-        `.source_blocks_per_ltpath`. Notice that sources are automatically
-        split.
+        relevant ones. Notice that sources are automatically split.
 
         :returns:
             a list with the number of sources for each source model
@@ -206,50 +294,40 @@ class BaseHazardCalculator(base.Calculator):
         logs.LOG.progress("initializing sources")
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(self.hc)
         sm_paths = distinct(self.source_model_lt)
-        nblocks = ceil(config.get('hazard', 'concurrent_tasks'), len(sm_paths))
-        lt_models = []
+        nrml_to_hazardlib = source.NrmlHazardlibConverter(
+            self.hc.investigation_time,
+            self.hc.rupture_mesh_spacing,
+            self.hc.width_of_mfd_bin,
+            self.hc.area_source_discretization,
+        )
+        # define an ordered dictionary trt_model_id -> SourceCollector
+        self.source_collector = collections.OrderedDict()
         for i, (sm, weight, smpath) in enumerate(sm_paths):
             fname = os.path.join(self.hc.base_path, sm)
-            source_collector = source.parse_source_model_smart(
-                fname,
-                self.hc.sites_affected_by,
-                self.source_model_lt.make_apply_uncertainties(smpath),
-                self.hc)
-            if not source_collector.source_weights:
-                raise RuntimeError(
-                    'Could not find sources close to the sites in %s '
-                    '(maximum_distance=%s km)' %
-                    (fname, self.hc.maximum_distance))
+            apply_unc = self.source_model_lt.make_apply_uncertainties(smpath)
+            source_collectors = source.parse_source_model(
+                fname, nrml_to_hazardlib, apply_unc)
+            trts = [sc.trt for sc in source_collectors]
 
-            self.source_model_lt.tectonic_region_types.update(
-                source_collector.source_weights)
+            self.source_model_lt.tectonic_region_types.update(trts)
             lt_model = models.LtSourceModel.objects.create(
                 hazard_calculation=self.hc, sm_lt_path=smpath, ordinal=i,
                 sm_name=sm, weight=weight)
-            lt_models.append(lt_model)
-            for trt, blocks in source_collector.split_blocks(nblocks):
-                self.source_blocks_per_ltpath[smpath, trt] = blocks
-                n = sum(len(block) for block in blocks)
-                logs.LOG.info('Found %d relevant source(s) for %s %s, TRT=%s',
-                              n, sm, smpath, trt)
-                logs.LOG.info('Splitting in %d blocks', len(blocks))
-                for i, block in enumerate(blocks, 1):
-                    logs.LOG.debug('%s, block %d: %d source(s), weight %s',
-                                   trt, i, len(block), block.weight)
 
-            # save TrtModel objects for each tectonic region type
-            trts = source_collector.sorted_trts()
+            # save TrtModels for each tectonic region type
             gsims_by_trt = make_gsim_lt(self.hc, trts).values
-            for trt in trts:
-                models.TrtModel.objects.create(
+            for sc in source_collectors:
+                # NB: the source_collectors are ordered by number of sources
+                # and lexicographically, so the models are in the right order
+                trt_model_id = models.TrtModel.objects.create(
                     lt_model=lt_model,
-                    tectonic_region_type=trt,
-                    num_sources=len(source_collector.source_weights[trt]),
-                    num_ruptures=source_collector.num_ruptures[trt],
-                    min_mag=source_collector.min_mag[trt],
-                    max_mag=source_collector.max_mag[trt],
-                    gsims=gsims_by_trt[trt])
-        return lt_models
+                    tectonic_region_type=sc.trt,
+                    num_sources=len(sc.sources),
+                    num_ruptures=sc.num_ruptures,
+                    min_mag=sc.min_mag,
+                    max_mag=sc.max_mag,
+                    gsims=gsims_by_trt[sc.trt]).id
+                self.source_collector[trt_model_id] = sc
 
     @EnginePerformanceMonitor.monitor
     def parse_risk_models(self):
@@ -413,6 +491,64 @@ class BaseHazardCalculator(base.Calculator):
         """
         return hazard_export.export(output_id, export_dir, export_type)
 
+    # this could be parallelized in the future, however in all the cases
+    # I have seen until now, the serialized approach is fast enough (MS)
+    @EnginePerformanceMonitor.monitor
+    def save_hazard_curves(self):
+        """
+        Post-execution actions. At the moment, all we do is finalize the hazard
+        curve results.
+        """
+        imtls = self.hc.intensity_measure_types_and_levels
+        points = self.hc.points_to_compute()
+
+        for rlz in self._get_realizations():
+            # create a multi-imt curve
+            multicurve = models.Output.objects.create_output(
+                self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                "hazard_curve_multi")
+            models.HazardCurve.objects.create(
+                output=multicurve, lt_realization=rlz,
+                investigation_time=self.hc.investigation_time)
+
+            with self.monitor('building curves per realization'):
+                curves_by_imt = models.build_curves(rlz, self.curves)
+
+            # create a new `HazardCurve` 'container' record for each
+            # realization for each intensity measure type
+            for imt, curves in zip(sorted(imtls), curves_by_imt):
+                hc_im_type, sa_period, sa_damping = from_string(imt)
+
+                # save output
+                hco = models.Output.objects.create(
+                    oq_job=self.job,
+                    display_name="Hazard Curve rlz-%s-%s" % (rlz.id, imt),
+                    output_type='hazard_curve',
+                )
+
+                # save hazard_curve
+                haz_curve = models.HazardCurve.objects.create(
+                    output=hco,
+                    lt_realization=rlz,
+                    investigation_time=self.hc.investigation_time,
+                    imt=hc_im_type,
+                    imls=imtls[imt],
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                )
+
+                # save hazard_curve_data
+                logs.LOG.info('saving %d hazard curves for %s, imt=%s',
+                              len(points), hco, imt)
+                writer.CacheInserter.saveall([models.HazardCurveData(
+                    hazard_curve=haz_curve,
+                    poes=list(poes),
+                    location='POINT(%s %s)' % (p.longitude, p.latitude),
+                    weight=rlz.weight)
+                    for p, poes in zip(points, curves)])
+
+        self.curves = {}  # save memory for the post-processing phase
+
     @EnginePerformanceMonitor.monitor
     def do_aggregate_post_proc(self):
         """
@@ -422,6 +558,8 @@ class BaseHazardCalculator(base.Calculator):
 
         Post-processing results will be stored directly into the database.
         """
+        del self.source_collector  # save memory
+
         num_rlzs = models.LtRealization.objects.filter(
             lt_model__hazard_calculation=self.hc).count()
 
