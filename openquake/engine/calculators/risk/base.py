@@ -99,8 +99,8 @@ def distribute_by_assets(job_id, calc, taxonomy, counts, outputdict):
         # submitting task
         task_no += 1
         logs.LOG.info('Built task #%d for taxonomy %s', task_no, taxonomy)
-        risk_model = calc.risk_models[taxonomy].copy(getters=getters)
-        otm.submit(calc.job.id, risk_model, outputdict,
+        risk_model = calc.risk_models[taxonomy]
+        otm.submit(calc.job.id, risk_model, getters, outputdict,
                    calc.calculator_parameters)
 
     return otm
