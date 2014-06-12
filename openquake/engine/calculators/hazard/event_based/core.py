@@ -405,9 +405,9 @@ class GmfCalculator(object):
             gsim = gsim_obj.__class__.__name__
             curves_by_imt = []
             for imt in self.imts:
-                curves_by_imt.append(
-                    numpy.array([gmf[gsim, imt].get(site_id, 0)
-                                 for site_id in sids]))
+                ground_motion_field = [gmf[gsim, imt].get(site_id, 0)
+                                       for site_id in sids]
+                curves_by_imt.append(ground_motion_field)
             curves_by_gsim.append((gsim, curves_by_imt))
         return curves_by_gsim
 
