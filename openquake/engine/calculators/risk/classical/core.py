@@ -30,7 +30,7 @@ from openquake.engine.utils import tasks
 
 
 @tasks.oqtask
-def classical(job_id, risk_model, outputdict, params):
+def classical(job_id, risk_model, getters, outputdict, params):
     """
     Celery task for the classical risk calculator.
 
@@ -38,6 +38,8 @@ def classical(job_id, risk_model, outputdict, params):
       ID of the currently running job
     :param risk_model:
       A :class:`openquake.risklib.workflows.RiskModel` instance
+    :param getters:
+      A list of callable hazard getters
     :param outputdict:
       An instance of :class:`..writers.OutputDict` containing
       output container instances (e.g. a LossCurve)
@@ -50,10 +52,10 @@ def classical(job_id, risk_model, outputdict, params):
     # Do the job in other functions, such that they can be unit tested
     # without the celery machinery
     with transaction.commit_on_success(using='job_init'):
-        do_classical(risk_model, outputdict, params, monitor)
+        do_classical(risk_model, getters, outputdict, params, monitor)
 
 
-def do_classical(risk_model, outputdict, params, monitor):
+def do_classical(risk_model, getters, outputdict, params, monitor):
     """
     See `classical` for a description of the parameters.
     :param monitor:
@@ -64,7 +66,7 @@ def do_classical(risk_model, outputdict, params, monitor):
     compute mean and quantile artifacts.
     """
     outputs_per_loss_type = risk_model.compute_outputs(
-        monitor.copy('getting data'))
+        getters, monitor.copy('getting data'))
     stats_per_loss_type = risk_model.compute_stats(
         outputs_per_loss_type, params.quantiles, post_processing)
     for loss_type, outputs in outputs_per_loss_type.iteritems():
