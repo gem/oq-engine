@@ -84,6 +84,6 @@ def reflect_data_to_be_processed(data):
 
 
 @oqtask
-def fake_risk_task(job_id, risk_model, outputdict, params):
+def fake_risk_task(job_id, risk_model, getters, outputdict, params):
     """Used in tests.calculators.risk.base"""
     return {job_id: 1}
