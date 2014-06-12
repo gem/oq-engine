@@ -479,19 +479,16 @@ class BaseHazardCalculator(base.Calculator):
         points = self.hc.points_to_compute()
 
         for rlz in self._get_realizations():
-            # create a new `HazardCurve` 'container' record for each
-            # realization (virtual container for multiple imts)
-            # this is needed by the risk (see export.risk_test)
-            # even if there is a single IMT
-            haz_curve_container = models.HazardCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
-                    "hazard_curve_multi"),
-                lt_realization=rlz,
+            # create a multi-imt curve
+            multicurve = models.Output.objects.create_output(
+                self.job, "hc-multi-imt-rlz-%s" % rlz.id,
+                "hazard_curve_multi")
+            models.HazardCurve.objects.create(
+                output=multicurve, lt_realization=rlz,
                 investigation_time=self.hc.investigation_time)
 
             with self.monitor('building curves per realization'):
-                curves_by_imt = haz_curve_container.build_data(self.curves)
+                curves_by_imt = models.build_curves(rlz, self.curves)
 
             # create a new `HazardCurve` 'container' record for each
             # realization for each intensity measure type
