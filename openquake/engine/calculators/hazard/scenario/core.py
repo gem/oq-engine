@@ -28,11 +28,11 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.imt import from_string
 import openquake.hazardlib.gsim
 
-from openquake.commonlib.general import SequenceSplitter, distinct
+from openquake.commonlib.general import block_splitter, distinct
 from openquake.commonlib import source
 
 from openquake.engine.calculators.hazard import general as haz_general
-from openquake.engine.utils import tasks
+from openquake.engine.utils import tasks, config
 from openquake.engine.db import models
 from openquake.engine import writer
 from openquake.engine.performance import EnginePerformanceMonitor
@@ -100,6 +100,7 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         super(ScenarioHazardCalculator, self).__init__(*args, **kwargs)
         self.gmf = None
         self.rupture = None
+        self.rupture_block_size = config.get('hazard', 'rupture_block_size')
 
     def initialize_sources(self):
         """
@@ -107,7 +108,16 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         attribute self.rupture.
         """
         nrml = RuptureModelParser(self.hc.inputs['rupture_model']).parse()
-        self.rupture = source.NrmlHazardlibConverter(self.hc)(nrml)
+        self.rupture = source.NrmlHazardlibConverter(
+            self.hc.investigation_time,
+            self.hc.rupture_mesh_spacing,
+            self.hc.width_of_mfd_bin,
+            self.hc.area_source_discretization,
+        )(nrml)
+
+    def initialize_realizations(self):
+        """There are no realizations for the scenario calculator"""
+        pass
 
     def pre_execute(self):
         """
@@ -177,6 +187,9 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         """
         ses_ruptures = models.SESRupture.objects.filter(
             rupture__ses_collection=self.ses_coll.id)
-        ss = SequenceSplitter(self.concurrent_tasks())
-        for task_no, ruptures in enumerate(ss.split(ses_ruptures)):
+        for task_no, ruptures in enumerate(
+                block_splitter(ses_ruptures, self.rupture_block_size)):
             yield self.job.id, ruptures, self.sites, self.gmf.id, task_no
+
+    def task_completed(self, result):
+        """Do nothing"""
