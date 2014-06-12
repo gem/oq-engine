@@ -61,13 +61,13 @@ from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 
-from openquake.engine import logs, writer
+from openquake.engine import logs
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
 from openquake.engine.db import models
 from openquake.engine.utils import tasks
-from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
+from openquake.engine.performance import LightMonitor
 
 
 class BoundingBox(object):
@@ -177,18 +177,6 @@ def _calc_pnes(gsim, r_sites, rupture, imts, imls, truncation_level,
             yield r_sites.expand(pnes, placeholder=1)
 
 
-def all_equal(obj, value):
-    """
-    :param obj: a numpy array or something else
-    :param value: a numeric value
-    :returns: a boolean
-    """
-    if isinstance(obj, numpy.ndarray):
-        return (obj == value).all()
-    else:
-        return obj == value
-
-
 @tasks.oqtask
 def compute_hazard_curves(
         job_id, sitecol, sources, trt_model_id, gsims, task_no):
@@ -265,8 +253,11 @@ def compute_hazard_curves(
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
     # big arrays of zeros (MS)
-    cs = [[0 if all_equal(c, 1) else 1. - c for c in curv] for curv in curves]
-    return zip(gsims, cs), trt_model_id, bbs
+    curves_by_gsim = [
+        (gsim.__class__.__name__,
+         [0 if general.all_equal(c, 1) else 1. - c for c in curv])
+        for gsim, curv in zip(gsims, curves)]
+    return curves_by_gsim, trt_model_id, bbs
 
 
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
@@ -290,20 +281,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         `execute` phase.).
         """
         super(ClassicalHazardCalculator, self).pre_execute()
-        self.imtls = self.hc.intensity_measure_types_and_levels
-        realizations = self._get_realizations()
-        n_rlz = len(realizations)
-        n_levels = sum(len(lvls) for lvls in self.imtls.itervalues()
-                       ) / float(len(self.imtls))
-        n_sites = len(self.hc.site_collection)
-        self.zero = numpy.array([numpy.zeros((n_sites, len(self.imtls[imt])))
-                                 for imt in sorted(self.imtls)])
-        total = n_rlz * len(self.imtls) * n_levels * n_sites
-        logs.LOG.info('Considering %d realization(s), %d IMT(s), %d level(s) '
-                      'and %d sites, total %d', n_rlz, len(self.imtls),
-                      n_levels, n_sites, total)
-        self.curves = {}  # {trt_model_id, gsim: curves_by_imt}
-
         # a dictionary with the bounding boxes for earch source
         # model and each site, defined only for disaggregation
         # calculations:
@@ -314,101 +291,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 ((lt_model.id, site.id), BoundingBox(lt_model.id, site.id))
                 for site in self.hc.site_collection
                 for lt_model in lt_models)
-
-    @EnginePerformanceMonitor.monitor
-    def task_completed(self, (result, trt_model_id, bbs)):
-        """
-        This is used to incrementally update hazard curve results by combining
-        an initial value with some new results. (Each set of new results is
-        computed over only a subset of seismic sources defined in the
-        calculation model.)
-
-        :param task_result:
-            A dictionary rlz -> curves_by_imt where curves_by_imt is a
-            list of 2-D numpy arrays representing the new results which need
-            to be combined with the current value. These should be the same
-            shape as self.curves[tr_model_id, gsim][j] where gsim is the
-            GSIM name and j is the IMT ordinal.
-        """
-        for gsim_obj, probs in result:
-            gsim = gsim_obj.__class__.__name__
-            # probabilities of no exceedence per IMT
-            pnes = numpy.array(
-                [1 - (zero if all_equal(prob, 0) else prob)
-                 for prob, zero in itertools.izip(probs, self.zero)])
-            # TODO: add a test like Yufang computation testing the broadcast
-            self.curves[trt_model_id, gsim] = 1 - (
-                1 - self.curves.get((trt_model_id, gsim), self.zero)) * pnes
-
-        if self.hc.poes_disagg:
-            for bb in bbs:
-                self.bb_dict[bb.lt_model_id, bb.site_id].update_bb(bb)
-
-    # this could be parallelized in the future, however in all the cases
-    # I have seen until now, the serialized approach is fast enough (MS)
-    @EnginePerformanceMonitor.monitor
-    def save_hazard_curves(self):
-        """
-        Post-execution actions. At the moment, all we do is finalize the hazard
-        curve results.
-        """
-        imtls = self.hc.intensity_measure_types_and_levels
-        points = self.hc.points_to_compute()
-
-        for rlz in self._get_realizations():
-            # create a new `HazardCurve` 'container' record for each
-            # realization (virtual container for multiple imts)
-            haz_curve_container = models.HazardCurve.objects.create(
-                output=models.Output.objects.create_output(
-                    self.job, "hc-multi-imt-rlz-%s" % rlz.id,
-                    "hazard_curve_multi"),
-                lt_realization=rlz,
-                investigation_time=self.hc.investigation_time)
-
-            with self.monitor('building curves per realization'):
-                curves_by_imt = haz_curve_container.build_data(self.curves)
-
-            # create a new `HazardCurve` 'container' record for each
-            # realization for each intensity measure type
-            for imt, curves in zip(sorted(imtls), curves_by_imt):
-                hc_im_type, sa_period, sa_damping = from_string(imt)
-
-                # save output
-                hco = models.Output.objects.create(
-                    oq_job=self.job,
-                    display_name="Hazard Curve rlz-%s" % rlz.id,
-                    output_type='hazard_curve',
-                )
-
-                # save hazard_curve
-                haz_curve = models.HazardCurve.objects.create(
-                    output=hco,
-                    lt_realization=rlz,
-                    investigation_time=self.hc.investigation_time,
-                    imt=hc_im_type,
-                    imls=imtls[imt],
-                    sa_period=sa_period,
-                    sa_damping=sa_damping,
-                )
-
-                # save hazard_curve_data
-                logs.LOG.info('saving %d hazard curves for %s, imt=%s',
-                              len(points), hco, imt)
-                writer.CacheInserter.saveall([models.HazardCurveData(
-                    hazard_curve=haz_curve,
-                    poes=list(poes),
-                    location='POINT(%s %s)' % (p.longitude, p.latitude),
-                    weight=rlz.weight)
-                    for p, poes in zip(points, curves)])
-
-        self.curves = {}  # save memory for the post-processing phase
-
-    def post_execute(self):
-        """
-        Generate the realizations and save the hazard curves
-        """
-        super(ClassicalHazardCalculator, self).post_execute()
-        self.save_hazard_curves()
 
     def post_process(self):
         """
