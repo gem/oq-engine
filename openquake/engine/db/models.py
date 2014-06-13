@@ -802,12 +802,12 @@ class HazardCalculation(djm.Model):
 
     def get_imts(self):
         """
-        Returns intensity mesure types or
-        intensity mesure types with levels.
+        Returns intensity mesure types or intensity mesure types with levels
+        in a fixed order.
         """
 
-        return (self.intensity_measure_types or
-                self.intensity_measure_types_and_levels.keys())
+        return sorted(self.intensity_measure_types or
+                      self.intensity_measure_types_and_levels)
 
     def save_sites(self, coordinates):
         """
