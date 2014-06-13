@@ -105,9 +105,10 @@ class ProbabilisticRupture(object):
 
 class SESRupture(object):
 
-    def __init__(self, rupture, ses, tag="TAG"):
+    def __init__(self, rupture, ses, seed=0, tag="TAG"):
         self.rupture = rupture
         self.ses = ses
+        self.seed = seed
         self.tag = tag
 
 
