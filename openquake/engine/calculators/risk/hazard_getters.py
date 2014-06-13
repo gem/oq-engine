@@ -183,8 +183,8 @@ class GroundMotionValuesGetter(HazardGetter):
         for sid, group in itertools.groupby(cursor, operator.itemgetter(0)):
             gmvs = []
             ruptures = []
-            for site_id, rupture_ids, gmvs in group:
-                gmvs.extend(gmvs)
+            for site_id, rupture_ids, gmvs_chunk in group:
+                gmvs.extend(gmvs_chunk)
                 ruptures.extend(rupture_ids)
             gmv_dict[sid] = dict(itertools.izip(ruptures, gmvs))
         return gmv_dict
