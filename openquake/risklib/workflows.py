@@ -292,7 +292,7 @@ class Classical(object):
     def compute_all_outputs(self, getters, loss_type, getter_monitor):
         """
         :param getters:
-            a list of hazard getters, i.e. objects with a .get_date(imt) method
+            a list of hazard getters, i.e. objects with a .data[imt] dictionary
         :param str loss_type:
             a string identifying the loss type we are considering
         :getter_monitor:
@@ -305,7 +305,7 @@ class Classical(object):
         imt = self.vulnerability_functions[loss_type].imt
         for getter in getters:
             with getter_monitor.copy('getting hazard'):
-                hazard_curves = getter.get_data(imt)
+                hazard_curves = getter.data[imt]
             with getter_monitor.copy('computing individual risk'):
                 all_outputs.append(
                     Output(getter.hid, getter.weight, loss_type,
@@ -465,7 +465,7 @@ class ProbabilisticEventBased(object):
     def compute_all_outputs(self, getters, loss_type, getter_monitor):
         """
         :param getters:
-            a list of hazard getters, i.e. objects with a .get_date(imt) method
+            a list of hazard getters, i.e. objects with a .data[imt] dictionary
         :param str loss_type:
             a string identifying the loss type we are considering
         :param getter_monitor:
@@ -478,7 +478,7 @@ class ProbabilisticEventBased(object):
         imt = self.vulnerability_functions[loss_type].imt
         for getter in getters:
             with getter_monitor.copy('getting hazard'):
-                gmvs = getter.get_data(imt)
+                gmvs = getter.data[imt]
             with getter_monitor.copy('computing individual risk'):
                 all_outputs.append(
                     Output(getter.hid, getter.weight, loss_type,
@@ -727,6 +727,13 @@ class RiskModel(object):
         """
         return [self.workflow.vulnerability_functions[lt]
                 for lt in self.loss_types]
+
+    @property
+    def imts(self):
+        """
+        The set of underlying IMTs, as strings
+        """
+        return set(vf.imt for vf in self.vulnerability_functions)
 
     def compute_outputs(self, getters, getter_monitor):
         """
