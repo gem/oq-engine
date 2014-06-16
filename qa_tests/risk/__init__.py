@@ -225,7 +225,7 @@ class CompleteTestCase(object):
         path = self._test_path("expected/%s.csv" % filename)
         return numpy.genfromtxt(path, dtype, delimiter=",")[slicer]
 
-    def expected_output_data(self, job):
+    def expected_output_data(self):
         """
         :returns:
             an iterable over data objects (e.g. LossCurveData)
