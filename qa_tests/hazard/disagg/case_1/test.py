@@ -21,8 +21,6 @@ class DisaggHazardCase1TestCase(_utils.DisaggHazardTestCase):
     working_dir = os.path.dirname(__file__)
     imts = ['PGA', 'SA-0.025']
     fnames = [
-        'disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_0.xml',
-        'disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_1.xml',
-        'disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_0.xml',
-        'disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1-ltr_1.xml',
+        'disagg_matrix(0.02)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
+        'disagg_matrix(0.1)-lon_10.1-lat_40.1-smltp_b1-gsimltp_b1.xml',
     ]
