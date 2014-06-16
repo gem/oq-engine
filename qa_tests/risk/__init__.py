@@ -87,7 +87,9 @@ class BaseRiskQATestCase(qa_utils.BaseQATestCase):
                 self._test_path('job_risk.ini'),
                 self.hazard_id(haz_job))
 
-            self.check_outputs(job)
+            for attr in dir(self):
+                if attr.startswith('check_'):
+                    getattr(self, attr)(job)
 
             if hasattr(self, 'expected_outputs'):
                 expected_outputs = self.expected_outputs()
@@ -223,7 +225,7 @@ class CompleteTestCase(object):
         path = self._test_path("expected/%s.csv" % filename)
         return numpy.genfromtxt(path, dtype, delimiter=",")[slicer]
 
-    def expected_output_data(self):
+    def expected_output_data(self, job):
         """
         :returns:
             an iterable over data objects (e.g. LossCurveData)
