@@ -30,16 +30,16 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         self._run_test()
 
     expected_elt_b2 = [  # the first 10 values for structural
-        ('smlt=00|ses=0899|src=3|rup=006-01', 6.75, 5000.7019593),
-        ('smlt=00|ses=1250|src=3|rup=002-01', 5.55, 4954.3175438),
-        ('smlt=00|ses=1652|src=3|rup=003-01', 5.85, 4552.8834591),
-        ('smlt=00|ses=1159|src=3|rup=001-02', 5.25, 4508.8312772),
-        ('smlt=00|ses=0833|src=3|rup=006-01', 6.75, 4482.6207698),
-        ('smlt=00|ses=0296|src=3|rup=002-01', 5.55, 4409.9396559),
-        ('smlt=00|ses=0986|src=3|rup=001-01', 5.25, 4301.6839388),
-        ('smlt=00|ses=0410|src=3|rup=001-01', 5.25, 4191.0523522),
-        ('smlt=00|ses=1395|src=3|rup=001-01', 5.25, 4173.6146605),
-        ('smlt=00|ses=0236|src=3|rup=004-01', 6.15, 4167.0200947),
+        ('smlt=00|ses=0899|src=3|rup=006-01', 6.75, 5000.70195926),
+        ('smlt=00|ses=1250|src=3|rup=002-01', 5.55, 5000.30415742),
+        ('smlt=00|ses=0236|src=3|rup=004-01', 6.15, 4762.77267285),
+        ('smlt=00|ses=1652|src=3|rup=003-01', 5.85, 4510.95161876),
+        ('smlt=00|ses=1159|src=3|rup=001-02', 5.25, 4349.69069842),
+        ('smlt=00|ses=0986|src=3|rup=001-01', 5.25, 4290.45162668),
+        ('smlt=00|ses=0296|src=3|rup=002-01', 5.55, 4217.37255025),
+        ('smlt=00|ses=0833|src=3|rup=006-01', 6.75, 4215.31848008),
+        ('smlt=00|ses=0410|src=3|rup=001-01', 5.25, 4163.81359397),
+        ('smlt=00|ses=1395|src=3|rup=001-01', 5.25, 4122.56430755),
     ]
 
     expected_loss_fractions_b1 = collections.OrderedDict([
