@@ -292,7 +292,7 @@ class Classical(object):
     def compute_all_outputs(self, getters, loss_type, getter_monitor):
         """
         :param getters:
-            a list of hazard getters, i.e. objects with a .get_date(imt) method
+            a list of hazard getters, i.e. objects with a .get_data(imt) method
         :param str loss_type:
             a string identifying the loss type we are considering
         :getter_monitor:
@@ -465,7 +465,7 @@ class ProbabilisticEventBased(object):
     def compute_all_outputs(self, getters, loss_type, getter_monitor):
         """
         :param getters:
-            a list of hazard getters, i.e. objects with a .get_date(imt) method
+            a list of hazard getters, i.e. objects with a .get_data(imt) method
         :param str loss_type:
             a string identifying the loss type we are considering
         :param getter_monitor:
@@ -727,6 +727,13 @@ class RiskModel(object):
         """
         return [self.workflow.vulnerability_functions[lt]
                 for lt in self.loss_types]
+
+    @property
+    def imts(self):
+        """
+        The set of underlying IMTs, as strings
+        """
+        return set(vf.imt for vf in self.vulnerability_functions)
 
     def compute_outputs(self, getters, getter_monitor):
         """
