@@ -17,7 +17,7 @@
     </disaggMatrix>
     <disaggMatrix type="Mag,Dist" dims="3,4" poE="0.1" iml="0.300499775729">
       <prob index="0,0" value="0.0555504153086"/>
-      <prob index="0,1" value="0.000272426951897"/>
+      <prob index="0,1" value="0.000272426951898"/>
       <prob index="0,2" value="0.0"/>
       <prob index="0,3" value="0.0"/>
       <prob index="1,0" value="0.0281797194173"/>
@@ -25,7 +25,7 @@
       <prob index="1,2" value="1.02482743345e-05"/>
       <prob index="1,3" value="0.0"/>
       <prob index="2,0" value="0.00959972302182"/>
-      <prob index="2,1" value="0.000608669881262"/>
+      <prob index="2,1" value="0.000608669881261"/>
       <prob index="2,2" value="0.000156573248981"/>
       <prob index="2,3" value="0.0"/>
     </disaggMatrix>
@@ -35,7 +35,7 @@
       <prob index="0,0,2" value="0.0451675961523"/>
       <prob index="0,1,0" value="0.0"/>
       <prob index="0,1,1" value="0.0"/>
-      <prob index="0,1,2" value="0.000272426951897"/>
+      <prob index="0,1,2" value="0.000272426951898"/>
       <prob index="0,2,0" value="0.0"/>
       <prob index="0,2,1" value="0.0"/>
       <prob index="0,2,2" value="0.0"/>
@@ -59,7 +59,7 @@
       <prob index="2,0,2" value="0.00350691722447"/>
       <prob index="2,1,0" value="0.0"/>
       <prob index="2,1,1" value="0.0"/>
-      <prob index="2,1,2" value="0.000608669881262"/>
+      <prob index="2,1,2" value="0.000608669881261"/>
       <prob index="2,2,0" value="0.0"/>
       <prob index="2,2,1" value="0.0"/>
       <prob index="2,2,2" value="0.000156573248981"/>
