@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import collections
 from nose.plugins.attrib import attr as noseattr
 from qa_tests import risk
 
@@ -41,15 +40,6 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         ('smlt=00|ses=0410|src=3|rup=001-01', 5.25, 4163.81359397),
         ('smlt=00|ses=1395|src=3|rup=001-01', 5.25, 4122.56430755),
     ]
-
-    expected_loss_fractions_b1 = collections.OrderedDict([
-        ('80.0000,82.0000|28.0000,30.0000',
-         (149151.051604689, 0.336224896458288)),
-        ('82.0000,84.0000|26.0000,28.0000',
-         (152271.548653352, 0.3432593007470749)),
-        ('84.0000,86.0000|26.0000,28.0000',
-         (142182.418810476, 0.32051580279463704)),
-    ])
 
     def expected_output_data(self):
         branches = dict(
@@ -157,12 +147,3 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
                 'asset_ref', 'loss_map__poe')]
         aae(actual_0, [373.897855723113, 228.343264402241,
                        612.342825267806, 722.034926561984])
-
-    def check_loss_fraction(self, job):
-        fractions_b1, fractions_b2 = models.LossFraction.objects.filter(
-            output__oq_job=job, variable="coordinate",
-            loss_type='structural').order_by('hazard_output')
-        site, odict = fractions_b1.iteritems().next()
-        # the disaggregation site in job_risk.ini
-        self.assertEqual(site, (81.2985, 29.1098))
-        self.assertEqual(odict, self.expected_loss_fractions_b1)
