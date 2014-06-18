@@ -16,6 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+TODO: write documentation.
+
+For the moment I give just an example:
+
+import logging
+import operator
+from openquake.commonlib.parallel import map_reduce
+logging.basicConfig(level=logging.INFO)
+
+def sum_all(*numbers):
+    return sum(numbers)
+
+print map_reduce(sum_all, [(1, 2, 3), (4, 5), (6,)], operator.add, 0)
+# => 21
+"""
+
 import os
 import sys
 import cPickle
