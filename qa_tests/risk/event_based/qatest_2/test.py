@@ -16,7 +16,7 @@
 """
 This is a fast test of the event_loss_table, which is quite stringent
 """
-
+import collections
 from nose.plugins.attrib import attr as noseattr
 from qa_tests import risk
 
@@ -52,6 +52,15 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         ('smlt=00|ses=0018|src=2|rup=001-02', 5.25, 71.8709085026),
     ]
 
+    expected_loss_fractions = collections.OrderedDict([
+        ('80.0000,82.0000|28.0000,30.0000',
+         (4050.860981516, 0.6065271127743204)),
+        ('82.0000,84.0000|26.0000,28.0000',
+         (1186.2710497, 0.17761793308271825)),
+        ('84.0000,86.0000|26.0000,28.0000',
+         (1441.647690579, 0.21585495414296138)),
+    ])
+
     def check_event_loss_table(self, job):
         # we check only the first 10 values of the event loss table
         # for loss_type=structural and branch b2
@@ -63,3 +72,12 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             self.assertEqual(e.rupture.tag, row[0])
             self.assertEqual(e.rupture.rupture.mag, row[1])
             self.assertAlmostEqual(e.aggregate_loss, row[2])
+
+    def check_loss_fraction(self, job):
+        [fractions] = models.LossFraction.objects.filter(
+            output__oq_job=job, variable="coordinate",
+            loss_type='structural').order_by('hazard_output')
+        site, odict = fractions.iteritems().next()
+        # the disaggregation site in job_risk.ini
+        self.assertEqual(site, (81.2985, 29.1098))
+        self.assertEqual(odict, self.expected_loss_fractions)
