@@ -175,15 +175,18 @@ class TaskManager(object):
     A manager to submit several tasks of the same type.
     The usage is::
 
-      oqm = OqTaskManager(do_something, logging.info)
-      oqm.send(arg1, arg2)
-      oqm.send(arg3, arg4)
-      print oqm.aggregate_results(agg, acc)
+      tm = TaskManager(do_something, logging.info)
+      tm.send(arg1, arg2)
+      tm.send(arg3, arg4)
+      print tm.aggregate_results(agg, acc)
 
     Progress report is built-in.
     """
     ResultSet = staticmethod(as_completed)
+    # in a subclass one could use a celery.task.ResultSet
+
     pickle = False
+    # could be True in a subclass
 
     def __init__(self, oqtask, progress, name=None):
         self.oqtask = oqtask
@@ -194,9 +197,10 @@ class TaskManager(object):
 
     def submit(self, *args):
         """
-        Submit an oqtask with the given arguments to celery and return
-        an AsyncResult. If the variable OQ_NO_DISTRIBUTE is set, the
-        task function is run in process and the result is returned.
+        Submit a function with the given arguments to the process pool
+        and add a Future to the list `.results`. If the variable
+        OQ_NO_DISTRIBUTE is set, the function is run in process and the
+        result is returned.
         """
         check_mem_usage()  # log a warning if too much memory is used
         if no_distribute():
@@ -275,11 +279,11 @@ def map_reduce(function, function_args, agg, acc, name=None):
 
     NB: if the environment variable OQ_NO_DISTRIBUTE is set the
     functions are run sequentially in the current process and then
-    map_reduce(function, function_args, agg, acc) is the same as
-    reduce(agg, itertools.starmap(function, function_args), acc).
-    Users of map_reduce should be aware of the fact that when
+    `map_reduce(function, function_args, agg, acc)` is the same as
+    `reduce(agg, itertools.starmap(function, function_args), acc)`.
+    Users of `map_reduce` should be aware of the fact that when
     thousands of functions are spawned and large arguments are passed
-    or large results are returned they may incur in memory issue
+    or large results are returned they may incur in memory issues.
 
     :param function: a top level Python function
     :param function_args: an iterable over positional arguments
@@ -287,7 +291,7 @@ def map_reduce(function, function_args, agg, acc, name=None):
     :param acc: the initial value of the accumulator
     :returns: the final value of the accumulator
     """
-    oqm = TaskManager(function, logging.info, name)
+    tm = TaskManager(function, logging.info, name)
     for args in function_args:
-        oqm.submit(*args)
-    return oqm.aggregate_results(agg, acc)
+        tm.submit(*args)
+    return tm.aggregate_results(agg, acc)
