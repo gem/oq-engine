@@ -33,6 +33,7 @@ For more information on computing ground motion fields, see
 
 import time
 import random
+import operator
 import collections
 
 import numpy.random
@@ -171,7 +172,7 @@ def compute_ruptures(
         # NB: the number of occurrences is very low, << 1, so it is
         # more efficient to filter only the ruptures that occur, i.e.
         # to call sample_number_of_occurrences() *before* the filtering
-        for rup in ses_num_occ.keys():
+        for rup in sorted(ses_num_occ, key=operator.attrgetter('rup_no')):
             with filter_ruptures_mon:  # filtering ruptures
                 r_sites = filters.filter_sites_by_distance_to_rupture(
                     rup, hc.maximum_distance, s_sites
