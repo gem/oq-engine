@@ -100,7 +100,8 @@ class ScenarioHazardCalculator(haz_general.BaseHazardCalculator):
         super(ScenarioHazardCalculator, self).__init__(*args, **kwargs)
         self.gmf = None
         self.rupture = None
-        self.rupture_block_size = config.get('hazard', 'rupture_block_size')
+        self.rupture_block_size = int(
+            config.get('hazard', 'rupture_block_size'))
 
     def initialize_sources(self):
         """
