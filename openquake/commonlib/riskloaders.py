@@ -20,18 +20,30 @@
 """
 Reading risk models for risk calculators
 """
-
 import collections
 from openquake.risklib import scientific, workflows
 from openquake.nrmllib.risk import parsers
 
+# loss types (in the risk models) and cost types (in the exposure)
+# are the sames except for fatalities -> occupants
 
-def get_vulnerability_functions(vulnerability_file):
+
+def loss_type_to_cost_type(lt):
+    """Convert a loss_type string into a cost_type string"""
+    return 'occupants' if lt == 'fatalities' else lt
+
+
+def cost_type_to_loss_type(ct):
+    """Convert a cost_type string into a loss_type string"""
+    return 'fatalities' if ct == 'occupants' else ct
+
+
+def _get_vulnerability_functions(vulnerability_file):
     """
     :param vulnerability_file:
         the pathname to a vulnerability file
     :returns:
-        a dictionary {taxonomy: (imt, vulnerability_function)}
+        a dictionary {taxonomy: vulnerability_function}
     :raises:
         * `ValueError` if validation of any vulnerability function fails
     """
@@ -57,6 +69,41 @@ def get_vulnerability_functions(vulnerability_file):
             raise ValueError(msg)
 
     return vfs
+
+
+def get_taxonomy_vfs(inputs, loss_types, retrofitted=False):
+    """
+    Given a dictionary {key: pathname} and a list of loss_types (for instance
+    ['structural', 'nonstructural', ...]) look for keys with name
+    <cost_type>__vulnerability, parse them and yield pairs
+    (taxonomy, vf_by_loss_type)
+    """
+    retro = '_retrofitted' if retrofitted else ''
+    vulnerability_functions = collections.defaultdict(list)
+    for loss_type in loss_types:
+        key = '%s_vulnerability%s' % (loss_type_to_cost_type(loss_type), retro)
+        if key not in inputs:
+            continue
+        for tax, vf in _get_vulnerability_functions(inputs[key]).iteritems():
+            vulnerability_functions[tax].append((loss_type, vf))
+    for taxonomy in vulnerability_functions:
+        yield taxonomy, dict(vulnerability_functions[taxonomy])
+
+
+def get_risk_models(inputs, loss_types, insured_losses=False,
+                    retrofitted=False):
+    """
+    Given a directory path name and a list of loss_types (for instance
+    ['structural', 'nonstructural', ...]) look for files with name
+    <loss_type>__vulnerability_model.xml, parse them and return a
+    dictionary {taxonomy: risk_model}.
+    """
+    risk_models = {}
+    for taxonomy, vf_by_loss_type in get_taxonomy_vfs(
+            inputs, loss_types, retrofitted):
+        workflow = workflows.Scenario(vf_by_loss_type, insured_losses)
+        risk_models[taxonomy] = workflows.RiskModel(taxonomy, workflow)
+    return risk_models
 
 
 class List(list):
