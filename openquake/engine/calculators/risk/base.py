@@ -22,14 +22,19 @@ Base RiskCalculator class.
 import collections
 import psutil
 
+from openquake.nrmllib.risk import parsers
+from openquake.risklib.workflows import RiskModel
+from openquake.commonlib.riskloaders import get_taxonomy_vfs
+
 from openquake.engine import logs, export
 from openquake.engine.db import models
 from openquake.engine.calculators import base
 from openquake.engine.calculators.risk import \
-    writers, validation, loaders, hazard_getters
+    writers, validation, hazard_getters
 from openquake.engine.utils import config, tasks
-from openquake.risklib.workflows import RiskModel
 from openquake.engine.performance import EnginePerformanceMonitor
+from openquake.engine.input.exposure import ExposureDBWriter
+
 
 BLOCK_SIZE = 100  # number of assets per block
 
@@ -151,12 +156,15 @@ class RiskCalculator(base.Calculator):
         """
         with self.monitor('get exposure'):
             self.taxonomies_asset_count = (
-                self.rc.preloaded_exposure_model or loaders.exposure(
-                    self.job, self.rc.inputs['exposure'])
+                self.rc.preloaded_exposure_model or
+                ExposureDBWriter(self.job).serialize(
+                    parsers.ExposureModelParser(self.rc.inputs['exposure']))
                 ).taxonomies_in(self.rc.region_constraint)
 
         with self.monitor('parse risk models'):
             self.risk_models = self.get_risk_models()
+            for rm in self.risk_models.itervalues():
+                self.loss_types.update(rm.loss_types)
 
             # consider only the taxonomies in the risk models if
             # taxonomies_from_model has been set to True in the
@@ -252,40 +260,21 @@ class RiskCalculator(base.Calculator):
         if self.bcr is False:
             return dict(
                 (taxonomy, RiskModel(taxonomy, self.get_workflow(vfs)))
-                for taxonomy, vfs in self._get_vfs())
+                for taxonomy, vfs in get_taxonomy_vfs(
+                    self.rc.inputs, models.LOSS_TYPES))
 
         # BCR risk models
-        risk_models = {}
-        orig_data = self._get_vfs(retrofitted=False)
-        retro_data = self._get_vfs(retrofitted=True)
+        orig_data = get_taxonomy_vfs(
+            self.rc.inputs, models.LOSS_TYPES, retrofitted=False)
+        retro_data = get_taxonomy_vfs(
+            self.rc.inputs, models.LOSS_TYPES, retrofitted=True)
 
-        for orig, retro in zip(orig_data, retro_data):
-            taxonomy, vfs = orig
-            taxonomy_, vfs_ = retro
+        risk_models = {}
+        for (taxonomy, vfs), (taxonomy_, vfs_) in zip(orig_data, retro_data):
             assert taxonomy_ == taxonomy_  # same taxonomy
             risk_models[taxonomy] = RiskModel(
                 taxonomy, self.get_workflow(vfs, vfs_))
-
         return risk_models
-
-    def _get_vfs(self, retrofitted=False):
-        """
-        Parse vulnerability models for each loss type in
-        `openquake.engine.db.models.LOSS_TYPES`,
-        then set the `risk_models` attribute.
-
-        :param bool retrofitted:
-            True if retrofitted models should be retrieved
-        :returns:
-            A dictionary taxonomy -> instance of `RiskModel`.
-        """
-        data = collections.defaultdict(list)  # imt, loss_type, vf per taxonomy
-        for v_input, loss_type in self.rc.vulnerability_inputs(retrofitted):
-            self.loss_types.add(loss_type)
-            for taxonomy, vf in loaders.vulnerability(v_input).items():
-                data[taxonomy].append((loss_type, vf))
-        for taxonomy in data:
-            yield taxonomy, dict(data[taxonomy])
 
     def get_workflow(self, vulnerability_functions):
         """
