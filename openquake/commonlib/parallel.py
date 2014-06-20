@@ -38,9 +38,12 @@ import sys
 import cPickle
 import logging
 import traceback
+import datetime
+import time
+from concurrent.futures import as_completed, ProcessPoolExecutor
+
 import psutil
 
-from concurrent.futures import as_completed, ProcessPoolExecutor
 
 executor = ProcessPoolExecutor()
 
@@ -295,3 +298,76 @@ def map_reduce(function, function_args, agg, acc, name=None):
     for args in function_args:
         tm.submit(*args)
     return tm.aggregate_results(agg, acc)
+
+
+# this is not thread-safe
+class PerformanceMonitor(object):
+    """
+    Measure the resident memory occupied by a list of processes during
+    the execution of a block of code. Should be used as a context manager,
+    as follows::
+
+     with PerformanceMonitor([os.getpid()]) as mm:
+         do_something()
+     deltamemory, = mm.mem
+
+    At the end of the block the PerformanceMonitor object will have the
+    following 5 public attributes:
+
+    .start_time: when the monitor started (a datetime object)
+    .duration: time elapsed between start and stop (in seconds)
+    .exc: None unless an exception happened inside the block of code
+    .mem: an array with the memory deltas (in bytes)
+
+    The memory array has the same length as the number of processes.
+    The behaviour of the PerformanceMonitor can be customized by subclassing it
+    and by overriding the method on_exit(), called at end and used to display
+    or store the results of the analysis.
+    """
+    def __init__(self, pids=None):
+        pids = pids or [os.getpid()]
+        self._procs = [psutil.Process(pid) for pid in pids if pid]
+        self._start_time = None  # seconds from the epoch
+        self.start_time = None  # datetime object
+        self.duration = None  # seconds
+        self.mem = None  # bytes
+        self.exc = None  # exception
+
+    def measure_mem(self):
+        "An array of memory measurements (in bytes), one per process"
+        mem = []
+        for proc in list(self._procs):
+            try:
+                rss = proc.get_memory_info().rss
+            except psutil.AccessDenied:
+                # no access to information about this process
+                # don't not try to check it anymore
+                self._procs.remove(proc)
+            else:
+                mem.append(rss)
+        return mem
+
+    def __enter__(self):
+        "Call .start"
+        self.exc = None
+        self._start_time = time.time()
+        self.start_time = datetime.fromtimestamp(self._start_time)
+        self.start_mem = self.measure_mem()
+        return self
+
+    def __exit__(self, etype, exc, tb):
+        "Call .stop"
+        self.exc = exc
+        self.stop_mem = self.measure_mem()
+        self.mem = self.stop_mem - self.start_mem
+        self.duration = time.time() - self._start_time
+        self.on_exit()
+
+    def on_exit(self):
+        "Save the results: to be overridden in subclasses"
+        print 'start_time =', self.start_time
+        print 'duration =', self.duration
+        print 'mem =', self.mem
+        if self.exc:
+            print 'exc = %s(%s)' % (self.exc.__class__.__name__, self.exc)
+
