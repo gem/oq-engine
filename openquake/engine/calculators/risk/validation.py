@@ -182,7 +182,7 @@ class ExposureHasTimeEvent(Validator):
     """
 
     def get_error(self):
-        if (self.calc.rc.vulnerability_input("occupants") is not None and
+        if (self.calc.rc.inputs.get("occupants") is not None and
             not self.calc.rc.exposure_model.has_time_event(
                 self.calc.rc.time_event)):
             return ("Some assets are missing an "
