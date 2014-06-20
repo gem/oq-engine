@@ -64,6 +64,8 @@ DILATION_ONE_METER = 1e-5
 def _normalize(prob, zero):
     # make sure that the elements of prob are matrices with n_levels elements,
     # possibly all zeros; zero is a matrix of n_sites * n_levels zeros
+    if all_equal(prob, 0):
+        return zero
     return numpy.array(
         [zero[0] if all_equal(p, 0) else p for p in prob], dtype=float)
 
