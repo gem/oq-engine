@@ -155,8 +155,19 @@ _devtest_innervm_run () {
 
     trap 'local LASTERR="$?" ; trap ERR ; (exit $LASTERR) ; return' ERR
 
+    ssh $lxc_ip "rm -f ssh.log"
+
     ssh $lxc_ip "sudo apt-get update"
-    ssh $lxc_ip "sudo apt-get upgrade -y"
+    ssh $lxc_ip "sudo apt-get -y upgrade"
+    gpg -a --export | ssh $lxc_ip "sudo apt-key add -"
+    # install package to manage repository properly
+    ssh $lxc_ip "sudo apt-get install -y python-software-properties"
+
+    # add custom packages
+    ssh $lxc_ip mkdir -p "repo"
+    ls ${GEM_DEB_REPO}/custom_pkgs # FIXME: for test
+    scp -r ${GEM_DEB_REPO}/custom_pkgs $lxc_ip:repo/custom_pkgs
+    ssh $lxc_ip "sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ./\""
 
     old_ifs="$IFS"
     IFS=" "
