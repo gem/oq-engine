@@ -23,11 +23,10 @@ import os
 import os.path
 import unittest
 
-from openquake.nrmllib.parsers import SourceModelParser
-
 from openquake.commonlib import logictree
-from openquake.commonlib.source import NrmlHazardlibConverter
-from openquake.commonlib.general import deep_eq
+from openquake.commonlib.source import \
+    NrmlHazardlibConverter, parse_source_model
+from openquake.commonlib.general import distinct
 
 from openquake.engine.calculators.hazard.general import make_gsim_lt
 
@@ -93,7 +92,7 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
                          [('maxMagGRRelative', 0.2),
                           ('bGRRelative', 0.1)])
 
-
+'''
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
     JOB_CONFIG = None
 
@@ -184,3 +183,54 @@ class AbsSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
     def test_b9(self):
         self._do_test(
             ['b3', 'b6', 'b9'], 'result_b9.xml', ['b1', 'b3', 'b6', 'b9'])
+
+'''
+
+nrml_to_hazardlib = NrmlHazardlibConverter(
+    investigation_time=50.,
+    rupture_mesh_spacing=1.,
+    width_of_mfd_bin=0.001,
+    area_source_discretization=10.)
+
+
+def read_sources(fname, seed, num_samples):
+    lt_xml = helpers.get_data_path(fname)
+    base_path = os.path.dirname(lt_xml)
+    smlt = logictree.SourceModelLogicTree(
+        open(lt_xml).read(), base_path, lt_xml,
+        seed=seed, num_samples=num_samples)
+    source_collectors = {}
+    for sm, weight, smpath in distinct(smlt):
+        smname = os.path.join(base_path, sm)
+        apply_unc = smlt.make_apply_uncertainties(smpath)
+        source_collectors[smpath] = parse_source_model(
+            smname, nrml_to_hazardlib, apply_unc)
+    return source_collectors
+
+
+class RelLogicTreeTestCase(unittest.TestCase):
+    sc = read_sources(
+        'LogicTreeRelativeUncertaintiesTest/logic_tree.xml',  12, 10)
+
+    def test(self):
+        self.assertEqual(
+            sorted(self.sc),
+            [('b1', 'b2', 'b4'), ('b1', 'b2', 'b5'), ('b1', 'b3', 'b6'),
+             ('b1', 'b3', 'b7')])
+
+
+class AbsLogicTreeTestCase(unittest.TestCase):
+    sc = read_sources(
+        'LogicTreeAbsoluteUncertaintiesTest/logic_tree.xml',  42, 10)
+
+    def test(self):
+        self.assertEqual(
+            sorted(self.sc),
+            [('b1', 'b2', 'b4'), ('b1', 'b2', 'b5'), ('b1', 'b3', 'b7')])
+        s1, s3, s4, s2 = sorted(sc.sources[0]
+                                for sc in self.sc['b1', 'b2', 'b4'])
+        import pdb; pdb.set_trace()
+        self.assertEqual([s1.mfd.a_val, s1.mfd.b_val], [3.5, 0.9])
+        self.assertEqual([s2.mfd.a_val, s2.mfd.b_val], [3.6, 1.0])
+        self.assertEqual([s3.mfd.a_val, s3.mfd.b_val], [3.6, 1.0])
+        self.assertEqual([s4.mfd.a_val, s4.mfd.b_val], [3.5, 0.9])
