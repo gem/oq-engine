@@ -122,7 +122,7 @@ def compute_ruptures(
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
-    imts = sorted(map(from_string, hc.intensity_measure_types))
+    imts = map(from_string, hc.intensity_measure_types)
     params = dict(
         correl_model=general.get_correl_model(hc),
         truncation_level=hc.truncation_level,
