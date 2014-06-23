@@ -8,7 +8,7 @@ Homepage: http://github.com/gem/oq-commonlib
 
 Package: python-oq-commonlib
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, python-scipy, python-numpy, python-lxml, python-oq-nrmllib, python-oq-risklib, python-oq-hazardlib
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-scipy, python-numpy, python-lxml, python-psutil, python-concurrent.futures, python-oq-nrmllib, python-oq-risklib, python-oq-hazardlib
 Description: common openquake libraries for both hazard and risk analysis.
 
 

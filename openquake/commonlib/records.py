@@ -224,7 +224,6 @@ class Exposure(Record):
 
     _constraints = [check_area]
 
-
     def to_node(self):
         node = Node('exposureModel', dict(
             id=self['id'],
