@@ -2802,7 +2802,8 @@ class EventLossData(djm.Model):
         """
         Convert EventLossData into a CSV string
         """
-        return '%s,%s' % (self.rupture.id, self.aggregate_loss)
+        return '%s,%s,%s' % (self.rupture.tag, self.rupture.rupture.mag,
+                             self.aggregate_loss)
 
 
 class BCRDistribution(djm.Model):
