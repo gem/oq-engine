@@ -38,8 +38,8 @@ import sys
 import cPickle
 import logging
 import traceback
-import datetime
 import time
+from datetime import datetime
 from concurrent.futures import as_completed, ProcessPoolExecutor
 
 import psutil
@@ -185,12 +185,6 @@ class TaskManager(object):
 
     Progress report is built-in.
     """
-    ResultSet = staticmethod(as_completed)
-    # in a subclass one could use a celery.task.ResultSet
-
-    pickle = False
-    # could be True in a subclass
-
     def __init__(self, oqtask, progress, name=None):
         self.oqtask = oqtask
         self.progress = progress
@@ -209,13 +203,10 @@ class TaskManager(object):
         if no_distribute():
             res = safely_call(self.oqtask, args)
         else:
-            if self.pickle:
-                args = pickle_sequence(args)
-                self.sent += sum(len(p) for p in args)
-            res = executor.submit(safely_call, self.oqtask, args, self.pickle)
+            res = executor.submit(safely_call, self.oqtask, args)
         self.results.append(res)
 
-    def _aggregate_result_set(self, agg, acc):
+    def aggregate_result_set(self, agg, acc):
         """
         Loop on a set of futures and update the accumulator
         by using the aggregation function.
@@ -224,11 +215,9 @@ class TaskManager(object):
         :param acc: the initial value of the accumulator
         :returns: the final value of the accumulator
         """
-        rset = self.ResultSet(self.results)
-        for future in rset:
+        for future in as_completed(self.results):
             check_mem_usage()  # log a warning if too much memory is used
-            res = future.result()
-            acc = agg(acc, res.unpickle() if self.pickle else res)
+            acc = agg(acc, future.result())
         return acc
 
     def aggregate_results(self, agg, acc):
@@ -257,9 +246,9 @@ class TaskManager(object):
         if no_distribute():
             agg_result = reduce(agg_and_percent, self.results, acc)
         else:
-            agg_result = self._aggregate_result_set(agg_and_percent, acc)
+            agg_result = self.aggregate_result_set(agg_and_percent, acc)
 
-        self.result = []
+        self.results = []
         return agg_result
 
     def wait(self):
@@ -359,7 +348,7 @@ class PerformanceMonitor(object):
         "Call .stop"
         self.exc = exc
         self.stop_mem = self.measure_mem()
-        self.mem = self.stop_mem - self.start_mem
+        self.mem = [m2 - m1 for m1, m2 in zip(self.start_mem, self.stop_mem)]
         self.duration = time.time() - self._start_time
         self.on_exit()
 
@@ -370,4 +359,3 @@ class PerformanceMonitor(object):
         print 'mem =', self.mem
         if self.exc:
             print 'exc = %s(%s)' % (self.exc.__class__.__name__, self.exc)
-
