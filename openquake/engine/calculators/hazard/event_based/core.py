@@ -122,14 +122,16 @@ def compute_ruptures(
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
     all_ses = range(1, hc.ses_per_logic_tree_path + 1)
-    imts = map(from_string, hc.intensity_measure_types)
+    # NB: the IMTs must be ordered for compatibility with the classical
+    # calculator; this is important when computing the hazard curves
+    sorted_imts = map(from_string, sorted(hc.intensity_measure_types))
     params = dict(
         correl_model=general.get_correl_model(hc),
         truncation_level=hc.truncation_level,
         maximum_distance=hc.maximum_distance)
 
     rupturecollector = RuptureCollector(
-        params, imts, gsims, trt_model.id, task_no)
+        params, sorted_imts, gsims, trt_model.id, task_no)
 
     filter_sites_mon = LightMonitor(
         'filtering sites', job_id, compute_ruptures)
