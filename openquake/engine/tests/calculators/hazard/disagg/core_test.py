@@ -30,7 +30,7 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
 
     def setUp(self):
         self.job, self.calc = self._setup_a_new_calculator()
-        models.JobStats.objects.create(oq_job=self.job, num_sites=0)
+        models.JobStats.objects.create(oq_job=self.job)
 
     def _setup_a_new_calculator(self):
         cfg = helpers.get_data_path('disaggregation/job.ini')
@@ -43,8 +43,6 @@ class DisaggHazardCalculatorTestcase(unittest.TestCase):
         # Test `pre_execute` to ensure that all stats are properly initialized.
         # Then test the core disaggregation function.
         self.calc.pre_execute()
-        job_stats = models.JobStats.objects.get(oq_job=self.job.id)
-        self.assertEqual(2, job_stats.num_sites)
 
         with mock.patch.dict(os.environ, {'OQ_NO_DISTRIBUTE': '1'}):
             # to test the disagg function, we first need to compute the hazard
