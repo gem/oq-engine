@@ -145,7 +145,6 @@ COMMENT ON COLUMN uiapi.performance.pgmemory IS 'Memory occupation in Postgres (
 
 
 COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
-COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
 COMMENT ON COLUMN uiapi.job_stats.disk_space IS 'How much the disk space occupation increased during the computation (in bytes)';
 
 
