@@ -26,7 +26,8 @@ import traceback
 
 from celery.task import task
 
-from openquake.engine.utils.tasks import Pickled, oqtask
+from openquake.commonlib.parallel import Pickled
+from openquake.engine.utils.tasks import oqtask
 
 
 # mimic the behavior of oqtask
