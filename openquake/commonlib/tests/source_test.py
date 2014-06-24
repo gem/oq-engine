@@ -575,7 +575,6 @@ class SourceCollectorTestCase(unittest.TestCase):
         [seq] = list(blocks)
         [src] = seq
         self.assertEqual(src.source_id, '5')
-        self.assertEqual(seq.weight, 2.1)
 
     def test_repr(self):
         self.assertEqual(
