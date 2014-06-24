@@ -28,8 +28,6 @@ from openquake.engine.db import models
 class EventBasedBCRCase1TestCase(risk.BaseRiskQATestCase):
     output_type = "gmf"
 
-    check_exports = False
-
     @noseattr('qa', 'risk', 'event_based_bcr')
     def test(self):
         self._run_test()
