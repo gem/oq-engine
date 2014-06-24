@@ -29,16 +29,16 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         self._run_test()
 
     expected_elt_b2 = [  # the first 10 values for structural
-        ('smlt=00|ses=0899|src=3|rup=006-01', 6.75, 5000.70195926),
-        ('smlt=00|ses=1250|src=3|rup=002-01', 5.55, 5000.30415742),
-        ('smlt=00|ses=0236|src=3|rup=004-01', 6.15, 4762.77267285),
-        ('smlt=00|ses=1652|src=3|rup=003-01', 5.85, 4510.95161876),
-        ('smlt=00|ses=1159|src=3|rup=001-02', 5.25, 4349.69069842),
-        ('smlt=00|ses=0986|src=3|rup=001-01', 5.25, 4290.45162668),
-        ('smlt=00|ses=0296|src=3|rup=002-01', 5.55, 4217.37255025),
-        ('smlt=00|ses=0833|src=3|rup=006-01', 6.75, 4215.31848008),
-        ('smlt=00|ses=0410|src=3|rup=001-01', 5.25, 4163.81359397),
-        ('smlt=00|ses=1395|src=3|rup=001-01', 5.25, 4122.56430755),
+        ('smlt=00|ses=1250|src=3|rup=002-01', 5.55, 4598.15454207),
+        ('smlt=00|ses=0899|src=3|rup=006-01', 6.75, 3229.03853895),
+        ('smlt=00|ses=0236|src=3|rup=004-01', 6.15, 1429.41738598),
+        ('smlt=00|ses=0833|src=3|rup=006-01', 6.75, 1333.06460009),
+        ('smlt=00|ses=1159|src=3|rup=001-02', 5.25, 1027.93870557),
+        ('smlt=00|ses=1395|src=3|rup=001-01', 5.25, 1004.52792749),
+        ('smlt=00|ses=0410|src=3|rup=001-01', 5.25, 801.220856365),
+        ('smlt=00|ses=1652|src=3|rup=003-01', 5.85, 710.514040648),
+        ('smlt=00|ses=0986|src=3|rup=001-01', 5.25, 661.852362756),
+        ('smlt=00|ses=0296|src=3|rup=002-01', 5.55, 605.144033155),
     ]
 
     def expected_output_data(self):
@@ -115,14 +115,14 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         actual_lm1 = [
             point.value for point in models.LossMapData.objects.filter(
                 loss_map=lm1).order_by('asset_ref', 'loss_map__poe')]
-        aae(actual_lm1, [643.26330681292, 273.961328576808,
-                         635.858405370638, 722.034926561984])
+        aae(actual_lm1, [644.42878691, 234.89986442,
+                         664.82432932, 753.55988728])
 
         actual_lm2 = [
             point.value for point in models.LossMapData.objects.filter(
                 loss_map=lm2).order_by('asset_ref', 'loss_map__poe')]
-        aae(actual_lm2, [373.88410526, 228.33583859,
-                         612.34282527, 767.04784899])
+        aae(actual_lm2, [376.21304957, 219.38682742,
+                         639.86715118,  801.07318199])
 
     def check_loss_map_mean(self, job):
         lm_with_stats = models.LossMap.objects.filter(
@@ -133,10 +133,10 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             point.value for point in models.LossMapData.objects.filter(
                 loss_map__in=lm_with_stats).order_by(
                 'asset_ref', 'loss_map__poe')]
-        aae(actual, [498.96370879308, 0.0, 0.0,
-                     249.806130145137, 0.0, 0.0,
-                     624.26902757739, 0.0, 0.0,
-                     743.094906982907, 0.0, 0.0])
+        aae(actual, [514.22057893, 0., 0.,
+                     227.85575576, 0., 0.,
+                     652.50322751, 0., 0.,
+                     778.04645901, 0., 0.])
 
     def check_loss_map_quantile(self, job):
         lm_with_quantile = models.LossMap.objects.filter(
@@ -147,5 +147,5 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
             point.value for point in models.LossMapData.objects.filter(
                 loss_map=lm_with_quantile[0]).order_by(
                 'asset_ref', 'loss_map__poe')]
-        aae(actual_0, [373.897855723113, 228.343264402241,
-                       612.342825267806, 722.034926561984])
+        aae(actual_0, [376.24261986, 219.38682742,
+                       639.86715118, 753.55988728])
