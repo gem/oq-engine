@@ -16,6 +16,7 @@
 import sys
 import math
 import copy
+import operator
 from itertools import izip
 
 from shapely import wkt
@@ -25,7 +26,7 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import Rupture as HazardlibRupture
 from openquake.nrmllib import models as nrml_models
 from openquake.nrmllib.hazard import parsers as haz_parsers
-from openquake.commonlib.general import split_on_max_weight
+from openquake.commonlib.general import block_splitter
 
 
 class SourceCollector(object):
@@ -96,13 +97,12 @@ class SourceCollector(object):
         for src in self.sources:
             sites = src_filter(src)
             if sites is not None:
-                weight = 1. + len(sites) / 100.
                 for ss in split_source(src, discr):
                     tot_sources += 1
                     num_ruptures = ss.count_ruptures()
                     self.num_ruptures += num_ruptures
                     srcs.append(ss)
-                    yield ss, weight * num_ruptures
+                    yield ss, num_ruptures
                     self.filtered_sources = (len(srcs), tot_sources)
             else:
                 tot_sources += 1
@@ -118,11 +118,13 @@ class SourceCollector(object):
         :param max_weight: the limit used to collect the sources
         :param discr: area source discretization
         """
-        n = len(self.sources)
-        assert n, 'No sources for TRT=%s!' % self.trt
-        weight = max_weight * n / (n + 20)
-        return split_on_max_weight(
-            self._gen_source_weight(src_filter, discr), weight)
+        num_sources = len(self.sources)
+        assert num_sources, 'No sources for TRT=%s!' % self.trt
+        weight = max_weight * num_sources / (num_sources + 100)
+        for block in block_splitter(
+                self._gen_source_weight(src_filter, discr), weight,
+                operator.itemgetter(1)):
+            yield [src for src, _weight in block]
 
     def __repr__(self):
         return '<%s TRT=%s, %d source(s)>' % (self.__class__.__name__,

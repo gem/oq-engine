@@ -95,11 +95,17 @@ class WeightedSequence(collections.MutableSequence):
         self._seq.insert(i, item)
         self.weight += weight
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
         """
         Ensure ordering by reverse weight
         """
-        return -cmp(self.weight, other.weight)
+        return self.weight < other.weight
+
+    def __eq__(self, other):
+        """
+        Compare for equality the items contained in self
+        """
+        return all(x == y for x, y in zip(self, other))
 
     def __repr__(self):
         """
@@ -142,10 +148,11 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def split_on_max_weight(item_weight_pairs, max_weight):
+def block_splitter(items, max_weight, weight=lambda item: 1):
     """
-    :param item_weight_pairs: an iterator of pairs (item, weight)
+    :param items: an iterator over items
     :param max_weight: the max weight to split on
+    :param weight: a function returning the weigth of a given item
 
     Group together the pairs until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
@@ -153,57 +160,47 @@ def split_on_max_weight(item_weight_pairs, max_weight):
 
     For instance
 
-     >>> pairs = [('A', 1), ('B', 2), ('C', 0), ('D', 4), ('E', 1)]
-     >>> list(split_on_max_weight(pairs, 3))
-     [<WeightedSequence ['A', 'B'], weight=3>, <WeightedSequence ['D'], weight=4>, <WeightedSequence ['E'], weight=1>]
+     >>> items = 'ABCDE'
+     >>> list(block_splitter(items, 3))
+     [<WeightedSequence ['A', 'B', 'C'], weight=3>, <WeightedSequence ['D', 'E'], weight=2>]
+
+    The default weight is 1 for all items.
     """
+    if max_weight <= 0:
+        raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
-    for item, weight in item_weight_pairs:
-        if weight < 0:  # error
+    for item in items:
+        w = weight(item)
+        if w < 0:  # error
             raise ValueError('The item %r got a negative weight %s!' %
-                             (item, weight))
-        elif weight == 0:  # ignore items with 0 weight
+                             (item, w))
+        elif w == 0:  # ignore items with 0 weight
             pass
-        elif ws.weight + weight > max_weight:
-            new_ws = WeightedSequence([(item, weight)])
+        elif ws.weight + w > max_weight:
+            new_ws = WeightedSequence([(item, w)])
             if ws:
                 yield ws
             ws = new_ws
         else:
-            ws.append((item, weight))
+            ws.append((item, w))
     if ws:
         yield ws
 
 
-def block_splitter(data, block_size):
+def split_in_blocks(sequence, hint, weight=lambda item: 1):
     """
-    Given a sequence of objects and a ``block_size``, generate slices from the
-    list. Each slice has a maximum size of ``block_size``.
+    Split the `sequence` in a number of WeightedSequences close to `hint`.
+    It tries to make the WeightedSequences balanced. For instance
 
-    If ``block_size`` is greater than the length of ``data``, this simply
-    yields the entire list.
+     >>> items = 'ABCDE'
+     >>> list(split_in_blocks(items, 3))
+     [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
 
-    :param data:
-        Any iterable sequence of data (including lists, iterators, and
-        generators).
-    :param int block_size:
-        Maximum size for each slice. Must be greater than 0.
-    :raises:
-        :exc:`ValueError` of the ``block_size`` is <= 0.
     """
-    if block_size <= 0:
-        raise ValueError(
-            'Invalid block size: %s. Value must be greater than 0.'
-            % block_size)
-
-    block_buffer = []
-    for d in data:
-        block_buffer.append(d)
-        if len(block_buffer) == block_size:
-            yield block_buffer
-            block_buffer = []
-    if len(block_buffer) > 0:
-        yield block_buffer
+    assert hint > 0, hint
+    items = list(sequence)
+    total_weight = float(sum(weight(item) for item in items))
+    return block_splitter(items, math.ceil(total_weight / hint), weight)
 
 
 def deep_eq(a, b, decimal=7, exclude=None):
