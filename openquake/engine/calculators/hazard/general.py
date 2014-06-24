@@ -171,14 +171,6 @@ class BaseHazardCalculator(base.Calculator):
             trt_model.num_ruptures = sc.num_ruptures
             trt_model.save()
 
-        # save job_stats
-        js = models.JobStats.objects.get(oq_job=self.job)
-        js.num_sources = [model.get_num_sources()
-                          for model in models.LtSourceModel.objects.filter(
-                              hazard_calculation=self.hc)]
-        js.num_sites = len(sitecol)
-        js.save()
-
     def _get_realizations(self):
         """
         Get all of the logic tree realizations for this calculation.
