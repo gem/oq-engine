@@ -24,11 +24,10 @@ import numpy
 
 from django import db
 
-from openquake.risklib import workflows
-from openquake.risklib.workflows import RiskModel
+from openquake.commonlib.riskloaders import get_damage_states_and_risk_models
 
 from openquake.engine.calculators.risk import (
-    base, hazard_getters, writers, validation, loaders)
+    base, hazard_getters, writers, validation)
 from openquake.engine.performance import EnginePerformanceMonitor
 from openquake.engine.utils import tasks
 from openquake.engine.db import models
@@ -110,9 +109,6 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         self.acc = {}
         self.damage_state_ids = None
 
-    def get_workflow(self, fragility_functions):
-        return workflows.Damage(fragility_functions)
-
     def agg_result(self, acc, task_result):
         """
         Update the dictionary acc, i.e. aggregate the damage distribution
@@ -166,14 +162,17 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         """
         Load fragility model and store damage states
         """
-        data, damage_state_ids = loaders.fragility(
-            self.rc, self.rc.inputs['fragility'])
-        self.damage_state_ids = damage_state_ids
-        self.loss_types.add('damage')  # single loss_type
-        risk_models = {}
-        for taxonomy, ffs in data:
-            risk_models[taxonomy] = RiskModel(taxonomy, self.get_workflow(ffs))
+        damage_states, risk_models = get_damage_states_and_risk_models(
+            self.rc.inputs['fragility'])
 
+        for lsi, dstate in enumerate(damage_states):
+            models.DmgState.objects.get_or_create(
+                risk_calculation=self.rc, dmg_state=dstate, lsi=lsi)
+
+        self.damage_state_ids = [d.id for d in models.DmgState.objects.filter(
+            risk_calculation=self.rc).order_by('lsi')]
+
+        self.loss_types.add('damage')  # single loss_type
         return risk_models
 
     @property
@@ -182,5 +181,4 @@ class ScenarioDamageRiskCalculator(base.RiskCalculator):
         Provides calculator specific params coming from
         :class:`openquake.engine.db.RiskCalculation`
         """
-
         return base.make_calc_params(damage_state_ids=self.damage_state_ids)
