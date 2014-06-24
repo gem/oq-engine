@@ -97,6 +97,41 @@ class ValidationError(LogicTreeError):
             self.basepath, self.filename, self.lineno, self.message)
 
 
+# private function used in sample
+def _sample(branches, rnd):
+    # Draw a random number and iterate through the branches in the set
+    # (adding up their weights) until the random value falls into
+    # the interval occupied by a branch. Return the latter.
+    diceroll = rnd.random()
+    acc = 0
+    for branch in branches:
+        acc += branch.weight
+        if acc >= diceroll:
+            return branch
+    raise AssertionError('do weights really sum up to 1.0?')
+
+
+def sample(weighted_objects, num_samples, rnd):
+    """
+    Take random samples of a sequence of weighted objects
+
+    :param weighted_objects:
+        A finite sequence of objects with a `.weight` attribute.
+        The weigths must sum up to 1.
+    :param num_samples:
+        The number of samples to return
+    :param rnd:
+        Random object. Should have method ``random()`` -- return uniformly
+        distributed random float number >= 0 and < 1.
+    :return:
+        A subsequence of the original sequence with `num_samples` elements
+    """
+    subsequence = []
+    for _ in xrange(num_samples):
+        subsequence.append(_sample(weighted_objects, rnd))
+    return subsequence
+
+
 class Branch(object):
     """
     Branch object, represents a ``<logicTreeBranch />`` element.
@@ -169,27 +204,6 @@ class BranchSet(object):
         self.branches = []
         self.uncertainty_type = uncertainty_type
         self.filters = filters
-
-    def sample(self, rnd=random):
-        """
-        Take a random branch (with respect to their weights) and return it.
-
-        :param rnd:
-            Random object. Should have method ``random()`` -- return uniformly
-            distributed random float number >= 0 and < 1.
-        :return:
-            :class:`Branch` object, one of branches in the branchet's list.
-        """
-        # Draw a random number and iterate through the branches in the set
-        # (adding up their weights) until the random value falls into
-        # the interval occupied by a branch. Return the latter.
-        diceroll = rnd.random()
-        acc = 0
-        for branch in self.branches:
-            acc += branch.weight
-            if acc >= diceroll:
-                return branch
-        raise AssertionError('do weights really sum up to 1.0?')
 
     def enumerate_paths(self):
         """
@@ -566,7 +580,7 @@ class BaseLogicTree(object):
         branchset = self.root_branchset
         branch_ids = []
         while branchset is not None:
-            branch = branchset.sample(rnd)
+            [branch] = sample(branchset.branches, 1, rnd)
             branch_ids.append(branch.branch_id)
             branchset = branch.child_branchset
         modelname = self.root_branchset.get_branch_by_id(branch_ids[0]).value
@@ -1211,15 +1225,17 @@ class GsimLogicTree(object):
         groups = []
         filter_keys = []
         # NB: branches are already sorted
-        for branchset, group in itertools.groupby(
+        for branchset, branches in itertools.groupby(
                 self.branches, operator.attrgetter('bset')):
             filter_keys.append(branchset[self.branchset_filter])
-            groups.append(list(group))
+            groups.append(list(branches))
         # with T tectonic region types there are T groups and T branches
         if self.num_samples:
-            random.seed(self.seed)
-            branches_iter = ([random.choice(group) for group in groups]
-                             for _ in xrange(self.num_samples))
+            rnd = random.Random(self.seed)
+            # take a branch for each group `num_samples` times
+            branches_iter = (
+                [sample(branches, 1, rnd)[0] for branches in groups]
+                for _ in xrange(self.num_samples))
         else:
             branches_iter = itertools.product(*groups)
         for branches in branches_iter:

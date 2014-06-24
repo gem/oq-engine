@@ -20,8 +20,9 @@ Tests for python logic tree processor.
 """
 
 import os
-import numpy
+import random
 import unittest
+import numpy
 from lxml import etree
 
 
@@ -1147,37 +1148,37 @@ class GMPELogicTreeTestCase(unittest.TestCase):
         })
 
 
-class BranchSetSampleTestCase(unittest.TestCase):
-    class FakeRandom(object):
-        def __init__(self, value):
-            self.value = value
-
-        def random(self):
-            return self.value
+class SampleTestCase(unittest.TestCase):
 
     def test_sample(self):
-        bs = logictree.BranchSet(None, None)
-        bs.branches = [logictree.Branch(i, Decimal('0.1'), i)
-                       for i in xrange(10)]
-        self.assertEqual(type(bs.sample()), logictree.Branch)
-        r = self.FakeRandom
-        self.assertEqual(bs.sample(r(0.05)).value, 0)
-        self.assertEqual(bs.sample(r(0.11)).value, 1)
-        self.assertEqual(bs.sample(r(0.2)).value, 2)
-        self.assertEqual(bs.sample(r(0.88)).value, 8)
-        self.assertEqual(bs.sample(r(0.9999999)).value, 9)
+        branches = [logictree.Branch(1, Decimal('0.2'), 'A'),
+                    logictree.Branch(1, Decimal('0.3'), 'B'),
+                    logictree.Branch(1, Decimal('0.5'), 'C')]
+        samples = logictree.sample(branches, 1000, random.Random(42))
+
+        def count(samples, value):
+            counter = 0
+            for s in samples:
+                if s.value == value:
+                    counter += 1
+            return counter
+
+        self.assertEqual(count(samples, value='A'), 178)
+        self.assertEqual(count(samples, value='B'), 302)
+        self.assertEqual(count(samples, value='C'), 520)
 
     def test_sample_broken_branch_weights(self):
-        bs = logictree.BranchSet(None, None)
-        bs.branches = [logictree.Branch(0, Decimal('0.1'), 0),
-                       logictree.Branch(1, Decimal('0.2'), 1)]
-        self.assertRaises(AssertionError, bs.sample, self.FakeRandom(0.8))
+        branches = [logictree.Branch(0, Decimal('0.1'), 0),
+                    logictree.Branch(1, Decimal('0.2'), 1)]
+        with self.assertRaises(AssertionError):
+            logictree.sample(branches, 1000, random.Random(42))
 
     def test_sample_one_branch(self):
-        bs = logictree.BranchSet(None, None)
-        bs.branches = [logictree.Branch(0, Decimal('1.0'), 0)]
-        for i in xrange(10):
-            self.assertEqual(bs.sample().branch_id, 0)
+        # always the same branch is returned
+        branches = [logictree.Branch(0, Decimal('1.0'), 0)]
+        bs = logictree.sample(branches, 10, random.Random(42))
+        for b in bs:
+            self.assertEqual(b.branch_id, 0)
 
 
 class BranchSetEnumerateTestCase(unittest.TestCase):
@@ -1529,9 +1530,10 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         if errormessage is not None:
             self.assertEqual(errormessage, str(exc.exception))
 
-    def parse_valid(self, xml, filter_keys=('Shield',)):
+    def parse_valid(self, xml, filter_keys=('Shield',), num_samples=0):
         return logictree.GsimLogicTree(
-            StringIO(xml), 'applyToTectonicRegionType', filter_keys)
+            StringIO(xml), 'applyToTectonicRegionType',
+            filter_keys, num_samples)
 
     def test_not_xml(self):
         self.parse_invalid('xxx', etree.XMLSyntaxError)
@@ -1658,3 +1660,31 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         fs_bg_model_rlzs = list(self.parse_valid(xml, fs_bg_model_trts))
         self.assertEqual(len(as_model_rlzs), 5 * 4 * 2 * 1)
         self.assertEqual(len(fs_bg_model_rlzs), 5 * 4)
+
+    def test_sampling(self):
+        xml = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SadighEtAl
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.49</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>
+                            ToroEtAl
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.51</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        r1, r2, r3 = list(self.parse_valid(xml, ['Volcanic'], num_samples=3))
+        self.assertEqual(r1.value['Volcanic'], 'ToroEtAl')
+        self.assertEqual(r2.value['Volcanic'], 'ToroEtAl')
+        self.assertEqual(r3.value['Volcanic'], 'SadighEtAl')
