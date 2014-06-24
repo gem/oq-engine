@@ -97,7 +97,7 @@ class WeightedSequence(collections.MutableSequence):
 
     def __lt__(self, other):
         """
-        Ensure ordering by reverse weight
+        Ensure ordering by weight
         """
         return self.weight < other.weight
 
