@@ -93,9 +93,11 @@ class EventBaseQATestCase1(risk.CompleteTestCase, risk.FixtureBasedQATestCase):
         # for loss_type=structural and branch b2
         tags = [row[0] for row in self.expected_elt_b2]
 
-        el_b1, el_b2 = models.EventLoss.objects.filter(
-            output__output_type='event_loss', output__oq_job=job,
-            loss_type='structural').order_by('output')
+        el_b2 = models.EventLoss.objects.get(
+            hazard_output__gmf__lt_realization__gsim_lt_path=['b2'],
+            output__output_type='event_loss',
+            output__oq_job=job,
+            loss_type='structural')
         elt = models.EventLossData.objects.filter(
             event_loss=el_b2.id, rupture__tag__in=tags
         ).order_by('-aggregate_loss')
