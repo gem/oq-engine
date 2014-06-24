@@ -19,16 +19,9 @@
 Tests for python logic tree processor.
 """
 
-import os
-import os.path
 import unittest
 
-from openquake.nrmllib.parsers import SourceModelParser
-
 from openquake.commonlib import logictree
-from openquake.commonlib.source import NrmlHazardlibConverter
-from openquake.commonlib.general import deep_eq
-
 from openquake.engine.calculators.hazard.general import make_gsim_lt
 
 from openquake.engine.tests.utils import helpers
@@ -92,95 +85,3 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         self.assertEqual(self.uncertainties_applied,
                          [('maxMagGRRelative', 0.2),
                           ('bGRRelative', 0.1)])
-
-
-class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
-    JOB_CONFIG = None
-
-    def _do_test(self, path, expected_result, expected_branch_ids):
-        cfg = helpers.get_data_path(self.JOB_CONFIG)
-        job = helpers.get_job(cfg)
-        hc = job.hazard_calculation
-        nrml_to_hazardlib = NrmlHazardlibConverter(
-            hc.investigation_time,
-            hc.rupture_mesh_spacing,
-            hc.width_of_mfd_bin,
-            hc.area_source_discretization)
-        base_path = job.hazard_calculation.base_path
-
-        source_model_lt = logictree.SourceModelLogicTree.from_hc(
-            job.hazard_calculation)
-
-        [branch] = source_model_lt.root_branchset.branches
-        all_branches = source_model_lt.branches
-        path = iter(path)
-        while branch.child_branchset is not None:
-            nextbranch = all_branches[next(path)]
-            branch.child_branchset.sample = (
-                lambda nextbranch: lambda rnd: nextbranch)(nextbranch)
-            branch = nextbranch
-        assert list(path) == []
-
-        [(sm_path, weight, branch_ids)] = source_model_lt
-        branch_ids = list(branch_ids)
-        self.assertEqual(expected_branch_ids, branch_ids)
-        modify_source = source_model_lt.make_apply_uncertainties(branch_ids)
-
-        expected_result_path = os.path.join(base_path, expected_result)
-        e_nrml_sources = SourceModelParser(expected_result_path).parse()
-        e_hazardlib_sources = [
-            nrml_to_hazardlib(source)
-            for source in e_nrml_sources]
-
-        original_sm_path = os.path.join(base_path, sm_path)
-        a_nrml_sources = SourceModelParser(original_sm_path).parse()
-        a_hazardlib_sources = [
-            nrml_to_hazardlib(source)
-            for source in a_nrml_sources]
-        for i, source in enumerate(a_hazardlib_sources):
-            modify_source(source)
-
-        self.assertEqual(len(e_hazardlib_sources), len(a_hazardlib_sources))
-        for i in xrange(len(e_hazardlib_sources)):
-            expected_source = e_hazardlib_sources[i]
-            actual_source = a_hazardlib_sources[i]
-            self.assertTrue(*deep_eq(expected_source, actual_source))
-
-
-class RelSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
-    JOB_CONFIG = helpers.get_data_path(
-        'LogicTreeRelativeUncertaintiesTest/rel_uncert.ini')
-
-    def test_b4(self):
-        self._do_test(['b2', 'b4'], 'result_b4.xml', ['b1', 'b2', 'b4'])
-
-    def test_b5(self):
-        self._do_test(['b2', 'b5'], 'result_b5.xml', ['b1', 'b2', 'b5'])
-
-    def test_b6(self):
-        self._do_test(['b3', 'b6'], 'result_b6.xml', ['b1', 'b3', 'b6'])
-
-    def test_b7(self):
-        self._do_test(['b3', 'b7'], 'result_b7.xml', ['b1', 'b3', 'b7'])
-
-
-class AbsSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
-    JOB_CONFIG = helpers.get_data_path(
-        'LogicTreeAbsoluteUncertaintiesTest/abs_uncert.ini')
-
-    def test_b4(self):
-        self._do_test(['b2', 'b4'], 'result_b4.xml', ['b1', 'b2', 'b4'])
-
-    def test_b5(self):
-        self._do_test(['b2', 'b5'], 'result_b5.xml', ['b1', 'b2', 'b5'])
-
-    def test_b7(self):
-        self._do_test(['b3', 'b7'], 'result_b7.xml', ['b1', 'b3', 'b7'])
-
-    def test_b8(self):
-        self._do_test(
-            ['b3', 'b6', 'b8'], 'result_b8.xml', ['b1', 'b3', 'b6', 'b8'])
-
-    def test_b9(self):
-        self._do_test(
-            ['b3', 'b6', 'b9'], 'result_b9.xml', ['b1', 'b3', 'b6', 'b9'])
