@@ -75,6 +75,18 @@ class SourceCollector(object):
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
 
+    def update_num_ruptures(self, src):
+        """
+        Update the attribute num_ruptures according to the given source.
+
+        :param src:
+            an instance of :class:
+            `openquake.hazardlib.source.base.BaseSeismicSource`
+        """
+        weight = src.count_ruptures()
+        self.num_ruptures += weight
+        return weight
+
     def filter_sources(self, src_filter):
         """
         Filter the sources with the given filtering function and
@@ -85,13 +97,11 @@ class SourceCollector(object):
             false value (or None) if the the source has to be discarded.
         """
         srcs = [src for src in self.sources
-                if src_filter(src)]
+                if src_filter(src) is not None]
         return self.__class__(self.trt, srcs)
 
-    def _gen_source_weight(self, src_filter, discr):
-        # yield all the sources of a given tectonic region type, together
-        # with their weight. As side effects populate the dictionary
-        # `.num_ruptures` and throw away the unfiltered sources in `.sources`.
+    def _filter_and_split_sources(self, src_filter, discr):
+        # NB: as a side effect it throws away the unfiltered sources
         srcs = []
         tot_sources = 0
         for src in self.sources:
@@ -99,10 +109,8 @@ class SourceCollector(object):
             if sites is not None:
                 for ss in split_source(src, discr):
                     tot_sources += 1
-                    num_ruptures = ss.count_ruptures()
-                    self.num_ruptures += num_ruptures
                     srcs.append(ss)
-                    yield ss, num_ruptures
+                    yield ss
                     self.filtered_sources = (len(srcs), tot_sources)
             else:
                 tot_sources += 1
@@ -120,11 +128,10 @@ class SourceCollector(object):
         """
         num_sources = len(self.sources)
         assert num_sources, 'No sources for TRT=%s!' % self.trt
-        weight = max_weight * num_sources / (num_sources + 100)
-        for block in block_splitter(
-                self._gen_source_weight(src_filter, discr), weight,
-                operator.itemgetter(1)):
-            yield [src for src, _weight in block]
+        return block_splitter(
+            self._filter_and_split_sources(src_filter, discr),
+            max_weight * num_sources / (num_sources + 100),
+            self.update_num_ruptures)
 
     def __repr__(self):
         return '<%s TRT=%s, %d source(s)>' % (self.__class__.__name__,
