@@ -138,11 +138,6 @@ store_site_model'
 
         self.calc.pre_execute()
 
-        # Test the job stats:
-        job_stats = models.JobStats.objects.get(oq_job=self.job.id)
-        # num sources * num lt samples / block size (items per task):
-        self.assertEqual(120, job_stats.num_sites)
-
         # Update job status to move on to the execution phase.
         self.job.is_running = True
 
