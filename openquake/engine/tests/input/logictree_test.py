@@ -19,15 +19,9 @@
 Tests for python logic tree processor.
 """
 
-import os
-import os.path
 import unittest
 
 from openquake.commonlib import logictree
-from openquake.commonlib.source import \
-    NrmlHazardlibConverter, parse_source_model
-from openquake.commonlib.general import distinct
-
 from openquake.engine.calculators.hazard.general import make_gsim_lt
 
 from openquake.engine.tests.utils import helpers
