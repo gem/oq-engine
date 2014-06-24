@@ -352,6 +352,8 @@ class RuptureCollector(object):
         :param num_ses: number of Stochastic Event Sets
         """
         gmf = collections.defaultdict(dict)  # (gsim, imt) > {site_id: poes}
+        zeros = {imt: numpy.zeros(len(imtls[str(imt)]))
+                 for imt in self.imts}
         for (gsim, imt, site_id), gmvs in self.gmvs_per_site.iteritems():
             gmf[gsim, imt][site_id] = gmvs_to_haz_curve(
                 gmvs, imtls[str(imt)], invest_time, num_ses * invest_time)
@@ -361,7 +363,7 @@ class RuptureCollector(object):
             curves_by_imt = []
             for imt in self.imts:
                 curves_by_imt.append(
-                    numpy.array([gmf[gsim, imt].get(site_id, 0)
+                    numpy.array([gmf[gsim, imt].get(site_id, zeros[imt])
                                  for site_id in sids]))
             curves_by_gsim.append((gsim, curves_by_imt))
         return curves_by_gsim
