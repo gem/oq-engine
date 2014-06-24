@@ -125,9 +125,7 @@ CREATE TABLE uiapi.job_stats (
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
     stop_time timestamp without time zone,
     -- The number of total sites in the calculation
-    num_sites INTEGER,
-    disk_space BIGINT, -- The disk space occupation in bytes
-    num_sources INTEGER[] -- The number of (filtered) sources per sm_lt_path
+    disk_space BIGINT -- The disk space occupation in bytes
 ) TABLESPACE uiapi_ts;
 
 
