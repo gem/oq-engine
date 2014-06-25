@@ -38,6 +38,7 @@ class Calculator(object):
     def __init__(self, job):
         self.job = job
         self.num_tasks = None
+        self._task_args = []
 
     def monitor(self, operation):
         """
