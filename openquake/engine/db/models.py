@@ -750,9 +750,6 @@ class HazardCalculation(djm.Model):
             site_ids = [hsite.id for hsite in hsites]
             sc = SiteCollection.from_points(lons, lats, site_ids, self)
         self._site_collection = sc
-        js = JobStats.objects.get(oq_job=self.oqjob)
-        js.num_sites = len(sc)
-        js.save()
         return sc
 
     def get_imts(self):
@@ -2260,6 +2257,7 @@ class SourceInfo(djm.Model):
     source_id = djm.TextField(null=False)
     source_class = djm.TextField(null=False)
     num_sources = djm.IntegerField(null=False)
+    num_sites = djm.IntegerField(null=False)
     num_ruptures = djm.IntegerField(null=False)
     occ_ruptures = djm.IntegerField(null=False)
     calc_time = djm.FloatField(null=False)

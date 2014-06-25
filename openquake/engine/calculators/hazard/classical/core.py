@@ -261,12 +261,12 @@ def compute_hazard_curves(
                     curv[i] *= pnes
              
         inserter.add(
-            models.SourceInfo(trt_model=trt_model_id,
+            models.SourceInfo(trt_model_id=trt_model_id,
                               source_id=source.source_id,
                               source_class=source.__class__.__name__,
                               num_sites=num_sites,
                               num_ruptures=num_ruptures,
-                              occ_ruptures=occ_ruptures,
+                              occ_ruptures=num_ruptures,
                               calc_time=time.time() - t0))
 
     make_ctxt_mon.flush()
