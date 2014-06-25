@@ -2252,6 +2252,23 @@ class TrtModel(djm.Model):
         # BaseHazardCalculator.initialize_sources
 
 
+class SourceInfo(djm.Model):
+    """
+    Source specific infos
+    """
+    trt_model = djm.ForeignKey('TrtModel')
+    source_id = djm.TextField(null=False)
+    source_class = djm.TextField(null=False)
+    num_sources = djm.IntegerField(null=False)
+    num_ruptures = djm.IntegerField(null=False)
+    occ_ruptures = djm.IntegerField(null=False)
+    calc_time = djm.FloatField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"source_info'
+        ordering = ['trt_model_id', 'source_id']
+
+
 class AssocLtRlzTrtModel(djm.Model):
     """
     Associations between logic tree realizations and TrtModels
