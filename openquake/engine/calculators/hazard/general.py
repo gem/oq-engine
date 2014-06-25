@@ -198,7 +198,9 @@ class BaseHazardCalculator(base.Calculator):
 
     def task_completed(self, result):
         """
-        Simply call the method `agg_curves`
+        Simply call the method `agg_curves`.
+
+        :param result: the result of the .core_calc_task
         """
         self.agg_curves(self.curves, result)
 
