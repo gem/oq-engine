@@ -20,19 +20,31 @@ from nose.plugins.attrib import attr
 from openquake.engine.db import models
 from qa_tests import _utils as qa_utils
 
+aaae = numpy.testing.assert_array_almost_equal
+
 
 class ClassicalHazardCase16TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'classical')
     def test(self):
         expected_mean_poes = [0.327905527354, 0.324717826053, 0.316179020913]
+        expected_q0_1_poes = [0.198642855479, 0.19587955512, 0.188594171735]
+        expected_q0_9_poes = [0.585553284108, 0.581083306028, 0.568977776502]
 
         job = self.run_hazard(
             os.path.join(os.path.dirname(__file__), 'job.ini'))
 
+        # mean
         [mean_curve] = models.HazardCurveData.objects \
             .filter(hazard_curve__output__oq_job=job.id,
                     hazard_curve__statistics='mean')
+        aaae(expected_mean_poes, mean_curve.poes, decimal=7)
 
-        numpy.testing.assert_array_almost_equal(
-            expected_mean_poes, mean_curve.poes, decimal=7)
+        # quantiles
+        quantile_0_1_curve, quantile_0_9_curve = \
+            models.HazardCurveData.objects.filter(
+                hazard_curve__output__oq_job=job.id,
+                hazard_curve__statistics='quantile').order_by(
+                'hazard_curve__quantile')
+        aaae(expected_q0_1_poes, quantile_0_1_curve.poes, decimal=7)
+        aaae(expected_q0_9_poes, quantile_0_9_curve.poes, decimal=7)
