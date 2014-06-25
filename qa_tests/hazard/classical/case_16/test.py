@@ -23,6 +23,9 @@ from qa_tests import _utils as qa_utils
 aaae = numpy.testing.assert_array_almost_equal
 
 
+# NB: this is a regression test to make sure that the sampling
+# works well even for huge source model logic trees, since
+# in the past we had issues, https://bugs.launchpad.net/oq-engine/+bug/1312020
 class ClassicalHazardCase16TestCase(qa_utils.BaseQATestCase):
 
     @attr('qa', 'hazard', 'classical')
