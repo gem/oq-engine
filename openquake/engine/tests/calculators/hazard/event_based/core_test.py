@@ -34,6 +34,8 @@ from openquake.hazardlib.gsim import get_available_gsims
 from openquake.engine.db import models
 from openquake.engine.calculators.hazard.event_based import core
 
+from openquake.engine.tests.calculators.hazard.event_based \
+    import _pp_test_data as test_data
 from openquake.engine.tests.utils import helpers
 
 
@@ -198,17 +200,19 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
         # 242 = 121 sites * 2 IMTs
         num_gmf1 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz1, task_no=0).count()
+
         num_gmf2 = models.GmfData.objects.filter(
             gmf__lt_realization=rlz2, task_no=0).count()
 
         self.assertEqual(num_gmf1, 242)
         self.assertEqual(num_gmf2, 242)
+        # NB: with source_max_weight=20000 5 tasks are generated
 
         # Now check for the correct number of hazard curves:
         curves = models.HazardCurve.objects.filter(output__oq_job=job)
-        # ((2 IMTs * 2 real) + (2 IMTs * (1 mean + 2 quantiles))) = 10
-        # + 3 mean and quantiles multi-imt curves
-        self.assertEqual(13, curves.count())
+        # ((2 IMTs * 2 rlz) + (2 IMTs * (1 mean + 2 quantiles))) = 10
+        # + 6 multi-imt curves (3 quantiles + 1 mean + 2 rlz)
+        self.assertEqual(15, curves.count())
 
         # Finally, check for the correct number of hazard maps:
         maps = models.HazardMap.objects.filter(output__oq_job=job)
@@ -252,3 +256,33 @@ class EventBasedHazardCalculatorTestCase(unittest.TestCase):
 
         actual = list(process_args(self.calc.task_arg_gen()))
         self.assertEqual(expected, actual)
+
+
+class GmvsToHazCurveTestCase(unittest.TestCase):
+    """
+    Tests for
+    :func:`openquake.engine.calculators.hazard.event_based.\
+post_processing.gmvs_to_haz_curve`.
+    """
+
+    def test_gmvs_to_haz_curve_site_1(self):
+        expected_poes = [0.63578, 0.39347, 0.07965]
+        imls = [0.01, 0.1, 0.2]
+        gmvs = test_data.SITE_1_GMVS
+        invest_time = 1.0  # years
+        duration = 1000.0  # years
+
+        actual_poes = core.gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
+        numpy.testing.assert_array_almost_equal(
+            expected_poes, actual_poes, decimal=6)
+
+    def test_gmvs_to_haz_curve_case_2(self):
+        expected_poes = [0.63578, 0.28609, 0.02664]
+        imls = [0.01, 0.1, 0.2]
+        gmvs = test_data.SITE_2_GMVS
+        invest_time = 1.0  # years
+        duration = 1000.0  # years
+
+        actual_poes = core.gmvs_to_haz_curve(gmvs, imls, invest_time, duration)
+        numpy.testing.assert_array_almost_equal(
+            expected_poes, actual_poes, decimal=6)
