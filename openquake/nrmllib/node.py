@@ -196,8 +196,10 @@ import cStringIO
 import ConfigParser
 from openquake import nrmllib
 from openquake.nrmllib.writers import StreamingXMLWriter
-from lxml import etree
-
+try:
+    from lxml import etree
+except ImportError:
+    from xml import etree
 
 ## this is duplicated from hazardlib to avoid a dependency
 def with_slots(cls):
