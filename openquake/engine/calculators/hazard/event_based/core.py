@@ -176,7 +176,7 @@ def compute_ruptures(
             tot_ruptures = sum(num for rup in ses_num_occ
                                for ses, num in ses_num_occ[rup])
             source_inserter.add(
-                models.SourceInfo(trt_model=trt_model_id,
+                models.SourceInfo(trt_model_id=trt_model_id,
                                   source_id=src.source_id,
                                   source_class=src.__class__.__name__,
                                   num_sites=len(s_sites),
