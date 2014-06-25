@@ -159,6 +159,11 @@ class BaseHazardCalculator(base.Calculator):
         Yielded results are of the form
         (job_id, site_collection, sources, trt_model_id, gsims, task_no).
         """
+        if self._task_args:
+            # the method was already called and the arguments generated
+            for args in self._task_args:
+                yield args
+            return
         sitecol = self.hc.site_collection
         task_no = 0
         for trt_model_id in self.source_collector:
@@ -175,7 +180,10 @@ class BaseHazardCalculator(base.Calculator):
             num_blocks = 0
             num_sources = 0
             for block in source_blocks:
-                yield self.job.id, sitecol, block, trt_model_id, gsims, task_no
+                args = (self.job.id, sitecol, block,
+                        trt_model.id, gsims, task_no)
+                self._task_args.append(args)
+                yield args
                 num_blocks += 1
                 task_no += 1
                 num_sources += len(block)
