@@ -391,9 +391,9 @@ CREATE TABLE hzrdr.probabilistic_rupture (
     is_multi_surface BOOLEAN NOT NULL,
     surface BYTEA NOT NULL,
     magnitude float NOT NULL,
+    _hypocenter FLOAT[3],
     site_indices INTEGER[]
 ) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'probabilistic_rupture', 'hypocenter', 4326, 'POINT', 2);
 
 
 CREATE TABLE hzrdr.ses_rupture (
