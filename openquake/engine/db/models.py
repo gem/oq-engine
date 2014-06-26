@@ -25,6 +25,7 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import os
 import collections
 import operator
 import itertools
@@ -47,6 +48,7 @@ from openquake.hazardlib.site import Site, SiteCollection
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
+from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
 from openquake.engine import writer
