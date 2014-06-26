@@ -1671,13 +1671,24 @@ class ProbabilisticRupture(djm.Model):
     """
     ses_collection = djm.ForeignKey('SESCollection')
     magnitude = djm.FloatField(null=False)
-    hypocenter = djm.PointField(srid=DEFAULT_SRID)
+    _hypocenter = fields.FloatArrayField(null=False)
     rake = djm.FloatField(null=False)
     tectonic_region_type = djm.TextField(null=False)
     is_from_fault_source = djm.NullBooleanField(null=False)
     is_multi_surface = djm.NullBooleanField(null=False)
     surface = fields.PickleField(null=False)
     site_indices = fields.IntArrayField(null=True)
+
+    # NB: the proper solution would be to store the hypocenter as a 3D
+    # point, however I was unable to do so, due to a bug in Django 1.3;
+    # notice that the GEOS library we are using does not even support
+    # the WKT for 3D points; that's why I am storing the point as a
+    # 3D array, as a workaround; luckily, we never perform any
+    # geospatial query on the hypocenter
+    @property
+    def hypocenter(self):
+        """Convert the 3D array into a hazardlib point"""
+        return geo.Point(*self._hypocenter)
 
     class Meta:
         db_table = 'hzrdr\".\"probabilistic_rupture'
@@ -1697,6 +1708,7 @@ class ProbabilisticRupture(djm.Model):
         iffs = is_from_fault_source(rupture)
         ims = is_multi_surface(rupture)
         lons, lats, depths = get_geom(rupture.surface, iffs, ims)
+        hp = rupture.hypocenter
         return cls.objects.create(
             ses_collection=ses_collection,
             magnitude=rupture.mag,
@@ -1705,7 +1717,7 @@ class ProbabilisticRupture(djm.Model):
             is_from_fault_source=iffs,
             is_multi_surface=ims,
             surface=rupture.surface,
-            hypocenter=rupture.hypocenter.wkt2d,
+            _hypocenter=[hp.longitude, hp.latitude, hp.depth],
             site_indices=site_indices)
 
     _geom = None
