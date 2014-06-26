@@ -1188,6 +1188,27 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute %r in %s' %
                 (self.branchset_filter, set(filter_keys)))
 
+    def get_num_branches(self):
+        """
+        Return the number of branches for branchset id, as a dictionary.
+        """
+        num = {}
+        for branchset, branches in itertools.groupby(
+                self.branches, operator.attrgetter('bset')):
+            num[branchset['branchSetID']] = len(list(branches))
+        return num
+
+    def get_num_paths(self):
+        """
+        Return the total number of paths in the tree.
+        """
+        # NB: the algorithm assume a symmetric logic tree for the GSIMs;
+        # in the future we may relax such assumption
+        num = 1
+        for val in self.get_num_branches().itervalues():
+            num *= val
+        return num
+
     def _parse_lt(self):
         # do the parsing, called at instantiation time to populate .values
         fkeys = []

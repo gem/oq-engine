@@ -1656,10 +1656,16 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         as_model_trts = ['Active Shallow Crust', 'Stable Shallow Crust',
                          'Shield', 'Volcanic']
         fs_bg_model_trts = ['Active Shallow Crust', 'Stable Shallow Crust']
-        as_model_rlzs = list(self.parse_valid(xml, as_model_trts))
-        fs_bg_model_rlzs = list(self.parse_valid(xml, fs_bg_model_trts))
-        self.assertEqual(len(as_model_rlzs), 5 * 4 * 2 * 1)
-        self.assertEqual(len(fs_bg_model_rlzs), 5 * 4)
+        as_model_lt = self.parse_valid(xml, as_model_trts)
+        fs_bg_model_lt = self.parse_valid(xml, fs_bg_model_trts)
+        self.assertEqual(as_model_lt.get_num_branches(),
+                         {'bs4': 1, 'bs1': 4, 'bs2': 5, 'bs3': 2})
+        self.assertEqual(fs_bg_model_lt.get_num_branches(),
+                         {'bs1': 4, 'bs2': 5})
+        self.assertEqual(as_model_lt.get_num_paths(), 40)
+        self.assertEqual(fs_bg_model_lt.get_num_paths(), 20)
+        self.assertEqual(len(list(as_model_lt)), 5 * 4 * 2 * 1)
+        self.assertEqual(len(list(fs_bg_model_lt)), 5 * 4)
 
     def test_sampling(self):
         xml = _make_nrml("""\
