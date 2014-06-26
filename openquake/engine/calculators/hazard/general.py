@@ -60,20 +60,6 @@ POES_PARAM_NAME = "POES"
 # 1e-5 represents the approximate distance of one meter at the equator.
 DILATION_ONE_METER = 1e-5
 
-
-def make_gsim_lt(hc, trts):
-    """
-    Helper to instantiate a GsimLogicTree object from the logic tree file.
-
-    :param hc: `openquake.engine.db.models.HazardCalculation` instance
-    :param trts: list of tectonic region type strings
-    """
-    fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
-    return logictree.GsimLogicTree(
-        fname, 'applyToTectonicRegionType', trts,
-        hc.number_of_logic_tree_samples, hc.random_seed)
-
-
 def store_site_model(job, site_model_source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -310,7 +296,7 @@ class BaseHazardCalculator(base.Calculator):
                 sm_name=sm, weight=weight)
 
             # save TrtModels for each tectonic region type
-            gsims_by_trt = make_gsim_lt(self.hc, trts).values
+            gsims_by_trt = lt_model.make_gsim_lt(trts).values
             for sc in source_collectors:
                 # NB: the source_collectors are ordered by number of sources
                 # and lexicographically, so the models are in the right order
@@ -424,23 +410,17 @@ class BaseHazardCalculator(base.Calculator):
         number of the realization (zero-based).
         """
         logs.LOG.progress("initializing realizations")
-        if self.hc.number_of_logic_tree_samples:  # sampling
-            gsim_lt = iter(make_gsim_lt(
-                self.hc, self.source_model_lt.tectonic_region_types))
-            # build 1 gsim realization for each source model realization
-
-            def make_rlzs(lt_model):
-                return [gsim_lt.next()]
-        else:  # full enumeration
-            def make_rlzs(lt_model):
-                return list(
-                    make_gsim_lt(
-                        self.hc, lt_model.get_tectonic_region_types()))
-
         for idx, (sm, weight, sm_lt_path) in enumerate(self.source_model_lt):
             lt_model = models.LtSourceModel.objects.get(
                 hazard_calculation=self.hc, sm_lt_path=sm_lt_path)
-            self._initialize_realizations(idx, lt_model, make_rlzs(lt_model))
+            lt = iter(lt_model.make_gsim_lt(seed=self.hc.random_seed + idx))
+            if self.hc.number_of_logic_tree_samples:  # sampling
+                rlzs = [lt.next()]  # pick one gsim realization
+            else:  # full enumeration
+                rlzs = list(lt)  # pick all gsim realizations
+            logs.LOG.info('Creating %d GMPE realization(s) for model %s, %s',
+                          len(rlzs), lt_model.sm_name, lt_model.sm_lt_path)
+            self._initialize_realizations(idx, lt_model, rlzs)
 
     @transaction.commit_on_success(using='job_init')
     def _initialize_realizations(self, idx, lt_model, realizations):
