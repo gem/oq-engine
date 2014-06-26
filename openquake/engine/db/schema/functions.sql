@@ -75,3 +75,17 @@ SELECT output_id, gmf_id, imt, sa_period, sa_damping,
   INNER JOIN hzrdr.gmf AS b
   ON a.gmf_id=b.id
   GROUP BY output_id, b.id, imt, sa_period, sa_damping) AS x;
+
+-- how many sources where done with respect to the total for each haz_calc
+CREATE VIEW hzrdr.source_progress AS
+SELECT a.hazard_calculation_id, sources_done, sources_todo FROM
+   (SELECT y.hazard_calculation_id, count(x.id) AS sources_done
+   FROM hzrdr.source_info AS x, hzrdr.lt_source_model AS y, hzrdr.trt_model AS z
+   WHERE x.trt_model_id = z.id AND z.lt_model_id=y.id
+   GROUP BY y.hazard_calculation_id) AS a,
+   (SELECT y.hazard_calculation_id, sum(num_sources) AS sources_todo
+   FROM hzrdr.lt_source_model AS y, hzrdr.trt_model AS z
+   WHERE z.lt_model_id=y.id
+   GROUP by y.hazard_calculation_id) AS b
+WHERE a.hazard_calculation_id=b.hazard_calculation_id;
+

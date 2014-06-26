@@ -391,9 +391,9 @@ CREATE TABLE hzrdr.probabilistic_rupture (
     is_multi_surface BOOLEAN NOT NULL,
     surface BYTEA NOT NULL,
     magnitude float NOT NULL,
+    _hypocenter FLOAT[3],
     site_indices INTEGER[]
 ) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'probabilistic_rupture', 'hypocenter', 4326, 'POINT', 2);
 
 
 CREATE TABLE hzrdr.ses_rupture (
@@ -522,6 +522,17 @@ CREATE TABLE hzrdr.trt_model (
    max_mag FLOAT NOT NULL,
    gsims TEXT[]
 ) TABLESPACE hzrdr_ts;
+
+-- specific source info
+CREATE TABLE hzrdr.source_info (
+  id SERIAL,
+  trt_model_id INTEGER NOT NULL,
+  source_id TEXT NOT NULL,
+  source_class TEXT NOT NULL,
+  num_sites INTEGER NOT NULL,
+  num_ruptures INTEGER NOT NULL,
+  occ_ruptures INTEGER NOT NULL,
+  calc_time FLOAT NOT NULL);
 
 -- associations logic tree realizations <-> trt_models
 CREATE TABLE hzrdr.assoc_lt_rlz_trt_model(
@@ -958,6 +969,12 @@ ADD CONSTRAINT hzrdr_trt_model_lt_source_model_fk
 FOREIGN KEY (lt_model_id)
 REFERENCES hzrdr.lt_source_model(id)
 ON DELETE CASCADE;
+
+-- hzrdr.source_info -> hzrdr.trt_model FK
+ALTER TABLE hzrdr.source_info ADD CONSTRAINT hzrdr_source_info_trt_model_fk
+FOREIGN KEY (trt_model_id) REFERENCES hzrdr.trt_model(id)
+ON DELETE CASCADE;
+
 
 -- hzrdr.assoc_lt_rlz_trt_model -> hzrdr.lt_realization FK
 ALTER TABLE hzrdr.assoc_lt_rlz_trt_model
