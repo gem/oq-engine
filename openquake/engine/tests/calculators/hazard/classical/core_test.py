@@ -117,6 +117,7 @@ store_site_model'
         self.calc.initialize_site_model()
         # enumeration is triggered by zero value used as number of realizations
         self.calc.job.hazard_calculation.number_of_logic_tree_samples = 0
+        self.calc.job.hazard_calculation.save()
         self.calc.initialize_sources()
         for args in self.calc.task_arg_gen():
             pass  # filter sources and save num_ruptures
