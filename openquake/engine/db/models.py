@@ -764,9 +764,6 @@ class HazardCalculation(djm.Model):
             site_ids = [hsite.id for hsite in hsites]
             sc = SiteCollection.from_points(lons, lats, site_ids, self)
         self._site_collection = sc
-        js = JobStats.objects.get(oq_job=self.oqjob)
-        js.num_sites = len(sc)
-        js.save()
         return sc
 
     def get_imts(self):
@@ -2246,6 +2243,24 @@ class TrtModel(djm.Model):
         ordering = ['id']
         # NB: the TrtModels are built in the right order, see
         # BaseHazardCalculator.initialize_sources
+
+
+class SourceInfo(djm.Model):
+    """
+    Source specific infos
+    """
+    trt_model = djm.ForeignKey('TrtModel')
+    source_id = djm.TextField(null=False)
+    source_class = djm.TextField(null=False)
+    num_sources = djm.IntegerField(null=False)
+    num_sites = djm.IntegerField(null=False)
+    num_ruptures = djm.IntegerField(null=False)
+    occ_ruptures = djm.IntegerField(null=False)
+    calc_time = djm.FloatField(null=False)
+
+    class Meta:
+        db_table = 'hzrdr\".\"source_info'
+        ordering = ['trt_model_id', 'source_id']
 
 
 class AssocLtRlzTrtModel(djm.Model):
