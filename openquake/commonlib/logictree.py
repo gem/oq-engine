@@ -1188,7 +1188,7 @@ class GsimLogicTree(object):
                 'Could not find branches with attribute %r in %s' %
                 (self.branchset_filter, set(filter_keys)))
 
-    def get_factors(self):
+    def get_num_branches(self):
         """
         Return the number of realizations for branchset id, as a dictionary.
         """
@@ -1198,13 +1198,15 @@ class GsimLogicTree(object):
             num[branchset['branchSetID']] = len(list(branches))
         return num
 
-    def get_num_realizations(self):
+    def get_num_paths(self):
         """
-        Return the total number of realizations for full enumeration
+        Return the total number of paths for full enumeration
         without doing a full enumeration.
         """
+        # NB: the algorithm assume a symmetric logic tree for the GSIMs
+        # in the future we may relax such assumption
         num = 1
-        for val in self.get_factors().itervalues():
+        for val in self.get_num_branches().itervalues():
             num *= val
         return num
 
