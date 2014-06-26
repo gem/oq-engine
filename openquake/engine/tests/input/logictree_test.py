@@ -18,12 +18,10 @@
 """
 Tests for python logic tree processor.
 """
-
 import unittest
 
 from openquake.commonlib import logictree
-from openquake.engine.calculators.hazard.general import make_gsim_lt
-
+from openquake.engine.db import models
 from openquake.engine.tests.utils import helpers
 
 
@@ -32,10 +30,12 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         # this is an example with number_of_logic_tree_samples = 1
         cfg = helpers.get_data_path('classical_job.ini')
         job = helpers.get_job(cfg)
-        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(
-            job.hazard_calculation)
-        self.gmpe_lt = make_gsim_lt(
-            job.hazard_calculation,
+        hc = job.hazard_calculation
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(hc)
+        sm = models.LtSourceModel(
+            hazard_calculation=hc, ordinal=0, sm_lt_path=[], sm_name='sm test',
+            weight=None)
+        self.gmpe_lt = sm.make_gsim_lt(
             ['Active Shallow Crust', 'Subduction Interface'])
 
     def test_sample_source_model(self):
@@ -49,7 +49,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.assertEqual(value,
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
-        self.assertIsNone(weight)
+        self.assertEqual(weight, 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
 
 
@@ -65,10 +65,12 @@ class LogicTreeProcessorParsePathTestCase(unittest.TestCase):
         self.original_apply_uncertainty = logictree.BranchSet.apply_uncertainty
         logictree.BranchSet.apply_uncertainty = apply_uncertainty
 
-        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(
-            job.hazard_calculation)
-        self.gmpe_lt = make_gsim_lt(
-            job.hazard_calculation,
+        hc = job.hazard_calculation
+        self.source_model_lt = logictree.SourceModelLogicTree.from_hc(hc)
+        sm = models.LtSourceModel(
+            hazard_calculation=hc, ordinal=0, sm_lt_path=[], sm_name='sm test',
+            weight=None)
+        self.gmpe_lt = sm.make_gsim_lt(
             ['Active Shallow Crust', 'Subduction Interface'])
 
     def tearDown(self):
