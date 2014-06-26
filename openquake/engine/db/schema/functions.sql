@@ -89,4 +89,3 @@ SELECT a.hazard_calculation_id, sources_done, sources_todo FROM
    GROUP by y.hazard_calculation_id) AS b
 WHERE a.hazard_calculation_id=b.hazard_calculation_id;
 
-ALTER VIEW hzrdr.source_progress OWNER TO oq_admin;
