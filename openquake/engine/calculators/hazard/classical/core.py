@@ -70,6 +70,9 @@ from openquake.engine.utils import tasks
 from openquake.engine.performance import LightMonitor
 
 
+inserter = writer.CacheInserter(models.SourceInfo, 10000)
+
+
 class BoundingBox(object):
     """
     A class to store the bounding box in distances, longitudes and magnitudes,
@@ -219,13 +222,15 @@ def compute_hazard_curves(
     calc_poes_mon = LightMonitor(
         'computing poes', job_id, compute_hazard_curves)
 
-    # NB: rows are a namedtuples with fields (source, rupture, rupture_sites)
+    num_sites = 0
+    # NB: rows are namedtuples with fields (source, rupture, rupture_sites)
     for source, rows in itertools.groupby(
             hc.gen_ruptures(sources, mon, sitecol),
             key=operator.attrgetter('source')):
         t0 = time.time()
         num_ruptures = 0
         for _source, rupture, r_sites in rows:
+            num_sites = max(num_sites, len(r_sites))
             num_ruptures += 1
             if hc.poes_disagg:  # doing disaggregation
                 jb_dists = rupture.surface.get_joyner_boore_distance(sitemesh)
@@ -242,13 +247,19 @@ def compute_hazard_curves(
                         gsim, r_sites, rupture, sorted_imts, sorted_imls,
                         hc.truncation_level, make_ctxt_mon, calc_poes_mon)):
                     curv[i] *= pnes
-
-        logs.LOG.info('job=%d, src=%s:%s, num_ruptures=%d, calc_time=%fs',
-                      job_id, source.source_id, source.__class__.__name__,
-                      num_ruptures, time.time() - t0)
+             
+        inserter.add(
+            models.SourceInfo(trt_model_id=trt_model_id,
+                              source_id=source.source_id,
+                              source_class=source.__class__.__name__,
+                              num_sites=num_sites,
+                              num_ruptures=num_ruptures,
+                              occ_ruptures=num_ruptures,
+                              calc_time=time.time() - t0))
 
     make_ctxt_mon.flush()
     calc_poes_mon.flush()
+    inserter.flush()
 
     # the 0 here is a shortcut for filtered sources giving no contribution;
     # this is essential for performance, we want to avoid returning
