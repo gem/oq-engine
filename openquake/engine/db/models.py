@@ -1679,12 +1679,14 @@ class ProbabilisticRupture(djm.Model):
     surface = fields.PickleField(null=False)
     site_indices = fields.IntArrayField(null=True)
 
-    # NB: the proper solution would be to store the hypocenter as a 3D
-    # point, however I was unable to do so, due to a bug in Django 1.3;
-    # notice that the GEOS library we are using does not even support
+    # NB (MS): the proper solution would be to store the hypocenter as a 3D
+    # point, however I was unable to do so, due to a bug in Django 1.3
+    # (I was getting a GeometryProxy exception).
+    # The GEOS library we are using does not even support
     # the WKT for 3D points; that's why I am storing the point as a
     # 3D array, as a workaround; luckily, we never perform any
-    # geospatial query on the hypocenter
+    # geospatial query on the hypocenter.
+    # we will be able to do better when we will upgrade (Geo)Django
     @property
     def hypocenter(self):
         """Convert the 3D array into a hazardlib point"""
