@@ -52,6 +52,7 @@ from openquake.engine.performance import EnginePerformanceMonitor, LightMonitor
 
 # NB: beware of large caches
 inserter = writer.CacheInserter(models.GmfData, 1000)
+source_inserter = writer.CacheInserter(models.SourceInfo, 10000)
 
 
 # NB (MS): the approach used here will not work for non-poissonian models
@@ -144,7 +145,6 @@ def compute_ruptures(
 
     # Compute and save stochastic event sets
     rnd = random.Random()
-    num_distinct_ruptures = 0
     total_ruptures = 0
 
     for src, seed in src_seeds:
@@ -212,20 +212,20 @@ def compute_ruptures(
             num_ruptures = len(ses_num_occ)
             tot_ruptures = sum(num for rup in ses_num_occ
                                for ses, num in ses_num_occ[rup])
-            logs.LOG.info(
-                'job=%d, src=%s:%s, num_ruptures=%d, tot_ruptures=%d, '
-                'num_sites=%d, calc_time=%fs', job_id, src.source_id,
-                src.__class__.__name__, num_ruptures, tot_ruptures,
-                len(s_sites), time.time() - t0)
-            num_distinct_ruptures += num_ruptures
+            source_inserter.add(
+                models.SourceInfo(trt_model_id=trt_model_id,
+                                  source_id=src.source_id,
+                                  source_class=src.__class__.__name__,
+                                  num_sites=len(s_sites),
+                                  num_ruptures=num_ruptures,
+                                  occ_ruptures=tot_ruptures,
+                                  calc_time=time.time() - t0))
 
-    if num_distinct_ruptures:
-        logs.LOG.info('job=%d, task %d generated %d/%d ruptures',
-                      job_id, task_no, num_distinct_ruptures, total_ruptures)
     filter_sites_mon.flush()
     generate_ruptures_mon.flush()
     filter_ruptures_mon.flush()
     save_ruptures_mon.flush()
+    source_inserter.flush()
 
     return rupturecollector
 
