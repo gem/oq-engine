@@ -2213,22 +2213,19 @@ class LtSourceModel(djm.Model):
             lt_model=self, num_ruptures__gt=0).values_list(
             'tectonic_region_type', flat=True)
 
-    def make_gsim_lt(self, trts=(), seed=None):
+    def make_gsim_lt(self, trts=()):
         """
         Helper to instantiate a GsimLogicTree object from the logic tree file.
 
         :param trts:
             sequence of tectonic region types (if not given uses
-            .get_tectonic_region_types() extracting the relevant trts)
-        :param seed:
-            seed used for the sampling (if not given uses hc.random_seed)
+            .get_tectonic_region_types() which extracts the relevant trts)
         """
         hc = self.hazard_calculation
         fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
         return logictree.GsimLogicTree(
             fname, 'applyToTectonicRegionType',
-            trts or self.get_tectonic_region_types(),
-            hc.number_of_logic_tree_samples, seed or hc.random_seed)
+            trts or self.get_tectonic_region_types())
 
     def __iter__(self):
         """
