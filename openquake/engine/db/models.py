@@ -25,6 +25,7 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import os
 import collections
 import operator
 import itertools
@@ -47,6 +48,7 @@ from openquake.hazardlib.site import Site, SiteCollection
 
 from openquake.commonlib.general import distinct
 from openquake.commonlib.riskloaders import loss_type_to_cost_type
+from openquake.commonlib import logictree
 
 from openquake.engine.db import fields
 from openquake.engine import writer
@@ -2192,6 +2194,10 @@ class LtSourceModel(djm.Model):
     sm_name = djm.TextField(null=False)
     weight = djm.DecimalField(decimal_places=100, max_digits=101, null=True)
 
+    class Meta:
+        db_table = 'hzrdr\".\"lt_source_model'
+        ordering = ['ordinal']
+
     def get_num_sources(self):
         """
         Return the number of sources in the model.
@@ -2207,9 +2213,19 @@ class LtSourceModel(djm.Model):
             lt_model=self, num_ruptures__gt=0).values_list(
             'tectonic_region_type', flat=True)
 
-    class Meta:
-        db_table = 'hzrdr\".\"lt_source_model'
-        ordering = ['ordinal']
+    def make_gsim_lt(self, trts=()):
+        """
+        Helper to instantiate a GsimLogicTree object from the logic tree file.
+
+        :param trts:
+            sequence of tectonic region types (if not given uses
+            .get_tectonic_region_types() which extracts the relevant trts)
+        """
+        hc = self.hazard_calculation
+        fname = os.path.join(hc.base_path, hc.inputs['gsim_logic_tree'])
+        return logictree.GsimLogicTree(
+            fname, 'applyToTectonicRegionType',
+            trts or self.get_tectonic_region_types())
 
     def __iter__(self):
         """
