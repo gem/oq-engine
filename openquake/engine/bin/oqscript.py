@@ -183,11 +183,11 @@ def set_up_arg_parser():
 
     export_grp = parser.add_argument_group('Export')
     export_grp.add_argument(
-        '--exports', choices=['xml'],  default=[], action="append",
+        '--exports', choices=['xml', 'csv'],  default=[], action="append",
         help=(
             'Use with --run-hazard and --run-risk to automatically export '
             'all calculation results to the specified format. Only "xml" is '
-            'supported currently. This is optional. If not specified, '
+            'fully supported currently. This is optional. If not specified, '
             'nothing will be exported; results will only be stored in the '
             'database.'
         )
