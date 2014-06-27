@@ -61,7 +61,7 @@ from openquake.hazardlib.geo.utils import get_spherical_bounding_box
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.geodetic import npoints_between
 
-from openquake.engine import logs
+from openquake.engine import logs, writer
 from openquake.engine.calculators.hazard import general
 from openquake.engine.calculators.hazard.classical import (
     post_processing as post_proc)
