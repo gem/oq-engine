@@ -18,6 +18,7 @@
 """
 Tests for python logic tree processor.
 """
+import random
 import unittest
 
 from openquake.commonlib import logictree
@@ -31,6 +32,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         cfg = helpers.get_data_path('classical_job.ini')
         job = helpers.get_job(cfg)
         hc = job.hazard_calculation
+        self.rnd = random.Random(hc.random_seed)
         self.source_model_lt = logictree.SourceModelLogicTree.from_hc(hc)
         sm = models.LtSourceModel(
             hazard_calculation=hc, ordinal=0, sm_lt_path=[], sm_name='sm test',
@@ -45,11 +47,12 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.assertEqual(('b1', 'b5', 'b8'), branch_ids)
 
     def test_sample_gmpe(self):
-        [(value, weight, branch_ids)] = self.gmpe_lt
+        (value, weight, branch_ids) = logictree.sample_one(
+            self.gmpe_lt, self.rnd)
         self.assertEqual(value,
                          {'Subduction Interface': 'SadighEtAl1997',
                           'Active Shallow Crust': 'ChiouYoungs2008'})
-        self.assertEqual(weight, None)
+        self.assertEqual(weight, 0.5)
         self.assertEqual(('b2', 'b3'), branch_ids)
 
 
